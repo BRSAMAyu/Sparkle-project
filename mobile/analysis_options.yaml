@@ -1,0 +1,35 @@
+# Dart Code Analysis Options
+# 用于配置 Dart 代码分析规则
+
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Error Rules
+    avoid_empty_else: true
+    avoid_slow_async_io: true
+    cancel_subscriptions: true
+    close_sinks: true
+
+    # Style Rules
+    always_declare_return_types: true
+    always_put_required_named_parameters_first: true
+    always_use_package_imports: true
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    require_trailing_commas: true
+    sort_child_properties_last: true
+    use_key_in_widget_constructors: true
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "build/**"
+
+  errors:
+    invalid_annotation_target: ignore
