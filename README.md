@@ -28,7 +28,7 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 - **目标平台**：Android / iOS
 
 ### 后端（Backend）
-- **框架**：FastAPI (Python 3.11+)
+- **框架**：FastAPI (Python 3.11+ (tested with 3.14))
 - **ORM**：SQLAlchemy 2.0
 - **数据库**：PostgreSQL (开发环境可用 SQLite)
 - **任务调度**：APScheduler
@@ -96,4 +96,4 @@ flutter run
 ---
 
 **Version**: MVP v0.1.0
-**Last Updated**: 2025-12-14
+**Last Updated**: 2025-12-15

@@ -5,7 +5,7 @@
 ### 后端开发环境
 
 **必需软件**:
-- Python 3.11+
+- Python 3.11+ (tested with 3.14)
 - PostgreSQL 14+ (或 SQLite 用于开发)
 - Git
 
