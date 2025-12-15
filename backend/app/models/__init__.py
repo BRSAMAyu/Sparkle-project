@@ -8,6 +8,9 @@ from app.models.task import Task, TaskType, TaskStatus
 from app.models.plan import Plan, PlanType
 from app.models.chat import ChatMessage, MessageRole
 from app.models.error_record import ErrorRecord
+from app.models.job import Job, JobType, JobStatus
+from app.models.subject import Subject
+from app.models.idempotency_key import IdempotencyKey
 
 __all__ = [
     "BaseModel",
@@ -21,4 +24,9 @@ __all__ = [
     "ChatMessage",
     "MessageRole",
     "ErrorRecord",
+    "Job",
+    "JobType",
+    "JobStatus",
+    "Subject",
+    "IdempotencyKey",
 ]

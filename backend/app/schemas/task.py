@@ -39,10 +39,16 @@ class TaskStart(BaseModel):
     task_id: UUID = Field(description="Task ID")
 
 class TaskComplete(BaseModel):
-    """Complete task"""
+    """Complete task (Legacy/Internal)"""
     task_id: UUID = Field(description="Task ID")
     actual_minutes: int = Field(ge=1, description="Actual minutes")
     user_note: Optional[str] = Field(default=None, description="Completion note")
+
+class TaskCompleteRequest(BaseModel):
+    """Complete task request body (v2.1)"""
+    actual_minutes: int = Field(ge=1, description="Actual minutes")
+    note: Optional[str] = Field(default=None, description="User note")
+    completion_quality: Optional[int] = Field(default=None, ge=1, le=5, description="Self rating 1-5")
 
 class TaskAbandon(BaseModel):
     """Abandon task"""

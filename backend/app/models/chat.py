@@ -44,6 +44,8 @@ class ChatMessage(BaseModel):
 
     # 会话信息
     session_id = Column(GUID(), nullable=False, index=True, default=uuid.uuid4)
+    # 🆕 v2.1: 客户端生成的消息 ID (用于幂等性)
+    message_id = Column(String(36), unique=True, nullable=True)
 
     # 消息内容
     role = Column(Enum(MessageRole), nullable=False)
@@ -51,6 +53,9 @@ class ChatMessage(BaseModel):
 
     # AI相关信息
     actions = Column(JSON, nullable=True)  # AI执行的动作列表
+    # 🆕 v2.1: 解析降级标记
+    parse_degraded = Column(Boolean, default=False)
+    
     tokens_used = Column(Integer, nullable=True)
     model_name = Column(String(100), nullable=True)
 

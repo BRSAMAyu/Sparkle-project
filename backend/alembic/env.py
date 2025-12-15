@@ -21,7 +21,10 @@ from app.config import settings
 from app.db.session import Base
 
 # Import all models to ensure they are registered with Base.metadata
-from app.models import User, Task, Plan, ChatMessage, ErrorRecord  # noqa: F401
+from app.models import (
+    User, Task, Plan, ChatMessage, ErrorRecord,
+    Job, Subject, IdempotencyKey
+)  # noqa: F401
 
 # this is the Alembic Config object
 config = context.config

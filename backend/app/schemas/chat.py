@@ -15,6 +15,8 @@ class ChatMessageSend(BaseModel):
     session_id: Optional[UUID] = Field(default=None, description="Session ID (create new if not provided)")
     task_id: Optional[UUID] = Field(default=None, description="Related task ID")
     context: Optional[dict] = Field(default=None, description="Context information")
+    # 🆕 v2.1: 客户端生成的消息 ID（用于幂等）
+    message_id: Optional[str] = Field(default=None, description="Client generated message ID for idempotency")
 
 class ChatSessionCreate(BaseModel):
     """Create session"""

@@ -39,9 +39,11 @@ class ErrorRecord(BaseModel):
     # 关联关系
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    # 🆕 v2.1: 关联标准学科表
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
 
     # 错误分类
-    subject = Column(String(100), nullable=False, index=True)  # 学科/课程
+    subject = Column(String(100), nullable=False, index=True)  # 学科/课程 (保留作为缓存或非标准输入)
     topic = Column(String(255), nullable=False, index=True)    # 知识点
     error_type = Column(String(100), nullable=False)           # 错误类型
 
