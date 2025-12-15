@@ -4,7 +4,7 @@ ChatMessage Model - 用户与AI的对话记录
 """
 import enum
 import uuid
-from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON
+from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
