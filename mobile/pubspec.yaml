@@ -37,6 +37,14 @@ dependencies:
   # Navigation
   go_router: ^13.0.0
 
+  # UI Enhancement
+  flutter_markdown: ^0.6.18
+  lottie: ^3.0.0
+  animations: ^2.0.11
+  fl_chart: ^0.66.0
+  shimmer: ^3.0.0
+  confetti: ^0.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
