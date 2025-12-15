@@ -10,6 +10,9 @@ from typing_extensions import Annotated
 from loguru import logger
 import json_repair
 
+from app.schemas.llm import LLMResponse
+
+
 # ==================== 🆕 宽容类型转换器 ====================
 
 def coerce_int(v: Any) -> int:
@@ -69,14 +72,7 @@ class ChatAction(BaseModel):
         extra = "ignore"
 
 
-class LLMResponse(BaseModel):
-    """LLM 响应结构"""
-    assistant_message: str
-    actions: List[ChatAction] = []
-    
-    # 🆕 显性降级状态
-    parse_degraded: bool = False
-    degraded_reason: Optional[str] = None
+
 
 
 # ==================== 解析器 ====================

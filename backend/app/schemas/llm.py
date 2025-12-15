@@ -136,3 +136,13 @@ class CreatePlanParams(BaseModel):
     
     class Config:
         extra = "ignore"
+
+class LLMResponse(BaseModel):
+    assistant_message: Optional[str] = None
+    actions: List[Any] = Field(default_factory=list)
+    parse_degraded: bool = False
+    degraded_reason: Optional[str] = None
+
+    class Config:
+        extra = "ignore"
+

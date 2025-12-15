@@ -13,7 +13,7 @@ import json
 
 from app.models.job import Job, JobStatus, JobType
 from app.config import settings
-from app.db.session import async_session_maker
+from app.db.session import AsyncSessionLocal
 
 class JobService:
     """异步任务服务 - v2.1 增强版"""
