@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     class Config:
-        env_file = "backend/.env"
+        env_file = ".env"
         case_sensitive = True
 
 

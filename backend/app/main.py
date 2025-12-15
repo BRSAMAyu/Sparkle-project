@@ -7,11 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.config import settings
-from app.db.session import get_db_session, async_session_maker
+from app.db.session import AsyncSessionLocal
 from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
+from app.api.v1.router import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     
-    async with async_session_maker() as db:
+    async with AsyncSessionLocal() as db:
         try:
             # 🆕 1. 恢复中断的 Job
             job_service = JobService()
@@ -81,6 +82,6 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# TODO: Include API routers
-# from app.api.v1.router import api_router
-# app.include_router(api_router, prefix="/api/v1")
+# Include API routers
+app.include_router(api_router, prefix="/api/v1")
+

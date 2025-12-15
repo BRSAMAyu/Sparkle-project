@@ -1,6 +1,7 @@
 """
 Error Records API Endpoints
 """
+from typing import Dict, Any # Moved to top
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from app.schemas.error import ErrorRecordCreate, ErrorRecordResponse
 
 router = APIRouter()
 
-@router.post("", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def create_error_record(
     record_in: ErrorRecordCreate,
     current_user: User = Depends(get_current_user),
@@ -51,5 +52,3 @@ async def create_error_record(
         "success": True,
         "data": ErrorRecordResponse.model_validate(db_record)
     }
-
-from typing import Dict, Any
