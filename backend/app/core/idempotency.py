@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.models.idempotency_key import IdempotencyKey
-from app.db.session import async_session_maker
+from app.db.session import AsyncSessionLocal
 from app.config import settings
 from loguru import logger
 
@@ -77,7 +77,7 @@ class DBIdempotencyStore(IdempotencyStore):
         self._local_locks: Dict[str, bool] = {}
 
     async def get(self, key: str) -> Optional[Dict[str, Any]]:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(IdempotencyKey).where(IdempotencyKey.key == key)
             )

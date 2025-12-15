@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.security import decode_token
 from app.core.exceptions import AuthenticationError
+from app.models.user import User # Added import
+
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -35,6 +37,18 @@ async def get_current_user_id(
             detail="无效的认证令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+async def get_current_user(
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> User:
+    from app.models.user import User # Import here to avoid circular dependency
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    return user
 
 
 # Database session dependency is already defined in app.db.session.get_db
