@@ -1,0 +1,60 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'user_model.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      email: json['email'] as String,
+      flameLevel: (json['flame_level'] as num).toInt(),
+      flameBrightness: (json['flame_brightness'] as num).toDouble(),
+      depthPreference: (json['depth_preference'] as num).toDouble(),
+      curiosityPreference: (json['curiosity_preference'] as num).toDouble(),
+      isActive: json['is_active'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      nickname: json['nickname'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+    );
+
+Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
+      'id': instance.id,
+      'username': instance.username,
+      'email': instance.email,
+      'nickname': instance.nickname,
+      'avatarUrl': instance.avatarUrl,
+      'flame_level': instance.flameLevel,
+      'flame_brightness': instance.flameBrightness,
+      'depth_preference': instance.depthPreference,
+      'curiosity_preference': instance.curiosityPreference,
+      'is_active': instance.isActive,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+    };
+
+UserPreferences _$UserPreferencesFromJson(Map<String, dynamic> json) =>
+    UserPreferences(
+      depthPreference: (json['depth_preference'] as num).toDouble(),
+      curiosityPreference: (json['curiosity_preference'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$UserPreferencesToJson(UserPreferences instance) =>
+    <String, dynamic>{
+      'depth_preference': instance.depthPreference,
+      'curiosity_preference': instance.curiosityPreference,
+    };
+
+FlameStatus _$FlameStatusFromJson(Map<String, dynamic> json) => FlameStatus(
+      level: (json['level'] as num).toInt(),
+      brightness: (json['brightness'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$FlameStatusToJson(FlameStatus instance) =>
+    <String, dynamic>{
+      'level': instance.level,
+      'brightness': instance.brightness,
+    };

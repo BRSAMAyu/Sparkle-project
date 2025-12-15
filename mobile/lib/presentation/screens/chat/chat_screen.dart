@@ -1,0 +1,233 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/presentation/providers/chat_provider.dart';
+import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
+import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
+import 'package:sparkle/presentation/widgets/empty_state.dart';
+
+class ChatScreen extends ConsumerStatefulWidget {
+  const ChatScreen({super.key});
+
+  @override
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends ConsumerState<ChatScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(chatProvider.select((state) => state.messages), (previous, next) {
+      if (next.length > (previous?.length ?? 0)) {
+        _scrollToBottom();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.minScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chatState = ref.watch(chatProvider);
+    final messages = chatState.messages;
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppDesignTokens.primaryBase.withOpacity(0.05),
+                Colors.white.withOpacity(0.8),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                gradient: AppDesignTokens.secondaryGradient,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'AI Learning Assistant',
+              style: TextStyle(color: AppDesignTokens.neutral900, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: AppDesignTokens.neutral700),
+            onPressed: () {
+              // TODO: History
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined, color: AppDesignTokens.neutral700),
+            tooltip: 'New Chat',
+            onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: AppDesignTokens.neutral50,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: messages.isEmpty
+                    ? Center(
+                        child: EmptyState(
+                          message: 'Ask me anything to start your learning journey!',
+                          title: 'Hello there!',
+                          icon: Icons.chat_bubble_outline,
+                          actionButtonText: 'Start a Topic',
+                          onActionPressed: () {
+                             // Maybe define starter prompts here
+                          },
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                        itemCount: messages.length + (chatState.isSending ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (chatState.isSending && index == 0) {
+                            return const Padding(
+                              padding: EdgeInsets.only(bottom: 12.0),
+                              child: _TypingIndicator(),
+                            );
+                          }
+                          
+                          // Adjust index if we have a loading indicator at 0
+                          final msgIndex = chatState.isSending ? index - 1 : index;
+                          final message = messages[messages.length - 1 - msgIndex];
+                          return ChatBubble(message: message);
+                        },
+                      ),
+              ),
+              if (chatState.error != null)
+                 Container(
+                   width: double.infinity,
+                   padding: const EdgeInsets.all(8.0),
+                   color: AppDesignTokens.error.withOpacity(0.1),
+                   child: Text(
+                     'Error: ${chatState.error}', 
+                     style: const TextStyle(color: AppDesignTokens.error),
+                     textAlign: TextAlign.center,
+                   ),
+                 ),
+              ChatInput(
+                enabled: !chatState.isSending,
+                onSend: (text) => ref.read(chatProvider.notifier).sendMessage(text),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+          bottomLeft: Radius.circular(4),
+        ),
+        boxShadow: AppDesignTokens.shadowSm,
+        border: Border.all(color: AppDesignTokens.neutral200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (index) {
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final delay = index * 0.2;
+              final progress = ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
+              final offset = sin(progress * pi) * 6;
+
+              return Transform.translate(
+                offset: Offset(0, -offset),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppDesignTokens.neutral400,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              );
+            },
+          );
+        }),
+      ),
+    );
+  }
+}
