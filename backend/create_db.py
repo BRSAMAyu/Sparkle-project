@@ -2,6 +2,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 from app.config import settings
 from app.db.session import Base
+import app.models # Import all models to register them
 
 async def create_db_tables():
     engine = create_async_engine(settings.DATABASE_URL)
