@@ -92,17 +92,44 @@ class ExpansionWorker:
             f"Expansion task {task.id} completed: created {len(new_nodes)} new nodes"
         )
 
-        # 如果需要，这里可以通过 SSE 或 WebSocket 通知前端
-        # await self._notify_frontend(task.user_id, new_nodes)
+        # 通过 SSE 通知前端
+        if new_nodes:
+            await self._notify_frontend(task.user_id, new_nodes)
 
     async def _notify_frontend(self, user_id, new_nodes):
         """
-        通知前端新节点已创建 (可选实现)
+        通知前端新节点已创建
 
-        可以使用 SSE (Server-Sent Events) 或 WebSocket
+        使用 SSE (Server-Sent Events) 推送涌现事件
         """
-        # TODO: 实现实时通知
-        pass
+        try:
+            from app.core.sse import sse_manager
+
+            # 构建事件数据
+            nodes_data = [
+                {
+                    "id": str(node.id),
+                    "name": node.name,
+                    "description": node.description,
+                    "sector_code": node.subject.sector_code if node.subject else "VOID"
+                }
+                for node in new_nodes
+            ]
+
+            # 推送事件
+            await sse_manager.send_to_user(
+                user_id=str(user_id),
+                event_type="nodes_expanded",
+                data={
+                    "nodes": nodes_data,
+                    "count": len(new_nodes)
+                }
+            )
+
+            logger.info(f"Sent SSE notification to user {user_id} for {len(new_nodes)} new nodes")
+
+        except Exception as e:
+            logger.error(f"Failed to send SSE notification: {e}", exc_info=True)
 
 
 # 全局 Worker 实例
