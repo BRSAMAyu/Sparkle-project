@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/presentation/widgets/custom_button.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class ActionCard extends StatefulWidget {
   final ChatAction action;
@@ -44,101 +45,144 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppDesignTokens.borderRadius12,
-        boxShadow: AppDesignTokens.shadowMd,
-        border: const Border(
-          left: BorderSide(
-            width: 4,
-            color: Colors.transparent, // Handled by gradient container behind or clipper? 
-            // Simpler: Use a Stack or Row for the colored stripe.
-          ),
+    final hasAction = widget.onConfirm != null || widget.onDismiss != null;
+
+    return GestureDetector(
+      onTap: hasAction ? () {
+        HapticFeedback.selectionClick();
+      } : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: AppDesignTokens.borderRadius16,
+          boxShadow: AppDesignTokens.shadowMd,
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius12,
-        child: Stack(
-          children: [
-            // Gradient Stripe
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: _getActionGradient(widget.action.type),
+        child: ClipRRect(
+          borderRadius: AppDesignTokens.borderRadius16,
+          child: Stack(
+            children: [
+              // Gradient Stripe
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: _getActionGradient(widget.action.type),
+                  ),
                 ),
               ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      AnimatedBuilder(
-                        animation: _scaleAnimation,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _scaleAnimation.value,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: _getActionGradient(widget.action.type),
-                                shape: BoxShape.circle,
-                                boxShadow: AppDesignTokens.shadowSm,
-                              ),
-                              child: Icon(
-                                _getActionIcon(widget.action.type),
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppDesignTokens.spacing12),
-                      Text(
-                        _getTitleForAction(widget.action.type),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: AppDesignTokens.fontWeightBold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDesignTokens.spacing16),
-                  _buildContentForAction(context, widget.action),
-                  const SizedBox(height: AppDesignTokens.spacing16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (widget.onDismiss != null)
-                        TextButton(
-                          onPressed: widget.onDismiss,
-                          child: Text(
-                            'Dismiss',
-                            style: TextStyle(color: AppDesignTokens.neutral600),
+
+              // Shimmer overlay for unconfirmed actions
+              if (hasAction)
+                Positioned.fill(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: -2.0, end: 2.0),
+                    duration: const Duration(seconds: 3),
+                    builder: (context, value, child) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.1),
+                              Colors.transparent,
+                            ],
+                            stops: [
+                              (value - 0.3).clamp(0.0, 1.0),
+                              value.clamp(0.0, 1.0),
+                              (value + 0.3).clamp(0.0, 1.0),
+                            ],
                           ),
                         ),
-                      const SizedBox(width: 8),
-                      if (widget.onConfirm != null)
-                        CustomButton(
-                          text: 'Confirm',
-                          icon: Icons.check,
-                          variant: CustomButtonVariant.primary,
-                          onPressed: widget.onConfirm,
-                        ),
-                    ],
+                      );
+                    },
+                    onEnd: () {
+                      // Restart animation
+                      setState(() {});
+                    },
                   ),
-                ],
+                ),
+
+              Padding(
+                padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        AnimatedBuilder(
+                          animation: _scaleAnimation,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: hasAction ? _scaleAnimation.value : 1.0,
+                              child: Container(
+                                padding: const EdgeInsets.all(AppDesignTokens.spacing8),
+                                decoration: BoxDecoration(
+                                  gradient: _getActionGradient(widget.action.type),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _getActionColor(widget.action.type).withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _getActionIcon(widget.action.type),
+                                  color: Colors.white,
+                                  size: AppDesignTokens.iconSizeSm,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: AppDesignTokens.spacing12),
+                        Expanded(
+                          child: Text(
+                            _getTitleForAction(widget.action.type),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: AppDesignTokens.fontWeightBold,
+                              color: AppDesignTokens.neutral900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDesignTokens.spacing16),
+                    _buildContentForAction(context, widget.action),
+                    if (hasAction) ...[
+                      const SizedBox(height: AppDesignTokens.spacing16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (widget.onDismiss != null)
+                            CustomButton.text(
+                              text: '忽略',
+                              onPressed: widget.onDismiss,
+                              size: ButtonSize.small,
+                            ),
+                          const SizedBox(width: AppDesignTokens.spacing8),
+                          if (widget.onConfirm != null)
+                            CustomButton.primary(
+                              text: '确认',
+                              icon: Icons.check_rounded,
+                              onPressed: widget.onConfirm,
+                              size: ButtonSize.small,
+                              customGradient: _getActionGradient(widget.action.type),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -152,30 +196,55 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
         return AppDesignTokens.secondaryGradient;
       case 'update_preference':
         return AppDesignTokens.infoGradient;
+      case 'add_error':
+        return AppDesignTokens.warningGradient;
       default:
         return AppDesignTokens.primaryGradient;
+    }
+  }
+
+  Color _getActionColor(String type) {
+    switch (type) {
+      case 'create_task':
+        return AppDesignTokens.primaryBase;
+      case 'create_plan':
+        return AppDesignTokens.secondaryBase;
+      case 'update_preference':
+        return AppDesignTokens.info;
+      case 'add_error':
+        return AppDesignTokens.warning;
+      default:
+        return AppDesignTokens.primaryBase;
     }
   }
 
   IconData _getActionIcon(String type) {
     switch (type) {
       case 'create_task':
-        return Icons.add_task;
+        return Icons.add_task_rounded;
       case 'create_plan':
-        return Icons.map;
+        return Icons.map_rounded;
+      case 'update_preference':
+        return Icons.settings_rounded;
+      case 'add_error':
+        return Icons.error_outline_rounded;
       default:
-        return Icons.touch_app;
+        return Icons.touch_app_rounded;
     }
   }
 
   String _getTitleForAction(String type) {
     switch (type) {
       case 'create_task':
-        return 'New Task Suggestion';
+        return 'AI建议：创建任务';
       case 'create_plan':
-        return 'New Plan Suggestion';
+        return 'AI建议：创建计划';
+      case 'update_preference':
+        return 'AI建议：更新偏好';
+      case 'add_error':
+        return 'AI建议：记录错题';
       default:
-        return 'Suggested Action';
+        return 'AI建议操作';
     }
   }
 
@@ -183,40 +252,108 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (action.params['title'] != null)
-          Text(
-            action.params['title'],
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-        const SizedBox(height: AppDesignTokens.spacing8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: action.params.entries.where((e) => e.key != 'title').map((entry) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppDesignTokens.neutral50,
-                borderRadius: AppDesignTokens.borderRadius8,
-                border: Border.all(color: AppDesignTokens.neutral200),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${entry.key}: ',
-                    style: TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
-                  ),
-                  Text(
-                    entry.value.toString(),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
+        if (action.params['title'] != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getActionColor(action.type).withOpacity(0.1),
+                  _getActionColor(action.type).withOpacity(0.05),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            );
-          }).toList(),
-        ),
+              borderRadius: AppDesignTokens.borderRadius12,
+              border: Border.all(
+                color: _getActionColor(action.type).withOpacity(0.2),
+              ),
+            ),
+            child: Text(
+              action.params['title'],
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: AppDesignTokens.fontWeightSemibold,
+                color: AppDesignTokens.neutral900,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDesignTokens.spacing12),
+        ],
+        if (action.params.entries.where((e) => e.key != 'title').isNotEmpty)
+          Wrap(
+            spacing: AppDesignTokens.spacing8,
+            runSpacing: AppDesignTokens.spacing8,
+            children: action.params.entries
+                .where((e) => e.key != 'title')
+                .map((entry) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDesignTokens.spacing12,
+                  vertical: AppDesignTokens.spacing8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppDesignTokens.neutral100,
+                  borderRadius: AppDesignTokens.borderRadius8,
+                  border: Border.all(color: AppDesignTokens.neutral200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _getParamIcon(entry.key),
+                      size: AppDesignTokens.iconSizeXs,
+                      color: AppDesignTokens.neutral600,
+                    ),
+                    const SizedBox(width: AppDesignTokens.spacing4),
+                    Text(
+                      '${_formatParamKey(entry.key)}: ',
+                      style: TextStyle(
+                        color: AppDesignTokens.neutral600,
+                        fontSize: AppDesignTokens.fontSizeSm,
+                      ),
+                    ),
+                    Text(
+                      entry.value.toString(),
+                      style: TextStyle(
+                        fontWeight: AppDesignTokens.fontWeightSemibold,
+                        fontSize: AppDesignTokens.fontSizeSm,
+                        color: AppDesignTokens.neutral900,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
+  }
+
+  IconData _getParamIcon(String key) {
+    switch (key.toLowerCase()) {
+      case 'type':
+      case 'task_type':
+        return Icons.category_rounded;
+      case 'difficulty':
+        return Icons.stars_rounded;
+      case 'estimated_minutes':
+      case 'duration':
+        return Icons.timer_rounded;
+      case 'subject':
+        return Icons.book_rounded;
+      case 'due_date':
+      case 'target_date':
+        return Icons.calendar_today_rounded;
+      default:
+        return Icons.label_rounded;
+    }
+  }
+
+  String _formatParamKey(String key) {
+    // Convert snake_case to readable format
+    return key
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 }

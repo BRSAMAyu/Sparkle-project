@@ -7,11 +7,13 @@ import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
-import 'package:sparkle/presentation/widgets/empty_state.dart';
-import 'package:sparkle/presentation/widgets/error_widget.dart';
-import 'package:sparkle/presentation/widgets/flame_indicator.dart';
-import 'package:sparkle/presentation/widgets/loading_indicator.dart';
-// import 'package:sparkle/presentation/widgets/task/task_card.dart'; // Assuming available
+import 'package:sparkle/presentation/widgets/common/empty_state.dart';
+import 'package:sparkle/presentation/widgets/common/error_widget.dart';
+import 'package:sparkle/presentation/widgets/common/flame_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/task/task_card.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -72,13 +74,10 @@ class _DashboardTab extends ConsumerWidget {
     final String? errorMessage = taskListState.error ?? planListState.error;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Welcome, ${user?.nickname ?? user?.username ?? ''}'),
-      ),
       body: isLoading
-          ? const LoadingIndicator(isLoading: true)
+          ? Center(child: LoadingIndicator.circular(showText: true, loadingText: '加载中...'))
           : errorMessage != null
-              ? AppErrorWidget(
+              ? CustomErrorWidget.page(
                   message: errorMessage,
                   onRetry: () {
                     ref.read(taskListProvider.notifier).refreshTasks();
@@ -90,56 +89,182 @@ class _DashboardTab extends ConsumerWidget {
                     await ref.read(taskListProvider.notifier).refreshTasks();
                     await ref.read(planListProvider.notifier).refresh();
                   },
-                  child: SingleChildScrollView(
+                  child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _FlameStatusCard(),
-                        SizedBox(height: AppDesignTokens.spacing16),
-                        _TodayTasksSection(),
-                        SizedBox(height: AppDesignTokens.spacing16),
-                        _RecommendedTasksSection(),
-                      ],
-                    ),
+                    slivers: [
+                      // 渐变AppBar with greeting
+                      _buildGradientAppBar(context, user),
+                      // Content
+                      SliverPadding(
+                        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            const _FlameStatusCard(),
+                            const SizedBox(height: AppDesignTokens.spacing24),
+                            const _TodayTasksSection(),
+                            const SizedBox(height: AppDesignTokens.spacing24),
+                            const _RecommendedTasksSection(),
+                            const SizedBox(height: AppDesignTokens.spacing32),
+                          ]),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+    );
+  }
+
+  Widget _buildGradientAppBar(BuildContext context, dynamic user) {
+    final hour = DateTime.now().hour;
+    String greeting;
+    if (hour < 12) {
+      greeting = '早上好';
+    } else if (hour < 18) {
+      greeting = '下午好';
+    } else {
+      greeting = '晚上好';
+    }
+
+    return SliverAppBar(
+      expandedHeight: 120.0,
+      floating: false,
+      pinned: true,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: AppDesignTokens.primaryGradient,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDesignTokens.spacing20,
+                vertical: AppDesignTokens.spacing16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    greeting,
+                    style: const TextStyle(
+                      fontSize: AppDesignTokens.fontSizeLg,
+                      color: Colors.white70,
+                      fontWeight: AppDesignTokens.fontWeightMedium,
+                    ),
+                  ),
+                  const SizedBox(height: AppDesignTokens.spacing4),
+                  Text(
+                    user?.nickname ?? user?.username ?? '学习者',
+                    style: const TextStyle(
+                      fontSize: AppDesignTokens.fontSize3xl,
+                      color: Colors.white,
+                      fontWeight: AppDesignTokens.fontWeightBold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class _FlameStatusCard extends ConsumerWidget {
   const _FlameStatusCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    return Card(
-      margin: EdgeInsets.zero, // Remove default card margin
-      shape: RoundedRectangleBorder(
-        borderRadius: AppDesignTokens.borderRadius12,
-      ),
-      elevation: 0, // Handled by AppThemeExtension shadows
+    final flameLevel = user?.flameLevel ?? 0;
+    final flameBrightness = ((user?.flameBrightness ?? 0) * 100).toInt();
+
+    return GestureDetector(
+      onTap: () {
+        // TODO: Navigate to detailed statistics
+      },
       child: Container(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: AppDesignTokens.borderRadius12,
-          boxShadow: Theme.of(context).appExtension?.cardShadow,
+          gradient: AppDesignTokens.cardGradientPrimary,
+          borderRadius: AppDesignTokens.borderRadius20,
+          boxShadow: AppDesignTokens.shadowPrimary,
         ),
         child: Row(
           children: [
-            FlameIndicator(currentLevel: user?.flameLevel ?? 0),
-            const SizedBox(width: AppDesignTokens.spacing16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Flame Level', style: Theme.of(context).textTheme.titleMedium),
-                Text('${user?.flameLevel ?? 0}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppDesignTokens.primaryBase,
-                )),
-                Text('Brightness: ${(user?.flameBrightness ?? 0) * 100}%', style: Theme.of(context).textTheme.bodyMedium),
-              ],
+            // Flame Indicator
+            FlameIndicator(
+              level: flameLevel,
+              brightness: flameBrightness,
+              size: 100.0,
+              showLabel: false,
+            ),
+            const SizedBox(width: AppDesignTokens.spacing20),
+            // Info Section
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '学习火焰',
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeSm,
+                      color: Colors.white70,
+                      fontWeight: AppDesignTokens.fontWeightMedium,
+                    ),
+                  ),
+                  const SizedBox(height: AppDesignTokens.spacing4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Lv.$flameLevel',
+                        style: const TextStyle(
+                          fontSize: AppDesignTokens.fontSize3xl,
+                          color: Colors.white,
+                          fontWeight: AppDesignTokens.fontWeightBold,
+                        ),
+                      ),
+                      const SizedBox(width: AppDesignTokens.spacing8),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Text(
+                          '亮度 $flameBrightness%',
+                          style: const TextStyle(
+                            fontSize: AppDesignTokens.fontSizeBase,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDesignTokens.spacing12),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.trending_up_rounded,
+                        size: AppDesignTokens.iconSizeSm,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: AppDesignTokens.spacing4),
+                      const Text(
+                        '持续学习中',
+                        style: TextStyle(
+                          fontSize: AppDesignTokens.fontSizeSm,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: AppDesignTokens.iconSizeSm,
+                        color: Colors.white54,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -150,6 +275,7 @@ class _FlameStatusCard extends ConsumerWidget {
 
 class _TodayTasksSection extends ConsumerWidget {
   const _TodayTasksSection();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final todayTasks = ref.watch(taskListProvider).todayTasks;
@@ -157,29 +283,63 @@ class _TodayTasksSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Today\'s Tasks', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppDesignTokens.spacing8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '今日任务',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: AppDesignTokens.fontWeightBold,
+              ),
+            ),
+            if (todayTasks.isNotEmpty)
+              CustomButton.text(
+                text: '查看全部',
+                onPressed: () {
+                  // Navigate to task list
+                },
+                size: ButtonSize.small,
+              ),
+          ],
+        ),
+        const SizedBox(height: AppDesignTokens.spacing12),
         if (todayTasks.isEmpty)
-          EmptyState(
-            message: 'No tasks for today. Time to relax or plan something new!',
-            icon: Icons.check_circle_outline,
-            title: 'All Done!',
-            actionButtonText: 'Add New Task',
-            onActionPressed: () {
+          CompactEmptyState(
+            message: '今天没有任务，可以休息或规划新任务',
+            icon: Icons.check_circle_outline_rounded,
+            actionText: '创建任务',
+            onAction: () {
               // TODO: Navigate to add task screen
             },
           )
         else
           SizedBox(
-            height: 150, // Card height, adjust as needed
+            height: 160,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: todayTasks.length,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               itemBuilder: (context, index) {
                 final task = todayTasks[index];
                 return SizedBox(
-                  width: 300, // Card width
-                  child: ListTile(title: Text(task.title)), // Placeholder for TaskCard
+                  width: 320,
+                  child: TaskCard(
+                    task: task,
+                    onTap: () {
+                      // TODO: Navigate to task detail
+                      context.push('/tasks/${task.id}');
+                    },
+                    onStart: () {
+                      // TODO: Start task execution
+                    },
+                    onComplete: () async {
+                      await ref.read(taskListProvider.notifier).completeTask(
+                        task.id,
+                        task.estimatedMinutes,
+                        null,
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -191,6 +351,7 @@ class _TodayTasksSection extends ConsumerWidget {
 
 class _RecommendedTasksSection extends ConsumerWidget {
   const _RecommendedTasksSection();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recommendedTasks = ref.watch(taskListProvider).recommendedTasks;
@@ -198,15 +359,32 @@ class _RecommendedTasksSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Recommended For You', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppDesignTokens.spacing8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '为你推荐',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: AppDesignTokens.fontWeightBold,
+              ),
+            ),
+            if (recommendedTasks.isNotEmpty)
+              CustomButton.text(
+                text: '更多推荐',
+                onPressed: () {
+                  // Navigate to recommendations
+                },
+                size: ButtonSize.small,
+              ),
+          ],
+        ),
+        const SizedBox(height: AppDesignTokens.spacing12),
         if (recommendedTasks.isEmpty)
-          EmptyState(
-            message: 'Explore new opportunities or continue your journey.',
-            icon: Icons.lightbulb_outline,
-            title: 'No Recommendations Yet',
-            actionButtonText: 'Explore Plans',
-            onActionPressed: () {
+          CompactEmptyState(
+            message: '暂无推荐任务，探索更多学习计划',
+            icon: Icons.lightbulb_outline_rounded,
+            actionText: '浏览计划',
+            onAction: () {
               // TODO: Navigate to plans screen
             },
           )
@@ -214,10 +392,29 @@ class _RecommendedTasksSection extends ConsumerWidget {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: recommendedTasks.length,
+            itemCount: recommendedTasks.length > 3 ? 3 : recommendedTasks.length,
             itemBuilder: (context, index) {
               final task = recommendedTasks[index];
-              return ListTile(title: Text(task.title)); // Placeholder for TaskCard
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppDesignTokens.spacing8),
+                child: TaskCard(
+                  task: task,
+                  compact: true,
+                  onTap: () {
+                    context.push('/tasks/${task.id}');
+                  },
+                  onStart: () {
+                    // TODO: Start task execution
+                  },
+                  onComplete: () async {
+                    await ref.read(taskListProvider.notifier).completeTask(
+                      task.id,
+                      task.estimatedMinutes,
+                      null,
+                    );
+                  },
+                ),
+              );
             },
           ),
       ],
