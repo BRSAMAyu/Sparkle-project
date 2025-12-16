@@ -13,6 +13,7 @@ import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
+import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -151,6 +152,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+
+      // Galaxy Routes
+      GoRoute(
+        path: '/galaxy',
+        name: 'galaxy',
+        builder: (context, state) => const GalaxyScreen(),
       ),
     ],
   );

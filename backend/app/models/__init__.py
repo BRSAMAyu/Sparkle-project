@@ -12,6 +12,7 @@ from app.models.job import Job, JobType, JobStatus
 from app.models.subject import Subject
 from app.models.idempotency_key import IdempotencyKey
 from app.models.notification import Notification
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
 __all__ = [
     "BaseModel",
@@ -31,4 +32,6 @@ __all__ = [
     "Subject",
     "IdempotencyKey",
     "Notification",
+    "KnowledgeNode",
+    "UserNodeStatus",
 ]

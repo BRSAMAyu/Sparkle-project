@@ -31,6 +31,14 @@ class Subject(Base):
     category = Column(String(50), nullable=True, index=True)
     # 例如: "计算机科学", "数学", "物理"
 
+    # 星域代码 (Knowledge Galaxy)
+    # 枚举: COSMOS, TECH, ART, CIVILIZATION, LIFE, WISDOM, VOID
+    sector_code = Column(String(20), default="VOID", nullable=False, server_default="VOID")
+
+    # 星域色调 (Hex Color)
+    hex_color = Column(String(7), nullable=True)
+    # 例如: "#FF5733"
+
     # 是否启用
     is_active = Column(Boolean, default=True, index=True)
 

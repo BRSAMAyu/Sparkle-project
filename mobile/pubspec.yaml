@@ -62,7 +62,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  shaders:
+    - shaders/core_flame.frag
   # Assets
   # assets:
   #   - assets/images/

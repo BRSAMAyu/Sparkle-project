@@ -35,4 +35,8 @@ class ApiEndpoints {
   static const String statsOverview = '/statistics/overview';
   static const String statsWeekly = '/statistics/weekly';
   static const String statsFlame = '/statistics/flame';
+
+  // Galaxy
+  static const String galaxyGraph = '/galaxy/graph';
+  static String sparkNode(String id) => '/galaxy/node/$id/spark';
 }
