@@ -13,14 +13,14 @@ class AppErrorWidget extends StatelessWidget {
   final ErrorWidgetType type;
 
   const AppErrorWidget({
-    Key? key,
+    super.key,
     required this.message,
     this.title,
     this.icon,
     this.onRetry,
     this.retryButtonText = 'Try Again',
     this.type = ErrorWidgetType.fullPage,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +36,8 @@ class AppErrorWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline, color: AppDesignTokens.error),
-            SizedBox(width: AppDesignTokens.spacing12),
+            const Icon(Icons.error_outline, color: AppDesignTokens.error),
+            const SizedBox(width: AppDesignTokens.spacing12),
             Expanded(
               child: Text(
                 message,
@@ -69,20 +69,20 @@ class AppErrorWidget extends StatelessWidget {
                 size: AppDesignTokens.iconSizeXl,
                 color: theme.colorScheme.error,
               ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             Text(
               title ?? 'Something Went Wrong',
               style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppDesignTokens.spacing8),
+            const SizedBox(height: AppDesignTokens.spacing8),
             Text(
               message,
               style: theme.textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              SizedBox(height: AppDesignTokens.spacing24),
+              const SizedBox(height: AppDesignTokens.spacing24),
               CustomButton(
                 text: retryButtonText,
                 onPressed: onRetry,

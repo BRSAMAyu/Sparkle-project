@@ -8,11 +8,11 @@ class SuccessAnimation extends StatefulWidget {
   final VoidCallback? onAnimationComplete;
 
   const SuccessAnimation({
-    Key? key,
+    super.key,
     this.child,
     this.playAnimation = false,
     this.onAnimationComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<SuccessAnimation> createState() => _SuccessAnimationState();
@@ -67,7 +67,7 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive, // All directions
             shouldLoop: false, // Don't loop by default
-            colors: [
+            colors: const [
               AppDesignTokens.primaryBase,
               AppDesignTokens.accent,
               AppDesignTokens.success,

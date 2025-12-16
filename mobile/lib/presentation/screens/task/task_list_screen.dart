@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/animations/staggered_list_animation.dart';
@@ -6,9 +7,10 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/task/task_card.dart';
-import 'package:sparkle/presentation/widgets/empty_state.dart';
-import 'package:sparkle/presentation/widgets/error_widget.dart';
-import 'package:sparkle/presentation/widgets/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/empty_state.dart';
+import 'package:sparkle/presentation/widgets/common/error_widget.dart';
+import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, completed }
 
@@ -44,22 +46,65 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search tasks...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppDesignTokens.primaryGradient,
+          ),
+        ),
+        title: AnimatedSwitcher(
+          duration: AppDesignTokens.durationNormal,
+          child: _isSearching
+              ? TextField(
+                  key: const ValueKey('search'),
+                  controller: _searchController,
+                  autofocus: true,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: AppDesignTokens.fontSizeBase,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '搜索任务...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  onChanged: (value) => setState(() {}),
+                )
+              : Row(
+                  key: const ValueKey('title'),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: AppDesignTokens.borderRadius8,
+                      ),
+                      child: const Icon(
+                        Icons.task_alt_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '我的任务',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: AppDesignTokens.fontWeightBold,
+                      ),
+                    ),
+                  ],
                 ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: (value) => setState(() {}),
-              )
-            : const Text('My Tasks'),
+        ),
         actions: [
           IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
+            color: Colors.white,
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -82,24 +127,25 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          HapticFeedback.mediumImpact();
           // TODO: Navigate to create task screen
           // context.push('/tasks/new');
         },
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         child: Container(
           width: 60,
           height: 60,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: AppDesignTokens.primaryGradient,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x4DFF6B35), // Primary shadow
-                blurRadius: 16,
-                offset: Offset(0, 8),
-              ),
-            ],
+            boxShadow: AppDesignTokens.shadowPrimary,
           ),
-          child: const Icon(Icons.add, color: Colors.white),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 32,
+          ),
         ),
       ),
     );
@@ -107,27 +153,33 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
   Widget _buildTaskList(BuildContext context, TaskListState state, List<TaskModel> tasks, WidgetRef ref) {
     if (state.isLoading && tasks.isEmpty) {
-      return const LoadingIndicator(isLoading: true);
+      return const Center(
+        child: LoadingIndicator.circular(
+          showText: true,
+          loadingText: '加载任务中...',
+        ),
+      );
     }
 
     if (state.error != null) {
-      return AppErrorWidget(
+      return CustomErrorWidget.page(
         message: state.error!,
         onRetry: () => ref.read(taskListProvider.notifier).refreshTasks(),
       );
     }
 
     if (tasks.isEmpty) {
-      return EmptyState(
-        message: _searchController.text.isNotEmpty 
-            ? 'No tasks found matching "${_searchController.text}"' 
-            : 'No tasks found. Create one to get started!',
-        icon: Icons.task_alt,
-        actionButtonText: 'Create Task',
-        onActionPressed: () {
-          // context.push('/tasks/new');
-        },
-      );
+      if (_searchController.text.isNotEmpty) {
+        return EmptyState.noResults(
+          searchQuery: _searchController.text,
+        );
+      } else {
+        return EmptyState.noTasks(
+          onCreateTask: () {
+            // context.push('/tasks/new');
+          },
+        );
+      }
     }
 
     return StaggeredListAnimation(
@@ -159,17 +211,40 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                 ),
                 confirmDismiss: (direction) async {
                   if (direction == DismissDirection.startToEnd) {
-                    await ref.read(taskListProvider.notifier).completeTask(task.id, task.estimatedMinutes, null);
-                    return false; 
+                    HapticFeedback.heavyImpact();
+                    await ref.read(taskListProvider.notifier).completeTask(
+                      task.id,
+                      task.estimatedMinutes,
+                      null,
+                    );
+                    return false;
                   } else {
+                    HapticFeedback.mediumImpact();
                     return await showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Confirm Delete'),
-                        content: const Text('Are you sure you want to delete this task?'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppDesignTokens.borderRadius20,
+                        ),
+                        title: const Text(
+                          '确认删除',
+                          style: TextStyle(
+                            fontWeight: AppDesignTokens.fontWeightBold,
+                          ),
+                        ),
+                        content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                          CustomButton.text(
+                            text: '取消',
+                            onPressed: () => Navigator.pop(ctx, false),
+                          ),
+                          CustomButton.primary(
+                            text: '删除',
+                            icon: Icons.delete_rounded,
+                            onPressed: () => Navigator.pop(ctx, true),
+                            customGradient: AppDesignTokens.errorGradient,
+                            size: ButtonSize.small,
+                          ),
                         ],
                       ),
                     );
@@ -217,8 +292,12 @@ class _FilterChips extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFilter = ref.watch(taskFilterProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: AppDesignTokens.shadowSm,
+      ),
       child: SizedBox(
         height: 40,
         child: ListView(
@@ -227,33 +306,62 @@ class _FilterChips extends ConsumerWidget {
             final isSelected = currentFilter == filter;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child: ChoiceChip(
-                label: Text(
-                  filter.name[0].toUpperCase() + filter.name.substring(1),
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : AppDesignTokens.neutral600,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                selected: isSelected,
-                selectedColor: Colors.transparent, 
-                backgroundColor: AppDesignTokens.neutral100,
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppDesignTokens.borderRadius16,
-                  side: BorderSide(
-                    color: isSelected ? Colors.transparent : AppDesignTokens.neutral300,
-                  ),
-                ),
-                onSelected: (selected) {
-                  if (selected) {
-                    ref.read(taskFilterProvider.notifier).state = filter;
-                  }
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(taskFilterProvider.notifier).state = filter;
                 },
+                child: AnimatedContainer(
+                  duration: AppDesignTokens.durationFast,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDesignTokens.spacing16,
+                    vertical: AppDesignTokens.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: isSelected ? AppDesignTokens.primaryGradient : null,
+                    color: isSelected ? null : AppDesignTokens.neutral100,
+                    borderRadius: AppDesignTokens.borderRadius20,
+                    border: Border.all(
+                      color: isSelected
+                          ? Colors.transparent
+                          : AppDesignTokens.neutral300,
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected ? AppDesignTokens.shadowSm : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getFilterLabel(filter),
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : AppDesignTokens.neutral700,
+                        fontWeight: isSelected
+                            ? AppDesignTokens.fontWeightBold
+                            : AppDesignTokens.fontWeightMedium,
+                        fontSize: AppDesignTokens.fontSizeSm,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             );
           }).toList(),
         ),
       ),
     );
+  }
+
+  String _getFilterLabel(TaskFilterOptions filter) {
+    switch (filter) {
+      case TaskFilterOptions.all:
+        return '全部';
+      case TaskFilterOptions.pending:
+        return '待办';
+      case TaskFilterOptions.inProgress:
+        return '进行中';
+      case TaskFilterOptions.completed:
+        return '已完成';
+    }
   }
 }

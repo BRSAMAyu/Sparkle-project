@@ -185,7 +185,7 @@ class _CircularTimerPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.width / 2 - 10; // Padding
-    final strokeWidth = 12.0;
+    const strokeWidth = 12.0;
 
     // Background Circle
     final bgPaint = Paint()

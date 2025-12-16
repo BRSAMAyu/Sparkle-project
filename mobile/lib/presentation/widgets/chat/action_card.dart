@@ -307,14 +307,14 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
                     const SizedBox(width: AppDesignTokens.spacing4),
                     Text(
                       '${_formatParamKey(entry.key)}: ',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppDesignTokens.neutral600,
                         fontSize: AppDesignTokens.fontSizeSm,
                       ),
                     ),
                     Text(
                       entry.value.toString(),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: AppDesignTokens.fontWeightSemibold,
                         fontSize: AppDesignTokens.fontSizeSm,
                         color: AppDesignTokens.neutral900,

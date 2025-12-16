@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/widgets/custom_button.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
 class ProfileScreen extends ConsumerWidget {

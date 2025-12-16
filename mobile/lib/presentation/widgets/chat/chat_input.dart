@@ -149,7 +149,7 @@ class _ChatInputState extends State<ChatInput>
                       ),
                       decoration: InputDecoration(
                         hintText: widget.placeholder,
-                        hintStyle: TextStyle(
+                        hintStyle: const TextStyle(
                           color: AppDesignTokens.neutral500,
                           fontSize: AppDesignTokens.fontSizeBase,
                         ),
@@ -185,7 +185,7 @@ class _ChatInputState extends State<ChatInput>
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white),
+                                    Colors.white,),
                               ),
                             )
                           : RotationTransition(

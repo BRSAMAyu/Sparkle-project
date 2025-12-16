@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/design/design_tokens.dart';
-import 'custom_button.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 错误组件类型
 enum ErrorType {
@@ -48,11 +48,10 @@ class CustomErrorWidget extends StatelessWidget {
   final bool showIcon;
 
   const CustomErrorWidget({
-    super.key,
+    required this.message, super.key,
     this.type = ErrorType.inline,
     this.severity = ErrorSeverity.error,
     this.title,
-    required this.message,
     this.icon,
     this.onRetry,
     this.onClose,
@@ -62,9 +61,8 @@ class CustomErrorWidget extends StatelessWidget {
 
   /// 全屏错误页工厂构造函数
   factory CustomErrorWidget.page({
-    Key? key,
+    required String message, Key? key,
     String? title,
-    required String message,
     IconData? icon,
     VoidCallback? onRetry,
     List<Widget>? actions,
@@ -84,9 +82,8 @@ class CustomErrorWidget extends StatelessWidget {
 
   /// 错误横幅工厂构造函数
   factory CustomErrorWidget.banner({
-    Key? key,
+    required String message, Key? key,
     String? title,
-    required String message,
     VoidCallback? onClose,
     ErrorSeverity severity = ErrorSeverity.error,
   }) {
@@ -102,8 +99,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   /// 内联错误提示工厂构造函数
   factory CustomErrorWidget.inline({
-    Key? key,
-    required String message,
+    required String message, Key? key,
     IconData? icon,
     bool showIcon = true,
     ErrorSeverity severity = ErrorSeverity.error,
@@ -188,7 +184,7 @@ class CustomErrorWidget extends StatelessWidget {
   Widget _buildErrorPage(BuildContext context) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppDesignTokens.spacing32),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -214,29 +210,29 @@ class CustomErrorWidget extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
             // 错误标题
             Text(
               title ?? _getDefaultTitle(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSize2xl,
                 fontWeight: AppDesignTokens.fontWeightBold,
                 color: AppDesignTokens.neutral900,
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: AppDesignTokens.spacing12),
             // 错误消息
             Text(
               message,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeBase,
                 color: AppDesignTokens.neutral600,
                 height: AppDesignTokens.lineHeightNormal,
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
             // 操作按钮
             if (actions != null)
               ...actions!
@@ -263,7 +259,7 @@ class CustomErrorWidget extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: AppDesignTokens.spacing16,
             vertical: AppDesignTokens.spacing12,
           ),
@@ -275,7 +271,7 @@ class CustomErrorWidget extends StatelessWidget {
                 color: Colors.white,
                 size: AppDesignTokens.iconSizeBase,
               ),
-              SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: AppDesignTokens.spacing12),
               // 内容
               Expanded(
                 child: Column(
@@ -285,17 +281,17 @@ class CustomErrorWidget extends StatelessWidget {
                     if (title != null) ...[
                       Text(
                         title!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: AppDesignTokens.fontSizeSm,
                           fontWeight: AppDesignTokens.fontWeightSemibold,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: AppDesignTokens.spacing4),
+                      const SizedBox(height: AppDesignTokens.spacing4),
                     ],
                     Text(
                       message,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: AppDesignTokens.fontSizeSm,
                         color: Colors.white,
                       ),
@@ -305,7 +301,7 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               // 关闭按钮
               if (onClose != null) ...[
-                SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: AppDesignTokens.spacing12),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   color: Colors.white,
@@ -324,7 +320,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   Widget _buildInlineError(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppDesignTokens.spacing12),
+      padding: const EdgeInsets.all(AppDesignTokens.spacing12),
       decoration: BoxDecoration(
         color: _getLightBackgroundColor(),
         border: Border.all(
@@ -342,7 +338,7 @@ class CustomErrorWidget extends StatelessWidget {
               color: _getBackgroundColor(),
               size: AppDesignTokens.iconSizeSm,
             ),
-            SizedBox(width: AppDesignTokens.spacing8),
+            const SizedBox(width: AppDesignTokens.spacing8),
           ],
           Expanded(
             child: Text(

@@ -125,7 +125,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
        actualMinutes: minutes,
        userNote: note,
        syncStatus: TaskSyncStatus.pending, // 🆕 标记为同步中
-     ));
+     ),);
      
      // 2. 后台发送
     try {
@@ -134,7 +134,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
        _updateTask(id, (task) => updatedTask.copyWith(
          syncStatus: TaskSyncStatus.synced,
          // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
-       ));
+       ),);
     } catch (e) {
       // 4. 🆕 失败：标记为失败状态（不直接回滚）
       String errorMsg = '操作失败';
@@ -145,7 +145,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       _updateTask(id, (task) => task.copyWith(
         syncStatus: TaskSyncStatus.failed,
         syncError: errorMsg,
-      ));
+      ),);
     }
   }
 
@@ -154,14 +154,14 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     _updateTask(id, (task) => task.copyWith(
       syncStatus: TaskSyncStatus.pending,
       syncError: null,
-    ));
+    ),);
     
     try {
       final updatedTask = await _taskRepository.completeTask(id, minutes, note);
       
       _updateTask(id, (task) => updatedTask.copyWith(
         syncStatus: TaskSyncStatus.synced,
-      ));
+      ),);
     } catch (e) {
       String errorMsg = '重试失败';
        if (e is DioException) {
@@ -170,7 +170,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       _updateTask(id, (task) => task.copyWith(
         syncStatus: TaskSyncStatus.failed,
         syncError: errorMsg,
-      ));
+      ),);
     }
   }
   

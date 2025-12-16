@@ -117,7 +117,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppDesignTokens.neutral50,
         ),
         child: SafeArea(

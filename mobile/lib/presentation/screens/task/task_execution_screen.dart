@@ -7,8 +7,8 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/task/timer_widget.dart';
-import 'package:sparkle/presentation/widgets/success_animation.dart';
-import 'package:sparkle/presentation/widgets/custom_button.dart';
+import 'package:sparkle/presentation/widgets/common/success_animation.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key});
@@ -29,17 +29,30 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave Session?'),
-        content: const Text('Your timer is still running. Are you sure you want to leave? Your progress will be saved.'),
-        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Stay'),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDesignTokens.borderRadius20,
+        ),
+        title: const Text(
+          '离开任务？',
+          style: TextStyle(
+            fontWeight: AppDesignTokens.fontWeightBold,
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Leave', style: TextStyle(color: AppDesignTokens.error)),
+        ),
+        content: const Text('计时器仍在运行，确定要离开吗？您的进度将被保存。'),
+        actions: [
+          CustomButton.text(
+            text: '继续执行',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          CustomButton.primary(
+            text: '离开',
+            icon: Icons.exit_to_app,
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).pop(true);
+            },
+            customGradient: AppDesignTokens.warningGradient,
+            size: ButtonSize.small,
           ),
         ],
       ),
@@ -76,17 +89,36 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     if (activeTask == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppDesignTokens.primaryGradient,
+            ),
+          ),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('No active task selected.'),
-              const SizedBox(height: 16),
-              CustomButton(
-                text: 'Go Back',
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 80,
+                color: AppDesignTokens.neutral400,
+              ),
+              const SizedBox(height: AppDesignTokens.spacing16),
+              Text(
+                '未选择任务',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: AppDesignTokens.fontWeightBold,
+                  color: AppDesignTokens.neutral700,
+                ),
+              ),
+              const SizedBox(height: AppDesignTokens.spacing24),
+              CustomButton.primary(
+                text: '返回',
+                icon: Icons.arrow_back,
                 onPressed: () => context.pop(),
-                variant: CustomButtonVariant.secondary,
+                size: ButtonSize.medium,
               ),
             ],
           ),
@@ -147,36 +179,79 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: AppDesignTokens.borderRadius12,
+                                borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
+                                border: Border.all(
+                                  color: AppDesignTokens.neutral200,
+                                  width: 1,
+                                ),
                               ),
                               child: ExpansionTile(
                                 shape: const Border(), // Remove default borders
-                                tilePadding: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16, vertical: 8),
+                                tilePadding: const EdgeInsets.symmetric(
+                                  horizontal: AppDesignTokens.spacing16,
+                                  vertical: AppDesignTokens.spacing12,
+                                ),
                                 title: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: const BoxDecoration(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
                                         gradient: AppDesignTokens.infoGradient,
                                         shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppDesignTokens.info.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      child: const Icon(Icons.description_outlined, color: Colors.white, size: 20),
+                                      child: const Icon(Icons.description_outlined, color: Colors.white, size: 22),
                                     ),
                                     const SizedBox(width: AppDesignTokens.spacing12),
-                                    Text('Task Guide', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(
+                                      '执行指南',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: AppDesignTokens.fontWeightBold,
+                                        color: AppDesignTokens.neutral900,
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 children: [
-                                   Padding(
-                                     padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                                     child: MarkdownBody(
-                                       data: activeTask.guideContent ?? 'No guide available.',
-                                       styleSheet: MarkdownStyleSheet(
-                                         p: Theme.of(context).textTheme.bodyMedium,
-                                       ),
-                                     ),
-                                   ),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+                                    decoration: const BoxDecoration(
+                                      color: AppDesignTokens.neutral50,
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(16),
+                                        bottomRight: Radius.circular(16),
+                                      ),
+                                    ),
+                                    child: MarkdownBody(
+                                      data: activeTask.guideContent ?? '暂无执行指南',
+                                      styleSheet: MarkdownStyleSheet(
+                                        p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: AppDesignTokens.neutral700,
+                                          height: 1.6,
+                                        ),
+                                        h1: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: AppDesignTokens.fontWeightBold,
+                                        ),
+                                        h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: AppDesignTokens.fontWeightBold,
+                                        ),
+                                        code: const TextStyle(
+                                          backgroundColor: AppDesignTokens.neutral100,
+                                          color: AppDesignTokens.primaryDark,
+                                          fontFamily: 'monospace',
+                                          fontSize: AppDesignTokens.fontSizeSm,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -186,31 +261,74 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: AppDesignTokens.borderRadius12,
+                                borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
+                                border: Border.all(
+                                  color: AppDesignTokens.neutral200,
+                                  width: 1,
+                                ),
                               ),
                               child: ExpansionTile(
                                 shape: const Border(),
-                                tilePadding: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16, vertical: 8),
+                                tilePadding: const EdgeInsets.symmetric(
+                                  horizontal: AppDesignTokens.spacing16,
+                                  vertical: AppDesignTokens.spacing12,
+                                ),
                                 title: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: const BoxDecoration(
-                                        gradient: AppDesignTokens.primaryGradient,
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        gradient: AppDesignTokens.secondaryGradient,
                                         shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppDesignTokens.secondaryBase.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                                      child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
                                     ),
                                     const SizedBox(width: AppDesignTokens.spacing12),
-                                    Text('AI Mentor', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'AI 学习助手',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: AppDesignTokens.fontWeightBold,
+                                        color: AppDesignTokens.neutral900,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                children: const [
-                                   Padding(
-                                     padding: EdgeInsets.all(AppDesignTokens.spacing16),
-                                     child: Center(child: Text('Chat UI coming soon...')),
-                                   ),
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+                                    decoration: const BoxDecoration(
+                                      color: AppDesignTokens.neutral50,
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(16),
+                                        bottomRight: Radius.circular(16),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        const Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          size: 48,
+                                          color: AppDesignTokens.neutral400,
+                                        ),
+                                        const SizedBox(height: AppDesignTokens.spacing12),
+                                        Text(
+                                          '聊天功能即将推出',
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: AppDesignTokens.neutral600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -233,7 +351,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           if (_showCelebration)
             Positioned.fill(
               child: Container(
-                color: Colors.black54,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      AppDesignTokens.primaryBase.withOpacity(0.3),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
                 child: SuccessAnimation(
                   playAnimation: true,
                   onAnimationComplete: _onCelebrationComplete,
@@ -241,16 +368,51 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: AppDesignTokens.success, size: 80),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Task Completed!', 
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: AppDesignTokens.successGradient,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppDesignTokens.success.withOpacity(0.5),
+                                blurRadius: 30,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                            size: 80,
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppDesignTokens.spacing24),
                         Text(
-                          '+${activeTask.difficulty * 10} XP',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppDesignTokens.accent),
+                          '任务完成！',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: AppDesignTokens.fontWeightBold,
+                          ),
+                        ),
+                        const SizedBox(height: AppDesignTokens.spacing12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDesignTokens.spacing20,
+                            vertical: AppDesignTokens.spacing8,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: AppDesignTokens.warningGradient,
+                            borderRadius: AppDesignTokens.borderRadius20,
+                            boxShadow: AppDesignTokens.shadowLg,
+                          ),
+                          child: Text(
+                            '+${activeTask.difficulty * 10} 经验值',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: AppDesignTokens.fontWeightBold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -277,39 +439,93 @@ class _BottomControls extends ConsumerWidget {
 
   void _showCompleteDialog(BuildContext context, WidgetRef ref) {
     final noteController = TextEditingController();
+    final minutes = Duration(seconds: elapsedSeconds).inMinutes;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Complete Task'),
-        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDesignTokens.borderRadius20,
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                gradient: AppDesignTokens.successGradient,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: AppDesignTokens.spacing12),
+            const Text(
+              '完成任务',
+              style: TextStyle(
+                fontWeight: AppDesignTokens.fontWeightBold,
+              ),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Time spent: ${Duration(seconds: elapsedSeconds).inMinutes} minutes.'),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.neutral50,
+                borderRadius: AppDesignTokens.borderRadius12,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: AppDesignTokens.primaryBase),
+                  const SizedBox(width: AppDesignTokens.spacing8),
+                  Text(
+                    '用时：$minutes 分钟',
+                    style: const TextStyle(
+                      fontWeight: AppDesignTokens.fontWeightMedium,
+                      color: AppDesignTokens.neutral700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppDesignTokens.spacing16),
             TextField(
               controller: noteController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: '笔记（选填）',
+                hintText: '记录一些学习心得...',
+                border: OutlineInputBorder(
+                  borderRadius: AppDesignTokens.borderRadius12,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AppDesignTokens.borderRadius12,
+                  borderSide: const BorderSide(
+                    color: AppDesignTokens.primaryBase,
+                    width: 2,
+                  ),
+                ),
               ),
               maxLines: 3,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-          ElevatedButton(
+          CustomButton.text(
+            text: '取消',
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          CustomButton.primary(
+            text: '确认完成',
+            icon: Icons.check_rounded,
             onPressed: () {
+              HapticFeedback.heavyImpact();
               Navigator.of(ctx).pop();
-              onComplete(Duration(seconds: elapsedSeconds).inMinutes, noteController.text);
+              onComplete(minutes, noteController.text.trim().isEmpty ? null : noteController.text.trim());
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppDesignTokens.success,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Complete'),
+            customGradient: AppDesignTokens.successGradient,
+            size: ButtonSize.small,
           ),
         ],
       ),

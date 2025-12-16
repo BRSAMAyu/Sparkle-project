@@ -83,7 +83,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
       case TaskType.planning:
         return LinearGradient(colors: [Colors.teal.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
       default:
-        return LinearGradient(colors: [AppDesignTokens.neutral50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return const LinearGradient(colors: [AppDesignTokens.neutral50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
     }
   }
 
@@ -182,19 +182,19 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                   Row(
                                     children: [
                                       if (widget.task.dueDate != null) ...[
-                                        Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
+                                        const Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
                                         const SizedBox(width: 4),
                                         Text(
                                           DateFormat.yMd().format(widget.task.dueDate!),
-                                          style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                          style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                         ),
                                         const SizedBox(width: AppDesignTokens.spacing12),
                                       ],
-                                      Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
+                                      const Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
                                       const SizedBox(width: 4),
                                       Text(
                                         '${widget.task.estimatedMinutes} min',
-                                        style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                        style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                       ),
                                     ],
                                   ),
@@ -269,7 +269,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                            ref.read(taskListProvider.notifier).retryCompleteTask(
                                             widget.task.id, 
                                             widget.task.actualMinutes ?? widget.task.estimatedMinutes, 
-                                            widget.task.userNote
+                                            widget.task.userNote,
                                           );
                                         },
                                         style: ElevatedButton.styleFrom(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 加载指示器类型
 enum LoadingType {
@@ -74,8 +74,7 @@ class LoadingIndicator extends StatelessWidget {
 
   /// 骨架屏加载指示器工厂构造函数
   factory LoadingIndicator.skeleton({
-    Key? key,
-    required SkeletonVariant variant,
+    required SkeletonVariant variant, Key? key,
     int count = 3,
   }) {
     return LoadingIndicator(
@@ -141,10 +140,10 @@ class LoadingIndicator extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           indicator,
-          SizedBox(height: AppDesignTokens.spacing12),
+          const SizedBox(height: AppDesignTokens.spacing12),
           Text(
             loadingText ?? '加载中...',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: AppDesignTokens.fontSizeSm,
               color: AppDesignTokens.neutral600,
             ),
@@ -164,7 +163,7 @@ class LoadingIndicator extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: skeletonCount,
       separatorBuilder: (context, index) =>
-          SizedBox(height: AppDesignTokens.spacing12),
+          const SizedBox(height: AppDesignTokens.spacing12),
       itemBuilder: (context, index) {
         switch (variant) {
           case SkeletonVariant.taskCard:
@@ -194,7 +193,7 @@ class LoadingIndicator extends StatelessWidget {
       color: AppDesignTokens.overlay30,
       child: Center(
         child: Container(
-          padding: EdgeInsets.all(AppDesignTokens.spacing32),
+          padding: const EdgeInsets.all(AppDesignTokens.spacing32),
           decoration: BoxDecoration(
             gradient: AppDesignTokens.cardGradientNeutral,
             borderRadius: AppDesignTokens.borderRadius20,
@@ -222,10 +221,10 @@ class LoadingIndicator extends StatelessWidget {
                 ),
               ),
               if (loadingText != null) ...[
-                SizedBox(height: AppDesignTokens.spacing20),
+                const SizedBox(height: AppDesignTokens.spacing20),
                 Text(
                   loadingText!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeBase,
                     fontWeight: AppDesignTokens.fontWeightMedium,
                     color: AppDesignTokens.neutral900,
@@ -292,7 +291,7 @@ class TaskCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ShimmerWrapper(
       child: Container(
-        padding: EdgeInsets.all(AppDesignTokens.spacing16),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: AppDesignTokens.borderRadius16,
@@ -309,8 +308,8 @@ class TaskCardSkeleton extends StatelessWidget {
                   height: 40.0,
                   borderRadius: AppDesignTokens.borderRadius4,
                 ),
-                SizedBox(width: AppDesignTokens.spacing12),
-                Expanded(
+                const SizedBox(width: AppDesignTokens.spacing12),
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -328,7 +327,7 @@ class TaskCardSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             // 标签行
             Row(
               children: [
@@ -337,7 +336,7 @@ class TaskCardSkeleton extends StatelessWidget {
                   height: 24.0,
                   borderRadius: AppDesignTokens.borderRadius12,
                 ),
-                SizedBox(width: AppDesignTokens.spacing8),
+                const SizedBox(width: AppDesignTokens.spacing8),
                 _SkeletonBox(
                   width: 80.0,
                   height: 24.0,
@@ -365,7 +364,7 @@ class ChatBubbleSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ShimmerWrapper(
       child: Padding(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
           vertical: AppDesignTokens.spacing8,
         ),
@@ -380,16 +379,16 @@ class ChatBubbleSkeleton extends StatelessWidget {
                 height: 40.0,
                 borderRadius: AppDesignTokens.borderRadiusFull,
               ),
-              SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: AppDesignTokens.spacing12),
             ],
             Flexible(
               child: Container(
-                padding: EdgeInsets.all(AppDesignTokens.spacing12),
+                padding: const EdgeInsets.all(AppDesignTokens.spacing12),
                 decoration: BoxDecoration(
                   color: AppDesignTokens.neutral200,
                   borderRadius: AppDesignTokens.borderRadius16,
                 ),
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _SkeletonBox(
@@ -411,7 +410,7 @@ class ChatBubbleSkeleton extends StatelessWidget {
               ),
             ),
             if (isUser) ...[
-              SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: AppDesignTokens.spacing12),
               _SkeletonBox(
                 width: 40.0,
                 height: 40.0,
@@ -433,7 +432,7 @@ class ProfileCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ShimmerWrapper(
       child: Container(
-        padding: EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: AppDesignTokens.borderRadius20,
@@ -447,19 +446,19 @@ class ProfileCardSkeleton extends StatelessWidget {
               height: 80.0,
               borderRadius: AppDesignTokens.borderRadiusFull,
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             // 用户名
-            _SkeletonBox(
+            const _SkeletonBox(
               width: 120.0,
               height: 20.0,
             ),
-            SizedBox(height: AppDesignTokens.spacing8),
+            const SizedBox(height: AppDesignTokens.spacing8),
             // 邮箱
-            _SkeletonBox(
+            const _SkeletonBox(
               width: 180.0,
               height: 14.0,
             ),
-            SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: AppDesignTokens.spacing24),
             // 统计数据行
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -476,7 +475,7 @@ class ProfileCardSkeleton extends StatelessWidget {
   }
 
   Widget _buildStatSkeleton() {
-    return Column(
+    return const Column(
       children: [
         _SkeletonBox(
           width: 40.0,
@@ -500,7 +499,7 @@ class ListItemSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ShimmerWrapper(
       child: Padding(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
           vertical: AppDesignTokens.spacing12,
         ),
@@ -511,8 +510,8 @@ class ListItemSkeleton extends StatelessWidget {
               height: 48.0,
               borderRadius: AppDesignTokens.borderRadius12,
             ),
-            SizedBox(width: AppDesignTokens.spacing12),
-            Expanded(
+            const SizedBox(width: AppDesignTokens.spacing12),
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

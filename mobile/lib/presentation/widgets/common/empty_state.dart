@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/design/design_tokens.dart';
-import 'custom_button.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 空状态场景类型
 enum EmptyStateType {
@@ -204,29 +204,29 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppDesignTokens.spacing32),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             // 图标
             if (showIcon) _buildIcon(),
-            if (showIcon) SizedBox(height: AppDesignTokens.spacing24),
+            if (showIcon) const SizedBox(height: AppDesignTokens.spacing24),
             // 标题
             Text(
               title ?? _getDefaultTitle(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSize2xl,
                 fontWeight: AppDesignTokens.fontWeightBold,
                 color: AppDesignTokens.neutral900,
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: AppDesignTokens.spacing12),
             // 描述
             Text(
               description ?? _getDefaultDescription(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeBase,
                 color: AppDesignTokens.neutral600,
                 height: AppDesignTokens.lineHeightNormal,
@@ -235,7 +235,7 @@ class EmptyState extends StatelessWidget {
             ),
             // 操作按钮
             if (customAction != null || (actionText != null && onAction != null)) ...[
-              SizedBox(height: AppDesignTokens.spacing32),
+              const SizedBox(height: AppDesignTokens.spacing32),
               customAction ??
                   CustomButton.primary(
                     text: actionText!,
@@ -296,8 +296,7 @@ class CompactEmptyState extends StatelessWidget {
   final String? actionText;
 
   const CompactEmptyState({
-    super.key,
-    required this.message,
+    required this.message, super.key,
     this.icon,
     this.onAction,
     this.actionText,
@@ -306,7 +305,7 @@ class CompactEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppDesignTokens.spacing24),
+      padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -314,7 +313,7 @@ class CompactEmptyState extends StatelessWidget {
             Container(
               width: 64.0,
               height: 64.0,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppDesignTokens.neutral100,
                 shape: BoxShape.circle,
               ),
@@ -324,18 +323,18 @@ class CompactEmptyState extends StatelessWidget {
                 color: AppDesignTokens.neutral400,
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
           ],
           Text(
             message,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: AppDesignTokens.fontSizeBase,
               color: AppDesignTokens.neutral600,
             ),
             textAlign: TextAlign.center,
           ),
           if (onAction != null && actionText != null) ...[
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             CustomButton.text(
               text: actionText!,
               onPressed: onAction,

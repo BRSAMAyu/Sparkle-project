@@ -11,14 +11,14 @@ class EmptyState extends StatelessWidget {
   final String actionButtonText;
 
   const EmptyState({
-    Key? key,
+    super.key,
     required this.message,
     this.title,
     this.icon,
     this.imagePath,
     this.onActionPressed,
     this.actionButtonText = 'Take Action',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +37,21 @@ class EmptyState extends StatelessWidget {
                 height: AppDesignTokens.iconSize3xl, // Use a larger size for images
                 width: AppDesignTokens.iconSize3xl,
               ),
-              SizedBox(height: AppDesignTokens.spacing16),
+              const SizedBox(height: AppDesignTokens.spacing16),
             ] else if (icon != null) ...[
               Icon(
                 icon,
                 size: AppDesignTokens.iconSize3xl,
                 color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
-              SizedBox(height: AppDesignTokens.spacing16),
+              const SizedBox(height: AppDesignTokens.spacing16),
             ],
             Text(
               title ?? 'No Content Here',
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: AppDesignTokens.spacing8),
+            const SizedBox(height: AppDesignTokens.spacing8),
             Text(
               message,
               style: theme.textTheme.bodyLarge?.copyWith(
@@ -60,7 +60,7 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             if (onActionPressed != null) ...[
-              SizedBox(height: AppDesignTokens.spacing24),
+              const SizedBox(height: AppDesignTokens.spacing24),
               CustomButton(
                 text: actionButtonText,
                 onPressed: onActionPressed,

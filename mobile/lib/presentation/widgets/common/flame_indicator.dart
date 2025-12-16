@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../../core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 火焰等级指示器组件
 ///
@@ -29,9 +29,7 @@ class FlameIndicator extends StatefulWidget {
   final VoidCallback? onTap;
 
   const FlameIndicator({
-    super.key,
-    required this.level,
-    required this.brightness,
+    required this.level, required this.brightness, super.key,
     this.size = 120.0,
     this.showLabel = true,
     this.animate = true,
@@ -183,7 +181,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
           ),
           // 标签
           if (widget.showLabel) ...[
-            SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: AppDesignTokens.spacing12),
             _buildLabel(),
           ],
         ],
@@ -236,10 +234,10 @@ class _FlameIndicatorState extends State<FlameIndicator>
               size: AppDesignTokens.iconSizeSm,
               color: _getFlameColor(),
             ),
-            SizedBox(width: AppDesignTokens.spacing4),
+            const SizedBox(width: AppDesignTokens.spacing4),
             Text(
               'Lv.${widget.level}',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeLg,
                 fontWeight: AppDesignTokens.fontWeightBold,
                 color: AppDesignTokens.neutral900,
@@ -247,11 +245,11 @@ class _FlameIndicatorState extends State<FlameIndicator>
             ),
           ],
         ),
-        SizedBox(height: AppDesignTokens.spacing4),
+        const SizedBox(height: AppDesignTokens.spacing4),
         // 亮度
         Text(
           '亮度 ${widget.brightness}%',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: AppDesignTokens.fontSizeSm,
             color: AppDesignTokens.neutral600,
           ),
@@ -344,9 +342,7 @@ class CompactFlameIndicator extends StatelessWidget {
   final VoidCallback? onTap;
 
   const CompactFlameIndicator({
-    super.key,
-    required this.level,
-    required this.brightness,
+    required this.level, required this.brightness, super.key,
     this.onTap,
   });
 
@@ -367,7 +363,7 @@ class CompactFlameIndicator extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing12,
           vertical: AppDesignTokens.spacing8,
         ),
@@ -387,14 +383,14 @@ class CompactFlameIndicator extends StatelessWidget {
               size: AppDesignTokens.iconSizeSm,
               color: _getFlameColor(),
             ),
-            SizedBox(width: AppDesignTokens.spacing8),
+            const SizedBox(width: AppDesignTokens.spacing8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Lv.$level',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeSm,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     color: AppDesignTokens.neutral900,
@@ -402,7 +398,7 @@ class CompactFlameIndicator extends StatelessWidget {
                 ),
                 Text(
                   '$brightness%',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeXs,
                     color: AppDesignTokens.neutral600,
                   ),

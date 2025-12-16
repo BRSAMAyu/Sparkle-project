@@ -7,10 +7,10 @@ class LoadingIndicator extends StatelessWidget {
   final bool isLoading;
 
   const LoadingIndicator({
-    Key? key,
+    super.key,
     this.skeletonChild,
     required this.isLoading,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

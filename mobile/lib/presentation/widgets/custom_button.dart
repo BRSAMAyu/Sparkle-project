@@ -23,7 +23,7 @@ class CustomButton extends StatelessWidget {
   final Widget? trailingIcon;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.variant = CustomButtonVariant.primary,
@@ -31,7 +31,7 @@ class CustomButton extends StatelessWidget {
     this.isDisabled = false,
     this.leadingIcon,
     this.trailingIcon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +43,14 @@ class CustomButton extends StatelessWidget {
     Color? overlayColor;
     BorderSide? borderSide;
     List<BoxShadow>? shadows;
-    TextStyle textStyle = theme.textTheme.labelLarge!.copyWith(
+    final TextStyle textStyle = theme.textTheme.labelLarge!.copyWith(
       fontWeight: AppDesignTokens.fontWeightSemibold,
     );
-    EdgeInsetsGeometry padding = EdgeInsets.symmetric(
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
       horizontal: AppDesignTokens.spacing24,
       vertical: AppDesignTokens.spacing12,
     );
-    BorderRadiusGeometry borderRadius = AppDesignTokens.borderRadius8;
+    final BorderRadiusGeometry borderRadius = AppDesignTokens.borderRadius8;
 
     switch (variant) {
       case CustomButtonVariant.primary:
@@ -72,7 +72,7 @@ class CustomButton extends StatelessWidget {
       case CustomButtonVariant.text:
         backgroundColor = Colors.transparent;
         foregroundColor = theme.primaryColor;
-        padding = EdgeInsets.symmetric(
+        padding = const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
           vertical: AppDesignTokens.spacing8,
         );
@@ -101,7 +101,7 @@ class CustomButton extends StatelessWidget {
           : backgroundColor.withOpacity(AppDesignTokens.opacityDisabled);
       foregroundColor = foregroundColor.withOpacity(AppDesignTokens.opacityDisabled);
       borderSide = borderSide?.copyWith(
-          color: borderSide.color.withOpacity(AppDesignTokens.opacityDisabled));
+          color: borderSide.color.withOpacity(AppDesignTokens.opacityDisabled),);
       shadows = null; // No shadows when disabled
     }
 
@@ -142,7 +142,7 @@ class CustomButton extends StatelessWidget {
                   )
                 else if (leadingIcon != null)
                   Padding(
-                    padding: EdgeInsets.only(right: AppDesignTokens.spacing8),
+                    padding: const EdgeInsets.only(right: AppDesignTokens.spacing8),
                     child: IconTheme(
                       data: IconThemeData(color: foregroundColor, size: textStyle.fontSize),
                       child: leadingIcon!,
@@ -154,7 +154,7 @@ class CustomButton extends StatelessWidget {
                 ),
                 if (!isLoading && trailingIcon != null)
                   Padding(
-                    padding: EdgeInsets.only(left: AppDesignTokens.spacing8),
+                    padding: const EdgeInsets.only(left: AppDesignTokens.spacing8),
                     child: IconTheme(
                       data: IconThemeData(color: foregroundColor, size: textStyle.fontSize),
                       child: trailingIcon!,

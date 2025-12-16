@@ -207,7 +207,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 8.0),
                                     child: ActionCard(action: action),
-                                  )
+                                  ),
                                 ).toList(),
                               ),
                             ),

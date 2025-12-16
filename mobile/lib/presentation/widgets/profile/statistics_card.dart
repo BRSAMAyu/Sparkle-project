@@ -22,7 +22,7 @@ class StatisticsCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [Colors.white, AppDesignTokens.neutral50],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

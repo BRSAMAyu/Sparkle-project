@@ -116,7 +116,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing24,
           vertical: AppDesignTokens.spacing12,
         ),
@@ -131,7 +131,7 @@ class AppThemes {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
           vertical: AppDesignTokens.spacing8,
         ),
@@ -146,7 +146,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing24,
           vertical: AppDesignTokens.spacing12,
         ),
@@ -157,11 +157,11 @@ class AppThemes {
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
-        borderSide: BorderSide(color: AppDesignTokens.neutral300),
+        borderSide: const BorderSide(color: AppDesignTokens.neutral300),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
-        borderSide: BorderSide(color: AppDesignTokens.neutral300),
+        borderSide: const BorderSide(color: AppDesignTokens.neutral300),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
@@ -169,7 +169,7 @@ class AppThemes {
       ),
       filled: true,
       fillColor: AppDesignTokens.neutral50,
-      contentPadding: EdgeInsets.all(AppDesignTokens.spacing16),
+      contentPadding: const EdgeInsets.all(AppDesignTokens.spacing16),
     ),
 
     // Chip theme
@@ -177,7 +177,7 @@ class AppThemes {
       backgroundColor: AppDesignTokens.neutral100,
       selectedColor: AppColors.primary,
       labelStyle: const TextStyle(fontSize: AppDesignTokens.fontSizeSm),
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppDesignTokens.spacing12,
         vertical: AppDesignTokens.spacing4,
       ),
@@ -341,7 +341,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing24,
           vertical: AppDesignTokens.spacing12,
         ),
@@ -356,7 +356,7 @@ class AppThemes {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
           vertical: AppDesignTokens.spacing8,
         ),
@@ -371,7 +371,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing24,
           vertical: AppDesignTokens.spacing12,
         ),
@@ -382,11 +382,11 @@ class AppThemes {
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
-        borderSide: BorderSide(color: AppDesignTokens.neutral700),
+        borderSide: const BorderSide(color: AppDesignTokens.neutral700),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
-        borderSide: BorderSide(color: AppDesignTokens.neutral700),
+        borderSide: const BorderSide(color: AppDesignTokens.neutral700),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppDesignTokens.borderRadius8,
@@ -394,7 +394,7 @@ class AppThemes {
       ),
       filled: true,
       fillColor: AppDesignTokens.neutral800,
-      contentPadding: EdgeInsets.all(AppDesignTokens.spacing16),
+      contentPadding: const EdgeInsets.all(AppDesignTokens.spacing16),
     ),
 
     // Chip theme
@@ -402,7 +402,7 @@ class AppThemes {
       backgroundColor: AppDesignTokens.neutral800,
       selectedColor: AppColors.primary,
       labelStyle: const TextStyle(fontSize: AppDesignTokens.fontSizeSm),
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppDesignTokens.spacing12,
         vertical: AppDesignTokens.spacing4,
       ),

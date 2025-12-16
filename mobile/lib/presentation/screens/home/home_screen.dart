@@ -240,23 +240,23 @@ class _FlameStatusCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppDesignTokens.spacing12),
-                  Row(
+                  const Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.trending_up_rounded,
                         size: AppDesignTokens.iconSizeSm,
                         color: Colors.white70,
                       ),
-                      const SizedBox(width: AppDesignTokens.spacing4),
-                      const Text(
+                      SizedBox(width: AppDesignTokens.spacing4),
+                      Text(
                         '持续学习中',
                         style: TextStyle(
                           fontSize: AppDesignTokens.fontSizeSm,
                           color: Colors.white70,
                         ),
                       ),
-                      const Spacer(),
-                      const Icon(
+                      Spacer(),
+                      Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: AppDesignTokens.iconSizeSm,
                         color: Colors.white54,

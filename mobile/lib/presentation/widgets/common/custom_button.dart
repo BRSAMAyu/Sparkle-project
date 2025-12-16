@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 按钮变体类型
 enum ButtonVariant {
@@ -65,9 +65,7 @@ class CustomButton extends StatefulWidget {
 
   /// 主要按钮工厂构造函数
   factory CustomButton.primary({
-    Key? key,
-    required String text,
-    required VoidCallback? onPressed,
+    required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
     ButtonSize size = ButtonSize.medium,
     bool isLoading = false,
@@ -89,9 +87,7 @@ class CustomButton extends StatefulWidget {
 
   /// 次要按钮工厂构造函数
   factory CustomButton.secondary({
-    Key? key,
-    required String text,
-    required VoidCallback? onPressed,
+    required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
     ButtonSize size = ButtonSize.medium,
     bool isLoading = false,
@@ -111,9 +107,7 @@ class CustomButton extends StatefulWidget {
 
   /// 文字按钮工厂构造函数
   factory CustomButton.text({
-    Key? key,
-    required String text,
-    required VoidCallback? onPressed,
+    required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
     ButtonSize size = ButtonSize.medium,
     bool isLoading = false,
@@ -132,9 +126,7 @@ class CustomButton extends StatefulWidget {
 
   /// 图标按钮工厂构造函数
   factory CustomButton.icon({
-    Key? key,
-    required IconData icon,
-    required VoidCallback? onPressed,
+    required IconData icon, required VoidCallback? onPressed, Key? key,
     ButtonSize size = ButtonSize.medium,
     bool isLoading = false,
     bool isCircular = true,
@@ -336,7 +328,7 @@ class _CustomButtonState extends State<CustomButton>
         onTap: isDisabled ? null : widget.onPressed,
         borderRadius: AppDesignTokens.borderRadius8,
         child: Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: AppDesignTokens.spacing12,
           ),
           child: _buildButtonRow(
@@ -418,7 +410,7 @@ class _CustomButtonState extends State<CustomButton>
         ),
       );
       if (widget.text != null) {
-        children.add(SizedBox(width: AppDesignTokens.spacing8));
+        children.add(const SizedBox(width: AppDesignTokens.spacing8));
       }
     } else if (widget.icon != null) {
       children.add(
@@ -429,7 +421,7 @@ class _CustomButtonState extends State<CustomButton>
         ),
       );
       if (widget.text != null) {
-        children.add(SizedBox(width: AppDesignTokens.spacing8));
+        children.add(const SizedBox(width: AppDesignTokens.spacing8));
       }
     }
 
