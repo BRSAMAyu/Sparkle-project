@@ -33,6 +33,7 @@ dependencies:
   intl: ^0.18.1
   uuid: ^4.2.2
   logger: ^2.0.2+1
+  url_launcher: ^6.2.2
 
   # Navigation
   go_router: ^13.0.0

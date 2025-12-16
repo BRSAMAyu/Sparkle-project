@@ -113,42 +113,85 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                             child: ClipRRect(
                               borderRadius: _getBorderRadius(isUser),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0), 
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      MarkdownBody(
-                                        data: widget.message.content,
-                                        styleSheet: MarkdownStyleSheet(
-                                          p: TextStyle(
-                                            color: isUser ? Colors.white : AppDesignTokens.neutral900,
-                                            fontSize: AppDesignTokens.fontSizeBase,
-                                            height: 1.5,
+                                filter: isUser ? ImageFilter.blur(sigmaX: 0, sigmaY: 0) : ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  decoration: isUser ? null : BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.white.withOpacity(0.9),
+                                        Colors.white.withOpacity(0.95),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        MarkdownBody(
+                                          data: widget.message.content,
+                                          styleSheet: MarkdownStyleSheet(
+                                            p: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              fontSize: AppDesignTokens.fontSizeBase,
+                                              height: AppDesignTokens.lineHeightNormal,
+                                            ),
+                                            h1: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              fontSize: AppDesignTokens.fontSize2xl,
+                                              fontWeight: AppDesignTokens.fontWeightBold,
+                                            ),
+                                            h2: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              fontSize: AppDesignTokens.fontSizeXl,
+                                              fontWeight: AppDesignTokens.fontWeightBold,
+                                            ),
+                                            h3: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              fontSize: AppDesignTokens.fontSizeLg,
+                                              fontWeight: AppDesignTokens.fontWeightSemibold,
+                                            ),
+                                            code: TextStyle(
+                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : AppDesignTokens.neutral200,
+                                              fontFamily: 'monospace',
+                                              fontSize: AppDesignTokens.fontSizeSm,
+                                              color: isUser ? Colors.white : AppDesignTokens.secondaryBase,
+                                            ),
+                                            codeblockDecoration: BoxDecoration(
+                                              color: isUser ? Colors.white.withOpacity(0.1) : AppDesignTokens.neutral900,
+                                              borderRadius: AppDesignTokens.borderRadius12,
+                                            ),
+                                            codeblockPadding: const EdgeInsets.all(AppDesignTokens.spacing12),
+                                            blockquote: TextStyle(
+                                              color: isUser ? Colors.white.withOpacity(0.8) : AppDesignTokens.neutral600,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                            blockquoteDecoration: BoxDecoration(
+                                              border: Border(
+                                                left: BorderSide(
+                                                  color: isUser ? Colors.white.withOpacity(0.5) : AppDesignTokens.primaryBase,
+                                                  width: 3.0,
+                                                ),
+                                              ),
+                                            ),
+                                            a: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.primaryBase,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                            listBullet: TextStyle(
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral700,
+                                            ),
                                           ),
-                                          code: TextStyle(
-                                            backgroundColor: isUser ? Colors.white24 : AppDesignTokens.neutral100,
-                                            fontFamily: 'monospace',
-                                            fontSize: AppDesignTokens.fontSizeSm,
-                                            color: isUser ? Colors.white : AppDesignTokens.neutral800,
-                                          ),
-                                          codeblockDecoration: BoxDecoration(
-                                            color: isUser ? Colors.white12 : AppDesignTokens.neutral100,
-                                            borderRadius: AppDesignTokens.borderRadius8,
-                                          ),
-                                          blockquote: TextStyle(
-                                            color: isUser ? Colors.white70 : AppDesignTokens.neutral600,
-                                            fontStyle: FontStyle.italic,
-                                          ),
+                                          onTapLink: (text, href, title) {
+                                            if (href != null) {
+                                              launchUrl(Uri.parse(href));
+                                            }
+                                          },
                                         ),
-                                        onTapLink: (text, href, title) {
-                                          if (href != null) {
-                                            launchUrl(Uri.parse(href));
-                                          }
-                                        },
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

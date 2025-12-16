@@ -5,7 +5,7 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
-import 'package:sparkle/presentation/widgets/empty_state.dart';
+import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -79,9 +79,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'AI Learning Assistant',
-              style: TextStyle(color: AppDesignTokens.neutral900, fontWeight: FontWeight.bold),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'AI学习助手',
+                  style: TextStyle(
+                    color: AppDesignTokens.neutral900,
+                    fontWeight: AppDesignTokens.fontWeightBold,
+                    fontSize: AppDesignTokens.fontSizeBase,
+                  ),
+                ),
+                Text(
+                  '随时为你解答',
+                  style: TextStyle(
+                    color: AppDesignTokens.neutral600,
+                    fontSize: AppDesignTokens.fontSizeXs,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -109,13 +126,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Expanded(
                 child: messages.isEmpty
                     ? Center(
-                        child: EmptyState(
-                          message: 'Ask me anything to start your learning journey!',
-                          title: 'Hello there!',
-                          icon: Icons.chat_bubble_outline,
-                          actionButtonText: 'Start a Topic',
-                          onActionPressed: () {
-                             // Maybe define starter prompts here
+                        child: EmptyState.noChats(
+                          onStartChat: () {
+                            // Show quick starter prompts
                           },
                         ),
                       )
