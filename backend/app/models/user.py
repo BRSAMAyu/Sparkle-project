@@ -2,7 +2,7 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
-from sqlalchemy import Column, String, Integer, Float, Boolean, Index
+from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -47,6 +47,9 @@ class User(BaseModel):
     # 用户偏好
     depth_preference = Column(Float, default=0.5, nullable=False)
     curiosity_preference = Column(Float, default=0.5, nullable=False)
+    
+    # 🆕 碎片时间/日程偏好 {"commute_time": ["08:00", "09:00"], "lunch_break": ...}
+    schedule_preferences = Column(JSON, nullable=True)
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)

@@ -11,6 +11,7 @@ from app.models.error_record import ErrorRecord
 from app.models.job import Job, JobType, JobStatus
 from app.models.subject import Subject
 from app.models.idempotency_key import IdempotencyKey
+from app.models.notification import Notification
 
 __all__ = [
     "BaseModel",
@@ -29,4 +30,5 @@ __all__ = [
     "JobStatus",
     "Subject",
     "IdempotencyKey",
+    "Notification",
 ]

@@ -11,6 +11,7 @@ from app.db.session import AsyncSessionLocal
 from app.db.init_db import init_db
 from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
+from app.services.scheduler_service import scheduler_service
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from app.api.v1.router import api_router
@@ -36,6 +37,9 @@ async def lifespan(app: FastAPI):
             # 🆕 2. 加载学科缓存
             subject_service = SubjectService()
             await subject_service.load_cache(db)
+
+            # 🆕 3. 启动定时任务调度器
+            scheduler_service.start()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
