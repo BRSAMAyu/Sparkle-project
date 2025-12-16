@@ -13,6 +13,7 @@ from app.services.subject_service import SubjectService
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from app.api.v1.router import api_router
+from app.api.v1.health import set_start_time
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
+    set_start_time()  # 记录启动时间
     
     async with AsyncSessionLocal() as db:
         try:
@@ -78,8 +80,15 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+    """
+    简单健康检查端点
+
+    完整的健康检查请访问 /api/v1/health
+    """
+    return {
+        "status": "healthy",
+        "detail": "For detailed health info, use /api/v1/health"
+    }
 
 
 # Include API routers
