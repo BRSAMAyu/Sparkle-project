@@ -5,7 +5,7 @@ Task Model - 学习任务卡片系统
 import enum
 from sqlalchemy import (
     Column, String, Integer, Text, Enum,
-    ForeignKey, DateTime, Date, Index, JSON
+    ForeignKey, DateTime, Date, Index, JSON, Boolean
 )
 from sqlalchemy.orm import relationship
 
@@ -90,9 +90,14 @@ class Task(BaseModel):
     priority = Column(Integer, default=0, nullable=False)
     due_date = Column(Date, nullable=True)
 
+    # Knowledge Galaxy Integration
+    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
+    auto_expand_enabled = Column(Boolean, default=True)
+
     # 关系定义
     user = relationship("User", back_populates="tasks")
     plan = relationship("Plan", back_populates="tasks")
+    knowledge_node = relationship("KnowledgeNode")
     chat_messages = relationship(
         "ChatMessage",
         back_populates="task",

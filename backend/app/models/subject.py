@@ -3,7 +3,7 @@
 Subject Model - 用于规范化错误档案中的学科分类
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, Integer, JSON, DateTime
+from sqlalchemy import Column, String, Boolean, Integer, JSON, DateTime, Float
 
 from app.db.session import Base
 
@@ -38,6 +38,15 @@ class Subject(Base):
     # 星域色调 (Hex Color)
     hex_color = Column(String(7), nullable=True)
     # 例如: "#FF5733"
+
+    # 星域辉光色 (Glow Color)
+    glow_color = Column(String(7), nullable=True)
+
+    # 星域基准角度 (0-360)
+    position_angle = Column(Float, nullable=True)
+
+    # 星域图标
+    icon_name = Column(String(50), nullable=True)
 
     # 是否启用
     is_active = Column(Boolean, default=True, index=True)
