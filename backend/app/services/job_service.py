@@ -125,7 +125,7 @@ class JobService:
         logger.info(f"Starting execution for job {job_id}")
         try:
             # 获取新的 DB session
-            async with async_session_maker() as db:
+            async with AsyncSessionLocal() as db:
                 # 标记为 Running
                 result = await db.execute(select(Job).where(Job.id == job_id))
                 job = result.scalar_one_or_none()
@@ -149,7 +149,7 @@ class JobService:
         except Exception as e:
             logger.exception(f"Job {job_id} execution failed: {e}")
             # 更新任务状态为失败
-            async with async_session_maker() as db:
+            async with AsyncSessionLocal() as db:
                 await db.execute(
                     update(Job)
                     .where(Job.id == job_id)

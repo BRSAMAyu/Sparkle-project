@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.config import settings
 from app.db.session import AsyncSessionLocal
+from app.db.init_db import init_db
 from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.core.idempotency import get_idempotency_store
@@ -25,6 +26,9 @@ async def lifespan(app: FastAPI):
     
     async with AsyncSessionLocal() as db:
         try:
+            # 🆕 0. 初始化数据库数据
+            await init_db(db)
+
             # 🆕 1. 恢复中断的 Job
             job_service = JobService()
             await job_service.startup_recovery(db)
