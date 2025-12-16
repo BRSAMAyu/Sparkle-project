@@ -19,6 +19,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       updatedAt: DateTime.parse(json['updated_at'] as String),
       nickname: json['nickname'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
+      schedulePreferences:
+          json['schedule_preferences'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -32,6 +34,7 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'depth_preference': instance.depthPreference,
       'curiosity_preference': instance.curiosityPreference,
       'is_active': instance.isActive,
+      'schedule_preferences': instance.schedulePreferences,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

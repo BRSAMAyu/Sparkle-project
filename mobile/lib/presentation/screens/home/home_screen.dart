@@ -7,20 +7,8 @@ import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
-import 'package:sparkle/presentation/widgets/common/empty_state.dart';
-import 'package:sparkle/presentation/widgets/common/error_widget.dart';
-import 'package:sparkle/presentation/widgets/common/flame_indicator.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
-import 'package:sparkle/presentation/widgets/task/task_card.dart';
-import 'package:sparkle/presentation/widgets/common/custom_button.dart';
-import 'package:go_router/go_router.dart';
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
+// ... imports ...
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
@@ -29,8 +17,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _DashboardTab(),
     TaskListScreen(),
     ChatScreen(),
-    GrowthScreen(), // Using GrowthScreen as a placeholder for a combined plan screen
-    Text('Profile Screen Placeholder'), // Placeholder
+    GrowthScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -115,58 +103,90 @@ class _DashboardTab extends ConsumerWidget {
   }
 
   Widget _buildGradientAppBar(BuildContext context, dynamic user) {
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = '早上好';
-    } else if (hour < 18) {
-      greeting = '下午好';
-    } else {
-      greeting = '晚上好';
-    }
+    // Need a ref to watch providers, but _DashboardTab is the ConsumerWidget, this is just a method.
+    // However, _DashboardTab calls this method and passes context.
+    // We cannot access 'ref' easily inside this method unless passed.
+    // So I will change the signature to accept 'ref'.
+    // BUT _DashboardTab calls it: `_buildGradientAppBar(context, user)`.
+    // I need to update the call site first?
+    // No, I can use Consumer(builder: ...) inside the widget if I want, or just pass ref.
+    
+    // Let's rely on the fact that I will change the call site in the NEXT step.
+    return Consumer(
+      builder: (context, ref, child) {
+        final hour = DateTime.now().hour;
+        String greeting;
+        if (hour < 12) {
+          greeting = '早上好';
+        } else if (hour < 18) {
+          greeting = '下午好';
+        } else {
+          greeting = '晚上好';
+        }
 
-    return SliverAppBar(
-      expandedHeight: 120.0,
-      floating: false,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: AppDesignTokens.primaryGradient,
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDesignTokens.spacing20,
-                vertical: AppDesignTokens.spacing16,
+        final unreadCountAsync = ref.watch(unreadNotificationsProvider);
+        final unreadCount = unreadCountAsync.value?.length ?? 0;
+
+        return SliverAppBar(
+          expandedHeight: 120.0,
+          floating: false,
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Container(
+              decoration: const BoxDecoration(
+                gradient: AppDesignTokens.primaryGradient,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    greeting,
-                    style: const TextStyle(
-                      fontSize: AppDesignTokens.fontSizeLg,
-                      color: Colors.white70,
-                      fontWeight: AppDesignTokens.fontWeightMedium,
-                    ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDesignTokens.spacing20,
+                    vertical: AppDesignTokens.spacing16,
                   ),
-                  const SizedBox(height: AppDesignTokens.spacing4),
-                  Text(
-                    user?.nickname ?? user?.username ?? '学习者',
-                    style: const TextStyle(
-                      fontSize: AppDesignTokens.fontSize3xl,
-                      color: Colors.white,
-                      fontWeight: AppDesignTokens.fontWeightBold,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            greeting,
+                            style: const TextStyle(
+                              fontSize: AppDesignTokens.fontSizeLg,
+                              color: Colors.white70,
+                              fontWeight: AppDesignTokens.fontWeightMedium,
+                            ),
+                          ),
+                          const SizedBox(height: AppDesignTokens.spacing4),
+                          Text(
+                            user?.nickname ?? user?.username ?? '学习者',
+                            style: const TextStyle(
+                              fontSize: AppDesignTokens.fontSize3xl,
+                              color: Colors.white,
+                              fontWeight: AppDesignTokens.fontWeightBold,
+                            ),
+                          ),
+                        ],
+                      ),
+                       IconButton(
+                        onPressed: () {
+                           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationListScreen()));
+                        },
+                        icon: Badge(
+                          isLabelVisible: unreadCount > 0,
+                          label: Text('$unreadCount'),
+                          child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
 }

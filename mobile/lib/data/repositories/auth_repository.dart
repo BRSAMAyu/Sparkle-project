@@ -95,6 +95,17 @@ class AuthRepository {
     }
   }
 
+  Future<UserModel> updateProfile(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiClient.put(ApiEndpoints.me, data: data);
+      return UserModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw e.response?.data['detail'] ?? 'Could not update profile.';
+    } catch (e) {
+      throw 'An unexpected error occurred';
+    }
+  }
+
   Future<void> saveTokens(TokenResponse tokenResponse) async {
     await _prefs.setString(_accessTokenKey, tokenResponse.accessToken);
     await _prefs.setString(_refreshTokenKey, tokenResponse.refreshToken);

@@ -20,6 +20,8 @@ class UserModel {
   final double curiosityPreference;
   @JsonKey(name: 'is_active')
   final bool isActive;
+  @JsonKey(name: 'schedule_preferences')
+  final Map<String, dynamic>? schedulePreferences;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -31,6 +33,7 @@ class UserModel {
     required this.email,
     required this.flameLevel, required this.flameBrightness, required this.depthPreference, required this.curiosityPreference, required this.isActive, required this.createdAt, required this.updatedAt, this.nickname,
     this.avatarUrl,
+    this.schedulePreferences,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
