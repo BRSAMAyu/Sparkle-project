@@ -16,6 +16,7 @@ from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from app.api.v1.router import api_router
 from app.api.v1.health import set_start_time
+from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,16 +41,23 @@ async def lifespan(app: FastAPI):
 
             # 🆕 3. 启动定时任务调度器
             scheduler_service.start()
+
+            # 🆕 4. 启动知识拓展后台任务
+            await start_expansion_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
-    
+
     logger.info("Sparkle API Server started successfully")
     
     yield
     
     # ==================== 关闭时 ====================
     logger.info("Shutting down Sparkle API Server...")
+
+    # 停止知识拓展后台任务
+    await stop_expansion_worker()
+
     logger.info("Sparkle API Server stopped")
 
 # Create FastAPI application

@@ -1,0 +1,46 @@
+{
+  "sector": "TECH",
+  "subject_name": "计算机科学",
+  "nodes": [
+    {
+      "name": "Python基础",
+      "name_en": "Python Basics",
+      "description": "Python编程语言的基础语法、数据类型和控制结构",
+      "importance_level": 2,
+      "is_seed": true,
+      "keywords": ["Python", "编程", "语法", "基础"]
+    },
+    {
+      "name": "数据结构",
+      "name_en": "Data Structures",
+      "description": "常用数据结构：数组、链表、栈、队列、树、图等",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["数据结构", "算法", "数组", "链表", "树"]
+    },
+    {
+      "name": "算法设计",
+      "name_en": "Algorithm Design",
+      "description": "算法设计策略：分治、动态规划、贪心、回溯等",
+      "importance_level": 4,
+      "is_seed": true,
+      "keywords": ["算法", "分治", "动态规划", "贪心"]
+    },
+    {
+      "name": "Web开发基础",
+      "name_en": "Web Development Basics",
+      "description": "HTML、CSS、JavaScript基础和前端开发入门",
+      "importance_level": 2,
+      "is_seed": true,
+      "keywords": ["Web", "HTML", "CSS", "JavaScript", "前端"]
+    },
+    {
+      "name": "数据库原理",
+      "name_en": "Database Principles",
+      "description": "关系型数据库原理、SQL语言、数据库设计",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["数据库", "SQL", "关系型", "设计"]
+    }
+  ]
+}

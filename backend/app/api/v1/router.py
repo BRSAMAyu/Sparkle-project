@@ -19,7 +19,7 @@ api_router.include_router(subjects.router, prefix="/subjects", tags=["学科"])
 api_router.include_router(errors.router, prefix="/errors", tags=["错题"])
 api_router.include_router(health.router, prefix="/health", tags=["健康检查"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["通知"])
-api_router.include_router(galaxy.router, prefix="/galaxy", tags=["星图"])
+api_router.include_router(galaxy.router, tags=["星图"])
 
 
 @api_router.get("/")

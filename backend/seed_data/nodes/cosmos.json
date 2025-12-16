@@ -1,0 +1,38 @@
+{
+  "sector": "COSMOS",
+  "subject_name": "数学",
+  "nodes": [
+    {
+      "name": "微积分基础",
+      "name_en": "Calculus Basics",
+      "description": "极限、导数、积分的基本概念和计算方法",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["微积分", "导数", "积分", "极限"]
+    },
+    {
+      "name": "线性代数",
+      "name_en": "Linear Algebra",
+      "description": "矩阵、向量空间、线性变换、特征值等",
+      "importance_level": 4,
+      "is_seed": true,
+      "keywords": ["线性代数", "矩阵", "向量", "特征值"]
+    },
+    {
+      "name": "概率论",
+      "name_en": "Probability Theory",
+      "description": "随机事件、概率分布、期望、方差等概念",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["概率", "统计", "分布", "期望"]
+    },
+    {
+      "name": "数理统计",
+      "name_en": "Mathematical Statistics",
+      "description": "参数估计、假设检验、回归分析",
+      "importance_level": 4,
+      "is_seed": true,
+      "keywords": ["统计", "估计", "检验", "回归"]
+    }
+  ]
+}

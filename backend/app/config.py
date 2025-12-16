@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     LLM_API_BASE_URL: str
     LLM_API_KEY: str
     LLM_MODEL_NAME: str = "qwen-turbo"
+    LLM_PROVIDER: str = "qwen"  # 'qwen' | 'deepseek' | 'openai'
+
+    # Embedding Service
+    EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
+    EMBEDDING_DIM: int = 1536  # 向量维度
 
     # File Storage
     UPLOAD_DIR: str = "./uploads"
