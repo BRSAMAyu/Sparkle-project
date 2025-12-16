@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
+    # Database Pool Settings (for PostgreSQL)
+    DB_POOL_SIZE: int = 20  # 连接池大小
+    DB_MAX_OVERFLOW: int = 40  # 最大溢出连接数
+    DB_POOL_RECYCLE: int = 3600  # 连接回收时间（秒）
+    DB_POOL_TIMEOUT: int = 30  # 获取连接超时时间（秒）
+    DB_ECHO: bool = False  # 是否打印SQL语句（生产环境应为False）
+
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = []
 

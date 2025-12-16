@@ -4,7 +4,7 @@ API v1 Router
 """
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, tasks, chat, plans, statistics, subjects, errors
+from app.api.v1 import auth, users, tasks, chat, plans, statistics, subjects, errors, health
 
 # Create main API router
 api_router = APIRouter()
@@ -17,6 +17,7 @@ api_router.include_router(plans.router, prefix="/plans", tags=["计划"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["统计"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["学科"])
 api_router.include_router(errors.router, prefix="/errors", tags=["错题"])
+api_router.include_router(health.router, prefix="/health", tags=["健康检查"])
 
 
 @api_router.get("/")
@@ -34,5 +35,6 @@ async def api_root():
             "/statistics",
             "/subjects",
             "/errors",
+            "/health",
         ],
     }
