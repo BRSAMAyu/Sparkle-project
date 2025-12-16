@@ -239,5 +239,43 @@ async def get_galaxy_stats(
     }
 
 
+@router.get("/events")
+async def galaxy_events_stream(
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    SSE 事件流
+
+    前端连接此端点以接收实时事件：
+    - nodes_expanded: 新节点涌现
+    - node_sparked: 节点被点亮
+    - decay_warning: 衰减警告
+    """
+    from fastapi.responses import StreamingResponse
+    from app.core.sse import sse_manager, event_generator
+
+    # 创建连接
+    queue = await sse_manager.connect(user_id)
+
+    async def cleanup():
+        """清理连接"""
+        await sse_manager.disconnect(user_id, queue)
+
+    # 返回 SSE 流
+    response = StreamingResponse(
+        event_generator(queue),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # 禁用 nginx 缓冲
+        }
+    )
+
+    # 注册清理回调
+    response.background = cleanup
+
+    return response
+
+
 # 导入必要的 or_ 函数
 from sqlalchemy import or_

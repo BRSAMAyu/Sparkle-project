@@ -10,15 +10,21 @@ from app.models.user import User
 from app.models.task import Task, TaskStatus
 from app.services.notification_service import NotificationService
 from app.schemas.notification import NotificationCreate
+from app.services.decay_service import DecayService
 
 class SchedulerService:
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         
     def start(self):
+        # 碎片时间提醒 (每15分钟检查一次)
         self.scheduler.add_job(self.check_fragmented_time, 'interval', minutes=15)
+
+        # 每日衰减任务 (每天凌晨3点执行)
+        self.scheduler.add_job(self.apply_daily_decay, 'cron', hour=3, minute=0)
+
         self.scheduler.start()
-        logger.info("Scheduler started")
+        logger.info("Scheduler started with fragmented time check and daily decay jobs")
 
     async def check_fragmented_time(self):
         """
@@ -87,5 +93,63 @@ class SchedulerService:
                 type="fragmented_time",
                 data={"task_id": str(task.id)}
             ))
+
+    async def apply_daily_decay(self):
+        """
+        每日遗忘衰减任务
+        对所有用户的知识点应用遗忘曲线衰减
+        """
+        logger.info("Starting daily decay job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                decay_service = DecayService(db)
+                stats = await decay_service.apply_daily_decay()
+
+                logger.info(
+                    f"Daily decay completed: "
+                    f"processed={stats['processed']}, "
+                    f"dimmed={stats['dimmed']}, "
+                    f"collapsed={stats['collapsed']}"
+                )
+
+                # 可选：对暗淡严重的节点发送复习提醒
+                if stats['dimmed'] > 0:
+                    await self._send_review_reminders(db)
+
+        except Exception as e:
+            logger.error(f"Error in daily decay job: {e}", exc_info=True)
+
+    async def _send_review_reminders(self, db):
+        """
+        向用户发送复习提醒通知
+        """
+        try:
+            # 获取所有有需要复习节点的用户
+            result = await db.execute(select(User).where(User.is_active == True))
+            users = result.scalars().all()
+
+            for user in users:
+                decay_service = DecayService(db)
+                suggestions = await decay_service.get_review_suggestions(
+                    user_id=user.id,
+                    limit=5
+                )
+
+                if suggestions:
+                    urgent_count = sum(1 for s in suggestions if s['urgency'] == 'high')
+
+                    # 发送通知
+                    await NotificationService.create(db, user.id, NotificationCreate(
+                        title="知识复习提醒",
+                        content=f"您有 {len(suggestions)} 个知识点需要复习" +
+                               (f"，其中 {urgent_count} 个紧急" if urgent_count > 0 else ""),
+                        type="review_reminder",
+                        data={"suggestion_count": len(suggestions), "urgent_count": urgent_count}
+                    ))
+
+                    logger.info(f"Sent review reminder to user {user.username}")
+
+        except Exception as e:
+            logger.error(f"Error sending review reminders: {e}", exc_info=True)
 
 scheduler_service = SchedulerService()
