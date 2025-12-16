@@ -7,9 +7,7 @@ class StaggeredListAnimation extends StatefulWidget {
   final Duration duration;
 
   const StaggeredListAnimation({
-    super.key,
-    required this.builder,
-    required this.itemCount,
+    required this.builder, required this.itemCount, super.key,
     this.delay = const Duration(milliseconds: 50),
     this.duration = const Duration(milliseconds: 350),
   });

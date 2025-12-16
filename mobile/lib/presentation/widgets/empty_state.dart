@@ -11,8 +11,7 @@ class EmptyState extends StatelessWidget {
   final String actionButtonText;
 
   const EmptyState({
-    super.key,
-    required this.message,
+    required this.message, super.key,
     this.title,
     this.icon,
     this.imagePath,

@@ -23,9 +23,7 @@ class CustomButton extends StatelessWidget {
   final Widget? trailingIcon;
 
   const CustomButton({
-    super.key,
-    required this.text,
-    required this.onPressed,
+    required this.text, required this.onPressed, super.key,
     this.variant = CustomButtonVariant.primary,
     this.isLoading = false,
     this.isDisabled = false,

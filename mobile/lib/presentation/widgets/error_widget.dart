@@ -13,8 +13,7 @@ class AppErrorWidget extends StatelessWidget {
   final ErrorWidgetType type;
 
   const AppErrorWidget({
-    super.key,
-    required this.message,
+    required this.message, super.key,
     this.title,
     this.icon,
     this.onRetry,

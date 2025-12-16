@@ -9,8 +9,7 @@ class FlameIndicator extends StatelessWidget {
   final Color inactiveColor;
 
   const FlameIndicator({
-    super.key,
-    required this.currentLevel,
+    required this.currentLevel, super.key,
     this.maxLevel = 5, // Default max level
     this.iconSize = AppDesignTokens.iconSizeBase,
     this.activeColor = AppDesignTokens.primaryBase,
