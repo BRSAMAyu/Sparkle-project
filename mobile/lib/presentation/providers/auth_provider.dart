@@ -74,6 +74,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
     }
   }
+
+  void loginAsGuest() {
+    state = state.copyWith(isLoading: true, error: null);
+    
+    // Simulate a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      final guestUser = UserModel(
+        id: 'guest-id',
+        username: 'Guest',
+        email: 'guest@example.com',
+        nickname: 'Sparkle Guest',
+        flameLevel: 1,
+        flameBrightness: 0.5,
+        depthPreference: 0.5,
+        curiosityPreference: 0.5,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      state = state.copyWith(
+        isLoading: false, 
+        isAuthenticated: true, 
+        user: guestUser,
+      );
+    });
+  }
   
   Future<void> refreshUser() async {
     if (state.isAuthenticated) {
