@@ -153,7 +153,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
 
   Widget _buildTaskList(BuildContext context, TaskListState state, List<TaskModel> tasks, WidgetRef ref) {
     if (state.isLoading && tasks.isEmpty) {
-      return const Center(
+      return Center(
         child: LoadingIndicator.circular(
           showText: true,
           loadingText: '加载任务中...',

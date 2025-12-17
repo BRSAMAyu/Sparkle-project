@@ -29,7 +29,7 @@ class NotificationListScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: LoadingIndicator.circular()),
+        loading: () => Center(child: LoadingIndicator.circular()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
