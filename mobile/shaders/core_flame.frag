@@ -34,7 +34,10 @@ float snoise(vec2 v){
   return 130.0 * dot(m, g);
 }
 
-vec4 main(vec2 coords) {
+out vec4 fragColor;
+
+void main() {
+    vec2 coords = FlutterFragCoord().xy;
     vec2 uv = coords / u_resolution;
     uv = uv * 2.0 - 1.0; // Center at 0,0
     
@@ -60,5 +63,5 @@ vec4 main(vec2 coords) {
     // Alpha
     float alpha = glow;
     
-    return vec4(finalColor * alpha, alpha);
+    fragColor = vec4(finalColor * alpha, alpha);
 }
