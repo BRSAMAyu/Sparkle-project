@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/data/repositories/user_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:logger/logger.dart';
 
 class SmartPushSettingsScreen extends ConsumerStatefulWidget {
@@ -152,6 +153,26 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             icon: const Icon(Icons.add),
             label: const Text('添加时间段'),
           ),
+
+          const SizedBox(height: 40),
+          const Divider(),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                ref.read(notificationServiceProvider).showSmartPush(
+                  title: "⚡ 调试：记忆临界点",
+                  body: "你的 [线性代数] 正在遗忘，点击立即复习！",
+                  payload: {"taskId": "debug_123"},
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
+                );
+              },
+              icon: const Icon(Icons.bug_report, color: Colors.grey),
+              label: const Text('发送测试通知 (Dev)', style: TextStyle(color: Colors.grey)),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );

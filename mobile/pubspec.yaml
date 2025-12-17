@@ -41,6 +41,7 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.0.0
   timezone: ^0.9.2
+  flutter_timezone: ^2.0.0
 
   # UI Enhancement
   flutter_markdown: ^0.6.18

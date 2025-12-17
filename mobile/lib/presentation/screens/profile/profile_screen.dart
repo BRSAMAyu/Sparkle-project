@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/profile/schedule_preferences_screen.dart';
+import 'package:sparkle/presentation/screens/profile/smart_push_settings_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -178,7 +179,13 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.notifications_none_rounded,
             title: '通知设置',
             gradient: AppDesignTokens.infoGradient,
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SmartPushSettingsScreen(),
+                ),
+              );
+            },
           ),
           const Divider(height: 1, indent: 60),
           _buildSettingsTile(
