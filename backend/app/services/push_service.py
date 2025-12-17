@@ -1,7 +1,8 @@
 import json
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
@@ -94,14 +95,14 @@ class PushService:
 
         # 4. Generate Content
         trigger_data = await trigger_strategy.get_trigger_data(user, self.db)
-        content = await self._generate_push_content(user, prefs, trigger_type, trigger_data)
+        content_dict = await self._generate_push_content(user, prefs, trigger_type, trigger_data)
         
-        if not content:
+        if not content_dict:
             logger.warning("Failed to generate push content.")
             return False
 
         # 5. Send & Record
-        await self._send_push(user, trigger_type, content, trigger_data)
+        await self._send_push(user, trigger_type, content_dict, trigger_data)
         
         return True
 
@@ -113,11 +114,7 @@ class PushService:
         now = datetime.now(timezone.utc)
 
         # Cooldown check (e.g., at least 2 hours between pushes)
-        # Assuming a hardcoded 2-hour cooldown for now, or configurable?
-        # Prompt said "smart backoff" but didn't specify exact cooldown logic.
-        # Let's use a simple 2-hour cooldown.
         if prefs.last_push_time:
-            # Ensure last_push_time is timezone-aware
             last_time = prefs.last_push_time
             if last_time.tzinfo is None:
                 last_time = last_time.replace(tzinfo=timezone.utc)
@@ -126,18 +123,22 @@ class PushService:
                 return True
 
         # Daily Cap Check
-        # Count pushes sent "today" in user's timezone.
-        # For simplicity, we'll use UTC day for now, or approximate.
-        # Ideally, convert 'now' to user's timezone.
-        # prefs.timezone is string like "Asia/Shanghai".
-        # For MVP, let's use UTC day.
+        # Convert now to user's local time to determine "today"
+        try:
+            tz = ZoneInfo(prefs.timezone or "Asia/Shanghai")
+            local_now = now.astimezone(tz)
+        except Exception:
+            tz = ZoneInfo("Asia/Shanghai")
+            local_now = now.astimezone(tz)
         
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+        # Start of local day in UTC
+        local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        utc_start_of_day = local_start_of_day.astimezone(timezone.utc)
+
         query = select(func.count()).select_from(PushHistory).where(
             and_(
                 PushHistory.user_id == user.id,
-                PushHistory.created_at >= start_of_day
+                PushHistory.created_at >= utc_start_of_day
             )
         )
         result = await self.db.execute(query)
@@ -147,75 +148,93 @@ class PushService:
 
     def _is_active_time(self, prefs: PushPreference) -> bool:
         """
-        Check if current time is within user's active slots.
+        Check if current time is within user's active slots and outside silence window (23-07).
         """
-        # If no slots defined, assume active (or default 9am-9pm?)
-        # Let's assume active if empty for MVP
-        if not prefs.active_slots:
-            return True
-            
-        # Parse slots: [{"start": "08:00", "end": "09:00"}]
-        # Need to handle timezone conversion.
-        # For MVP, assume slots are in user's local time, and we check current local time.
-        
-        # TODO: Implement proper timezone handling using pytz or zoneinfo
-        # For now, just return True to avoid blocking testing.
-        return True
+        try:
+            tz = ZoneInfo(prefs.timezone or "Asia/Shanghai")
+        except ZoneInfoNotFoundError:
+            logger.warning(f"Invalid timezone {prefs.timezone}, defaulting to Asia/Shanghai")
+            tz = ZoneInfo("Asia/Shanghai")
 
-    async def _generate_push_content(self, user: User, prefs: PushPreference, trigger_type: str, data: Dict) -> str:
+        now_local = datetime.now(tz)
+        
+        # 1. Hard Rule: Silence Window (23:00 - 07:00)
+        # TODO: Add override flag check if user forced enable?
+        if now_local.hour >= 23 or now_local.hour < 7:
+            return False
+            
+        # 2. Check minute alignment (Optional optimization: only run on :00 and :30)
+        # Assuming scheduler handles the trigger time, but we can double check logic if needed.
+        # Strict checking here might miss if job runs at 00:01. Let's be lenient on minutes here
+        # and assume the caller (Scheduler) controls frequency.
+
+        # 3. Active Slots Check
+        if not prefs.active_slots:
+            return True # If not defined, default to allowed (within 07-23)
+            
+        # prefs.active_slots structure: [{"start": "08:00", "end": "09:00"}]
+        # Check if current time falls into any slot
+        current_time_str = now_local.strftime("%H:%M")
+        current_minutes = now_local.hour * 60 + now_local.minute
+        
+        is_in_slot = False
+        try:
+            # Support both list of strings or list of objects
+            # Assuming objects as per previous context: [{"start": "...", "end": "..."}]
+            slots = prefs.active_slots
+            if isinstance(slots, list):
+                for slot in slots:
+                    if isinstance(slot, dict) and "start" in slot and "end" in slot:
+                        start_h, start_m = map(int, slot["start"].split(":"))
+                        end_h, end_m = map(int, slot["end"].split(":"))
+                        
+                        start_mins = start_h * 60 + start_m
+                        end_mins = end_h * 60 + end_m
+                        
+                        if start_mins <= current_minutes <= end_mins:
+                            is_in_slot = True
+                            break
+        except Exception as e:
+            logger.error(f"Error parsing active slots: {e}")
+            return True # Fail open to avoid blocking valid pushes on config error
+            
+        return is_in_slot
+
+    async def _generate_push_content(self, user: User, prefs: PushPreference, trigger_type: str, data: Dict) -> Dict[str, str]:
         """
         Generate push content using LLM based on persona and trigger data.
+        Returns dict with 'title' and 'body'.
         """
-        persona = prefs.persona_type # coach, anime
+        persona = prefs.persona_type or "coach"
+        nickname = user.nickname or user.username or "同学"
         
-        system_prompt = f"""You are a helpful learning assistant named Sparkle.
-User Persona: {persona} (coach: strict but encouraging; anime: cute, energetic, uses emojis).
-Task: Generate a short push notification message (under 50 words).
-Language: Chinese."""
+        return await llm_service.generate_push_content(
+            user_nickname=nickname,
+            persona=persona,
+            trigger_type=trigger_type,
+            context_data=data
+        )
 
-        user_prompt = ""
-        if trigger_type == "sprint":
-            user_prompt = f"Remind me that my plan '{data.get('plan_name')}' has a deadline in {data.get('hours_remaining')} hours. Urge me to focus!"
-        elif trigger_type == "memory":
-            user_prompt = f"Tell me that my memory of '{', '.join(data.get('nodes', []))}' is fading (retention: {int(data.get('retention_rate', 0)*100)}%). I need to review now!"
-        elif trigger_type == "inactivity":
-            user_prompt = "I haven't been active for a while. Gently invite me back to learn."
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-
-        try:
-            content = await llm_service.chat(messages, temperature=0.7)
-            return content.strip()
-        except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
-            # Fallback content
-            if trigger_type == "sprint":
-                return "冲刺提醒：你的计划快截止了，加油！"
-            elif trigger_type == "memory":
-                return "记忆唤醒：有些知识点快忘记了，快来复习吧。"
-            else:
-                return "好久不见，Sparkle 想你了。"
-
-    async def _send_push(self, user: User, trigger_type: str, content: str, data: Dict):
+    async def _send_push(self, user: User, trigger_type: str, content: Dict[str, str], data: Dict):
         """
         Create Notification and History records.
         """
+        title = content.get("title", "Sparkle 提醒")
+        body = content.get("body", "你有一条新消息")
+
         # 1. Create Notification (User visible)
         notif_create = NotificationCreate(
-            title="Sparkle 提醒", # Could be dynamic
-            content=content,
+            title=title,
+            content=body,
             type=trigger_type,
             data=data
         )
         await NotificationService.create(self.db, user.id, notif_create)
         
         # 2. Create PushHistory (Analytics)
-        # Calculate naive content hash
         import hashlib
-        content_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+        # Hash body content
+        content_hash = hashlib.md5(body.encode('utf-8')).hexdigest()
         
         history = PushHistory(
             user_id=user.id,
@@ -229,4 +248,4 @@ Language: Chinese."""
         user.push_preference.last_push_time = datetime.now(timezone.utc)
         
         await self.db.commit()
-        logger.info(f"Push sent to user {user.id} [{trigger_type}]: {content}")
+        logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")

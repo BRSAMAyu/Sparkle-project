@@ -11,88 +11,44 @@ from app.models.task import Task, TaskStatus
 from app.services.notification_service import NotificationService
 from app.schemas.notification import NotificationCreate
 from app.services.decay_service import DecayService
+from app.services.push_service import PushService
 
 class SchedulerService:
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         
     def start(self):
-        # 碎片时间提醒 (每15分钟检查一次)
-        self.scheduler.add_job(self.check_fragmented_time, 'interval', minutes=15)
-
+        # 智能推送循环 (每15分钟运行一次，PushService 内部会做更细致的频控)
+        self.scheduler.add_job(self.run_smart_push_cycle, 'interval', minutes=15)
+        
         # 每日衰减任务 (每天凌晨3点执行)
         self.scheduler.add_job(self.apply_daily_decay, 'cron', hour=3, minute=0)
 
         self.scheduler.start()
-        logger.info("Scheduler started with fragmented time check and daily decay jobs")
+        logger.info("Scheduler started with smart push cycle and daily decay jobs")
 
-    async def check_fragmented_time(self):
+    async def run_smart_push_cycle(self):
         """
-        Check for fragmented time opportunities for all users.
+        执行智能推送周期
+        触发 PushService.process_all_users()
         """
-        logger.info("Checking for fragmented time opportunities...")
+        logger.info("Starting smart push cycle...")
         async with AsyncSessionLocal() as db:
-            # 1. Get active users with schedule preferences
-            result = await db.execute(select(User).where(User.is_active == True, User.schedule_preferences.isnot(None)))
-            users = result.scalars().all()
-            
-            now = datetime.now()
-            current_hour = now.hour
-            current_minute = now.minute
-            
-            for user in users:
-                try:
-                    prefs = user.schedule_preferences
-                    if not prefs:
-                        continue
-                        
-                    # Example prefs: {"commute": ["08:00", "09:00"], "lunch": ["12:00", "13:00"]}
-                    # Simplified logic: Check if current time falls within any range
-                    
-                    is_fragmented_time = False
-                    matched_period = ""
-                    
-                    for period_name, time_range in prefs.items():
-                        if isinstance(time_range, list) and len(time_range) == 2:
-                            start_time = datetime.strptime(time_range[0], "%H:%M").time()
-                            end_time = datetime.strptime(time_range[1], "%H:%M").time()
-                            current_time = now.time()
-                            
-                            if start_time <= current_time <= end_time:
-                                is_fragmented_time = True
-                                matched_period = period_name
-                                break
-                    
-                    if is_fragmented_time:
-                        await self._suggest_task(db, user, matched_period)
-                        
-                except Exception as e:
-                    logger.error(f"Error checking fragmented time for user {user.id}: {e}")
+            push_service = PushService(db)
+            await push_service.process_all_users()
 
-    async def _suggest_task(self, db, user, period_name):
-        """
-        Suggest a short task for the user.
-        """
-        # Find a short task (< 15 mins)
-        result = await db.execute(
-            select(Task)
-            .where(Task.user_id == user.id, Task.status == TaskStatus.TODO, Task.estimated_minutes <= 15)
-            .limit(1)
-        )
-        task = result.scalar_one_or_none()
-        
-        if task:
-            # Check if we already notified recently? (Simplification: Just notify)
-            # Ideally we should check if we already sent a notification for this slot today.
-            
-            logger.info(f"Suggesting task {task.title} for user {user.username} during {period_name}")
-            
-            await NotificationService.create(db, user.id, NotificationCreate(
-                title=f"利用碎片时间 ({period_name})",
-                content=f"现在是 {period_name} 时间，要不要花 {task.estimated_minutes} 分钟完成任务：{task.title}？",
-                type="fragmented_time",
-                data={"task_id": str(task.id)}
-            ))
+    # async def check_fragmented_time(self):
+    #     """
+    #     Check for fragmented time opportunities for all users.
+    #     (Deprecated by Smart Push Cycle v2.0)
+    #     """
+    #     logger.info("Checking for fragmented time opportunities...")
+    #     async with AsyncSessionLocal() as db:
+    #         # 1. Get active users with schedule preferences
+    #         result = await db.execute(select(User).where(User.is_active == True, User.schedule_preferences.isnot(None)))
+    #         users = result.scalars().all()
+    #         ...
+    # (保留旧代码作为参考或彻底删除，此处注释掉以避免冲突)
 
     async def apply_daily_decay(self):
         """

@@ -1,3 +1,4 @@
+import json
 from typing import List, Dict, AsyncGenerator, Optional
 import asyncio
 from loguru import logger
@@ -190,6 +191,107 @@ class LLMService:
         logger.debug(f"Starting stream chat with model: {model}")
         async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
             yield chunk
+
+    async def generate_push_content(
+        self,
+        user_nickname: str,
+        persona: str,
+        trigger_type: str,
+        context_data: Dict
+    ) -> Dict[str, str]:
+        """
+        Generate "irresistible" push notification content based on persona.
+        
+        Args:
+            user_nickname: Name of the user
+            persona: "coach" (strict) or "anime" (gentle/cute) or others
+            trigger_type: "memory", "sprint", "inactivity"
+            context_data: Data from strategy (nodes, plan name, etc.)
+            
+        Returns:
+            Dict with "title" and "body" keys.
+        """
+        
+        # 1. Define Persona Prompts
+        persona_prompts = {
+            "coach": """
+            Role: Strict, discipline-focused Study Coach.
+            Tone: Stern, urgent, authoritative. 
+            Style: Use rhetorical questions, emphasize consequences of laziness.
+            Example: "还没学完？你的线性代数正在哭泣！"
+            """,
+            "anime": """
+            Role: Gentle, cute, energetic Anime Assistant (like a younger sister or supportive friend).
+            Tone: Sweet, encouraging, uses emojis (✨, 🥺, 🔥).
+            Style: Address user as '欧尼酱' or '亲爱的', emphasize growing together.
+            Example: "欧尼酱~ 记忆碎片要消失了哦，快来补救吧！✨"
+            """
+        }
+        
+        selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"]) # Default to coach
+        
+        # 2. Define Context Description based on Trigger
+        trigger_desc = ""
+        if trigger_type == "memory":
+            nodes = ", ".join(context_data.get("nodes", []))
+            retention = int(context_data.get("retention_rate", 0) * 100)
+            trigger_desc = f"User is forgetting these topics: {nodes}. Retention is down to {retention}%. Explain that reviewing now saves time later."
+        elif trigger_type == "sprint":
+            plan_name = context_data.get("plan_name", "Plan")
+            hours = context_data.get("hours_remaining", 0)
+            trigger_desc = f"Deadline approaching for plan '{plan_name}' in {hours} hours. Urge immediate action to avoid failure."
+        elif trigger_type == "inactivity":
+            trigger_desc = "User hasn't studied for over 24 hours. Gently guilt-trip (coach) or sweetly miss them (anime) to bring them back."
+        
+        # 3. Construct Full Prompt
+        system_prompt = f"""
+        You are Sparkle, an AI Learning Assistant.
+        {selected_persona_prompt}
+        
+        Task: Write a push notification for user '{user_nickname}'.
+        Context: {trigger_desc}
+        
+        Constraints:
+        1. Language: Chinese (Simplified).
+        2. Length: Body must be under 30 words. Title under 10 words.
+        3. Format: Return ONLY a valid JSON object with keys "title" and "body". Do not wrap in markdown code blocks.
+        4. Content: Must explain "WHY study NOW".
+        """
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Generate push notification now."}
+        ]
+        
+        # 4. Call LLM
+        try:
+            response_text = await self.chat(messages, temperature=0.8) # Slightly higher temp for creativity
+            
+            # 5. Parse JSON
+            # Clean up potential markdown formatting like ```json ... ```
+            cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+            
+            content = json.loads(cleaned_text)
+            
+            # Fallback validation
+            if "title" not in content or "body" not in content:
+                raise ValueError("Missing keys in JSON response")
+                
+            return content
+            
+        except Exception as e:
+            logger.error(f"Failed to generate push content: {e}")
+            # Fallback hardcoded messages
+            if persona == "anime":
+                return {
+                    "title": "想你了~ ✨",
+                    "body": f"{user_nickname}，好久没来学习了，记忆都要发霉啦！🥺"
+                }
+            else:
+                return {
+                    "title": "学习提醒",
+                    "body": f"{user_nickname}，该复习了。拖延只会增加未来的负担。"
+                }
 
 # Singleton instance
 llm_service = LLMService()
