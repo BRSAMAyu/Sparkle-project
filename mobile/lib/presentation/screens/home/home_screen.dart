@@ -12,8 +12,18 @@ import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 import 'package:sparkle/presentation/widgets/task/task_card.dart';
 import 'package:sparkle/presentation/widgets/common/flame_indicator.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
+import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/error_widget.dart';
+import 'package:sparkle/presentation/providers/notification_provider.dart';
 import 'package:sparkle/presentation/screens/home/notification_list_screen.dart';
 import 'package:go_router/go_router.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;

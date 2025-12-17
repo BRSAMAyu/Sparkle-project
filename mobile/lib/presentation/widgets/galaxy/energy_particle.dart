@@ -56,12 +56,8 @@ class EnergyTransferAnimation extends StatefulWidget {
   final Duration duration;
 
   const EnergyTransferAnimation({
-    super.key,
+    required this.sourcePosition, required this.targetPosition, required this.targetColor, required this.onComplete, super.key,
     this.duration = const Duration(milliseconds: 800),
-    required this.sourcePosition,
-    required this.targetPosition,
-    required this.targetColor,
-    required this.onComplete,
   });
 
   @override
@@ -251,7 +247,7 @@ class _EnergyParticlePainter extends CustomPainter {
     // Inner glow (bright core)
     final innerGlowPaint = Paint()
       ..color = Colors.white.withOpacity(0.8)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawCircle(currentPosition, 5 * glowScale, innerGlowPaint);
 
     // Core particle (solid)

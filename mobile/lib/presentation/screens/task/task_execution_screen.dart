@@ -7,7 +7,7 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/task/timer_widget.dart';
-import 'package:sparkle/presentation/widgets/common/success_animation.dart';
+import 'package:sparkle/presentation/widgets/success_animation.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
@@ -79,7 +79,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   void _onCelebrationComplete() {
     if (mounted) {
-      context.pop(); // Go back to task list/detail
+      context.go('/galaxy'); // Navigate to Galaxy screen to show spark animation
     }
   }
 
@@ -572,9 +572,8 @@ class _BottomControls extends ConsumerWidget {
         children: [
           Expanded(
             flex: 1,
-            child: CustomButton(
-              text: 'Abandon',
-              variant: CustomButtonVariant.text,
+            child: CustomButton.text(
+              text: '放弃',
               onPressed: () => _abandonTask(context, ref),
               // Use error color for text if possible, or leave as primary/custom
             ),
@@ -582,10 +581,10 @@ class _BottomControls extends ConsumerWidget {
           const SizedBox(width: AppDesignTokens.spacing16),
           Expanded(
             flex: 2,
-            child: CustomButton(
-              text: 'Complete Task',
-              variant: CustomButtonVariant.success,
+            child: CustomButton.primary(
+              text: '完成任务',
               onPressed: () => _showCompleteDialog(context, ref),
+              customGradient: AppDesignTokens.successGradient,
             ),
           ),
         ],

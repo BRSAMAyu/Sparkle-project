@@ -1,32 +1,16 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class StatisticsCard extends StatelessWidget {
-  final String title;
-  final Widget chart;
-  final String? subtitle;
-
-  const StatisticsCard({
-    required this.title, 
-    required this.chart, 
-    this.subtitle,
-    super.key,
-  });
+  const StatisticsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppDesignTokens.spacing16,
-        vertical: AppDesignTokens.spacing8,
-      ),
-      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      padding: const EdgeInsets.all(AppDesignTokens.spacing20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Colors.white, AppDesignTokens.neutral50],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowMd,
       ),
@@ -34,29 +18,126 @@ class StatisticsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: AppDesignTokens.fontWeightBold,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppDesignTokens.primaryBase.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.show_chart_rounded,
+                  color: AppDesignTokens.primaryBase,
+                  size: 20,
                 ),
               ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppDesignTokens.neutral600,
-                  ),
+              const SizedBox(width: AppDesignTokens.spacing12),
+              const Text(
+                '本周成长趋势',
+                style: TextStyle(
+                  fontSize: AppDesignTokens.fontSizeLg,
+                  fontWeight: AppDesignTokens.fontWeightBold,
+                  color: AppDesignTokens.neutral900,
                 ),
+              ),
             ],
           ),
-          const SizedBox(height: AppDesignTokens.spacing16),
-          SizedBox(
+          const SizedBox(height: AppDesignTokens.spacing24),
+          const SizedBox(
             height: 200,
-            child: chart,
+            child: _WeeklyTrendChart(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WeeklyTrendChart extends StatelessWidget {
+  const _WeeklyTrendChart();
+
+  @override
+  Widget build(BuildContext context) {
+    // Mock Data: [3, 5, 2, 8, 4, 7, 9]
+    final spots = [
+      const FlSpot(0, 3),
+      const FlSpot(1, 5),
+      const FlSpot(2, 2),
+      const FlSpot(3, 8),
+      const FlSpot(4, 4),
+      const FlSpot(5, 7),
+      const FlSpot(6, 9),
+    ];
+
+    return RepaintBoundary(
+      child: LineChart(
+        LineChartData(
+          gridData: const FlGridData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                  if (value.toInt() >= 0 && value.toInt() < days.length) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        days[value.toInt()],
+                        style: const TextStyle(
+                          color: AppDesignTokens.neutral500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }
+                  return const Text('');
+                },
+                interval: 1,
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: AppDesignTokens.primaryBase,
+              barWidth: 3,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 4,
+                    color: Colors.white,
+                    strokeWidth: 2,
+                    strokeColor: AppDesignTokens.primaryBase,
+                  );
+                },
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    AppDesignTokens.primaryBase.withOpacity(0.2),
+                    AppDesignTokens.primaryBase.withOpacity(0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ],
+          minX: 0,
+          maxX: 6,
+          minY: 0,
+          maxY: 10,
+        ),
       ),
     );
   }

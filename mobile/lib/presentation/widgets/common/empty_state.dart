@@ -76,8 +76,8 @@ class EmptyState extends StatelessWidget {
     return EmptyState(
       key: key,
       type: EmptyStateType.noChats,
-      title: '还没有对话',
-      description: '开始与AI助手对话，获取学习建议和帮助',
+      title: '我是你的 AI 导师 Sparkle',
+      description: '有什么可以帮你？',
       icon: Icons.chat_bubble_outline_rounded,
       actionText: '开始对话',
       onAction: onStartChat,

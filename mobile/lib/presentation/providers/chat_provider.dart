@@ -124,7 +124,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                   handleAction(ChatAction(
                     type: action['type'] as String? ?? '',
                     params: action['data'] as Map<String, dynamic>? ?? {},
-                  ));
+                  ),);
                 }
               }
             }

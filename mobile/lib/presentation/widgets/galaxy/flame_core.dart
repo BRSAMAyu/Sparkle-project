@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 class FlameCore extends StatefulWidget {
   final double intensity;
 
-  const FlameCore({super.key, required this.intensity});
+  const FlameCore({required this.intensity, super.key});
 
   @override
   State<FlameCore> createState() => _FlameCoreState();

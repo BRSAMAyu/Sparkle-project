@@ -131,7 +131,7 @@ class _ChatInputState extends State<ChatInput>
                       border: Border.all(
                         color: _isFocused
                             ? AppDesignTokens.primaryBase
-                            : AppDesignTokens.neutral200,
+                            : Colors.transparent, // Use transparent instead of neutral200 for cleaner look when unfocused
                         width: _isFocused ? 2.0 : 1.0,
                       ),
                       boxShadow: _isFocused ? AppDesignTokens.shadowSm : null,

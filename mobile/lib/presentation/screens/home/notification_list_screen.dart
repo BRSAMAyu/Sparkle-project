@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
-import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 
 class NotificationListScreen extends ConsumerWidget {

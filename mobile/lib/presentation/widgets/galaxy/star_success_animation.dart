@@ -17,11 +17,8 @@ class StarSuccessAnimation extends StatefulWidget {
   final Duration duration;
 
   const StarSuccessAnimation({
-    super.key,
+    required this.position, required this.color, required this.onComplete, super.key,
     this.duration = const Duration(milliseconds: 600),
-    required this.position,
-    required this.color,
-    required this.onComplete,
   });
 
   @override

@@ -134,7 +134,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           data: widget.message.content,
                                           styleSheet: MarkdownStyleSheet(
                                             p: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              color: isUser ? Colors.white : AppDesignTokens.neutral800,
                                               fontSize: AppDesignTokens.fontSizeBase,
                                               height: AppDesignTokens.lineHeightNormal,
                                             ),
@@ -154,13 +154,13 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               fontWeight: AppDesignTokens.fontWeightSemibold,
                                             ),
                                             code: TextStyle(
-                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : AppDesignTokens.neutral200,
+                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : AppDesignTokens.neutral100,
                                               fontFamily: 'monospace',
                                               fontSize: AppDesignTokens.fontSizeSm,
                                               color: isUser ? Colors.white : AppDesignTokens.secondaryBase,
                                             ),
                                             codeblockDecoration: BoxDecoration(
-                                              color: isUser ? Colors.white.withOpacity(0.1) : AppDesignTokens.neutral900,
+                                              color: isUser ? Colors.white.withOpacity(0.1) : AppDesignTokens.neutral100,
                                               borderRadius: AppDesignTokens.borderRadius12,
                                             ),
                                             codeblockPadding: const EdgeInsets.all(AppDesignTokens.spacing12),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,17 +54,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppDesignTokens.primaryBase.withOpacity(0.05),
-                Colors.white.withOpacity(0.8),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppDesignTokens.primaryBase.withOpacity(0.05),
+                    Colors.white.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+              ),
             ),
-            border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
           ),
         ),
         backgroundColor: Colors.transparent,

@@ -23,7 +23,7 @@ class TaskDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: taskAsync.when(
         data: (task) => _TaskDetailView(task: task),
-        loading: () => const Center(
+        loading: () => Center(
           child: LoadingIndicator.circular(
             showText: true,
             loadingText: '加载任务详情...',
@@ -80,59 +80,69 @@ class _TaskDetailView extends ConsumerWidget {
     );
   }
 
+  LinearGradient _getBackgroundGradient(TaskType type) {
+    switch (type) {
+      case TaskType.learning:
+        return LinearGradient(colors: [Colors.blue.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+      case TaskType.training:
+        return LinearGradient(colors: [Colors.orange.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+      case TaskType.errorFix:
+        return LinearGradient(colors: [Colors.red.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+      case TaskType.reflection:
+        return LinearGradient(colors: [Colors.purple.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+      case TaskType.social:
+        return LinearGradient(colors: [Colors.green.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+      case TaskType.planning:
+        return LinearGradient(colors: [Colors.teal.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+    }
+  }
+
   Widget _buildSliverAppBar(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 200.0,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppDesignTokens.primaryLight.withOpacity(0.8),
-                AppDesignTokens.neutral50,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Hero(
-                    tag: 'task-title-${task.id}',
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Text(
+        background: Hero(
+          tag: 'task-${task.id}',
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: _getBackgroundGradient(task.type),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         task.title,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: AppDesignTokens.fontWeightBold,
                           color: AppDesignTokens.neutral900,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: AppDesignTokens.spacing8),
-                  Wrap(
-                    spacing: AppDesignTokens.spacing8,
-                    children: [
-                      Chip(
-                        label: Text(toBeginningOfSentenceCase(task.type.name) ?? task.type.name),
-                        backgroundColor: Colors.white.withOpacity(0.8),
-                        avatar: const Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
-                      ),
-                      Chip(
-                        label: Text(toBeginningOfSentenceCase(task.status.name) ?? task.status.name),
-                        backgroundColor: _getStatusColor(task.status).withOpacity(0.2),
-                        labelStyle: TextStyle(color: _getStatusColor(task.status), fontWeight: FontWeight.bold),
+                      const SizedBox(height: AppDesignTokens.spacing8),
+                      Wrap(
+                        spacing: AppDesignTokens.spacing8,
+                        children: [
+                          Chip(
+                            label: Text(toBeginningOfSentenceCase(task.type.name) ?? task.type.name),
+                            backgroundColor: Colors.white.withOpacity(0.8),
+                            avatar: const Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
+                          ),
+                          Chip(
+                            label: Text(toBeginningOfSentenceCase(task.status.name) ?? task.status.name),
+                            backgroundColor: _getStatusColor(task.status).withOpacity(0.2),
+                            labelStyle: TextStyle(color: _getStatusColor(task.status), fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
