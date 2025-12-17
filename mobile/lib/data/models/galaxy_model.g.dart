@@ -9,13 +9,13 @@ part of 'galaxy_model.dart';
 GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
     GalaxyNodeModel(
       id: json['id'] as String,
-      parentId: json['parent_id'] as String?,
       name: json['name'] as String,
       importance: (json['importance'] as num).toInt(),
       sector: $enumDecode(_$SectorEnumEnumMap, json['sector']),
-      baseColor: json['base_color'] as String?,
       isUnlocked: json['is_unlocked'] as bool,
       masteryScore: (json['mastery_score'] as num).toInt(),
+      parentId: json['parent_id'] as String?,
+      baseColor: json['base_color'] as String?,
     );
 
 Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>

@@ -21,6 +21,10 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       avatarUrl: json['avatarUrl'] as String?,
       schedulePreferences:
           json['schedule_preferences'] as Map<String, dynamic>?,
+      pushPreferences: json['push_preference'] == null
+          ? null
+          : PushPreferences.fromJson(
+              json['push_preference'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -35,8 +39,29 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'curiosity_preference': instance.curiosityPreference,
       'is_active': instance.isActive,
       'schedule_preferences': instance.schedulePreferences,
+      'push_preference': instance.pushPreferences,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
+    };
+
+PushPreferences _$PushPreferencesFromJson(Map<String, dynamic> json) =>
+    PushPreferences(
+      activeSlots: (json['active_slots'] as List<dynamic>?)
+          ?.map((e) => Map<String, String>.from(e as Map))
+          .toList(),
+      timezone: json['timezone'] as String? ?? 'Asia/Shanghai',
+      enableCuriosity: json['enable_curiosity'] as bool? ?? true,
+      personaType: json['persona_type'] as String? ?? 'coach',
+      dailyCap: (json['daily_cap'] as num?)?.toInt() ?? 5,
+    );
+
+Map<String, dynamic> _$PushPreferencesToJson(PushPreferences instance) =>
+    <String, dynamic>{
+      'active_slots': instance.activeSlots,
+      'timezone': instance.timezone,
+      'enable_curiosity': instance.enableCuriosity,
+      'persona_type': instance.personaType,
+      'daily_cap': instance.dailyCap,
     };
 
 UserPreferences _$UserPreferencesFromJson(Map<String, dynamic> json) =>

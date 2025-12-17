@@ -14,10 +14,10 @@ NotificationModel _$NotificationModelFromJson(Map<String, dynamic> json) =>
       content: json['content'] as String,
       type: json['type'] as String,
       isRead: json['is_read'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
       readAt: json['read_at'] == null
           ? null
           : DateTime.parse(json['read_at'] as String),
-      createdAt: DateTime.parse(json['created_at'] as String),
       data: json['data'] as Map<String, dynamic>?,
     );
 
