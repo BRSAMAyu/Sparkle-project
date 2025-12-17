@@ -31,3 +31,27 @@ class Notification(BaseModel):
 
     def __repr__(self):
         return f"<Notification(title={self.title}, user_id={self.user_id})>"
+
+
+class PushHistory(BaseModel):
+    """
+    推送历史记录 (用于频控和分析)
+    """
+    __tablename__ = "push_histories"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    
+    # 触发类型: memory (记忆唤醒), sprint (冲刺提醒), inactivity (沉睡唤醒)
+    trigger_type = Column(String(50), nullable=False)
+    
+    # 内容哈希，防止重复生成
+    content_hash = Column(String(64), nullable=True, index=True)
+    
+    # 状态: sent, clicked, snoozed, dismissed
+    status = Column(String(50), default="sent", nullable=False)
+
+    # 关系
+    user = relationship("User", backref="push_histories")
+
+    def __repr__(self):
+        return f"<PushHistory(user_id={self.user_id}, type={self.trigger_type}, status={self.status})>"

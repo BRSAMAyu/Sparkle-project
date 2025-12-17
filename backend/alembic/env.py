@@ -23,7 +23,8 @@ from app.db.session import Base
 # Import all models to ensure they are registered with Base.metadata
 from app.models import (
     User, Task, Plan, ChatMessage, ErrorRecord,
-    Job, Subject, IdempotencyKey, Notification
+    Job, Subject, IdempotencyKey, Notification,
+    PushPreference, PushHistory
 )  # noqa: F401
 
 # this is the Alembic Config object

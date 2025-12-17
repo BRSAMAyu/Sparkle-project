@@ -148,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ref.read(authProvider.notifier).loginAsGuest();
                   },
                   child: Text(
-                    "Continue as Guest",
+                    'Continue as Guest',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.outline,
                     ),
