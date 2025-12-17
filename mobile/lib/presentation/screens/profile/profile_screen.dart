@@ -4,7 +4,6 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/profile/schedule_preferences_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
-import 'package:sparkle/presentation/widgets/common/flame_indicator.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});

@@ -2,10 +2,10 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
-from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON
+from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, GUID
 
 
 class User(BaseModel):
@@ -49,12 +49,20 @@ class User(BaseModel):
     curiosity_preference = Column(Float, default=0.5, nullable=False)
     
     # 🆕 碎片时间/日程偏好 {"commute_time": ["08:00", "09:00"], "lunch_break": ...}
-    schedule_preferences = Column(JSON, nullable=True)
+    schedule_preferences = Column(JSON, nullable=True)  # Deprecated: Use PushPreference instead
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)
 
     # 关系定义
+    push_preference = relationship(
+        "PushPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="joined"
+    )
+
     tasks = relationship(
         "Task",
         back_populates="user",
@@ -85,6 +93,36 @@ class User(BaseModel):
 
     def __repr__(self):
         return f"<User(username={self.username}, email={self.email})>"
+
+
+class PushPreference(BaseModel):
+    """
+    用户推送偏好设置 (v2.0)
+    """
+    __tablename__ = "push_preferences"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    
+    # 活跃时间段 [{"start": "08:00", "end": "09:00"}]
+    active_slots = Column(JSON, nullable=True)
+    
+    # 时区
+    timezone = Column(String(50), default="Asia/Shanghai", nullable=False)
+    
+    # 开关和配置
+    enable_curiosity = Column(Boolean, default=True, nullable=False)
+    persona_type = Column(String(50), default="coach", nullable=False) # coach, anime
+    
+    # 频控
+    daily_cap = Column(Integer, default=5, nullable=False)
+    last_push_time = Column(DateTime, nullable=True)
+    consecutive_ignores = Column(Integer, default=0, nullable=False)
+
+    # 关系
+    user = relationship("User", back_populates="push_preference")
+
+    def __repr__(self):
+        return f"<PushPreference(user_id={self.user_id}, timezone={self.timezone})>"
 
 
 # 创建索引
