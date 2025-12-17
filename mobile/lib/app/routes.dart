@@ -1,6 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/splash/splash_screen.dart';
 import 'package:sparkle/presentation/screens/auth/login_screen.dart';
@@ -20,6 +21,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
+    navigatorKey: navigatorKey, // Set the global navigator key
     initialLocation: '/',
     debugLogDiagnostics: true,
     redirect: (context, state) {

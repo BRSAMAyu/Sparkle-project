@@ -22,6 +22,8 @@ class UserModel {
   final bool isActive;
   @JsonKey(name: 'schedule_preferences')
   final Map<String, dynamic>? schedulePreferences;
+  @JsonKey(name: 'push_preference')
+  final PushPreferences? pushPreferences;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -34,10 +36,37 @@ class UserModel {
     required this.flameLevel, required this.flameBrightness, required this.depthPreference, required this.curiosityPreference, required this.isActive, required this.createdAt, required this.updatedAt, this.nickname,
     this.avatarUrl,
     this.schedulePreferences,
+    this.pushPreferences,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
+}
+
+/// 推送偏好
+@JsonSerializable()
+class PushPreferences {
+  @JsonKey(name: 'active_slots')
+  final List<Map<String, String>>? activeSlots;
+  @JsonKey(name: 'timezone')
+  final String timezone;
+  @JsonKey(name: 'enable_curiosity')
+  final bool enableCuriosity;
+  @JsonKey(name: 'persona_type')
+  final String personaType;
+  @JsonKey(name: 'daily_cap')
+  final int dailyCap;
+
+  PushPreferences({
+    this.activeSlots,
+    this.timezone = 'Asia/Shanghai',
+    this.enableCuriosity = true,
+    this.personaType = 'coach',
+    this.dailyCap = 5,
+  });
+
+  factory PushPreferences.fromJson(Map<String, dynamic> json) => _$PushPreferencesFromJson(json);
+  Map<String, dynamic> toJson() => _$PushPreferencesToJson(this);
 }
 
 /// 用户偏好
