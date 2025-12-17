@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -23,6 +26,9 @@ class ApiClient {
     _dio.interceptors.add(_ref.read(authInterceptorProvider));
     _dio.interceptors.add(_ref.read(loggingInterceptorProvider));
   }
+
+  /// 获取 Dio 实例 (用于需要直接访问的场景)
+  Dio get dio => _dio;
 
   Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) async {
     try {
@@ -59,4 +65,111 @@ class ApiClient {
       rethrow;
     }
   }
+
+  /// SSE 流式 POST 请求
+  ///
+  /// 返回一个 Stream，每次 yield 一个 SSE 事件
+  /// 支持容错：网络断开时不会抛出异常，而是优雅地结束流
+  Stream<SSEEvent> postStream(String path, {dynamic data}) async* {
+    try {
+      final response = await _dio.post<ResponseBody>(
+        path,
+        data: data,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+          },
+        ),
+      );
+
+      final stream = response.data?.stream;
+      if (stream == null) {
+        yield SSEEvent(event: 'error', data: '{"message": "No stream data"}');
+        return;
+      }
+
+      String buffer = '';
+
+      await for (final chunk in stream) {
+        buffer += utf8.decode(chunk);
+
+        // 解析 SSE 事件 (以双换行分隔)
+        while (buffer.contains('\n\n')) {
+          final eventEnd = buffer.indexOf('\n\n');
+          final eventStr = buffer.substring(0, eventEnd);
+          buffer = buffer.substring(eventEnd + 2);
+
+          final event = _parseSSEEvent(eventStr);
+          if (event != null) {
+            yield event;
+
+            // 如果是 done 或 error 事件，结束流
+            if (event.event == 'done' || event.event == 'error') {
+              return;
+            }
+          }
+        }
+      }
+
+      // 处理剩余的 buffer
+      if (buffer.isNotEmpty) {
+        final event = _parseSSEEvent(buffer);
+        if (event != null) {
+          yield event;
+        }
+      }
+    } on DioException catch (e) {
+      // 🚨 网络错误时不抛出异常，返回错误事件
+      yield SSEEvent(
+        event: 'error',
+        data: '{"message": "${e.message ?? "网络连接中断"}"}',
+      );
+    } catch (e) {
+      yield SSEEvent(
+        event: 'error',
+        data: '{"message": "发生错误: $e"}',
+      );
+    }
+  }
+
+  /// 解析单个 SSE 事件
+  SSEEvent? _parseSSEEvent(String eventStr) {
+    String? event;
+    String? data;
+
+    for (final line in eventStr.split('\n')) {
+      if (line.startsWith('event:')) {
+        event = line.substring(6).trim();
+      } else if (line.startsWith('data:')) {
+        data = line.substring(5).trim();
+      }
+    }
+
+    if (data != null) {
+      return SSEEvent(event: event ?? 'message', data: data);
+    }
+    return null;
+  }
+}
+
+/// SSE 事件数据类
+class SSEEvent {
+  final String event;
+  final String data;
+
+  SSEEvent({required this.event, required this.data});
+
+  /// 解析 data 为 JSON Map
+  Map<String, dynamic>? get jsonData {
+    try {
+      return json.decode(data) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  String toString() => 'SSEEvent(event: $event, data: $data)';
 }

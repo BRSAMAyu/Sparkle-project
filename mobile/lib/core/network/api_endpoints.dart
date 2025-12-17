@@ -28,6 +28,7 @@ class ApiEndpoints {
   
   // Chat
   static const String chat = '/chat';
+  static const String chatStream = '/chat/stream';  // SSE 流式聊天端点
   static const String chatSessions = '/chat/sessions';
   static String sessionMessages(String id) => '/chat/sessions/$id/messages';
   

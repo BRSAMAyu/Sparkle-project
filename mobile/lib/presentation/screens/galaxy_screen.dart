@@ -5,7 +5,7 @@ import 'package:sparkle/presentation/widgets/galaxy/flame_core.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
-  const GalaxyScreen({Key? key}) : super(key: key);
+  const GalaxyScreen({super.key});
 
   @override
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
@@ -103,7 +103,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
                   final node = galaxyState.nodes[DateTime.now().millisecond % galaxyState.nodes.length];
                   ref.read(galaxyProvider.notifier).sparkNode(node.id);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Sparking ${node.name}!")),
+                    SnackBar(content: Text('Sparking ${node.name}!')),
                   );
                 }
               },

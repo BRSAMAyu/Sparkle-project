@@ -55,7 +55,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);
-      debugPrint("Error loading galaxy: $e");
+      debugPrint('Error loading galaxy: $e');
     }
   }
 
@@ -67,7 +67,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       // But for MVP full reload is safer for consistency
       await loadGalaxy(); 
     } catch (e) {
-      debugPrint("Error sparking node: $e");
+      debugPrint('Error sparking node: $e');
     }
   }
 

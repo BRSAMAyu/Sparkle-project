@@ -124,7 +124,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: Column(
             children: [
               Expanded(
-                child: messages.isEmpty
+                child: messages.isEmpty && chatState.streamingContent.isEmpty
                     ? Center(
                         child: EmptyState.noChats(
                           onStartChat: () {
@@ -136,15 +136,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         controller: _scrollController,
                         reverse: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                        // 🆕 显示流式内容或加载指示器
                         itemCount: messages.length + (chatState.isSending ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (chatState.isSending && index == 0) {
+                            // 如果有流式内容，显示它；否则显示加载指示器
+                            if (chatState.streamingContent.isNotEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: _StreamingBubble(content: chatState.streamingContent),
+                              );
+                            }
                             return const Padding(
                               padding: EdgeInsets.only(bottom: 12.0),
                               child: _TypingIndicator(),
                             );
                           }
-                          
+
                           // Adjust index if we have a loading indicator at 0
                           final msgIndex = chatState.isSending ? index - 1 : index;
                           final message = messages[messages.length - 1 - msgIndex];
@@ -180,6 +188,97 @@ class _TypingIndicator extends StatefulWidget {
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+/// 流式输出气泡 - 显示正在流式输出的 AI 响应
+class _StreamingBubble extends StatelessWidget {
+  final String content;
+
+  const _StreamingBubble({required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.8,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+          ),
+          boxShadow: AppDesignTokens.shadowSm,
+          border: Border.all(color: AppDesignTokens.neutral200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Flexible(
+              child: Text(
+                content,
+                style: const TextStyle(
+                  color: AppDesignTokens.neutral900,
+                  fontSize: AppDesignTokens.fontSizeBase,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // 闪烁的光标
+            const _BlinkingCursor(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 闪烁光标组件
+class _BlinkingCursor extends StatefulWidget {
+  const _BlinkingCursor();
+
+  @override
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
+}
+
+class _BlinkingCursorState extends State<_BlinkingCursor>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(
+        width: 2,
+        height: 16,
+        color: AppDesignTokens.primaryBase,
+      ),
+    );
+  }
 }
 
 class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerProviderStateMixin {

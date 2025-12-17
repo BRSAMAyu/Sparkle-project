@@ -186,7 +186,7 @@ class _DashboardTab extends ConsumerWidget {
             ),
           ),
         );
-      }
+      },
     );
   }
 }

@@ -24,13 +24,8 @@ class GalaxyNodeModel {
 
   GalaxyNodeModel({
     required this.id,
-    this.parentId,
-    required this.name,
-    required this.importance,
-    required this.sector,
+    required this.name, required this.importance, required this.sector, required this.isUnlocked, required this.masteryScore, this.parentId,
     this.baseColor,
-    required this.isUnlocked,
-    required this.masteryScore,
   });
 
   factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) => _$GalaxyNodeModelFromJson(json);
