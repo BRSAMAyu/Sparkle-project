@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Demo Mode (演示模式 - 用于竞赛演示，确保关键流程稳定)
+    DEMO_MODE: bool = False  # 生产环境应设为 False
+
     class Config:
         env_file = ".env"
         case_sensitive = True

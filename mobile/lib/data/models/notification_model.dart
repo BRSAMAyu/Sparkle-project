@@ -25,8 +25,7 @@ class NotificationModel {
     required this.content,
     required this.type,
     required this.isRead,
-    this.readAt,
-    required this.createdAt,
+    required this.createdAt, this.readAt,
     this.data,
   });
 

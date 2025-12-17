@@ -40,7 +40,7 @@ class NotificationListScreen extends ConsumerWidget {
 class NotificationItem extends ConsumerWidget {
   final NotificationModel notification;
 
-  const NotificationItem({super.key, required this.notification});
+  const NotificationItem({required this.notification, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

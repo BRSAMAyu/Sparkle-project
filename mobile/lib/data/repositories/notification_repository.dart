@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {

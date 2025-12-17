@@ -4,7 +4,7 @@
 """
 import math
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +41,7 @@ class DecayService:
             dict: 衰减统计 {processed: int, dimmed: int, collapsed: int}
         """
         stats = {'processed': 0, 'dimmed': 0, 'collapsed': 0}
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # 1. 查询需要衰减的节点状态
         # 条件：已解锁 + 未暂停衰减 + 上次学习超过 1 天
@@ -112,7 +112,7 @@ class DecayService:
         Returns:
             List[dict]: 建议复习的知识点列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         query = (
             select(UserNodeStatus, KnowledgeNode)
@@ -171,7 +171,7 @@ class DecayService:
         Returns:
             dict: 包含需要复习的节点数、暗淡节点数等
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # 统计需要复习的节点
         review_query = select(func.count()).select_from(UserNodeStatus).where(
