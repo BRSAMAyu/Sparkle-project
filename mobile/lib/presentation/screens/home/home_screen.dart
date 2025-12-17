@@ -8,7 +8,12 @@ import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
-// ... imports ...
+import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:sparkle/presentation/widgets/task/task_card.dart';
+import 'package:sparkle/presentation/widgets/common/flame_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/empty_state.dart';
+import 'package:sparkle/presentation/screens/home/notification_list_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
@@ -62,6 +67,15 @@ class _DashboardTab extends ConsumerWidget {
     final String? errorMessage = taskListState.error ?? planListState.error;
 
     return Scaffold(
+      floatingActionButton: CustomButton.icon(
+        icon: Icons.add_rounded,
+        onPressed: () {
+           // TODO: Navigate to add task
+           // context.push('/tasks/new'); 
+        },
+        size: ButtonSize.large,
+        isCircular: true,
+      ),
       body: isLoading
           ? Center(child: LoadingIndicator.circular(showText: true, loadingText: '加载中...'))
           : errorMessage != null
@@ -103,15 +117,6 @@ class _DashboardTab extends ConsumerWidget {
   }
 
   Widget _buildGradientAppBar(BuildContext context, dynamic user) {
-    // Need a ref to watch providers, but _DashboardTab is the ConsumerWidget, this is just a method.
-    // However, _DashboardTab calls this method and passes context.
-    // We cannot access 'ref' easily inside this method unless passed.
-    // So I will change the signature to accept 'ref'.
-    // BUT _DashboardTab calls it: `_buildGradientAppBar(context, user)`.
-    // I need to update the call site first?
-    // No, I can use Consumer(builder: ...) inside the widget if I want, or just pass ref.
-    
-    // Let's rely on the fact that I will change the call site in the NEXT step.
     return Consumer(
       builder: (context, ref, child) {
         final hour = DateTime.now().hour;
