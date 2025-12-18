@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// 计划卡片组件
 /// 用于在聊天中显示 AI 生成的计划
@@ -24,7 +25,12 @@ class PlanCard extends StatelessWidget {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to plan detail page
+          // 根据计划类型导航到相应页面
+          if (planType == 'sprint') {
+            context.push('/sprint');
+          } else if (planType == 'growth') {
+            context.push('/growth');
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -75,7 +81,12 @@ class PlanCard extends StatelessWidget {
                   const Spacer(),
                   TextButton.icon(
                     onPressed: () {
-                      // TODO: Implement "View Plan" action
+                      // 根据计划类型导航到相应页面
+                      if (planType == 'sprint') {
+                        context.push('/sprint');
+                      } else if (planType == 'growth') {
+                        context.push('/growth');
+                      }
                     },
                     icon: const Icon(Icons.arrow_forward_ios, size: 16),
                     label: const Text('查看计划'),

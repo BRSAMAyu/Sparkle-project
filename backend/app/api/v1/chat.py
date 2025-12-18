@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import json
@@ -15,6 +16,8 @@ from app.tools.registry import tool_registry
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.prompts import build_system_prompt
+from app.orchestration.error_handler import AgentErrorHandler
+from app.core.pending_actions import pending_actions_store
 from app.models.chat import ChatMessage, MessageRole
 
 router = APIRouter()
@@ -46,6 +49,7 @@ async def chat(
     """
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
+    error_handler = AgentErrorHandler()
     
     # 1. 构建上下文和对话历史
     user_context = await get_user_context(db, current_user.id)
@@ -71,44 +75,96 @@ async def chat(
     
     # 4. 处理工具调用
     tool_results = []
+    requires_confirmation = False
+    confirmation_data = None
+
     if llm_response.tool_calls:
-        tool_results = await tool_executor.execute_tool_calls(
-            tool_calls=llm_response.tool_calls,
-            user_id=str(current_user.id),
-            db_session=db
-        )
+        # 4.1 检查是否有需要确认的工具
+        for tool_call in llm_response.tool_calls:
+            tool_name = tool_call["function"]["name"]
+            tool = tool_registry.get_tool(tool_name)
+
+            if tool and tool.requires_confirmation:
+                # 保存待确认操作
+                arguments = tool_call["function"]["arguments"]
+                if isinstance(arguments, str):
+                    arguments = json.loads(arguments)
+
+                action_id = await pending_actions_store.save(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    user_id=str(current_user.id),
+                    description=f"执行 {tool.description}",
+                    preview_data={"tool_call": tool_call}
+                )
+
+                requires_confirmation = True
+                confirmation_data = {
+                    "action_id": action_id,
+                    "tool_name": tool_name,
+                    "description": f"即将执行: {tool.description}",
+                    "preview": arguments
+                }
+                break  # 只处理第一个需要确认的工具
+
+        # 4.2 如果不需要确认，执行工具调用
+        if not requires_confirmation:
+            tool_results = await tool_executor.execute_tool_calls(
+                tool_calls=llm_response.tool_calls,
+                user_id=str(current_user.id),
+                db_session=db
+            )
+
+            # 4.3 错误处理与自我修正
+            # 检查是否有失败的工具调用，并尝试自动修正
+            corrected_results = await error_handler.handle_batch_errors(
+                llm_service=llm_service,
+                tool_results=tool_results,
+                original_requests=llm_response.tool_calls,
+                user_id=str(current_user.id),
+                db_session=db
+            )
+            tool_results = corrected_results
         
         # 5. 将工具执行结果反馈给 LLM，获取最终回复
-        # Append LLM's initial response (which contained tool calls) to history
-        llm_response_for_history = {
-            "role": "assistant",
-            "content": llm_response.content,
-            "tool_calls": llm_response.tool_calls # Store raw tool calls if needed
-        }
-        
-        # Append tool results in history as tool messages
-        tool_messages_for_history = []
-        for tr in tool_results:
-             tool_messages_for_history.append({
-                 "role": "tool",
-                 "content": json.dumps(tr.model_dump(), ensure_ascii=False)
-             })
-        
-        updated_conversation_history = llm_conversation_history + [
-            {"role": "user", "content": request.message} # User message
-        ] + [llm_response_for_history] + tool_messages_for_history
+        if requires_confirmation:
+            # 如果需要确认，直接使用 LLM 的初始回复，提示用户确认
+            llm_text = llm_response.content or "需要确认操作，请查看下方的确认卡片。"
+        elif tool_results:
+            # Append LLM's initial response (which contained tool calls) to history
+            llm_response_for_history = {
+                "role": "assistant",
+                "content": llm_response.content,
+                "tool_calls": llm_response.tool_calls # Store raw tool calls if needed
+            }
 
-        final_llm_response = await llm_service.continue_with_tool_results(
-            conversation_history=updated_conversation_history
-        )
-        llm_text = final_llm_response.content
+            # Append tool results in history as tool messages
+            tool_messages_for_history = []
+            for tr in tool_results:
+                 tool_messages_for_history.append({
+                     "role": "tool",
+                     "content": json.dumps(tr.model_dump(), ensure_ascii=False)
+                 })
+
+            updated_conversation_history = llm_conversation_history + [
+                {"role": "user", "content": request.message} # User message
+            ] + [llm_response_for_history] + tool_messages_for_history
+
+            final_llm_response = await llm_service.continue_with_tool_results(
+                conversation_history=updated_conversation_history
+            )
+            llm_text = final_llm_response.content
+        else:
+            llm_text = llm_response.content
     else:
         llm_text = llm_response.content
     
     # 6. 组装响应
     response_data = response_composer.compose_response(
         llm_text=llm_text,
-        tool_results=tool_results
+        tool_results=tool_results,
+        requires_confirmation=requires_confirmation,
+        confirmation_data=confirmation_data
     )
     
     # 7. 保存消息到数据库
@@ -135,6 +191,7 @@ async def chat_stream(
     """
     async def event_generator():
         tool_executor = ToolExecutor()
+        error_handler = AgentErrorHandler()
         
         user_id_uuid = current_user.id
         
@@ -189,14 +246,32 @@ async def chat_stream(
             elif chunk.type == "tool_call_end":
                 # Execute tool once full arguments are received
                 yield f"data: {json.dumps({'type': 'tool_start', 'tool': chunk.tool_name})}\\n\n"
-                
+
                 result = await tool_executor.execute_tool_call(
                     tool_name=chunk.tool_name,
                     arguments=chunk.full_arguments,
                     user_id=str(current_user.id),
                     db_session=db
                 )
-                
+
+                # 错误处理与自我修正
+                if not result.success and error_handler.should_retry(result):
+                    original_request = {
+                        "id": chunk.tool_call_id,
+                        "function": {
+                            "name": chunk.tool_name,
+                            "arguments": json.dumps(chunk.full_arguments)
+                        }
+                    }
+                    result = await error_handler.handle_tool_error(
+                        llm_service=llm_service,
+                        tool_result=result,
+                        original_request=original_request,
+                        retry_count=0,
+                        user_id=str(current_user.id),
+                        db_session=db
+                    )
+
                 yield f"data: {json.dumps({'type': 'tool_result', 'result': result.model_dump()})}\\n\n"
                 
                 # If there's a widget, send it separately
@@ -267,25 +342,167 @@ async def confirm_action(
     确认高风险操作
     用于需要用户二次确认的工具调用
     """
-    # From the plan, this is not implemented yet in backend fully
-    # Placeholder for now
+    # 获取待确认的操作
+    pending_action = await pending_actions_store.get(action_id, str(current_user.id))
+
+    if not pending_action:
+        raise HTTPException(status_code=404, detail="操作不存在或已过期")
+
+    # 如果用户取消操作
     if not confirmed:
+        await pending_actions_store.delete(action_id, str(current_user.id))
         return {"status": "cancelled", "message": "操作已取消"}
-    
-    # In a real scenario, retrieve pending action from cache/db based on action_id
-    # For now, simulate success
-    return {"status": "executed", "result": {"success": True, "tool_name": "simulated_tool", "data": {"action_id": action_id}}}
+
+    # 用户确认，执行实际操作
+    tool_executor = ToolExecutor()
+    error_handler = AgentErrorHandler()
+
+    try:
+        result = await tool_executor.execute_tool_call(
+            tool_name=pending_action["tool_name"],
+            arguments=pending_action["arguments"],
+            user_id=str(current_user.id),
+            db_session=db
+        )
+
+        # 错误处理与自我修正
+        if not result.success and error_handler.should_retry(result):
+            original_request = {
+                "function": {
+                    "name": pending_action["tool_name"],
+                    "arguments": json.dumps(pending_action["arguments"])
+                }
+            }
+            result = await error_handler.handle_tool_error(
+                llm_service=llm_service,
+                tool_result=result,
+                original_request=original_request,
+                retry_count=0,
+                user_id=str(current_user.id),
+                db_session=db
+            )
+
+        # 删除已处理的待确认操作
+        await pending_actions_store.delete(action_id, str(current_user.id))
+
+        return {"status": "executed", "result": result.model_dump()}
+
+    except Exception as e:
+        # 删除失败的待确认操作
+        await pending_actions_store.delete(action_id, str(current_user.id))
+        raise HTTPException(status_code=500, detail=f"执行操作时出错: {str(e)}")
 
 # ============辅助函数 ============ 
 
 async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
-    """获取用户上下文信息"""
-    # TODO: 实现获取用户近期任务、计划等
-    return {
+    """
+    获取用户上下文信息
+    为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
+    """
+    from datetime import datetime, timedelta
+    from app.models.task import Task
+    from app.models.plan import Plan
+    from app.models.knowledge import UserNodeStatus
+
+    context = {
         "recent_tasks": [],
         "active_plans": [],
-        "flame_level": 1
+        "flame_level": 1,
+        "flame_brightness": 0,
+        "knowledge_stats": {}
     }
+
+    try:
+        # 1. 获取用户基本信息（火花等级和亮度）
+        user_stmt = select(User).where(User.id == user_id)
+        user_result = await db.execute(user_stmt)
+        user = user_result.scalar_one_or_none()
+
+        if user:
+            context["flame_level"] = user.flame_level or 1
+            context["flame_brightness"] = user.flame_brightness or 0
+            context["learning_preferences"] = {
+                "depth_preference": user.depth_preference,
+                "curiosity_preference": user.curiosity_preference
+            }
+
+        # 2. 获取近期任务（最近7天）
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        tasks_stmt = (
+            select(Task)
+            .where(
+                and_(
+                    Task.user_id == user_id,
+                    Task.created_at >= seven_days_ago
+                )
+            )
+            .order_by(Task.created_at.desc())
+            .limit(10)  # 最多返回10个任务
+        )
+        tasks_result = await db.execute(tasks_stmt)
+        tasks = tasks_result.scalars().all()
+
+        context["recent_tasks"] = [
+            {
+                "id": str(task.id),
+                "title": task.title,
+                "type": task.task_type,
+                "status": task.status,
+                "estimated_minutes": task.estimated_minutes,
+                "actual_minutes": task.actual_minutes
+            }
+            for task in tasks
+        ]
+
+        # 3. 获取活跃计划（未完成的计划）
+        plans_stmt = (
+            select(Plan)
+            .where(
+                and_(
+                    Plan.user_id == user_id,
+                    Plan.is_completed == False
+                )
+            )
+            .order_by(Plan.created_at.desc())
+            .limit(5)  # 最多返回5个计划
+        )
+        plans_result = await db.execute(plans_stmt)
+        plans = plans_result.scalars().all()
+
+        context["active_plans"] = [
+            {
+                "id": str(plan.id),
+                "title": plan.title,
+                "type": plan.plan_type,
+                "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                "progress": plan.progress or 0
+            }
+            for plan in plans
+        ]
+
+        # 4. 获取知识星图统计
+        nodes_stmt = (
+            select(UserNodeStatus)
+            .where(UserNodeStatus.user_id == user_id)
+        )
+        nodes_result = await db.execute(nodes_stmt)
+        nodes = nodes_result.scalars().all()
+
+        total_nodes = len(nodes)
+        mastered_nodes = sum(1 for n in nodes if n.mastery_level >= 0.8)
+        learning_nodes = sum(1 for n in nodes if 0.3 <= n.mastery_level < 0.8)
+
+        context["knowledge_stats"] = {
+            "total_nodes": total_nodes,
+            "mastered_nodes": mastered_nodes,
+            "learning_nodes": learning_nodes
+        }
+
+    except Exception as e:
+        # 如果获取上下文失败，返回默认值，不影响聊天功能
+        print(f"获取用户上下文时出错: {e}")
+
+    return context
 
 async def get_conversation_history(
     db: AsyncSession, 

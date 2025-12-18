@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// 知识卡片组件
 /// 用于在聊天中显示 AI 生成的知识节点
@@ -23,7 +24,8 @@ class KnowledgeCard extends StatelessWidget {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to knowledge detail page
+          // 导航到知识星图页面
+          context.push('/galaxy');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -74,7 +76,8 @@ class KnowledgeCard extends StatelessWidget {
                 alignment: Alignment.bottomRight,
                 child: TextButton.icon(
                   onPressed: () {
-                    // TODO: Implement "Learn More" action
+                    // 导航到知识星图页面
+                    context.push('/galaxy');
                   },
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
                   label: const Text('查看详情'),

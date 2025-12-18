@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 /// 任务列表组件
 /// 用于在聊天中批量显示 AI 生成的任务
@@ -38,7 +39,8 @@ class TaskListWidget extends StatelessWidget {
               alignment: Alignment.bottomRight,
               child: TextButton.icon(
                 onPressed: () {
-                  // TODO: Navigate to tasks overview or specific plan
+                  // 导航到任务列表页面
+                  context.push('/tasks');
                 },
                 icon: const Icon(Icons.arrow_forward_ios, size: 16),
                 label: const Text('查看所有任务'),
@@ -72,7 +74,8 @@ class TaskListWidget extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.info_outline, size: 20),
             onPressed: () {
-              // TODO: Show task details
+              // 导航到任务详情页面
+              context.push('/tasks/$id');
             },
           ),
         ],

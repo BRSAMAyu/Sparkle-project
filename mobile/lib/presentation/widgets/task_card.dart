@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// 任务卡片组件
 /// 用于在聊天中显示 AI 生成的任务
@@ -180,6 +181,7 @@ class TaskCard extends StatelessWidget {
   }
 
   void _startTask(BuildContext context, String taskId) {
-    // TODO: 导航到任务执行页面
+    // 导航到任务执行页面
+    context.push('/tasks/$taskId/execute');
   }
 }
