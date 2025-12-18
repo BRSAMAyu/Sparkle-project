@@ -19,13 +19,13 @@ Sparkle (星火) is an AI-powered learning assistant app for college students, f
 sparkle-flutter/
 ├── backend/          # FastAPI backend
 │   ├── app/
-│   │   ├── api/v1/   # API endpoints (auth, tasks, chat, plans, statistics, subjects, errors)
+│   │   ├── api/v1/   # API endpoints (auth, tasks, chat, plans, statistics, subjects, errors, knowledge, push)
 │   │   ├── core/     # Security, exceptions, idempotency
 │   │   ├── db/       # Database session and initialization
 │   │   ├── models/   # SQLAlchemy models
 │   │   ├── schemas/  # Pydantic schemas for request/response
-│   │   ├── services/ # Business logic (user, task, plan, chat, LLM, subject)
-│   │   └── utils/    # Helper utilities
+│   │   ├── services/ # Business logic (user, task, plan, chat, LLM, subject, knowledge, push)
+│   │   └── utils/    # Helper utilities (forgetting curve, vector search)
 │   ├── alembic/      # Database migrations
 │   └── tests/        # Pytest tests
 └── mobile/           # Flutter app
@@ -144,18 +144,37 @@ dart format lib/        # Format code
 4. **Schema Layer** (`app/schemas/`): Pydantic models for validation and serialization
 
 **Key Models**:
-- **User**: User accounts with flame_level, flame_brightness, and learning preferences (depth_preference, curiosity_preference)
+- **User**: User accounts with flame_level, flame_brightness, learning preferences (depth_preference, curiosity_preference), and push_settings
 - **Task**: Learning task cards with types (learning, training, error_fix, reflection, social, planning) and statuses (pending, in_progress, completed, abandoned)
 - **Plan**: Sprint plans (exam prep) or growth plans (long-term learning) with target_date and mastery_level
 - **ChatMessage**: AI conversation history with structured actions in JSON format
-- **ErrorRecord**: Wrong answer archive for spaced repetition
+- **ErrorRecord**: Wrong answer archive for spaced repetition with forgetting curve tracking
 - **Job**: Background job system for async task processing (has recovery mechanism on startup)
 - **Subject**: Subject/course catalog with caching
+- **KnowledgeNode**: Knowledge graph nodes with mastery tracking, vector embeddings for semantic search
+- **KnowledgeEdge**: Relationships between knowledge nodes (prerequisite, related, derived)
+- **NodeReview**: Spaced repetition review records for knowledge nodes
+- **PushLog**: Push notification history with delivery status and user engagement tracking
 
 **LLM Service**:
 - Abstracted in `app/services/llm_service.py`
 - Uses OpenAI-compatible API (works with Qwen, DeepSeek, OpenAI)
 - Configure via `LLM_API_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL_NAME` in .env
+- Enhanced parsing with "宽容模式" (tolerant mode) v2.2 for robust JSON extraction from LLM responses
+
+**Knowledge Graph Service**:
+- Knowledge node management with mastery level tracking
+- Vector embeddings for semantic search (using text-embedding models)
+- LLM-powered knowledge expansion and relationship inference
+- Spaced repetition scheduling based on forgetting curve algorithm
+- Service: `app/services/knowledge_service.py`
+
+**Push Notification Service**:
+- Persona-based intelligent push generation using LLM
+- Three push types: Sprint Reminder, Memory Wake, Sleep Wake
+- Configurable push preferences (frequency, time slots, content types)
+- Push log tracking with delivery status and engagement metrics
+- Service: `app/services/push_service.py`
 
 **Idempotency System**:
 - Middleware-based idempotency using `IdempotencyMiddleware` (in `app/api/middleware.py`)
@@ -200,7 +219,10 @@ dart format lib/        # Format code
 - Chat interface with AI tutor (chat_screen.dart, chat_bubble.dart, action_card.dart)
 - Task management with execution timer (task screens, timer_widget.dart)
 - Sprint and growth plan screens
-- Profile and statistics
+- Knowledge map visualization with graph view
+- Push notification settings and preferences
+- Guest mode for quick onboarding
+- Profile and statistics with flame level/brightness display
 
 ### Code Generation Requirements
 
@@ -238,20 +260,29 @@ API endpoint configured in `lib/core/constants/api_constants.dart` or `lib/core/
 
 Base: `/api/v1`
 
-- `/auth` - Registration, login, token refresh
-- `/users` - User profile management
+- `/auth` - Registration, login, token refresh, guest mode
+- `/users` - User profile management, push settings, notification preferences
 - `/tasks` - Task CRUD, start, complete operations
 - `/chat` - AI conversation with action suggestions
 - `/plans` - Plan management, AI task generation
 - `/statistics` - Learning overview, flame level/brightness
 - `/subjects` - Subject catalog
-- `/errors` - Error record management
+- `/errors` - Error record management with forgetting curve
+- `/knowledge` - Knowledge graph management (nodes, edges, reviews)
+- `/knowledge/expand` - LLM-powered knowledge expansion
+- `/knowledge/search` - Vector semantic search for knowledge nodes
+- `/push` - Push notification management, delivery logs, testing
 
 See `docs/api_design.md` for detailed API specs.
 
 ## Database Schema
 
-Key tables: users, tasks, plans, chat_messages, error_records, jobs, subjects, idempotency_keys
+Key tables: users, tasks, plans, chat_messages, error_records, jobs, subjects, idempotency_keys, knowledge_nodes, knowledge_edges, node_reviews, push_logs
+
+**New Features**:
+- **Knowledge Graph**: knowledge_nodes (with vector embeddings), knowledge_edges (prerequisites/related), node_reviews (spaced repetition)
+- **Push System**: push_logs (delivery tracking), user.push_settings (JSONB preferences)
+- **Forgetting Curve**: Enhanced error_records with next_review_at calculation
 
 See `docs/database_schema.md` for full schema and relationships.
 

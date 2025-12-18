@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 // Global navigator key to allow navigation without context from notifications
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
