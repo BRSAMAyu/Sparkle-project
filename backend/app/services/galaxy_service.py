@@ -35,6 +35,82 @@ class GalaxyService:
         self.expansion_service = ExpansionService(db)
 
     # ==========================================
+    # 0. Node & Edge Management (Added for Agent)
+    # ==========================================
+    async def create_node(
+        self,
+        user_id: UUID,
+        title: str,
+        summary: str,
+        subject_id: Optional[int] = None,
+        tags: List[str] = [],
+        parent_node_id: Optional[UUID] = None
+    ) -> KnowledgeNode:
+        """Create a new knowledge node"""
+        node = KnowledgeNode(
+            name=title,
+            description=summary,
+            subject_id=subject_id,
+            keywords=tags,
+            parent_id=parent_node_id,
+            is_seed=False,
+            source_type='user_created',
+            importance_level=1
+        )
+        self.db.add(node)
+        await self.db.flush()
+
+        status = UserNodeStatus(
+            user_id=user_id,
+            node_id=node.id,
+            is_unlocked=True,
+            mastery_score=0,
+            first_unlock_at=datetime.utcnow()
+        )
+        self.db.add(status)
+        
+        await self.db.commit()
+        await self.db.refresh(node)
+        return node
+
+    async def create_edge(
+        self,
+        user_id: UUID,
+        source_id: UUID,
+        target_id: UUID,
+        relation_type: str
+    ) -> NodeRelation:
+        """Create a relation between nodes"""
+        edge = NodeRelation(
+            source_node_id=source_id,
+            target_node_id=target_id,
+            relation_type=relation_type,
+            created_by='user'
+        )
+        self.db.add(edge)
+        await self.db.commit()
+        await self.db.refresh(edge)
+        return edge
+    
+    async def keyword_search(
+         self,
+         user_id: UUID,
+         query: str,
+         subject_id: Optional[int] = None,
+         limit: int = 10
+    ) -> List[KnowledgeNode]:
+        """Keyword search for nodes"""
+        stmt = select(KnowledgeNode).where(
+            KnowledgeNode.name.ilike(f"%{query}%")
+        )
+        if subject_id:
+             stmt = stmt.where(KnowledgeNode.subject_id == subject_id)
+        
+        stmt = stmt.limit(limit)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    # ==========================================
     # 1. 获取星图数据
     # ==========================================
     async def get_galaxy_graph(
@@ -217,6 +293,7 @@ class GalaxyService:
         self,
         user_id: UUID,
         query: str,
+        subject_id: Optional[int] = None,
         limit: int = 10,
         threshold: float = 0.3
     ) -> List[SearchResultItem]:
@@ -226,6 +303,7 @@ class GalaxyService:
         Args:
             user_id: 用户 ID
             query: 搜索查询
+            subject_id: 可选，限定科目
             limit: 返回数量限制
             threshold: 相似度阈值 (越小越严格)
 
@@ -244,6 +322,13 @@ class GalaxyService:
                 KnowledgeNode.embedding.cosine_distance(query_embedding).label('distance')
             )
             .where(KnowledgeNode.embedding.isnot(None))
+        )
+        
+        if subject_id:
+            search_query = search_query.where(KnowledgeNode.subject_id == subject_id)
+            
+        search_query = (
+            search_query
             .order_by('distance')
             .limit(limit)
         )

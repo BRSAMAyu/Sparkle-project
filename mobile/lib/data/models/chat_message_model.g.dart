@@ -8,28 +8,47 @@ part of 'chat_message_model.dart';
 
 ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
     ChatMessageModel(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      sessionId: json['session_id'] as String,
+      id: json['id'] as String?,
+      userId: json['user_id'] as String?,
+      conversationId: json['conversation_id'] as String,
+      taskId: json['task_id'] as String?,
       role: $enumDecode(_$MessageRoleEnumMap, json['role']),
       content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      taskId: json['task_id'] as String?,
-      actions: (json['actions'] as List<dynamic>?)
-          ?.map((e) => ChatAction.fromJson(e as Map<String, dynamic>))
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+      widgets: (json['widgets'] as List<dynamic>?)
+          ?.map((e) => WidgetPayload.fromJson(e as Map<String, dynamic>))
           .toList(),
+      toolResults: (json['tool_results'] as List<dynamic>?)
+          ?.map((e) => ToolResultModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasErrors: json['has_errors'] as bool?,
+      errors: (json['errors'] as List<dynamic>?)
+          ?.map((e) => ErrorInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      requiresConfirmation: json['requires_confirmation'] as bool?,
+      confirmationData: json['confirmation_data'] == null
+          ? null
+          : ConfirmationData.fromJson(
+              json['confirmation_data'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'user_id': instance.userId,
-      'session_id': instance.sessionId,
+      'conversation_id': instance.conversationId,
       'task_id': instance.taskId,
       'role': _$MessageRoleEnumMap[instance.role]!,
       'content': instance.content,
-      'actions': instance.actions,
       'created_at': instance.createdAt.toIso8601String(),
+      'widgets': instance.widgets,
+      'tool_results': instance.toolResults,
+      'has_errors': instance.hasErrors,
+      'errors': instance.errors,
+      'requires_confirmation': instance.requiresConfirmation,
+      'confirmation_data': instance.confirmationData,
     };
 
 const _$MessageRoleEnumMap = {
@@ -38,55 +57,95 @@ const _$MessageRoleEnumMap = {
   MessageRole.system: 'system',
 };
 
-ChatAction _$ChatActionFromJson(Map<String, dynamic> json) => ChatAction(
+WidgetPayload _$WidgetPayloadFromJson(Map<String, dynamic> json) =>
+    WidgetPayload(
       type: json['type'] as String,
-      params: json['params'] as Map<String, dynamic>,
+      data: json['data'] as Map<String, dynamic>,
     );
 
-Map<String, dynamic> _$ChatActionToJson(ChatAction instance) =>
+Map<String, dynamic> _$WidgetPayloadToJson(WidgetPayload instance) =>
     <String, dynamic>{
       'type': instance.type,
-      'params': instance.params,
+      'data': instance.data,
     };
 
-ChatRequest _$ChatRequestFromJson(Map<String, dynamic> json) => ChatRequest(
-      content: json['content'] as String,
-      sessionId: json['session_id'] as String?,
-      taskId: json['task_id'] as String?,
+ToolResultModel _$ToolResultModelFromJson(Map<String, dynamic> json) =>
+    ToolResultModel(
+      success: json['success'] as bool,
+      toolName: json['tool_name'] as String,
+      data: json['data'] as Map<String, dynamic>?,
+      errorMessage: json['error_message'] as String?,
+      widgetType: json['widget_type'] as String?,
+      widgetData: json['widget_data'] as Map<String, dynamic>?,
     );
 
-Map<String, dynamic> _$ChatRequestToJson(ChatRequest instance) =>
+Map<String, dynamic> _$ToolResultModelToJson(ToolResultModel instance) =>
     <String, dynamic>{
-      'content': instance.content,
-      'session_id': instance.sessionId,
-      'task_id': instance.taskId,
+      'success': instance.success,
+      'tool_name': instance.toolName,
+      'data': instance.data,
+      'error_message': instance.errorMessage,
+      'widget_type': instance.widgetType,
+      'widget_data': instance.widgetData,
     };
 
-ChatResponse _$ChatResponseFromJson(Map<String, dynamic> json) => ChatResponse(
-      message:
-          ChatMessageModel.fromJson(json['message'] as Map<String, dynamic>),
-      actions: (json['actions'] as List<dynamic>?)
-          ?.map((e) => ChatAction.fromJson(e as Map<String, dynamic>))
-          .toList(),
+ErrorInfo _$ErrorInfoFromJson(Map<String, dynamic> json) => ErrorInfo(
+      tool: json['tool'] as String,
+      message: json['message'] as String,
+      suggestion: json['suggestion'] as String?,
     );
 
-Map<String, dynamic> _$ChatResponseToJson(ChatResponse instance) =>
+Map<String, dynamic> _$ErrorInfoToJson(ErrorInfo instance) => <String, dynamic>{
+      'tool': instance.tool,
+      'message': instance.message,
+      'suggestion': instance.suggestion,
+    };
+
+ConfirmationData _$ConfirmationDataFromJson(Map<String, dynamic> json) =>
+    ConfirmationData(
+      actionId: json['action_id'] as String,
+      toolName: json['tool_name'] as String,
+      description: json['description'] as String,
+      preview: json['preview'] as Map<String, dynamic>,
+    );
+
+Map<String, dynamic> _$ConfirmationDataToJson(ConfirmationData instance) =>
+    <String, dynamic>{
+      'action_id': instance.actionId,
+      'tool_name': instance.toolName,
+      'description': instance.description,
+      'preview': instance.preview,
+    };
+
+ChatApiResponse _$ChatApiResponseFromJson(Map<String, dynamic> json) =>
+    ChatApiResponse(
+      message: json['message'] as String,
+      conversationId: json['conversation_id'] as String,
+      widgets: (json['widgets'] as List<dynamic>?)
+          ?.map((e) => WidgetPayload.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      toolResults: (json['tool_results'] as List<dynamic>?)
+          ?.map((e) => ToolResultModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasErrors: json['has_errors'] as bool?,
+      errors: (json['errors'] as List<dynamic>?)
+          ?.map((e) => ErrorInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      requiresConfirmation: json['requires_confirmation'] as bool?,
+      confirmationData: json['confirmation_data'] == null
+          ? null
+          : ConfirmationData.fromJson(
+              json['confirmation_data'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$ChatApiResponseToJson(ChatApiResponse instance) =>
     <String, dynamic>{
       'message': instance.message,
-      'actions': instance.actions,
-    };
-
-ChatSession _$ChatSessionFromJson(Map<String, dynamic> json) => ChatSession(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      firstMessageSummary: json['first_message_summary'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-
-Map<String, dynamic> _$ChatSessionToJson(ChatSession instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'user_id': instance.userId,
-      'first_message_summary': instance.firstMessageSummary,
-      'created_at': instance.createdAt.toIso8601String(),
+      'conversation_id': instance.conversationId,
+      'widgets': instance.widgets,
+      'tool_results': instance.toolResults,
+      'has_errors': instance.hasErrors,
+      'errors': instance.errors,
+      'requires_confirmation': instance.requiresConfirmation,
+      'confirmation_data': instance.confirmationData,
     };
