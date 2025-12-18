@@ -1,65 +1,37 @@
 """
 LLM 响应解析器
-Parser - 解析 LLM 输出并处理容错 (v2.1 增强版)
+Parser - 解析 LLM 输出并处理容错 (v2.2 增强版)
+
+v2.2 变更:
+- 使用 llm.py 中的增强版 coerce 函数
+- 增强意图检测，支持更多中文表达和否定词排除
 """
 import json
 import re
 from typing import Any, Optional, List
-from pydantic import BaseModel, BeforeValidator
-from typing_extensions import Annotated
+from pydantic import BaseModel
 from loguru import logger
 import json_repair
 
-from app.schemas.llm import LLMResponse
-
-
-# ==================== 🆕 宽容类型转换器 ====================
-
-def coerce_int(v: Any) -> int:
-    """将字符串数字转为 int"""
-    if isinstance(v, int):
-        return v
-    if isinstance(v, str):
-        try:
-            return int(v)
-        except ValueError:
-            pass
-        # 尝试提取数字
-        match = re.search(r'\d+', v)
-        if match:
-            return int(match.group())
-    if isinstance(v, float):
-        return int(v)
-    raise ValueError(f"Cannot convert {v} to int")
-
-
-def coerce_str_list(v: Any) -> List[str]:
-    """将单个字符串转为列表"""
-    if isinstance(v, list):
-        return [str(item) for item in v]
-    if isinstance(v, str):
-        return [v]
-    return []
-
-
-# 宽容类型定义
-CoercedInt = Annotated[int, BeforeValidator(coerce_int)]
-CoercedStrList = Annotated[List[str], BeforeValidator(coerce_str_list)]
+from app.schemas.llm import (
+    LLMResponse,
+    CoercedInt,
+    CoercedStrList,
+)
 
 
 # ==================== Schema 定义 ====================
 
 class TaskActionParams(BaseModel):
-    """任务创建参数 - 宽容模式"""
+    """任务创建参数 - 宽容模式 (v2.2)"""
     title: str
     type: str = "learning"
-    estimated_minutes: CoercedInt = 15  # 🆕 自动转换 "15" -> 15
-    tags: CoercedStrList = []           # 🆕 自动转换 "tag" -> ["tag"]
-    difficulty: CoercedInt = 3          # 🆕 自动转换
+    estimated_minutes: CoercedInt = 15  # 自动转换 "15" -> 15, "十五" -> 15, "1小时" -> 60
+    tags: CoercedStrList = []           # 自动转换 "tag" -> ["tag"]
+    difficulty: CoercedInt = 3          # 自动转换
     guide_content: Optional[str] = None
-    
+
     class Config:
-        # 忽略额外字段，不报错
         extra = "ignore"
 
 
@@ -67,7 +39,7 @@ class ChatAction(BaseModel):
     """对话 Action"""
     type: str
     params: dict = {}
-    
+
     class Config:
         extra = "ignore"
 
@@ -145,23 +117,75 @@ class LLMResponseParser:
     
     def _detect_action_intent(self, text: str) -> Optional[str]:
         """
-        🆕 检测文本中是否暗示了操作成功
-        
-        如果检测到，返回警告信息
+        增强版意图检测 (v2.2)
+
+        检测文本中是否暗示了操作成功，同时处理否定句
+
+        Returns:
+            警告信息 (如果检测到假装成功的风险) 或 None
         """
-        # 检测关键词
-        success_indicators = [
-            ("创建", "任务"),
-            ("添加", "计划"),
-            ("已为您", ""),
-            ("帮你", "创建"),
-            ("completed", ""),
-        ]
-        
         text_lower = text.lower()
-        for indicator1, indicator2 in success_indicators:
-            if indicator1 in text_lower:
-                if not indicator2 or indicator2 in text_lower:
-                    return f"AI 可能尝试执行了操作，但数据格式有误。如需{indicator1}，请手动操作或重新描述需求。"
-        
+
+        # 1. 否定词排除 - 如果句子是否定意图，不触发警告
+        negation_prefixes = ["不要", "取消", "删除", "移除", "别", "不用", "不需要", "撤销"]
+        for prefix in negation_prefixes:
+            if prefix in text_lower:
+                return None
+
+        # 2. 定义意图映射
+        intent_map = {
+            "create_task": {
+                "actions": [
+                    "创建", "新建", "添加", "建立", "生成",
+                    "安排", "记下", "记一下", "加个", "加一个",
+                    "create", "add", "new", "make"
+                ],
+                "objects": [
+                    "任务", "待办", "事项", "todo", "task",
+                    "日程", "提醒", "计划", "复习", "学习"
+                ],
+                "message": "创建任务"
+            },
+            "create_plan": {
+                "actions": [
+                    "制定", "规划", "设定", "设置", "安排",
+                    "plan", "schedule", "set"
+                ],
+                "objects": [
+                    "计划", "方案", "日程", "安排", "目标",
+                    "plan", "schedule", "goal"
+                ],
+                "message": "制定计划"
+            },
+            "fake_success": {
+                "phrases": [
+                    "已为您", "成功创建", "已经创建", "帮你创建了",
+                    "已添加", "已安排", "创建完成", "添加完成",
+                    "done", "finished", "created", "added",
+                    "好的，我已", "我帮你", "已经帮你"
+                ],
+                "message": "执行操作"
+            }
+        }
+
+        # 3. 检查显式的成功短语 (优先级最高)
+        for phrase in intent_map["fake_success"]["phrases"]:
+            if phrase in text_lower:
+                return (
+                    f"AI 反馈包含'{phrase}'，但未生成有效数据结构。"
+                    f"请尝试更明确的指令（如：'创建一个背单词任务，预计15分钟'）。"
+                )
+
+        # 4. 交叉匹配动作和对象
+        for intent_key in ["create_task", "create_plan"]:
+            intent = intent_map[intent_key]
+            has_action = any(a in text_lower for a in intent["actions"])
+            has_object = any(o in text_lower for o in intent["objects"])
+
+            if has_action and has_object:
+                return (
+                    f"AI 识别到{intent['message']}意图，但未能生成正确的 JSON 格式。"
+                    f"请尝试更明确的指令（如：'创建一个背单词任务'）。"
+                )
+
         return None

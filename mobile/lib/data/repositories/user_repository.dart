@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/user_model.dart';
 
 class UserRepository {

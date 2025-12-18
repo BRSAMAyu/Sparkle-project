@@ -58,18 +58,18 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
         
-    _logger.i("NotificationService initialized");
+    _logger.i('NotificationService initialized');
   }
 
   // Static/Global callback for background handling if needed
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationResponse(NotificationResponse details) {
     // Handle background actions (snooze, dismiss)
-    print("Background notification action: ${details.actionId}");
+    print('Background notification action: ${details.actionId}');
   }
 
   void _onNotificationResponse(NotificationResponse details) {
-    _logger.i("Notification action: ${details.actionId}, payload: ${details.payload}");
+    _logger.i('Notification action: ${details.actionId}, payload: ${details.payload}');
     
     if (details.payload != null) {
       try {
@@ -95,19 +95,19 @@ class NotificationService {
           _handleDismiss(payload);
         }
       } catch (e) {
-        _logger.e("Error parsing notification payload: $e");
+        _logger.e('Error parsing notification payload: $e');
       }
     }
   }
   
   void _handleSnooze(Map<String, dynamic> payload) {
     // TODO: Call API to snooze
-    _logger.i("Snoozing notification: $payload");
+    _logger.i('Snoozing notification: $payload');
   }
 
   void _handleDismiss(Map<String, dynamic> payload) {
     // TODO: Call API to dismiss
-    _logger.i("Dismissing notification: $payload");
+    _logger.i('Dismissing notification: $payload');
   }
 
   Future<void> showSmartPush({
