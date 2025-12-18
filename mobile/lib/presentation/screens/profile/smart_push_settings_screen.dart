@@ -120,7 +120,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             const Center(child: Padding(
               padding: EdgeInsets.only(right: 16.0),
               child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-            ))
+            ),)
           else
             IconButton(
               icon: const Icon(Icons.save),
@@ -160,9 +160,9 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             child: TextButton.icon(
               onPressed: () {
                 ref.read(notificationServiceProvider).showSmartPush(
-                  title: "⚡ 调试：记忆临界点",
-                  body: "你的 [线性代数] 正在遗忘，点击立即复习！",
-                  payload: {"taskId": "debug_123"},
+                  title: '⚡ 调试：记忆临界点',
+                  body: '你的 [线性代数] 正在遗忘，点击立即复习！',
+                  payload: {'taskId': 'debug_123'},
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
                    const SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
@@ -224,7 +224,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceVariant,
+          color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: isSelected ? Border.all(color: colorScheme.primary, width: 2) : null,
         ),
