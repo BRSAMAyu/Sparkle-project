@@ -1,162 +1,132 @@
 import 'dart:async';
-
+import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
-
-/// 流式聊天事件类型
-enum StreamEventType {
-  token,      // AI 正在输出的文字 chunk
-  actions,    // AI 生成的 actions (如创建任务)
-  parseStatus,// 解析状态 (是否降级)
-  done,       // 完成
-  error,      // 错误
-}
-
-/// 流式聊天事件
-class ChatStreamEvent {
-  final StreamEventType type;
-  final String? content;       // token 类型时的文字内容
-  final List<dynamic>? actions;// actions 类型时的动作列表
-  final String? messageId;     // done 类型时返回的消息 ID
-  final String? sessionId;     // done 类型时返回的会话 ID
-  final String? errorMessage;  // error 类型时的错误信息
-  final bool? degraded;        // parseStatus 类型时是否降级
-
-  ChatStreamEvent({
-    required this.type,
-    this.content,
-    this.actions,
-    this.messageId,
-    this.sessionId,
-    this.errorMessage,
-    this.degraded,
-  });
-}
+import '../models/chat_message_model.dart';
 
 class ChatRepository {
-  final ApiClient _apiClient;
+  final Dio _dio;
 
-  ChatRepository(this._apiClient);
+  ChatRepository(this._dio);
 
-  // Note: This is duplicated from TaskRepository. It would be better to have a base repository class
-  // or a shared error handling mixin.
-  T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ?? 'An unknown error occurred in $functionName';
-    throw Exception(errorMessage);
+  /// 流式聊天（SSE）
+  Stream<ChatStreamEvent> chatStream(String message, String? conversationId) {
+    final controller = StreamController<ChatStreamEvent>();
+    
+    _startSSEConnection(
+      message: message,
+      conversationId: conversationId,
+      controller: controller,
+    );
+    
+    return controller.stream;
   }
 
-  /// 流式发送消息 (SSE)
-  ///
-  /// 返回一个 Stream<ChatStreamEvent>，可以实时接收 AI 的响应
-  /// 当网络断开或出错时，会发送 error 事件而不是抛出异常
-  Stream<ChatStreamEvent> sendMessageStream(ChatRequest request) async* {
-    String accumulatedContent = '';  // 累积的内容，用于网络中断时保留已接收的文字
-
+  Future<void> _startSSEConnection({
+    required String message,
+    String? conversationId,
+    required StreamController<ChatStreamEvent> controller,
+  }) async {
     try {
-      await for (final sseEvent in _apiClient.postStream(
-        ApiEndpoints.chatStream,
-        data: request.toJson(),
-      )) {
-        final jsonData = sseEvent.jsonData;
+      final response = await _dio.post<ResponseBody>(
+        '/api/v1/chat/stream',
+        data: {
+          'message': message,
+          'conversation_id': conversationId,
+        },
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {'Accept': 'text/event-stream'},
+        ),
+      );
 
-        switch (sseEvent.event) {
-          case 'token':
-            final content = jsonData?['content'] as String? ?? '';
-            accumulatedContent += content;
-            yield ChatStreamEvent(type: StreamEventType.token, content: content);
-            break;
+      final stream = response.data!.stream;
+      String buffer = '';
 
-          case 'actions':
-            final actions = jsonData?['actions'] as List<dynamic>?;
-            yield ChatStreamEvent(type: StreamEventType.actions, actions: actions);
-            break;
-
-          case 'parse_status':
-            final degraded = jsonData?['degraded'] as bool? ?? false;
-            yield ChatStreamEvent(type: StreamEventType.parseStatus, degraded: degraded);
-            break;
-
-          case 'done':
-            yield ChatStreamEvent(
-              type: StreamEventType.done,
-              messageId: jsonData?['message_id'] as String?,
-              sessionId: jsonData?['session_id'] as String?,
-            );
-            return;  // 正常结束
-
-          case 'error':
-            yield ChatStreamEvent(
-              type: StreamEventType.error,
-              errorMessage: jsonData?['message'] as String? ?? '未知错误',
-            );
-            return;
-
-          default:
-            // 未知事件类型，忽略
-            break;
+      await for (final chunk in stream.transform(utf8.decoder)) {
+        buffer += chunk;
+        
+        // 解析 SSE 事件
+        while (buffer.contains('\n\n')) {
+          final eventEnd = buffer.indexOf('\n\n');
+          final eventStr = buffer.substring(0, eventEnd);
+          buffer = buffer.substring(eventEnd + 2);
+          
+          if (eventStr.startsWith('data: ')) {
+            final dataStr = eventStr.substring(6);
+            try {
+              final data = json.decode(dataStr);
+              controller.add(_parseEvent(data));
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
         }
       }
-
-      // 如果流正常结束但没有收到 done 事件，也发送一个完成事件
-      yield ChatStreamEvent(type: StreamEventType.done);
-
+      
+      controller.close();
     } catch (e) {
-      // 🚨 关键：网络错误时不崩溃，保留已累积的内容
-      yield ChatStreamEvent(
-        type: StreamEventType.error,
-        errorMessage: '网络连接中断，已保留部分内容',
-        content: accumulatedContent.isNotEmpty ? accumulatedContent : null,
-      );
+      controller.addError(e);
+      controller.close();
     }
   }
 
-  /// 非流式发送消息 (兼容旧代码)
-  Future<ChatResponse> sendMessage(ChatRequest request) async {
-    try {
-      final response = await _apiClient.post(ApiEndpoints.chat, data: request.toJson());
-      return ChatResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      return _handleDioError(e, 'sendMessage');
+  ChatStreamEvent _parseEvent(Map<String, dynamic> data) {
+    final type = data['type'] as String;
+    
+    switch (type) {
+      case 'text':
+        return TextEvent(content: data['content'] as String);
+      
+      case 'tool_start':
+        return ToolStartEvent(toolName: data['tool'] as String);
+      
+      case 'tool_result':
+        return ToolResultEvent(
+          result: ToolResultModel.fromJson(data['result']),
+        );
+      
+      case 'widget':
+        return WidgetEvent(
+          widgetType: data['widget_type'] as String,
+          widgetData: data['widget_data'] as Map<String, dynamic>,
+        );
+      
+      case 'done':
+        return DoneEvent();
+      
+      default:
+        return UnknownEvent(data: data);
     }
   }
-
-  Future<List<ChatSession>> getSessions({int limit = 20}) async {
-    try {
-      final response = await _apiClient.get(ApiEndpoints.chatSessions, queryParameters: {'limit': limit});
-       final List<dynamic> data = response.data;
-      return data.map((json) => ChatSession.fromJson(json)).toList();
-    } on DioException catch (e) {
-      return _handleDioError(e, 'getSessions');
-    }
-  }
-
-  Future<List<ChatMessageModel>> getSessionMessages(String sessionId, {int limit = 50}) async {
-    try {
-      final response = await _apiClient.get(ApiEndpoints.sessionMessages(sessionId), queryParameters: {'limit': limit});
-       final List<dynamic> data = response.data;
-      return data.map((json) => ChatMessageModel.fromJson(json)).toList();
-    } on DioException catch (e) {
-      return _handleDioError(e, 'getSessionMessages');
-    }
-  }
-
-  Future<void> deleteSession(String sessionId) async {
-    try {
-      // Assuming the endpoint is something like DELETE /chat/sessions/{id}
-      // This is not explicitly defined in ApiEndpoints, so I'm making an assumption.
-      await _apiClient.delete('${ApiEndpoints.chatSessions}/$sessionId');
-    } on DioException catch (e) {
-      return _handleDioError(e, 'deleteSession');
-    }
-  }
-
 }
 
-// Provider for ChatRepository
-final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return ChatRepository(apiClient);
-});
+// 事件类型定义
+abstract class ChatStreamEvent {}
+
+class TextEvent extends ChatStreamEvent {
+  final String content;
+  TextEvent({required this.content});
+}
+
+class ToolStartEvent extends ChatStreamEvent {
+  final String toolName;
+  ToolStartEvent({required this.toolName});
+}
+
+class ToolResultEvent extends ChatStreamEvent {
+  final ToolResultModel result;
+  ToolResultEvent({required this.result});
+}
+
+class WidgetEvent extends ChatStreamEvent {
+  final String widgetType;
+  final Map<String, dynamic> widgetData;
+  WidgetEvent({required this.widgetType, required this.widgetData});
+}
+
+class DoneEvent extends ChatStreamEvent {}
+
+class UnknownEvent extends ChatStreamEvent {
+  final Map<String, dynamic> data;
+  UnknownEvent({required this.data});
+}

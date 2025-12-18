@@ -1,7 +1,8 @@
 import json
-from typing import List, Dict, AsyncGenerator, Optional
+from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator
 import asyncio
 from loguru import logger
+from dataclasses import dataclass
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
@@ -101,8 +102,27 @@ DEMO_MOCK_RESPONSES: Dict[str, str] = {
 💡 小提示：遇到不会的题目，先尝试自己思考 5 分钟，这样学习效果更好！""",
 }
 
+@dataclass
+class LLMResponse:
+    content: str
+    tool_calls: Optional[List[Dict]] = None
+    finish_reason: str = "stop"
+
+@dataclass
+class StreamChunk:
+    type: str  # "text" | "tool_call_chunk" | "tool_call_end"
+    content: Optional[str] = None
+    tool_call_id: Optional[str] = None
+    tool_name: Optional[str] = None
+    arguments: Optional[str] = None # For tool_call_chunk
+    full_arguments: Optional[Dict] = None # For tool_call_end
 
 class LLMService:
+    """
+    LLM 服务
+    支持工具调用（Function Calling）
+    """
+    
     def __init__(self):
         self.provider: LLMProvider = OpenAICompatibleProvider(
             api_key=settings.LLM_API_KEY,
@@ -191,6 +211,173 @@ class LLMService:
         logger.debug(f"Starting stream chat with model: {model}")
         async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
             yield chunk
+
+    async def chat_with_tools(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tools: List[Dict[str, Any]],
+        conversation_history: Optional[List[Dict]] = None
+    ) -> LLMResponse:
+        """
+        带工具调用的聊天
+        
+        Args:
+            system_prompt: 系统提示词
+            user_message: 用户消息
+            tools: OpenAI 格式的工具定义
+            conversation_history: 对话历史
+            
+        Returns:
+            LLMResponse: 包含文本和工具调用的响应
+        """
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        if conversation_history:
+            messages.extend(conversation_history)
+        
+        messages.append({"role": "user", "content": user_message})
+
+        # Using self.provider.client (AsyncOpenAI) directly for tool calls
+        if hasattr(self.provider, 'client'):
+            response = await self.provider.client.chat.completions.create(
+                model=self.default_model,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",  # 让模型自动决定是否调用工具
+                temperature=0.7, # Default temperature
+            )
+            
+            choice = response.choices[0]
+            message = choice.message
+            
+            tool_calls_dicts = []
+            if message.tool_calls:
+                for tc in message.tool_calls:
+                    tool_calls_dicts.append({
+                        "id": tc.id,
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments, # Arguments are already string
+                        }
+                    })
+
+            return LLMResponse(
+                content=message.content or "",
+                tool_calls=tool_calls_dicts,
+                finish_reason=choice.finish_reason
+            )
+        else:
+            raise NotImplementedError("Current LLM provider does not support tool calling directly.")
+    
+    async def continue_with_tool_results(
+        self,
+        conversation_history: List[Dict], # full history up to LLM's initial response
+        tool_results: List[Dict] # tool_results from executor
+    ) -> LLMResponse:
+        """
+        将工具执行结果反馈给 LLM，获取最终回复
+        """
+        messages = conversation_history[:] # Copy history
+        
+        # Append tool messages
+        for result in tool_results:
+            # Need to find the original tool_call_id from the conversation_history if possible
+            # Or just append as a 'tool' role message
+            messages.append({
+                "role": "tool",
+                # "tool_call_id": result.get("tool_call_id", ""), # if we track original tool_call_id
+                "content": json.dumps(result, ensure_ascii=False)
+            })
+        
+        # Now call LLM again without tools, get final message
+        if hasattr(self.provider, 'client'):
+            response = await self.provider.client.chat.completions.create(
+                model=self.default_model,
+                messages=messages,
+                temperature=0.7,
+            )
+            choice = response.choices[0]
+            message = choice.message
+            return LLMResponse(
+                content=message.content or "",
+                tool_calls=None, # No more tool calls expected
+                finish_reason=choice.finish_reason
+            )
+        else:
+            raise NotImplementedError("Current LLM provider does not support tool calling directly.")
+    
+    async def chat_stream_with_tools(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tools: List[Dict[str, Any]]
+    ) -> AsyncIterator[StreamChunk]:
+        """
+        流式聊天（支持工具调用）
+        
+        Yields:
+            StreamChunk: 文本块或工具调用
+        """
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+        
+        if hasattr(self.provider, 'client'):
+            stream = await self.provider.client.chat.completions.create(
+                model=self.default_model,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+                stream=True,
+                temperature=0.7,
+            )
+            
+            collected_tool_call_chunks = {} # {id: {name: "", args_str: ""}}
+            
+            async for chunk in stream:
+                delta = chunk.choices[0].delta
+                
+                # Text content
+                if delta.content:
+                    yield StreamChunk(type="text", content=delta.content)
+                
+                # Tool call chunks
+                if delta.tool_calls:
+                    for tc_chunk in delta.tool_calls:
+                        tool_call_id = tc_chunk.id
+                        
+                        if tool_call_id not in collected_tool_call_chunks:
+                            collected_tool_call_chunks[tool_call_id] = {
+                                "name": "",
+                                "args_str": ""
+                            }
+                            
+                        if tc_chunk.function.name:
+                            collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
+                            yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
+                            
+                        if tc_chunk.function.arguments:
+                            collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
+                            yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+            
+            # After stream ends, yield full tool call if any
+            for tool_call_id, data in collected_tool_call_chunks.items():
+                if data["name"] and data["args_str"]:
+                    try:
+                        full_arguments = json.loads(data["args_str"])
+                        yield StreamChunk(
+                            type="tool_call_end",
+                            tool_call_id=tool_call_id,
+                            tool_name=data["name"],
+                            full_arguments=full_arguments
+                        )
+                    except json.JSONDecodeError:
+                        logger.error(f"Failed to decode tool arguments for {tool_call_id}: {data['args_str']}")
+
+        else:
+            raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
     async def generate_push_content(
         self,

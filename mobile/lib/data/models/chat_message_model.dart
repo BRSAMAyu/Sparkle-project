@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part 'chat_message_model.g.dart';
 
@@ -12,94 +13,178 @@ enum MessageRole {
 class ChatMessageModel {
   final String id;
   @JsonKey(name: 'user_id')
-  final String userId;
-  @JsonKey(name: 'session_id')
-  final String sessionId;
+  final String? userId; // Optional for client-generated messages
+  @JsonKey(name: 'conversation_id')
+  final String conversationId;
   @JsonKey(name: 'task_id')
   final String? taskId;
   final MessageRole role;
   final String content;
-  final List<ChatAction>? actions;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
+  
+  // New: Agent Workflow support
+  final List<WidgetPayload>? widgets;        // Widgets to render
+  @JsonKey(name: 'tool_results')
+  final List<ToolResultModel>? toolResults;  // Tool execution results
+  @JsonKey(name: 'has_errors')
+  final bool? hasErrors;
+  final List<ErrorInfo>? errors;
+  @JsonKey(name: 'requires_confirmation')
+  final bool? requiresConfirmation;
+  @JsonKey(name: 'confirmation_data')
+  final ConfirmationData? confirmationData;
 
   ChatMessageModel({
-    required this.id,
-    required this.userId,
-    required this.sessionId,
-    required this.role, required this.content, required this.createdAt, this.taskId,
-    this.actions,
-  });
+    String? id,
+    this.userId,
+    required this.conversationId,
+    this.taskId,
+    required this.role,
+    required this.content,
+    DateTime? createdAt,
+    this.widgets,
+    this.toolResults,
+    this.hasErrors,
+    this.errors,
+    this.requiresConfirmation,
+    this.confirmationData,
+  }) : id = id ?? const Uuid().v4(),
+       createdAt = createdAt ?? DateTime.now();
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) => _$ChatMessageModelFromJson(json);
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
+
+  ChatMessageModel copyWith({
+    String? id,
+    String? userId,
+    String? conversationId,
+    String? taskId,
+    MessageRole? role,
+    String? content,
+    DateTime? createdAt,
+    List<WidgetPayload>? widgets,
+    List<ToolResultModel>? toolResults,
+    bool? hasErrors,
+    List<ErrorInfo>? errors,
+    bool? requiresConfirmation,
+    ConfirmationData? confirmationData,
+  }) {
+    return ChatMessageModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      conversationId: conversationId ?? this.conversationId,
+      taskId: taskId ?? this.taskId,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      widgets: widgets ?? this.widgets,
+      toolResults: toolResults ?? this.toolResults,
+      hasErrors: hasErrors ?? this.hasErrors,
+      errors: errors ?? this.errors,
+      requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
+      confirmationData: confirmationData ?? this.confirmationData,
+    );
+  }
 }
 
 @JsonSerializable()
-class ChatAction {
-  final String type;
-  final Map<String, dynamic> params;
+class WidgetPayload {
+  final String type;  // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
+  final Map<String, dynamic> data;
 
-  ChatAction({
-    required this.type,
-    required this.params,
+  WidgetPayload({required this.type, required this.data});
+
+  factory WidgetPayload.fromJson(Map<String, dynamic> json) => _$WidgetPayloadFromJson(json);
+  Map<String, dynamic> toJson() => _$WidgetPayloadToJson(this);
+}
+
+@JsonSerializable()
+class ToolResultModel {
+  final bool success;
+  @JsonKey(name: 'tool_name')
+  final String toolName;
+  final Map<String, dynamic>? data;
+  @JsonKey(name: 'error_message')
+  final String? errorMessage;
+  @JsonKey(name: 'widget_type')
+  final String? widgetType;
+  @JsonKey(name: 'widget_data')
+  final Map<String, dynamic>? widgetData;
+
+  ToolResultModel({
+    required this.success,
+    required this.toolName,
+    this.data,
+    this.errorMessage,
+    this.widgetType,
+    this.widgetData,
   });
 
-  factory ChatAction.fromJson(Map<String, dynamic> json) => _$ChatActionFromJson(json);
-  Map<String, dynamic> toJson() => _$ChatActionToJson(this);
+  factory ToolResultModel.fromJson(Map<String, dynamic> json) => _$ToolResultModelFromJson(json);
+  Map<String, dynamic> toJson() => _$ToolResultModelToJson(this);
 }
 
 @JsonSerializable()
-class ChatRequest {
-  final String content;
-  @JsonKey(name: 'session_id')
-  final String? sessionId;
-  @JsonKey(name: 'task_id')
-  final String? taskId;
+class ErrorInfo {
+  final String tool;
+  final String message;
+  final String? suggestion;
 
-  ChatRequest({
-    required this.content,
-    this.sessionId,
-    this.taskId,
+  ErrorInfo({required this.tool, required this.message, this.suggestion});
+
+  factory ErrorInfo.fromJson(Map<String, dynamic> json) => _$ErrorInfoFromJson(json);
+  Map<String, dynamic> toJson() => _$ErrorInfoToJson(this);
+}
+
+@JsonSerializable()
+class ConfirmationData {
+  @JsonKey(name: 'action_id')
+  final String actionId;
+  @JsonKey(name: 'tool_name')
+  final String toolName;
+  final String description;
+  final Map<String, dynamic> preview;
+
+  ConfirmationData({
+    required this.actionId,
+    required this.toolName,
+    required this.description,
+    required this.preview,
   });
 
-  factory ChatRequest.fromJson(Map<String, dynamic> json) => _$ChatRequestFromJson(json);
-  Map<String, dynamic> toJson() => _$ChatRequestToJson(this);
+  factory ConfirmationData.fromJson(Map<String, dynamic> json) => _$ConfirmationDataFromJson(json);
+  Map<String, dynamic> toJson() => _$ConfirmationDataToJson(this);
 }
 
+// Backend API response for chat endpoint
 @JsonSerializable()
-class ChatResponse {
-  final ChatMessageModel message;
-  final List<ChatAction>? actions;
-  
-  String get sessionId => message.sessionId;
+class ChatApiResponse {
+  final String message;
+  @JsonKey(name: 'conversation_id')
+  final String conversationId;
+  final List<WidgetPayload>? widgets;
+  @JsonKey(name: 'tool_results')
+  final List<ToolResultModel>? toolResults;
+  @JsonKey(name: 'has_errors')
+  final bool? hasErrors;
+  final List<ErrorInfo>? errors;
+  @JsonKey(name: 'requires_confirmation')
+  final bool? requiresConfirmation;
+  @JsonKey(name: 'confirmation_data')
+  final ConfirmationData? confirmationData;
 
-  ChatResponse({
+  ChatApiResponse({
     required this.message,
-    this.actions,
+    required this.conversationId,
+    this.widgets,
+    this.toolResults,
+    this.hasErrors,
+    this.errors,
+    this.requiresConfirmation,
+    this.confirmationData,
   });
 
-  factory ChatResponse.fromJson(Map<String, dynamic> json) => _$ChatResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$ChatResponseToJson(this);
-}
-
-@JsonSerializable()
-class ChatSession {
-  final String id;
-  @JsonKey(name: 'user_id')
-  final String userId;
-  @JsonKey(name: 'first_message_summary')
-  final String firstMessageSummary;
-  @JsonKey(name: 'created_at')
-  final DateTime createdAt;
-
-  ChatSession({
-    required this.id,
-    required this.userId,
-    required this.firstMessageSummary,
-    required this.createdAt,
-  });
-
-  factory ChatSession.fromJson(Map<String, dynamic> json) => _$ChatSessionFromJson(json);
-  Map<String, dynamic> toJson() => _$ChatSessionToJson(this);
+  factory ChatApiResponse.fromJson(Map<String, dynamic> json) => _$ChatApiResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$ChatApiResponseToJson(this);
 }
