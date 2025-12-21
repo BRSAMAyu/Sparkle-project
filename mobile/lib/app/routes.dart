@@ -15,6 +15,13 @@ import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_detail_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_chat_screen.dart';
+import 'package:sparkle/presentation/screens/community/create_group_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_search_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
+import 'package:sparkle/presentation/screens/community/friends_screen.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -161,6 +168,52 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/galaxy',
         name: 'galaxy',
         builder: (context, state) => const GalaxyScreen(),
+      ),
+
+      // Community Routes
+      GoRoute(
+        path: '/community/friends',
+        name: 'friends',
+        builder: (context, state) => const FriendsScreen(),
+      ),
+      GoRoute(
+        path: '/community/groups',
+        name: 'groups',
+        builder: (context, state) => const GroupListScreen(),
+      ),
+      GoRoute(
+        path: '/community/groups/search',
+        name: 'groupSearch',
+        builder: (context, state) => const GroupSearchScreen(),
+      ),
+      GoRoute(
+        path: '/community/groups/create',
+        name: 'createGroup',
+        builder: (context, state) => const CreateGroupScreen(),
+      ),
+      GoRoute(
+        path: '/community/groups/:id',
+        name: 'groupDetail',
+        builder: (context, state) {
+          final groupId = state.pathParameters['id']!;
+          return GroupDetailScreen(groupId: groupId);
+        },
+      ),
+      GoRoute(
+        path: '/community/groups/:id/chat',
+        name: 'groupChat',
+        builder: (context, state) {
+          final groupId = state.pathParameters['id']!;
+          return GroupChatScreen(groupId: groupId);
+        },
+      ),
+      GoRoute(
+        path: '/community/groups/:id/tasks',
+        name: 'groupTasks',
+        builder: (context, state) {
+          final groupId = state.pathParameters['id']!;
+          return GroupTasksScreen(groupId: groupId);
+        },
       ),
     ],
   );
