@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CommunityRepository {
   final ApiClient _apiClient;
@@ -272,3 +273,7 @@ class CommunityRepository {
     }
   }
 }
+
+final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
+  return CommunityRepository(ref.watch(apiClientProvider));
+});
