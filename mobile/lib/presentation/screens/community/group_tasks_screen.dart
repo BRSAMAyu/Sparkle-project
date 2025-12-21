@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
@@ -27,7 +27,7 @@ class GroupTasksScreen extends ConsumerWidget {
       body: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return const Center(child: EmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
+            return Center(child: CompactEmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(groupTasksProvider(groupId).notifier).refresh(),

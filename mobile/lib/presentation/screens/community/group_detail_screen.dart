@@ -191,7 +191,7 @@ class GroupDetailScreen extends ConsumerWidget {
 
                 // Actions
                 if (isMember) ...[
-                  CustomButton.filled(
+                  CustomButton.primary(
                     text: 'Enter Chat',
                     icon: Icons.chat_bubble_outline,
                     size: ButtonSize.large,
@@ -203,7 +203,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: CustomButton.outlined(
+                        child: CustomButton.secondary(
                           text: 'Tasks',
                           icon: Icons.task_alt,
                           onPressed: () {
@@ -213,7 +213,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: CustomButton.outlined(
+                        child: CustomButton.secondary(
                           text: 'Members',
                           icon: Icons.people_outline,
                           onPressed: () {
@@ -224,7 +224,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ] else ...[
-                  CustomButton.filled(
+                  CustomButton.primary(
                     text: 'Join Group',
                     onPressed: () async {
                       HapticFeedback.lightImpact();
