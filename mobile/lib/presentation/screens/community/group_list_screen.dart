@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 
 class GroupListScreen extends ConsumerWidget {
   const GroupListScreen({super.key});
@@ -17,7 +17,8 @@ class GroupListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的社群'),
+        title: const Text('My Community'),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -32,17 +33,18 @@ class GroupListScreen extends ConsumerWidget {
           context.push('/community/groups/create');
         },
         icon: const Icon(Icons.add),
-        label: const Text('创建/加入'),
-        backgroundColor: AppDesignTokens.primaryColor,
+        label: const Text('Create'),
+        backgroundColor: AppDesignTokens.primaryBase,
+        elevation: 4,
       ),
       body: groupsState.when(
         data: (groups) {
           if (groups.isEmpty) {
             return Center(
               child: CompactEmptyState(
-                message: '你还没有加入任何社群',
+                message: 'You haven\'t joined any groups yet',
                 icon: Icons.group_outlined,
-                actionText: '去发现',
+                actionText: 'Discover Groups',
                 onAction: () {
                   context.push('/community/groups/search');
                 },
@@ -60,14 +62,15 @@ class GroupListScreen extends ConsumerWidget {
                   const SizedBox(height: AppDesignTokens.spacing12),
               itemBuilder: (context, index) {
                 final group = groups[index];
-                return _GroupListTile(group: group);
+                return _AnimatedGroupTile(
+                  group: group,
+                  index: index,
+                );
               },
             ),
           );
         },
-        loading: () => const Center(
-          child: LoadingIndicator.circular(showText: true),
-        ),
+        loading: () => const _GroupListLoading(),
         error: (error, stackTrace) => Center(
           child: CustomErrorWidget.page(
             message: error.toString(),
@@ -81,6 +84,62 @@ class GroupListScreen extends ConsumerWidget {
   }
 }
 
+class _AnimatedGroupTile extends StatefulWidget {
+  final GroupListItem group;
+  final int index;
+
+  const _AnimatedGroupTile({required this.group, required this.index});
+
+  @override
+  State<_AnimatedGroupTile> createState() => _AnimatedGroupTileState();
+}
+
+class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    
+    // Stagger effect based on index
+    final delay = Duration(milliseconds: widget.index * 50);
+    Future.delayed(delay, () {
+      if (mounted) _controller.forward();
+    });
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: _GroupListTile(group: widget.group),
+      ),
+    );
+  }
+}
+
 class _GroupListTile extends StatelessWidget {
   final GroupListItem group;
 
@@ -88,81 +147,163 @@ class _GroupListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius12),
+    final isSprint = group.isSprint;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+        boxShadow: AppDesignTokens.shadowSm,
+        border: Border.all(color: AppDesignTokens.neutral100),
       ),
-      child: InkWell(
-        onTap: () {
-          context.push('/community/groups/${group.id}');
-        },
-        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius12),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-          child: Row(
-            children: [
-              // Avatar placeholder or actual avatar
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: group.isSprint ? Colors.orange.shade100 : Colors.blue.shade100,
-                child: Icon(
-                   group.isSprint ? Icons.timer : Icons.school,
-                   color: group.isSprint ? Colors.orange : Colors.blue,
-                ),
-              ),
-              const SizedBox(width: AppDesignTokens.spacing16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.local_fire_department,
-                            size: 14, color: Colors.orange.shade700),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${group.totalFlamePower}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.people, size: 14, color: Colors.grey.shade600),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${group.memberCount}人',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+        child: InkWell(
+          onTap: () {
+            context.push('/community/groups/${group.id}');
+          },
+          borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+          splashColor: AppDesignTokens.primaryBase.withOpacity(0.1),
+          highlightColor: AppDesignTokens.primaryBase.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+            child: Row(
+              children: [
+                // Avatar with Hero
+                Hero(
+                  tag: 'group-avatar-${group.id}',
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isSprint 
+                          ? LinearGradient(colors: [Colors.orange.shade100, Colors.orange.shade50])
+                          : LinearGradient(colors: [Colors.blue.shade100, Colors.blue.shade50]),
+                      boxShadow: [
+                         BoxShadow(
+                           color: (isSprint ? Colors.orange : Colors.blue).withOpacity(0.2),
+                           blurRadius: 8,
+                           offset: const Offset(0, 4),
+                         )
                       ],
                     ),
-                    if (group.isSprint && group.daysRemaining != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          '距离截止还有 ${group.daysRemaining} 天',
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                  ],
+                    child: Icon(
+                       isSprint ? Icons.timer_outlined : Icons.school_outlined,
+                       color: isSprint ? Colors.deepOrange : Colors.blue.shade700,
+                       size: 28,
+                    ),
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+                const SizedBox(width: AppDesignTokens.spacing16),
+                
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              group.name,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppDesignTokens.neutral900,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isSprint && group.daysRemaining != null)
+                             Container(
+                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                               decoration: BoxDecoration(
+                                 color: Colors.red.shade50,
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               child: Text(
+                                 '${group.daysRemaining}d left',
+                                 style: TextStyle(
+                                   color: Colors.red.shade700,
+                                   fontSize: 10,
+                                   fontWeight: FontWeight.bold,
+                                 ),
+                               ),
+                             ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          _buildInfoBadge(
+                            context, 
+                            Icons.local_fire_department_rounded, 
+                            '${group.totalFlamePower}',
+                            Colors.orange,
+                          ),
+                          const SizedBox(width: 12),
+                          _buildInfoBadge(
+                            context,
+                            Icons.people_alt_rounded,
+                            '${group.memberCount}',
+                            Colors.grey,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppDesignTokens.neutral600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GroupListLoading extends StatelessWidget {
+  const _GroupListLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      itemCount: 6,
+      separatorBuilder: (context, index) => const SizedBox(height: AppDesignTokens.spacing12),
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: AppDesignTokens.neutral200,
+          highlightColor: AppDesignTokens.neutral100,
+          child: Container(
+            height: 88,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+            ),
+          ),
+        );
+      },
     );
   }
 }

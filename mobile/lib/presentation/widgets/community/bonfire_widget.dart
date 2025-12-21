@@ -1,62 +1,155 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
-class BonfireWidget extends StatelessWidget {
+class BonfireWidget extends StatefulWidget {
   final int level; // 1-5
   final double size;
 
   const BonfireWidget({
     super.key, 
     required this.level,
-    this.size = 100,
+    this.size = 120,
   });
 
   @override
+  State<BonfireWidget> createState() => _BonfireWidgetState();
+}
+
+class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Color _getFireColor() {
+    if (widget.level >= 5) return Colors.purpleAccent;
+    if (widget.level >= 4) return Colors.redAccent;
+    if (widget.level >= 3) return Colors.deepOrangeAccent;
+    if (widget.level >= 2) return Colors.orangeAccent;
+    return Colors.amber;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Placeholder visualization: A fire icon that grows/changes color with level
-    Color fireColor;
-    double iconSize = size;
+    final baseColor = _getFireColor();
+    final double scaleFactor = 1.0 + (widget.level * 0.1);
 
-    if (level >= 5) {
-      fireColor = Colors.purple;
-      iconSize = size * 1.2;
-    } else if (level >= 4) {
-      fireColor = Colors.red;
-      iconSize = size * 1.1;
-    } else if (level >= 3) {
-      fireColor = Colors.deepOrange;
-    } else if (level >= 2) {
-      fireColor = Colors.orange;
-      iconSize = size * 0.9;
-    } else {
-      fireColor = Colors.yellow.shade700;
-      iconSize = size * 0.8;
-    }
-
-    return Container(
-      width: size * 1.5,
-      height: size * 1.5,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            fireColor.withOpacity(0.2),
-            Colors.transparent,
-          ],
-        ),
-      ),
+    return SizedBox(
+      width: widget.size * 1.5,
+      height: widget.size * 1.5,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Icon(Icons.local_fire_department, size: iconSize, color: fireColor),
+          // Outer Glow
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Container(
+                width: widget.size * scaleFactor,
+                height: widget.size * scaleFactor,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      baseColor.withOpacity(0.1 + (_controller.value * 0.1)),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.4, 1.0],
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // Inner Pulse
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1.0 + (_controller.value * 0.05),
+                child: Container(
+                  width: widget.size * 0.8 * scaleFactor,
+                  height: widget.size * 0.8 * scaleFactor,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        baseColor.withOpacity(0.2),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Main Icon with shake effect (optional, maybe just scale)
+          // Let's use a Stack of icons to create depth
+          
+          // Background flame (darker)
+          Positioned(
+            bottom: widget.size * 0.1,
+            child: Icon(
+              Icons.local_fire_department,
+              size: widget.size * scaleFactor,
+              color: baseColor.withOpacity(0.5),
+            ),
+          ),
+          
+          // Foreground flame (brighter)
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Positioned(
+                bottom: widget.size * 0.1 + (_controller.value * 2),
+                child: Icon(
+                  Icons.local_fire_department,
+                  size: (widget.size * 0.95 * scaleFactor),
+                  color: baseColor,
+                ),
+              );
+            },
+          ),
+
+          // Level Badge
           Positioned(
             bottom: 0,
-            child: Text(
-              'Lv.$level',
-              style: TextStyle(
-                color: fireColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: AppDesignTokens.shadowSm,
+                border: Border.all(color: baseColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bolt, size: 14, color: baseColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Lv.${widget.level}',
+                    style: TextStyle(
+                      color: baseColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
