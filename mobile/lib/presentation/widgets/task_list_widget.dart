@@ -8,9 +8,9 @@ class TaskListWidget extends StatelessWidget {
   final List<dynamic> tasks; // List of Map<String, dynamic>
 
   const TaskListWidget({
-    Key? key,
+    super.key,
     required this.tasks,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class TaskListWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            ...tasks.map((taskData) => _buildTaskItem(context, taskData)).toList(),
+            ...tasks.map((taskData) => _buildTaskItem(context, taskData)),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.bottomRight,

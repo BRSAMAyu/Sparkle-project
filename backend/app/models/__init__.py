@@ -16,6 +16,12 @@ from app.models.galaxy import (
     KnowledgeNode, UserNodeStatus, NodeRelation,
     StudyRecord, NodeExpansionQueue
 )
+from app.models.community import (
+    Friendship, FriendshipStatus,
+    Group, GroupType, GroupRole,
+    GroupMember, GroupMessage, MessageType,
+    GroupTask, GroupTaskClaim
+)
 
 __all__ = [
     "BaseModel",
@@ -42,4 +48,15 @@ __all__ = [
     "NodeRelation",
     "StudyRecord",
     "NodeExpansionQueue",
+    # Community
+    "Friendship",
+    "FriendshipStatus",
+    "Group",
+    "GroupType",
+    "GroupRole",
+    "GroupMember",
+    "GroupMessage",
+    "MessageType",
+    "GroupTask",
+    "GroupTaskClaim",
 ]

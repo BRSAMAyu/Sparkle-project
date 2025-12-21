@@ -8,10 +8,10 @@ class TaskCard extends StatelessWidget {
   final Function(String taskId)? onAction;
 
   const TaskCard({
-    Key? key,
+    super.key,
     required this.data,
     this.onAction,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +69,7 @@ class TaskCard extends StatelessWidget {
                   // 预估时间
                   if (estimatedMinutes != null) ...[
                     Icon(Icons.timer_outlined, size: 16, 
-                         color: Theme.of(context).hintColor),
+                         color: Theme.of(context).hintColor,),
                     const SizedBox(width: 4),
                     Text('$estimatedMinutes 分钟'),
                     const SizedBox(width: 16),
@@ -77,7 +77,7 @@ class TaskCard extends StatelessWidget {
                   // 优先级
                   ...List.generate(
                     priority,
-                    (_) => Icon(Icons.star, size: 14, color: Colors.amber),
+                    (_) => const Icon(Icons.star, size: 14, color: Colors.amber),
                   ),
                   const Spacer(),
                   // 快捷操作按钮

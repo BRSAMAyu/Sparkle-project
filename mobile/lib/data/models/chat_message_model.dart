@@ -36,12 +36,9 @@ class ChatMessageModel {
   final ConfirmationData? confirmationData;
 
   ChatMessageModel({
-    String? id,
+    required this.conversationId, required this.role, required this.content, String? id,
     this.userId,
-    required this.conversationId,
     this.taskId,
-    required this.role,
-    required this.content,
     DateTime? createdAt,
     this.widgets,
     this.toolResults,

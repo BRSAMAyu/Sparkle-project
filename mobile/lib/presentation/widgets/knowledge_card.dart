@@ -7,9 +7,9 @@ class KnowledgeCard extends StatelessWidget {
   final Map<String, dynamic> data;
 
   const KnowledgeCard({
-    Key? key,
+    super.key,
     required this.data,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +68,7 @@ class KnowledgeCard extends StatelessWidget {
                     label: Text(tag, style: Theme.of(context).textTheme.labelSmall),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
-                  )).toList(),
+                  ),).toList(),
                 ),
               ],
               const SizedBox(height: 12),

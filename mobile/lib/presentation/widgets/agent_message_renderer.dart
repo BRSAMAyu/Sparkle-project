@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../data/models/chat_message_model.dart';
-import 'task_card.dart';
-import 'knowledge_card.dart';
-import 'confirmation_dialog.dart';
-import 'task_list_widget.dart'; // New widget for task list
-import 'plan_card.dart';       // New widget for plan card
+import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/presentation/widgets/task_card.dart';
+import 'package:sparkle/presentation/widgets/knowledge_card.dart';
+import 'package:sparkle/presentation/widgets/confirmation_dialog.dart';
+import 'package:sparkle/presentation/widgets/task_list_widget.dart'; // New widget for task list
+import 'package:sparkle/presentation/widgets/plan_card.dart';       // New widget for plan card
 
 /// Agent 消息渲染器
 /// 根据消息中的 widgets 字段动态渲染不同类型的组件
@@ -14,11 +14,11 @@ class AgentMessageRenderer extends StatelessWidget {
   final Function(String actionId, bool confirmed)? onConfirmation;
 
   const AgentMessageRenderer({
-    Key? key,
+    super.key,
     required this.message,
     this.onTaskAction,
     this.onConfirmation,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,7 @@ class AgentMessageRenderer extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(text),
@@ -92,7 +92,7 @@ class AgentMessageRenderer extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.warning_amber, 
-                     color: Theme.of(context).colorScheme.error),
+                     color: Theme.of(context).colorScheme.error,),
                 const SizedBox(width: 8),
                 Text('操作遇到问题', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
@@ -115,7 +115,7 @@ class AgentMessageRenderer extends StatelessWidget {
 
   Widget _buildConfirmationCard(
     BuildContext context, 
-    ConfirmationData data
+    ConfirmationData data,
   ) {
     return Card(
       color: Theme.of(context).colorScheme.tertiaryContainer,

@@ -199,14 +199,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                           ),
                           
                           // Action Cards
-                          if (widget.message.actions != null && widget.message.actions!.isNotEmpty)
+                          if (widget.message.widgets != null && widget.message.widgets!.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0, left: 8.0),
                               child: Column(
-                                children: widget.message.actions!.map((action) => 
+                                children: widget.message.widgets!.map((widgetPayload) => 
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: ActionCard(action: action),
+                                    child: ActionCard(action: widgetPayload),
                                   ),
                                 ).toList(),
                               ),

@@ -9,13 +9,13 @@ class ConfirmationDialog extends StatelessWidget {
   final VoidCallback onCancel;
 
   const ConfirmationDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.previewData,
     required this.onConfirm,
     required this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +35,13 @@ class ConfirmationDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   _formatPreview(previewData!),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace'
+                    fontFamily: 'monospace',
                   ),
                 ),
               ),
@@ -51,12 +51,12 @@ class ConfirmationDialog extends StatelessWidget {
       ),
       actions: <Widget>[
         TextButton(
-          child: const Text('取消'),
           onPressed: onCancel,
+          child: const Text('取消'),
         ),
         ElevatedButton(
-          child: const Text('确认'),
           onPressed: onConfirm,
+          child: const Text('确认'),
         ),
       ],
     );

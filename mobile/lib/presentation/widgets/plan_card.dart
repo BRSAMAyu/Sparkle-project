@@ -7,9 +7,9 @@ class PlanCard extends StatelessWidget {
   final Map<String, dynamic> data;
 
   const PlanCard({
-    Key? key,
+    super.key,
     required this.data,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

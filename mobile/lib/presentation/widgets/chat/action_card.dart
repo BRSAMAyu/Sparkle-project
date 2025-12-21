@@ -5,7 +5,7 @@ import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class ActionCard extends StatefulWidget {
-  final ChatAction action;
+  final WidgetPayload action;
   final VoidCallback? onConfirm;
   final VoidCallback? onDismiss;
 
@@ -88,7 +88,7 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
                             end: Alignment.bottomRight,
                             colors: [
                               Colors.transparent,
-                              Colors.white.withOpacity(0.1),
+                              Colors.white.withValues(alpha: 0.1),
                               Colors.transparent,
                             ],
                             stops: [
@@ -126,7 +126,7 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _getActionColor(widget.action.type).withOpacity(0.3),
+                                      color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -248,29 +248,29 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
     }
   }
 
-  Widget _buildContentForAction(BuildContext context, ChatAction action) {
+  Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (action.params['title'] != null) ...[
+        if (action.data['title'] != null) ...[
           Container(
             padding: const EdgeInsets.all(AppDesignTokens.spacing12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  _getActionColor(action.type).withOpacity(0.1),
-                  _getActionColor(action.type).withOpacity(0.05),
+                  _getActionColor(action.type).withValues(alpha: 0.1),
+                  _getActionColor(action.type).withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: AppDesignTokens.borderRadius12,
               border: Border.all(
-                color: _getActionColor(action.type).withOpacity(0.2),
+                color: _getActionColor(action.type).withValues(alpha: 0.2),
               ),
             ),
             child: Text(
-              action.params['title'],
+              action.data['title'],
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 fontWeight: AppDesignTokens.fontWeightSemibold,
                 color: AppDesignTokens.neutral900,
@@ -279,11 +279,11 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
           ),
           const SizedBox(height: AppDesignTokens.spacing12),
         ],
-        if (action.params.entries.where((e) => e.key != 'title').isNotEmpty)
+        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
           Wrap(
             spacing: AppDesignTokens.spacing8,
             runSpacing: AppDesignTokens.spacing8,
-            children: action.params.entries
+            children: action.data.entries
                 .where((e) => e.key != 'title')
                 .map((entry) {
               return Container(
