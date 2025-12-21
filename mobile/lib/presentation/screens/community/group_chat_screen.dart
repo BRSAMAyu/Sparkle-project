@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/data/models/community_model.dart';
+
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/community/group_chat_bubble.dart';
@@ -124,7 +124,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: chatState.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return const Center(child: Text('No messages yet. Say hi!'));
+                  return Center(child: const Text('No messages yet. Say hi!'));
                 }
                 return ListView.builder(
                   reverse: true,

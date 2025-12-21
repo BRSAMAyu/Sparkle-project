@@ -207,7 +207,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               
               const SizedBox(height: AppDesignTokens.spacing32),
               
-              CustomButton.filled(
+              CustomButton.primary(
                 text: _isSubmitting ? 'Creating...' : 'Create Group',
                 onPressed: _isSubmitting ? null : _submit,
               ),

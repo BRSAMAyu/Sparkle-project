@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
@@ -57,8 +57,8 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
       body: searchState.when(
         data: (groups) {
           if (groups.isEmpty) {
-            return const Center(
-              child: EmptyState(
+            return Center(
+              child: CompactEmptyState(
                 message: 'Search for squads or sprint groups',
                 icon: Icons.search,
               ),

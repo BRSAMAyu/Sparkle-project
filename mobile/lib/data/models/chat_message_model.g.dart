@@ -8,12 +8,12 @@ part of 'chat_message_model.dart';
 
 ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
     ChatMessageModel(
-      id: json['id'] as String?,
-      userId: json['user_id'] as String?,
       conversationId: json['conversation_id'] as String,
-      taskId: json['task_id'] as String?,
       role: $enumDecode(_$MessageRoleEnumMap, json['role']),
       content: json['content'] as String,
+      id: json['id'] as String?,
+      userId: json['user_id'] as String?,
+      taskId: json['task_id'] as String?,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),

@@ -152,18 +152,18 @@ class _GroupListTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+        borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
         border: Border.all(color: AppDesignTokens.neutral100),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+        borderRadius: AppDesignTokens.borderRadius16,
         child: InkWell(
           onTap: () {
             context.push('/community/groups/${group.id}');
           },
-          borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+          borderRadius: AppDesignTokens.borderRadius16,
           splashColor: AppDesignTokens.primaryBase.withOpacity(0.1),
           highlightColor: AppDesignTokens.primaryBase.withOpacity(0.05),
           child: Padding(
@@ -299,7 +299,7 @@ class _GroupListLoading extends StatelessWidget {
             height: 88,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(AppDesignTokens.borderRadius16),
+              borderRadius: AppDesignTokens.borderRadius16,
             ),
           ),
         );
