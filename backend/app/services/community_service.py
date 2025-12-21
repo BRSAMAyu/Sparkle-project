@@ -1,0 +1,754 @@
+"""
+社群功能服务层
+Community Service - 好友、群组、消息、打卡、任务的业务逻辑
+"""
+from typing import Optional, List, Tuple, Dict, Any
+from datetime import datetime, timedelta
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, func, desc
+from sqlalchemy.orm import selectinload
+
+from app.models.user import User
+from app.models.community import (
+    Friendship, FriendshipStatus,
+    Group, GroupType, GroupRole,
+    GroupMember, GroupMessage, MessageType,
+    GroupTask, GroupTaskClaim
+)
+from app.schemas.community import (
+    GroupCreate, GroupUpdate, GroupTaskCreate,
+    MessageSend, CheckinRequest
+)
+
+
+class FriendshipService:
+    """好友系统服务"""
+
+    @staticmethod
+    async def send_friend_request(
+        db: AsyncSession,
+        user_id: UUID,
+        target_id: UUID,
+        match_reason: Optional[dict] = None
+    ) -> Friendship:
+        """
+        发送好友请求
+
+        逻辑说明：
+        1. 检查是否已存在关系
+        2. 确保 user_id < friend_id 以保持唯一性
+        3. 创建 pending 状态的好友关系
+        """
+        if user_id == target_id:
+            raise ValueError("不能添加自己为好友")
+
+        # 标准化顺序（使用字符串比较）
+        if str(user_id) < str(target_id):
+            small_id, large_id = user_id, target_id
+        else:
+            small_id, large_id = target_id, user_id
+
+        # 检查是否已存在
+        existing = await db.execute(
+            select(Friendship).where(
+                Friendship.user_id == small_id,
+                Friendship.friend_id == large_id,
+                Friendship.not_deleted_filter()
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError("已存在好友关系或待处理请求")
+
+        friendship = Friendship(
+            user_id=small_id,
+            friend_id=large_id,
+            initiated_by=user_id,
+            status=FriendshipStatus.PENDING,
+            match_reason=match_reason
+        )
+        db.add(friendship)
+        await db.flush()
+        await db.refresh(friendship)
+        return friendship
+
+    @staticmethod
+    async def respond_to_request(
+        db: AsyncSession,
+        user_id: UUID,
+        friendship_id: UUID,
+        accept: bool
+    ) -> Optional[Friendship]:
+        """
+        响应好友请求
+
+        逻辑说明：
+        1. 验证当前用户是被请求方
+        2. 更新状态为 accepted 或删除记录
+        """
+        friendship = await Friendship.get_by_id(db, friendship_id)
+        if not friendship:
+            raise ValueError("好友请求不存在")
+
+        # 确认当前用户是被请求方
+        if friendship.initiated_by == user_id:
+            raise ValueError("不能响应自己发起的请求")
+
+        if user_id not in (friendship.user_id, friendship.friend_id):
+            raise ValueError("无权操作此请求")
+
+        if accept:
+            friendship.status = FriendshipStatus.ACCEPTED
+            await db.flush()
+            return friendship
+        else:
+            await friendship.delete(db, soft=True)
+            return None
+
+    @staticmethod
+    async def get_friends(
+        db: AsyncSession,
+        user_id: UUID,
+        status: FriendshipStatus = FriendshipStatus.ACCEPTED
+    ) -> List[Tuple[Friendship, User]]:
+        """获取好友列表"""
+        result = await db.execute(
+            select(Friendship, User).join(
+                User, or_(
+                    and_(Friendship.user_id == user_id, User.id == Friendship.friend_id),
+                    and_(Friendship.friend_id == user_id, User.id == Friendship.user_id)
+                )
+            ).where(
+                or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+                Friendship.status == status,
+                Friendship.not_deleted_filter()
+            )
+        )
+        return result.all()
+
+    @staticmethod
+    async def get_pending_requests(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> List[Friendship]:
+        """获取待处理的好友请求（收到的）"""
+        result = await db.execute(
+            select(Friendship).where(
+                or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+                Friendship.status == FriendshipStatus.PENDING,
+                Friendship.initiated_by != user_id,  # 不是自己发起的
+                Friendship.not_deleted_filter()
+            ).options(
+                selectinload(Friendship.initiator)
+            )
+        )
+        return list(result.scalars().all())
+
+
+class GroupService:
+    """群组服务"""
+
+    @staticmethod
+    async def create_group(
+        db: AsyncSession,
+        creator_id: UUID,
+        data: GroupCreate
+    ) -> Group:
+        """
+        创建群组
+
+        逻辑说明：
+        1. 创建群组记录
+        2. 将创建者设为群主
+        """
+        group = Group(
+            name=data.name,
+            description=data.description,
+            type=data.type,
+            focus_tags=data.focus_tags or [],
+            deadline=data.deadline,
+            sprint_goal=data.sprint_goal,
+            max_members=data.max_members,
+            is_public=data.is_public,
+            join_requires_approval=data.join_requires_approval
+        )
+        db.add(group)
+        await db.flush()
+
+        # 添加创建者为群主
+        owner = GroupMember(
+            group_id=group.id,
+            user_id=creator_id,
+            role=GroupRole.OWNER,
+            joined_at=datetime.utcnow(),
+            last_active_at=datetime.utcnow()
+        )
+        db.add(owner)
+
+        await db.flush()
+        await db.refresh(group)
+        return group
+
+    @staticmethod
+    async def get_group(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: Optional[UUID] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        获取群组详情
+
+        返回包含成员数量和当前用户角色的完整信息
+        """
+        group = await Group.get_by_id(db, group_id)
+        if not group:
+            return None
+
+        # 计算成员数量
+        member_count_result = await db.execute(
+            select(func.count(GroupMember.id)).where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member_count = member_count_result.scalar() or 0
+
+        # 获取当前用户角色
+        my_role = None
+        if user_id:
+            member_result = await db.execute(
+                select(GroupMember).where(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter()
+                )
+            )
+            member = member_result.scalar_one_or_none()
+            if member:
+                my_role = member.role
+
+        # 计算剩余天数
+        days_remaining = None
+        if group.deadline:
+            delta = group.deadline - datetime.utcnow()
+            days_remaining = max(0, delta.days)
+
+        return {
+            'id': group.id,
+            'name': group.name,
+            'description': group.description,
+            'avatar_url': group.avatar_url,
+            'type': group.type,
+            'focus_tags': group.focus_tags or [],
+            'deadline': group.deadline,
+            'sprint_goal': group.sprint_goal,
+            'max_members': group.max_members,
+            'is_public': group.is_public,
+            'join_requires_approval': group.join_requires_approval,
+            'total_flame_power': group.total_flame_power,
+            'today_checkin_count': group.today_checkin_count,
+            'total_tasks_completed': group.total_tasks_completed,
+            'created_at': group.created_at,
+            'updated_at': group.updated_at,
+            'member_count': member_count,
+            'my_role': my_role,
+            'days_remaining': days_remaining
+        }
+
+    @staticmethod
+    async def join_group(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID
+    ) -> GroupMember:
+        """加入群组"""
+        # 检查群组是否存在
+        group = await Group.get_by_id(db, group_id)
+        if not group:
+            raise ValueError("群组不存在")
+
+        # 检查是否已是成员
+        existing = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError("已是群组成员")
+
+        # 检查成员上限
+        member_count_result = await db.execute(
+            select(func.count(GroupMember.id)).where(
+                GroupMember.group_id == group_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member_count = member_count_result.scalar() or 0
+        if member_count >= group.max_members:
+            raise ValueError("群组已满")
+
+        member = GroupMember(
+            group_id=group_id,
+            user_id=user_id,
+            role=GroupRole.MEMBER,
+            joined_at=datetime.utcnow(),
+            last_active_at=datetime.utcnow()
+        )
+        db.add(member)
+        await db.flush()
+        await db.refresh(member)
+        return member
+
+    @staticmethod
+    async def leave_group(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID
+    ) -> bool:
+        """退出群组"""
+        result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = result.scalar_one_or_none()
+        if not member:
+            raise ValueError("不是群组成员")
+
+        if member.role == GroupRole.OWNER:
+            raise ValueError("群主不能直接退出，请先转让群主")
+
+        await member.delete(db, soft=True)
+        return True
+
+    @staticmethod
+    async def get_my_groups(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> List[Dict[str, Any]]:
+        """获取用户加入的所有群组"""
+        result = await db.execute(
+            select(Group, GroupMember).join(
+                GroupMember, GroupMember.group_id == Group.id
+            ).where(
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter(),
+                Group.not_deleted_filter()
+            )
+        )
+
+        groups = []
+        for group, membership in result.all():
+            # 获取成员数量
+            member_count_result = await db.execute(
+                select(func.count(GroupMember.id)).where(
+                    GroupMember.group_id == group.id,
+                    GroupMember.not_deleted_filter()
+                )
+            )
+            member_count = member_count_result.scalar() or 0
+
+            days_remaining = None
+            if group.deadline:
+                delta = group.deadline - datetime.utcnow()
+                days_remaining = max(0, delta.days)
+
+            groups.append({
+                'id': group.id,
+                'name': group.name,
+                'type': group.type,
+                'member_count': member_count,
+                'total_flame_power': group.total_flame_power,
+                'deadline': group.deadline,
+                'days_remaining': days_remaining,
+                'focus_tags': group.focus_tags or [],
+                'my_role': membership.role
+            })
+
+        return groups
+
+    @staticmethod
+    async def search_groups(
+        db: AsyncSession,
+        keyword: Optional[str] = None,
+        group_type: Optional[GroupType] = None,
+        tags: Optional[List[str]] = None,
+        limit: int = 20
+    ) -> List[Group]:
+        """搜索公开群组"""
+        query = select(Group).where(
+            Group.is_public == True,
+            Group.not_deleted_filter()
+        )
+
+        if keyword:
+            query = query.where(
+                or_(
+                    Group.name.ilike(f"%{keyword}%"),
+                    Group.description.ilike(f"%{keyword}%")
+                )
+            )
+
+        if group_type:
+            query = query.where(Group.type == group_type)
+
+        query = query.limit(limit)
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+
+class GroupMessageService:
+    """群消息服务"""
+
+    @staticmethod
+    async def send_message(
+        db: AsyncSession,
+        group_id: UUID,
+        sender_id: UUID,
+        data: MessageSend
+    ) -> GroupMessage:
+        """发送消息"""
+        # 验证是否是群成员
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == sender_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = membership_result.scalar_one_or_none()
+        if not member:
+            raise ValueError("不是群组成员")
+        if member.is_muted:
+            raise ValueError("您已被禁言")
+
+        message = GroupMessage(
+            group_id=group_id,
+            sender_id=sender_id,
+            message_type=data.message_type,
+            content=data.content,
+            content_data=data.content_data,
+            reply_to_id=data.reply_to_id
+        )
+        db.add(message)
+
+        # 更新最后活跃时间
+        member.last_active_at = datetime.utcnow()
+
+        await db.flush()
+        await db.refresh(message)
+        return message
+
+    @staticmethod
+    async def get_messages(
+        db: AsyncSession,
+        group_id: UUID,
+        before_id: Optional[UUID] = None,
+        limit: int = 50
+    ) -> List[GroupMessage]:
+        """获取群消息（分页）"""
+        query = select(GroupMessage).where(
+            GroupMessage.group_id == group_id,
+            GroupMessage.not_deleted_filter()
+        ).options(
+            selectinload(GroupMessage.sender)
+        ).order_by(desc(GroupMessage.created_at))
+
+        if before_id:
+            # 获取before_id对应消息的创建时间
+            before_msg = await GroupMessage.get_by_id(db, before_id)
+            if before_msg:
+                query = query.where(GroupMessage.created_at < before_msg.created_at)
+
+        query = query.limit(limit)
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def send_system_message(
+        db: AsyncSession,
+        group_id: UUID,
+        content: str,
+        content_data: Optional[dict] = None
+    ) -> GroupMessage:
+        """发送系统消息"""
+        message = GroupMessage(
+            group_id=group_id,
+            sender_id=None,
+            message_type=MessageType.SYSTEM,
+            content=content,
+            content_data=content_data
+        )
+        db.add(message)
+        await db.flush()
+        await db.refresh(message)
+        return message
+
+
+class CheckinService:
+    """打卡服务"""
+
+    @staticmethod
+    async def checkin(
+        db: AsyncSession,
+        user_id: UUID,
+        data: CheckinRequest
+    ) -> Dict[str, Any]:
+        """
+        群组打卡
+
+        逻辑说明：
+        1. 验证群成员身份
+        2. 检查今日是否已打卡
+        3. 更新打卡连续天数
+        4. 计算火苗奖励
+        5. 发送打卡消息到群组
+        """
+        # 获取成员信息
+        result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == data.group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = result.scalar_one_or_none()
+        if not member:
+            raise ValueError("不是群组成员")
+
+        # 检查今日是否已打卡
+        today = datetime.utcnow().date()
+        if member.last_checkin_date and member.last_checkin_date.date() == today:
+            raise ValueError("今日已打卡")
+
+        # 计算连续打卡天数
+        yesterday = today - timedelta(days=1)
+        if member.last_checkin_date and member.last_checkin_date.date() == yesterday:
+            member.checkin_streak += 1
+        else:
+            member.checkin_streak = 1
+
+        member.last_checkin_date = datetime.utcnow()
+
+        # 计算火苗奖励
+        base_flame = 10
+        streak_bonus = min(member.checkin_streak * 2, 20)  # 最多+20
+        duration_bonus = min(data.today_duration_minutes // 30 * 5, 30)  # 每30分钟+5，最多+30
+        flame_earned = base_flame + streak_bonus + duration_bonus
+
+        member.flame_contribution += flame_earned
+
+        # 更新群组统计
+        group = await Group.get_by_id(db, data.group_id)
+        group.total_flame_power += flame_earned
+        group.today_checkin_count += 1
+
+        # 发送打卡消息
+        message = GroupMessage(
+            group_id=data.group_id,
+            sender_id=user_id,
+            message_type=MessageType.CHECKIN,
+            content=data.message,
+            content_data={
+                'flame_power': flame_earned,
+                'streak': member.checkin_streak,
+                'today_duration': data.today_duration_minutes
+            }
+        )
+        db.add(message)
+
+        await db.flush()
+
+        # 计算排名
+        rank_result = await db.execute(
+            select(func.count(GroupMember.id)).where(
+                GroupMember.group_id == data.group_id,
+                GroupMember.flame_contribution > member.flame_contribution,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        rank = (rank_result.scalar() or 0) + 1
+
+        return {
+            'success': True,
+            'new_streak': member.checkin_streak,
+            'flame_earned': flame_earned,
+            'rank_in_group': rank,
+            'group_checkin_count': group.today_checkin_count
+        }
+
+
+class GroupTaskService:
+    """群任务服务"""
+
+    @staticmethod
+    async def create_task(
+        db: AsyncSession,
+        group_id: UUID,
+        creator_id: UUID,
+        data: GroupTaskCreate
+    ) -> GroupTask:
+        """创建群任务"""
+        # 验证权限（群主或管理员）
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == creator_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = membership_result.scalar_one_or_none()
+        if not member or member.role == GroupRole.MEMBER:
+            raise ValueError("只有群主或管理员可以创建群任务")
+
+        task = GroupTask(
+            group_id=group_id,
+            created_by=creator_id,
+            title=data.title,
+            description=data.description,
+            tags=data.tags or [],
+            estimated_minutes=data.estimated_minutes,
+            difficulty=data.difficulty,
+            due_date=data.due_date
+        )
+        db.add(task)
+        await db.flush()
+        await db.refresh(task)
+        return task
+
+    @staticmethod
+    async def claim_task(
+        db: AsyncSession,
+        task_id: UUID,
+        user_id: UUID
+    ) -> GroupTaskClaim:
+        """
+        认领群任务
+
+        注意：实际应用中需要注入 TaskService 来创建个人任务
+        """
+        # 获取群任务
+        group_task = await GroupTask.get_by_id(db, task_id)
+        if not group_task:
+            raise ValueError("任务不存在")
+
+        # 检查是否已认领
+        existing = await db.execute(
+            select(GroupTaskClaim).where(
+                GroupTaskClaim.group_task_id == task_id,
+                GroupTaskClaim.user_id == user_id,
+                GroupTaskClaim.not_deleted_filter()
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError("已认领此任务")
+
+        # 记录认领
+        claim = GroupTaskClaim(
+            group_task_id=task_id,
+            user_id=user_id,
+            claimed_at=datetime.utcnow()
+            # personal_task_id 需要在实际创建个人任务后设置
+        )
+        db.add(claim)
+
+        # 更新认领计数
+        group_task.total_claims += 1
+
+        await db.flush()
+        await db.refresh(claim)
+        return claim
+
+    @staticmethod
+    async def complete_task(
+        db: AsyncSession,
+        claim_id: UUID
+    ) -> Optional[GroupTaskClaim]:
+        """完成群任务（由个人任务完成时触发）"""
+        claim = await GroupTaskClaim.get_by_id(db, claim_id)
+        if not claim or claim.is_completed:
+            return claim
+
+        claim.is_completed = True
+        claim.completed_at = datetime.utcnow()
+
+        # 更新群任务完成计数
+        group_task = await GroupTask.get_by_id(db, claim.group_task_id)
+        group_task.total_completions += 1
+
+        # 更新成员完成任务数
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_task.group_id,
+                GroupMember.user_id == claim.user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = membership_result.scalar_one_or_none()
+        if member:
+            member.tasks_completed += 1
+
+        # 更新群组统计
+        group = await Group.get_by_id(db, group_task.group_id)
+        group.total_tasks_completed += 1
+
+        await db.flush()
+        return claim
+
+    @staticmethod
+    async def get_group_tasks(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: Optional[UUID] = None
+    ) -> List[Dict[str, Any]]:
+        """获取群任务列表"""
+        result = await db.execute(
+            select(GroupTask).where(
+                GroupTask.group_id == group_id,
+                GroupTask.not_deleted_filter()
+            ).options(
+                selectinload(GroupTask.creator),
+                selectinload(GroupTask.claims)
+            ).order_by(desc(GroupTask.created_at))
+        )
+
+        tasks = []
+        for task in result.scalars():
+            completion_rate = (
+                task.total_completions / task.total_claims
+                if task.total_claims > 0 else 0
+            )
+
+            task_dict = {
+                'id': task.id,
+                'title': task.title,
+                'description': task.description,
+                'tags': task.tags or [],
+                'estimated_minutes': task.estimated_minutes,
+                'difficulty': task.difficulty,
+                'total_claims': task.total_claims,
+                'total_completions': task.total_completions,
+                'completion_rate': completion_rate,
+                'due_date': task.due_date,
+                'created_at': task.created_at,
+                'updated_at': task.updated_at,
+                'creator': task.creator,
+                'is_claimed_by_me': False,
+                'my_completion_status': None
+            }
+
+            if user_id:
+                for claim in task.claims:
+                    if claim.user_id == user_id and not claim.is_deleted:
+                        task_dict['is_claimed_by_me'] = True
+                        task_dict['my_completion_status'] = claim.is_completed
+                        break
+
+            tasks.append(task_dict)
+
+        return tasks

@@ -1,0 +1,287 @@
+"""
+社群功能 Pydantic Schemas
+Community Schemas - 好友、群组、消息、任务相关的请求/响应模型
+"""
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+from uuid import UUID
+from enum import Enum
+
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.common import BaseSchema
+
+
+# ============ 枚举类型 ============
+
+class FriendshipStatusEnum(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    BLOCKED = "blocked"
+
+
+class GroupTypeEnum(str, Enum):
+    SQUAD = "squad"
+    SPRINT = "sprint"
+
+
+class GroupRoleEnum(str, Enum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+
+
+class MessageTypeEnum(str, Enum):
+    TEXT = "text"
+    TASK_SHARE = "task_share"
+    PROGRESS = "progress"
+    ACHIEVEMENT = "achievement"
+    CHECKIN = "checkin"
+    SYSTEM = "system"
+
+
+# ============ 用户简要信息 ============
+
+class UserBrief(BaseModel):
+    """用户简要信息（用于社群场景）"""
+    id: UUID = Field(description="用户ID")
+    username: str = Field(description="用户名")
+    nickname: Optional[str] = Field(default=None, description="昵称")
+    avatar_url: Optional[str] = Field(default=None, description="头像URL")
+    flame_level: int = Field(default=1, description="火苗等级")
+    flame_brightness: float = Field(default=0.5, description="火苗亮度")
+
+    class Config:
+        from_attributes = True
+
+
+# ============ 好友系统 Schemas ============
+
+class FriendRequest(BaseModel):
+    """发起好友请求"""
+    target_user_id: UUID = Field(description="目标用户ID")
+    message: Optional[str] = Field(default=None, max_length=200, description="请求留言")
+
+
+class FriendResponse(BaseModel):
+    """好友请求响应"""
+    friendship_id: UUID = Field(description="好友关系ID")
+    accept: bool = Field(description="是否接受")
+
+
+class FriendshipInfo(BaseSchema):
+    """好友关系信息"""
+    friend: UserBrief = Field(description="好友信息")
+    status: FriendshipStatusEnum = Field(description="关系状态")
+    match_reason: Optional[Dict[str, Any]] = Field(default=None, description="匹配原因")
+    initiated_by_me: bool = Field(default=False, description="是否由我发起")
+
+
+class FriendRecommendation(BaseModel):
+    """好友推荐"""
+    user: UserBrief = Field(description="推荐用户")
+    match_score: float = Field(ge=0, le=1, description="匹配得分")
+    match_reasons: List[str] = Field(description="匹配原因列表")
+
+    class Config:
+        from_attributes = True
+
+
+# ============ 群组 Schemas ============
+
+class GroupCreate(BaseModel):
+    """创建群组"""
+    name: str = Field(min_length=2, max_length=100, description="群组名称")
+    description: Optional[str] = Field(default=None, max_length=500, description="群组描述")
+    type: GroupTypeEnum = Field(description="群组类型")
+    focus_tags: List[str] = Field(default_factory=list, max_length=10, description="关注标签")
+
+    # 冲刺群专用
+    deadline: Optional[datetime] = Field(default=None, description="冲刺截止日期")
+    sprint_goal: Optional[str] = Field(default=None, max_length=500, description="冲刺目标")
+
+    # 设置
+    max_members: int = Field(default=50, ge=2, le=200, description="最大成员数")
+    is_public: bool = Field(default=True, description="是否公开")
+    join_requires_approval: bool = Field(default=False, description="加入需要审批")
+
+    @field_validator('deadline')
+    @classmethod
+    def validate_deadline(cls, v, info):
+        if info.data.get('type') == GroupTypeEnum.SPRINT and v is None:
+            raise ValueError('冲刺群必须设置截止日期')
+        if v and v < datetime.now():
+            raise ValueError('截止日期不能是过去的时间')
+        return v
+
+
+class GroupUpdate(BaseModel):
+    """更新群组信息"""
+    name: Optional[str] = Field(default=None, min_length=2, max_length=100, description="群组名称")
+    description: Optional[str] = Field(default=None, max_length=500, description="群组描述")
+    focus_tags: Optional[List[str]] = Field(default=None, max_length=10, description="关注标签")
+    deadline: Optional[datetime] = Field(default=None, description="冲刺截止日期")
+    sprint_goal: Optional[str] = Field(default=None, max_length=500, description="冲刺目标")
+    is_public: Optional[bool] = Field(default=None, description="是否公开")
+    join_requires_approval: Optional[bool] = Field(default=None, description="加入需要审批")
+
+
+class GroupInfo(BaseSchema):
+    """群组详细信息"""
+    name: str = Field(description="群组名称")
+    description: Optional[str] = Field(description="群组描述")
+    avatar_url: Optional[str] = Field(description="群组头像")
+    type: GroupTypeEnum = Field(description="群组类型")
+    focus_tags: List[str] = Field(description="关注标签")
+
+    # 冲刺群信息
+    deadline: Optional[datetime] = Field(description="冲刺截止日期")
+    sprint_goal: Optional[str] = Field(description="冲刺目标")
+    days_remaining: Optional[int] = Field(default=None, description="距离截止日期天数")
+
+    # 统计
+    member_count: int = Field(description="成员数量")
+    total_flame_power: int = Field(description="火苗总能量")
+    today_checkin_count: int = Field(description="今日打卡数")
+    total_tasks_completed: int = Field(description="完成任务总数")
+
+    # 设置
+    max_members: int = Field(description="最大成员数")
+    is_public: bool = Field(description="是否公开")
+    join_requires_approval: bool = Field(description="加入需要审批")
+
+    # 当前用户在群组中的角色（如果是成员）
+    my_role: Optional[GroupRoleEnum] = Field(default=None, description="我的角色")
+
+
+class GroupListItem(BaseModel):
+    """群组列表项（简要信息）"""
+    id: UUID = Field(description="群组ID")
+    name: str = Field(description="群组名称")
+    type: GroupTypeEnum = Field(description="群组类型")
+    member_count: int = Field(description="成员数量")
+    total_flame_power: int = Field(description="火苗总能量")
+    deadline: Optional[datetime] = Field(description="冲刺截止日期")
+    days_remaining: Optional[int] = Field(description="剩余天数")
+    focus_tags: List[str] = Field(description="关注标签")
+    my_role: Optional[GroupRoleEnum] = Field(default=None, description="我的角色")
+
+    class Config:
+        from_attributes = True
+
+
+# ============ 群成员 Schemas ============
+
+class GroupMemberInfo(BaseModel):
+    """群成员信息"""
+    user: UserBrief = Field(description="用户信息")
+    role: GroupRoleEnum = Field(description="角色")
+    flame_contribution: int = Field(description="火苗贡献值")
+    tasks_completed: int = Field(description="完成任务数")
+    checkin_streak: int = Field(description="连续打卡天数")
+    joined_at: datetime = Field(description="加入时间")
+    last_active_at: datetime = Field(description="最后活跃时间")
+
+    class Config:
+        from_attributes = True
+
+
+class MemberRoleUpdate(BaseModel):
+    """更新成员角色"""
+    user_id: UUID = Field(description="用户ID")
+    new_role: GroupRoleEnum = Field(description="新角色")
+
+
+# ============ 群消息 Schemas ============
+
+class MessageSend(BaseModel):
+    """发送消息"""
+    message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT, description="消息类型")
+    content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
+    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
+    reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+
+    @field_validator('content')
+    @classmethod
+    def validate_content(cls, v, info):
+        msg_type = info.data.get('message_type')
+        if msg_type == MessageTypeEnum.TEXT and not v:
+            raise ValueError('文本消息必须有内容')
+        return v
+
+
+class MessageInfo(BaseSchema):
+    """消息信息"""
+    sender: Optional[UserBrief] = Field(description="发送者（系统消息为空）")
+    message_type: MessageTypeEnum = Field(description="消息类型")
+    content: Optional[str] = Field(description="消息内容")
+    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
+    reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
+
+
+# ============ 群任务 Schemas ============
+
+class GroupTaskCreate(BaseModel):
+    """创建群任务"""
+    title: str = Field(min_length=2, max_length=200, description="任务标题")
+    description: Optional[str] = Field(default=None, max_length=1000, description="任务描述")
+    tags: List[str] = Field(default_factory=list, max_length=5, description="标签")
+    estimated_minutes: int = Field(default=10, ge=1, le=480, description="预估时长（分钟）")
+    difficulty: int = Field(default=1, ge=1, le=5, description="难度等级")
+    due_date: Optional[datetime] = Field(default=None, description="截止日期")
+
+
+class GroupTaskInfo(BaseSchema):
+    """群任务信息"""
+    title: str = Field(description="任务标题")
+    description: Optional[str] = Field(description="任务描述")
+    tags: List[str] = Field(description="标签")
+    estimated_minutes: int = Field(description="预估时长")
+    difficulty: int = Field(description="难度等级")
+    total_claims: int = Field(description="认领次数")
+    total_completions: int = Field(description="完成次数")
+    completion_rate: float = Field(description="完成率")
+    due_date: Optional[datetime] = Field(description="截止日期")
+    creator: UserBrief = Field(description="创建者")
+
+    # 当前用户状态
+    is_claimed_by_me: bool = Field(default=False, description="是否已认领")
+    my_completion_status: Optional[bool] = Field(default=None, description="我的完成状态")
+
+
+# ============ 打卡 Schemas ============
+
+class CheckinRequest(BaseModel):
+    """打卡请求"""
+    group_id: UUID = Field(description="群组ID")
+    message: Optional[str] = Field(default=None, max_length=200, description="打卡留言")
+    today_duration_minutes: int = Field(ge=0, description="今日学习时长（分钟）")
+
+
+class CheckinResponse(BaseModel):
+    """打卡响应"""
+    success: bool = Field(description="是否成功")
+    new_streak: int = Field(description="新的连续天数")
+    flame_earned: int = Field(description="获得的火苗值")
+    rank_in_group: int = Field(description="在群组中的排名")
+    group_checkin_count: int = Field(description="群组今日打卡数")
+
+
+# ============ 火堆视觉 Schemas ============
+
+class FlameStatus(BaseModel):
+    """火苗状态（用于可视化）"""
+    user_id: UUID = Field(description="用户ID")
+    flame_power: int = Field(description="火苗能量 0-100")
+    flame_color: str = Field(description="火苗颜色代码")
+    flame_size: float = Field(description="相对大小 0.5-2.0")
+    position_x: float = Field(description="在火堆中的X位置")
+    position_y: float = Field(description="在火堆中的Y位置")
+
+
+class GroupFlameStatus(BaseModel):
+    """群组火堆状态"""
+    group_id: UUID = Field(description="群组ID")
+    total_power: int = Field(description="总能量")
+    flames: List[FlameStatus] = Field(description="所有成员的火苗")
+    bonfire_level: int = Field(ge=1, le=5, description="火堆等级")

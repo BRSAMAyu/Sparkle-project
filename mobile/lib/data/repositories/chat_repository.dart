@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../models/chat_message_model.dart';
+import 'package:sparkle/data/models/chat_message_model.dart';
 
 class ChatRepository {
   final Dio _dio;
@@ -23,8 +23,7 @@ class ChatRepository {
 
   Future<void> _startSSEConnection({
     required String message,
-    String? conversationId,
-    required StreamController<ChatStreamEvent> controller,
+    required StreamController<ChatStreamEvent> controller, String? conversationId,
   }) async {
     try {
       final response = await _dio.post<ResponseBody>(
@@ -42,7 +41,7 @@ class ChatRepository {
       final stream = response.data!.stream;
       String buffer = '';
 
-      await for (final chunk in stream.transform(utf8.decoder)) {
+      await for (final chunk in stream.cast<List<int>>().transform(utf8.decoder)) {
         buffer += chunk;
         
         // 解析 SSE 事件
@@ -55,7 +54,9 @@ class ChatRepository {
             final dataStr = eventStr.substring(6);
             try {
               final data = json.decode(dataStr);
-              controller.add(_parseEvent(data));
+              if (!controller.isClosed) {
+                controller.add(_parseEvent(data));
+              }
             } catch (e) {
               // 忽略解析错误
             }
@@ -63,10 +64,14 @@ class ChatRepository {
         }
       }
       
-      controller.close();
+      if (!controller.isClosed) {
+        controller.close();
+      }
     } catch (e) {
-      controller.addError(e);
-      controller.close();
+      if (!controller.isClosed) {
+        controller.addError(e);
+        controller.close();
+      }
     }
   }
 

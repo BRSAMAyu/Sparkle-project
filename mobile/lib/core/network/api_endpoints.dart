@@ -40,4 +40,25 @@ class ApiEndpoints {
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
+
+  // Community - Friends
+  static const String friends = '/community/friends';
+  static const String friendRequest = '/community/friends/request';
+  static const String friendRespond = '/community/friends/respond';
+  static const String friendsPending = '/community/friends/pending';
+  static const String friendsRecommendations = '/community/friends/recommendations';
+
+  // Community - Groups
+  static const String groups = '/community/groups';
+  static const String groupsSearch = '/community/groups/search';
+  static String group(String id) => '/community/groups/$id';
+  static String groupJoin(String id) => '/community/groups/$id/join';
+  static String groupLeave(String id) => '/community/groups/$id/leave';
+  static String groupMessages(String id) => '/community/groups/$id/messages';
+  static String groupTasks(String id) => '/community/groups/$id/tasks';
+  static String groupFlame(String id) => '/community/groups/$id/flame';
+
+  // Community - Tasks & Checkin
+  static String claimTask(String id) => '/community/tasks/$id/claim';
+  static const String checkin = '/community/checkin';
 }
