@@ -49,7 +49,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
       await userRepo.updateUserPreferences(userPreferences);
 
       // Refresh auth provider user data to reflect changes
-      await ref.read(authProvider.notifier).fetchAndSetCurrentUser();
+      await ref.read(authProvider.notifier).refreshUser();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -130,4 +130,3 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
     );
   }
 }
-

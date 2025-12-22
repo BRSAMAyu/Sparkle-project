@@ -74,7 +74,7 @@ class GroupTasksScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: LoadingIndicator.circular()),
+        loading: () => const Center(child: LoadingIndicator()),
         error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(groupTasksProvider(groupId).notifier).refresh())),
       ),
     );

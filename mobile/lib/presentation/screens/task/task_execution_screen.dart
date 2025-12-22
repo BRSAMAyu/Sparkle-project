@@ -473,7 +473,6 @@ class _TimerControls extends StatelessWidget {
           text: '番茄钟',
           icon: Icons.timer,
           onPressed: onTogglePomodoro,
-          isSelected: isPomodoroMode,
           size: ButtonSize.small,
         ),
         ...[15, 25, 45, 60].map((minutes) => CustomButton.secondary(

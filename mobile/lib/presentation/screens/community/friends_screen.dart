@@ -72,7 +72,7 @@ class _MyFriendsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: LoadingIndicator.circular()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendsProvider.notifier).refresh())),
     );
   }
@@ -133,7 +133,7 @@ class _PendingRequestsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: LoadingIndicator.circular()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh())),
     );
   }
@@ -186,7 +186,7 @@ class _RecommendationsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: LoadingIndicator.circular()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendRecommendationsProvider.notifier).refresh())),
     );
   }
