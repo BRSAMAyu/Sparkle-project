@@ -5,10 +5,14 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/models/task_completion_result.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/task/timer_widget.dart';
 import 'package:sparkle/presentation/widgets/success_animation.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:sparkle/presentation/widgets/task/quick_tools_panel.dart';
+import 'package:sparkle/presentation/widgets/task/task_chat_panel.dart';
+import 'package:sparkle/presentation/widgets/task/task_feedback_dialog.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key});
@@ -21,6 +25,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
   bool _isTimerRunning = false;
   bool _showCelebration = false;
+  TaskCompletionResult? _completionResult;
 
   // Timer Enhancement State
   TimerMode _timerMode = TimerMode.countUp;
@@ -74,7 +79,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   }
 
   void _handleCompletion(int minutes, String? note) async {
-    // 1. Stop Timer (handled by widget state generally, but good to be sure)
+    // 1. Stop Timer
     setState(() {
       _isTimerRunning = false;
       _showCelebration = true;
@@ -86,13 +91,36 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     // 3. API Call
     final task = ref.read(activeTaskProvider);
     if (task != null) {
-      await ref.read(taskListProvider.notifier).completeTask(task.id, minutes, note);
+      // Run completion in background while animation plays
+      final result = await ref.read(taskListProvider.notifier).completeTask(task.id, minutes, note);
+      if (mounted) {
+        setState(() {
+          _completionResult = result;
+        });
+      }
     }
   }
 
   void _onCelebrationComplete() {
-    if (mounted) {
-      context.go('/galaxy'); // Navigate to Galaxy screen to show spark animation
+    if (!mounted) return;
+
+    if (_completionResult != null) {
+      // Show feedback dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TaskFeedbackDialog(
+          result: _completionResult!,
+          onClose: () {
+            Navigator.of(context).pop(); // Close dialog
+            context.go('/galaxy'); // Navigate away
+          },
+        ),
+      );
+    } else {
+      // Fallback if result isn't ready or failed (though optimistic update usually handles it)
+      // For now, just go to galaxy
+       context.go('/galaxy');
     }
   }
 
