@@ -16,7 +16,9 @@ from app.api.v1 import (
     notifications,
     capsules,
     community,
-    cognitive
+    cognitive,
+    omnibar,
+    dashboard
 )
 
 api_router = APIRouter()
@@ -32,6 +34,8 @@ api_router.include_router(notifications.router, prefix="/notifications", tags=["
 api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
 api_router.include_router(community.router, prefix="/community", tags=["community"])
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
+api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
 
 @api_router.get("/")
@@ -52,5 +56,7 @@ async def api_root():
             "/health",
             "/community",
             "/capsules",
+            "/omnibar",
+            "/dashboard",
         ],
     }

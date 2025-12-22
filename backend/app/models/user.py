@@ -51,6 +51,9 @@ class User(BaseModel):
     # 🆕 碎片时间/日程偏好 {"commute_time": ["08:00", "09:00"], "lunch_break": ...}
     schedule_preferences = Column(JSON, nullable=True)  # Deprecated: Use PushPreference instead
 
+    # 🆕 天气映射偏好 (v2.3)
+    weather_preferences = Column(JSON, nullable=True)
+
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)
 

@@ -65,4 +65,10 @@ class ApiEndpoints {
   // Cognitive Prism
   static const String cognitiveFragments = '/cognitive/fragments';
   static const String cognitivePatterns = '/cognitive/patterns';
+
+  // OmniBar
+  static const String omnibarDispatch = '/omnibar/dispatch';
+
+  // Dashboard
+  static const String dashboardStatus = '/dashboard/status';
 }
