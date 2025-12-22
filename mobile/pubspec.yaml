@@ -50,6 +50,7 @@ dependencies:
   fl_chart: ^0.66.0
   shimmer: ^3.0.0
   confetti: ^0.7.0
+  math_expressions: ^3.1.0
 
 dev_dependencies:
   flutter_test:

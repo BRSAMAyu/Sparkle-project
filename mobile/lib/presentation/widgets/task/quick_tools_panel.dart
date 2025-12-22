@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
 
 class QuickToolsPanel extends StatelessWidget {
   const QuickToolsPanel({super.key});
+
+  void _showTool(BuildContext context, Widget tool) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: tool,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,26 +28,19 @@ class QuickToolsPanel extends StatelessWidget {
           icon: Icons.calculate_outlined,
           label: '计算器',
           color: Colors.blue,
-          onTap: () {
-            // Show calculator dialog/overlay
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('计算器功能开发中')));
-          },
+          onTap: () => _showTool(context, const CalculatorTool()),
         ),
         _ToolButton(
           icon: Icons.translate_outlined,
           label: '翻译',
           color: Colors.purple,
-          onTap: () {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('翻译功能开发中')));
-          },
+          onTap: () => _showTool(context, const TranslatorTool()),
         ),
         _ToolButton(
           icon: Icons.note_alt_outlined,
           label: '笔记',
           color: Colors.orange,
-          onTap: () {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('笔记功能开发中')));
-          },
+          onTap: () => _showTool(context, const NotesTool()),
         ),
       ],
     );
