@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/providers/plan_provider.dart';
+import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/presentation/providers/capsule_provider.dart';
+import 'package:sparkle/presentation/providers/plan_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
-import 'package:sparkle/presentation/widgets/common/custom_button.dart';
-import 'package:sparkle/presentation/widgets/task/task_card.dart';
+import 'package:sparkle/presentation/widgets/home/weather_header.dart';
+import 'package:sparkle/presentation/widgets/home/focus_card.dart';
+import 'package:sparkle/presentation/widgets/home/prism_card.dart';
+import 'package:sparkle/presentation/widgets/home/sprint_card.dart';
+import 'package:sparkle/presentation/widgets/home/next_actions_card.dart';
+import 'package:sparkle/presentation/widgets/home/omnibar.dart';
 
-import 'package:sparkle/presentation/widgets/common/empty_state.dart';
-import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
-import 'package:go_router/go_router.dart';
-
-import 'package:sparkle/presentation/widgets/home/thought_capsule_dialog.dart';
-import 'package:sparkle/presentation/widgets/cognitive/realtime_nudge_bubble.dart';
-
+/// HomeScreen v2.3 - The Cockpit
+///
+/// Features:
+/// - Deep Space theme with glassmorphism
+/// - Bento Grid dashboard layout
+/// - Weather header showing inner state
+/// - OmniBar replacing BottomNavigationBar
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -29,135 +34,124 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  bool _isSprintMode = false;
 
-  List<Widget> get _widgetOptions => <Widget>[
-    _DashboardTab(
-      isSprintMode: _isSprintMode,
-      onSprintModeChanged: (value) => setState(() => _isSprintMode = value),
-      onNavigateToChat: () => setState(() => _selectedIndex = 2),
-    ),
-    const GalaxyScreen(),
-    const ChatScreen(),
-    const CommunityScreen(),
-    const ProfileScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  List<Widget> get _screens => [
+        const _DashboardScreen(),
+        const GalaxyScreen(),
+        const ChatScreen(),
+        const CommunityScreen(),
+        const ProfileScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    // Dashboard uses special layout with OmniBar
+    if (_selectedIndex == 0) {
+      return _screens[0];
+    }
+
     return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      floatingActionButton: _selectedIndex == 0 // Only show on Dashboard
-          ? FloatingActionButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const ThoughtCapsuleDialog(),
-                );
-              },
-              backgroundColor: AppDesignTokens.primaryBase,
-              child: const Icon(Icons.psychology, color: Colors.white),
-            )
-          : null,
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: '首页'),
-          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_outlined), activeIcon: Icon(Icons.auto_awesome), label: '星图'),
-          BottomNavigationBarItem(icon: Icon(Icons.forum_outlined), activeIcon: Icon(Icons.forum), label: '对话'),
-          BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: '社群'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: '我的'),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-      ),
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: _buildNavigationBar(),
+    );
+  }
+
+  Widget _buildNavigationBar() {
+    return BottomNavigationBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home),
+          label: '首页',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.auto_awesome_outlined),
+          activeIcon: Icon(Icons.auto_awesome),
+          label: '星图',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.forum_outlined),
+          activeIcon: Icon(Icons.forum),
+          label: '对话',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.groups_outlined),
+          activeIcon: Icon(Icons.groups),
+          label: '社群',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outlined),
+          activeIcon: Icon(Icons.person),
+          label: '我的',
+        ),
+      ],
+      currentIndex: _selectedIndex,
+      onTap: (index) => setState(() => _selectedIndex = index),
+      type: BottomNavigationBarType.fixed,
     );
   }
 }
 
-class _DashboardTab extends ConsumerWidget {
-  final bool isSprintMode;
-  final ValueChanged<bool> onSprintModeChanged;
-  final VoidCallback onNavigateToChat;
-
-  const _DashboardTab({
-    required this.isSprintMode,
-    required this.onSprintModeChanged,
-    required this.onNavigateToChat,
-  });
+/// Dashboard Screen with v2.3 Bento Grid layout
+class _DashboardScreen extends ConsumerWidget {
+  const _DashboardScreen();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final dashboardState = ref.watch(dashboardProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppDesignTokens.neutral900 : AppDesignTokens.neutral50,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await ref.read(taskListProvider.notifier).refreshTasks();
-          await ref.read(planListProvider.notifier).refresh();
-          await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
-        },
-        child: CustomScrollView(
-          slivers: [
-            _buildModernAppBar(context, user, isDark),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // 1. Sprint Mode Switch (Prominent)
-                    _buildSprintModeCard(context, isDark),
-                    const SizedBox(height: 20),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppDesignTokens.deepSpaceGradient,
+        ),
+        child: Stack(
+          children: [
+            // Background stars effect
+            const _StarField(),
 
-                    // Add button to navigate to PatternListScreen
-                    CustomButton.secondary(
-                      text: '查看行为定式',
-                      icon: Icons.psychology_alt,
-                      onPressed: () => context.go('/cognitive/patterns'),
-                      size: ButtonSize.medium,
+            // Main content
+            RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(dashboardProvider.notifier).refresh();
+                await ref.read(taskListProvider.notifier).refreshTasks();
+                await ref.read(planListProvider.notifier).refresh();
+              },
+              child: CustomScrollView(
+                slivers: [
+                  // App bar with user info
+                  SliverToBoxAdapter(
+                    child: _buildAppBar(context, user),
+                  ),
+
+                  // Weather header
+                  const SliverToBoxAdapter(
+                    child: WeatherHeader(),
+                  ),
+
+                  // Bento Grid
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _buildBentoGrid(context, dashboardState),
                     ),
-                    const SizedBox(height: 24),
+                  ),
 
-                    // Real-time Nudge Bubble
-                    const RealtimeNudgeBubble(),
-                    const SizedBox(height: 24),
-
-                    // 2. Main Chat/AI Interaction Window (Replaces small task icons)
-                    _buildMainChatEntry(context, isDark),
-                    const SizedBox(height: 24),
-
-                    // 3. Stats (Optional, keep for context but make subtle)
-                    _buildStatsRow(isDark),
-                    const SizedBox(height: 24),
-
-                    // Curiosity Capsules (Only in Growth Mode)
-                    if (!isSprintMode) ...[
-                      const _CuriosityCapsuleSection(),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // 4. Active Plans
-                    _ActivePlanSection(isSprintMode: isSprintMode),
-                    const SizedBox(height: 24),
-                    
-                    // 5. Today's Tasks
-                    const _TodayTasksSection(),
-
-                    const SizedBox(height: 80), 
-                  ],
-                ),
+                  // Extra padding for OmniBar
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 100),
+                  ),
+                ],
               ),
+            ),
+
+            // OmniBar at bottom
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _OmniBarContainer(),
             ),
           ],
         ),
@@ -165,478 +159,242 @@ class _DashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildSprintModeCard(BuildContext context, bool isDark) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: isSprintMode
-            ? const LinearGradient(
-                colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isSprintMode ? null : (isDark ? AppDesignTokens.neutral800 : Colors.white),
-        borderRadius: AppDesignTokens.borderRadius20,
-        boxShadow: isSprintMode
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFFF416C).withOpacity(0.4),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : AppDesignTokens.shadowSm,
-        border: isSprintMode ? null : Border.all(color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(isSprintMode ? 0.2 : 0.0),
-              shape: BoxShape.circle,
-              border: Border.all(color: isSprintMode ? Colors.white30 : AppDesignTokens.neutral200),
+  Widget _buildAppBar(BuildContext context, dynamic user) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 20,
+              backgroundImage:
+                  user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+              backgroundColor: AppDesignTokens.primaryBase,
+              child: user?.avatarUrl == null
+                  ? Text(
+                      (user?.nickname ?? 'U')[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
             ),
-            child: Icon(
-              Icons.flash_on_rounded,
-              color: isSprintMode ? Colors.white : AppDesignTokens.neutral400,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+            const SizedBox(width: 12),
+
+            // Greeting
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '冲刺模式',
-                  style: TextStyle(
+                  _getGreeting(user?.nickname ?? '同学'),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isSprintMode ? Colors.white : (isDark ? Colors.white : AppDesignTokens.neutral900),
+                    color: Colors.white,
                   ),
                 ),
                 Text(
-                  isSprintMode ? '高强度备考中 · 屏蔽干扰' : '点击开启沉浸式学习',
+                  '保持好奇，探索未知',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: isSprintMode ? Colors.white70 : (isDark ? Colors.white54 : AppDesignTokens.neutral500),
+                    fontSize: 12,
+                    color: Colors.white.withAlpha(150),
                   ),
                 ),
               ],
             ),
-          ),
-          Switch(
-            value: isSprintMode,
-            onChanged: onSprintModeChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: Colors.white.withOpacity(0.3),
-            inactiveThumbColor: AppDesignTokens.neutral400,
-            inactiveTrackColor: AppDesignTokens.neutral200,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildMainChatEntry(BuildContext context, bool isDark) {
-    return GestureDetector(
-      onTap: onNavigateToChat,
-      child: Container(
-        height: 180,
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6366F1), Color(0xFF4F46E5)], // Indigo/Purple theme for AI
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: AppDesignTokens.borderRadius24,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF4F46E5).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'AI 导师在线',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
             const Spacer(),
-            const Text(
-              '今天想学点什么？',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Row(
-              children: [
-                Text(
-                  '点击开始对话 · 扫题 · 错题分析 · 制定计划',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
-                Spacer(),
-                Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 20),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildModernAppBar(BuildContext context, dynamic user, bool isDark) {
-    return SliverAppBar(
-      expandedHeight: 120.0, // Reduced height
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          color: isDark ? AppDesignTokens.neutral900 : AppDesignTokens.neutral50, // Match background
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            // Flame level
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(20),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Row(
                 children: [
-                   CircleAvatar(
-                    radius: 20,
-                    backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-                    backgroundColor: AppDesignTokens.primaryBase,
-                    child: user?.avatarUrl == null
-                        ? Text(
-                            (user?.nickname ?? 'U')[0].toUpperCase(),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          )
-                        : null,
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: Colors.orange,
+                    size: 18,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '早安, ${user?.nickname ?? "同学"}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppDesignTokens.neutral900,
-                        ),
-                      ),
-                      Text(
-                        '保持好奇，探索未知',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  // Flame Icon (Simple)
-                  const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 24),
+                  const SizedBox(width: 4),
                   Text(
-                    ' Lv.${user?.flameLevel ?? 1}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                    'Lv.${user?.flameLevel ?? 1}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatsRow(bool isDark) {
-    return Row(
+  Widget _buildBentoGrid(BuildContext context, DashboardState state) {
+    return StaggeredGrid.count(
+      crossAxisCount: 4,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
       children: [
-        _buildStatCard('专注时长', '3.5h', Icons.timer, Colors.blue, isDark),
-        const SizedBox(width: 12),
-        _buildStatCard('掌握知识', '12', Icons.hub_outlined, Colors.purple, isDark), // Changed to Knowledge count
-        const SizedBox(width: 12),
-        _buildStatCard('连续打卡', '12天', Icons.calendar_today, Colors.orange, isDark),
+        // Focus Card - 2x2 (left column)
+        StaggeredGridTile.count(
+          crossAxisCellCount: 2,
+          mainAxisCellCount: 2,
+          child: FocusCard(
+            onTap: () {
+              context.push('/focus');
+            },
+          ),
+        ),
+
+        // Prism Card - 2x1 (top right)
+        StaggeredGridTile.count(
+          crossAxisCellCount: 2,
+          mainAxisCellCount: 1,
+          child: const PrismCard(),
+        ),
+
+        // Sprint Card - 2x1 (bottom right)
+        StaggeredGridTile.count(
+          crossAxisCellCount: 2,
+          mainAxisCellCount: 1,
+          child: SprintCard(
+            onTap: () {
+              context.push('/plans');
+            },
+          ),
+        ),
+
+        // Next Actions - 4x1.2 (full width bottom)
+        StaggeredGridTile.count(
+          crossAxisCellCount: 4,
+          mainAxisCellCount: 1.2,
+          child: NextActionsCard(
+            onViewAll: () {
+              context.push('/tasks');
+            },
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool isDark) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? AppDesignTokens.neutral800 : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isDark ? null : AppDesignTokens.shadowSm,
-          border: isDark ? Border.all(color: AppDesignTokens.neutral700) : null,
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : AppDesignTokens.neutral900,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CuriosityCapsuleSection extends ConsumerWidget {
-  const _CuriosityCapsuleSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final capsuleState = ref.watch(capsuleProvider);
-
-    return capsuleState.when(
-      data: (capsules) {
-        if (capsules.isEmpty) return const SizedBox.shrink();
-        return Column(
-          children: [
-            ...capsules.map((capsule) => CuriosityCapsuleCard(capsule: capsule)),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-}
-
-
-
-class _ActivePlanSection extends ConsumerWidget {
-  final bool isSprintMode;
-
-  const _ActivePlanSection({required this.isSprintMode});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final planState = ref.watch(planListProvider);
-    final activePlans = planState.activePlans;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // In Sprint Mode, we prioritize Sprint Plans
-    final displayPlans = isSprintMode
-        ? activePlans.where((p) => p.type == PlanType.sprint).toList()
-        : activePlans;
-
-    if (displayPlans.isEmpty) {
-      if (isSprintMode) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isDark ? AppDesignTokens.neutral800 : const Color(0xFFFFF0F0),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.red.shade100),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.timer_off_outlined, color: Colors.red.shade400, size: 32),
-              const SizedBox(height: 12),
-              Text(
-                '暂无冲刺计划',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : AppDesignTokens.neutral900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '告诉 AI 你的考试时间，立即生成冲刺计划',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-      return const SizedBox.shrink();
+  String _getGreeting(String name) {
+    final hour = DateTime.now().hour;
+    String greeting;
+    if (hour < 6) {
+      greeting = '夜深了';
+    } else if (hour < 12) {
+      greeting = '早安';
+    } else if (hour < 14) {
+      greeting = '午安';
+    } else if (hour < 18) {
+      greeting = '下午好';
+    } else {
+      greeting = '晚上好';
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              isSprintMode ? '冲刺进度' : '长期计划',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: AppDesignTokens.fontWeightBold,
-                color: isDark ? Colors.white : AppDesignTokens.neutral900,
-              ),
-            ),
-            if (activePlans.isNotEmpty)
-              CustomButton.text(
-                text: '全部计划',
-                onPressed: () {
-                   // Navigate to plans
-                },
-                size: ButtonSize.small,
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...displayPlans.map((plan) => _buildPlanCard(context, plan, isDark)),
-      ],
-    );
+    return '$greeting, $name';
   }
+}
 
-  Widget _buildPlanCard(BuildContext context, PlanModel plan, bool isDark) {
-    final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays;
-    
-    final isSprint = plan.type == PlanType.sprint;
+/// OmniBar container with navigation items
+class _OmniBarContainer extends StatelessWidget {
+  const _OmniBarContainer();
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: isDark ? null : AppDesignTokens.shadowSm,
-        border: Border.all(
-          color: isSprint 
-              ? (isDark ? Colors.red.shade900 : Colors.red.shade100) 
-              : (isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral200),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            AppDesignTokens.deepSpaceStart.withAlpha(200),
+            AppDesignTokens.deepSpaceStart,
+          ],
+          stops: const [0.0, 0.3, 1.0],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isSprint ? Colors.red.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // OmniBar input
+            const OmniBar(),
+            const SizedBox(height: 8),
+
+            // Navigation icons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _NavItem(
+                  icon: Icons.auto_awesome_outlined,
+                  label: '星图',
+                  onTap: () => context.push('/galaxy'),
                 ),
-                child: Icon(
-                  isSprint ? Icons.flash_on_rounded : Icons.flag_rounded,
-                  color: isSprint ? Colors.red : Colors.blue,
-                  size: 20,
+                _NavItem(
+                  icon: Icons.forum_outlined,
+                  label: '对话',
+                  onTap: () => context.push('/chat'),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plan.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : AppDesignTokens.neutral900,
-                      ),
-                    ),
-                    if (daysLeft != null)
-                      Text(
-                        daysLeft > 0 ? '距离目标还有 $daysLeft 天' : '今日截止',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: daysLeft <= 3 ? Colors.red : (isDark ? Colors.white54 : AppDesignTokens.neutral500),
-                          fontWeight: daysLeft <= 3 ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                  ],
+                _NavItem(
+                  icon: Icons.groups_outlined,
+                  label: '社群',
+                  onTap: () => context.push('/community'),
                 ),
-              ),
-              CircularProgressIndicator(
-                value: plan.progress,
-                backgroundColor: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral100,
-                valueColor: AlwaysStoppedAnimation<Color>(isSprint ? Colors.red : Colors.blue),
-                strokeWidth: 6,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: plan.progress,
-              backgroundColor: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral100,
-              valueColor: AlwaysStoppedAnimation<Color>(isSprint ? Colors.red : Colors.blue),
-              minHeight: 8,
+                _NavItem(
+                  icon: Icons.person_outlined,
+                  label: '我的',
+                  onTap: () => context.push('/profile'),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '进度 ${(plan.progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
-                ),
-              ),
-              Text(
-                '每日 ${plan.dailyAvailableMinutes} min',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
-                ),
-              ),
-            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white60, size: 22),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.white60,
+            ),
           ),
         ],
       ),
@@ -644,80 +402,46 @@ class _ActivePlanSection extends ConsumerWidget {
   }
 }
 
-class _TodayTasksSection extends ConsumerWidget {
-  const _TodayTasksSection();
+/// Decorative star field background
+class _StarField extends StatelessWidget {
+  const _StarField();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final todayTasks = ref.watch(taskListProvider).todayTasks;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '今日任务',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: AppDesignTokens.fontWeightBold,
-              ),
-            ),
-            if (todayTasks.isNotEmpty)
-              CustomButton.text(
-                text: '查看全部',
-                onPressed: () {
-                  // Navigate to task list
-                },
-                size: ButtonSize.small,
-              ),
-          ],
-        ),
-        const SizedBox(height: AppDesignTokens.spacing12),
-        if (todayTasks.isEmpty)
-          CompactEmptyState(
-            message: '今天没有任务，可以休息或规划新任务',
-            icon: Icons.check_circle_outline_rounded,
-            actionText: '创建任务',
-            onAction: () {
-              // TODO: Navigate to add task screen
-            },
-          )
-        else
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: todayTasks.length,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              itemBuilder: (context, index) {
-                final task = todayTasks[index];
-                return SizedBox(
-                  width: 320,
-                  child: TaskCard(
-                    task: task,
-                    onTap: () {
-                      // TODO: Navigate to task detail
-                      context.push('/tasks/${task.id}');
-                    },
-                    onStart: () {
-                      // TODO: Start task execution
-                    },
-                    onComplete: () async {
-                      await ref.read(taskListProvider.notifier).completeTask(
-                        task.id,
-                        task.estimatedMinutes,
-                        null,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: MediaQuery.of(context).size,
+      painter: _StarPainter(),
     );
   }
 }
 
+class _StarPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white;
 
+    // Draw random stars
+    final stars = [
+      Offset(size.width * 0.1, size.height * 0.15),
+      Offset(size.width * 0.3, size.height * 0.08),
+      Offset(size.width * 0.5, size.height * 0.12),
+      Offset(size.width * 0.7, size.height * 0.05),
+      Offset(size.width * 0.85, size.height * 0.18),
+      Offset(size.width * 0.15, size.height * 0.25),
+      Offset(size.width * 0.6, size.height * 0.22),
+      Offset(size.width * 0.9, size.height * 0.28),
+      Offset(size.width * 0.25, size.height * 0.35),
+      Offset(size.width * 0.75, size.height * 0.32),
+    ];
+
+    for (var i = 0; i < stars.length; i++) {
+      final opacity = 0.3 + (i % 3) * 0.2;
+      final radius = 1.0 + (i % 2);
+      paint.color = Colors.white.withAlpha((opacity * 255).toInt());
+      canvas.drawCircle(stars[i], radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

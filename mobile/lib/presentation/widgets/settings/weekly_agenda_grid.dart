@@ -124,8 +124,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                   children: [
                     const SizedBox(width: timeLabelWidth),
                     ...['一', '二', '三', '四', '五', '六', '日'].map((day) =>
-                      SizedBox(
-                        width: cellWidth,
+                      Expanded(
                         child: Center(
                           child: Text(
                             day,
@@ -169,39 +168,39 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     ),
                     
                     // The Grid Area
-                    // Use a Stack to draw lines over cells if needed, or just Container
-                    Container(
-                      width: gridWidth,
-                      height: cellHeight * 24,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                    Expanded(
+                      child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: GestureDetector(
-                        // Handle drag to paint
-                        onPanStart: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                        onPanUpdate: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                        // Handle tap to paint
-                        onTapDown: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                        
-                        child: Column(
-                          children: List.generate(24, (hour) =>
-                            Row(
-                              children: List.generate(7, (day) {
-                                final index = hour * 7 + day;
-                                return Container(
-                                  width: cellWidth,
-                                  height: cellHeight,
-                                  // Use border for grid lines
-                                  decoration: BoxDecoration(
-                                    color: _getColor(_gridState[index]),
-                                    border: Border(
-                                      right: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
-                                      bottom: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
-                                    ),
-                                  ),
-                                );
-                              }),
+                        child: Container(
+                          height: cellHeight * 24,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: GestureDetector(
+                            onPanStart: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                            onPanUpdate: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                            onTapDown: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                            child: Column(
+                              children: List.generate(24, (hour) =>
+                                Row(
+                                  children: List.generate(7, (day) {
+                                    final index = hour * 7 + day;
+                                    return Expanded(
+                                      child: Container(
+                                        height: cellHeight,
+                                        decoration: BoxDecoration(
+                                          color: _getColor(_gridState[index]),
+                                          border: Border(
+                                            right: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
+                                            bottom: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
                             ),
                           ),
                         ),

@@ -113,6 +113,45 @@ class AppDesignTokens {
   static final Color overlayLight20 = Colors.white.withOpacity(0.2);
   static final Color overlayLight30 = Colors.white.withOpacity(0.3);
 
+  // ==================== Deep Space Theme (v2.3) ====================
+
+  /// Deep Space background colors
+  static const Color deepSpaceStart = Color(0xFF0D1B2A);
+  static const Color deepSpaceEnd = Color(0xFF1B263B);
+  static const Color deepSpaceSurface = Color(0xFF1B2838);
+
+  /// Deep Space gradient (radial for background)
+  static const LinearGradient deepSpaceGradient = LinearGradient(
+    colors: [deepSpaceStart, deepSpaceEnd],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  /// Glassmorphism colors
+  static final Color glassBackground = Colors.white.withOpacity(0.08);
+  static final Color glassBorder = Colors.white.withOpacity(0.15);
+  static final Color glassHighlight = Colors.white.withOpacity(0.25);
+
+  /// Weather theme colors
+  static const Color weatherSunny = Color(0xFFFFD93D);
+  static const Color weatherCloudy = Color(0xFF90A4AE);
+  static const Color weatherRainy = Color(0xFF5C6BC0);
+  static const Color weatherMeteor = Color(0xFFFF6B35);
+
+  /// Cognitive Prism colors
+  static const Color prismPurple = Color(0xFF9C27B0);
+  static const Color prismBlue = Color(0xFF3F51B5);
+  static const Color prismGreen = Color(0xFF4CAF50);
+
+  /// Focus flame colors
+  static const Color flameCore = Color(0xFFFF6B35);
+  static const Color flameGlow = Color(0xFFFFAB91);
+  static const LinearGradient flameGradient = LinearGradient(
+    colors: [Color(0xFFFF8A65), Color(0xFFFF6B35), Color(0xFFE64A19)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
   /// Card gradients for different contexts
   static const LinearGradient cardGradientPrimary = LinearGradient(
     colors: [Color(0xFFFF6B35), Color(0xFFFF8C5A)],

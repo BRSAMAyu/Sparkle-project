@@ -148,46 +148,48 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
   Widget _buildQuadrantLabels() {
     const labelPadding = 8.0;
     const textStyle = TextStyle(
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: FontWeight.bold,
       color: AppDesignTokens.neutral600,
     );
 
     return const Stack(
       children: [
-        // Depth Axis (Vertical)
+        // Depth+ at top center
         Align(
           alignment: Alignment.topCenter,
           child: Padding(
             padding: EdgeInsets.only(top: labelPadding),
-            child: Text('深度 (High Depth)', style: textStyle),
+            child: Text('深度+', style: textStyle),
           ),
         ),
+        // Depth- at bottom center
         Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
             padding: EdgeInsets.only(bottom: labelPadding),
-            child: Text('浅层 (Shallow)', style: textStyle),
+            child: Text('深度-', style: textStyle),
           ),
         ),
-        // Curiosity Axis (Horizontal)
+        // Curiosity- (Focus) at left center
         Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: EdgeInsets.only(left: labelPadding),
             child: RotatedBox(
               quarterTurns: 3,
-              child: Text('专注 (Focus)', style: textStyle),
+              child: Text('好奇-', style: textStyle),
             ),
           ),
         ),
+        // Curiosity+ at right center
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
             padding: EdgeInsets.only(right: labelPadding),
             child: RotatedBox(
               quarterTurns: 1,
-              child: Text('好奇 (Curiosity)', style: textStyle),
+              child: Text('好奇+', style: textStyle),
             ),
           ),
         ),
