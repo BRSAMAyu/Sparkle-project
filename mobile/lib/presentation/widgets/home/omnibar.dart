@@ -6,6 +6,7 @@ import 'package:sparkle/data/repositories/omnibar_repository.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/app/theme.dart';
 
 /// OmniBar - Project Cockpit Floating Dock
 class OmniBar extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
       case 'TASK': return Colors.greenAccent;
       case 'CAPSULE': return Colors.purpleAccent;
       case 'CHAT': return Colors.blueAccent;
-      default: return Colors.white24;
+      default: return AppColors.textOnDark(context).withOpacity(0.15);
     }
   }
 
@@ -147,10 +148,10 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                   controller: _controller,
                   focusNode: _focusNode,
                   onSubmitted: (_) => _submit(),
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(color: AppColors.textOnDark(context), fontSize: 15),
                   decoration: InputDecoration(
                     hintText: '告诉我你的想法...',
-                    hintStyle: TextStyle(color: Colors.white.withAlpha(80), fontSize: 14),
+                    hintStyle: TextStyle(color: AppColors.textOnDark(context).withAlpha(80), fontSize: 14),
                     border: InputBorder.none,
                   ),
                 ),
@@ -161,7 +162,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 IconButton(
                   icon: Icon(
                     _intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded,
-                    color: _intentType != null ? color : Colors.white70,
+                    color: _intentType != null ? color : AppColors.textOnDark(context).withOpacity(0.7),
                     size: 20,
                   ),
                   onPressed: _submit,

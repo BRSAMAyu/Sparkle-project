@@ -11,11 +11,48 @@ class AppColors {
   static const lightBackground = AppDesignTokens.neutral100;
   static const lightCard = Colors.white;
   static const lightText = AppDesignTokens.neutral900;
+  static const lightTextSecondary = AppDesignTokens.neutral700;
+  static const lightIcon = AppDesignTokens.neutral800;
+  static const lightBorder = AppDesignTokens.neutral300;
+  static const lightDivider = AppDesignTokens.neutral200;
 
   // Dark Theme
   static const darkBackground = AppDesignTokens.neutral900;
   static const darkCard = AppDesignTokens.neutral800;
   static const darkText = AppDesignTokens.neutral50;
+  static const darkTextSecondary = AppDesignTokens.neutral300;
+  static const darkIcon = AppDesignTokens.neutral100;
+  static const darkBorder = AppDesignTokens.neutral700;
+  static const darkDivider = AppDesignTokens.neutral600;
+
+  // Semantic colors for both themes
+  static Color surfaceBright(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? Colors.white
+        : AppDesignTokens.neutral800;
+  }
+
+  static Color textOnBright(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? AppDesignTokens.neutral900
+        : Colors.white;
+  }
+
+  static Color textOnDark(BuildContext context) {
+    // For dark backgrounds, always use light text for maximum contrast
+    return Colors.white;
+  }
+
+  static Color iconOnBright(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.light
+        ? AppDesignTokens.neutral800
+        : AppDesignTokens.neutral100;
+  }
+
+  static Color iconOnDark(BuildContext context) {
+    // For dark backgrounds, always use light icons for maximum contrast
+    return Colors.white;
+  }
 }
 
 /// Theme Extension for custom properties

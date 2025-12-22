@@ -61,7 +61,7 @@ uvicorn app.main:app --reload
 **Database**:
 ```bash
 # Create new migration (after model changes)
-alembic revision --autogenerate -m "description"
+alembic revision --autogen.ate -m "description"
 
 # Apply migrations
 alembic upgrade head
@@ -130,7 +130,7 @@ flutter test test/unit/ # Run specific directory
 ```bash
 cd mobile
 flutter analyze         # Static analysis
-dart format lib/        # Format code
+dart format lib/        # Code quality
 ```
 
 ## Architecture & Key Concepts
@@ -173,7 +173,7 @@ dart format lib/        # Format code
 - Persona-based intelligent push generation using LLM
 - Three push types: Sprint Reminder, Memory Wake, Sleep Wake
 - Configurable push preferences (frequency, time slots, content types)
-- Push log tracking with delivery status and engagement metrics
+- Push log tracking with delivery status and user engagement metrics
 - Service: `app/services/push_service.py`
 
 **Idempotency System**:
