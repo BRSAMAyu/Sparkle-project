@@ -22,6 +22,19 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   bool _isTimerRunning = false;
   bool _showCelebration = false;
 
+  // Timer Enhancement State
+  TimerMode _timerMode = TimerMode.countUp;
+  int _currentTimerDuration = 0; // In seconds
+  bool _isPomodoroMode = false;
+  int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
+
+  @override
+  void initState() {
+    super.initState();
+    final task = ref.read(activeTaskProvider);
+    _currentTimerDuration = task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
+  }
+
   Future<bool> _onWillPop() async {
     if (_showCelebration) return false; // Don't pop during celebration
     if (!_isTimerRunning) return true;
@@ -81,6 +94,49 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     if (mounted) {
       context.go('/galaxy'); // Navigate to Galaxy screen to show spark animation
     }
+  }
+
+  void _setPresetDuration(int minutes) {
+    setState(() {
+      _timerMode = TimerMode.countDown;
+      _currentTimerDuration = minutes * 60;
+      _isPomodoroMode = false; // Disable Pomodoro if a preset is selected
+    });
+  }
+
+  void _togglePomodoro() {
+    setState(() {
+      _isPomodoroMode = !_isPomodoroMode;
+      if (_isPomodoroMode) {
+        _timerMode = TimerMode.countDown; // Pomodoro is always countdown
+        _currentTimerDuration = 25 * 60; // Start with work phase
+        _pomodoroCycle = 0;
+      } else {
+        // Reset to default or previous state if exiting Pomodoro
+        _timerMode = TimerMode.countUp;
+        _currentTimerDuration = 0;
+      }
+    });
+  }
+
+  void _onPomodoroComplete() {
+    if (!_isPomodoroMode) return;
+
+    if (_pomodoroCycle == 0) { // Work phase completed
+      _pomodoroCycle = 1;
+      _currentTimerDuration = 5 * 60; // Short break
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('番茄工作时间结束！休息一下。')),
+      );
+    } else if (_pomodoroCycle == 1) { // Short break completed
+      _pomodoroCycle = 0;
+      _currentTimerDuration = 25 * 60; // Next work phase
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('休息时间结束！开始新的工作。')),
+      );
+    } 
+    // Extend for long breaks if desired
+    setState(() {}); // Trigger rebuild for TimerWidget to update
   }
 
   @override
@@ -166,12 +222,22 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // 1. Timer Area
                             Center(
                               child: TimerWidget(
-                                mode: TimerMode.countUp,
-                                initialSeconds: activeTask.actualMinutes != null ? activeTask.actualMinutes! * 60 : 0,
-                                maxSeconds: activeTask.estimatedMinutes * 60,
+                                key: ValueKey(_currentTimerDuration), // Force rebuild on duration change
+                                mode: _timerMode,
+                                initialSeconds: _currentTimerDuration,
+                                maxSeconds: _isPomodoroMode ? (_pomodoroCycle == 0 ? 25 * 60 : 5 * 60) : null,
                                 onTick: (seconds) => _elapsedSeconds = seconds,
                                 onStateChange: (isRunning) => _isTimerRunning = isRunning,
+                                onComplete: _onPomodoroComplete, // Call only for Pomodoro
                               ),
+                            ),
+                            const SizedBox(height: AppDesignTokens.spacing24),
+
+                            // Timer Controls
+                            _TimerControls(
+                              isPomodoroMode: _isPomodoroMode,
+                              onTogglePomodoro: _togglePomodoro,
+                              onSetPreset: _setPresetDuration,
                             ),
                             const SizedBox(height: AppDesignTokens.spacing40),
 
@@ -257,81 +323,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             ),
                             const SizedBox(height: AppDesignTokens.spacing16),
 
-                            // 3. Chat Area (Placeholder)
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: AppDesignTokens.borderRadius16,
-                                boxShadow: AppDesignTokens.shadowMd,
-                                border: Border.all(
-                                  color: AppDesignTokens.neutral200,
-                                  width: 1,
-                                ),
-                              ),
-                              child: ExpansionTile(
-                                shape: const Border(),
-                                tilePadding: const EdgeInsets.symmetric(
-                                  horizontal: AppDesignTokens.spacing16,
-                                  vertical: AppDesignTokens.spacing12,
-                                ),
-                                title: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        gradient: AppDesignTokens.secondaryGradient,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppDesignTokens.secondaryBase.withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
-                                    ),
-                                    const SizedBox(width: AppDesignTokens.spacing12),
-                                    Text(
-                                      'AI 学习助手',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: AppDesignTokens.fontWeightBold,
-                                        color: AppDesignTokens.neutral900,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(AppDesignTokens.spacing24),
-                                    decoration: const BoxDecoration(
-                                      color: AppDesignTokens.neutral50,
-                                      borderRadius: BorderRadius.only(
-                                        bottomLeft: Radius.circular(16),
-                                        bottomRight: Radius.circular(16),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        const Icon(
-                                          Icons.chat_bubble_outline_rounded,
-                                          size: 48,
-                                          color: AppDesignTokens.neutral400,
-                                        ),
-                                        const SizedBox(height: AppDesignTokens.spacing12),
-                                        Text(
-                                          '聊天功能即将推出',
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: AppDesignTokens.neutral600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            // 3. Quick Tools Panel
+                            const QuickToolsPanel(),
+                            const SizedBox(height: AppDesignTokens.spacing16),
+
+                            // 4. Task Chat Panel
+                            TaskChatPanel(taskId: activeTask.id),
                           ],
                         ),
                       ),
@@ -422,6 +419,41 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _TimerControls extends StatelessWidget {
+  final bool isPomodoroMode;
+  final VoidCallback onTogglePomodoro;
+  final Function(int minutes) onSetPreset;
+
+  const _TimerControls({
+    required this.isPomodoroMode,
+    required this.onTogglePomodoro,
+    required this.onSetPreset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: AppDesignTokens.spacing8,
+      runSpacing: AppDesignTokens.spacing8,
+      children: [
+        CustomButton.secondary(
+          text: '番茄钟',
+          icon: Icons.timer,
+          onPressed: onTogglePomodoro,
+          isSelected: isPomodoroMode,
+          size: ButtonSize.small,
+        ),
+        ...[15, 25, 45, 60].map((minutes) => CustomButton.secondary(
+          text: '$minutes 分钟',
+          onPressed: () => onSetPreset(minutes),
+          size: ButtonSize.small,
+        )),
+      ],
     );
   }
 }

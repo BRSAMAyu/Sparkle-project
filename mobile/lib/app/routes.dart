@@ -7,6 +7,7 @@ import 'package:sparkle/presentation/screens/splash/splash_screen.dart';
 import 'package:sparkle/presentation/screens/auth/login_screen.dart';
 import 'package:sparkle/presentation/screens/auth/register_screen.dart';
 import 'package:sparkle/presentation/screens/home/home_screen.dart';
+import 'package:sparkle/presentation/screens/task/task_create_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_detail_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
@@ -14,6 +15,7 @@ import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
+import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_detail_screen.dart';
@@ -86,6 +88,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tasks',
         name: 'tasks',
         builder: (context, state) => const TaskListScreen(),
+      ),
+      GoRoute(
+        path: '/tasks/new',
+        name: 'createTask',
+        builder: (context, state) => const TaskCreateScreen(),
       ),
       GoRoute(
         path: '/tasks/:id',
@@ -161,6 +168,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/settings/learning-mode',
+        name: 'learningMode',
+        builder: (context, state) => const LearningModeScreen(),
       ),
 
       // Galaxy Routes

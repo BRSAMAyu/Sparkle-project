@@ -90,6 +90,13 @@ class User(BaseModel):
         cascade="all, delete-orphan",
         lazy="dynamic"
     )
+    
+    curiosity_capsules = relationship(
+        "CuriosityCapsule",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
 
     def __repr__(self):
         return f"<User(username={self.username}, email={self.email})>"

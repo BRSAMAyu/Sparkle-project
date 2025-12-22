@@ -49,6 +49,16 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
   }
 
   @override
+  void didUpdateWidget(TimerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSeconds != widget.initialSeconds && !_isRunning) {
+      setState(() {
+        _currentSeconds = widget.initialSeconds;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     _pulseController.dispose();

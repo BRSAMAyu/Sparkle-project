@@ -114,7 +114,7 @@ def upgrade() -> None:
     with op.batch_alter_table('tasks', schema=None) as batch_op:
         batch_op.add_column(sa.Column('knowledge_node_id', app.models.base.GUID(), nullable=True))
         batch_op.add_column(sa.Column('auto_expand_enabled', sa.Boolean(), nullable=True))
-        batch_op.create_foreign_key(None, 'knowledge_nodes', ['knowledge_node_id'], ['id'])
+        batch_op.create_foreign_key('fk_tasks_knowledge_node_id', 'knowledge_nodes', ['knowledge_node_id'], ['id'])
 
     with op.batch_alter_table('user_node_status', schema=None) as batch_op:
         batch_op.add_column(sa.Column('total_study_minutes', sa.Integer(), nullable=False))

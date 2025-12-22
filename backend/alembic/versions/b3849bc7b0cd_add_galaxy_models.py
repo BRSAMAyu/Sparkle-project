@@ -62,7 +62,7 @@ def upgrade() -> None:
         batch_op.create_foreign_key('fk_error_records_subject_id', 'subjects', ['subject_id'], ['id'])
 
     with op.batch_alter_table('idempotency_keys', schema=None) as batch_op:
-        batch_op.create_index('idx_idempotency_expires', ['expires_at'], unique=False)
+        # batch_op.create_index(batch_op.f('idx_idempotency_expires'), ['expires_at'], unique=False)
         batch_op.create_index(batch_op.f('ix_idempotency_keys_expires_at'), ['expires_at'], unique=False)
         batch_op.create_index(batch_op.f('ix_idempotency_keys_user_id'), ['user_id'], unique=False)
 

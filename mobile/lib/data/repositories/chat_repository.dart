@@ -2,11 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/data/models/chat_response_model.dart';
 
 class ChatRepository {
   final Dio _dio;
 
   ChatRepository(this._dio);
+
+  /// 发送任务相关消息 (非流式)
+  Future<ChatResponseModel> sendMessageToTask(String taskId, String message, String? conversationId) async {
+    final response = await _dio.post(
+      '/api/v1/chat/task/$taskId',
+      data: {
+        'message': message,
+        'conversation_id': conversationId,
+      },
+    );
+    return ChatResponseModel.fromJson(response.data);
+  }
 
   /// 流式聊天（SSE）
   Stream<ChatStreamEvent> chatStream(String message, String? conversationId) {

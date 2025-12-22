@@ -7,6 +7,19 @@ class UserRepository {
 
   UserRepository(this._apiClient);
 
+  /// 更新用户学习偏好
+  Future<UserModel> updateUserPreferences(UserPreferencesModel preferences) async {
+    try {
+      final response = await _apiClient.put(
+        '/users/me/preferences', 
+        data: preferences.toJson(),
+      );
+      return UserModel.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// 更新推送偏好
   Future<UserModel> updatePushPreferences(PushPreferences prefs) async {
     try {
@@ -33,3 +46,4 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return UserRepository(apiClient);
 });
+

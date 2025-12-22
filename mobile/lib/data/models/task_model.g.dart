@@ -77,11 +77,13 @@ TaskCreate _$TaskCreateFromJson(Map<String, dynamic> json) => TaskCreate(
       type: $enumDecode(_$TaskTypeEnumMap, json['type']),
       estimatedMinutes: (json['estimatedMinutes'] as num).toInt(),
       difficulty: (json['difficulty'] as num).toInt(),
+      energyCost: (json['energy_cost'] as num?)?.toInt() ?? 1,
       planId: json['plan_id'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      guideContent: json['guide_content'] as String?,
     );
 
 Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
@@ -90,9 +92,11 @@ Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
       'type': _$TaskTypeEnumMap[instance.type]!,
       'estimatedMinutes': instance.estimatedMinutes,
       'difficulty': instance.difficulty,
+      'energy_cost': instance.energyCost,
       'plan_id': instance.planId,
       'tags': instance.tags,
       'due_date': instance.dueDate?.toIso8601String(),
+      'guide_content': instance.guideContent,
     };
 
 TaskUpdate _$TaskUpdateFromJson(Map<String, dynamic> json) => TaskUpdate(

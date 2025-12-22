@@ -141,20 +141,26 @@ class TaskCreate {
   final TaskType type;
   final int estimatedMinutes;
   final int difficulty;
+  @JsonKey(name: 'energy_cost')
+  final int energyCost;
   @JsonKey(name: 'plan_id')
   final String? planId;
   final List<String>? tags;
   @JsonKey(name: 'due_date')
   final DateTime? dueDate;
+  @JsonKey(name: 'guide_content')
+  final String? guideContent;
 
   TaskCreate({
     required this.title,
     required this.type,
     required this.estimatedMinutes,
     required this.difficulty,
+    this.energyCost = 1,
     this.planId,
     this.tags,
     this.dueDate,
+    this.guideContent,
   });
 
   factory TaskCreate.fromJson(Map<String, dynamic> json) => _$TaskCreateFromJson(json);

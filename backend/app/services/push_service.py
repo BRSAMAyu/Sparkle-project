@@ -13,10 +13,12 @@ from app.models.notification import PushHistory
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
 from app.services.llm_service import llm_service
+from app.services.curiosity_capsule_service import curiosity_capsule_service
 from app.services.push_strategies import (
     SprintStrategy,
     MemoryStrategy,
-    InactivityStrategy
+    InactivityStrategy,
+    CuriosityStrategy
 )
 
 class PushService:
@@ -25,6 +27,7 @@ class PushService:
         self.sprint_strategy = SprintStrategy()
         self.memory_strategy = MemoryStrategy()
         self.inactivity_strategy = InactivityStrategy()
+        self.curiosity_strategy = CuriosityStrategy()
 
     async def process_all_users(self):
         """
@@ -70,7 +73,7 @@ class PushService:
             logger.debug(f"User {user.id} reached frequency cap.")
             return False
 
-        # 3. Strategy Evaluation (Priority: Sprint > Memory > Inactivity)
+        # 3. Strategy Evaluation (Priority: Sprint > Curiosity > Memory > Inactivity)
         trigger_strategy = None
         trigger_data = {}
         trigger_type = ""
@@ -80,7 +83,12 @@ class PushService:
             trigger_strategy = self.sprint_strategy
             trigger_type = "sprint"
         
-        # Check Memory Strategy (only if sprint didn't trigger)
+        # Check Curiosity Strategy
+        elif prefs.enable_curiosity and await self.curiosity_strategy.should_trigger(user, self.db):
+            trigger_strategy = self.curiosity_strategy
+            trigger_type = "curiosity"
+
+        # Check Memory Strategy
         elif await self.memory_strategy.should_trigger(user, self.db):
             trigger_strategy = self.memory_strategy
             trigger_type = "memory"
@@ -94,8 +102,21 @@ class PushService:
             return False
 
         # 4. Generate Content
-        trigger_data = await trigger_strategy.get_trigger_data(user, self.db)
-        content_dict = await self._generate_push_content(user, prefs, trigger_type, trigger_data)
+        # For curiosity, we might generate capsule inside get_trigger_data or separate
+        if trigger_type == "curiosity":
+            # Generate capsule first
+            capsule = await curiosity_capsule_service.generate_daily_capsule(user.id, self.db)
+            if capsule:
+                trigger_data = {"capsule_id": str(capsule.id), "title": capsule.title, "preview": capsule.content[:50]}
+                content_dict = {
+                    "title": f"✨ 好奇心胶囊: {capsule.title}",
+                    "body": f"发现一个新知识点！{capsule.content[:30]}..."
+                }
+            else:
+                return False
+        else:
+            trigger_data = await trigger_strategy.get_trigger_data(user, self.db)
+            content_dict = await self._generate_push_content(user, prefs, trigger_type, trigger_data)
         
         if not content_dict:
             logger.warning("Failed to generate push content.")

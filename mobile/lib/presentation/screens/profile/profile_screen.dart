@@ -162,8 +162,8 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
-            icon: Icons.tune_rounded,
-            title: '学习偏好',
+            icon: Icons.calendar_today_outlined,
+            title: '日程偏好',
             gradient: AppDesignTokens.secondaryGradient,
             onTap: () {
               Navigator.of(context).push(
@@ -171,6 +171,16 @@ class ProfileScreen extends ConsumerWidget {
                   builder: (_) => const SchedulePreferencesScreen(),
                 ),
               );
+            },
+          ),
+          const Divider(height: 1, indent: 60),
+          _buildSettingsTile(
+            context,
+            icon: Icons.psychology_outlined,
+            title: '学习模式设置',
+            gradient: AppDesignTokens.infoGradient,
+            onTap: () {
+              context.go('/settings/learning-mode');
             },
           ),
           const Divider(height: 1, indent: 60),

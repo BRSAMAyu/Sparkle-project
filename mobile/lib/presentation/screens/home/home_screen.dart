@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/plan_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
+import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
@@ -16,6 +17,7 @@ import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
 import 'package:sparkle/presentation/screens/home/notification_list_screen.dart';
+import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -81,7 +83,7 @@ class _DashboardTab extends ConsumerWidget {
         icon: Icons.add_rounded,
         onPressed: () {
            // TODO: Navigate to add task
-           // context.push('/tasks/new'); 
+           context.push('/tasks/new'); 
         },
         size: ButtonSize.large,
         isCircular: true,
@@ -100,6 +102,7 @@ class _DashboardTab extends ConsumerWidget {
                   onRefresh: () async {
                     await ref.read(taskListProvider.notifier).refreshTasks();
                     await ref.read(planListProvider.notifier).refresh();
+                    await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
                   },
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -112,6 +115,8 @@ class _DashboardTab extends ConsumerWidget {
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             const _FlameStatusCard(),
+                            const SizedBox(height: AppDesignTokens.spacing24),
+                            const _CuriosityCapsuleSection(),
                             const SizedBox(height: AppDesignTokens.spacing24),
                             const _TodayTasksSection(),
                             const SizedBox(height: AppDesignTokens.spacing24),
@@ -202,6 +207,28 @@ class _DashboardTab extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _CuriosityCapsuleSection extends ConsumerWidget {
+  const _CuriosityCapsuleSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final capsuleState = ref.watch(capsuleProvider);
+
+    return capsuleState.when(
+      data: (capsules) {
+        if (capsules.isEmpty) return const SizedBox.shrink();
+        return Column(
+          children: [
+            ...capsules.map((capsule) => CuriosityCapsuleCard(capsule: capsule)),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
