@@ -91,6 +91,8 @@ class _ChatInputState extends State<ChatInput>
   Widget build(BuildContext context) {
     final bool canSend =
         widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return SafeArea(
       child: ClipRect(
@@ -104,15 +106,15 @@ class _ChatInputState extends State<ChatInput>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.white.withOpacity(0.9),
-                  Colors.white.withOpacity(0.95),
+                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withOpacity(0.9),
+                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withOpacity(0.95),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
               border: Border(
                 top: BorderSide(
-                  color: AppDesignTokens.neutral200.withOpacity(0.5),
+                  color: (isDark ? Colors.white12 : AppDesignTokens.neutral200).withOpacity(0.5),
                   width: 1.0,
                 ),
               ),
@@ -125,14 +127,14 @@ class _ChatInputState extends State<ChatInput>
                     duration: AppDesignTokens.durationFast,
                     decoration: BoxDecoration(
                       color: _isFocused
-                          ? Colors.white
-                          : AppDesignTokens.neutral100,
+                          ? (isDark ? AppDesignTokens.neutral800 : Colors.white)
+                          : (isDark ? AppDesignTokens.neutral800.withOpacity(0.5) : AppDesignTokens.neutral100),
                       borderRadius: AppDesignTokens.borderRadius24,
                       border: Border.all(
                         color: _isFocused
                             ? AppDesignTokens.primaryBase
-                            : Colors.transparent, // Use transparent instead of neutral200 for cleaner look when unfocused
-                        width: _isFocused ? 2.0 : 1.0,
+                            : Colors.transparent,
+                        width: 2.0, // Consistent width to avoid layout shift, but transparent when not focused
                       ),
                       boxShadow: _isFocused ? AppDesignTokens.shadowSm : null,
                     ),
@@ -143,19 +145,19 @@ class _ChatInputState extends State<ChatInput>
                       minLines: 1,
                       maxLines: 5,
                       textCapitalization: TextCapitalization.sentences,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppDesignTokens.fontSizeBase,
-                        color: AppDesignTokens.neutral900,
+                        color: isDark ? Colors.white : AppDesignTokens.neutral900,
                       ),
                       decoration: InputDecoration(
                         hintText: widget.placeholder,
-                        hintStyle: const TextStyle(
-                          color: AppDesignTokens.neutral500,
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : AppDesignTokens.neutral500,
                           fontSize: AppDesignTokens.fontSizeBase,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppDesignTokens.spacing16,
-                          vertical: AppDesignTokens.spacing12,
+                          vertical: AppDesignTokens.spacing10,
                         ),
                         border: InputBorder.none,
                         isDense: true,
@@ -173,7 +175,7 @@ class _ChatInputState extends State<ChatInput>
                     height: 48,
                     decoration: BoxDecoration(
                       gradient: canSend ? AppDesignTokens.primaryGradient : null,
-                      color: canSend ? null : AppDesignTokens.neutral300,
+                      color: canSend ? null : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral300),
                       shape: BoxShape.circle,
                       boxShadow: canSend ? AppDesignTokens.shadowPrimary : null,
                     ),
@@ -194,7 +196,7 @@ class _ChatInputState extends State<ChatInput>
                                 Icons.arrow_upward_rounded,
                                 color: canSend
                                     ? Colors.white
-                                    : AppDesignTokens.neutral500,
+                                    : (isDark ? Colors.white38 : AppDesignTokens.neutral500),
                                 size: AppDesignTokens.iconSizeBase,
                               ),
                             ),

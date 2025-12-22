@@ -131,13 +131,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             children: [
               Expanded(
                 child: messages.isEmpty && chatState.streamingContent.isEmpty
-                    ? Center(
-                        child: EmptyState.noChats(
-                          onStartChat: () {
-                            // Show quick starter prompts
-                          },
-                        ),
-                      )
+                    ? _buildQuickActions(context)
                     : ListView.builder(
                         controller: _scrollController,
                         reverse: true,
@@ -183,6 +177,121 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.primaryBase.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome, size: 48, color: AppDesignTokens.primaryBase),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '你好，我是你的 AI 导师',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '今天想做点什么？',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppDesignTokens.neutral600,
+              ),
+            ),
+            const SizedBox(height: 40),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                _QuickActionChip(
+                  icon: Icons.add_task_rounded,
+                  label: '新建微任务',
+                  color: Colors.blue,
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage("帮我创建一个新的微任务"),
+                ),
+                _QuickActionChip(
+                  icon: Icons.calendar_month_rounded,
+                  label: '生成长期计划',
+                  color: Colors.purple,
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage("帮我生成一个长期学习计划"),
+                ),
+                _QuickActionChip(
+                  icon: Icons.bug_report_rounded,
+                  label: '错误归因',
+                  color: Colors.orange,
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage("我想分析一下最近的错误原因"),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppDesignTokens.neutral800 : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/presentation/providers/theme_provider.dart';
 import 'package:sparkle/presentation/widgets/settings/learning_mode_control.dart';
 import 'package:sparkle/presentation/widgets/settings/weekly_agenda_grid.dart';
 
-class UnifiedSettingsScreen extends StatefulWidget {
+class UnifiedSettingsScreen extends ConsumerStatefulWidget {
   const UnifiedSettingsScreen({super.key});
 
   @override
-  State<UnifiedSettingsScreen> createState() => _UnifiedSettingsScreenState();
+  ConsumerState<UnifiedSettingsScreen> createState() => _UnifiedSettingsScreenState();
 }
 
-class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
+class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   // Mock State
   double _depth = 0.5;
   double _curiosity = 0.5;
@@ -67,6 +69,29 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               onChanged: (data) {
                 // Handle updates
               },
+            ),
+            const SizedBox(height: AppDesignTokens.spacing32),
+
+            _buildSectionHeader(Icons.brightness_6, '显示设置'),
+            const SizedBox(height: AppDesignTokens.spacing16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('外观模式'),
+              subtitle: const Text('选择浅色或深色界面体验'),
+              trailing: DropdownButton<ThemeMode>(
+                value: ref.watch(themeModeProvider),
+                underline: const SizedBox.shrink(),
+                onChanged: (ThemeMode? newValue) {
+                  if (newValue != null) {
+                    ref.read(themeModeProvider.notifier).state = newValue;
+                  }
+                },
+                items: const [
+                  DropdownMenuItem(value: ThemeMode.system, child: Text('跟随系统')),
+                  DropdownMenuItem(value: ThemeMode.light, child: Text('浅色模式')),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text('深色模式')),
+                ],
+              ),
             ),
             const SizedBox(height: AppDesignTokens.spacing32),
 
