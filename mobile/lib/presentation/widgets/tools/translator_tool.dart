@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class TranslatorTool extends StatefulWidget {
   const TranslatorTool({super.key});

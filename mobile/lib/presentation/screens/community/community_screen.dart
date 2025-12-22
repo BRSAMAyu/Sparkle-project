@@ -266,7 +266,7 @@ class _FriendsTab extends ConsumerWidget {
                     ),
                   ),
                   trailing: IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.chat_bubble_outline,
                       color: AppDesignTokens.primaryBase,
                     ),

@@ -231,7 +231,7 @@ class _DashboardTab extends ConsumerWidget {
           Switch(
             value: isSprintMode,
             onChanged: onSprintModeChanged,
-            activeColor: Colors.white,
+            activeThumbColor: Colors.white,
             activeTrackColor: Colors.white.withOpacity(0.3),
             inactiveThumbColor: AppDesignTokens.neutral400,
             inactiveTrackColor: AppDesignTokens.neutral200,
@@ -368,12 +368,12 @@ class _DashboardTab extends ConsumerWidget {
                   ),
                   const Spacer(),
                   // Flame Icon (Simple)
-                  Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 24),
+                  const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 24),
                   Text(
                     ' Lv.${user?.flameLevel ?? 1}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold, 
-                      color: isDark ? Colors.white : AppDesignTokens.neutral900
+                      color: isDark ? Colors.white : AppDesignTokens.neutral900,
                     ),
                   ),
                 ],
@@ -489,7 +489,7 @@ class _ActivePlanSection extends ConsumerWidget {
               Icon(Icons.timer_off_outlined, color: Colors.red.shade400, size: 32),
               const SizedBox(height: 12),
               Text(
-                "暂无冲刺计划",
+                '暂无冲刺计划',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white : AppDesignTokens.neutral900,
@@ -497,7 +497,7 @@ class _ActivePlanSection extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                "告诉 AI 你的考试时间，立即生成冲刺计划",
+                '告诉 AI 你的考试时间，立即生成冲刺计划',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? Colors.white54 : AppDesignTokens.neutral500,
@@ -540,9 +540,7 @@ class _ActivePlanSection extends ConsumerWidget {
   }
 
   Widget _buildPlanCard(BuildContext context, PlanModel plan, bool isDark) {
-    final daysLeft = plan.targetDate != null
-        ? plan.targetDate!.difference(DateTime.now()).inDays
-        : null;
+    final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays;
     
     final isSprint = plan.type == PlanType.sprint;
 

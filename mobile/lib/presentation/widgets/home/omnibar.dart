@@ -87,7 +87,7 @@ class _OmniBarState extends ConsumerState<OmniBar> {
       margin: EdgeInsets.only(
         left: 16, 
         right: 16, 
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -98,7 +98,7 @@ class _OmniBarState extends ConsumerState<OmniBar> {
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
-          )
+          ),
         ],
         border: Border.all(color: AppDesignTokens.primaryBase.withOpacity(0.3)),
       ),

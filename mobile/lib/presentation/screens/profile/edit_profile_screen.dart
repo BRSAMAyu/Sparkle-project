@@ -83,7 +83,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(
+                : const Text(
                     '保存',
                     style: TextStyle(
                       color: AppDesignTokens.primaryBase,
@@ -157,7 +157,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SnackBar(content: Text('头像上传功能开发中')),
                 );
               },
-              child: Text(
+              child: const Text(
                 '更换头像',
                 style: TextStyle(
                   color: AppDesignTokens.primaryBase,
@@ -269,7 +269,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+              borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,

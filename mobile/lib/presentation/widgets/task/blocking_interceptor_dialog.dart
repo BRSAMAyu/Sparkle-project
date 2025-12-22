@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class BlockingInterceptorDialog extends ConsumerStatefulWidget {
@@ -11,9 +9,7 @@ class BlockingInterceptorDialog extends ConsumerStatefulWidget {
   final VoidCallback onAbandonConfirmed;
 
   const BlockingInterceptorDialog({
-    super.key,
-    required this.taskId,
-    required this.onAbandonConfirmed,
+    required this.taskId, required this.onAbandonConfirmed, super.key,
   });
 
   @override
@@ -121,7 +117,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                 onChanged: (value) => setState(() => _selectedReason = value),
                 contentPadding: EdgeInsets.zero,
                 activeColor: AppDesignTokens.primaryBase,
-              )),
+              ),),
 
               // Other/Custom Input
               RadioListTile<String>(

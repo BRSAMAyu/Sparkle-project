@@ -5,7 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 class BentoGrid extends StatelessWidget {
   final List<Widget> children;
 
-  const BentoGrid({super.key, required this.children});
+  const BentoGrid({required this.children, super.key});
 
   @override
   Widget build(BuildContext context) {

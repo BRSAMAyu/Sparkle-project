@@ -153,17 +153,17 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
       color: AppDesignTokens.neutral600,
     );
 
-    return Stack(
+    return const Stack(
       children: [
         // Depth Axis (Vertical)
-        const Align(
+        Align(
           alignment: Alignment.topCenter,
           child: Padding(
             padding: EdgeInsets.only(top: labelPadding),
             child: Text('深度 (High Depth)', style: textStyle),
           ),
         ),
-        const Align(
+        Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
             padding: EdgeInsets.only(bottom: labelPadding),
@@ -171,7 +171,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
           ),
         ),
         // Curiosity Axis (Horizontal)
-        const Align(
+        Align(
           alignment: Alignment.centerLeft,
           child: Padding(
             padding: EdgeInsets.only(left: labelPadding),
@@ -181,7 +181,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
             ),
           ),
         ),
-        const Align(
+        Align(
           alignment: Alignment.centerRight,
           child: Padding(
             padding: EdgeInsets.only(right: labelPadding),

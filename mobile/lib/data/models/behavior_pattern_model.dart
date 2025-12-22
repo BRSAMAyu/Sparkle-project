@@ -28,12 +28,9 @@ class BehaviorPatternModel {
     required this.userId,
     required this.patternName,
     required this.patternType,
-    this.description,
+    required this.isArchived, required this.createdAt, required this.updatedAt, this.description,
     this.solutionText,
     this.evidenceIds,
-    required this.isArchived,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory BehaviorPatternModel.fromJson(Map<String, dynamic> json) =>

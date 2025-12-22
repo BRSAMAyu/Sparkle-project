@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/task_card.dart';
 import 'package:sparkle/presentation/widgets/knowledge_card.dart';
-import 'package:sparkle/presentation/widgets/confirmation_dialog.dart';
 import 'package:sparkle/presentation/widgets/task_list_widget.dart'; // New widget for task list
 import 'package:sparkle/presentation/widgets/plan_card.dart';       // New widget for plan card
 

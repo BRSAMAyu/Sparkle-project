@@ -20,12 +20,9 @@ class CognitiveFragmentModel {
   CognitiveFragmentModel({
     required this.id,
     required this.userId,
-    this.taskId,
-    required this.sourceType,
-    required this.content,
+    required this.sourceType, required this.content, required this.createdAt, this.taskId,
     this.sentiment,
     this.tags,
-    required this.createdAt,
   });
 
   factory CognitiveFragmentModel.fromJson(Map<String, dynamic> json) =>

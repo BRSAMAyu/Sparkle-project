@@ -6,7 +6,6 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
-import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -221,19 +220,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   icon: Icons.add_task_rounded,
                   label: '新建微任务',
                   color: Colors.blue,
-                  onTap: () => ref.read(chatProvider.notifier).sendMessage("帮我创建一个新的微任务"),
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage('帮我创建一个新的微任务'),
                 ),
                 _QuickActionChip(
                   icon: Icons.calendar_month_rounded,
                   label: '生成长期计划',
                   color: Colors.purple,
-                  onTap: () => ref.read(chatProvider.notifier).sendMessage("帮我生成一个长期学习计划"),
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage('帮我生成一个长期学习计划'),
                 ),
                 _QuickActionChip(
                   icon: Icons.bug_report_rounded,
                   label: '错误归因',
                   color: Colors.orange,
-                  onTap: () => ref.read(chatProvider.notifier).sendMessage("我想分析一下最近的错误原因"),
+                  onTap: () => ref.read(chatProvider.notifier).sendMessage('我想分析一下最近的错误原因'),
                 ),
               ],
             ),

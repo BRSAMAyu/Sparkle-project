@@ -6,7 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 class PatternCard extends StatelessWidget {
   final BehaviorPatternModel pattern;
 
-  const PatternCard({super.key, required this.pattern});
+  const PatternCard({required this.pattern, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class PatternCard extends StatelessWidget {
                   ),
                 ),
                 if (pattern.isArchived)
-                  Icon(Icons.archive, color: AppDesignTokens.neutral500, size: 20),
+                  const Icon(Icons.archive, color: AppDesignTokens.neutral500, size: 20),
               ],
             ),
             const SizedBox(height: AppDesignTokens.spacing16),

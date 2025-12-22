@@ -86,7 +86,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
             right: 20,
             child: Center(
               child: Text(
-                "Sparkle 6+1 知识星域",
+                'Sparkle 6+1 知识星域',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.5),
                   fontSize: 14,
@@ -109,39 +109,39 @@ class _SectorModelPainter extends CustomPainter {
   // 6+1 Sector Definitions
   static final List<_SectorDef> sectors = [
     _SectorDef(
-      id: "COSMOS",
-      name: "理性星域",
-      color: Color(0xFF00BFFF), // Deep Sky Blue
+      id: 'COSMOS',
+      name: '理性星域',
+      color: const Color(0xFF00BFFF), // Deep Sky Blue
       icon: Icons.science,
-      description: "真理与法则",
+      description: '真理与法则',
     ),
     _SectorDef(
-      id: "TECH",
-      name: "造物星域",
-      color: Color(0xFFC0C0C0), // Silver (Using light grey for visibility)
+      id: 'TECH',
+      name: '造物星域',
+      color: const Color(0xFFC0C0C0), // Silver (Using light grey for visibility)
       icon: Icons.computer,
-      description: "创造与工具",
+      description: '创造与工具',
     ),
     _SectorDef(
-      id: "ART",
-      name: "灵感星域",
-      color: Color(0xFFFF00FF), // Magenta
+      id: 'ART',
+      name: '灵感星域',
+      color: const Color(0xFFFF00FF), // Magenta
       icon: Icons.palette,
-      description: "美与情感",
+      description: '美与情感',
     ),
     _SectorDef(
-      id: "CIVILIZATION",
-      name: "文明星域",
-      color: Color(0xFFFFD700), // Gold
+      id: 'CIVILIZATION',
+      name: '文明星域',
+      color: const Color(0xFFFFD700), // Gold
       icon: Icons.public,
-      description: "社会与历史",
+      description: '社会与历史',
     ),
     _SectorDef(
-      id: "LIFE",
-      name: "生活星域",
-      color: Color(0xFF32CD32), // Lime Green
+      id: 'LIFE',
+      name: '生活星域',
+      color: const Color(0xFF32CD32), // Lime Green
       icon: Icons.favorite,
-      description: "生存与肉体",
+      description: '生存与肉体',
     ),
   ];
 
@@ -197,7 +197,7 @@ class _SectorModelPainter extends CustomPainter {
     double radius, 
     double startAngle, 
     double sweepAngle, 
-    _SectorDef sector
+    _SectorDef sector,
   ) {
     // 1. Sector Background Gradient (Subtle)
     final paint = Paint()
@@ -240,7 +240,7 @@ class _SectorModelPainter extends CustomPainter {
     canvas.drawCircle(
       iconPos, 
       25, 
-      Paint()..color = sector.color.withOpacity(0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)
+      Paint()..color = sector.color.withOpacity(0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
     );
 
     // Draw Icon (Placeholder circle for now, or text)
@@ -248,7 +248,7 @@ class _SectorModelPainter extends CustomPainter {
       text: TextSpan(
         children: [
           TextSpan(
-            text: "${sector.name}\n",
+            text: '${sector.name}\n',
             style: TextStyle(
               color: sector.color,
               fontWeight: FontWeight.bold,
@@ -276,7 +276,7 @@ class _SectorModelPainter extends CustomPainter {
     // Keeping it upright is more readable.
     textPainter.paint(
       canvas, 
-      Offset(iconPos.dx - textPainter.width / 2, iconPos.dy - textPainter.height / 2)
+      Offset(iconPos.dx - textPainter.width / 2, iconPos.dy - textPainter.height / 2),
     );
     
     // 4. Draw some "Stars" within this sector
@@ -298,7 +298,7 @@ class _SectorModelPainter extends CustomPainter {
             canvas.drawLine(
                 Offset(sx, sy), 
                 center, // Just connect to center for simple visual
-                Paint()..color = sector.color.withOpacity(0.1)..strokeWidth = 0.5
+                Paint()..color = sector.color.withOpacity(0.1)..strokeWidth = 0.5,
             );
         }
     }

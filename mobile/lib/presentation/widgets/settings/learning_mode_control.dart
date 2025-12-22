@@ -126,7 +126,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                                 ),
                               ],
                             ),
-                            child: Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
+                            child: const Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
                           ),
                         ),
                       ],

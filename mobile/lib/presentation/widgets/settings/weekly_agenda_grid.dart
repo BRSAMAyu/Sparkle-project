@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
 
 enum AgendaType {
   busy,      // 1 繁忙
@@ -71,7 +70,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cellHeight = 32.0; // Increased touch target
+    const cellHeight = 32.0; // Increased touch target
 
     return Column(
       children: [
@@ -93,7 +92,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     width: 2,
                   ),
                   boxShadow: isSelected ? [
-                    BoxShadow(color: _getColor(type).withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 2))
+                    BoxShadow(color: _getColor(type).withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 2)),
                   ] : null,
                 ),
                 child: Text(
@@ -114,7 +113,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
         LayoutBuilder(
           builder: (context, constraints) {
             final availableWidth = constraints.maxWidth;
-            final timeLabelWidth = 32.0;
+            const timeLabelWidth = 32.0;
             final gridWidth = availableWidth - timeLabelWidth;
             final cellWidth = gridWidth / 7;
 
@@ -123,7 +122,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                  // Header (Days)
                 Row(
                   children: [
-                    SizedBox(width: timeLabelWidth),
+                    const SizedBox(width: timeLabelWidth),
                     ...['一', '二', '三', '四', '五', '六', '日'].map((day) =>
                       SizedBox(
                         width: cellWidth,
@@ -157,7 +156,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 6),
                             child: Text(
-                              '${hour.toString().padLeft(2, '0')}',
+                              hour.toString().padLeft(2, '0'),
                               style: TextStyle(
                                 fontSize: 10,
                                 color: isDark ? Colors.white54 : Colors.grey.shade600,
