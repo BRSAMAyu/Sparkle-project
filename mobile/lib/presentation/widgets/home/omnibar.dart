@@ -6,13 +6,9 @@ import 'package:sparkle/data/repositories/omnibar_repository.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/app/theme.dart';
 
-/// OmniBar - The unified input for v2.3
-///
-/// All interactions enter through this component:
-/// - Tasks: Creates task and refreshes list
-/// - Capsules: Captures thought into cognitive prism
-/// - Chat: Opens full chat screen
+/// OmniBar - Project Cockpit Floating Dock
 class OmniBar extends ConsumerStatefulWidget {
   const OmniBar({super.key});
 
@@ -20,12 +16,11 @@ class OmniBar extends ConsumerStatefulWidget {
   ConsumerState<OmniBar> createState() => _OmniBarState();
 }
 
-class _OmniBarState extends ConsumerState<OmniBar>
-    with SingleTickerProviderStateMixin {
+class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
-  String? _lastActionType;
+  String? _intentType; // 'TASK', 'CAPSULE', 'CHAT'
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -35,11 +30,34 @@ class _OmniBarState extends ConsumerState<OmniBar>
     super.initState();
     _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
     );
-    _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
+    _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
+
+    _controller.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    final text = _controller.text.toLowerCase();
+    String? newIntent;
+    if (text.contains('提醒') || text.contains('做') || text.contains('任务')) {
+      newIntent = 'TASK';
+    } else if (text.contains('烦') || text.contains('想') || text.contains('！')) {
+      newIntent = 'CAPSULE';
+    } else if (text.length > 10) {
+      newIntent = 'CHAT';
+    }
+
+    if (newIntent != _intentType) {
+      setState(() => _intentType = newIntent);
+      if (newIntent != null) {
+        _glowController.forward(from: 0);
+      } else {
+        _glowController.reverse();
+      }
+    }
   }
 
   @override
@@ -54,10 +72,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    setState(() {
-      _isLoading = true;
-      _lastActionType = null;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final result = await ref.read(omniBarRepositoryProvider).dispatch(text);
@@ -65,105 +80,40 @@ class _OmniBarState extends ConsumerState<OmniBar>
         await _handleResult(result);
         _controller.clear();
         _focusNode.unfocus();
+        setState(() => _intentType = null);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('发送失败: $e'),
-            backgroundColor: AppDesignTokens.error,
-          ),
+          SnackBar(content: Text('发送失败: $e'), backgroundColor: AppDesignTokens.error),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
-    final data = result['data'] as Map<String, dynamic>?;
-
-    setState(() {
-      _lastActionType = type;
-    });
-
     switch (type) {
-      case 'CHAT':
-        // Navigate to chat
-        context.push('/chat');
-        break;
-
+      case 'CHAT': context.push('/chat'); break;
       case 'TASK':
-        // Show success with glow animation
-        _glowController.forward().then((_) => _glowController.reverse());
-
-        // Refresh task list and dashboard
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text('任务已创建: ${data?['title'] ?? ''}'),
-                ],
-              ),
-              backgroundColor: AppDesignTokens.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
         break;
-
       case 'CAPSULE':
-        // Show purple glow for capsule
-        _glowController.forward().then((_) => _glowController.reverse());
-
-        // Refresh cognitive data
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.diamond_outlined, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text('已捕获到认知棱镜'),
-                ],
-              ),
-              backgroundColor: AppDesignTokens.prismPurple,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
         break;
     }
   }
 
-  Color _getGlowColor() {
-    switch (_lastActionType) {
-      case 'TASK':
-        return AppDesignTokens.success;
-      case 'CAPSULE':
-        return AppDesignTokens.prismPurple;
-      default:
-        return AppDesignTokens.primaryBase;
+  Color _getIntentColor() {
+    switch (_intentType) {
+      case 'TASK': return Colors.greenAccent;
+      case 'CAPSULE': return Colors.purpleAccent;
+      case 'CHAT': return Colors.blueAccent;
+      default: return AppColors.textOnDark(context).withOpacity(0.15);
     }
   }
 
@@ -172,86 +122,50 @@ class _OmniBarState extends ConsumerState<OmniBar>
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
-        final glowColor = _getGlowColor();
-
+        final color = _getIntentColor();
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          height: 56,
           decoration: BoxDecoration(
-            color: AppDesignTokens.glassBackground,
-            borderRadius: BorderRadius.circular(30),
+            color: const Color(0xFF1E1E1E).withOpacity(0.9),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: _lastActionType != null
-                  ? glowColor.withAlpha((_glowAnimation.value * 255).toInt())
-                  : AppDesignTokens.glassBorder,
-              width: _lastActionType != null ? 1.5 : 1,
+              color: color.withOpacity(0.3 + (_glowAnimation.value * 0.4)),
+              width: 1.5,
             ),
-            boxShadow: _lastActionType != null
-                ? [
-                    BoxShadow(
-                      color: glowColor.withAlpha(
-                        (_glowAnimation.value * 100).toInt(),
-                      ),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(25),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(_glowAnimation.value * 0.2),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              // Input field
               Expanded(
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
                   onSubmitted: (_) => _submit(),
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(color: AppColors.textOnDark(context), fontSize: 15),
                   decoration: InputDecoration(
-                    hintText: '想做什么？或是随便聊聊...',
+                    hintText: '告诉我你的想法...',
+                    hintStyle: TextStyle(color: AppColors.textOnDark(context).withAlpha(80), fontSize: 14),
                     border: InputBorder.none,
-                    hintStyle: TextStyle(
-                      color: Colors.white.withAlpha(100),
-                      fontSize: 15,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    isDense: true,
                   ),
                 ),
               ),
-
-              const SizedBox(width: 8),
-
-              // Send button
               if (_isLoading)
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                  ),
-                )
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else
-                GestureDetector(
-                  onTap: _submit,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppDesignTokens.primaryBase,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_upward_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+                IconButton(
+                  icon: Icon(
+                    _intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded,
+                    color: _intentType != null ? color : AppColors.textOnDark(context).withOpacity(0.7),
+                    size: 20,
                   ),
+                  onPressed: _submit,
                 ),
             ],
           ),

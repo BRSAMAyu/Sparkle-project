@@ -356,6 +356,13 @@ class AppDesignTokens {
   static const int zIndexPopover = 1500;
   static const int zIndexTooltip = 1600;
 
+  // ==================== Responsive Breakpoints ====================
+
+  static const double breakpointMobile = 480.0;
+  static const double breakpointTablet = 768.0;
+  static const double breakpointDesktop = 1024.0;
+  static const double breakpointWide = 1440.0;
+
   // ==================== Opacity Levels ====================
 
   static const double opacityDisabled = 0.5;
