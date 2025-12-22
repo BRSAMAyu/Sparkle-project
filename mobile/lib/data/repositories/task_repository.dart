@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/models/task_completion_result.dart';
 
 class TaskRepository {
   final ApiClient _apiClient;
@@ -28,6 +29,11 @@ class TaskRepository {
       }
       final response = await _apiClient.get(ApiEndpoints.tasks, queryParameters: queryParams);
       // Assuming the paginated response is in the data field
+      // Checking for 'data' wrapper if exists, otherwise assume root
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      // Paginated response usually has 'data' (list) and 'meta'.
+      // If backend returns {data: [tasks], meta: ...}, then PaginatedResponse.fromJson(response.data) is correct if it handles that structure.
+      // But based on previous backend code: return {"data": [...], "meta": ...}
       return PaginatedResponse.fromJson(response.data, (json) => TaskModel.fromJson(json as Map<String, dynamic>));
     } on DioException catch (e) {
       return _handleDioError(e, 'getTasks');
@@ -37,7 +43,8 @@ class TaskRepository {
   Future<TaskModel> getTask(String id) async {
     try {
       final response = await _apiClient.get(ApiEndpoints.task(id));
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'getTask');
     }
@@ -46,7 +53,7 @@ class TaskRepository {
   Future<List<TaskModel>> getTodayTasks() async {
     try {
       final response = await _apiClient.get(ApiEndpoints.todayTasks);
-      final List<dynamic> data = response.data;
+      final List<dynamic> data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
       return data.map((json) => TaskModel.fromJson(json)).toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'getTodayTasks');
@@ -56,7 +63,7 @@ class TaskRepository {
   Future<List<TaskModel>> getRecommendedTasks({int limit = 5}) async {
     try {
       final response = await _apiClient.get(ApiEndpoints.recommendedTasks, queryParameters: {'limit': limit});
-      final List<dynamic> data = response.data;
+      final List<dynamic> data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
       return data.map((json) => TaskModel.fromJson(json)).toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'getRecommendedTasks');
@@ -66,7 +73,8 @@ class TaskRepository {
   Future<TaskModel> createTask(TaskCreate task) async {
     try {
       final response = await _apiClient.post(ApiEndpoints.tasks, data: task.toJson());
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTask');
     }
@@ -75,7 +83,8 @@ class TaskRepository {
   Future<TaskModel> updateTask(String id, TaskUpdate task) async {
     try {
       final response = await _apiClient.put(ApiEndpoints.task(id), data: task.toJson());
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'updateTask');
     }
@@ -92,17 +101,19 @@ class TaskRepository {
   Future<TaskModel> startTask(String id) async {
     try {
       final response = await _apiClient.post(ApiEndpoints.startTask(id));
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
     }
   }
 
-  Future<TaskModel> completeTask(String id, int actualMinutes, String? note) async {
+  Future<TaskCompletionResult> completeTask(String id, int actualMinutes, String? note) async {
     try {
       final taskComplete = TaskComplete(actualMinutes: actualMinutes, userNote: note);
       final response = await _apiClient.post(ApiEndpoints.completeTask(id), data: taskComplete.toJson());
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskCompletionResult.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'completeTask');
     }
@@ -112,7 +123,8 @@ class TaskRepository {
     try {
       // Backend uses a POST for this action
       final response = await _apiClient.post(ApiEndpoints.abandonTask(id));
-      return TaskModel.fromJson(response.data);
+      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
+      return TaskModel.fromJson(data);
     } on DioException catch (e) {
       return _handleDioError(e, 'abandonTask');
     }

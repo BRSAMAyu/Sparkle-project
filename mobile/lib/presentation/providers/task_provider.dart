@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/models/task_completion_result.dart';
 import 'package:sparkle/data/repositories/task_repository.dart';
 import 'package:dio/dio.dart';
 
@@ -117,7 +118,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   }
 
   /// 完成任务 - 乐观更新（v2.1 增强）
-  Future<void> completeTask(String id, int minutes, String? note) async {
+  Future<TaskCompletionResult?> completeTask(String id, int minutes, String? note) async {
      // 1. 乐观更新 UI
      _updateTask(id, (task) => task.copyWith(
        status: TaskStatus.completed,
@@ -129,12 +130,16 @@ class TaskNotifier extends StateNotifier<TaskListState> {
      
      // 2. 后台发送
     try {
-      final updatedTask = await _taskRepository.completeTask(id, minutes, note);
+      final result = await _taskRepository.completeTask(id, minutes, note);
+      final updatedTask = TaskModel.fromJson(result.task);
+      
        // 3. 成功：更新为已同步
        _updateTask(id, (task) => updatedTask.copyWith(
          syncStatus: TaskSyncStatus.synced,
          // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
        ),);
+       
+       return result;
     } catch (e) {
       // 4. 🆕 失败：标记为失败状态（不直接回滚）
       String errorMsg = '操作失败';
@@ -146,6 +151,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         syncStatus: TaskSyncStatus.failed,
         syncError: errorMsg,
       ),);
+      return null;
     }
   }
 
@@ -157,7 +163,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     ),);
     
     try {
-      final updatedTask = await _taskRepository.completeTask(id, minutes, note);
+      final result = await _taskRepository.completeTask(id, minutes, note);
+      final updatedTask = TaskModel.fromJson(result.task);
       
       _updateTask(id, (task) => updatedTask.copyWith(
         syncStatus: TaskSyncStatus.synced,
