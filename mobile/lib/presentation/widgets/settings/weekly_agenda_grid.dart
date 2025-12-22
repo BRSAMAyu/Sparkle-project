@@ -171,35 +171,29 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          height: cellHeight * 24,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: GestureDetector(
-                            onPanStart: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                            onPanUpdate: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                            onTapDown: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                            child: Column(
-                              children: List.generate(24, (hour) =>
-                                Row(
-                                  children: List.generate(7, (day) {
-                                    final index = hour * 7 + day;
-                                    return Expanded(
-                                      child: Container(
-                                        height: cellHeight,
-                                        decoration: BoxDecoration(
-                                          color: _getColor(_gridState[index]),
-                                          border: Border(
-                                            right: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
-                                            bottom: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
-                                          ),
+                        child: GestureDetector(
+                          onPanStart: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                          onPanUpdate: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                          onTapDown: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(24, (hour) =>
+                              Row(
+                                children: List.generate(7, (day) {
+                                  final index = hour * 7 + day;
+                                  return Expanded(
+                                    child: Container(
+                                      height: cellHeight,
+                                      decoration: BoxDecoration(
+                                        color: _getColor(_gridState[index]),
+                                        border: Border(
+                                          right: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
+                                          bottom: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200, width: 0.5),
                                         ),
                                       ),
-                                    );
-                                  }),
-                                ),
+                                    ),
+                                  );
+                                }),
                               ),
                             ),
                           ),

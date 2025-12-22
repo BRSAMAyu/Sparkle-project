@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
-/// WeatherHeader - Inner Weather System for v2.3 dashboard
-///
-/// Displays the user's "inner weather" based on:
-/// - Sprint plan progress
-/// - Recent study activity
-/// - Anxiety levels from cognitive fragments
+/// WeatherHeader - Full-screen background weather system
 class WeatherHeader extends ConsumerWidget {
   const WeatherHeader({super.key});
 
@@ -17,82 +12,48 @@ class WeatherHeader extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      height: 200,
+      height: double.infinity,
       decoration: BoxDecoration(
         gradient: _getWeatherGradient(dashboardState.weather.type),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
       ),
       child: Stack(
         children: [
-          // Weather particles/effects
-          _buildWeatherEffects(dashboardState.weather.type),
+          // Background stars
+          const _StarField(),
 
-          // Content
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _buildWeatherIcon(dashboardState.weather.type),
-                      const SizedBox(width: 12),
-                      Text(
-                        _getWeatherTitle(dashboardState.weather.type),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+          // Weather effects (Particles)
+          _buildWeatherEffects(dashboardState.weather.type),
+          
+          // Corner overlay for weather status
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _getWeatherTitle(dashboardState.weather.type),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 6),
+                    _buildWeatherIcon(dashboardState.weather.type),
+                  ],
+                ),
+                Text(
+                  dashboardState.weather.condition,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.6),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    dashboardState.weather.condition,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                  const Spacer(),
-                  // Today's focus summary
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.local_fire_department_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_formatFocusTime(dashboardState.flame.todayFocusMinutes)} 专注',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -104,33 +65,33 @@ class WeatherHeader extends ConsumerWidget {
     switch (type) {
       case 'sunny':
         return const LinearGradient(
-          colors: [Color(0xFF4FC3F7), Color(0xFF29B6F6), Color(0xFF03A9F4)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF0D1B2A), Color(0xFF1B263B), Color(0xFF415A77)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         );
       case 'cloudy':
         return const LinearGradient(
-          colors: [Color(0xFF78909C), Color(0xFF607D8B), Color(0xFF546E7A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF1A1A1A), Color(0xFF2C3E50), Color(0xFF4B5D67)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         );
       case 'rainy':
         return const LinearGradient(
-          colors: [Color(0xFF5C6BC0), Color(0xFF3F51B5), Color(0xFF303F9F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         );
       case 'meteor':
         return const LinearGradient(
-          colors: [Color(0xFFFF8A65), Color(0xFFFF7043), Color(0xFFFF5722)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF1A0B2E), Color(0xFF2D1B4E), Color(0xFF4A148C)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         );
       default:
         return const LinearGradient(
-          colors: [Color(0xFF4FC3F7), Color(0xFF29B6F6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF0D1B2A), Color(0xFF1B263B)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         );
     }
   }
@@ -153,14 +114,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(icon, color: Colors.white, size: 28),
-    );
+    return Icon(icon, color: Colors.white, size: 18);
   }
 
   String _getWeatherTitle(String type) {
@@ -168,18 +122,17 @@ class WeatherHeader extends ConsumerWidget {
       case 'sunny':
         return '晴空万里';
       case 'cloudy':
-        return '阴云密布';
+        return '薄雾弥漫';
       case 'rainy':
         return '风雨欲来';
       case 'meteor':
-        return '流星划过';
+        return '繁星入梦';
       default:
         return '晴空万里';
     }
   }
 
   Widget _buildWeatherEffects(String type) {
-    // Simple particle effects based on weather
     return Positioned.fill(
       child: IgnorePointer(
         child: CustomPaint(
@@ -188,81 +141,94 @@ class WeatherHeader extends ConsumerWidget {
       ),
     );
   }
+}
 
-  String _formatFocusTime(int minutes) {
-    if (minutes < 60) {
-      return '${minutes}m';
-    }
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    return mins > 0 ? '${hours}h ${mins}m' : '${hours}h';
+class _StarField extends StatelessWidget {
+  const _StarField();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: MediaQuery.of(context).size,
+      painter: _StarPainter(),
+    );
   }
+}
+
+class _StarPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white;
+    final stars = [
+      Offset(size.width * 0.1, size.height * 0.15),
+      Offset(size.width * 0.3, size.height * 0.08),
+      Offset(size.width * 0.5, size.height * 0.12),
+      Offset(size.width * 0.7, size.height * 0.05),
+      Offset(size.width * 0.85, size.height * 0.18),
+      Offset(size.width * 0.15, size.height * 0.25),
+      Offset(size.width * 0.6, size.height * 0.22),
+      Offset(size.width * 0.9, size.height * 0.28),
+      Offset(size.width * 0.25, size.height * 0.35),
+      Offset(size.width * 0.75, size.height * 0.32),
+      Offset(size.width * 0.4, size.height * 0.45),
+      Offset(size.width * 0.1, size.height * 0.65),
+      Offset(size.width * 0.8, size.height * 0.75),
+      Offset(size.width * 0.5, size.height * 0.85),
+    ];
+
+    for (var i = 0; i < stars.length; i++) {
+      final opacity = 0.2 + (i % 3) * 0.1;
+      final radius = 0.5 + (i % 2) * 0.5;
+      paint.color = Colors.white.withAlpha((opacity * 255).toInt());
+      canvas.drawCircle(stars[i], radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _WeatherParticlePainter extends CustomPainter {
   final String type;
-
   _WeatherParticlePainter(this.type);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withOpacity(0.1);
+    final paint = Paint()..color = Colors.white.withOpacity(0.05);
 
-    // Draw subtle circles for decorative effect
     switch (type) {
       case 'sunny':
-        // Sun rays
         paint.style = PaintingStyle.stroke;
         paint.strokeWidth = 1;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 5; i++) {
           canvas.drawCircle(
-            Offset(size.width * 0.8, size.height * 0.3),
-            30 + i * 20.0,
+            Offset(size.width * 0.8, size.height * 0.2),
+            20 + i * 30.0,
             paint,
           );
         }
         break;
       case 'cloudy':
-        // Cloud shapes
         paint.style = PaintingStyle.fill;
-        canvas.drawCircle(
-          Offset(size.width * 0.7, size.height * 0.4),
-          40,
-          paint,
-        );
-        canvas.drawCircle(
-          Offset(size.width * 0.8, size.height * 0.5),
-          30,
-          paint,
-        );
+        canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.1), 60, paint);
+        canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.3), 80, paint);
         break;
       case 'rainy':
-        // Rain drops
         paint.style = PaintingStyle.fill;
-        for (int i = 0; i < 20; i++) {
-          final x = (size.width * 0.5) + (i % 5) * 30;
-          final y = (size.height * 0.2) + (i ~/ 5) * 25;
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromLTWH(x, y, 3, 12),
-              const Radius.circular(2),
-            ),
-            paint,
-          );
+        paint.color = Colors.white.withOpacity(0.1);
+        for (int i = 0; i < 30; i++) {
+          final x = (size.width * 0.1) + (i % 6) * 60;
+          final y = (size.height * 0.1) + (i ~/ 6) * 80;
+          canvas.drawRect(Rect.fromLTWH(x, y, 1, 15), paint);
         }
         break;
       case 'meteor':
-        // Shooting stars
         paint.style = PaintingStyle.stroke;
-        paint.strokeWidth = 2;
-        for (int i = 0; i < 5; i++) {
-          final startX = size.width * (0.5 + i * 0.1);
-          final startY = size.height * (0.1 + i * 0.1);
-          canvas.drawLine(
-            Offset(startX, startY),
-            Offset(startX + 30, startY + 20),
-            paint,
-          );
+        paint.strokeWidth = 1.5;
+        paint.color = Colors.white.withOpacity(0.2);
+        for (int i = 0; i < 3; i++) {
+          final start = Offset(size.width * (0.3 + i * 0.2), size.height * (0.1 + i * 0.1));
+          canvas.drawLine(start, Offset(start.dx + 40, start.dy + 30), paint);
         }
         break;
     }
