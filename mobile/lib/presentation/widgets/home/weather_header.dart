@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/app/theme.dart';
 
 /// WeatherHeader - Full-screen background weather system
 class WeatherHeader extends ConsumerWidget {
@@ -36,21 +37,21 @@ class WeatherHeader extends ConsumerWidget {
                   children: [
                     Text(
                       _getWeatherTitle(dashboardState.weather.type),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.textOnDark(context),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    _buildWeatherIcon(dashboardState.weather.type),
+                    _buildWeatherIcon(dashboardState.weather.type, context),
                   ],
                 ),
                 Text(
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
+                    color: AppColors.textOnDark(context).withOpacity(0.6),
                   ),
                 ),
               ],
@@ -96,7 +97,7 @@ class WeatherHeader extends ConsumerWidget {
     }
   }
 
-  Widget _buildWeatherIcon(String type) {
+  Widget _buildWeatherIcon(String type, BuildContext context) {
     IconData icon;
     switch (type) {
       case 'sunny':
@@ -114,7 +115,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Icon(icon, color: Colors.white, size: 18);
+    return Icon(icon, color: AppColors.textOnDark(context), size: 18);
   }
 
   String _getWeatherTitle(String type) {

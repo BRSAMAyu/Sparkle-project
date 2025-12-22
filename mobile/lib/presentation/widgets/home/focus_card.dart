@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/app/theme.dart';
 
 /// FocusCard - Deep Dive Entry Card for Project Cockpit
 class FocusCard extends ConsumerStatefulWidget {
@@ -70,12 +71,12 @@ class _FocusCardState extends ConsumerState<FocusCard>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       '专注核心',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white70,
+                        color: AppColors.textOnDark(context).withOpacity(0.7),
                       ),
                     ),
                     Container(
@@ -86,10 +87,10 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       ),
                       child: Text(
                         'Lv.$flameLevel',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.textOnDark(context),
                         ),
                       ),
                     ),
@@ -115,9 +116,9 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.local_fire_department_rounded,
-                            color: Colors.white,
+                            color: AppColors.iconOnDark(context),
                             size: 36,
                           ),
                         ),
@@ -131,18 +132,18 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     children: [
                       Text(
                         _formatFocusTime(todayMinutes),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.textOnDark(context),
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         '今日专注时长',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.white60,
+                          color: AppColors.textOnDark(context).withOpacity(0.6),
                         ),
                       ),
                     ],
@@ -161,14 +162,14 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       children: [
                         Text(
                           dashboardState.weather.type == 'sunny' ? '心流状态' : '进入驾驶舱',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                            color: AppColors.textOnDark(context),
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 14),
+                        Icon(Icons.chevron_right_rounded, color: AppColors.iconOnDark(context), size: 14),
                       ],
                     ),
                   ),
