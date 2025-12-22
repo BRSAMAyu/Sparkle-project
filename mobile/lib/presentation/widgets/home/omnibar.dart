@@ -1,10 +1,18 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/repositories/omnibar_repository.dart';
+import 'package:sparkle/presentation/providers/task_provider.dart';
+import 'package:sparkle/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 
+/// OmniBar - The unified input for v2.3
+///
+/// All interactions enter through this component:
+/// - Tasks: Creates task and refreshes list
+/// - Capsules: Captures thought into cognitive prism
+/// - Chat: Opens full chat screen
 class OmniBar extends ConsumerStatefulWidget {
   const OmniBar({super.key});
 
@@ -12,10 +20,35 @@ class OmniBar extends ConsumerStatefulWidget {
   ConsumerState<OmniBar> createState() => _OmniBarState();
 }
 
-class _OmniBarState extends ConsumerState<OmniBar> {
+class _OmniBarState extends ConsumerState<OmniBar>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  bool _isExpanded = false;
+  final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
+  String? _lastActionType;
+
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    _glowController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     final text = _controller.text.trim();
@@ -23,22 +56,23 @@ class _OmniBarState extends ConsumerState<OmniBar> {
 
     setState(() {
       _isLoading = true;
+      _lastActionType = null;
     });
 
     try {
       final result = await ref.read(omniBarRepositoryProvider).dispatch(text);
       if (mounted) {
-        _handleResult(result);
+        await _handleResult(result);
         _controller.clear();
-        setState(() {
-          _isExpanded = false;
-        });
-        FocusScope.of(context).unfocus();
+        _focusNode.unfocus();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
+          SnackBar(
+            content: Text('发送失败: $e'),
+            backgroundColor: AppDesignTokens.error,
+          ),
         );
       }
     } finally {
@@ -50,92 +84,179 @@ class _OmniBarState extends ConsumerState<OmniBar> {
     }
   }
 
-  void _handleResult(Map<String, dynamic> result) {
-    final type = result['action_type'];
-    final data = result['data'];
+  Future<void> _handleResult(Map<String, dynamic> result) async {
+    final type = result['action_type'] as String?;
+    final data = result['data'] as Map<String, dynamic>?;
 
-    if (type == 'CHAT') {
-      // Navigate to chat with initial message
-      // TODO: Pass data properly to chat screen
-      // For now, we assume chat screen can fetch latest or we pass it
-      context.go('/chat'); // Simple navigation for now
-    } else if (type == 'TASK') {
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Task created: ${data['title']}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      // Refresh task list - TODO: Use provider to refresh
-    } else if (type == 'CAPSULE') {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thought captured into Prism'),
-          backgroundColor: Colors.purple,
-        ),
-      );
+    setState(() {
+      _lastActionType = type;
+    });
+
+    switch (type) {
+      case 'CHAT':
+        // Navigate to chat
+        context.push('/chat');
+        break;
+
+      case 'TASK':
+        // Show success with glow animation
+        _glowController.forward().then((_) => _glowController.reverse());
+
+        // Refresh task list and dashboard
+        await ref.read(taskListProvider.notifier).refreshTasks();
+        await ref.read(dashboardProvider.notifier).refresh();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text('任务已创建: ${data?['title'] ?? ''}'),
+                ],
+              ),
+              backgroundColor: AppDesignTokens.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+        break;
+
+      case 'CAPSULE':
+        // Show purple glow for capsule
+        _glowController.forward().then((_) => _glowController.reverse());
+
+        // Refresh cognitive data
+        await ref.read(cognitiveProvider.notifier).loadFragments();
+        await ref.read(dashboardProvider.notifier).refresh();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.diamond_outlined, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text('已捕获到认知棱镜'),
+                ],
+              ),
+              backgroundColor: AppDesignTokens.prismPurple,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+        break;
+    }
+  }
+
+  Color _getGlowColor() {
+    switch (_lastActionType) {
+      case 'TASK':
+        return AppDesignTokens.success;
+      case 'CAPSULE':
+        return AppDesignTokens.prismPurple;
+      default:
+        return AppDesignTokens.primaryBase;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        final glowColor = _getGlowColor();
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: EdgeInsets.only(
-        left: 16, 
-        right: 16, 
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppDesignTokens.glassBackground,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: _lastActionType != null
+                  ? glowColor.withAlpha((_glowAnimation.value * 255).toInt())
+                  : AppDesignTokens.glassBorder,
+              width: _lastActionType != null ? 1.5 : 1,
+            ),
+            boxShadow: _lastActionType != null
+                ? [
+                    BoxShadow(
+                      color: glowColor.withAlpha(
+                        (_glowAnimation.value * 100).toInt(),
+                      ),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
           ),
-        ],
-        border: Border.all(color: AppDesignTokens.primaryBase.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              onTap: () {
-                setState(() {
-                  _isExpanded = true;
-                });
-              },
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                hintText: '想做什么？或是随便聊聊...',
-                border: InputBorder.none,
-                hintStyle: TextStyle(color: isDark ? Colors.white38 : AppDesignTokens.neutral400),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              // Input field
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  onSubmitted: (_) => _submit(),
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: '想做什么？或是随便聊聊...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                      color: Colors.white.withAlpha(100),
+                      fontSize: 15,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    isDense: true,
+                  ),
+                ),
               ),
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
-            ),
+
+              const SizedBox(width: 8),
+
+              // Send button
+              if (_isLoading)
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: _submit,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppDesignTokens.primaryBase,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          if (_isLoading)
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.send_rounded),
-              color: AppDesignTokens.primaryBase,
-              onPressed: _submit,
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

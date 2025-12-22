@@ -21,21 +21,21 @@ class DashboardState {
     this.error,
   });
 
-  DashboardState.loading() : 
+  DashboardState.loading() :
     weather = WeatherData(type: 'sunny', condition: ''),
     flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
     sprint = null,
     nextActions = const [],
-    cognitive = CognitiveData(weeklyPattern: '', status: ''),
+    cognitive = CognitiveData(status: 'empty'),
     isLoading = true,
     error = null;
 
-  DashboardState.error(String errorMessage) : 
+  DashboardState.error(String errorMessage) :
     weather = WeatherData(type: 'sunny', condition: ''),
     flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
     sprint = null,
     nextActions = const [],
-    cognitive = CognitiveData(weeklyPattern: '', status: ''),
+    cognitive = CognitiveData(status: 'empty'),
     isLoading = false,
     error = errorMessage;
 
@@ -108,10 +108,21 @@ class TaskData {
 }
 
 class CognitiveData {
-  final String weeklyPattern;
+  final String? weeklyPattern;
+  final String? patternType;
+  final String? description;
+  final String? solutionText;
   final String status;
+  final bool hasNewInsight;
 
-  CognitiveData({required this.weeklyPattern, required this.status});
+  CognitiveData({
+    this.weeklyPattern,
+    this.patternType,
+    this.description,
+    this.solutionText,
+    required this.status,
+    this.hasNewInsight = false,
+  });
 }
 
 // Provider
@@ -173,8 +184,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       // Parse cognitive data
       final cognitiveMap = dashboardData['cognitive'] as Map<String, dynamic>;
       final cognitive = CognitiveData(
-        weeklyPattern: cognitiveMap['weekly_pattern'] as String,
+        weeklyPattern: cognitiveMap['weekly_pattern'] as String?,
+        patternType: cognitiveMap['pattern_type'] as String?,
+        description: cognitiveMap['description'] as String?,
+        solutionText: cognitiveMap['solution_text'] as String?,
         status: cognitiveMap['status'] as String,
+        hasNewInsight: cognitiveMap['has_new_insight'] as bool? ?? false,
       );
       
       state = DashboardState(
