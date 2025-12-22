@@ -1,0 +1,31 @@
+{
+  "@@locale": "en",
+  "appTitle": "Sparkle",
+  "home": "Home",
+  "community": "Community",
+  "knowledgeGalaxy": "Galaxy",
+  "profile": "Me",
+  "tasks": "Tasks",
+  "chat": "Chat",
+  "plans": "Plans",
+  
+  "weeklyAgenda": "Weekly Agenda",
+  "agendaBusy": "Busy",
+  "agendaFragmented": "Fragmented",
+  "agendaRelax": "Relax",
+  
+  "learningMode": "Learning Mode",
+  "depthPreference": "Depth",
+  "curiosityPreference": "Curiosity",
+  
+  "settings": "Settings",
+  "language": "Language",
+  "schedulePreferences": "Schedule",
+  "notificationSettings": "Notifications",
+  "theme": "Theme",
+  
+  "taskCard": "Task Card",
+  "planCard": "Plan Card",
+  "startTask": "Start",
+  "viewDetails": "Details"
+}

@@ -6,8 +6,8 @@ import 'package:sparkle/presentation/providers/plan_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
-import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
-import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
+import 'package:sparkle/presentation/screens/galaxy/galaxy_screen.dart';
+import 'package:sparkle/presentation/screens/community/community_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 import 'package:sparkle/presentation/widgets/task/task_card.dart';
@@ -32,9 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<Widget> _widgetOptions = <Widget>[
     _DashboardTab(),
-    TaskListScreen(),
+    GalaxyScreen(),
     ChatScreen(),
-    GrowthScreen(),
+    CommunityScreen(),
     ProfileScreen(),
   ];
 
@@ -52,11 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.task_alt_outlined), activeIcon: Icon(Icons.task_alt), label: 'Tasks'),
-          BottomNavigationBarItem(icon: Icon(Icons.forum_outlined), activeIcon: Icon(Icons.forum), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'Plans'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: 'Me'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: '首页'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_outlined), activeIcon: Icon(Icons.auto_awesome), label: '星图'),
+          BottomNavigationBarItem(icon: Icon(Icons.forum_outlined), activeIcon: Icon(Icons.forum), label: '对话'),
+          BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: '社群'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: '我的'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -75,138 +75,211 @@ class _DashboardTab extends ConsumerWidget {
     final taskListState = ref.watch(taskListProvider);
     final planListState = ref.watch(planListProvider);
 
-    final bool isLoading = taskListState.isLoading || planListState.isLoading;
-    final String? errorMessage = taskListState.error ?? planListState.error;
-
     return Scaffold(
-      floatingActionButton: CustomButton.icon(
-        icon: Icons.add_rounded,
-        onPressed: () {
-           // TODO: Navigate to add task
-           context.push('/tasks/new'); 
+      backgroundColor: AppDesignTokens.neutral50,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(taskListProvider.notifier).refreshTasks();
+          await ref.read(planListProvider.notifier).refresh();
+          await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
         },
-        size: ButtonSize.large,
-        isCircular: true,
-      ),
-      body: isLoading
-          ? Center(child: LoadingIndicator.circular(showText: true, loadingText: '加载中...'))
-          : errorMessage != null
-              ? CustomErrorWidget.page(
-                  message: errorMessage,
-                  onRetry: () {
-                    ref.read(taskListProvider.notifier).refreshTasks();
-                    ref.read(planListProvider.notifier).refresh();
-                  },
-                )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    await ref.read(taskListProvider.notifier).refreshTasks();
-                    await ref.read(planListProvider.notifier).refresh();
-                    await ref.read(capsuleProvider.notifier).fetchTodayCapsules();
-                  },
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      // 渐变AppBar with greeting
-                      _buildGradientAppBar(context, user),
-                      // Content
-                      SliverPadding(
-                        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                        sliver: SliverList(
-                          delegate: SliverChildListDelegate([
-                            const _FlameStatusCard(),
-                            const SizedBox(height: AppDesignTokens.spacing24),
-                            const _CuriosityCapsuleSection(),
-                            const SizedBox(height: AppDesignTokens.spacing24),
-                            const _TodayTasksSection(),
-                            const SizedBox(height: AppDesignTokens.spacing24),
-                            const _RecommendedTasksSection(),
-                            const SizedBox(height: AppDesignTokens.spacing32),
-                          ]),
-                        ),
-                      ),
-                    ],
-                  ),
+        child: CustomScrollView(
+          slivers: [
+            _buildModernAppBar(context, user),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildStatsRow(),
+                    const SizedBox(height: 20),
+                    _buildQuickActions(context),
+                    const SizedBox(height: 20),
+                    const _TodayTasksSection(),
+                    const SizedBox(height: 20),
+                    const _RecommendedTasksSection(),
+                    const SizedBox(height: 80), // Bottom padding
+                  ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/tasks/new'),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
-  Widget _buildGradientAppBar(BuildContext context, dynamic user) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final hour = DateTime.now().hour;
-        String greeting;
-        if (hour < 12) {
-          greeting = '早上好';
-        } else if (hour < 18) {
-          greeting = '下午好';
-        } else {
-          greeting = '晚上好';
-        }
-
-        final unreadCountAsync = ref.watch(unreadNotificationsProvider);
-        final unreadCount = unreadCountAsync.value?.length ?? 0;
-
-        return SliverAppBar(
-          expandedHeight: 120.0,
-          floating: false,
-          pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: const BoxDecoration(
-                gradient: AppDesignTokens.primaryGradient,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDesignTokens.spacing20,
-                    vertical: AppDesignTokens.spacing16,
-                  ),
-                  child: Row(
+  Widget _buildModernAppBar(BuildContext context, dynamic user) {
+    return SliverAppBar(
+      expandedHeight: 180.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: AppDesignTokens.primaryGradient,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            greeting,
+                            '早安, ${user?.nickname ?? "同学"}',
                             style: const TextStyle(
-                              fontSize: AppDesignTokens.fontSizeLg,
-                              color: Colors.white70,
-                              fontWeight: AppDesignTokens.fontWeightMedium,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: AppDesignTokens.spacing4),
-                          Text(
-                            user?.nickname ?? user?.username ?? '学习者',
-                            style: const TextStyle(
-                              fontSize: AppDesignTokens.fontSize3xl,
-                              color: Colors.white,
-                              fontWeight: AppDesignTokens.fontWeightBold,
+                          const Text(
+                            '今天也要保持好奇心哦',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
                           ),
                         ],
                       ),
-                       IconButton(
-                        onPressed: () {
-                           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationListScreen()));
-                        },
-                        icon: Badge(
-                          isLabelVisible: unreadCount > 0,
-                          label: Text('$unreadCount'),
-                          child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 28),
-                        ),
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                        child: user?.avatarUrl == null ? const Icon(Icons.person) : null,
                       ),
                     ],
                   ),
-                ),
+                  const Spacer(),
+                  // Flame / Level Info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 28),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '学习火焰 Lv.${user?.flameLevel ?? 1}',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '亮度 ${(user?.flameBrightness ?? 0.5) * 100}%',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right, color: Colors.white54),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Row(
+      children: [
+        _buildStatCard('专注时长', '3.5h', Icons.timer, Colors.blue),
+        const SizedBox(width: 12),
+        _buildStatCard('完成任务', '5', Icons.check_circle, Colors.green),
+        const SizedBox(width: 12),
+        _buildStatCard('连续打卡', '12天', Icons.calendar_today, Colors.orange),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppDesignTokens.shadowSm,
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppDesignTokens.neutral900,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppDesignTokens.neutral500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildActionBtn(context, Icons.add_task, '新建任务', () => context.push('/tasks/new')),
+        _buildActionBtn(context, Icons.qr_code_scanner, '扫题', () {}),
+        _buildActionBtn(context, Icons.auto_awesome_motion, '生成计划', () {}),
+        _buildActionBtn(context, Icons.history_edu, '错题本', () {}),
+      ],
+    );
+  }
+
+  Widget _buildActionBtn(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: AppDesignTokens.shadowSm,
+            ),
+            child: Icon(icon, color: AppDesignTokens.primaryBase),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral700)),
+        ],
+      ),
     );
   }
 }

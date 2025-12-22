@@ -31,6 +31,8 @@ dependencies:
 
   # Utilities
   intl: ^0.18.1
+  flutter_localizations:
+    sdk: flutter
   uuid: ^4.2.2
   logger: ^2.0.2+1
   url_launcher: ^6.2.2
@@ -68,6 +70,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   shaders:
     - shaders/core_flame.frag
   # Assets

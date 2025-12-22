@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/screens/profile/schedule_preferences_screen.dart';
-import 'package:sparkle/presentation/screens/profile/smart_push_settings_screen.dart';
+import 'package:sparkle/presentation/screens/profile/unified_settings_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+  // ... (rest of the class)
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,38 +163,27 @@ class ProfileScreen extends ConsumerWidget {
           const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
-            icon: Icons.calendar_today_outlined,
-            title: '日程偏好',
+            icon: Icons.tune_rounded,
+            title: '个人偏好设置', // Unified entry
             gradient: AppDesignTokens.secondaryGradient,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const SchedulePreferencesScreen(),
+                  builder: (_) => const UnifiedSettingsScreen(),
                 ),
               );
             },
           ),
           const Divider(height: 1, indent: 60),
-          _buildSettingsTile(
+           _buildSettingsTile(
             context,
-            icon: Icons.psychology_outlined,
-            title: '学习模式设置',
+            icon: Icons.language_rounded,
+            title: '语言设置',
             gradient: AppDesignTokens.infoGradient,
             onTap: () {
-              context.go('/settings/learning-mode');
-            },
-          ),
-          const Divider(height: 1, indent: 60),
-          _buildSettingsTile(
-            context,
-            icon: Icons.notifications_none_rounded,
-            title: '通知设置',
-            gradient: AppDesignTokens.infoGradient,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SmartPushSettingsScreen(),
-                ),
+              // TODO: Language settings
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('已默认设置为中文')),
               );
             },
           ),
