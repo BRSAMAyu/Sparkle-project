@@ -30,7 +30,7 @@ dependencies:
   cached_network_image: ^3.3.0
 
   # Utilities
-  intl: ^0.18.1
+  intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
   uuid: ^4.2.2

@@ -76,14 +76,14 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               title: const Text('启用通知'),
               value: _notificationsEnabled,
               onChanged: (v) => setState(() => _notificationsEnabled = v),
-              activeColor: AppDesignTokens.primaryColor,
+              activeColor: AppDesignTokens.primaryBase,
             ),
             SwitchListTile(
               title: const Text('智能碎片时间提醒'),
               subtitle: const Text('在绿色时间段主动推送微任务'),
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
-              activeColor: AppDesignTokens.primaryColor,
+              activeColor: AppDesignTokens.primaryBase,
             ),
           ],
         ),
@@ -94,7 +94,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
   Widget _buildSectionHeader(IconData icon, String title) {
     return Row(
       children: [
-        Icon(icon, color: AppDesignTokens.primaryColor),
+        Icon(icon, color: AppDesignTokens.primaryBase),
         const SizedBox(width: 8),
         Text(
           title,

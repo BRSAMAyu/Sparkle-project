@@ -48,7 +48,7 @@ class CustomButton extends StatelessWidget {
       horizontal: AppDesignTokens.spacing24,
       vertical: AppDesignTokens.spacing12,
     );
-    final BorderRadiusGeometry borderRadius = AppDesignTokens.borderRadius8;
+    final BorderRadius borderRadius = AppDesignTokens.borderRadius8;
 
     switch (variant) {
       case CustomButtonVariant.primary:
