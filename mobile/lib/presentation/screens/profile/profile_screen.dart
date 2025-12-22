@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/presentation/screens/profile/edit_profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/unified_settings_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
@@ -157,7 +158,13 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.person_outline_rounded,
             title: '编辑资料',
             gradient: AppDesignTokens.primaryGradient,
-            onTap: () {},
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const EditProfileScreen(),
+                ),
+              );
+            },
           ),
           const Divider(height: 1, indent: 60),
           _buildSettingsTile(

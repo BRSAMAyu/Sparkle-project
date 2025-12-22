@@ -48,7 +48,8 @@ class _FlameCoreState extends State<FlameCore> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     if (_program == null) {
-      return const SizedBox(width: 200, height: 200);
+      // Fallback: Pure Flutter implementation when shader fails to load
+      return _FallbackFlameCore(intensity: widget.intensity, time: _time);
     }
 
     return CustomPaint(
@@ -80,7 +81,7 @@ class _ShaderPainter extends CustomPainter {
     // uniform float u_time;
     // uniform float u_intensity;
     // uniform vec2 u_resolution;
-    
+
     shader.setFloat(0, time);
     shader.setFloat(1, intensity);
     shader.setFloat(2, size.width);
@@ -93,5 +94,62 @@ class _ShaderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ShaderPainter oldDelegate) {
     return oldDelegate.time != time || oldDelegate.intensity != intensity;
+  }
+}
+
+/// Fallback flame core implementation using pure Flutter
+/// Used when shader fails to load
+class _FallbackFlameCore extends StatelessWidget {
+  final double intensity;
+  final double time;
+
+  const _FallbackFlameCore({
+    required this.intensity,
+    required this.time,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Animate size based on time for pulsing effect
+    final pulseScale = 1.0 + 0.1 * (0.5 + 0.5 * (time * 2).remainder(1.0));
+
+    return SizedBox(
+      width: 200,
+      height: 200,
+      child: Center(
+        child: Transform.scale(
+          scale: pulseScale,
+          child: Container(
+            width: 80 + intensity * 40,
+            height: 80 + intensity * 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Colors.white,
+                  Colors.orange.shade300,
+                  Colors.deepOrange,
+                  Colors.deepOrange.withOpacity(0.5),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.2, 0.5, 0.7, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.3 + intensity * 0.3),
+                  blurRadius: 30 + intensity * 20,
+                  spreadRadius: 10 + intensity * 10,
+                ),
+                BoxShadow(
+                  color: Colors.deepOrange.withOpacity(0.2 + intensity * 0.2),
+                  blurRadius: 50 + intensity * 30,
+                  spreadRadius: 20 + intensity * 15,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
