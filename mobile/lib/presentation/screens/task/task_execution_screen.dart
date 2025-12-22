@@ -14,6 +14,8 @@ import 'package:sparkle/presentation/widgets/task/quick_tools_panel.dart';
 import 'package:sparkle/presentation/widgets/task/task_chat_panel.dart';
 import 'package:sparkle/presentation/widgets/task/task_feedback_dialog.dart';
 
+import 'package:sparkle/presentation/widgets/task/blocking_interceptor_dialog.dart';
+
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key});
 
@@ -590,8 +592,6 @@ class _BottomControls extends ConsumerWidget {
       ),
     );
   }
-
-import 'package:sparkle/presentation/widgets/task/blocking_interceptor_dialog.dart';
 
   void _abandonTask(BuildContext context, WidgetRef ref) {
     showDialog(

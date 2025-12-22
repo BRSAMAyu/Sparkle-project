@@ -1,45 +1,46 @@
-# Sparkle Implementation Report
+# Implementation Report - Cognitive Prism (v2.1 - v2.3)
 
-## Completed Tasks
+## Overview
+Implemented the "Cognitive Prism" feature set, transforming Sparkle from a task manager into a cognitive behavioral aid. This feature captures user behavioral fragments ("Thought Capsules", task execution habits) and uses AI to identify patterns and provide interventions.
 
-### Phase 1: Backend Task API & Guide Service
-- [x] Verified and updated `backend/app/api/v1/tasks.py` with full CRUD, filtering, pagination, start, abandon, and complete endpoints.
-- [x] Created `backend/app/services/task_guide_service.py` for AI guide generation.
-- [x] Updated `backend/app/api/v1/chat.py` to add `POST /chat/task/{task_id}` for task-context chat.
+## Components Implemented
 
-### Phase 2: Frontend Task Creation
-- [x] Created `mobile/lib/presentation/screens/task/task_create_screen.dart` with fields for type, difficulty, energy cost, and AI guide switch.
-- [x] Updated `mobile/lib/app/routes.dart` to include `/tasks/new` route.
-- [x] Updated `mobile/lib/data/models/task_model.dart` to include `energyCost` and `guideContent`.
+### Backend (FastAPI)
+1.  **Database Models** (`app.models.cognitive`):
+    *   `CognitiveFragment`: Stores individual behavioral data points (explicit inputs or implicit signals).
+    *   `BehaviorPattern`: Stores AI-analyzed behavioral patterns (e.g., "Planning Fallacy").
+2.  **Services**:
+    *   `CognitiveService`: Core logic for:
+        *   Creating fragments with automatic embedding generation (via `EmbeddingService`).
+        *   Mining implicit behaviors (e.g., checking for late-night work or time estimation errors).
+        *   Generating weekly reports using LLM to synthesize fragments into patterns.
+    *   `SchedulerService`: Added daily job (4:00 AM) to trigger implicit behavior mining.
+3.  **API**:
+    *   `POST /api/v1/cognitive/fragments`: Create explicit fragments.
+    *   `GET /api/v1/cognitive/fragments`: List user fragments.
+    *   `GET /api/v1/cognitive/patterns`: Retrieve analyzed patterns.
+    *   `POST /api/v1/cognitive/analysis/trigger`: Manually trigger analysis (dev/test).
 
-### Phase 3: Task Execution Interface
-- [x] Created `mobile/lib/presentation/widgets/task/task_chat_panel.dart` for in-task AI assistance.
-- [x] Created `mobile/lib/presentation/widgets/task/quick_tools_panel.dart` (placeholder for Calculator, Translation, Notes).
-- [x] Enhanced `mobile/lib/presentation/widgets/task/timer_widget.dart` to support programmatic updates.
-- [x] Updated `mobile/lib/presentation/screens/task/task_execution_screen.dart` to integrate Chat Panel, Tools Panel, and Pomodoro Timer.
+### Mobile (Flutter)
+1.  **Data Layer**:
+    *   Models: `CognitiveFragmentModel`, `BehaviorPatternModel`.
+    *   Repository: `CognitiveRepository`.
+    *   State Management: `CognitiveNotifier` (Riverpod).
+2.  **UI - Input**:
+    *   **Thought Capsule**: Floating Action Button on Dashboard -> Dialog for quick text/voice input.
+    *   **Blocking Interceptor**: Intercepts "Abandon Task" action to prompt for a reason, converting failure into data.
+3.  **UI - Feedback**:
+    *   **Pattern List Screen**: Displays identified behavioral patterns with descriptions and "magic spell" solutions.
+    *   **Real-time Nudge**: Conditional bubble on the Home Screen displaying the latest actionable advice.
 
-### Phase 4: Two-Dimensional Controller (Learning Preferences)
-- [x] Added `PUT /users/me/preferences` endpoint in `backend/app/api/v1/users.py`.
-- [x] Created `mobile/lib/presentation/widgets/profile/preference_controller_2d.dart` for visual adjustment of Depth vs. Curiosity.
-- [x] Created `mobile/lib/presentation/screens/profile/learning_mode_screen.dart` integrating the 2D controller.
-- [x] Updated `backend/app/orchestration/prompts.py` to influence AI responses based on preferences.
-- [x] Updated `mobile/lib/presentation/screens/profile/profile_screen.dart` to link to the new Learning Mode screen.
+## Technical Details
+*   **Embeddings**: Used `pgvector` for storing semantic embeddings of user thoughts.
+*   **LLM Integration**: Used `LLMService` for sentiment analysis (on ingestion) and pattern recognition (weekly aggregation).
+*   **Navigation**: Integrated new screens into `GoRouter` configuration.
 
-### Phase 5: Curiosity Capsule System
-- [x] Created `backend/app/models/curiosity_capsule.py`.
-- [x] Fixed complex Alembic migration issues (SQLite/Postgres compatibility).
-- [x] Created `backend/app/services/curiosity_capsule_service.py` to generate content using recent tasks.
-- [x] Created `backend/app/api/v1/capsules.py` with endpoints for fetching and marking read.
-- [x] Updated `backend/app/services/push_service.py` to include `CuriosityStrategy` for push notifications.
-- [x] Created `mobile/lib/data/models/curiosity_capsule_model.dart`.
-- [x] Created `mobile/lib/data/repositories/capsule_repository.dart` and `mobile/lib/presentation/providers/capsule_provider.dart`.
-- [x] Created `mobile/lib/presentation/widgets/home/curiosity_capsule_card.dart` and integrated it into `HomeScreen`.
+## Status
+*   [x] Phase 1: Data Foundation (Models, Basic API, Input UI)
+*   [x] Phase 2: Analysis Engine (Implicit Mining, Report Generation)
+*   [x] Phase 3: Feedback Loop (Pattern Cards, Nudges)
 
-### Phase 6: Task Completion Feedback
-- [x] Created `backend/app/services/feedback_service.py` to generate AI feedback upon task completion.
-- [x] Integrated feedback generation into `backend/app/api/v1/tasks.py` complete endpoint.
-
-## Next Steps
-- Implement the Frontend display for the Task Completion Feedback (Phase 6.3).
-- Test the full flow: Create Task -> Execute (Timer/Chat) -> Complete -> Receive Feedback -> Check Curiosity Capsule.
-- Refine UI/UX for the new components.
+All features specified in the design document "Sparkle 新特性设计文档：认知棱镜 (Cognitive Prism)" have been implemented.

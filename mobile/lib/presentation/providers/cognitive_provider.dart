@@ -1,26 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/cognitive_fragment_model.dart';
+import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/data/repositories/cognitive_repository.dart';
 
 class CognitiveState {
   final bool isLoading;
   final List<CognitiveFragmentModel> fragments;
+  final List<BehaviorPatternModel> patterns;
   final String? error;
 
   CognitiveState({
     this.isLoading = false,
     this.fragments = const [],
+    this.patterns = const [],
     this.error,
   });
 
   CognitiveState copyWith({
     bool? isLoading,
     List<CognitiveFragmentModel>? fragments,
+    List<BehaviorPatternModel>? patterns,
     String? error,
   }) {
     return CognitiveState(
       isLoading: isLoading ?? this.isLoading,
       fragments: fragments ?? this.fragments,
+      patterns: patterns ?? this.patterns,
       error: error, // If passed null, it stays null (optional reset logic needed if intended)
     );
   }
@@ -36,6 +41,16 @@ class CognitiveNotifier extends StateNotifier<CognitiveState> {
     try {
       final fragments = await _repository.getFragments();
       state = state.copyWith(isLoading: false, fragments: fragments);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> loadPatterns() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final patterns = await _repository.getBehaviorPatterns();
+      state = state.copyWith(isLoading: false, patterns: patterns);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
