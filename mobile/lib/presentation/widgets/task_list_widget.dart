@@ -8,8 +8,7 @@ class TaskListWidget extends StatelessWidget {
   final List<dynamic> tasks; // List of Map<String, dynamic>
 
   const TaskListWidget({
-    super.key,
-    required this.tasks,
+    required this.tasks, super.key,
   });
 
   @override

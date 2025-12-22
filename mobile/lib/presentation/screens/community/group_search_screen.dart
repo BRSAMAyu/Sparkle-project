@@ -57,7 +57,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
       body: searchState.when(
         data: (groups) {
           if (groups.isEmpty) {
-            return Center(
+            return const Center(
               child: CompactEmptyState(
                 message: 'Search for squads or sprint groups',
                 icon: Icons.search,

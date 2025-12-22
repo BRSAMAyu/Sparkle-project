@@ -14,8 +14,7 @@ class AgentMessageRenderer extends StatelessWidget {
   final Function(String actionId, bool confirmed)? onConfirmation;
 
   const AgentMessageRenderer({
-    super.key,
-    required this.message,
+    required this.message, super.key,
     this.onTaskAction,
     this.onConfirmation,
   });

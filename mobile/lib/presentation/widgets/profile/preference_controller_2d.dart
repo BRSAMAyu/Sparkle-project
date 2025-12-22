@@ -7,10 +7,9 @@ class PreferenceController2D extends StatefulWidget {
   final ValueChanged<Offset> onPreferenceChanged;
 
   const PreferenceController2D({
-    super.key,
+    required this.onPreferenceChanged, super.key,
     this.initialDepth = 0.5,
     this.initialCuriosity = 0.5,
-    required this.onPreferenceChanged,
   });
 
   @override
@@ -31,7 +30,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double size = constraints.biggest.shortestSide;
-        final double handleSize = 40; // Size of the draggable flame icon
+        const double handleSize = 40; // Size of the draggable flame icon
 
         // Convert normalized position to local pixel coordinates
         double x = _currentPosition.dx * size;
@@ -43,12 +42,12 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
 
         return GestureDetector(
           onPanUpdate: (details) {
-            RenderBox renderBox = context.findRenderObject() as RenderBox;
-            Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+            final RenderBox renderBox = context.findRenderObject() as RenderBox;
+            final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
 
             // Normalize to 0.0 - 1.0 range
-            double newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
-            double newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0); // Y-axis inverted for depth
+            final double newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
+            final double newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0); // Y-axis inverted for depth
 
             setState(() {
               _currentPosition = Offset(newCuriosity, 1.0 - newDepth);
@@ -113,7 +112,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
       shadows: [Shadow(blurRadius: 2, color: Colors.white)],
     );
 
-    return Column(
+    return const Column(
       children: [
         Expanded(
           child: Row(

@@ -8,7 +8,7 @@ import 'package:sparkle/data/models/curiosity_capsule_model.dart';
 class CuriosityCapsuleCard extends ConsumerWidget {
   final CuriosityCapsuleModel capsule;
 
-  const CuriosityCapsuleCard({super.key, required this.capsule});
+  const CuriosityCapsuleCard({required this.capsule, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +20,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         tilePadding: const EdgeInsets.all(16),
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: AppDesignTokens.secondaryGradient,
             shape: BoxShape.circle,
           ),

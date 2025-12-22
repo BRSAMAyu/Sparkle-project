@@ -7,7 +7,7 @@ import 'package:sparkle/presentation/providers/auth_provider.dart';
 class GroupChatBubble extends ConsumerStatefulWidget {
   final MessageInfo message;
 
-  const GroupChatBubble({super.key, required this.message});
+  const GroupChatBubble({required this.message, super.key});
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();

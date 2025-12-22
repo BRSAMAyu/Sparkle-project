@@ -35,7 +35,7 @@ class CommunityRepository {
       await _apiClient.post(ApiEndpoints.friendRequest, data: {
         'target_user_id': targetUserId,
         'message': message,
-      });
+      },);
     } on DioException catch (e) {
       return _handleDioError(e, 'sendFriendRequest');
     }
@@ -47,7 +47,7 @@ class CommunityRepository {
       await _apiClient.post(ApiEndpoints.friendRespond, data: {
         'friendship_id': friendshipId,
         'accept': accept,
-      });
+      },);
     } on DioException catch (e) {
       return _handleDioError(e, 'respondToRequest');
     }

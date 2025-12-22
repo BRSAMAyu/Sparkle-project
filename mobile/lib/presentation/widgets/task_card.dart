@@ -8,8 +8,7 @@ class TaskCard extends StatelessWidget {
   final Function(String taskId)? onAction;
 
   const TaskCard({
-    super.key,
-    required this.data,
+    required this.data, super.key,
     this.onAction,
   });
 

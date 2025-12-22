@@ -10,7 +10,7 @@ import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 class GroupChatScreen extends ConsumerStatefulWidget {
   final String groupId;
 
-  const GroupChatScreen({super.key, required this.groupId});
+  const GroupChatScreen({required this.groupId, super.key});
 
   @override
   ConsumerState<GroupChatScreen> createState() => _GroupChatScreenState();
@@ -124,7 +124,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: chatState.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return Center(child: const Text('No messages yet. Say hi!'));
+                  return const Center(child: Text('No messages yet. Say hi!'));
                 }
                 return ListView.builder(
                   reverse: true,

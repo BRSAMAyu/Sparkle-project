@@ -7,8 +7,7 @@ class PlanCard extends StatelessWidget {
   final Map<String, dynamic> data;
 
   const PlanCard({
-    super.key,
-    required this.data,
+    required this.data, super.key,
   });
 
   @override

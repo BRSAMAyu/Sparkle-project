@@ -9,8 +9,7 @@ class TaskChatPanel extends ConsumerStatefulWidget {
   final String taskId;
 
   const TaskChatPanel({
-    super.key, 
-    required this.taskId,
+    required this.taskId, super.key,
   });
 
   @override
@@ -57,7 +56,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: AppDesignTokens.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
@@ -95,7 +94,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
               height: 300,
               color: AppDesignTokens.neutral50,
               child: messages.isEmpty 
-                  ? Center(
+                  ? const Center(
                       child: Text(
                         '有问题尽管问我！', 
                         style: TextStyle(color: AppDesignTokens.neutral400),
