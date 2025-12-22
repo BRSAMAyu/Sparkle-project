@@ -479,7 +479,7 @@ class _TimerControls extends StatelessWidget {
           text: '$minutes 分钟',
           onPressed: () => onSetPreset(minutes),
           size: ButtonSize.small,
-        )),
+        ),),
       ],
     );
   }

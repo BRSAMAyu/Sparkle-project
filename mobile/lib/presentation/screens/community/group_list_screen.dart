@@ -186,7 +186,7 @@ class _GroupListTile extends StatelessWidget {
                            color: (isSprint ? Colors.orange : Colors.blue).withOpacity(0.2),
                            blurRadius: 8,
                            offset: const Offset(0, 4),
-                         )
+                         ),
                       ],
                     ),
                     child: Icon(

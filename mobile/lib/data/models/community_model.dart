@@ -94,10 +94,8 @@ class FriendshipInfo {
     required this.id,
     required this.friend,
     required this.status,
-    this.matchReason,
+    required this.createdAt, required this.updatedAt, this.matchReason,
     this.initiatedByMe = false,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory FriendshipInfo.fromJson(Map<String, dynamic> json) =>
@@ -165,23 +163,12 @@ class GroupInfo {
   GroupInfo({
     required this.id,
     required this.name,
-    this.description,
+    required this.type, required this.focusTags, required this.memberCount, required this.totalFlamePower, required this.todayCheckinCount, required this.totalTasksCompleted, required this.maxMembers, required this.isPublic, required this.joinRequiresApproval, required this.createdAt, required this.updatedAt, this.description,
     this.avatarUrl,
-    required this.type,
-    required this.focusTags,
     this.deadline,
     this.sprintGoal,
     this.daysRemaining,
-    required this.memberCount,
-    required this.totalFlamePower,
-    required this.todayCheckinCount,
-    required this.totalTasksCompleted,
-    required this.maxMembers,
-    required this.isPublic,
-    required this.joinRequiresApproval,
     this.myRole,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory GroupInfo.fromJson(Map<String, dynamic> json) =>
@@ -216,9 +203,8 @@ class GroupListItem {
     required this.type,
     required this.memberCount,
     required this.totalFlamePower,
-    this.deadline,
+    required this.focusTags, this.deadline,
     this.daysRemaining,
-    required this.focusTags,
     this.myRole,
   });
 
@@ -248,8 +234,7 @@ class GroupCreate {
 
   GroupCreate({
     required this.name,
-    this.description,
-    required this.type,
+    required this.type, this.description,
     this.focusTags = const [],
     this.deadline,
     this.sprintGoal,
@@ -315,13 +300,10 @@ class MessageInfo {
 
   MessageInfo({
     required this.id,
-    this.sender,
-    required this.messageType,
+    required this.messageType, required this.createdAt, required this.updatedAt, this.sender,
     this.content,
     this.contentData,
     this.replyToId,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory MessageInfo.fromJson(Map<String, dynamic> json) =>
@@ -385,19 +367,11 @@ class GroupTaskInfo {
   GroupTaskInfo({
     required this.id,
     required this.title,
-    this.description,
-    required this.tags,
-    required this.estimatedMinutes,
-    required this.difficulty,
-    required this.totalClaims,
-    required this.totalCompletions,
-    required this.completionRate,
+    required this.tags, required this.estimatedMinutes, required this.difficulty, required this.totalClaims, required this.totalCompletions, required this.completionRate, required this.createdAt, required this.updatedAt, this.description,
     this.dueDate,
     this.creator,
     this.isClaimedByMe = false,
     this.myCompletionStatus,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory GroupTaskInfo.fromJson(Map<String, dynamic> json) =>
@@ -442,8 +416,7 @@ class CheckinRequest {
 
   CheckinRequest({
     required this.groupId,
-    this.message,
-    required this.todayDurationMinutes,
+    required this.todayDurationMinutes, this.message,
   });
 
   factory CheckinRequest.fromJson(Map<String, dynamic> json) =>

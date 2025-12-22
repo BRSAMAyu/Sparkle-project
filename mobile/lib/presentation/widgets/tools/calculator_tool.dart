@@ -20,9 +20,9 @@ class _CalculatorToolState extends State<CalculatorTool> {
         _result = '';
       } else if (text == '=') {
         try {
-          Parser p = Parser();
-          Expression exp = p.parse(_expression.replaceAll('x', '*'));
-          ContextModel cm = ContextModel();
+          final Parser p = Parser();
+          final Expression exp = p.parse(_expression.replaceAll('x', '*'));
+          final ContextModel cm = ContextModel();
           _result = '${exp.evaluate(EvaluationType.REAL, cm)}';
           // Remove .0 if integer
           if (_result.endsWith('.0')) {

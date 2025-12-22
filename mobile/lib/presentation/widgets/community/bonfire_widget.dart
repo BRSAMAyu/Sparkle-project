@@ -6,8 +6,7 @@ class BonfireWidget extends StatefulWidget {
   final double size;
 
   const BonfireWidget({
-    super.key, 
-    required this.level,
+    required this.level, super.key,
     this.size = 120,
   });
 

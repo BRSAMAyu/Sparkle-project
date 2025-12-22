@@ -13,7 +13,7 @@ import 'package:sparkle/presentation/widgets/community/bonfire_widget.dart';
 class GroupDetailScreen extends ConsumerWidget {
   final String groupId;
 
-  const GroupDetailScreen({super.key, required this.groupId});
+  const GroupDetailScreen({required this.groupId, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +30,7 @@ class GroupDetailScreen extends ConsumerWidget {
               message: e.toString(), 
               onRetry: () {
                 ref.read(groupDetailProvider(groupId).notifier).refresh();
-              }
+              },
             ),
           ),
         ),
@@ -67,7 +67,7 @@ class GroupDetailScreen extends ConsumerWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
-                    : LinearGradient(
+                    : const LinearGradient(
                         colors: [AppDesignTokens.primaryBase, AppDesignTokens.secondaryBase],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -184,7 +184,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       label: Text(tag),
                       backgroundColor: AppDesignTokens.neutral100,
                       labelStyle: const TextStyle(color: AppDesignTokens.neutral800),
-                    )).toList(),
+                    ),).toList(),
                   ),
                   const SizedBox(height: 32),
                 ],

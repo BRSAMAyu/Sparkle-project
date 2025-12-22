@@ -29,7 +29,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
     setState(() {
       _isLoading = false;
       // In a real app, we'd call an API here.
-      _output = "[翻译结果] ${_inputController.text} (Translated)"; 
+      _output = '[翻译结果] ${_inputController.text} (Translated)'; 
     });
   }
 

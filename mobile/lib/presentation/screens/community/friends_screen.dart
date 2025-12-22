@@ -46,7 +46,7 @@ class _MyFriendsTab extends ConsumerWidget {
     return friendsState.when(
       data: (friends) {
         if (friends.isEmpty) {
-          return Center(child: CompactEmptyState(message: 'No friends yet', icon: Icons.people_outline));
+          return const Center(child: CompactEmptyState(message: 'No friends yet', icon: Icons.people_outline));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
@@ -88,7 +88,7 @@ class _PendingRequestsTab extends ConsumerWidget {
     return requestsState.when(
       data: (requests) {
         if (requests.isEmpty) {
-          return Center(child: const Text('No pending requests'));
+          return const Center(child: Text('No pending requests'));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(pendingRequestsProvider.notifier).refresh(),
@@ -149,7 +149,7 @@ class _RecommendationsTab extends ConsumerWidget {
     return recommendationsState.when(
       data: (recommendations) {
         if (recommendations.isEmpty) {
-          return Center(child: const Text('No recommendations available'));
+          return const Center(child: Text('No recommendations available'));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendRecommendationsProvider.notifier).refresh(),

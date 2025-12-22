@@ -7,8 +7,7 @@ class KnowledgeCard extends StatelessWidget {
   final Map<String, dynamic> data;
 
   const KnowledgeCard({
-    super.key,
-    required this.data,
+    required this.data, super.key,
   });
 
   @override

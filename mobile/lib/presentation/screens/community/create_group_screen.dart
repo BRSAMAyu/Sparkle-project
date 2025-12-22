@@ -117,7 +117,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               const SizedBox(height: AppDesignTokens.spacing16),
               
               DropdownButtonFormField<GroupType>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(
                   labelText: 'Group Type',
                   border: OutlineInputBorder(),

@@ -31,8 +31,8 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
               content: c.content, 
               isRead: true, 
               createdAt: c.createdAt, 
-              relatedSubject: c.relatedSubject
-            ) : c).toList(),
+              relatedSubject: c.relatedSubject,
+            ) : c,).toList(),
         );
       });
     } catch (e) {

@@ -121,7 +121,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
             // Type Selector
             DropdownButtonFormField<TaskType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               decoration: const InputDecoration(
                 labelText: '任务类型',
                 border: OutlineInputBorder(),
@@ -163,7 +163,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _estimatedMinutes,
+                    initialValue: _estimatedMinutes,
                     decoration: const InputDecoration(
                       labelText: '预计时长',
                       border: OutlineInputBorder(),
@@ -181,7 +181,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _difficulty,
+                    initialValue: _difficulty,
                     decoration: const InputDecoration(
                       labelText: '难度',
                       border: OutlineInputBorder(),
@@ -202,7 +202,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             
             // Energy Cost
             DropdownButtonFormField<int>(
-              value: _energyCost,
+              initialValue: _energyCost,
               decoration: const InputDecoration(
                 labelText: '能量消耗',
                 border: OutlineInputBorder(),
@@ -223,7 +223,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               title: const Text('截止日期'),
               subtitle: Text(_dueDate == null 
                 ? '未设置' 
-                : DateFormat('yyyy-MM-dd').format(_dueDate!)),
+                : DateFormat('yyyy-MM-dd').format(_dueDate!),),
               leading: const Icon(Icons.calendar_today),
               shape: RoundedRectangleBorder(
                 side: BorderSide(color: Colors.grey.shade400),

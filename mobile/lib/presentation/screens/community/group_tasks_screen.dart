@@ -9,7 +9,7 @@ import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 class GroupTasksScreen extends ConsumerWidget {
   final String groupId;
 
-  const GroupTasksScreen({super.key, required this.groupId});
+  const GroupTasksScreen({required this.groupId, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +27,7 @@ class GroupTasksScreen extends ConsumerWidget {
       body: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return Center(child: CompactEmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
+            return const Center(child: CompactEmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(groupTasksProvider(groupId).notifier).refresh(),
@@ -47,11 +47,11 @@ class GroupTasksScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.timer, size: 14, color: Colors.grey),
+                            const Icon(Icons.timer, size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             Text('${task.estimatedMinutes} min'),
                             const SizedBox(width: 12),
-                            Icon(Icons.people, size: 14, color: Colors.grey),
+                            const Icon(Icons.people, size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             Text('${task.totalClaims} claimed'),
                           ],

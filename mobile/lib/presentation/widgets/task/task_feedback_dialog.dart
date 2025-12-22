@@ -9,9 +9,7 @@ class TaskFeedbackDialog extends StatelessWidget {
   final VoidCallback onClose;
 
   const TaskFeedbackDialog({
-    super.key,
-    required this.result,
-    required this.onClose,
+    required this.result, required this.onClose, super.key,
   });
 
   @override
@@ -30,7 +28,7 @@ class TaskFeedbackDialog extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: AppDesignTokens.primaryGradient,
                     shape: BoxShape.circle,
                   ),
@@ -65,7 +63,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               )
             else
-              const Text("任务已完成！继续保持。"),
+              const Text('任务已完成！继续保持。'),
               
             const SizedBox(height: AppDesignTokens.spacing20),
             
@@ -85,14 +83,14 @@ class TaskFeedbackDialog extends StatelessWidget {
                         icon: Icons.local_fire_department,
                         color: Colors.orange,
                         value: "+${result.flameUpdate!['brightness_change']}%",
-                        label: "亮度",
+                        label: '亮度',
                       ),
                     if (result.statsUpdate != null)
                        _StatItem(
                         icon: Icons.emoji_events,
                         color: Colors.amber,
                         value: "${result.statsUpdate!['streak_days']}天",
-                        label: "连胜",
+                        label: '连胜',
                       ),
                   ],
                 ),

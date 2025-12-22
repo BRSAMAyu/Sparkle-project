@@ -29,7 +29,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Navigator.pop(context);
             },
             child: const Text('保存'),
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -76,14 +76,14 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               title: const Text('启用通知'),
               value: _notificationsEnabled,
               onChanged: (v) => setState(() => _notificationsEnabled = v),
-              activeColor: AppDesignTokens.primaryBase,
+              activeThumbColor: AppDesignTokens.primaryBase,
             ),
             SwitchListTile(
               title: const Text('智能碎片时间提醒'),
               subtitle: const Text('在绿色时间段主动推送微任务'),
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
-              activeColor: AppDesignTokens.primaryBase,
+              activeThumbColor: AppDesignTokens.primaryBase,
             ),
           ],
         ),

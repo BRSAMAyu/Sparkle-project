@@ -12,9 +12,8 @@ class WeeklyAgendaGrid extends StatefulWidget {
   final Function(Map<String, dynamic> data) onChanged;
 
   const WeeklyAgendaGrid({
-    super.key,
+    required this.onChanged, super.key,
     this.initialData,
-    required this.onChanged,
   });
 
   @override
@@ -107,13 +106,13 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
         // Header (Days)
         Row(
           children: [
-            SizedBox(width: 30), // Time label column
+            const SizedBox(width: 30), // Time label column
             ...['一', '二', '三', '四', '五', '六', '日'].map((day) => 
               Expanded(
                 child: Center(
                   child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              )
+              ),
             ),
           ],
         ),
@@ -138,7 +137,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                           '$index',
                           style: const TextStyle(fontSize: 10, color: Colors.grey),
                         ),
-                      )
+                      ),
                     ),
                   ),
                 ),
