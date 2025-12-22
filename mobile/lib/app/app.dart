@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sparkle/app/routes.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 /// Sparkle Application Root Widget
 class SparkleApp extends ConsumerWidget {
@@ -20,8 +21,14 @@ class SparkleApp extends ConsumerWidget {
       themeMode: ThemeMode.system,
       routerConfig: router,
       // Localization
-      // localizationsDelegates: AppLocalizations.localizationsDelegates,
-      // supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        ...AppLocalizations.localizationsDelegates,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'), // Default to Chinese
     );
   }
 }

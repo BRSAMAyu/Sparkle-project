@@ -1,0 +1,31 @@
+{
+  "@@locale": "zh",
+  "appTitle": "Sparkle 星火",
+  "home": "首页",
+  "community": "社群",
+  "knowledgeGalaxy": "知识星图",
+  "profile": "我的",
+  "tasks": "任务",
+  "chat": "对话",
+  "plans": "计划",
+  
+  "weeklyAgenda": "每周日程",
+  "agendaBusy": "繁忙 (专注于课业/工作)",
+  "agendaFragmented": "碎片 (高效利用时间)",
+  "agendaRelax": "放松 (休息/娱乐)",
+  
+  "learningMode": "学习模式",
+  "depthPreference": "深度偏好",
+  "curiosityPreference": "好奇偏好",
+  
+  "settings": "设置",
+  "language": "语言",
+  "schedulePreferences": "日程偏好",
+  "notificationSettings": "通知设置",
+  "theme": "主题",
+  
+  "taskCard": "任务卡片",
+  "planCard": "计划卡片",
+  "startTask": "开始任务",
+  "viewDetails": "查看详情"
+}
