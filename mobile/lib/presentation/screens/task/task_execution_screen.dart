@@ -591,24 +591,18 @@ class _BottomControls extends ConsumerWidget {
     );
   }
 
+import 'package:sparkle/presentation/widgets/task/blocking_interceptor_dialog.dart';
+
   void _abandonTask(BuildContext context, WidgetRef ref) {
-     showDialog(
+    showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Abandon Task?'),
-        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
-        content: const Text('Are you sure? This will mark the task as abandoned.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              ref.read(taskListProvider.notifier).abandonTask(task.id);
-              Navigator.of(ctx).pop();
-              context.pop(); 
-            },
-            child: const Text('Abandon', style: TextStyle(color: AppDesignTokens.error)),
-          ),
-        ],
+      builder: (ctx) => BlockingInterceptorDialog(
+        taskId: task.id,
+        onAbandonConfirmed: () {
+           ref.read(taskListProvider.notifier).abandonTask(task.id);
+           // Navigate away completely to Galaxy to exit execution flow safely
+           context.go('/galaxy');
+        },
       ),
     );
   }

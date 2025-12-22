@@ -12,6 +12,7 @@ from app.services.notification_service import NotificationService
 from app.schemas.notification import NotificationCreate
 from app.services.decay_service import DecayService
 from app.services.push_service import PushService
+from app.services.cognitive_service import CognitiveService
 
 class SchedulerService:
     def __init__(self):
@@ -23,6 +24,9 @@ class SchedulerService:
         
         # 每日衰减任务 (每天凌晨3点执行)
         self.scheduler.add_job(self.apply_daily_decay, 'cron', hour=3, minute=0)
+
+        # 每日行为挖掘 (每天凌晨4点执行)
+        self.scheduler.add_job(self.mining_implicit_behaviors_job, 'cron', hour=4, minute=0)
 
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle and daily decay jobs")
@@ -74,6 +78,29 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Error in daily decay job: {e}", exc_info=True)
+
+    async def mining_implicit_behaviors_job(self):
+        """
+        每日隐式行为挖掘任务
+        """
+        logger.info("Starting implicit behavior mining job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                # 1. Get all active users
+                result = await db.execute(select(User).where(User.is_active == True))
+                users = result.scalars().all()
+                
+                cognitive_service = CognitiveService(db)
+                total_fragments = 0
+                
+                for user in users:
+                    fragments = await cognitive_service.mining_implicit_behaviors(user.id)
+                    total_fragments += len(fragments)
+                    
+                logger.info(f"Implicit mining completed: {total_fragments} fragments generated across {len(users)} users.")
+
+        except Exception as e:
+            logger.error(f"Error in implicit mining job: {e}", exc_info=True)
 
     async def _send_review_reminders(self, db):
         """

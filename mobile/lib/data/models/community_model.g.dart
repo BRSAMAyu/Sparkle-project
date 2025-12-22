@@ -29,10 +29,10 @@ FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       friend: UserBrief.fromJson(json['friend'] as Map<String, dynamic>),
       status: $enumDecode(_$FriendshipStatusEnumMap, json['status']),
-      matchReason: json['match_reason'] as Map<String, dynamic>?,
-      initiatedByMe: json['initiated_by_me'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      matchReason: json['match_reason'] as Map<String, dynamic>?,
+      initiatedByMe: json['initiated_by_me'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$FriendshipInfoToJson(FriendshipInfo instance) =>
@@ -73,17 +73,10 @@ Map<String, dynamic> _$FriendRecommendationToJson(
 GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
       id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
-      avatarUrl: json['avatar_url'] as String?,
       type: $enumDecode(_$GroupTypeEnumMap, json['type']),
       focusTags: (json['focus_tags'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
-      deadline: json['deadline'] == null
-          ? null
-          : DateTime.parse(json['deadline'] as String),
-      sprintGoal: json['sprint_goal'] as String?,
-      daysRemaining: (json['days_remaining'] as num?)?.toInt(),
       memberCount: (json['member_count'] as num).toInt(),
       totalFlamePower: (json['total_flame_power'] as num).toInt(),
       todayCheckinCount: (json['today_checkin_count'] as num).toInt(),
@@ -91,9 +84,16 @@ GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
       maxMembers: (json['max_members'] as num).toInt(),
       isPublic: json['is_public'] as bool,
       joinRequiresApproval: json['join_requires_approval'] as bool,
-      myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      description: json['description'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      deadline: json['deadline'] == null
+          ? null
+          : DateTime.parse(json['deadline'] as String),
+      sprintGoal: json['sprint_goal'] as String?,
+      daysRemaining: (json['days_remaining'] as num?)?.toInt(),
+      myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
     );
 
 Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
@@ -136,13 +136,13 @@ GroupListItem _$GroupListItemFromJson(Map<String, dynamic> json) =>
       type: $enumDecode(_$GroupTypeEnumMap, json['type']),
       memberCount: (json['member_count'] as num).toInt(),
       totalFlamePower: (json['total_flame_power'] as num).toInt(),
+      focusTags: (json['focus_tags'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
       deadline: json['deadline'] == null
           ? null
           : DateTime.parse(json['deadline'] as String),
       daysRemaining: (json['days_remaining'] as num?)?.toInt(),
-      focusTags: (json['focus_tags'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
     );
 
@@ -161,8 +161,8 @@ Map<String, dynamic> _$GroupListItemToJson(GroupListItem instance) =>
 
 GroupCreate _$GroupCreateFromJson(Map<String, dynamic> json) => GroupCreate(
       name: json['name'] as String,
-      description: json['description'] as String?,
       type: $enumDecode(_$GroupTypeEnumMap, json['type']),
+      description: json['description'] as String?,
       focusTags: (json['focus_tags'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -213,15 +213,15 @@ Map<String, dynamic> _$GroupMemberInfoToJson(GroupMemberInfo instance) =>
 
 MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
       id: json['id'] as String,
+      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
       sender: json['sender'] == null
           ? null
           : UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
-      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -266,13 +266,15 @@ GroupTaskInfo _$GroupTaskInfoFromJson(Map<String, dynamic> json) =>
     GroupTaskInfo(
       id: json['id'] as String,
       title: json['title'] as String,
-      description: json['description'] as String?,
       tags: (json['tags'] as List<dynamic>).map((e) => e as String).toList(),
       estimatedMinutes: (json['estimated_minutes'] as num).toInt(),
       difficulty: (json['difficulty'] as num).toInt(),
       totalClaims: (json['total_claims'] as num).toInt(),
       totalCompletions: (json['total_completions'] as num).toInt(),
       completionRate: (json['completion_rate'] as num).toDouble(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      description: json['description'] as String?,
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
@@ -281,8 +283,6 @@ GroupTaskInfo _$GroupTaskInfoFromJson(Map<String, dynamic> json) =>
           : UserBrief.fromJson(json['creator'] as Map<String, dynamic>),
       isClaimedByMe: json['is_claimed_by_me'] as bool? ?? false,
       myCompletionStatus: json['my_completion_status'] as bool?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$GroupTaskInfoToJson(GroupTaskInfo instance) =>
@@ -331,8 +331,8 @@ Map<String, dynamic> _$GroupTaskCreateToJson(GroupTaskCreate instance) =>
 CheckinRequest _$CheckinRequestFromJson(Map<String, dynamic> json) =>
     CheckinRequest(
       groupId: json['group_id'] as String,
-      message: json['message'] as String?,
       todayDurationMinutes: (json['today_duration_minutes'] as num).toInt(),
+      message: json['message'] as String?,
     );
 
 Map<String, dynamic> _$CheckinRequestToJson(CheckinRequest instance) =>

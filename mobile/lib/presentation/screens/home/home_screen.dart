@@ -17,6 +17,8 @@ import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:sparkle/presentation/widgets/home/thought_capsule_dialog.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -52,6 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
+      floatingActionButton: _selectedIndex == 0 // Only show on Dashboard
+          ? FloatingActionButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const ThoughtCapsuleDialog(),
+                );
+              },
+              backgroundColor: AppDesignTokens.primaryBase,
+              child: const Icon(Icons.psychology, color: Colors.white),
+            )
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: '首页'),

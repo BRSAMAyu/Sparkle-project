@@ -61,4 +61,7 @@ class ApiEndpoints {
   // Community - Tasks & Checkin
   static String claimTask(String id) => '/community/tasks/$id/claim';
   static const String checkin = '/community/checkin';
+
+  // Cognitive Prism
+  static const String cognitiveFragments = '/cognitive/fragments';
 }

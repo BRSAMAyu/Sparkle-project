@@ -4,24 +4,34 @@ API v1 Router
 """
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, tasks, chat, plans, statistics, subjects, errors, health, notifications, galaxy, community, capsules
+from app.api.v1 import (
+    auth,
+    users,
+    galaxy,
+    chat,
+    tasks,
+    plans,
+    subjects,
+    statistics,
+    notifications,
+    capsules,
+    community,
+    cognitive
+)
 
-# Create main API router
 api_router = APIRouter()
-
-api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
-api_router.include_router(users.router, prefix="/users", tags=["用户"])
-api_router.include_router(tasks.router, prefix="/tasks", tags=["任务"])
-api_router.include_router(chat.router, prefix="/chat", tags=["对话"])
-api_router.include_router(plans.router, prefix="/plans", tags=["计划"])
-api_router.include_router(statistics.router, prefix="/statistics", tags=["统计"])
-api_router.include_router(subjects.router, prefix="/subjects", tags=["学科"])
-api_router.include_router(errors.router, prefix="/errors", tags=["错题"])
-api_router.include_router(health.router, prefix="/health", tags=["健康检查"])
-api_router.include_router(notifications.router, prefix="/notifications", tags=["通知"])
-api_router.include_router(galaxy.router, tags=["星图"])
-api_router.include_router(community.router, prefix="/community", tags=["社群"])
-api_router.include_router(capsules.router, prefix="/capsules", tags=["好奇心胶囊"])
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
+api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])
+api_router.include_router(statistics.router, prefix="/stats", tags=["statistics"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
+api_router.include_router(community.router, prefix="/community", tags=["community"])
+api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
 
 
 @api_router.get("/")
