@@ -88,7 +88,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             },
           );
         },
-        loading: () => const Center(child: LoadingIndicator.circular()),
+        loading: () => const Center(child: LoadingIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );

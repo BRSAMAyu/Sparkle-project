@@ -90,7 +90,6 @@ class _NotesToolState extends State<NotesTool> {
                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('笔记已保存 (Mock)')));
             },
             size: ButtonSize.medium,
-            color: Colors.orange,
           ),
         ],
       ),

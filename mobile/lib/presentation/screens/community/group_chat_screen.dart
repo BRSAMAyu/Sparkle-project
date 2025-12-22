@@ -136,7 +136,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: LoadingIndicator.circular()),
+              loading: () => const Center(child: LoadingIndicator()),
               error: (e, s) => Center(
                 child: CustomErrorWidget.page(
                   message: e.toString(),
