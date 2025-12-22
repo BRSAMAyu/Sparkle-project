@@ -18,6 +18,7 @@ import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:sparkle/presentation/widgets/home/thought_capsule_dialog.dart';
+import 'package:sparkle/presentation/widgets/cognitive/realtime_nudge_bubble.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -118,6 +119,19 @@ class _DashboardTab extends ConsumerWidget {
                     // 1. Sprint Mode Switch (Prominent)
                     _buildSprintModeCard(context, isDark),
                     const SizedBox(height: 20),
+
+                    // Add button to navigate to PatternListScreen
+                    CustomButton.secondary(
+                      text: '查看行为定式',
+                      icon: Icons.psychology_alt,
+                      onPressed: () => context.go('/cognitive/patterns'),
+                      size: ButtonSize.medium,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Real-time Nudge Bubble
+                    const RealtimeNudgeBubble(),
+                    const SizedBox(height: 24),
 
                     // 2. Main Chat/AI Interaction Window (Replaces small task icons)
                     _buildMainChatEntry(context, isDark),

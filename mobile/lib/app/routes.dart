@@ -24,6 +24,7 @@ import 'package:sparkle/presentation/screens/community/create_group_screen.dart'
 import 'package:sparkle/presentation/screens/community/group_search_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
 import 'package:sparkle/presentation/screens/community/friends_screen.dart';
+import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -180,6 +181,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/galaxy',
         name: 'galaxy',
         builder: (context, state) => const GalaxyScreen(),
+      ),
+
+      // Cognitive Routes
+      GoRoute(
+        path: '/cognitive/patterns',
+        name: 'patternList',
+        builder: (context, state) => const PatternListScreen(),
       ),
 
       // Community Routes
