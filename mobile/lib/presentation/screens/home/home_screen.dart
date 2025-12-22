@@ -6,7 +6,7 @@ import 'package:sparkle/presentation/providers/plan_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
-import 'package:sparkle/presentation/screens/galaxy/galaxy_screen.dart';
+import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';

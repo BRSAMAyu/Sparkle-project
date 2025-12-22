@@ -47,76 +47,102 @@ class _LearningModeControlState extends State<LearningModeControl> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 1.0,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.grey.shade900,
-                  border: Border.all(color: Colors.white24),
-                  boxShadow: [
-                     BoxShadow(
-                        color: Colors.blue.withOpacity(0.2 * _currentCuriosity),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                     ),
-                  ],
-                ),
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    _updatePosition(details.localPosition, constraints.biggest);
-                  },
-                  onTapDown: (details) {
-                    _updatePosition(details.localPosition, constraints.biggest);
-                  },
-                  child: Stack(
-                    children: [
-                      // Grid lines
-                      _buildGrid(constraints.maxWidth, constraints.maxHeight),
-                      
-                      // Labels
-                      const Positioned(left: 10, top: 10, child: Text('深度+', style: TextStyle(color: Colors.white54))),
-                      const Positioned(left: 10, bottom: 10, child: Text('深度-', style: TextStyle(color: Colors.white54))),
-                      const Positioned(right: 10, bottom: 10, child: Text('好奇+', style: TextStyle(color: Colors.white54))),
-                      const Positioned(left: 10, bottom: 10, child: Padding(padding: EdgeInsets.only(left: 40), child: Text('好奇-', style: TextStyle(color: Colors.white54)))),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Limit the size to be reasonable on all screens
+            final maxSize = constraints.maxWidth.clamp(200.0, 280.0);
 
-                      // The Handle
-                      Positioned(
-                        left: _currentCuriosity * constraints.maxWidth - 15,
-                        top: (1.0 - _currentDepth) * constraints.maxHeight - 15,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.withOpacity(0.8),
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.touch_app, size: 16, color: Colors.blue),
-                        ),
-                      ),
+            return Center(
+              child: SizedBox(
+                width: maxSize,
+                height: maxSize,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+                    border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                    boxShadow: [
+                       BoxShadow(
+                          color: AppDesignTokens.primaryBase.withOpacity(0.15 * _currentCuriosity),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                       ),
                     ],
                   ),
+                  child: GestureDetector(
+                    onPanUpdate: (details) {
+                      _updatePosition(details.localPosition, Size(maxSize, maxSize));
+                    },
+                    onTapDown: (details) {
+                      _updatePosition(details.localPosition, Size(maxSize, maxSize));
+                    },
+                    child: Stack(
+                      children: [
+                        // Grid lines
+                        _buildGrid(maxSize, maxSize),
+
+                        // Labels - positioned at corners
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Text('深度+', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                        ),
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: Text('深度-', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                        ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Text('好奇+', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                        ),
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Text('好奇-', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                        ),
+
+                        // The Handle
+                        Positioned(
+                          left: _currentCuriosity * maxSize - 15,
+                          top: (1.0 - _currentDepth) * maxSize - 15,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppDesignTokens.primaryBase.withOpacity(0.6),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildInfoChip('深度: ${(_currentDepth * 100).toInt()}%'),
+            const SizedBox(width: 12),
             _buildInfoChip('好奇: ${(_currentCuriosity * 100).toInt()}%'),
           ],
         ),
@@ -132,15 +158,21 @@ class _LearningModeControlState extends State<LearningModeControl> {
   }
 
   Widget _buildInfoChip(String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(20),
+        color: isDark ? Colors.white10 : AppDesignTokens.primaryBase.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         label,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: isDark ? Colors.white : AppDesignTokens.primaryBase,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
       ),
     );
   }

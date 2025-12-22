@@ -295,10 +295,10 @@ class AppThemes {
     primaryColor: AppColors.primary,
     scaffoldBackgroundColor: AppColors.darkBackground,
 
-    // Color scheme
+    // Color scheme - use brighter secondary for dark mode
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primary,
-      secondary: AppColors.secondary,
+      secondary: AppDesignTokens.secondaryBaseDark,
       surface: AppColors.darkCard,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
@@ -307,11 +307,11 @@ class AppThemes {
       onError: Colors.white,
     ),
 
-    // Extensions
+    // Extensions - use brighter secondary gradient for dark mode
     extensions: <ThemeExtension<dynamic>>[
       AppThemeExtension(
         primaryGradient: AppDesignTokens.primaryGradient,
-        secondaryGradient: AppDesignTokens.secondaryGradient,
+        secondaryGradient: AppDesignTokens.secondaryGradientDark,
         cardGradient: const LinearGradient( // Darker gradient for dark mode
           colors: [AppDesignTokens.neutral800, AppDesignTokens.neutral700],
           begin: Alignment.topLeft,

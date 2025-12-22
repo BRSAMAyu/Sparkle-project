@@ -30,9 +30,20 @@ class AppDesignTokens {
   static const Color secondaryLight = Color(0xFF3949AB);
   static const Color secondaryDark = Color(0xFF000051);
 
+  /// Secondary colors for dark mode (brighter for readability)
+  static const Color secondaryBaseDark = Color(0xFF5C6BC0);
+  static const Color secondaryLightDark = Color(0xFF7986CB);
+
   /// Secondary gradient
   static const LinearGradient secondaryGradient = LinearGradient(
     colors: [secondaryBase, secondaryLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Secondary gradient for dark mode (brighter for readability)
+  static const LinearGradient secondaryGradientDark = LinearGradient(
+    colors: [secondaryBaseDark, secondaryLightDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

@@ -8,11 +8,11 @@ class StatisticsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing20),
+      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: AppDesignTokens.borderRadius16,
-        boxShadow: AppDesignTokens.shadowMd,
+        boxShadow: AppDesignTokens.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,7 +20,7 @@ class StatisticsCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: AppDesignTokens.primaryBase.withOpacity(0.1),
                   shape: BoxShape.circle,
@@ -28,23 +28,23 @@ class StatisticsCard extends StatelessWidget {
                 child: const Icon(
                   Icons.show_chart_rounded,
                   color: AppDesignTokens.primaryBase,
-                  size: 20,
+                  size: 16,
                 ),
               ),
-              const SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: AppDesignTokens.spacing8),
               const Text(
                 '本周成长趋势',
                 style: TextStyle(
-                  fontSize: AppDesignTokens.fontSizeLg,
-                  fontWeight: AppDesignTokens.fontWeightBold,
+                  fontSize: AppDesignTokens.fontSizeBase,
+                  fontWeight: AppDesignTokens.fontWeightSemibold,
                   color: AppDesignTokens.neutral900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppDesignTokens.spacing24),
+          const SizedBox(height: AppDesignTokens.spacing16),
           const SizedBox(
-            height: 200,
+            height: 120,
             child: _WeeklyTrendChart(),
           ),
         ],

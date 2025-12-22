@@ -66,115 +66,130 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width - 32; // minus padding
-    final cellWidth = width / 8; // 7 days + 1 label column
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // Calculate cell size based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final availableWidth = screenWidth - 32 - 28; // minus padding and time label column
+    final cellWidth = availableWidth / 7;
+    final cellHeight = 20.0; // Fixed cell height for compact view
 
     return Column(
       children: [
         // Legend / Type Selector
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: AgendaType.values.map((type) {
             final isSelected = _selectedType == type;
             return GestureDetector(
               onTap: () => setState(() => _selectedType = type),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getColor(type).withOpacity(isSelected ? 1.0 : 0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  color: _getColor(type).withOpacity(isSelected ? 1.0 : 0.3),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected ? Colors.white : Colors.transparent,
-                    width: 2,
+                    color: isSelected ? (isDark ? Colors.white : Colors.grey.shade700) : Colors.transparent,
+                    width: 1.5,
                   ),
                 ),
                 child: Text(
                   _getLabel(type),
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? (isDark ? Colors.white : Colors.grey.shade900)
+                        : (isDark ? Colors.white70 : Colors.grey.shade700),
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
               ),
             );
           }).toList(),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: 12),
+
         // Header (Days)
         Row(
           children: [
-            const SizedBox(width: 30), // Time label column
-            ...['一', '二', '三', '四', '五', '六', '日'].map((day) => 
-              Expanded(
+            const SizedBox(width: 28), // Time label column width
+            ...['一', '二', '三', '四', '五', '六', '日'].map((day) =>
+              SizedBox(
+                width: cellWidth,
                 child: Center(
-                  child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.grey.shade700,
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // Grid
-        SizedBox(
-          height: 400, // Fixed height for scrollable area
-          child: SingleChildScrollView(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Time Labels
-                SizedBox(
-                  width: 30,
-                  child: Column(
-                    children: List.generate(24, (index) => 
+        // Grid with scrollable area
+        Container(
+          height: 300, // Fixed height for scrollable area
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: SingleChildScrollView(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Time Labels
+                  Column(
+                    children: List.generate(24, (hour) =>
                       Container(
-                        height: 30,
-                        alignment: Alignment.topCenter,
+                        width: 28,
+                        height: cellHeight,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 4),
                         child: Text(
-                          '$index',
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          '${hour.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: isDark ? Colors.white54 : Colors.grey.shade600,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                // The Grid
-                Expanded(
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      // Calculate which cell is touched
-                      // This needs precise math relative to the grid container
-                      // For MVP, we use Tap on individual cells via GridView
-                    },
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        childAspectRatio: 1.5, // width/height ratio
+                  // The Grid
+                  Expanded(
+                    child: Column(
+                      children: List.generate(24, (hour) =>
+                        Row(
+                          children: List.generate(7, (day) {
+                            final index = hour * 7 + day;
+                            return GestureDetector(
+                              onTap: () => _updateCell(index),
+                              child: Container(
+                                width: cellWidth,
+                                height: cellHeight,
+                                margin: const EdgeInsets.all(0.5),
+                                decoration: BoxDecoration(
+                                  color: _getColor(_gridState[index]),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
                       ),
-                      itemCount: 168,
-                      itemBuilder: (context, index) {
-                        return GestureDetector(
-                          onTap: () => _updateCell(index),
-                          // Support drag by tracking pointer? 
-                          // Simpler: Just tap for now, or drag in a future iteration
-                          child: Container(
-                            margin: const EdgeInsets.all(1),
-                            decoration: BoxDecoration(
-                              color: _getColor(_gridState[index]),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        );
-                      },
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
