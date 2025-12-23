@@ -12,6 +12,8 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus, NodeRelation, Study
 from app.models.subject import Subject
 from app.services.embedding_service import embedding_service
 from app.services.expansion_service import ExpansionService
+from app.core.cache import cached, cache_service
+from app.config import settings
 from app.schemas.galaxy import (
     GalaxyGraphResponse, NodeWithStatus, SparkEvent,
     SparkResult, SearchResultItem, GalaxyUserStats,
@@ -113,6 +115,7 @@ class GalaxyService:
     # ==========================================
     # 1. 获取星图数据
     # ==========================================
+    @cached(ttl=600, key_builder=lambda self, user_id, sector_code=None, include_locked=True: f"{user_id}:{sector_code}:{include_locked}")
     async def get_galaxy_graph(
         self,
         user_id: UUID,
@@ -279,6 +282,11 @@ class GalaxyService:
                 trigger_task_id=task_id,
                 user_id=user_id
             )
+
+        # 9. Invalidate Galaxy Graph Cache
+        # Pattern: Sparkle:view:get_galaxy_graph:{user_id}:*
+        pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
+        await cache_service.delete_pattern(pattern)
 
         return SparkResult(
             spark_event=spark_event,

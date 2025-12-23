@@ -17,6 +17,7 @@ from app.api.middleware import IdempotencyMiddleware
 from app.api.v1.router import api_router
 from app.api.v1.health import set_start_time
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
+from app.core.cache import cache_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +26,9 @@ async def lifespan(app: FastAPI):
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
+    
+    # Initialize Cache (Redis)
+    await cache_service.init_redis()
     
     async with AsyncSessionLocal() as db:
         try:
@@ -57,6 +61,9 @@ async def lifespan(app: FastAPI):
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()
+    
+    # Close Cache
+    await cache_service.close()
 
     logger.info("Sparkle API Server stopped")
 

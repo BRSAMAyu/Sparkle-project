@@ -20,7 +20,8 @@ from app.api.v1 import (
     omnibar,
     dashboard,
     analytics,
-    stt
+    stt,
+    focus
 )
 
 api_router = APIRouter()
@@ -40,6 +41,7 @@ api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
+api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 
 
 @api_router.get("/")

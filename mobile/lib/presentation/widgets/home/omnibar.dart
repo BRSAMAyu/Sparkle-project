@@ -150,27 +150,71 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                   onSubmitted: (_) => _submit(),
                   style: TextStyle(color: AppColors.textOnDark(context), fontSize: 15),
                   decoration: InputDecoration(
-                    hintText: '告诉我你的想法...',
-                    hintStyle: TextStyle(color: AppColors.textOnDark(context).withAlpha(80), fontSize: 14),
+                    hintText: _isListening ? '正在聆听...' : '告诉我你的想法...',
+                    hintStyle: TextStyle(
+                      color: _isListening 
+                          ? AppDesignTokens.primaryBase 
+                          : AppColors.textOnDark(context).withAlpha(80), 
+                      fontSize: 14
+                    ),
                     border: InputBorder.none,
                   ),
                 ),
               ),
               if (_isLoading)
                 const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              else if (_controller.text.isEmpty && !_isListening)
+                 IconButton(
+                  icon: const Icon(Icons.mic, color: AppDesignTokens.primaryBase),
+                  onPressed: _toggleListening,
+                  tooltip: '语音输入',
+                )
               else
                 IconButton(
                   icon: Icon(
-                    _intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded,
-                    color: _intentType != null ? color : AppColors.textOnDark(context).withOpacity(0.7),
+                    _isListening 
+                        ? Icons.stop_circle_outlined 
+                        : (_intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded),
+                    color: _isListening 
+                        ? Colors.redAccent 
+                        : (_intentType != null ? color : AppColors.textOnDark(context).withOpacity(0.7)),
                     size: 20,
                   ),
-                  onPressed: _submit,
+                  onPressed: _isListening ? _toggleListening : _submit,
                 ),
             ],
           ),
         );
       },
     );
+  }
+
+  bool _isListening = false;
+
+  void _toggleListening() {
+    setState(() {
+      _isListening = !_isListening;
+    });
+
+    if (_isListening) {
+      _glowController.repeat(reverse: true);
+      // TODO: Implement actual WebSocket audio streaming
+      // For UI demo, simulate text input after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _controller.text = "创建一个复习离散数学的计划";
+            _onTextChanged();
+            _glowController.stop();
+            _glowController.reset();
+            _glowController.forward();
+          });
+        }
+      });
+    } else {
+      _glowController.stop();
+      _glowController.reset();
+    }
   }
 }

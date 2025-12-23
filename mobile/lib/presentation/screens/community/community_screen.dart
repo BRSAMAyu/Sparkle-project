@@ -14,7 +14,7 @@ class CommunityScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('社群'),
@@ -31,6 +31,7 @@ class CommunityScreen extends StatelessWidget {
             tabs: [
               Tab(text: '我的群组', icon: Icon(Icons.groups_rounded, size: 20)),
               Tab(text: '好友', icon: Icon(Icons.people_rounded, size: 20)),
+              Tab(text: '发现', icon: Icon(Icons.explore_rounded, size: 20)),
             ],
             indicatorColor: AppDesignTokens.primaryBase,
             labelColor: AppDesignTokens.primaryBase,
@@ -40,6 +41,7 @@ class CommunityScreen extends StatelessWidget {
           children: [
             _GroupsTab(),
             _FriendsTab(),
+            _DiscoverTab(),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -49,6 +51,124 @@ class CommunityScreen extends StatelessWidget {
           icon: const Icon(Icons.add),
           label: const Text('创建群组'),
           backgroundColor: AppDesignTokens.primaryBase,
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverTab extends StatelessWidget {
+  const _DiscoverTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      children: [
+        _buildSectionHeader(context, '官方备考计划', Icons.verified, Colors.blue),
+        const SizedBox(height: 12),
+        _buildOfficialCard(
+          context,
+          'CET-6 30天突击',
+          '包含每日单词打卡与真题训练',
+          '3.2k 人参与',
+          Colors.blue.shade100,
+          Icons.school,
+        ),
+        const SizedBox(height: 12),
+        _buildOfficialCard(
+          context,
+          '期末离散数学复习',
+          '知识点梳理 + 重点题型解析',
+          '580 人参与',
+          Colors.purple.shade100,
+          Icons.functions,
+        ),
+        
+        const SizedBox(height: 24),
+        _buildSectionHeader(context, '热门资源', Icons.local_fire_department, Colors.orange),
+        const SizedBox(height: 12),
+        // Placeholder for shared resources list
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text('更多精彩资源即将上线...', style: TextStyle(color: Colors.grey)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const Spacer(),
+        TextButton(
+          onPressed: () {},
+          child: const Text('查看全部'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOfficialCard(
+    BuildContext context, 
+    String title, 
+    String subtitle, 
+    String footer,
+    Color bgColor,
+    IconData icon,
+  ) {
+    return Card(
+      elevation: 0,
+      color: bgColor.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: bgColor.withOpacity(0.5)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.8),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.black87),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(subtitle),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.people_outline, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(footer, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ],
+        ),
+        trailing: ElevatedButton(
+          onPressed: () {
+            // Join official group logic
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppDesignTokens.primaryBase,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          child: const Text('加入'),
         ),
       ),
     );

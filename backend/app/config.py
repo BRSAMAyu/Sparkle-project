@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # Database Pool Settings (for PostgreSQL)
     DB_POOL_SIZE: int = 20  # 连接池大小
     DB_MAX_OVERFLOW: int = 40  # 最大溢出连接数
