@@ -36,6 +36,7 @@ class GroupType(str, enum.Enum):
     """群组类型"""
     SQUAD = "squad"          # 学习小队（长期）
     SPRINT = "sprint"        # 冲刺群（短期）
+    OFFICIAL = "official"    # 官方课程/考试群
 
 
 class GroupRole(str, enum.Enum):
@@ -49,10 +50,19 @@ class MessageType(str, enum.Enum):
     """消息类型"""
     TEXT = "text"                    # 普通文本
     TASK_SHARE = "task_share"        # 分享任务卡
+    PLAN_SHARE = "plan_share"        # 分享计划
+    FRAGMENT_SHARE = "fragment_share" # 分享认知碎片
     PROGRESS = "progress"            # 进度更新
     ACHIEVEMENT = "achievement"      # 成就达成
     CHECKIN = "checkin"              # 打卡
     SYSTEM = "system"                # 系统消息
+
+
+class SharedResourceType(str, enum.Enum):
+    """共享资源类型"""
+    PLAN = "plan"
+    TASK = "task"
+    COGNITIVE_FRAGMENT = "cognitive_fragment"
 
 
 # ============ 好友系统 ============
@@ -326,4 +336,52 @@ class GroupTaskClaim(BaseModel):
         UniqueConstraint('group_task_id', 'user_id', name='uq_task_claim'),
         Index('idx_claim_task', 'group_task_id'),
         Index('idx_claim_user', 'user_id'),
+    )
+
+
+# ============ 通用共享资源 ============
+
+class SharedResource(BaseModel):
+    """
+    通用共享资源表
+    用于将 Plan, CognitiveFragment, Task 等分享给群组或好友
+    """
+    __tablename__ = "shared_resources"
+
+    # 目标 (分享给谁)
+    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
+    target_user_id = Column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
+
+    # 来源
+    shared_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+
+    # 资源引用 (多态关联)
+    # 注意: 需要确保 plan/task/cognitive 模型已定义或使用字符串引用避免循环导入
+    # 实际运行时 SQLAlchemy 会解析
+    plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
+    task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    cognitive_fragment_id = Column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
+
+    # 权限与元数据
+    permission = Column(String(20), default="view", nullable=False)  # view, comment, edit
+    comment = Column(Text, nullable=True)  # 分享留言
+
+    # 计数
+    view_count = Column(Integer, default=0)
+    save_count = Column(Integer, default=0)  # 被转存/fork次数
+
+    # 关系
+    group = relationship("Group")
+    sharer = relationship("User", foreign_keys=[shared_by])
+    
+    # 资源关系 (Lazy load to avoid circular import issues at module level if carefully handled, 
+    # but strictly Plan/Task should be imported. For now we assume they are available in registry)
+    plan = relationship("Plan", foreign_keys=[plan_id])
+    task = relationship("Task", foreign_keys=[task_id])
+    cognitive_fragment = relationship("CognitiveFragment", foreign_keys=[cognitive_fragment_id])
+
+    __table_args__ = (
+        Index('idx_share_group', 'group_id'),
+        Index('idx_share_target_user', 'target_user_id'),
+        Index('idx_share_resource_plan', 'plan_id'),
     )

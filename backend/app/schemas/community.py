@@ -285,3 +285,51 @@ class GroupFlameStatus(BaseModel):
     total_power: int = Field(description="总能量")
     flames: List[FlameStatus] = Field(description="所有成员的火苗")
     bonfire_level: int = Field(ge=1, le=5, description="火堆等级")
+
+
+# ============ 共享资源 Schemas ============
+
+class SharedResourceTypeEnum(str, Enum):
+    PLAN = "plan"
+    TASK = "task"
+    COGNITIVE_FRAGMENT = "cognitive_fragment"
+
+
+class SharedResourceCreate(BaseModel):
+    """创建共享资源请求"""
+    resource_type: SharedResourceTypeEnum = Field(description="资源类型")
+    resource_id: UUID = Field(description="资源ID")
+    target_group_id: Optional[UUID] = Field(default=None, description="分享给群组ID")
+    target_user_id: Optional[UUID] = Field(default=None, description="分享给好友ID")
+    permission: str = Field(default="view", pattern="^(view|comment|edit)$", description="权限")
+    comment: Optional[str] = Field(default=None, max_length=500, description="分享留言")
+
+
+class SharedResourceInfo(BaseSchema):
+    """共享资源信息"""
+    resource_type: str = Field(description="资源类型") # Simplified for response
+    # We return the embedded object if possible, or just IDs?
+    # Ideally return a summary of the object.
+    # For simplicity, we return generic info and client fetches details if needed, 
+    # OR we embed a brief summary.
+    
+    # IDs
+    plan_id: Optional[UUID] = None
+    task_id: Optional[UUID] = None
+    cognitive_fragment_id: Optional[UUID] = None
+    
+    # Metadata
+    permission: str
+    comment: Optional[str]
+    view_count: int
+    save_count: int
+    
+    sharer: UserBrief
+    
+    # Embedded Briefs (Optional)
+    # Ideally we'd have a 'resource_title' or 'resource_summary' field computed
+    resource_title: Optional[str] = None
+    resource_summary: Optional[str] = None
+
+    class Config:
+        from_attributes = True

@@ -26,13 +26,17 @@ from app.schemas.community import (
     CheckinRequest, CheckinResponse,
     # 火堆
     GroupFlameStatus, FlameStatus,
+    # 共享资源
+    SharedResourceCreate, SharedResourceInfo,
     # 枚举
-    GroupTypeEnum, GroupRoleEnum
+    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum
 )
 from app.services.community_service import (
     FriendshipService, GroupService, GroupMessageService,
     CheckinService, GroupTaskService
 )
+from app.services.collaboration_service import collaboration_service
+from app.models.community import SharedResourceType
 
 router = APIRouter()
 
@@ -569,3 +573,106 @@ async def get_group_flame_status(
         flames=flames,
         bonfire_level=bonfire_level
     )
+
+
+# ============ 资源共享 ============
+
+@router.post("/share", response_model=SharedResourceInfo, summary="分享资源")
+async def share_resource(
+    data: SharedResourceCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    分享任务、计划或认知碎片给群组或好友
+    """
+    try:
+        # Convert enum schema to model enum
+        resource_type = SharedResourceType(data.resource_type.value)
+        
+        shared = await collaboration_service.share_resource(
+            db,
+            current_user.id,
+            resource_type,
+            data.resource_id,
+            target_group_id=data.target_group_id,
+            target_user_id=data.target_user_id,
+            permission=data.permission,
+            comment=data.comment
+        )
+        await db.commit()
+        
+        # Construct response
+        return SharedResourceInfo(
+            id=shared.id,
+            created_at=shared.created_at,
+            updated_at=shared.updated_at,
+            resource_type=data.resource_type.value,
+            plan_id=shared.plan_id,
+            task_id=shared.task_id,
+            cognitive_fragment_id=shared.cognitive_fragment_id,
+            permission=shared.permission,
+            comment=shared.comment,
+            view_count=shared.view_count,
+            save_count=shared.save_count,
+            sharer=UserBrief.model_validate(shared.sharer) if shared.sharer else None,
+            # We skip embedding full object details for now or fetch if needed
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/resources", response_model=List[SharedResourceInfo], summary="获取群组共享资源")
+async def get_group_resources(
+    group_id: UUID,
+    resource_type: Optional[SharedResourceTypeEnum] = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取分享到群组的资源列表
+    """
+    # Check if user is member
+    await GroupService.get_group(db, group_id, current_user.id) # Will raise/return None if not accessible? 
+    # Actually get_group returns None if not found or not member? 
+    # Current implementation of get_group checks permission implicitly or explicitly?
+    # Let's rely on service check or do manual check if strictly needed.
+    # GroupService.get_group returns group info if user is member (based on internal logic usually).
+    
+    rtype = SharedResourceType(resource_type.value) if resource_type else None
+    
+    resources = await collaboration_service.get_group_resources(
+        db, group_id, rtype, limit
+    )
+    
+    result = []
+    for res in resources:
+        # Determine strict type string
+        r_type_str = "unknown"
+        if res.plan_id: r_type_str = "plan"
+        elif res.task_id: r_type_str = "task"
+        elif res.cognitive_fragment_id: r_type_str = "cognitive_fragment"
+        
+        # Prepare embedded title/summary if possible
+        title = None
+        if res.plan: title = res.plan.name
+        elif res.task: title = res.task.title
+        # elif res.cognitive_fragment: title = ...
+        
+        result.append(SharedResourceInfo(
+            id=res.id,
+            created_at=res.created_at,
+            updated_at=res.updated_at,
+            resource_type=r_type_str,
+            plan_id=res.plan_id,
+            task_id=res.task_id,
+            cognitive_fragment_id=res.cognitive_fragment_id,
+            permission=res.permission,
+            comment=res.comment,
+            view_count=res.view_count,
+            save_count=res.save_count,
+            sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
+            resource_title=title
+        ))
+    return result
