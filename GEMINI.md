@@ -225,6 +225,7 @@ uvicorn app.main:app --reload
 **Testing:**
 *   Run all tests: `pytest`
 *   Run specific file: `pytest tests/test_api/test_auth.py`
+*   Run plan service tests: `pytest tests/test_api/test_plans.py` (Note: PlanService implementation is minimal)
 
 ### Mobile (`/mobile`)
 
@@ -274,8 +275,8 @@ flutter pub run build_runner build --delete-conflicting-outputs
 | POST | `/api/v1/tasks/{id}/start` | `start_task` | `TaskService.start` |
 | POST | `/api/v1/tasks/{id}/complete` | `complete_task` | `TaskService.complete` |
 | POST | `/api/v1/tasks/{id}/abandon` | `abandon_task` | `TaskService.abandon` |
-| GET | `/api/v1/plans` | `get_plans` | `PlanService.get_multi` |
-| POST | `/api/v1/plans` | `create_plan` | `PlanService.create` |
+| GET | `/api/v1/plans` | `get_plans` | PlanService API exists but implementation is minimal |
+| POST | `/api/v1/plans` | `create_plan` | PlanService API exists but implementation is minimal |
 
 ### Data Model Perspective (Database Schema)
 
@@ -478,6 +479,10 @@ flutter pub run build_runner build --delete-conflicting-outputs
 4.  **Complete Task** (`complete`)
 5.  **Abandon Task** (`abandon`)
 
+#### PlanService (Plan Service)
+`PlanService (backend/app/services/plan_service.py)` has API endpoints defined but implementation is minimal:
+1.  **Get Plans** (`get_multi`) - Returns empty data in current implementation
+
 #### PushService (Smart Push Service)
 `PushService (backend/app/services/push_service.py)` is responsible for smart push logic:
 
@@ -541,8 +546,8 @@ The mobile application uses `go_router` for route management, with key pages inc
 - `/tasks/:id`: Task Detail Screen
 - `/tasks/:id/execute`: Task Execution Screen
 - `/chat`: Chat Screen
-- `/sprint`: Sprint Plan Screen
-- `/growth`: Growth Plan Screen
+- `/sprint`: Sprint Plan Screen (Frontend implementation complete, backend service minimal)
+- `/growth`: Growth Plan Screen (Frontend implementation complete, backend service minimal)
 - `/profile`: Profile Screen
 - `/galaxy`: Knowledge Galaxy Screen
 
@@ -684,6 +689,3 @@ Error handling mechanisms include:
 4.  **Retry Mechanism**: Provides a retry button or automatic retry functionality for retriable operations.
 5.  **Local Caching**: Uses `hive` or `shared_preferences` to cache critical operations and resubmit them when the network is restored.
 6.  **User-Friendly Prompts**: Displays clear and easy-to-understand error messages, avoiding technical jargon.
-
-
-
