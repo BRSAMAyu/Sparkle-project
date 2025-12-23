@@ -49,6 +49,12 @@ def build_system_prompt(user_context: dict, conversation_history: str) -> str:
 def format_user_context(context: dict) -> str:
     """格式化用户上下文"""
     lines = []
+    
+    # 优先展示分析摘要
+    if context.get("analytics_summary"):
+        lines.append(context["analytics_summary"])
+        lines.append("-" * 20)
+
     if context.get("recent_tasks"):
         lines.append(f"近期任务: {len(context['recent_tasks'])} 个")
     if context.get("active_plans"):

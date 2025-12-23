@@ -35,7 +35,7 @@ class CuriosityCapsule(BaseModel):
     is_read = Column(Boolean, default=False, nullable=False)
 
     user = relationship("User", back_populates="curiosity_capsules")
-    task = relationship("Task", back_populates="curiosity_capsule") # One-to-one or one-to-many? For now, one-to-many from capsule to task.
+    task = relationship("Task", back_populates="curiosity_capsules") # One-to-one or one-to-many? For now, one-to-many from capsule to task.
 
     def __repr__(self):
         return f"<CuriosityCapsule(title={self.title}, user_id={self.user_id})>"

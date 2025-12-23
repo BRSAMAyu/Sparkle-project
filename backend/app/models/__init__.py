@@ -23,6 +23,8 @@ from app.models.community import (
     GroupTask, GroupTaskClaim
 )
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
+from app.models.analytics import UserDailyMetric
+from app.models.curiosity_capsule import CuriosityCapsule
 
 __all__ = [
     "BaseModel",
@@ -63,4 +65,7 @@ __all__ = [
     # Cognitive Prism
     "CognitiveFragment",
     "BehaviorPattern",
+    # Analytics
+    "UserDailyMetric",
+    "CuriosityCapsule",
 ]
