@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
@@ -98,17 +99,17 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8.0),
                             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                            decoration: isUser 
+                            decoration: isUser
                               ? BoxDecoration(
                                   gradient: AppDesignTokens.primaryGradient,
                                   borderRadius: _getBorderRadius(isUser),
                                   boxShadow: AppDesignTokens.shadowSm,
                                 )
                               : BoxDecoration(
-                                  color: Colors.white,
+                                  color: context.colors.surfaceCard,
                                   borderRadius: _getBorderRadius(isUser),
                                   boxShadow: AppDesignTokens.shadowSm,
-                                  border: Border.all(color: AppDesignTokens.neutral200),
+                                  border: Border.all(color: context.colors.border),
                                 ),
                             child: ClipRRect(
                               borderRadius: _getBorderRadius(isUser),
@@ -118,15 +119,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   decoration: isUser ? null : BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        Colors.white.withOpacity(0.9),
-                                        Colors.white.withOpacity(0.95),
+                                        context.colors.surfaceGlass,
+                                        context.colors.surfaceCard,
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                                    padding: const EdgeInsets.symmetric(vertical: AppDesignTokens.spacing12, horizontal: AppDesignTokens.spacing16),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -134,45 +135,45 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           data: widget.message.content,
                                           styleSheet: MarkdownStyleSheet(
                                             p: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral800,
+                                              color: isUser ? Colors.white : context.colors.textPrimary,
                                               fontSize: AppDesignTokens.fontSizeBase,
                                               height: AppDesignTokens.lineHeightNormal,
                                             ),
                                             h1: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              color: isUser ? Colors.white : context.colors.textPrimary,
                                               fontSize: AppDesignTokens.fontSize2xl,
                                               fontWeight: AppDesignTokens.fontWeightBold,
                                             ),
                                             h2: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              color: isUser ? Colors.white : context.colors.textPrimary,
                                               fontSize: AppDesignTokens.fontSizeXl,
                                               fontWeight: AppDesignTokens.fontWeightBold,
                                             ),
                                             h3: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral900,
+                                              color: isUser ? Colors.white : context.colors.textPrimary,
                                               fontSize: AppDesignTokens.fontSizeLg,
                                               fontWeight: AppDesignTokens.fontWeightSemibold,
                                             ),
                                             code: TextStyle(
-                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : AppDesignTokens.neutral100,
+                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : context.colors.surfaceElevated,
                                               fontFamily: 'monospace',
                                               fontSize: AppDesignTokens.fontSizeSm,
                                               color: isUser ? Colors.white : AppDesignTokens.secondaryBase,
                                             ),
                                             codeblockDecoration: BoxDecoration(
-                                              color: isUser ? Colors.white.withOpacity(0.1) : AppDesignTokens.neutral100,
+                                              color: isUser ? Colors.white.withOpacity(0.1) : context.colors.surfaceElevated,
                                               borderRadius: AppDesignTokens.borderRadius12,
                                             ),
                                             codeblockPadding: const EdgeInsets.all(AppDesignTokens.spacing12),
                                             blockquote: TextStyle(
-                                              color: isUser ? Colors.white.withOpacity(0.8) : AppDesignTokens.neutral600,
+                                              color: isUser ? Colors.white.withOpacity(0.8) : context.colors.textSecondary,
                                               fontStyle: FontStyle.italic,
                                             ),
                                             blockquoteDecoration: BoxDecoration(
                                               border: Border(
                                                 left: BorderSide(
                                                   color: isUser ? Colors.white.withOpacity(0.5) : AppDesignTokens.primaryBase,
-                                                  width: 3.0,
+                                                  width: AppDesignTokens.spacing4 - 1.0,
                                                 ),
                                               ),
                                             ),
@@ -181,7 +182,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               decoration: TextDecoration.underline,
                                             ),
                                             listBullet: TextStyle(
-                                              color: isUser ? Colors.white : AppDesignTokens.neutral700,
+                                              color: isUser ? Colors.white : context.colors.textSecondary,
                                             ),
                                           ),
                                           onTapLink: (text, href, title) {

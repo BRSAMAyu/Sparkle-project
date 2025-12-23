@@ -132,6 +132,7 @@ class AppThemes {
         cardShadow: AppDesignTokens.shadowMd,
         elevatedShadow: AppDesignTokens.shadowLg,
       ),
+      SparkleColors.light,
     ],
 
     // Card theme with precise shadows
@@ -357,6 +358,7 @@ class AppThemes {
         cardShadow: AppDesignTokens.shadowMd,
         elevatedShadow: AppDesignTokens.shadowLg,
       ),
+      SparkleColors.dark,
     ],
 
     // Card theme
@@ -554,4 +556,220 @@ class AppThemes {
 /// Helper extension to access custom theme properties
 extension ThemeExtensionHelper on ThemeData {
   AppThemeExtension? get appExtension => extension<AppThemeExtension>();
+}
+
+/// Sparkle 应用专用颜色扩展 - 支持深色/浅色模式
+@immutable
+class SparkleColors extends ThemeExtension<SparkleColors> {
+  // 任务类型颜色
+  final Color taskLearning;
+  final Color taskTraining;
+  final Color taskErrorFix;
+  final Color taskReflection;
+  final Color taskSocial;
+  final Color taskPlanning;
+
+  // 计划类型颜色
+  final Color planSprint;
+  final Color planGrowth;
+
+  // 表面颜色
+  final Color surfaceCard;
+  final Color surfaceElevated;
+  final Color surfaceGlass;
+
+  // 文本颜色
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textTertiary;
+  final Color textOnPrimary;
+
+  // 边框和分割线颜色
+  final Color border;
+  final Color divider;
+
+  const SparkleColors({
+    required this.taskLearning,
+    required this.taskTraining,
+    required this.taskErrorFix,
+    required this.taskReflection,
+    required this.taskSocial,
+    required this.taskPlanning,
+    required this.planSprint,
+    required this.planGrowth,
+    required this.surfaceCard,
+    required this.surfaceElevated,
+    required this.surfaceGlass,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    required this.textOnPrimary,
+    required this.border,
+    required this.divider,
+  });
+
+  /// 浅色主题配色
+  static const light = SparkleColors(
+    // 任务类型 - 使用饱和度适中的颜色
+    taskLearning: Color(0xFF2196F3),
+    taskTraining: Color(0xFFFF9800),
+    taskErrorFix: Color(0xFFF44336),
+    taskReflection: Color(0xFF9C27B0),
+    taskSocial: Color(0xFF4CAF50),
+    taskPlanning: Color(0xFF009688),
+    // 计划类型
+    planSprint: Color(0xFFE53935),
+    planGrowth: Color(0xFF43A047),
+    // 表面颜色
+    surfaceCard: Colors.white,
+    surfaceElevated: Color(0xFFFAFAFA),
+    surfaceGlass: Color(0xF0FFFFFF),
+    // 文本颜色
+    textPrimary: AppDesignTokens.neutral900,
+    textSecondary: AppDesignTokens.neutral700,
+    textTertiary: AppDesignTokens.neutral500,
+    textOnPrimary: Colors.white,
+    // 边框和分割线
+    border: AppDesignTokens.neutral300,
+    divider: AppDesignTokens.neutral200,
+  );
+
+  /// 深色主题配色
+  static const dark = SparkleColors(
+    // 任务类型 - 使用更亮的颜色以提高对比度
+    taskLearning: Color(0xFF64B5F6),
+    taskTraining: Color(0xFFFFB74D),
+    taskErrorFix: Color(0xFFEF5350),
+    taskReflection: Color(0xFFBA68C8),
+    taskSocial: Color(0xFF81C784),
+    taskPlanning: Color(0xFF4DB6AC),
+    // 计划类型
+    planSprint: Color(0xFFFF5252),
+    planGrowth: Color(0xFF66BB6A),
+    // 表面颜色
+    surfaceCard: AppDesignTokens.neutral800,
+    surfaceElevated: AppDesignTokens.neutral700,
+    surfaceGlass: Color(0xF0424242),
+    // 文本颜色
+    textPrimary: AppDesignTokens.neutral50,
+    textSecondary: AppDesignTokens.neutral300,
+    textTertiary: AppDesignTokens.neutral500,
+    textOnPrimary: Colors.white,
+    // 边框和分割线
+    border: AppDesignTokens.neutral700,
+    divider: AppDesignTokens.neutral600,
+  );
+
+  @override
+  SparkleColors copyWith({
+    Color? taskLearning,
+    Color? taskTraining,
+    Color? taskErrorFix,
+    Color? taskReflection,
+    Color? taskSocial,
+    Color? taskPlanning,
+    Color? planSprint,
+    Color? planGrowth,
+    Color? surfaceCard,
+    Color? surfaceElevated,
+    Color? surfaceGlass,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textTertiary,
+    Color? textOnPrimary,
+    Color? border,
+    Color? divider,
+  }) {
+    return SparkleColors(
+      taskLearning: taskLearning ?? this.taskLearning,
+      taskTraining: taskTraining ?? this.taskTraining,
+      taskErrorFix: taskErrorFix ?? this.taskErrorFix,
+      taskReflection: taskReflection ?? this.taskReflection,
+      taskSocial: taskSocial ?? this.taskSocial,
+      taskPlanning: taskPlanning ?? this.taskPlanning,
+      planSprint: planSprint ?? this.planSprint,
+      planGrowth: planGrowth ?? this.planGrowth,
+      surfaceCard: surfaceCard ?? this.surfaceCard,
+      surfaceElevated: surfaceElevated ?? this.surfaceElevated,
+      surfaceGlass: surfaceGlass ?? this.surfaceGlass,
+      textPrimary: textPrimary ?? this.textPrimary,
+      textSecondary: textSecondary ?? this.textSecondary,
+      textTertiary: textTertiary ?? this.textTertiary,
+      textOnPrimary: textOnPrimary ?? this.textOnPrimary,
+      border: border ?? this.border,
+      divider: divider ?? this.divider,
+    );
+  }
+
+  @override
+  SparkleColors lerp(ThemeExtension<SparkleColors>? other, double t) {
+    if (other is! SparkleColors) return this;
+    return SparkleColors(
+      taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
+      taskTraining: Color.lerp(taskTraining, other.taskTraining, t)!,
+      taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t)!,
+      taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
+      taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
+      taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
+      planSprint: Color.lerp(planSprint, other.planSprint, t)!,
+      planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
+      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
+      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
+      surfaceGlass: Color.lerp(surfaceGlass, other.surfaceGlass, t)!,
+      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
+      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+      textOnPrimary: Color.lerp(textOnPrimary, other.textOnPrimary, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      divider: Color.lerp(divider, other.divider, t)!,
+    );
+  }
+
+  /// 根据任务类型获取颜色
+  Color getTaskColor(String taskType) {
+    switch (taskType.toLowerCase()) {
+      case 'learning':
+        return taskLearning;
+      case 'training':
+        return taskTraining;
+      case 'error_fix':
+        return taskErrorFix;
+      case 'reflection':
+        return taskReflection;
+      case 'social':
+        return taskSocial;
+      case 'planning':
+        return taskPlanning;
+      default:
+        return taskLearning;
+    }
+  }
+
+  /// 根据计划类型获取颜色
+  Color getPlanColor(String planType) {
+    switch (planType.toLowerCase()) {
+      case 'sprint':
+        return planSprint;
+      case 'growth':
+        return planGrowth;
+      default:
+        return planSprint;
+    }
+  }
+
+  /// 创建任务类型渐变
+  LinearGradient getTaskGradient(String taskType) {
+    final color = getTaskColor(taskType);
+    return LinearGradient(
+      colors: [color, color.withOpacity(0.7)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+}
+
+/// 便捷访问扩展
+extension SparkleColorsExtension on BuildContext {
+  SparkleColors get colors =>
+      Theme.of(this).extension<SparkleColors>() ?? SparkleColors.light;
 }

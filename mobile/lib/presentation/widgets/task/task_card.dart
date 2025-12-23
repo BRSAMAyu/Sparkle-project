@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
@@ -49,38 +50,20 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     super.dispose();
   }
 
-  LinearGradient _getTypeGradient(TaskType type) {
-    switch (type) {
-      case TaskType.learning:
-        return LinearGradient(colors: [Colors.blue.shade300, Colors.blue.shade500]);
-      case TaskType.training:
-        return LinearGradient(colors: [Colors.orange.shade300, Colors.orange.shade500]);
-      case TaskType.errorFix:
-        return LinearGradient(colors: [Colors.red.shade300, Colors.red.shade500]);
-      case TaskType.reflection:
-        return LinearGradient(colors: [Colors.purple.shade300, Colors.purple.shade500]);
-      case TaskType.social:
-        return LinearGradient(colors: [Colors.green.shade300, Colors.green.shade500]);
-      case TaskType.planning:
-        return LinearGradient(colors: [Colors.teal.shade300, Colors.teal.shade500]);
-    }
+  LinearGradient _getTypeGradient(BuildContext context, TaskType type) {
+    return context.colors.getTaskGradient(type.name);
   }
 
-  LinearGradient _getBackgroundGradient(TaskType type) {
-    switch (type) {
-      case TaskType.learning:
-        return LinearGradient(colors: [Colors.blue.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case TaskType.training:
-        return LinearGradient(colors: [Colors.orange.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case TaskType.errorFix:
-        return LinearGradient(colors: [Colors.red.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case TaskType.reflection:
-        return LinearGradient(colors: [Colors.purple.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case TaskType.social:
-        return LinearGradient(colors: [Colors.green.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case TaskType.planning:
-        return LinearGradient(colors: [Colors.teal.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
-    }
+  LinearGradient _getBackgroundGradient(BuildContext context, TaskType type) {
+    final taskColor = context.colors.getTaskColor(type.name);
+    return LinearGradient(
+      colors: [
+        taskColor.withOpacity(0.05),
+        context.colors.surfaceCard,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
   }
 
   @override
@@ -114,7 +97,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
-                    gradient: _getBackgroundGradient(widget.task.type),
+                    gradient: _getBackgroundGradient(context, widget.task.type),
                     borderRadius: AppDesignTokens.borderRadius12,
                     boxShadow: AppDesignTokens.shadowSm,
                   ),
@@ -143,7 +126,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               Container(
                                 width: 4,
                                 decoration: BoxDecoration(
-                                  gradient: _getTypeGradient(widget.task.type),
+                                  gradient: _getTypeGradient(context, widget.task.type),
                                 ),
                               ),
                               // Content
@@ -176,10 +159,10 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             const SizedBox(width: AppDesignTokens.spacing8),
                                             _TaskTypeChip(type: widget.task.type),
                                             if (widget.task.status == TaskStatus.completed) ...[
-                                              const SizedBox(width: 4),
+                                              const SizedBox(width: AppDesignTokens.spacing4),
                                               const Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
-                                               const SizedBox(width: 4),
+                                               const SizedBox(width: AppDesignTokens.spacing4),
                                               _StatusChip(status: widget.task.status),
                                             ],
                                           ],
@@ -221,7 +204,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                                 },
                                               ),
                                             if (widget.onComplete != null && widget.task.status != TaskStatus.completed) ...[
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: AppDesignTokens.spacing8),
                                               _ActionButton(
                                                 icon: Icons.check_rounded,
                                                 color: AppDesignTokens.success,
@@ -254,12 +237,12 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(Icons.cloud_off, color: Colors.white, size: 32),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: AppDesignTokens.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: AppDesignTokens.spacing12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -332,7 +315,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: AppDesignTokens.borderRadius20,
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
@@ -409,7 +392,7 @@ class _TaskTypeChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppDesignTokens.borderRadius12,
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
@@ -450,7 +433,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppDesignTokens.borderRadius12,
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(

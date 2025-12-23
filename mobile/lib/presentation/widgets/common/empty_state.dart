@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -215,10 +216,10 @@ class EmptyState extends StatelessWidget {
             // 标题
             Text(
               title ?? _getDefaultTitle(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppDesignTokens.fontSize2xl,
                 fontWeight: AppDesignTokens.fontWeightBold,
-                color: AppDesignTokens.neutral900,
+                color: context.colors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),

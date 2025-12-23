@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/utils/responsive_utils.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -61,8 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
       currentIndex: _selectedIndex,
       onTap: (index) => setState(() => _selectedIndex = index),
       type: BottomNavigationBarType.fixed,
-      backgroundColor: const Color(0xFF0D1B2A),
-      unselectedItemColor: Colors.white54,
+      backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+      unselectedItemColor: context.colors.textSecondary,
       selectedItemColor: AppDesignTokens.primaryBase,
     );
   }

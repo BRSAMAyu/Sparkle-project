@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -53,7 +54,7 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
       } : null,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.surfaceCard,
           borderRadius: AppDesignTokens.borderRadius16,
           boxShadow: AppDesignTokens.shadowMd,
         ),

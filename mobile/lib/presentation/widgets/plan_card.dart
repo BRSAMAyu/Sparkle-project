@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 计划卡片组件
 /// 用于在聊天中显示 AI 生成的计划
@@ -128,33 +130,25 @@ class PlanCard extends StatelessWidget {
   }
 
   Widget _buildPlanTypeChip(BuildContext context, String type) {
-    Color color;
-    String label;
-    
-    switch (type) {
-      case 'sprint':
-        color = Colors.red;
-        label = '冲刺计划';
-        break;
-      case 'growth':
-        color = Colors.green;
-        label = '成长计划';
-        break;
-      default:
-        color = Colors.grey;
-        label = type;
-    }
-    
+    final color = context.colors.getPlanColor(type);
+    final label = type == 'sprint' ? '冲刺计划' : type == 'growth' ? '成长计划' : type;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDesignTokens.spacing8,
+        vertical: AppDesignTokens.spacing4,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppDesignTokens.borderRadius12,
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontSize: AppDesignTokens.fontSizeXs,
+        ),
       ),
     );
   }

@@ -116,11 +116,10 @@ class CognitiveData {
   final bool hasNewInsight;
 
   CognitiveData({
-    this.weeklyPattern,
+    required this.status, this.weeklyPattern,
     this.patternType,
     this.description,
     this.solutionText,
-    required this.status,
     this.hasNewInsight = false,
   });
 }
