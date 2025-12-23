@@ -20,11 +20,13 @@ from app.models.community import (
     Friendship, FriendshipStatus,
     Group, GroupType, GroupRole,
     GroupMember, GroupMessage, MessageType,
-    GroupTask, GroupTaskClaim
+    GroupTask, GroupTaskClaim, SharedResource
 )
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
 from app.models.analytics import UserDailyMetric
 from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.focus import FocusSession, FocusType, FocusStatus
+from app.models.vocabulary import WordBook, DictionaryEntry
 
 __all__ = [
     "BaseModel",
@@ -62,10 +64,18 @@ __all__ = [
     "MessageType",
     "GroupTask",
     "GroupTaskClaim",
+    "SharedResource",
     # Cognitive Prism
     "CognitiveFragment",
     "BehaviorPattern",
     # Analytics
     "UserDailyMetric",
     "CuriosityCapsule",
+    # Focus
+    "FocusSession",
+    "FocusType",
+    "FocusStatus",
+    # Vocabulary
+    "WordBook",
+    "DictionaryEntry",
 ]

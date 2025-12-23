@@ -3,9 +3,14 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/vocabulary_lookup_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/wordbook_tool.dart';
 
 class QuickToolsPanel extends StatelessWidget {
-  const QuickToolsPanel({super.key});
+  final String? taskId; // 当前任务ID，用于关联
+
+  const QuickToolsPanel({super.key, this.taskId});
 
   void _showTool(BuildContext context, Widget tool) {
     showModalBottomSheet(
@@ -21,8 +26,10 @@ class QuickToolsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
       children: [
         _ToolButton(
           icon: Icons.calculate_outlined,
@@ -41,6 +48,24 @@ class QuickToolsPanel extends StatelessWidget {
           label: '笔记',
           color: Colors.orange,
           onTap: () => _showTool(context, const NotesTool()),
+        ),
+        _ToolButton(
+          icon: Icons.search_rounded,
+          label: '查词',
+          color: Colors.cyan,
+          onTap: () => _showTool(context, VocabularyLookupTool(taskId: taskId)),
+        ),
+        _ToolButton(
+          icon: Icons.lightbulb_outlined,
+          label: '闪念胶囊',
+          color: Colors.amber,
+          onTap: () => _showTool(context, FlashCapsuleTool(taskId: taskId)),
+        ),
+        _ToolButton(
+          icon: Icons.menu_book_rounded,
+          label: '生词本',
+          color: Colors.green,
+          onTap: () => _showTool(context, const WordbookTool()),
         ),
       ],
     );

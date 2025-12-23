@@ -354,7 +354,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             const SizedBox(height: AppDesignTokens.spacing16),
 
                             // 3. Quick Tools Panel
-                            const QuickToolsPanel(),
+                            QuickToolsPanel(taskId: activeTask.id),
                             const SizedBox(height: AppDesignTokens.spacing16),
 
                             // 4. Task Chat Panel
