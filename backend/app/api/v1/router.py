@@ -18,7 +18,8 @@ from app.api.v1 import (
     community,
     cognitive,
     omnibar,
-    dashboard
+    dashboard,
+    analytics
 )
 
 api_router = APIRouter()
@@ -36,6 +37,7 @@ api_router.include_router(community.router, prefix="/community", tags=["communit
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 
 
 @api_router.get("/")

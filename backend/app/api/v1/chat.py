@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.services.llm_service import llm_service, LLMResponse, StreamChunk
+from app.services.analytics_service import AnalyticsService
 from app.tools.registry import tool_registry
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.composer import ResponseComposer
@@ -542,13 +543,20 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
         "active_plans": [],
         "flame_level": 1,
         "flame_brightness": 0,
-        "knowledge_stats": {}
+        "knowledge_stats": {},
+        "analytics_summary": ""
     }
 
     try:
+        # 0. 获取 Analytics Summary
+        analytics_service = AnalyticsService(db)
+        # Ensure today's stats are up to date (optional, might be slow for every chat, maybe skip calculation here and just read?)
+        # For MVP, let's just get the summary which reads stored data.
+        # Ideally, we calculate it async or periodically.
+        context["analytics_summary"] = await analytics_service.get_user_profile_summary(user_id)
+
         # 1. 获取用户基本信息（火花等级和亮度）
-        user_stmt = select(User).where(User.id == user_id)
-        user_result = await db.execute(user_stmt)
+        user_stmt = select(User).where(User.id == user_id)        user_result = await db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
 
         if user:
