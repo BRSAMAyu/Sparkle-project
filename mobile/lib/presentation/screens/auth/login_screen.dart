@@ -132,6 +132,63 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text('Login'),
                 ),
+                
+                const SizedBox(height: 24),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: TextStyle(color: Colors.grey)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Social Login Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _SocialLoginButton(
+                      icon: Icons.g_mobiledata_rounded, // Use a generic icon or custom asset
+                      label: 'Google',
+                      onTap: () {
+                        // Mock Google Login
+                        ref.read(authProvider.notifier).socialLogin(
+                          provider: 'google',
+                          token: 'mock-google-token-123',
+                          nickname: 'Google User',
+                        );
+                      },
+                    ),
+                    _SocialLoginButton(
+                      icon: Icons.apple_rounded, 
+                      label: 'Apple',
+                      onTap: () {
+                        // Mock Apple Login
+                        ref.read(authProvider.notifier).socialLogin(
+                          provider: 'apple',
+                          token: 'mock-apple-token-123',
+                          nickname: 'Apple User',
+                        );
+                      },
+                    ),
+                    _SocialLoginButton(
+                      icon: Icons.wechat_rounded, // Assuming Material Icons has WeChat or similar
+                      label: 'WeChat',
+                      onTap: () {
+                        // Mock WeChat Login
+                        ref.read(authProvider.notifier).socialLogin(
+                          provider: 'wechat',
+                          token: 'mock-wechat-token-123',
+                          nickname: 'WeChat User',
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 16),
 
                 // Register Link
@@ -158,6 +215,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SocialLoginButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SocialLoginButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, size: 32, color: Colors.black87),
       ),
     );
   }

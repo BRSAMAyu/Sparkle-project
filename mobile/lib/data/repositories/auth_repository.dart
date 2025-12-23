@@ -57,6 +57,34 @@ class AuthRepository {
     }
   }
 
+  Future<TokenResponse> socialLogin({
+    required String provider,
+    required String token,
+    String? email,
+    String? nickname,
+    String? avatarUrl,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        '/auth/social-login', // Assuming endpoint is relative to base URL prefix
+        data: {
+          'provider': provider,
+          'token': token,
+          'email': email,
+          'nickname': nickname,
+          'avatar_url': avatarUrl,
+        },
+      );
+      final tokenResponse = TokenResponse.fromJson(response.data);
+      await saveTokens(tokenResponse);
+      return tokenResponse;
+    } on DioException catch (e) {
+      throw e.response?.data['detail'] ?? 'Social login failed';
+    } catch (e) {
+      throw 'An unexpected error occurred: $e';
+    }
+  }
+
   Future<void> logout() async {
     // In a real app, you might want to call a server endpoint to invalidate the token
     await clearTokens();

@@ -65,6 +65,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> socialLogin({
+    required String provider,
+    required String token,
+    String? email,
+    String? nickname,
+    String? avatarUrl,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _authRepository.socialLogin(
+        provider: provider,
+        token: token,
+        email: email,
+        nickname: nickname,
+        avatarUrl: avatarUrl,
+      );
+      final user = await _authRepository.getCurrentUser();
+      state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
+    }
+  }
+
   Future<void> register(String username, String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {

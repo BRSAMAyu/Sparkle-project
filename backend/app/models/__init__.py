@@ -20,14 +20,12 @@ from app.models.community import (
     Friendship, FriendshipStatus,
     Group, GroupType, GroupRole,
     GroupMember, GroupMessage, MessageType,
-        GroupTask,
-        GroupTaskClaim
-    )
-    from app.models.cognitive import CognitiveFragment, BehaviorPattern
-    
-    __all__ = [
-        "BaseModel",
-    
+    GroupTask, GroupTaskClaim
+)
+from app.models.cognitive import CognitiveFragment, BehaviorPattern
+
+__all__ = [
+    "BaseModel",
     "GUID",
     "User",
     "PushPreference",

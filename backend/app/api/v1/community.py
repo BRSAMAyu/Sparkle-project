@@ -116,6 +116,46 @@ async def get_pending_requests(
     return requests
 
 
+@router.get("/users/search", response_model=List[UserBrief], summary="搜索用户")
+async def search_users(
+    keyword: str = Query(..., min_length=1),
+    limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    搜索用户（用于添加好友）
+    
+    支持按用户名或昵称搜索
+    """
+    from sqlalchemy import select, or_
+    
+    # Simple search implementation
+    stmt = select(User).where(
+        or_(
+            User.username.ilike(f"%{keyword}%"),
+            User.nickname.ilike(f"%{keyword}%")
+        )
+    ).where(
+        User.id != current_user.id,
+        User.is_active == True
+    ).limit(limit)
+    
+    result = await db.execute(stmt)
+    users = result.scalars().all()
+    
+    return [
+        UserBrief(
+            id=user.id,
+            username=user.username,
+            nickname=user.nickname,
+            avatar_url=user.avatar_url,
+            flame_level=user.flame_level,
+            flame_brightness=user.flame_brightness
+        ) for user in users
+    ]
+
+
 # ============ WebSocket ============
 
 @router.websocket("/groups/{group_id}/ws")

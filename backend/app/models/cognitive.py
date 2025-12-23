@@ -3,9 +3,8 @@ Cognitive Prism Models
 认知棱镜相关模型
 """
 import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean
+from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from pgvector.sqlalchemy import Vector
 
 from app.models.base import BaseModel, GUID
@@ -29,7 +28,7 @@ class CognitiveFragment(BaseModel):
     
     # AI 预分析结果
     sentiment = Column(String(20), nullable=True)   # anxious, bored, neutral...
-    tags = Column(ARRAY(String), nullable=True)     # ['procrastination', 'distraction']
+    tags = Column(JSON, nullable=True)     # ['procrastination', 'distraction']
     
     # 语义向量
     embedding = Column(Vector(1536), nullable=True)
@@ -57,7 +56,7 @@ class BehaviorPattern(BaseModel):
     # 关联的 cognitive_fragments ID 数组
     # 注意: 这里存储 ID 数组，应用层处理关联，或者使用多对多关系表。
     # 为了简化，设计文档建议使用 ID 数组。在 SQLAlchemy 中可以使用 ARRAY(GUID)
-    evidence_ids = Column(ARRAY(GUID), nullable=True)
+    evidence_ids = Column(JSON, nullable=True)
     
     is_archived = Column(Boolean, default=False) # 用户是否已克服此定式
 
