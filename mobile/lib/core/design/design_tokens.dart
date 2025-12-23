@@ -363,10 +363,37 @@ class AppDesignTokens {
   static const double breakpointDesktop = 1024.0;
   static const double breakpointWide = 1440.0;
 
+  // ==================== Content Width Constraints ====================
+
+  /// Maximum content width for different screen sizes
+  static const double contentMaxWidthMobile = 600.0;
+  static const double contentMaxWidthTablet = 840.0;
+  static const double contentMaxWidthDesktop = 1200.0;
+
   // ==================== Opacity Levels ====================
 
   static const double opacityDisabled = 0.5;
   static const double opacitySubtle = 0.7;
   static const double opacityMedium = 0.8;
   static const double opacityFull = 1.0;
+
+  // ==================== Component-Specific Tokens ====================
+
+  /// Chat bubble maximum width as a factor of screen width
+  static const double chatBubbleMaxWidthFactor = 0.75;
+
+  /// Task card type indicator stripe width
+  static const double cardStripeWidth = 4.0;
+
+  /// Minimum touch target size for accessibility (WCAG 2.1)
+  static const double touchTargetMinSize = 48.0;
+
+  /// Standard divider thickness
+  static const double dividerThickness = 1.0;
+
+  /// Card elevation heights
+  static const double elevationNone = 0.0;
+  static const double elevationLow = 2.0;
+  static const double elevationMedium = 4.0;
+  static const double elevationHigh = 8.0;
 }

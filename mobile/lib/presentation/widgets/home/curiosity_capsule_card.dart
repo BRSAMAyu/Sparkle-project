@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/data/models/curiosity_capsule_model.dart';
@@ -47,7 +48,10 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                 MarkdownBody(data: capsule.content),
                 const SizedBox(height: 8),
                 if (capsule.relatedSubject != null)
-                  Chip(label: Text(capsule.relatedSubject!), backgroundColor: AppDesignTokens.neutral100),
+                  Chip(
+                    label: Text(capsule.relatedSubject!),
+                    backgroundColor: context.colors.surfaceElevated,
+                  ),
               ],
             ),
           ),

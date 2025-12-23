@@ -20,8 +20,7 @@ class GlassCard extends StatefulWidget {
   final int mainAxisCellCount;
 
   const GlassCard({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.padding,
     this.width,
     this.height,
