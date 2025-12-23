@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -21,9 +22,10 @@ class ActionCard extends StatefulWidget {
   State<ActionCard> createState() => _ActionCardState();
 }
 
-class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateMixin {
+class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   late AnimationController _pulseController;
-  late Animation<double> _scaleAnimation;
+  late Animation<double> _iconScaleAnimation;
+  late AnimationController _pressController;
 
   @override
   void initState() {
@@ -33,14 +35,20 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _pressController = AnimationController(
+      vsync: this,
+      duration: SparkleMotion.fast,
     );
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _pressController.dispose();
     super.dispose();
   }
 
@@ -49,140 +57,146 @@ class _ActionCardState extends State<ActionCard> with SingleTickerProviderStateM
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
 
     return GestureDetector(
+      onTapDown: hasAction ? (_) => _pressController.forward() : null,
+      onTapUp: hasAction ? (_) => _pressController.reverse() : null,
+      onTapCancel: hasAction ? () => _pressController.reverse() : null,
       onTap: hasAction ? () {
         HapticFeedback.selectionClick();
       } : null,
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.colors.surfaceCard,
-          borderRadius: AppDesignTokens.borderRadius16,
-          boxShadow: AppDesignTokens.shadowMd,
-        ),
-        child: ClipRRect(
-          borderRadius: AppDesignTokens.borderRadius16,
-          child: Stack(
-            children: [
-              // Gradient Stripe
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 4,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: _getActionGradient(widget.action.type),
-                  ),
-                ),
-              ),
-
-              // Shimmer overlay for unconfirmed actions
-              if (hasAction)
-                Positioned.fill(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: -2.0, end: 2.0),
-                    duration: const Duration(seconds: 3),
-                    builder: (context, value, child) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.transparent,
-                              Colors.white.withValues(alpha: 0.1),
-                              Colors.transparent,
-                            ],
-                            stops: [
-                              (value - 0.3).clamp(0.0, 1.0),
-                              value.clamp(0.0, 1.0),
-                              (value + 0.3).clamp(0.0, 1.0),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    onEnd: () {
-                      // Restart animation
-                      setState(() {});
-                    },
-                  ),
-                ),
-
-              Padding(
-                padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        AnimatedBuilder(
-                          animation: _scaleAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: hasAction ? _scaleAnimation.value : 1.0,
-                              child: Container(
-                                padding: const EdgeInsets.all(AppDesignTokens.spacing8),
-                                decoration: BoxDecoration(
-                                  gradient: _getActionGradient(widget.action.type),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  _getActionIcon(widget.action.type),
-                                  color: Colors.white,
-                                  size: AppDesignTokens.iconSizeSm,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: AppDesignTokens.spacing12),
-                        Expanded(
-                          child: Text(
-                            _getTitleForAction(widget.action.type),
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: AppDesignTokens.fontWeightBold,
-                              color: AppDesignTokens.neutral900,
-                            ),
-                          ),
-                        ),
-                      ],
+      child: SparkleMotion.pressScale(
+        animation: _pressController,
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceCard,
+            borderRadius: AppDesignTokens.borderRadius16,
+            boxShadow: AppDesignTokens.shadowMd,
+          ),
+          child: ClipRRect(
+            borderRadius: AppDesignTokens.borderRadius16,
+            child: Stack(
+              children: [
+                // Gradient Stripe
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: _getActionGradient(widget.action.type),
                     ),
-                    const SizedBox(height: AppDesignTokens.spacing16),
-                    _buildContentForAction(context, widget.action),
-                    if (hasAction) ...[
-                      const SizedBox(height: AppDesignTokens.spacing16),
+                  ),
+                ),
+
+                // Shimmer overlay for unconfirmed actions
+                if (hasAction)
+                  Positioned.fill(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: -2.0, end: 2.0),
+                      duration: const Duration(seconds: 3),
+                      builder: (context, value, child) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.transparent,
+                                Colors.white.withValues(alpha: 0.1),
+                                Colors.transparent,
+                              ],
+                              stops: [
+                                (value - 0.3).clamp(0.0, 1.0),
+                                value.clamp(0.0, 1.0),
+                                (value + 0.3).clamp(0.0, 1.0),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      onEnd: () {
+                        // Restart animation
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ),
+
+                Padding(
+                  padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (widget.onDismiss != null)
-                            CustomButton.text(
-                              text: '忽略',
-                              onPressed: widget.onDismiss,
-                              size: ButtonSize.small,
+                          AnimatedBuilder(
+                            animation: _iconScaleAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: hasAction ? _iconScaleAnimation.value : 1.0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(AppDesignTokens.spacing8),
+                                  decoration: BoxDecoration(
+                                    gradient: _getActionGradient(widget.action.type),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    _getActionIcon(widget.action.type),
+                                    color: Colors.white,
+                                    size: AppDesignTokens.iconSizeSm,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: AppDesignTokens.spacing12),
+                          Expanded(
+                            child: Text(
+                              _getTitleForAction(widget.action.type),
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: AppDesignTokens.fontWeightBold,
+                                color: AppDesignTokens.neutral900,
+                              ),
                             ),
-                          const SizedBox(width: AppDesignTokens.spacing8),
-                          if (widget.onConfirm != null)
-                            CustomButton.primary(
-                              text: '确认',
-                              icon: Icons.check_rounded,
-                              onPressed: widget.onConfirm,
-                              size: ButtonSize.small,
-                              customGradient: _getActionGradient(widget.action.type),
-                            ),
+                          ),
                         ],
                       ),
+                      const SizedBox(height: AppDesignTokens.spacing16),
+                      _buildContentForAction(context, widget.action),
+                      if (hasAction) ...[
+                        const SizedBox(height: AppDesignTokens.spacing16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (widget.onDismiss != null)
+                              CustomButton.text(
+                                text: '忽略',
+                                onPressed: widget.onDismiss,
+                                size: ButtonSize.small,
+                              ),
+                            const SizedBox(width: AppDesignTokens.spacing8),
+                            if (widget.onConfirm != null)
+                              CustomButton.primary(
+                                text: '确认',
+                                icon: Icons.check_rounded,
+                                onPressed: widget.onConfirm,
+                                size: ButtonSize.small,
+                                customGradient: _getActionGradient(widget.action.type),
+                              ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

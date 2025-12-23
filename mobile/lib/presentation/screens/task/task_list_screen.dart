@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/animations/staggered_list_animation.dart';
+import 'package:sparkle/core/animations/staggered_responsive_grid.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
@@ -10,7 +10,6 @@ import 'package:sparkle/presentation/widgets/task/task_card.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
-import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, completed }
 
@@ -182,7 +181,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       }
     }
 
-    return StaggeredListAnimation(
+    return StaggeredResponsiveGrid(
       itemCount: tasks.length,
       builder: (context, index, animation) {
         final task = tasks[index];
@@ -194,76 +193,19 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
               end: Offset.zero,
             ).animate(animation),
             child: RepaintBoundary(
-              child: Dismissible(
-                key: Key(task.id),
-                direction: DismissDirection.horizontal,
-                background: Container(
-                  color: AppDesignTokens.success,
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 20),
-                  child: const Icon(Icons.check, color: Colors.white),
-                ),
-                secondaryBackground: Container(
-                  color: AppDesignTokens.error,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.startToEnd) {
-                    HapticFeedback.heavyImpact();
-                    await ref.read(taskListProvider.notifier).completeTask(
-                      task.id,
-                      task.estimatedMinutes,
-                      null,
-                    );
-                    return false;
-                  } else {
-                    HapticFeedback.mediumImpact();
-                    return await showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppDesignTokens.borderRadius20,
-                        ),
-                        title: const Text(
-                          '确认删除',
-                          style: TextStyle(
-                            fontWeight: AppDesignTokens.fontWeightBold,
-                          ),
-                        ),
-                        content: const Text('确定要删除这个任务吗？此操作无法撤销。'),
-                        actions: [
-                          CustomButton.text(
-                            text: '取消',
-                            onPressed: () => Navigator.pop(ctx, false),
-                          ),
-                          CustomButton.primary(
-                            text: '删除',
-                            icon: Icons.delete_rounded,
-                            onPressed: () => Navigator.pop(ctx, true),
-                            customGradient: AppDesignTokens.errorGradient,
-                            size: ButtonSize.small,
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+              child: TaskCard(
+                task: task,
+                onTap: () {
+                  context.push('/tasks/${task.id}');
                 },
-                onDismissed: (direction) {
-                  if (direction == DismissDirection.endToStart) {
-                    ref.read(taskListProvider.notifier).deleteTask(task.id);
-                  }
+                onStart: () {
+                   // Handle start
+                   ref.read(taskListProvider.notifier).startTask(task.id);
                 },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0), // Padding handled by TaskCard margin mostly
-                  child: TaskCard(
-                    task: task,
-                    onTap: () {
-                      context.push('/tasks/${task.id}');
-                    },
-                  ),
-                ),
+                onComplete: () {
+                   // Handle complete
+                   ref.read(taskListProvider.notifier).completeTask(task.id, task.estimatedMinutes, null);
+                },
               ),
             ),
           ),

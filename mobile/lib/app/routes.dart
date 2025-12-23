@@ -1,4 +1,5 @@
 import 'package:animations/animations.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -25,6 +26,26 @@ import 'package:sparkle/presentation/screens/community/group_search_screen.dart'
 import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
 import 'package:sparkle/presentation/screens/community/friends_screen.dart';
 import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
+
+/// Helper to build pages with transitions
+Page<dynamic> _buildTransitionPage({
+  required GoRouterState state,
+  required Widget child,
+  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return SharedAxisTransition(
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        transitionType: type,
+        child: child,
+      );
+    },
+  );
+}
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -62,55 +83,70 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const SplashScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
 
       // Auth Routes
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const LoginScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
       GoRoute(
         path: '/register',
         name: 'register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const RegisterScreen(),
+          type: SharedAxisTransitionType.horizontal,
+        ),
       ),
 
       // Home Routes
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const HomeScreen(),
+          type: SharedAxisTransitionType.scaled, // Fade/Scale in for Home
+        ),
       ),
 
       // Task Routes
       GoRoute(
         path: '/tasks',
         name: 'tasks',
-        builder: (context, state) => const TaskListScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const TaskListScreen(),
+        ),
       ),
       GoRoute(
         path: '/tasks/new',
         name: 'createTask',
-        builder: (context, state) => const TaskCreateScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const TaskCreateScreen(),
+          type: SharedAxisTransitionType.scaled, // Modal-like
+        ),
       ),
       GoRoute(
         path: '/tasks/:id',
         name: 'taskDetail',
         pageBuilder: (context, state) {
           final taskId = state.pathParameters['id']!;
-          return CustomTransitionPage(
-            key: state.pageKey,
+          return _buildTransitionPage(
+            state: state,
             child: TaskDetailScreen(taskId: taskId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SharedAxisTransition(
-                animation: animation,
-                secondaryAnimation: secondaryAnimation,
-                transitionType: SharedAxisTransitionType.horizontal,
-                child: child,
-              );
-            },
           );
         },
       ),
@@ -118,17 +154,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/tasks/:id/execute',
         name: 'taskExecution',
         pageBuilder: (context, state) {
-          return CustomTransitionPage(
-            key: state.pageKey,
+          return _buildTransitionPage(
+            state: state,
             child: const TaskExecutionScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return SharedAxisTransition(
-                animation: animation,
-                secondaryAnimation: secondaryAnimation,
-                transitionType: SharedAxisTransitionType.scaled,
-                child: child,
-              );
-            },
+            type: SharedAxisTransitionType.scaled, // Special mode
           );
         },
       ),
@@ -137,102 +166,134 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/chat',
         name: 'chat',
-        pageBuilder: (context, state) {
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: const ChatScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeThroughTransition(
-                animation: animation,
-                secondaryAnimation: secondaryAnimation,
-                child: child,
-              );
-            },
-          );
-        },
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const ChatScreen(),
+        ),
       ),
 
       // Plan Routes
       GoRoute(
         path: '/sprint',
         name: 'sprint',
-        builder: (context, state) => const SprintScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const SprintScreen(),
+        ),
       ),
       GoRoute(
         path: '/growth',
         name: 'growth',
-        builder: (context, state) => const GrowthScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const GrowthScreen(),
+        ),
       ),
 
       // Profile Routes
       GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const ProfileScreen(),
+        ),
       ),
       GoRoute(
         path: '/settings/learning-mode',
         name: 'learningMode',
-        builder: (context, state) => const LearningModeScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const LearningModeScreen(),
+        ),
       ),
 
       // Galaxy Routes
       GoRoute(
         path: '/galaxy',
         name: 'galaxy',
-        builder: (context, state) => const GalaxyScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const GalaxyScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
 
       // Cognitive Routes
       GoRoute(
         path: '/cognitive/patterns',
         name: 'patternList',
-        builder: (context, state) => const PatternListScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const PatternListScreen(),
+        ),
       ),
 
       // Community Routes
       GoRoute(
         path: '/community/friends',
         name: 'friends',
-        builder: (context, state) => const FriendsScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const FriendsScreen(),
+        ),
       ),
       GoRoute(
         path: '/community/groups',
         name: 'groups',
-        builder: (context, state) => const GroupListScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const GroupListScreen(),
+        ),
       ),
       GoRoute(
         path: '/community/groups/search',
         name: 'groupSearch',
-        builder: (context, state) => const GroupSearchScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const GroupSearchScreen(),
+        ),
       ),
       GoRoute(
         path: '/community/groups/create',
         name: 'createGroup',
-        builder: (context, state) => const CreateGroupScreen(),
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const CreateGroupScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
       GoRoute(
         path: '/community/groups/:id',
         name: 'groupDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final groupId = state.pathParameters['id']!;
-          return GroupDetailScreen(groupId: groupId);
+          return _buildTransitionPage(
+            state: state,
+            child: GroupDetailScreen(groupId: groupId),
+          );
         },
       ),
       GoRoute(
         path: '/community/groups/:id/chat',
         name: 'groupChat',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final groupId = state.pathParameters['id']!;
-          return GroupChatScreen(groupId: groupId);
+          return _buildTransitionPage(
+            state: state,
+            child: GroupChatScreen(groupId: groupId),
+          );
         },
       ),
       GoRoute(
         path: '/community/groups/:id/tasks',
         name: 'groupTasks',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final groupId = state.pathParameters['id']!;
-          return GroupTasksScreen(groupId: groupId);
+          return _buildTransitionPage(
+            state: state,
+            child: GroupTasksScreen(groupId: groupId),
+          );
         },
       ),
     ],

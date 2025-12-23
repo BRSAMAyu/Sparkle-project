@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/core/utils/responsive_utils.dart';
+import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
@@ -38,32 +38,42 @@ class _HomeScreenState extends State<HomeScreen> {
         const ProfileScreen(),
       ];
 
+  static const _destinations = [
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: '驾驶舱',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.auto_awesome_outlined),
+      selectedIcon: Icon(Icons.auto_awesome),
+      label: '星图',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.forum_outlined),
+      selectedIcon: Icon(Icons.forum),
+      label: '对话',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.groups_outlined),
+      selectedIcon: Icon(Icons.groups),
+      label: '社群',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.person_outlined),
+      selectedIcon: Icon(Icons.person),
+      label: '我的',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    if (_selectedIndex == 0) return _screens[0];
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
+    return ResponsiveScaffold(
+      title: 'Sparkle',
       body: _screens[_selectedIndex],
-      bottomNavigationBar: _buildNavigationBar(),
-    );
-  }
-
-  Widget _buildNavigationBar() {
-    return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: '驾驶舱'),
-        BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_outlined), activeIcon: Icon(Icons.auto_awesome), label: '星图'),
-        BottomNavigationBarItem(icon: Icon(Icons.forum_outlined), activeIcon: Icon(Icons.forum), label: '对话'),
-        BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: '社群'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outlined), activeIcon: Icon(Icons.person), label: '我的'),
-      ],
+      destinations: _destinations,
       currentIndex: _selectedIndex,
-      onTap: (index) => setState(() => _selectedIndex = index),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: const Color(0xFF0D1B2A),
-      unselectedItemColor: Colors.white54,
-      selectedItemColor: AppDesignTokens.primaryBase,
+      onDestinationSelected: (index) => setState(() => _selectedIndex = index),
     );
   }
 }
@@ -114,11 +124,11 @@ class _DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3: Omni-Bar
-          Positioned(
+          const Positioned(
             left: 16,
             right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: const OmniBar(),
+            bottom: 16, // Adjusted for ResponsiveScaffold which puts this inside body
+            child: OmniBar(),
           ),
         ],
       ),
@@ -156,36 +166,39 @@ class _DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
-    return StaggeredGrid.count(
-      crossAxisCount: 4,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      children: [
-        // Card A: Focus Core (2x2)
-        StaggeredGridTile.count(
-          crossAxisCellCount: 2,
-          mainAxisCellCount: 2,
-          child: FocusCard(onTap: () => context.push('/focus')),
-        ),
-        // Card B: Cognitive Prism (2x1)
-        const StaggeredGridTile.count(
-          crossAxisCellCount: 2,
-          mainAxisCellCount: 1,
-          child: PrismCard(),
-        ),
-        // Card D: Sprint Ring (1x1)
-        StaggeredGridTile.count(
-          crossAxisCellCount: 1,
-          mainAxisCellCount: 1,
-          child: SprintCard(onTap: () => context.push('/plans')),
-        ),
-        // Card C: Next Actions (1x2)
-        StaggeredGridTile.count(
-          crossAxisCellCount: 1,
-          mainAxisCellCount: 2,
-          child: NextActionsCard(onViewAll: () => context.push('/tasks')),
-        ),
-      ],
+    // Wrap with ContentConstraint for responsive width on desktop
+    return ContentConstraint(
+      child: StaggeredGrid.count(
+        crossAxisCount: 4,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        children: [
+          // Card A: Focus Core (2x2)
+          StaggeredGridTile.count(
+            crossAxisCellCount: 2,
+            mainAxisCellCount: 2,
+            child: FocusCard(onTap: () => context.push('/focus')),
+          ),
+          // Card B: Cognitive Prism (2x1)
+          const StaggeredGridTile.count(
+            crossAxisCellCount: 2,
+            mainAxisCellCount: 1,
+            child: PrismCard(),
+          ),
+          // Card D: Sprint Ring (1x1)
+          StaggeredGridTile.count(
+            crossAxisCellCount: 1,
+            mainAxisCellCount: 1,
+            child: SprintCard(onTap: () => context.push('/plans')),
+          ),
+          // Card C: Next Actions (1x2)
+          StaggeredGridTile.count(
+            crossAxisCellCount: 1,
+            mainAxisCellCount: 2,
+            child: NextActionsCard(onViewAll: () => context.push('/tasks')),
+          ),
+        ],
+      ),
     );
   }
 }

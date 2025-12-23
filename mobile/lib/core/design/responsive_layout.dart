@@ -40,11 +40,7 @@ class ResponsiveScaffold extends StatelessWidget {
   final String? title;
 
   const ResponsiveScaffold({
-    super.key,
-    required this.body,
-    required this.destinations,
-    required this.currentIndex,
-    required this.onDestinationSelected,
+    required this.body, required this.destinations, required this.currentIndex, required this.onDestinationSelected, super.key,
     this.floatingActionButton,
     this.appBar,
     this.title,
@@ -92,7 +88,7 @@ class ResponsiveScaffold extends StatelessWidget {
                       icon: d.icon,
                       selectedIcon: d.selectedIcon ?? d.icon,
                       label: Text(d.label),
-                    ))
+                    ),)
                 .toList(),
           ),
           const VerticalDivider(thickness: 1, width: 1),
@@ -143,7 +139,7 @@ class ResponsiveScaffold extends StatelessWidget {
                       icon: d.icon,
                       selectedIcon: d.selectedIcon ?? d.icon,
                       label: Text(d.label),
-                    )),
+                    ),),
               ],
             ),
           ),
@@ -170,8 +166,7 @@ class ContentConstraint extends StatelessWidget {
   final bool enabled;
 
   const ContentConstraint({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.padding,
     this.enabled = true,
   });
@@ -225,8 +220,7 @@ class ResponsiveGrid extends StatelessWidget {
   final double? childAspectRatio;
 
   const ResponsiveGrid({
-    super.key,
-    required this.children,
+    required this.children, super.key,
     this.spacing = AppDesignTokens.spacing16,
     this.childAspectRatio,
   });
@@ -270,8 +264,7 @@ class ResponsiveSliverGrid extends StatelessWidget {
   final double? childAspectRatio;
 
   const ResponsiveSliverGrid({
-    super.key,
-    required this.children,
+    required this.children, super.key,
     this.spacing = AppDesignTokens.spacing16,
     this.childAspectRatio,
   });
@@ -318,9 +311,7 @@ class ResponsiveTwoColumn extends StatelessWidget {
   final double sidebarWidth;
 
   const ResponsiveTwoColumn({
-    super.key,
-    required this.main,
-    required this.sidebar,
+    required this.main, required this.sidebar, super.key,
     this.sidebarWidth = 320,
   });
 

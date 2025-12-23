@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/presentation/widgets/task_card.dart';
+import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/presentation/widgets/task/task_card.dart';
 import 'package:sparkle/presentation/widgets/knowledge_card.dart';
 import 'package:sparkle/presentation/widgets/task_list_widget.dart'; // New widget for task list
 import 'package:sparkle/presentation/widgets/plan_card.dart';       // New widget for plan card
@@ -58,10 +59,35 @@ class AgentMessageRenderer extends StatelessWidget {
   Widget _buildWidget(BuildContext context, WidgetPayload widget) {
     switch (widget.type) {
       case 'task_card':
-        return TaskCard(
-          data: widget.data,
-          onAction: onTaskAction,
-        );
+        try {
+          // Ensure mandatory fields for TaskModel are present
+          final Map<String, dynamic> data = Map.from(widget.data);
+          data['user_id'] ??= 'unknown';
+          data['tags'] ??= <String>[];
+          data['difficulty'] ??= 1;
+          data['energy_cost'] ??= 1;
+          data['priority'] ??= 1;
+          data['created_at'] ??= DateTime.now().toIso8601String();
+          data['updated_at'] ??= DateTime.now().toIso8601String();
+          
+          // Handle 'type' mapping if it's a string that might not match exactly or needs defaulting
+          // Assuming the backend/LLM sends correct string matching the enum (e.g., "learning")
+          
+          final task = TaskModel.fromJson(data);
+          return TaskCard(
+            task: task,
+            onTap: () => onTaskAction?.call(task.id),
+          );
+        } catch (e) {
+          debugPrint('Error parsing TaskModel in AgentMessageRenderer: $e');
+          return Card(
+            color: Theme.of(context).colorScheme.errorContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('Invalid task data: ${e.toString()}'),
+            ),
+          );
+        }
       
       case 'knowledge_card':
         return KnowledgeCard(data: widget.data);
