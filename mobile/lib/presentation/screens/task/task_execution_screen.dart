@@ -466,22 +466,38 @@ class _TimerControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: AppDesignTokens.spacing8,
-      runSpacing: AppDesignTokens.spacing8,
+    return Column(
       children: [
-        CustomButton.secondary(
-          text: '番茄钟',
-          icon: Icons.timer,
-          onPressed: onTogglePomodoro,
-          size: ButtonSize.small,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppDesignTokens.spacing8,
+          runSpacing: AppDesignTokens.spacing8,
+          children: [
+            CustomButton.secondary(
+              text: '番茄钟',
+              icon: Icons.timer,
+              onPressed: onTogglePomodoro,
+              size: ButtonSize.small,
+            ),
+            ...[15, 25, 45, 60].map((minutes) => CustomButton.secondary(
+              text: '$minutes 分钟',
+              onPressed: () => onSetPreset(minutes),
+              size: ButtonSize.small,
+            ),),
+          ],
         ),
-        ...[15, 25, 45, 60].map((minutes) => CustomButton.secondary(
-          text: '$minutes 分钟',
-          onPressed: () => onSetPreset(minutes),
-          size: ButtonSize.small,
-        ),),
+        const SizedBox(height: 16),
+        CustomButton.primary(
+          text: '进入正念模式',
+          icon: Icons.self_improvement,
+          onPressed: () {
+            final activeTask = ProviderScope.containerOf(context).read(activeTaskProvider);
+            if (activeTask != null) {
+              context.push('/focus/mindfulness', extra: activeTask);
+            }
+          },
+          customGradient: AppDesignTokens.primaryGradient,
+        ),
       ],
     );
   }

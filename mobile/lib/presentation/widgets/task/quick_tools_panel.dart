@@ -6,6 +6,8 @@ import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/vocabulary_lookup_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/wordbook_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/breathing_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/focus_stats_tool.dart';
 
 class QuickToolsPanel extends StatelessWidget {
   final String? taskId; // 当前任务ID，用于关联
@@ -66,6 +68,18 @@ class QuickToolsPanel extends StatelessWidget {
           label: '生词本',
           color: Colors.green,
           onTap: () => _showTool(context, const WordbookTool()),
+        ),
+        _ToolButton(
+          icon: Icons.air,
+          label: '呼吸',
+          color: Colors.indigo,
+          onTap: () => _showTool(context, const BreathingTool()),
+        ),
+        _ToolButton(
+          icon: Icons.bar_chart,
+          label: '统计',
+          color: Colors.deepPurple,
+          onTap: () => _showTool(context, const FocusStatsTool()),
         ),
       ],
     );
