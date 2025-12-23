@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
+import 'package:sparkle/data/repositories/auth_repository.dart';
+import 'package:sparkle/presentation/providers/auth_provider.dart';
 
 // 1. Friends Provider
 final friendsProvider = StateNotifierProvider<FriendsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) {
@@ -187,16 +192,63 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 }
 
 // 4. Group Chat Provider (Family)
-final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier, AsyncValue<List<MessageInfo>>, String>((ref, groupId) {
-  return GroupChatNotifier(ref.watch(communityRepositoryProvider), groupId);
+final groupChatProvider = StateNotifierProvider.autoDispose.family<GroupChatNotifier, AsyncValue<List<MessageInfo>>, String>((ref, groupId) {
+  return GroupChatNotifier(
+    ref.watch(communityRepositoryProvider),
+    ref.watch(authRepositoryProvider),
+    groupId
+  );
 });
 
 class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   final CommunityRepository _repository;
+  final AuthRepository _authRepository;
   final String _groupId;
+  final WebSocketService _wsService = WebSocketService();
 
-  GroupChatNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
+  GroupChatNotifier(this._repository, this._authRepository, this._groupId) : super(const AsyncValue.loading()) {
     loadMessages();
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() {
+    final token = _authRepository.getAccessToken();
+    if (token == null) return;
+
+    // Convert http/https to ws/wss
+    // Assumes ApiEndpoints.baseUrl is like 'http://host/api/v1'
+    final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
+    // Final URL: ws://host/api/v1/community/groups/{id}/ws?token={token}
+    final wsUrl = '$baseUrl/community/groups/$_groupId/ws?token=$token';
+
+    try {
+      _wsService.connect(wsUrl);
+      _wsService.stream?.listen((data) {
+        if (data is String) {
+          try {
+            final jsonData = jsonDecode(data);
+            final message = MessageInfo.fromJson(jsonData);
+
+            // Append to state if it's a new message
+            state.whenData((messages) {
+              if (!messages.any((m) => m.id == message.id)) {
+                state = AsyncValue.data([message, ...messages]);
+              }
+            });
+          } catch (e) {
+            print('WS Parse Error: $e');
+          }
+        }
+      });
+    } catch (e) {
+      print('WS Connect Error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _wsService.disconnect();
+    super.dispose();
   }
 
   Future<void> loadMessages() async {
@@ -218,7 +270,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       // Optimistically update or re-fetch
       // For now, let's append if success
       state.whenData((messages) {
-        state = AsyncValue.data([message, ...messages]);
+        if (!messages.any((m) => m.id == message.id)) {
+          state = AsyncValue.data([message, ...messages]);
+        }
       });
     } catch (e) {
       rethrow;

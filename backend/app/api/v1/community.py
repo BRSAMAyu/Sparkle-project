@@ -2,13 +2,14 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
 from app.db.session import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, decode_token
+from app.core.websocket import manager
 from app.models.user import User
 from app.models.community import GroupType
 from app.schemas.community import (
@@ -113,6 +114,47 @@ async def get_pending_requests(
     """获取收到的待处理好友请求"""
     requests = await FriendshipService.get_pending_requests(db, current_user.id)
     return requests
+
+
+# ============ WebSocket ============
+
+@router.websocket("/groups/{group_id}/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    group_id: UUID,
+    token: str = Query(...)
+):
+    """
+    群组实时通讯 WebSocket 接口
+    连接地址: ws://host/api/v1/groups/{group_id}/ws?token={jwt_token}
+    """
+    try:
+        # 验证 Token
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=4003)
+            return
+            
+        # 建立连接
+        await manager.connect(websocket, str(group_id), user_id)
+        
+        try:
+            while True:
+                # 保持连接活跃，接收客户端消息（如果有）
+                # 目前主要用于服务器推送，客户端发送走 HTTP POST
+                data = await websocket.receive_text()
+                # 可以在这里处理心跳等
+        except WebSocketDisconnect:
+            manager.disconnect(websocket, str(group_id), user_id)
+            
+    except Exception as e:
+        print(f"WebSocket Error: {e}")
+        # 尝试关闭连接
+        try:
+            await websocket.close()
+        except:
+            pass
 
 
 # ============ 群组管理 ============
@@ -235,7 +277,7 @@ async def send_message(
         message = await GroupMessageService.send_message(db, group_id, current_user.id, data)
         await db.commit()
 
-        return MessageInfo(
+        message_info = MessageInfo(
             id=message.id,
             created_at=message.created_at,
             updated_at=message.updated_at,
@@ -252,6 +294,11 @@ async def send_message(
             content_data=message.content_data,
             reply_to_id=message.reply_to_id
         )
+
+        # 广播消息到 WebSocket
+        await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
+
+        return message_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

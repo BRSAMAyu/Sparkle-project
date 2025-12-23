@@ -1,8 +1,9 @@
 import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
-class GlassCard extends StatelessWidget {
+class GlassCard extends StatefulWidget {
   final Widget child;
   final double? width;
   final double? height;
@@ -17,7 +18,8 @@ class GlassCard extends StatelessWidget {
   final bool enableTapEffect;
 
   const GlassCard({
-    required this.child, super.key,
+    required this.child,
+    super.key,
     this.width,
     this.height,
     this.margin,
@@ -32,19 +34,105 @@ class GlassCard extends StatelessWidget {
   });
 
   @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Default glass color based on theme
-    final defaultColor = isDark 
-        ? AppDesignTokens.neutral900.withOpacity(opacity) 
-        : Colors.white.withOpacity(opacity);
-    
+    final defaultColor = widget.color ?? (isDark 
+        ? AppDesignTokens.neutral900.withValues(alpha: widget.opacity)
+        : Colors.white.withValues(alpha: widget.opacity));
+
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.white.withValues(alpha: 0.2);
+
     // Default border radius
-    final defaultBorderRadius = borderRadius ?? AppDesignTokens.borderRadius20;
-    
-    // Default shadows
-    final defaultShadows = shadows ?? [
+    final defaultBorderRadius = widget.borderRadius ?? AppDesignTokens.borderRadius20;
+
+    // Default shadows - subtly customized for glass effect
+    final defaultShadows = widget.shadows ?? [
       BoxShadow(
-        color: isDark 
+        color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.05),
+        blurRadius: 16,
+        offset: const Offset(0, 8),
+      ),
+    ];
+
+    Widget content = Container(
+      width: widget.width,
+      height: widget.height,
+      margin: widget.margin,
+      decoration: BoxDecoration(
+        color: defaultColor,
+        borderRadius: defaultBorderRadius,
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: defaultShadows,
+      ),
+      child: ClipRRect(
+        borderRadius: defaultBorderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
+          child: Padding(
+            padding: widget.padding,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+
+    if (widget.onTap != null) {
+      if (widget.enableTapEffect) {
+        return GestureDetector(
+          onTapDown: (_) => _controller.forward(),
+          onTapUp: (_) => _controller.reverse(),
+          onTapCancel: () => _controller.reverse(),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            widget.onTap!();
+          },
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: content,
+          ),
+        );
+      } else {
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            widget.onTap!();
+          },
+          child: content,
+        );
+      }
+    }
+
+    return content;
+  }
+}

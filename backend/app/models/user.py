@@ -57,6 +57,15 @@ class User(BaseModel):
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)
 
+    # 🆕 社交登录 ID
+    google_id = Column(String(255), unique=True, nullable=True, index=True)
+    apple_id = Column(String(255), unique=True, nullable=True, index=True)
+    wechat_unionid = Column(String(255), unique=True, nullable=True, index=True)
+    
+    # 🆕 注册来源 (analytics)
+    registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
+    last_login_at = Column(DateTime, nullable=True)
+
     # 关系定义
     push_preference = relationship(
         "PushPreference",
