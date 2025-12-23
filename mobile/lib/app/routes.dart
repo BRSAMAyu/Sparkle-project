@@ -26,6 +26,8 @@ import 'package:sparkle/presentation/screens/community/group_search_screen.dart'
 import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
 import 'package:sparkle/presentation/screens/community/friends_screen.dart';
 import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
+import 'package:sparkle/presentation/screens/focus/mindfulness_mode_screen.dart';
+import 'package:sparkle/data/models/task_model.dart';
 
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({
@@ -158,6 +160,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             state: state,
             child: const TaskExecutionScreen(),
             type: SharedAxisTransitionType.scaled, // Special mode
+          );
+        },
+      ),
+
+      // Focus Routes
+      GoRoute(
+        path: '/focus/mindfulness',
+        name: 'mindfulness',
+        pageBuilder: (context, state) {
+          final task = state.extra as TaskModel;
+          return _buildTransitionPage(
+            state: state,
+            child: MindfulnessModeScreen(task: task),
+            type: SharedAxisTransitionType.scaled,
           );
         },
       ),

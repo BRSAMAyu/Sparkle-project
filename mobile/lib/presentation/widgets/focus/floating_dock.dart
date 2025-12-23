@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
-/// 支持边缘吸附、自动隐藏、点击展开
+/// 支持边缘吸附、自动隐藏、点击展开菜单
 class FocusFloatingDock extends StatefulWidget {
-  final VoidCallback onTap;
+  final VoidCallback? onMindfulnessTap;
+  final VoidCallback? onToolsTap;
   final Axis initialEdge; // Left, Right, Top, Bottom
 
   const FocusFloatingDock({
     super.key,
-    required this.onTap,
+    this.onMindfulnessTap,
+    this.onToolsTap,
     this.initialEdge = Axis.horizontal,
   });
 
@@ -33,6 +35,19 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
       duration: const Duration(milliseconds: 300),
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    
+    // Auto-hide after 3 seconds of inactivity
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && !_isExpanded) {
+        setState(() => _isHiding = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _snapToEdge(Size screenSize) {
@@ -46,39 +61,50 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
     });
   }
 
+  void _toggleExpand() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      _isHiding = false;
+      if (_isExpanded) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
+    final bool isRightSide = _position.dx > screenSize.width / 2;
 
     return Positioned(
       left: _position.dx,
       top: _position.dy,
       child: GestureDetector(
         onPanUpdate: (details) {
+          if (_isExpanded) return; // Disable drag when expanded
           setState(() {
             _position += details.delta;
             _isHiding = false;
           });
         },
         onPanEnd: (details) {
+          if (_isExpanded) return;
           _snapToEdge(screenSize);
-        },
-        onTap: () {
-          setState(() {
-            _isHiding = !_isHiding;
-          });
-          widget.onTap();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          width: _isHiding ? 20 : 60,
-          height: 60,
+          width: _isHiding ? 20 : (_isExpanded ? 180 : 60),
+          height: _isExpanded ? 160 : 60,
           decoration: BoxDecoration(
-            color: AppDesignTokens.primaryBase.withOpacity(0.9),
-            borderRadius: BorderRadius.horizontal(
-              left: _position.dx > 100 ? const Radius.circular(30) : Radius.zero,
-              right: _position.dx < 100 ? const Radius.circular(30) : Radius.zero,
-            ),
+            color: AppDesignTokens.primaryBase.withOpacity(0.95),
+            borderRadius: _isHiding 
+                ? BorderRadius.horizontal(
+                    left: isRightSide ? const Radius.circular(30) : Radius.zero,
+                    right: !isRightSide ? const Radius.circular(30) : Radius.zero,
+                  )
+                : BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
@@ -88,8 +114,82 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
             ],
           ),
           child: _isHiding 
-            ? const SizedBox.shrink() 
-            : const Icon(Icons.timer_rounded, color: Colors.white, size: 30),
+            ? InkWell(
+                onTap: () {
+                  setState(() => _isHiding = false);
+                },
+                child: const SizedBox.expand(),
+              ) 
+            : _isExpanded 
+                ? _buildExpandedMenu()
+                : _buildCollapsedIcon(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsedIcon() {
+    return InkWell(
+      onTap: _toggleExpand,
+      borderRadius: BorderRadius.circular(30),
+      child: const Center(
+        child: Icon(Icons.timer_rounded, color: Colors.white, size: 30),
+      ),
+    );
+  }
+
+  Widget _buildExpandedMenu() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // Collapse Button
+        InkWell(
+          onTap: _toggleExpand,
+          child: const Icon(Icons.close, color: Colors.white, size: 24),
+        ),
+        
+        // Menu Items
+        _buildMenuItem(
+          icon: Icons.self_improvement,
+          label: '正念模式',
+          onTap: () {
+            _toggleExpand();
+            widget.onMindfulnessTap?.call();
+          },
+        ),
+        _buildMenuItem(
+          icon: Icons.grid_view,
+          label: '工具箱',
+          onTap: () {
+            _toggleExpand();
+            widget.onToolsTap?.call();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
