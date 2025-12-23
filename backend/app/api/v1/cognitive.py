@@ -6,7 +6,7 @@ from typing import List, Any
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
@@ -16,34 +16,62 @@ from app.services.cognitive_service import CognitiveService
 
 router = APIRouter()
 
+async def _analyze_fragment_task(user_id: UUID, fragment_id: UUID, db_session_factory):
+    """Background task wrapper for analysis"""
+    # Note: BackgroundTasks in FastAPI with async SQLAlchemy session requires creating a new session scope
+    # because the dependency session might be closed.
+    async with db_session_factory() as session:
+        service = CognitiveService(session)
+        await service.analyze_behavior(user_id, fragment_id)
+
 @router.post("/fragments", response_model=CognitiveFragmentResponse)
 async def create_fragment(
     *,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     fragment_in: CognitiveFragmentCreate,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
 ):
     """
     创建一个新的认知碎片 (闪念/拦截)
     """
     service = CognitiveService(db)
-    # Note: For MVP, passing background_tasks to service. 
-    # Be aware of session lifecycle issues in prod. 
-    # Here we might await it directly in service if background task fails due to closed session.
-    # In `CognitiveService.create_fragment`, we logic handles execution.
-    # To be safe and simple for now, we can await it inside the service (latency < 2s usually)
-    # or ensure the service implementation handles it correctly.
-    # Given the implementation I wrote, it tries to use the passed session in BG task which is risky.
-    # I will modify the service call to NOT use background_tasks for the DB part, 
-    # or I accept that it might be synchronous for now to avoid session closed errors.
     
-    # Let's make it synchronous for reliability in this prototype phase
     fragment = await service.create_fragment(
         user_id=current_user.id,
-        data=fragment_in,
-        background_tasks=None # Force sync execution
+        content=fragment_in.content,
+        source_type=fragment_in.source_type,
+        resource_type=fragment_in.resource_type,
+        resource_url=fragment_in.resource_url,
+        context_tags=fragment_in.context_tags,
+        error_tags=fragment_in.error_tags,
+        severity=fragment_in.severity,
+        task_id=fragment_in.task_id
     )
+    
+    # Trigger AI Analysis
+    # Note: To avoid complexity with session passing in background tasks, 
+    # for this iteration we can run it inline if it's not too slow, 
+    # OR we need a proper session factory dependency.
+    # Given the complexity of "analyze_behavior" (RAG + LLM), it will be slow.
+    # For now, I will skip the background task trigger implementation in API 
+    # and rely on the client to call /analyze/trigger or just accept it's manual for now,
+    # OR (Better) - Implement a proper background worker later.
+    # 
+    # BUT, to fulfill the "Real-time" feel, I will attempt to run it 
+    # if the user specifically requests it or just logging it.
+    #
+    # Actually, simplest way for prototype: just await it. It might take 3-5 seconds.
+    # Let's try to await it for immediate feedback in testing, 
+    # but the response model doesn't include the analysis result yet (it's in patterns).
+    
+    # Let's execute it inline for now to ensure it works.
+    try:
+        await service.analyze_behavior(current_user.id, fragment.id)
+    except Exception as e:
+        # Log but don't fail the request
+        print(f"Analysis failed: {e}")
+        
     return fragment
 
 @router.get("/fragments", response_model=List[CognitiveFragmentResponse])
@@ -65,19 +93,6 @@ async def get_fragments(
     )
     return fragments
 
-@router.post("/analysis/trigger", response_model=List[BehaviorPatternResponse])
-async def trigger_analysis(
-    *,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    手动触发行为定式分析 (测试用)
-    """
-    service = CognitiveService(db)
-    patterns = await service.generate_weekly_report(user_id=current_user.id)
-    return patterns
-
 @router.get("/patterns", response_model=List[BehaviorPatternResponse])
 async def get_patterns(
     *,
@@ -87,11 +102,10 @@ async def get_patterns(
     """
     获取用户的行为定式列表
     """
-    # For now, just return all non-archived patterns or sort by recent
     stmt = (
         select(BehaviorPattern)
         .where(BehaviorPattern.user_id == current_user.id)
-        .order_by(BehaviorPattern.created_at.desc())
+        .order_by(desc(BehaviorPattern.created_at))
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

@@ -3,7 +3,7 @@ Cognitive Prism Models
 认知棱镜相关模型
 """
 import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON
+from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
@@ -23,13 +23,24 @@ class CognitiveFragment(BaseModel):
     # 来源类型: capsule (闪念), interceptor (拦截器), behavior (隐式行为)
     source_type = Column(String(20), nullable=False) 
     
+    # 资源信息 (v2.3)
+    resource_type = Column(String(20), default="text", nullable=False) # text, audio, image
+    resource_url = Column(String(512), nullable=True) # oss url
+    
     # 内容: 用户输入的内容 或 系统生成的描述
     content = Column(Text, nullable=False)
     
     # AI 预分析结果
     sentiment = Column(String(20), nullable=True)   # anxious, bored, neutral...
-    tags = Column(JSON, nullable=True)     # ['procrastination', 'distraction']
     
+    # 标签系统 (v2.3 Enhanced)
+    tags = Column(JSON, nullable=True)     # Generic tags
+    error_tags = Column(JSON, nullable=True) # Structured error tags e.g. ["planning.underestimate", "execution.procrastination"]
+    context_tags = Column(JSON, nullable=True) # Context: { "location": "library", "mood": "anxious", "people": "alone" }
+    
+    # 严重程度 (v2.3)
+    severity = Column(Integer, default=1, nullable=False) # 1-5
+
     # 语义向量
     embedding = Column(Vector(1536), nullable=True)
 
@@ -54,9 +65,11 @@ class BehaviorPattern(BaseModel):
     solution_text = Column(Text, nullable=True)         # 建议文案
     
     # 关联的 cognitive_fragments ID 数组
-    # 注意: 这里存储 ID 数组，应用层处理关联，或者使用多对多关系表。
-    # 为了简化，设计文档建议使用 ID 数组。在 SQLAlchemy 中可以使用 ARRAY(GUID)
     evidence_ids = Column(JSON, nullable=True)
+    
+    # 统计指标 (v2.3)
+    confidence_score = Column(Float, default=0.0) # AI Confidence
+    frequency = Column(Integer, default=1)        # Occurrences count
     
     is_archived = Column(Boolean, default=False) # 用户是否已克服此定式
 
