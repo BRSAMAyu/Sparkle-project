@@ -174,7 +174,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -190,7 +190,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
             child: Icon(
               Icons.local_fire_department,
               size: 80,
-              color: isMe ? Colors.white.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+              color: isMe ? Colors.white.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
             ),
           ),
           Padding(
@@ -203,7 +203,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: isMe ? Colors.white.withOpacity(0.2) : Colors.white,
+                        color: isMe ? Colors.white.withValues(alpha: 0.2) : Colors.white,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.bolt, color: Colors.yellow, size: 18),
@@ -233,13 +233,13 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                    Container(
                      padding: const EdgeInsets.all(8),
                      decoration: BoxDecoration(
-                       color: isMe ? Colors.black.withOpacity(0.1) : Colors.white.withOpacity(0.6),
+                       color: isMe ? Colors.black.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.6),
                        borderRadius: BorderRadius.circular(8),
                      ),
                      child: Text(
                        widget.message.content!,
                        style: TextStyle(
-                         color: isMe ? Colors.white.withOpacity(0.9) : Colors.brown.shade800,
+                         color: isMe ? Colors.white.withValues(alpha: 0.9) : Colors.brown.shade800,
                          fontStyle: FontStyle.italic,
                          fontSize: 13,
                        ),
