@@ -1,8 +1,10 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/core/network/api_client.dart';
 
 class GalaxyState {
   final List<GalaxyNodeModel> nodes;
@@ -39,8 +41,33 @@ final galaxyProvider = StateNotifierProvider<GalaxyNotifier, GalaxyState>((ref) 
 
 class GalaxyNotifier extends StateNotifier<GalaxyState> {
   final GalaxyRepository _repository;
+  StreamSubscription? _eventsSubscription;
 
-  GalaxyNotifier(this._repository) : super(GalaxyState());
+  GalaxyNotifier(this._repository) : super(GalaxyState()) {
+    _initEventsListener();
+  }
+
+  @override
+  void dispose() {
+    _eventsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initEventsListener() {
+    _eventsSubscription = _repository.getGalaxyEventsStream().listen((event) {
+      if (event.event == 'nodes_expanded') {
+        _handleNodesExpanded(event.jsonData);
+      }
+    });
+  }
+
+  void _handleNodesExpanded(Map<String, dynamic>? data) {
+    if (data == null || data['nodes'] == null) return;
+    
+    // We can either full reload or manually add nodes
+    // Manual addition is better for performance and animations
+    loadGalaxy(); // For now, simple reload to ensure consistency
+  }
 
   Future<void> loadGalaxy() async {
     state = state.copyWith(isLoading: true);

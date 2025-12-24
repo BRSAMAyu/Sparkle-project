@@ -14,10 +14,11 @@ from app.models.user import User
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskDetail, TaskCompleteRequest, 
-    TaskStart, TaskAbandon, TaskSummary
+    TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse
 )
 from app.services.task_guide_service import task_guide_service
 from app.services.feedback_service import feedback_service
+from app.services.intelligent_task_service import IntelligentTaskService
 
 from app.core.exceptions import NotFoundError, AuthorizationError
 
@@ -106,6 +107,18 @@ async def create_task(
     await db.refresh(task)
     
     return {"data": TaskDetail.model_validate(task)}
+
+@router.post("/suggestions", response_model=TaskSuggestionResponse)
+async def get_task_suggestions(
+    request: TaskSuggestionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取任务创建建议 (LLM 驱动)
+    """
+    service = IntelligentTaskService(db)
+    return await service.get_suggestions(current_user.id, request.input_text)
 
 @router.get("/{task_id}", response_model=Dict[str, Any])
 async def get_task(

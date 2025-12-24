@@ -53,6 +53,8 @@ class TaskModel {
   final int priority;
   @JsonKey(name: 'due_date')
   final DateTime? dueDate;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -76,6 +78,7 @@ class TaskModel {
     this.actualMinutes,
     this.userNote,
     this.dueDate,
+    this.knowledgeNodeId,
     this.syncStatus = TaskSyncStatus.synced,
     this.syncError,
     this.retryToken,
@@ -102,6 +105,7 @@ class TaskModel {
     String? userNote,
     int? priority,
     DateTime? dueDate,
+    String? knowledgeNodeId,
     DateTime? createdAt,
     DateTime? updatedAt,
     TaskSyncStatus? syncStatus,
@@ -126,6 +130,7 @@ class TaskModel {
       userNote: userNote ?? this.userNote,
       priority: priority ?? this.priority,
       dueDate: dueDate ?? this.dueDate,
+      knowledgeNodeId: knowledgeNodeId ?? this.knowledgeNodeId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -148,6 +153,8 @@ class TaskCreate {
   final List<String>? tags;
   @JsonKey(name: 'due_date')
   final DateTime? dueDate;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
   @JsonKey(name: 'guide_content')
   final String? guideContent;
 
@@ -160,6 +167,7 @@ class TaskCreate {
     this.planId,
     this.tags,
     this.dueDate,
+    this.knowledgeNodeId,
     this.guideContent,
   });
 
@@ -204,6 +212,94 @@ class TaskComplete {
     this.userNote,
   });
 
-  factory TaskComplete.fromJson(Map<String, dynamic> json) => _$TaskCompleteFromJson(json);
-  Map<String, dynamic> toJson() => _$TaskCompleteToJson(this);
-}
+    factory TaskComplete.fromJson(Map<String, dynamic> json) => _$TaskCompleteFromJson(json);
+
+    Map<String, dynamic> toJson() => _$TaskCompleteToJson(this);
+
+  }
+
+  
+
+  @JsonSerializable()
+
+  class SuggestedNode {
+
+    final String? id;
+
+    final String name;
+
+    final String reason;
+
+    @JsonKey(name: 'is_new')
+
+    final bool isNew;
+
+  
+
+    SuggestedNode({
+
+      this.id,
+
+      required this.name,
+
+      required this.reason,
+
+      required this.isNew,
+
+    });
+
+  
+
+    factory SuggestedNode.fromJson(Map<String, dynamic> json) => _$SuggestedNodeFromJson(json);
+
+    Map<String, dynamic> toJson() => _$SuggestedNodeToJson(this);
+
+  }
+
+  
+
+  @JsonSerializable()
+
+  class TaskSuggestionResponse {
+
+    final String intent;
+
+    @JsonKey(name: 'suggested_nodes')
+
+    final List<SuggestedNode> suggestedNodes;
+
+    @JsonKey(name: 'suggested_tags')
+
+    final List<String> suggestedTags;
+
+    @JsonKey(name: 'estimated_minutes')
+
+    final int? estimatedMinutes;
+
+    final int? difficulty;
+
+  
+
+    TaskSuggestionResponse({
+
+      required this.intent,
+
+      required this.suggestedNodes,
+
+      required this.suggestedTags,
+
+      this.estimatedMinutes,
+
+      this.difficulty,
+
+    });
+
+  
+
+    factory TaskSuggestionResponse.fromJson(Map<String, dynamic> json) => _$TaskSuggestionResponseFromJson(json);
+
+    Map<String, dynamic> toJson() => _$TaskSuggestionResponseToJson(this);
+
+  }
+
+  

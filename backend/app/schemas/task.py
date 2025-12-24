@@ -21,6 +21,7 @@ class TaskCreate(BaseModel):
     guide_content: Optional[str] = Field(default=None, description="Guide content")
     priority: int = Field(default=0, description="Priority")
     due_date: Optional[date] = Field(default=None, description="Due date")
+    knowledge_node_id: Optional[UUID] = Field(default=None, description="Knowledge node ID")
 
 class TaskUpdate(BaseModel):
     """Update task"""
@@ -78,6 +79,7 @@ class TaskDetail(TaskBase):
     completed_at: Optional[datetime] = Field(description="Completed time")
     actual_minutes: Optional[int] = Field(description="Actual minutes")
     user_note: Optional[str] = Field(description="User note")
+    knowledge_node_id: Optional[UUID] = Field(description="Knowledge node ID")
 
 class TaskSummary(BaseModel):
     """Task summary statistics"""
@@ -95,3 +97,24 @@ class TaskListQuery(BaseModel):
     tags: Optional[List[str]] = Field(default=None, description="Tags filter")
     page: int = Field(default=1, ge=1, description="Page number")
     page_size: int = Field(default=20, ge=1, le=100, description="Page size")
+
+# ========== Suggestion Schemas ==========
+
+class SuggestedNode(BaseModel):
+    """Suggested knowledge node"""
+    id: Optional[UUID] = Field(default=None, description="Node ID (if existing)")
+    name: str = Field(description="Node name")
+    reason: str = Field(description="Reason for suggestion")
+    is_new: bool = Field(default=False, description="Whether this is a potential new node")
+
+class TaskSuggestionRequest(BaseModel):
+    """Request for task suggestions"""
+    input_text: str = Field(min_length=1, description="User input title or description")
+
+class TaskSuggestionResponse(BaseModel):
+    """Response for task suggestions"""
+    intent: str = Field(description="Recognized user intent")
+    suggested_nodes: List[SuggestedNode] = Field(default_factory=list, description="Suggested knowledge nodes")
+    suggested_tags: List[str] = Field(default_factory=list, description="Suggested tags")
+    estimated_minutes: Optional[int] = Field(default=None, description="Suggested duration")
+    difficulty: Optional[int] = Field(default=None, description="Suggested difficulty")

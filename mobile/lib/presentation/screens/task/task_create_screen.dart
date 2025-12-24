@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,12 +25,79 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   DateTime? _dueDate;
   bool _generateGuide = false;
   bool _isSubmitting = false;
+  String? _selectedKnowledgeNodeId;
+
+  // Intelligent Suggestions State
+  Timer? _debounce;
+  TaskSuggestionResponse? _suggestions;
+  bool _isLoadingSuggestions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.addListener(_onTitleChanged);
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _tagsController.dispose();
     super.dispose();
+  }
+
+  void _onTitleChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 800), () {
+      if (_titleController.text.length > 2) {
+        _fetchSuggestions(_titleController.text);
+      }
+    });
+  }
+
+  Future<void> _fetchSuggestions(String input) async {
+    if (!mounted) return;
+    setState(() => _isLoadingSuggestions = true);
+    try {
+      final result = await ref.read(taskRepositoryProvider).getSuggestions(input);
+      if (mounted) {
+        setState(() {
+          _suggestions = result;
+          _isLoadingSuggestions = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSuggestions = false);
+      }
+    }
+  }
+
+  void _applySuggestion(SuggestedNode node) {
+    setState(() {
+      _titleController.text = node.name;
+      _selectedKnowledgeNodeId = node.id;
+      // Also apply suggested tags if available and not already added
+      if (_suggestions != null) {
+        final currentTags = _tagsController.text.split(',').map((e) => e.trim()).toList();
+        for (final tag in _suggestions!.suggestedTags) {
+          if (!currentTags.contains(tag)) {
+            if (_tagsController.text.isEmpty) {
+              _tagsController.text = tag;
+            } else {
+              _tagsController.text += ', $tag';
+            }
+          }
+        }
+        if (_suggestions!.estimatedMinutes != null) {
+          _estimatedMinutes = _suggestions!.estimatedMinutes!;
+        }
+        if (_suggestions!.difficulty != null) {
+          _difficulty = _suggestions!.difficulty!;
+        }
+      }
+    });
   }
 
   Future<void> _submitTask() async {
@@ -54,6 +122,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         energyCost: _energyCost,
         tags: tags,
         dueDate: _dueDate,
+        knowledgeNodeId: _selectedKnowledgeNodeId,
         // TODO: Pass generateGuide flag to API if supported via query param or extended DTO
         // Currently API takes generate_guide as query param. 
         // TaskRepository.createTask needs update or we assume default behavior.
@@ -117,6 +186,34 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 return null;
               },
             ),
+            if (_isLoadingSuggestions)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
+            if (_suggestions != null && _suggestions!.suggestedNodes.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('智能建议：', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8,
+                      children: _suggestions!.suggestedNodes.map((node) {
+                        return ActionChip(
+                          avatar: Icon(node.isNew ? Icons.add_circle_outline : Icons.link, size: 16),
+                          label: Text(node.name),
+                          onPressed: () => _applySuggestion(node),
+                          tooltip: node.reason,
+                          backgroundColor: node.isNew ? Colors.green.shade50 : Colors.blue.shade50,
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
 
             // Type Selector
