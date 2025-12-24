@@ -19,6 +19,7 @@ class ApiEndpoints {
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static const String taskSuggestions = '/tasks/suggestions';
 
   // Plans
   static const String plans = '/plans';
@@ -40,6 +41,7 @@ class ApiEndpoints {
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
+  static const String galaxyEvents = '/galaxy/events';
 
   // Community - Friends
   static const String friends = '/community/friends';

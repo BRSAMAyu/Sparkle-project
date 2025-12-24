@@ -29,9 +29,11 @@ class GalaxyRepository {
     try {
       await _apiClient.post(ApiEndpoints.sparkNode(id));
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Failed to spark node';
-    } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception(e.response?.data?['detail'] ?? 'Failed to spark node');
     }
+  }
+
+  Stream<SSEEvent> getGalaxyEventsStream() {
+    return _apiClient.getStream(ApiEndpoints.galaxyEvents);
   }
 }

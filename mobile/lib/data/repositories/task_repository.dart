@@ -129,6 +129,18 @@ class TaskRepository {
       return _handleDioError(e, 'abandonTask');
     }
   }
+
+  Future<TaskSuggestionResponse> getSuggestions(String inputText) async {
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.taskSuggestions,
+        data: {'input_text': inputText},
+      );
+      return TaskSuggestionResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getSuggestions');
+    }
+  }
 }
 
 // Provider for TaskRepository

@@ -43,6 +43,7 @@ class TaskService:
             guide_content=obj_in.guide_content,
             priority=obj_in.priority,
             due_date=obj_in.due_date,
+            knowledge_node_id=obj_in.knowledge_node_id,
             status=TaskStatus.PENDING,
         )
         db.add(db_obj)

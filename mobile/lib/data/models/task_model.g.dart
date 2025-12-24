@@ -32,6 +32,7 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
     );
 
 Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
@@ -52,6 +53,7 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'user_note': instance.userNote,
       'priority': instance.priority,
       'due_date': instance.dueDate?.toIso8601String(),
+      'knowledge_node_id': instance.knowledgeNodeId,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -83,6 +85,7 @@ TaskCreate _$TaskCreateFromJson(Map<String, dynamic> json) => TaskCreate(
       dueDate: json['due_date'] == null
           ? null
           : DateTime.parse(json['due_date'] as String),
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
       guideContent: json['guide_content'] as String?,
     );
 
@@ -96,6 +99,7 @@ Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
       'plan_id': instance.planId,
       'tags': instance.tags,
       'due_date': instance.dueDate?.toIso8601String(),
+      'knowledge_node_id': instance.knowledgeNodeId,
       'guide_content': instance.guideContent,
     };
 
@@ -131,4 +135,44 @@ Map<String, dynamic> _$TaskCompleteToJson(TaskComplete instance) =>
     <String, dynamic>{
       'actual_minutes': instance.actualMinutes,
       'user_note': instance.userNote,
+    };
+
+SuggestedNode _$SuggestedNodeFromJson(Map<String, dynamic> json) =>
+    SuggestedNode(
+      id: json['id'] as String?,
+      name: json['name'] as String,
+      reason: json['reason'] as String,
+      isNew: json['is_new'] as bool,
+    );
+
+Map<String, dynamic> _$SuggestedNodeToJson(SuggestedNode instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'reason': instance.reason,
+      'is_new': instance.isNew,
+    };
+
+TaskSuggestionResponse _$TaskSuggestionResponseFromJson(
+        Map<String, dynamic> json) =>
+    TaskSuggestionResponse(
+      intent: json['intent'] as String,
+      suggestedNodes: (json['suggested_nodes'] as List<dynamic>)
+          .map((e) => SuggestedNode.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      suggestedTags: (json['suggested_tags'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt(),
+      difficulty: (json['difficulty'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$TaskSuggestionResponseToJson(
+        TaskSuggestionResponse instance) =>
+    <String, dynamic>{
+      'intent': instance.intent,
+      'suggested_nodes': instance.suggestedNodes,
+      'suggested_tags': instance.suggestedTags,
+      'estimated_minutes': instance.estimatedMinutes,
+      'difficulty': instance.difficulty,
     };

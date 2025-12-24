@@ -13,14 +13,14 @@ BehaviorPatternModel _$BehaviorPatternModelFromJson(
       userId: json['user_id'] as String,
       patternName: json['pattern_name'] as String,
       patternType: json['pattern_type'] as String,
+      isArchived: json['is_archived'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
       description: json['description'] as String?,
       solutionText: json['solution_text'] as String?,
       evidenceIds: (json['evidence_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
-      isArchived: json['is_archived'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$BehaviorPatternModelToJson(

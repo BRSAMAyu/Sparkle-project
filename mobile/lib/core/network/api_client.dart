@@ -66,6 +66,59 @@ class ApiClient {
     }
   }
 
+  /// SSE 流式 GET 请求
+  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) async* {
+    try {
+      final response = await _dio.get<ResponseBody>(
+        path,
+        queryParameters: queryParameters,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+          },
+        ),
+      );
+
+      final stream = response.data?.stream;
+      if (stream == null) {
+        yield SSEEvent(event: 'error', data: '{"message": "No stream data"}');
+        return;
+      }
+
+      String buffer = '';
+
+      await for (final chunk in stream) {
+        buffer += utf8.decode(chunk);
+
+        while (buffer.contains('\n\n')) {
+          final eventEnd = buffer.indexOf('\n\n');
+          final eventStr = buffer.substring(0, eventEnd);
+          buffer = buffer.substring(eventEnd + 2);
+
+          final event = _parseSSEEvent(eventStr);
+          if (event != null) {
+            yield event;
+            if (event.event == 'done' || event.event == 'error') {
+              return;
+            }
+          }
+        }
+      }
+    } on DioException catch (e) {
+      yield SSEEvent(
+        event: 'error',
+        data: '{"message": "${e.message ?? "网络连接中断"}"}',
+      );
+    } catch (e) {
+      yield SSEEvent(
+        event: 'error',
+        data: '{"message": "发生错误: $e"}',
+      );
+    }
+  }
+
   /// SSE 流式 POST 请求
   ///
   /// 返回一个 Stream，每次 yield 一个 SSE 事件

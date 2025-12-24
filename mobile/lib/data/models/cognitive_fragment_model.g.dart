@@ -11,12 +11,12 @@ CognitiveFragmentModel _$CognitiveFragmentModelFromJson(
     CognitiveFragmentModel(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      taskId: json['task_id'] as String?,
       sourceType: json['source_type'] as String,
       content: json['content'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      taskId: json['task_id'] as String?,
       sentiment: json['sentiment'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
-      createdAt: DateTime.parse(json['created_at'] as String),
     );
 
 Map<String, dynamic> _$CognitiveFragmentModelToJson(
