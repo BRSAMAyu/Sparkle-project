@@ -14,8 +14,7 @@ class MindfulnessModeScreen extends ConsumerStatefulWidget {
   final TaskModel task;
 
   const MindfulnessModeScreen({
-    super.key,
-    required this.task,
+    required this.task, super.key,
   });
 
   @override

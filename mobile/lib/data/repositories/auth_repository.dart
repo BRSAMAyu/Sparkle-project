@@ -1,20 +1,20 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/user_model.dart';
 
-// Keys for SharedPreferences
+// Keys for Secure Storage
 const String _accessTokenKey = 'accessToken';
 const String _refreshTokenKey = 'refreshToken';
 
 class AuthRepository {
   final ApiClient _apiClient;
-  final SharedPreferences _prefs;
+  final FlutterSecureStorage _storage;
 
-  AuthRepository(this._apiClient, this._prefs);
+  AuthRepository(this._apiClient, this._storage);
 
   Future<UserModel> register(String username, String email, String password) async {
     try {
@@ -91,7 +91,7 @@ class AuthRepository {
   }
 
   Future<TokenResponse> refreshToken() async {
-    final refreshToken = getRefreshToken();
+    final refreshToken = await getRefreshToken();
     if (refreshToken == null) {
       throw 'No refresh token available.';
     }
@@ -135,41 +135,41 @@ class AuthRepository {
   }
 
   Future<void> saveTokens(TokenResponse tokenResponse) async {
-    await _prefs.setString(_accessTokenKey, tokenResponse.accessToken);
-    await _prefs.setString(_refreshTokenKey, tokenResponse.refreshToken);
+    await _storage.write(key: _accessTokenKey, value: tokenResponse.accessToken);
+    await _storage.write(key: _refreshTokenKey, value: tokenResponse.refreshToken);
   }
 
   Future<void> clearTokens() async {
-    await _prefs.remove(_accessTokenKey);
-    await _prefs.remove(_refreshTokenKey);
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
   }
 
-  String? getAccessToken() {
-    return _prefs.getString(_accessTokenKey);
+  Future<String?> getAccessToken() async {
+    return await _storage.read(key: _accessTokenKey);
   }
 
   // Alias for getAccessToken to match usage in ApiInterceptor
-  String? getToken() => getAccessToken();
+  Future<String?> getToken() => getAccessToken();
   
-  String? getRefreshToken() {
-    return _prefs.getString(_refreshTokenKey);
+  Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
   }
 
-  bool isLoggedIn() {
-    return getAccessToken() != null;
+  Future<bool> isLoggedIn() async {
+    return await getAccessToken() != null;
   }
 }
 
-// Provider for SharedPreferences - will be overridden in main.dart with preloaded instance
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('SharedPreferences must be overridden in main.dart');
+// Provider for FlutterSecureStorage
+final flutterSecureStorageProvider = Provider<FlutterSecureStorage>((ref) {
+  return const FlutterSecureStorage();
 });
 
 
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  final sharedPrefs = ref.watch(sharedPreferencesProvider);
+  final storage = ref.watch(flutterSecureStorageProvider);
 
-  return AuthRepository(apiClient, sharedPrefs);
+  return AuthRepository(apiClient, storage);
 });

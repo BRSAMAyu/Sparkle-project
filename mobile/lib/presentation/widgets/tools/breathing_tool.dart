@@ -172,7 +172,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                     animation: _controller,
                     builder: (context, child) {
                       // Scale from 0.4 to 1.0
-                      double scale = 0.4 + (_controller.value * 0.6);
+                      final double scale = 0.4 + (_controller.value * 0.6);
                       return Transform.scale(
                         scale: scale,
                         child: Container(

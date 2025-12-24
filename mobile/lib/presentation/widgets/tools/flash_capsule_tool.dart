@@ -186,7 +186,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       fontWeight: AppDesignTokens.fontWeightBold,
                     ),
                   ),
-                  Text(
+                  const Text(
                     '快速记录学习中遇到的问题',
                     style: TextStyle(
                       color: AppDesignTokens.neutral500,
@@ -206,7 +206,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Subject Dropdown
-                  Text(
+                  const Text(
                     '科目',
                     style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,
@@ -243,7 +243,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const SizedBox(height: 20),
 
                   // Topic Input
-                  Text(
+                  const Text(
                     '知识点',
                     style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,
@@ -271,7 +271,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const SizedBox(height: 20),
 
                   // Error Type Chips
-                  Text(
+                  const Text(
                     '错误类型',
                     style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,
@@ -310,7 +310,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const SizedBox(height: 20),
 
                   // Description
-                  Text(
+                  const Text(
                     '描述',
                     style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,

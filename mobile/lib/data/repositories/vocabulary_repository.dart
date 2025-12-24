@@ -27,7 +27,7 @@ class VocabularyRepository {
     await _apiClient.post('/vocabulary/wordbook/review', data: {
       'word_id': wordId,
       'success': success,
-    });
+    },);
   }
 
   // LLM Methods

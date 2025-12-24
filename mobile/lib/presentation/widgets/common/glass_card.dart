@@ -85,7 +85,7 @@ class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMix
       ),
     ];
 
-    Widget content = Container(
+    final Widget content = Container(
       width: widget.width,
       height: widget.height,
       margin: widget.margin,

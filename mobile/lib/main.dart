@@ -21,10 +21,6 @@ void main() async {
 
   runApp(
     ProviderScope(
-      overrides: [
-        // Override the sharedPreferencesProvider with the preloaded instance
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
       child: const SparkleApp(),
     ),
   );

@@ -196,7 +196,7 @@ final groupChatProvider = StateNotifierProvider.autoDispose.family<GroupChatNoti
   return GroupChatNotifier(
     ref.watch(communityRepositoryProvider),
     ref.watch(authRepositoryProvider),
-    groupId
+    groupId,
   );
 });
 

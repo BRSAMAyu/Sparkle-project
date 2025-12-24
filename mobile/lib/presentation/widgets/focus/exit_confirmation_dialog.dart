@@ -13,10 +13,7 @@ class ExitConfirmationDialog extends StatefulWidget {
   final VoidCallback onCancel;
 
   const ExitConfirmationDialog({
-    super.key,
-    required this.elapsedMinutes,
-    required this.onConfirmExit,
-    required this.onCancel,
+    required this.elapsedMinutes, required this.onConfirmExit, required this.onCancel, super.key,
   });
 
   @override
@@ -42,7 +39,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.easeOut,
-    ));
+    ),);
     _slideController.forward();
   }
 

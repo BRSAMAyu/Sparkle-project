@@ -64,9 +64,40 @@ class Settings(BaseSettings):
     # Demo Mode (演示模式 - 用于竞赛演示，确保关键流程稳定)
     DEMO_MODE: bool = False  # 生产环境应设为 False
 
+    # Idempotency Store
+    IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
+
     class Config:
         env_file = ".env"
         case_sensitive = True
+
+    @field_validator("SECRET_KEY", mode="before")
+    @classmethod
+    def validate_secret_key(cls, v):
+        if not v:
+            raise ValueError("SECRET_KEY must be set in the environment variables.")
+        return v
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def validate_database_url(cls, v):
+        if not v:
+            raise ValueError("DATABASE_URL must be set in the environment variables.")
+        return v
+
+    @field_validator("LLM_API_BASE_URL", mode="before")
+    @classmethod
+    def validate_llm_api_base_url(cls, v):
+        if not v:
+            raise ValueError("LLM_API_BASE_URL must be set in the environment variables.")
+        return v
+
+    @field_validator("LLM_API_KEY", mode="before")
+    @classmethod
+    def validate_llm_api_key(cls, v):
+        if not v:
+            raise ValueError("LLM_API_KEY must be set in the environment variables.")
+        return v
 
 
 # Create global settings instance

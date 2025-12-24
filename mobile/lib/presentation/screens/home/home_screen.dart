@@ -7,7 +7,6 @@ import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/presentation/providers/plan_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';

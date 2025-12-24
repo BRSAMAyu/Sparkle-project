@@ -2,22 +2,24 @@
 Sparkle Backend - FastAPI Application Entry Point
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from loguru import logger
-
+from prometheus_fastapi_instrumentator import Instrumentator
+from app.core.rate_limiting import setup_rate_limiting
 from app.config import settings
-from app.db.session import AsyncSessionLocal
+from app.db.session import get_db, AsyncSessionLocal
 from app.db.init_db import init_db
 from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.services.scheduler_service import scheduler_service
+from app.core.cache import cache_service
+from app.core.access_control import verify_token
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
+from loguru import logger
 from app.api.v1.router import api_router
-from app.api.v1.health import set_start_time
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
-from app.core.cache import cache_service
+from app.api.v1.health import set_start_time
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -77,6 +79,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+setup_rate_limiting(app)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -89,6 +93,12 @@ app.add_middleware(
 # 🆕 幂等性中间件
 idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "memory")
 app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Startup event to instrument and expose metrics"""
+    Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/")
@@ -116,4 +126,3 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
-

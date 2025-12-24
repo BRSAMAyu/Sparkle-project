@@ -155,7 +155,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                       color: _isListening 
                           ? AppDesignTokens.primaryBase 
                           : AppColors.textOnDark(context).withAlpha(80), 
-                      fontSize: 14
+                      fontSize: 14,
                     ),
                     border: InputBorder.none,
                   ),
@@ -204,7 +204,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
         if (mounted && _isListening) {
           setState(() {
             _isListening = false;
-            _controller.text = "创建一个复习离散数学的计划";
+            _controller.text = '创建一个复习离散数学的计划';
             _onTextChanged();
             _glowController.stop();
             _glowController.reset();

@@ -14,7 +14,7 @@ from app.db.session import get_db
 from app.core.security import (
     create_access_token, create_refresh_token,
     verify_password, get_password_hash,
-    get_current_user, decode_token
+    decode_token
 )
 from app.models.user import User
 from app.schemas.user import (
@@ -48,7 +48,8 @@ async def register(
         email=data.email,
         hashed_password=get_password_hash(data.password),
         nickname=data.nickname or data.username,
-        registration_source="email"
+        registration_source="email",
+        is_active=True
     )
     db.add(user)
     await db.commit()
@@ -77,6 +78,13 @@ async def login(
 ):
     """
     User login with username/email and password
+    """
+    # Check username or email
+    result = await db.execute(
+        select(User).where((User.username == data.username) | (User.email == data.username))
+    )
+    user = result.scalars().first()
+    
     """
     # Check username or email
     result = await db.execute(
@@ -172,7 +180,7 @@ async def social_login(
             user.apple_id = social_id
         elif data.provider == 'wechat':
             user.wechat_unionid = social_id
-            
+
         db.add(user)
         await db.commit()
         await db.refresh(user)

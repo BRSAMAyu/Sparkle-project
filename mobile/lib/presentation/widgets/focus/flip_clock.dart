@@ -8,8 +8,7 @@ class FlipClock extends StatelessWidget {
   final bool showHours;
 
   const FlipClock({
-    super.key,
-    required this.seconds,
+    required this.seconds, super.key,
     this.showHours = false,
   });
 
@@ -74,7 +73,7 @@ class _FlipDigitState extends State<_FlipDigit>
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: const Interval(0, 0.5, curve: Curves.easeIn),
-    ));
+    ),);
 
     _bottomFlipAnimation = Tween<double>(
       begin: -pi / 2,
@@ -82,7 +81,7 @@ class _FlipDigitState extends State<_FlipDigit>
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-    ));
+    ),);
   }
 
   @override
@@ -297,8 +296,7 @@ class SimpleFlipClock extends StatelessWidget {
   final double fontSize;
 
   const SimpleFlipClock({
-    super.key,
-    required this.seconds,
+    required this.seconds, super.key,
     this.showHours = false,
     this.fontSize = 64,
   });

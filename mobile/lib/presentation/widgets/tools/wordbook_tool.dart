@@ -246,7 +246,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
   Widget _buildAllWords(List<dynamic> wordbook) {
     if (wordbook.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -255,16 +255,16 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               size: 64,
               color: AppDesignTokens.neutral300,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               '生词本空空如也',
               style: TextStyle(
                 color: AppDesignTokens.neutral500,
                 fontSize: 16,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '使用查词工具添加生词',
               style: TextStyle(
                 color: AppDesignTokens.neutral400,
@@ -349,7 +349,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ),
               Text(
                 '${_currentReviewIndex + 1} / ${reviewList.length}',
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppDesignTokens.neutral500,
                   fontWeight: FontWeight.w500,
                 ),
@@ -394,7 +394,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       const SizedBox(height: 8),
                       Text(
                         word['phonetic'],
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppDesignTokens.neutral500,
                           fontSize: 18,
                           fontStyle: FontStyle.italic,
@@ -418,7 +418,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         textAlign: TextAlign.center,
                       ),
                     ] else ...[
-                      Text(
+                      const Text(
                         '点击显示释义',
                         style: TextStyle(
                           color: AppDesignTokens.neutral400,
@@ -481,8 +481,7 @@ class _WordCard extends StatelessWidget {
 
   const _WordCard({
     required this.word,
-    this.phonetic,
-    required this.definition,
+    required this.definition, this.phonetic,
     this.dueText,
     this.masteryLevel,
     this.onTap,
@@ -495,7 +494,7 @@ class _WordCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppDesignTokens.neutral200),
+        side: const BorderSide(color: AppDesignTokens.neutral200),
       ),
       child: InkWell(
         onTap: onTap,
@@ -521,7 +520,7 @@ class _WordCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             phonetic!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppDesignTokens.neutral500,
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
@@ -535,7 +534,7 @@ class _WordCard extends StatelessWidget {
                       definition,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppDesignTokens.neutral600,
                         fontSize: 14,
                       ),

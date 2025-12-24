@@ -23,7 +23,7 @@ class ErrorRepository {
       'description': description,
       if (aiAnalysis != null) 'ai_analysis': aiAnalysis,
       if (imageUrls != null && imageUrls.isNotEmpty) 'image_urls': imageUrls,
-    });
+    },);
     return response.data;
   }
 
