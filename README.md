@@ -49,6 +49,12 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
   - 可配置推送偏好（频率、时段、内容类型）
   - 通知权限智能引导
 
+#### 👥 社群功能
+- 👥 **好友系统**：基于共同课程/考试匹配学习伙伴
+- 🏠 **学习小队**：面向长期目标的社群组织
+- 🏃 **冲刺群**：短期临时群组，带倒计时功能
+- 🔥 **火堆系统**：可视化社群学习氛围
+
 #### 👤 用户体验
 - 🚀 **游客模式**：支持游客快速体验核心功能，无需注册
 - 🔐 **完整的用户认证系统**：注册、登录、JWT Token 自动刷新
@@ -83,7 +89,12 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 sparkle/
 ├── backend/          # Python FastAPI 后端
 ├── mobile/           # Flutter 移动端
-└── docs/             # 项目文档
+├── docs/             # 项目文档
+├── ARCHITECTURE.md   # 项目技术架构
+├── MODULES.md        # 功能模块详解
+├── COMMUNITY_FEATURES.md # 社群功能详解
+├── API_REFERENCE.md  # API接口参考
+└── DEVELOPMENT_GUIDE.md # 开发指南
 ```
 
 ## 🚀 快速开始
@@ -107,11 +118,16 @@ flutter pub get
 flutter run
 ```
 
-## 📚 文档
+## 📚 项目文档
 
-- [API 设计文档](docs/api_design.md)
-- [数据库设计文档](docs/database_schema.md)
-- [开发指南](docs/development_guide.md)
+- [项目技术架构](ARCHITECTURE.md) - 详细的系统架构和模块关系
+- [功能模块详解](MODULES.md) - 各功能模块的详细说明
+- [社群功能详解](COMMUNITY_FEATURES.md) - 社群功能的完整介绍
+- [API接口参考](API_REFERENCE.md) - 完整的API接口文档
+- [开发指南](DEVELOPMENT_GUIDE.md) - 开发环境搭建和开发流程
+- [API 设计文档](docs/api_design.md) - 早期API设计文档
+- [数据库设计文档](docs/database_schema.md) - 数据库表结构说明
+- [开发指南](docs/development_guide.md) - 早期开发指南
 
 ## 👥 团队
 
@@ -142,3 +158,4 @@ flutter run
 - ✅ LLM 宽容模式解析增强至 v2.2
 - ✅ 游客模式支持
 - ✅ 推送偏好设置和通知权限配置
+- ✅ 社群功能完整实现（好友、群组、打卡、火堆系统）
