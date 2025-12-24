@@ -23,6 +23,8 @@ from app.schemas.user import (
 )
 from app.config import settings
 
+from loguru import logger
+
 router = APIRouter()
 
 @router.post("/register", response_model=Any)
@@ -36,10 +38,12 @@ async def register(
     # Check existing user
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalars().first():
+        logger.warning(f"Registration failed: username {data.username} already exists")
         raise HTTPException(status_code=400, detail="Username already registered")
     
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalars().first():
+        logger.warning(f"Registration failed: email {data.email} already exists")
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Create user
@@ -54,6 +58,8 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    logger.info(f"User registered successfully: {user.username} (ID: {user.id})")
 
     # Create tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -85,14 +91,8 @@ async def login(
     )
     user = result.scalars().first()
     
-    """
-    # Check username or email
-    result = await db.execute(
-        select(User).where((User.username == data.username) | (User.email == data.username))
-    )
-    user = result.scalars().first()
-    
     if not user or not verify_password(data.password, user.hashed_password):
+        logger.warning(f"Login failed for user: {data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -100,11 +100,10 @@ async def login(
         )
     
     if not user.is_active:
+        logger.warning(f"Login attempt for inactive user: {user.username}")
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    # Update last login
-    # user.last_login_at = datetime.utcnow()
-    # await db.commit()
+    logger.info(f"User logged in: {user.username} (ID: {user.id})")
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

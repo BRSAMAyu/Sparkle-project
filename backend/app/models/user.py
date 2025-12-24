@@ -56,6 +56,7 @@ class User(BaseModel):
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)
+    is_superuser = Column(Boolean, default=False, nullable=False)
 
     # 🆕 社交登录 ID
     google_id = Column(String(255), unique=True, nullable=True, index=True)

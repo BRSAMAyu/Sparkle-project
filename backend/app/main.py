@@ -20,6 +20,10 @@ from loguru import logger
 from app.api.v1.router import api_router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
 from app.api.v1.health import set_start_time
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from fastapi.responses import JSONResponse
+from app.core.exceptions import SparkleException
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -81,6 +85,18 @@ app = FastAPI(
 
 setup_rate_limiting(app)
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -126,3 +142,30 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+
+@app.exception_handler(SparkleException)
+async def sparkle_exception_handler(request: Request, exc: SparkleException):
+    """自定义异常处理器"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error_code": exc.__class__.__name__,
+            "message": exc.message,
+            "detail": exc.detail
+        },
+    )
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """全局未捕获异常处理器"""
+    logger.exception(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error_code": "InternalServerError",
+            "message": "An unexpected error occurred",
+            "detail": str(exc) if settings.DEBUG else None
+        },
+    )

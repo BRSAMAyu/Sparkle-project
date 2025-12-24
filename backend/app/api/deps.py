@@ -45,10 +45,23 @@ async def get_current_user(
     from app.models.user import User # Import here to avoid circular dependency
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+        raise AuthenticationError("User not found")
     return user
+
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not current_user.is_active:
+        raise AuthenticationError("Inactive user")
+    return current_user
+
+async def get_current_active_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    if not current_user.is_superuser:
+        from app.core.exceptions import AuthorizationError
+        raise AuthorizationError("The user doesn't have enough privileges")
+    return current_user
 
 
 # Database session dependency is already defined in app.db.session.get_db

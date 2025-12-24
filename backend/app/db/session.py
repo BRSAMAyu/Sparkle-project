@@ -26,6 +26,11 @@ def _get_engine_kwargs():
         }
     else:
         # PostgreSQL 使用连接池配置
+        connect_args = {}
+        # 🆕 如果是非 SQLite 数据库，通常建议在生产环境中强制使用 SSL
+        if not settings.DEBUG:
+            connect_args["ssl"] = "require"
+
         return {
             "pool_size": settings.DB_POOL_SIZE,
             "max_overflow": settings.DB_MAX_OVERFLOW,
@@ -34,6 +39,7 @@ def _get_engine_kwargs():
             "pool_pre_ping": True,  # 连接前健康检查
             "echo": settings.DEBUG or settings.DB_ECHO,
             "future": True,
+            "connect_args": connect_args,
         }
 
 

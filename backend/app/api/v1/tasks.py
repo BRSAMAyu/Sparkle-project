@@ -19,6 +19,8 @@ from app.schemas.task import (
 from app.services.task_guide_service import task_guide_service
 from app.services.feedback_service import feedback_service
 
+from app.core.exceptions import NotFoundError, AuthorizationError
+
 router = APIRouter()
 
 @router.get("", response_model=Dict[str, Any])
@@ -116,7 +118,7 @@ async def get_task(
     """
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
         
     return {"data": TaskDetail.model_validate(task)}
 
@@ -132,7 +134,7 @@ async def update_task(
     """
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
         
     update_data = task_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -154,7 +156,7 @@ async def delete_task(
     """
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
         
     await db.delete(task)
     await db.commit()
@@ -172,7 +174,7 @@ async def start_task(
     """
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
         
     task.status = TaskStatus.IN_PROGRESS
     task.started_at = datetime.utcnow()
@@ -194,7 +196,7 @@ async def abandon_task(
     """
     task = await db.get(Task, task_id)
     if not task or task.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
         
     task.status = TaskStatus.ABANDONED
     task.user_note = request.reason # Store reason in user_note or separate field if available
@@ -218,10 +220,10 @@ async def complete_task(
     # 查找任务
     task = await db.get(Task, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(message="Task not found")
     
     if task.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise AuthorizationError(message="Not authorized to complete this task")
     
     # 更新状态
     task.status = TaskStatus.COMPLETED
