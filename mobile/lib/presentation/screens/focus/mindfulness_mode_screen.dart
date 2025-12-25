@@ -320,24 +320,22 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             overflow: TextOverflow.ellipsis,
           ),
 
-          if (widget.task.category != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: AppDesignTokens.primaryGradient,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                widget.task.category!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: AppDesignTokens.primaryGradient,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              widget.task.type.name.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
