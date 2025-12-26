@@ -44,6 +44,15 @@ enum FriendshipStatus {
   blocked,
 }
 
+enum UserStatus {
+  @JsonValue('online')
+  online,
+  @JsonValue('offline')
+  offline,
+  @JsonValue('invisible')
+  invisible,
+}
+
 // ============ 用户简要信息 ============
 
 @JsonSerializable()
@@ -57,6 +66,7 @@ class UserBrief {
   final int flameLevel;
   @JsonKey(name: 'flame_brightness')
   final double flameBrightness;
+  final UserStatus status;
 
   UserBrief({
     required this.id,
@@ -65,6 +75,7 @@ class UserBrief {
     this.avatarUrl,
     this.flameLevel = 1,
     this.flameBrightness = 0.5,
+    this.status = UserStatus.offline,
   });
 
   factory UserBrief.fromJson(Map<String, dynamic> json) =>
@@ -311,6 +322,71 @@ class MessageInfo {
   Map<String, dynamic> toJson() => _$MessageInfoToJson(this);
 
   bool get isSystemMessage => sender == null;
+}
+
+@JsonSerializable()
+class PrivateMessageInfo {
+  final String id;
+  final UserBrief sender;
+  final UserBrief receiver;
+  @JsonKey(name: 'message_type')
+  final MessageType messageType;
+  final String? content;
+  @JsonKey(name: 'content_data')
+  final Map<String, dynamic>? contentData;
+  @JsonKey(name: 'reply_to_id')
+  final String? replyToId;
+  @JsonKey(name: 'is_read')
+  final bool isRead;
+  @JsonKey(name: 'read_at')
+  final DateTime? readAt;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'updated_at')
+  final DateTime updatedAt;
+
+  PrivateMessageInfo({
+    required this.id,
+    required this.sender,
+    required this.receiver,
+    required this.messageType,
+    required this.isRead,
+    required this.createdAt,
+    required this.updatedAt,
+    this.content,
+    this.contentData,
+    this.replyToId,
+    this.readAt,
+  });
+
+  factory PrivateMessageInfo.fromJson(Map<String, dynamic> json) =>
+      _$PrivateMessageInfoFromJson(json);
+  Map<String, dynamic> toJson() => _$PrivateMessageInfoToJson(this);
+}
+
+@JsonSerializable()
+class PrivateMessageSend {
+  @JsonKey(name: 'target_user_id')
+  final String targetUserId;
+  @JsonKey(name: 'message_type')
+  final MessageType messageType;
+  final String? content;
+  @JsonKey(name: 'content_data')
+  final Map<String, dynamic>? contentData;
+  @JsonKey(name: 'reply_to_id')
+  final String? replyToId;
+
+  PrivateMessageSend({
+    required this.targetUserId,
+    this.messageType = MessageType.text,
+    this.content,
+    this.contentData,
+    this.replyToId,
+  });
+
+  factory PrivateMessageSend.fromJson(Map<String, dynamic> json) =>
+      _$PrivateMessageSendFromJson(json);
+  Map<String, dynamic> toJson() => _$PrivateMessageSendToJson(this);
 }
 
 @JsonSerializable()

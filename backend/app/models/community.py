@@ -385,3 +385,45 @@ class SharedResource(BaseModel):
         Index('idx_share_target_user', 'target_user_id'),
         Index('idx_share_resource_plan', 'plan_id'),
     )
+
+
+# ============ 私聊消息系统 ============
+
+class PrivateMessage(BaseModel):
+    """
+    私聊消息表
+
+    设计说明：
+    - 类似于GroupMessage，但用于好友间一对一聊天
+    - receiver_id 指向接收消息的用户
+    """
+    __tablename__ = "private_messages"
+
+    sender_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    receiver_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 消息类型
+    message_type = Column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
+
+    # 消息内容
+    content = Column(Text, nullable=True)  # 纯文本内容
+
+    # 结构化内容 (同 GroupMessage)
+    content_data = Column(JSON, nullable=True)
+
+    # 回复相关
+    reply_to_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True)
+
+    # 状态
+    is_read = Column(Boolean, default=False, nullable=False)
+    read_at = Column(DateTime, nullable=True)
+
+    # 关系
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+    reply_to = relationship("PrivateMessage", remote_side="PrivateMessage.id")
+
+    __table_args__ = (
+        Index('idx_private_message_conversation', 'sender_id', 'receiver_id', 'created_at'),
+        Index('idx_private_message_receiver_unread', 'receiver_id', 'is_read'),
+    )

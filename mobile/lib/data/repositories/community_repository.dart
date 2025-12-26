@@ -78,6 +78,54 @@ class CommunityRepository {
     }
   }
 
+  /// 获取私信
+  Future<List<PrivateMessageInfo>> getPrivateMessages(
+    String friendId, {
+    String? beforeId,
+    int limit = 50,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParams = {'limit': limit};
+      if (beforeId != null) queryParams['before_id'] = beforeId;
+
+      final response = await _apiClient.get(
+        ApiEndpoints.privateMessages(friendId),
+        queryParameters: queryParams,
+      );
+      final List<dynamic> data = response.data;
+      return data.map((json) => PrivateMessageInfo.fromJson(json)).toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getPrivateMessages');
+    }
+  }
+
+  /// 发送私信
+  Future<PrivateMessageInfo> sendPrivateMessage(PrivateMessageSend message) async {
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.sendPrivateMessage,
+        data: message.toJson(),
+      );
+      return PrivateMessageInfo.fromJson(response.data);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'sendPrivateMessage');
+    }
+  }
+
+  /// 搜索用户
+  Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async {
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.searchUsers,
+        queryParameters: {'keyword': keyword, 'limit': limit},
+      );
+      final List<dynamic> data = response.data;
+      return data.map((json) => UserBrief.fromJson(json)).toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'searchUsers');
+    }
+  }
+
   // ============ 群组管理 ============
 
   /// 创建群组

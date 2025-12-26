@@ -391,8 +391,11 @@ class _FriendsTab extends ConsumerWidget {
                       color: AppDesignTokens.primaryBase,
                     ),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('私聊功能开发中')),
+                      context.push(
+                        Uri(
+                          path: '/community/friends/${friend.id}/chat',
+                          queryParameters: {'name': friend.displayName},
+                        ).toString(),
                       );
                     },
                   ),

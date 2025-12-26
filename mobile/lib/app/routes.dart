@@ -18,6 +18,7 @@ import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
+import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_detail_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_chat_screen.dart';
@@ -25,8 +26,12 @@ import 'package:sparkle/presentation/screens/community/create_group_screen.dart'
 import 'package:sparkle/presentation/screens/community/group_search_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
 import 'package:sparkle/presentation/screens/community/friends_screen.dart';
+import 'package:sparkle/presentation/screens/community/private_chat_screen.dart';
 import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
+import 'package:sparkle/presentation/screens/cognitive/curiosity_capsule_screen.dart';
 import 'package:sparkle/presentation/screens/focus/mindfulness_mode_screen.dart';
+import 'package:sparkle/presentation/screens/focus/focus_main_screen.dart';
+import 'package:sparkle/presentation/screens/stats/calendar_stats_screen.dart';
 import 'package:sparkle/data/models/task_model.dart';
 
 /// Helper to build pages with transitions
@@ -166,6 +171,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Focus Routes
       GoRoute(
+        path: '/focus',
+        name: 'focus',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const FocusMainScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
+      ),
+      GoRoute(
         path: '/focus/mindfulness',
         name: 'mindfulness',
         pageBuilder: (context, state) {
@@ -176,6 +190,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             type: SharedAxisTransitionType.scaled,
           );
         },
+      ),
+
+      // Calendar Stats Route
+      GoRoute(
+        path: '/calendar-stats',
+        name: 'calendarStats',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const CalendarStatsScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
 
       // Chat Routes
@@ -189,6 +214,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Plan Routes
+      GoRoute(
+        path: '/plans', // Alias for sprint for now or a main plan screen if created
+        name: 'plans',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const SprintScreen(),
+        ),
+      ),
       GoRoute(
         path: '/sprint',
         name: 'sprint',
@@ -234,6 +267,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           type: SharedAxisTransitionType.scaled,
         ),
       ),
+      GoRoute(
+        path: '/galaxy/node/:id',
+        name: 'knowledgeDetail',
+        pageBuilder: (context, state) {
+          final nodeId = state.pathParameters['id']!;
+          return _buildTransitionPage(
+            state: state,
+            child: KnowledgeDetailScreen(nodeId: nodeId),
+          );
+        },
+      ),
 
       // Cognitive Routes
       GoRoute(
@@ -242,6 +286,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const PatternListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/curiosity-capsule',
+        name: 'curiosityCapsule',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const CuriosityCapsuleScreen(),
         ),
       ),
 
@@ -309,6 +361,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           return _buildTransitionPage(
             state: state,
             child: GroupTasksScreen(groupId: groupId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/community/friends/:id/chat',
+        name: 'privateChat',
+        pageBuilder: (context, state) {
+          final friendId = state.pathParameters['id']!;
+          final friendName = state.uri.queryParameters['name'] ?? 'Chat';
+          return _buildTransitionPage(
+            state: state,
+            child: PrivateChatScreen(friendId: friendId, friendName: friendName),
           );
         },
       ),

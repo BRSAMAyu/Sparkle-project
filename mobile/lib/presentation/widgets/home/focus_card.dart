@@ -44,6 +44,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
     final dashboardState = ref.watch(dashboardProvider);
     final todayMinutes = dashboardState.flame.todayFocusMinutes;
     final flameLevel = dashboardState.flame.level;
+    final tasksCompleted = dashboardState.flame.tasksCompleted;
+    final nudgeMessage = dashboardState.flame.nudgeMessage;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -55,7 +57,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppDesignTokens.flameCore.withAlpha(40),
+                  AppDesignTokens.flameCore.withValues(alpha: 0.15), // Corrected .withValues
                   AppDesignTokens.glassBackground,
                 ],
                 begin: Alignment.topLeft,
@@ -64,10 +66,11 @@ class _FocusCardState extends ConsumerState<FocusCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -76,13 +79,13 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textOnDark(context).withOpacity(0.7),
+                        color: AppColors.textOnDark(context).withValues(alpha: 0.7),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppDesignTokens.flameCore.withAlpha(40),
+                        color: AppDesignTokens.flameCore.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -96,89 +99,103 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     ),
                   ],
                 ),
-                const Spacer(),
-                Center(
-                  child: AnimatedBuilder(
-                    animation: _flameAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _flameAnimation.value,
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            gradient: RadialGradient(
-                              colors: [
-                                AppDesignTokens.flameCore,
-                                AppDesignTokens.flameCore.withAlpha(100),
-                                Colors.transparent,
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.local_fire_department_rounded,
-                            color: AppColors.iconOnDark(context),
-                            size: 36,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const Spacer(),
-                Center(
+                
+                Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        _formatFocusTime(todayMinutes),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textOnDark(context),
-                        ),
+                      // Flame Animation
+                      AnimatedBuilder(
+                        animation: _flameAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _flameAnimation.value,
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  colors: [
+                                    AppDesignTokens.flameCore,
+                                    AppDesignTokens.flameCore.withValues(alpha: 0.4),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.local_fire_department_rounded,
+                                color: AppColors.iconOnDark(context),
+                                size: 32,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '今日专注时长',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textOnDark(context).withOpacity(0.6),
+                      const SizedBox(height: 12),
+                      // Nudge Message
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          nudgeMessage,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.3,
+                            color: AppColors.textOnDark(context).withValues(alpha: 0.9),
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(20),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          dashboardState.weather.type == 'sunny' ? '心流状态' : '进入驾驶舱',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textOnDark(context),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.chevron_right_rounded, color: AppColors.iconOnDark(context), size: 14),
-                      ],
-                    ),
-                  ),
+                
+                const SizedBox(height: 8),
+
+                // Metrics Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildMetric(context, _formatFocusTime(todayMinutes), '今日专注'),
+                    Container(height: 20, width: 1, color: Colors.white12),
+                    _buildMetric(context, '$tasksCompleted', '今日完成'),
+                  ],
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMetric(BuildContext context, String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textOnDark(context),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: AppColors.textOnDark(context).withValues(alpha: 0.6),
+          ),
+        ),
+      ],
     );
   }
 

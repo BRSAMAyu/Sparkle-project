@@ -752,3 +752,86 @@ class GroupTaskService:
             tasks.append(task_dict)
 
         return tasks
+
+
+class PrivateMessageService:
+    """私聊消息服务"""
+
+    @staticmethod
+    async def send_message(
+        db: AsyncSession,
+        sender_id: UUID,
+        data: Any # PrivateMessageSend type hint omitted to avoid import cycle or error if not imported yet
+    ) -> Any: # PrivateMessage
+        """发送私聊消息"""
+        from app.models.community import PrivateMessage
+        
+        # Check if friendship exists? (Optional, usually we allow messaging if not blocked)
+        # For simplicity, we assume allowed if not blocked.
+        
+        message = PrivateMessage(
+            sender_id=sender_id,
+            receiver_id=data.target_user_id,
+            message_type=data.message_type,
+            content=data.content,
+            content_data=data.content_data,
+            reply_to_id=data.reply_to_id,
+            created_at=datetime.utcnow()
+        )
+        db.add(message)
+        await db.flush()
+        await db.refresh(message)
+        return message
+
+    @staticmethod
+    async def get_messages(
+        db: AsyncSession,
+        user_id: UUID,
+        friend_id: UUID,
+        before_id: Optional[UUID] = None,
+        limit: int = 50
+    ) -> List[Any]: # List[PrivateMessage]
+        """获取与某好友的私聊记录"""
+        from app.models.community import PrivateMessage
+        
+        query = select(PrivateMessage).where(
+            or_(
+                and_(PrivateMessage.sender_id == user_id, PrivateMessage.receiver_id == friend_id),
+                and_(PrivateMessage.sender_id == friend_id, PrivateMessage.receiver_id == user_id)
+            ),
+            PrivateMessage.not_deleted_filter()
+        ).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver)
+        ).order_by(desc(PrivateMessage.created_at))
+
+        if before_id:
+            before_msg = await PrivateMessage.get_by_id(db, before_id)
+            if before_msg:
+                query = query.where(PrivateMessage.created_at < before_msg.created_at)
+
+        query = query.limit(limit)
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def mark_as_read(
+        db: AsyncSession,
+        user_id: UUID,
+        sender_id: UUID
+    ) -> int:
+        """标记来自某人的消息为已读"""
+        from app.models.community import PrivateMessage
+        from sqlalchemy import update
+        
+        stmt = update(PrivateMessage).where(
+            PrivateMessage.receiver_id == user_id,
+            PrivateMessage.sender_id == sender_id,
+            PrivateMessage.is_read == False
+        ).values(
+            is_read=True,
+            read_at=datetime.utcnow()
+        )
+        
+        result = await db.execute(stmt)
+        return result.rowcount

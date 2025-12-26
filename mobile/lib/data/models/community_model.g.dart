@@ -245,6 +245,58 @@ const _$MessageTypeEnumMap = {
   MessageType.system: 'system',
 };
 
+PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
+    PrivateMessageInfo(
+      id: json['id'] as String,
+      sender: UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
+      receiver: UserBrief.fromJson(json['receiver'] as Map<String, dynamic>),
+      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
+      isRead: json['is_read'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      content: json['content'] as String?,
+      contentData: json['content_data'] as Map<String, dynamic>?,
+      replyToId: json['reply_to_id'] as String?,
+      readAt: json['read_at'] == null
+          ? null
+          : DateTime.parse(json['read_at'] as String),
+    );
+
+Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'sender': instance.sender,
+      'receiver': instance.receiver,
+      'message_type': _$MessageTypeEnumMap[instance.messageType]!,
+      'content': instance.content,
+      'content_data': instance.contentData,
+      'reply_to_id': instance.replyToId,
+      'is_read': instance.isRead,
+      'read_at': instance.readAt?.toIso8601String(),
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+    };
+
+PrivateMessageSend _$PrivateMessageSendFromJson(Map<String, dynamic> json) =>
+    PrivateMessageSend(
+      targetUserId: json['target_user_id'] as String,
+      messageType:
+          $enumDecodeNullable(_$MessageTypeEnumMap, json['message_type']) ??
+              MessageType.text,
+      content: json['content'] as String?,
+      contentData: json['content_data'] as Map<String, dynamic>?,
+      replyToId: json['reply_to_id'] as String?,
+    );
+
+Map<String, dynamic> _$PrivateMessageSendToJson(PrivateMessageSend instance) =>
+    <String, dynamic>{
+      'target_user_id': instance.targetUserId,
+      'message_type': _$MessageTypeEnumMap[instance.messageType]!,
+      'content': instance.content,
+      'content_data': instance.contentData,
+      'reply_to_id': instance.replyToId,
+    };
+
 MessageSend _$MessageSendFromJson(Map<String, dynamic> json) => MessageSend(
       messageType:
           $enumDecodeNullable(_$MessageTypeEnumMap, json['message_type']) ??

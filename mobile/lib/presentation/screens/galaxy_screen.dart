@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/flame_core.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
+import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -24,10 +26,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
   // Canvas constants
   static const double _canvasSize = 4000.0;
   static const double _canvasCenter = 2000.0;
+  static const double _flameCoreSize = 200.0;
+
+  // Track last scale to avoid unnecessary updates
+  double _lastScale = 1.0;
 
   @override
   void initState() {
     super.initState();
+
+    // Listen to transformation changes for scale updates
+    _transformationController.addListener(_onTransformChanged);
 
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -44,8 +53,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
 
   @override
   void dispose() {
+    _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
     super.dispose();
+  }
+
+  /// Handle transformation changes to update scale in provider
+  void _onTransformChanged() {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    // Only update if scale changed significantly (avoid excessive updates during pan)
+    if ((scale - _lastScale).abs() > 0.02) {
+      _lastScale = scale;
+      ref.read(galaxyProvider.notifier).updateScale(scale);
+    }
   }
 
   /// Convert a canvas position (in the 4000x4000 space) to screen coordinates
@@ -60,6 +80,41 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
   Offset _getScreenCenter() {
     final size = MediaQuery.of(context).size;
     return Offset(size.width / 2, size.height / 2);
+  }
+
+  /// Convert screen position to canvas coordinates
+  Offset _screenToCanvas(Offset screenPosition) {
+    final matrix = _transformationController.value.clone()..invert();
+    return MatrixUtils.transformPoint(matrix, screenPosition);
+  }
+
+  /// Handle tap on canvas to detect node clicks
+  void _handleTapUp(TapUpDetails details) {
+    final galaxyState = ref.read(galaxyProvider);
+    if (galaxyState.nodes.isEmpty) return;
+
+    // Convert screen tap to canvas coordinates
+    final canvasTap = _screenToCanvas(details.localPosition);
+
+    // Get current scale for dynamic hit radius
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    final hitRadius = 30 / scale; // Larger hit area when zoomed out
+
+    // Find the tapped node
+    for (final node in galaxyState.nodes) {
+      final nodePos = galaxyState.nodePositions[node.id];
+      if (nodePos == null) continue;
+
+      // Add canvas center offset to get actual position
+      final actualPos = nodePos + const Offset(_canvasCenter, _canvasCenter);
+      final distance = (canvasTap - actualPos).distance;
+
+      if (distance < hitRadius + (node.importance * 2)) {
+        // Node tapped - navigate to detail screen
+        context.push('/galaxy/node/${node.id}');
+        return;
+      }
+    }
   }
 
   /// Parse a hex color string to Color
@@ -166,38 +221,60 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
       backgroundColor: Colors.black, // Deep space
       body: Stack(
         children: [
-          // 1. Star Map (Interactive)
-          InteractiveViewer(
-            transformationController: _transformationController,
-            boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
-            minScale: 0.1,
-            maxScale: 3.0,
-            constrained: false, // Infinite canvas
-            child: SizedBox(
-              width: _canvasSize,
-              height: _canvasSize,
-              child: AnimatedBuilder(
-                animation: _transformationController,
-                builder: (context, child) {
-                  final scale = _transformationController.value.getMaxScaleOnAxis();
-                  return CustomPaint(
-                    painter: StarMapPainter(
-                      nodes: galaxyState.nodes,
-                      positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
-                      scale: scale,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // 2. Flame Core (Fixed at screen center)
-          Center(
-            child: IgnorePointer(
-              // Let touches pass through to InteractiveViewer
-              child: FlameCore(
-                intensity: galaxyState.userFlameIntensity,
+          // 1. Star Map (Interactive) with FlameCore inside canvas
+          GestureDetector(
+            onTapUp: _handleTapUp,
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
+              minScale: 0.1,
+              maxScale: 3.0,
+              constrained: false, // Infinite canvas
+              child: SizedBox(
+                width: _canvasSize,
+                height: _canvasSize,
+                child: AnimatedBuilder(
+                  animation: _transformationController,
+                  builder: (context, child) {
+                    final scale = _transformationController.value.getMaxScaleOnAxis();
+                    return Stack(
+                      children: [
+                        // Background: Sector nebula visualization
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: SectorBackgroundPainter(
+                              canvasSize: _canvasSize,
+                            ),
+                          ),
+                        ),
+                        // FlameCore at canvas center (moves with pan/zoom)
+                        Positioned(
+                          left: _canvasCenter - _flameCoreSize / 2,
+                          top: _canvasCenter - _flameCoreSize / 2,
+                          child: SizedBox(
+                            width: _flameCoreSize,
+                            height: _flameCoreSize,
+                            child: FlameCore(
+                              intensity: galaxyState.userFlameIntensity,
+                            ),
+                          ),
+                        ),
+                        // Star map on top
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: StarMapPainter(
+                              nodes: galaxyState.nodes,
+                              positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
+                              scale: scale,
+                              aggregationLevel: galaxyState.aggregationLevel,
+                              clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -270,6 +347,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
   // Helper to shift logical (0,0) to center of the 4000x4000 canvas
   Map<String, Offset> _centerPositions(Map<String, Offset> raw, double cx, double cy) {
     return raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
+  }
+
+  // Helper to shift cluster positions to center of the 4000x4000 canvas
+  Map<String, ClusterInfo> _centerClusters(Map<String, ClusterInfo> raw, double cx, double cy) {
+    return raw.map((key, cluster) => MapEntry(
+      key,
+      ClusterInfo(
+        id: cluster.id,
+        name: cluster.name,
+        position: cluster.position + Offset(cx, cy),
+        nodeCount: cluster.nodeCount,
+        totalMastery: cluster.totalMastery,
+        sector: cluster.sector,
+        childNodeIds: cluster.childNodeIds,
+      ),
+    ));
   }
 }
 

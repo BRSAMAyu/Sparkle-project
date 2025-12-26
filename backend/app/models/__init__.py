@@ -20,7 +20,7 @@ from app.models.community import (
     Friendship, FriendshipStatus,
     Group, GroupType, GroupRole,
     GroupMember, GroupMessage, MessageType,
-    GroupTask, GroupTaskClaim, SharedResource
+    GroupTask, GroupTaskClaim, SharedResource, PrivateMessage
 )
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
 from app.models.analytics import UserDailyMetric
@@ -65,6 +65,7 @@ __all__ = [
     "GroupTask",
     "GroupTaskClaim",
     "SharedResource",
+    "PrivateMessage",
     # Cognitive Prism
     "CognitiveFragment",
     "BehaviorPattern",

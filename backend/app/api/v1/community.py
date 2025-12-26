@@ -10,7 +10,7 @@ from uuid import UUID
 from app.db.session import get_db
 from app.core.security import get_current_user, decode_token
 from app.core.websocket import manager
-from app.models.user import User
+from app.models.user import User, UserStatus
 from app.models.community import GroupType
 from app.schemas.community import (
     # 好友
@@ -20,8 +20,13 @@ from app.schemas.community import (
     MemberRoleUpdate, UserBrief,
     # 消息
     MessageSend, MessageInfo,
+    PrivateMessageSend, PrivateMessageInfo,
     # 任务
     GroupTaskCreate, GroupTaskInfo,
+    # 状态
+    UserStatusUpdate,
+    # 其他
+    CheckinRequest, CheckinResponse,
     # 打卡
     CheckinRequest, CheckinResponse,
     # 火堆
@@ -33,10 +38,11 @@ from app.schemas.community import (
 )
 from app.services.community_service import (
     FriendshipService, GroupService, GroupMessageService,
-    CheckinService, GroupTaskService
+    CheckinService, GroupTaskService, PrivateMessageService
 )
 from app.services.collaboration_service import collaboration_service
 from app.models.community import SharedResourceType
+from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
 
@@ -382,6 +388,170 @@ async def get_messages(
             reply_to_id=msg.reply_to_id
         ))
     return result
+
+
+# ============ 私聊消息 ============
+
+@router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
+async def send_private_message(
+    data: PrivateMessageSend,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """发送私聊消息"""
+    try:
+        message = await PrivateMessageService.send_message(db, current_user.id, data)
+        await db.commit()
+
+        msg_info = PrivateMessageInfo(
+            id=message.id,
+            created_at=message.created_at,
+            updated_at=message.updated_at,
+            sender=UserBrief.model_validate(message.sender),
+            receiver=UserBrief.model_validate(message.receiver) if message.receiver else None, # Should always be there
+            message_type=message.message_type,
+            content=message.content,
+            content_data=message.content_data,
+            reply_to_id=message.reply_to_id,
+            is_read=message.is_read,
+            read_at=message.read_at
+        )
+
+        # 推送 WebSocket
+        await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
+
+        return msg_info
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/friends/{friend_id}/messages", response_model=List[PrivateMessageInfo], summary="获取私信记录")
+async def get_private_messages(
+    friend_id: UUID,
+    before_id: Optional[UUID] = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取与某位好友的私信记录"""
+    # 标记已读
+    await PrivateMessageService.mark_as_read(db, current_user.id, friend_id)
+    await db.commit()
+
+    messages = await PrivateMessageService.get_messages(db, current_user.id, friend_id, before_id, limit)
+
+    result = []
+    for msg in messages:
+        result.append(PrivateMessageInfo(
+            id=msg.id,
+            created_at=msg.created_at,
+            updated_at=msg.updated_at,
+            sender=UserBrief.model_validate(msg.sender),
+            receiver=UserBrief.model_validate(msg.receiver),
+            message_type=msg.message_type,
+            content=msg.content,
+            content_data=msg.content_data,
+            reply_to_id=msg.reply_to_id,
+            is_read=msg.is_read,
+            read_at=msg.read_at
+        ))
+    return result
+
+
+async def _update_user_status(user_id: str, status: UserStatus):
+    """更新用户状态并通知好友"""
+    async with AsyncSessionLocal() as db:
+        user = await db.get(User, user_id)
+        if not user:
+            return
+
+        # Invisible 逻辑: 如果当前是隐身，上线/下线操作不改变DB状态（保持隐身）
+        if user.status == UserStatus.INVISIBLE:
+            return 
+
+        user.status = status
+        db.add(user)
+        await db.commit()
+
+        # 通知好友
+        friends = await FriendshipService.get_friends(db, user.id)
+        friend_ids = [str(f_user.id) for _, f_user in friends]
+        
+        # 广播
+        broadcast_status = status.value
+        if status == UserStatus.INVISIBLE:
+            broadcast_status = UserStatus.OFFLINE.value
+            
+        await manager.notify_status_change(str(user.id), broadcast_status, friend_ids)
+
+
+@router.put("/status", summary="更新在线状态")
+async def update_status(
+    data: UserStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """手动更新在线状态"""
+    # 重新加载以确保 attached
+    user = await db.get(User, current_user.id)
+    user.status = UserStatus(data.status.value)
+    db.add(user)
+    await db.commit()
+    
+    # 通知
+    friends = await FriendshipService.get_friends(db, user.id)
+    friend_ids = [str(f_user.id) for _, f_user in friends]
+    
+    broadcast_status = data.status.value
+    if data.status == UserStatus.INVISIBLE:
+        broadcast_status = UserStatus.OFFLINE.value
+        
+    await manager.notify_status_change(str(user.id), broadcast_status, friend_ids)
+    
+    return {"success": True, "status": data.status}
+
+
+@router.websocket("/ws/connect")
+async def user_websocket_endpoint(
+    websocket: WebSocket,
+    token: str = Query(...)
+):
+    """
+    用户个人 WebSocket 连接
+    用于接收私信通知、系统通知等
+    连接地址: ws://host/api/v1/community/ws/connect?token={jwt_token}
+    """
+    user_id = None
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=4003)
+            return
+            
+        await manager.connect_user(websocket, user_id)
+        
+        # 上线通知
+        await _update_user_status(user_id, UserStatus.ONLINE)
+        
+        try:
+            while True:
+                # 保持连接，接收客户端消息
+                data = await websocket.receive_text()
+                # 可以在这里处理心跳
+        except WebSocketDisconnect:
+            manager.disconnect_user(user_id)
+            # 下线通知
+            await _update_user_status(user_id, UserStatus.OFFLINE)
+            
+    except Exception as e:
+        print(f"User WebSocket Error: {e}")
+        try:
+            if user_id:
+                manager.disconnect_user(user_id)
+            await websocket.close()
+        except:
+            pass
 
 
 # ============ 打卡 ============

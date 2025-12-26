@@ -2,10 +2,18 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
-from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON, ForeignKey, DateTime
+from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
+import enum
 
 from app.models.base import BaseModel, GUID
+
+
+class UserStatus(str, enum.Enum):
+    """用户在线状态"""
+    ONLINE = "online"
+    OFFLINE = "offline"
+    INVISIBLE = "invisible"
 
 
 class User(BaseModel):
@@ -57,6 +65,7 @@ class User(BaseModel):
     # 状态
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
+    status = Column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
 
     # 🆕 社交登录 ID
     google_id = Column(String(255), unique=True, nullable=True, index=True)

@@ -335,3 +335,102 @@ class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> 
     }
   }
 }
+
+// 7. Private Chat Provider (Family)
+final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>((ref, friendId) {
+  return PrivateChatNotifier(
+    ref.watch(communityRepositoryProvider),
+    ref.watch(authRepositoryProvider),
+    friendId,
+  );
+});
+
+class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
+  final CommunityRepository _repository;
+  final AuthRepository _authRepository;
+  final String _friendId;
+  final WebSocketService _wsService = WebSocketService();
+
+  PrivateChatNotifier(this._repository, this._authRepository, this._friendId) : super(const AsyncValue.loading()) {
+    loadMessages();
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() {
+    final token = _authRepository.getAccessToken();
+    if (token == null) return;
+
+    // Convert http/https to ws/wss
+    final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
+    // Final URL: ws://host/api/v1/community/ws/connect?token={token}
+    final wsUrl = '$baseUrl/community/ws/connect?token=$token';
+
+    try {
+      _wsService.connect(wsUrl);
+      _wsService.stream?.listen((data) {
+        if (data is String) {
+          try {
+            final jsonData = jsonDecode(data);
+            // Check if it matches PrivateMessage structure
+            // In a real app we might wrap messages in envelopes {type: 'private_chat', data: ...}
+            // For now assume direct mapping or check fields
+            if (jsonData['sender'] != null && jsonData['receiver'] != null) {
+               final message = PrivateMessageInfo.fromJson(jsonData);
+               
+               // Filter: only relevant to this conversation
+               // Either sent by friend OR sent by me to friend (if echoed back)
+               if (message.sender.id == _friendId || message.receiver.id == _friendId) {
+                 state.whenData((messages) {
+                   if (!messages.any((m) => m.id == message.id)) {
+                     state = AsyncValue.data([message, ...messages]);
+                   }
+                 });
+               }
+            }
+          } catch (e) {
+            print('WS Parse Error (Private): $e');
+          }
+        }
+      });
+    } catch (e) {
+      print('WS Connect Error (Private): $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _wsService.disconnect();
+    super.dispose();
+  }
+
+  Future<void> loadMessages() async {
+    state = const AsyncValue.loading();
+    try {
+      final messages = await _repository.getPrivateMessages(_friendId);
+      state = AsyncValue.data(messages);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> sendMessage({required String content, MessageType type = MessageType.text}) async {
+    try {
+      final message = await _repository.sendPrivateMessage(
+        PrivateMessageSend(
+          targetUserId: _friendId,
+          content: content,
+          messageType: type,
+        ),
+      );
+      
+      // Optimistically update
+      state.whenData((messages) {
+        if (!messages.any((m) => m.id == message.id)) {
+          state = AsyncValue.data([message, ...messages]);
+        }
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+}

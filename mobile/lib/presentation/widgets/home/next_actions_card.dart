@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
+import 'package:sparkle/data/models/task_model.dart';
 
 /// NextActionsCard - Next Actions Card (1x2 tall)
 class NextActionsCard extends ConsumerWidget {
@@ -54,7 +56,7 @@ class NextActionsCard extends ConsumerWidget {
                     ? _buildEmptyState()
                     : ListView.separated(
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: nextActions.length.clamp(0, 3),
+                        itemCount: nextActions.length.clamp(0, 1),
                         separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           return _NextActionItem(task: nextActions[index]);
@@ -91,53 +93,59 @@ class _NextActionItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(10),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            task.title,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+    return GestureDetector(
+      onTap: () {
+        final taskModel = _toTaskModel(task);
+        context.push('/focus/mindfulness', extra: taskModel);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(10),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              task.title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _getTypeColor(task.type),
-                  shape: BoxShape.circle,
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _getTypeColor(task.type),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${task.estimatedMinutes}m',
-                  style: TextStyle(fontSize: 9, color: Colors.white.withAlpha(120)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${task.estimatedMinutes}m',
+                    style: TextStyle(fontSize: 9, color: Colors.white.withAlpha(120)),
+                  ),
                 ),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  await ref.read(taskListProvider.notifier).completeTask(task.id, task.estimatedMinutes, null);
-                  ref.read(dashboardProvider.notifier).refresh();
-                },
-                child: Icon(Icons.check_circle_outline_rounded, color: Colors.white.withAlpha(150), size: 14),
-              ),
-            ],
-          ),
-        ],
+                GestureDetector(
+                  onTap: () async {
+                    await ref.read(taskListProvider.notifier).completeTask(task.id, task.estimatedMinutes, null);
+                    ref.read(dashboardProvider.notifier).refresh();
+                  },
+                  child: Icon(Icons.check_circle_outline_rounded, color: Colors.white.withAlpha(150), size: 14),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -149,6 +157,35 @@ class _NextActionItem extends ConsumerWidget {
       case 'error_fix': return Colors.red;
       case 'reflection': return AppDesignTokens.prismPurple;
       default: return Colors.grey;
+    }
+  }
+
+  TaskModel _toTaskModel(TaskData data) {
+    return TaskModel(
+      id: data.id,
+      userId: '',
+      title: data.title,
+      type: _parseTaskType(data.type),
+      tags: [],
+      estimatedMinutes: data.estimatedMinutes,
+      difficulty: 1,
+      energyCost: 1,
+      status: TaskStatus.pending,
+      priority: data.priority,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  TaskType _parseTaskType(String type) {
+    switch (type) {
+      case 'learning': return TaskType.learning;
+      case 'training': return TaskType.training;
+      case 'error_fix': return TaskType.errorFix;
+      case 'reflection': return TaskType.reflection;
+      case 'social': return TaskType.social;
+      case 'planning': return TaskType.planning;
+      default: return TaskType.learning;
     }
   }
 }

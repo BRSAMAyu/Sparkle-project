@@ -6,6 +6,7 @@ class DashboardState {
   final WeatherData weather;
   final FlameData flame;
   final SprintData? sprint;
+  final GrowthData? growth; // Added Growth Plan
   final List<TaskData> nextActions;
   final CognitiveData cognitive;
   final bool isLoading;
@@ -15,6 +16,7 @@ class DashboardState {
     required this.weather,
     required this.flame,
     required this.sprint,
+    this.growth,
     required this.nextActions,
     required this.cognitive,
     this.isLoading = false,
@@ -25,6 +27,7 @@ class DashboardState {
     weather = WeatherData(type: 'sunny', condition: ''),
     flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
     sprint = null,
+    growth = null,
     nextActions = const [],
     cognitive = CognitiveData(status: 'empty'),
     isLoading = true,
@@ -34,6 +37,7 @@ class DashboardState {
     weather = WeatherData(type: 'sunny', condition: ''),
     flame = FlameData(level: 1, brightness: 0, todayFocusMinutes: 0),
     sprint = null,
+    growth = null,
     nextActions = const [],
     cognitive = CognitiveData(status: 'empty'),
     isLoading = false,
@@ -43,6 +47,7 @@ class DashboardState {
     WeatherData? weather,
     FlameData? flame,
     SprintData? sprint,
+    GrowthData? growth,
     List<TaskData>? nextActions,
     CognitiveData? cognitive,
     bool? isLoading,
@@ -52,6 +57,7 @@ class DashboardState {
       weather: weather ?? this.weather,
       flame: flame ?? this.flame,
       sprint: sprint ?? this.sprint,
+      growth: growth ?? this.growth,
       nextActions: nextActions ?? this.nextActions,
       cognitive: cognitive ?? this.cognitive,
       isLoading: isLoading ?? this.isLoading,
@@ -71,8 +77,16 @@ class FlameData {
   final int level;
   final int brightness;
   final int todayFocusMinutes;
+  final int tasksCompleted;
+  final String nudgeMessage;
 
-  FlameData({required this.level, required this.brightness, required this.todayFocusMinutes});
+  FlameData({
+    required this.level,
+    required this.brightness,
+    required this.todayFocusMinutes,
+    this.tasksCompleted = 0,
+    this.nudgeMessage = '保持专注，继续前行',
+  });
 }
 
 class SprintData {
@@ -88,6 +102,20 @@ class SprintData {
     required this.progress,
     required this.daysLeft,
     required this.totalEstimatedHours,
+  });
+}
+
+class GrowthData {
+  final String id;
+  final String name;
+  final double progress;
+  final double masteryLevel;
+
+  GrowthData({
+    required this.id,
+    required this.name,
+    required this.progress,
+    required this.masteryLevel,
   });
 }
 
@@ -155,6 +183,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         level: flameMap['level'] as int,
         brightness: flameMap['brightness'] as int,
         todayFocusMinutes: flameMap['today_focus_minutes'] as int,
+        tasksCompleted: flameMap['tasks_completed'] as int? ?? 0,
+        nudgeMessage: flameMap['nudge_message'] as String? ?? '保持专注，继续前行',
       );
       
       // Parse sprint data (nullable)
@@ -165,6 +195,15 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         progress: (sprintMap['progress'] as num).toDouble(),
         daysLeft: sprintMap['days_left'] as int,
         totalEstimatedHours: (sprintMap['total_estimated_hours'] as num).toDouble(),
+      ) : null;
+
+      // Parse growth data (nullable)
+      final growthMap = dashboardData['growth'] as Map<String, dynamic>?;
+      final GrowthData? growth = growthMap != null ? GrowthData(
+        id: growthMap['id'] as String,
+        name: growthMap['name'] as String,
+        progress: (growthMap['progress'] as num).toDouble(),
+        masteryLevel: (growthMap['mastery_level'] as num).toDouble(),
       ) : null;
       
       // Parse next actions
@@ -195,6 +234,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         weather: weather,
         flame: flame,
         sprint: sprint,
+        growth: growth,
         nextActions: nextActions,
         cognitive: cognitive,
       );

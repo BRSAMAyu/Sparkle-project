@@ -40,6 +40,12 @@ class MessageTypeEnum(str, Enum):
     SYSTEM = "system"
 
 
+class UserStatusEnum(str, Enum):
+    ONLINE = "online"
+    OFFLINE = "offline"
+    INVISIBLE = "invisible"
+
+
 # ============ 用户简要信息 ============
 
 class UserBrief(BaseModel):
@@ -50,9 +56,16 @@ class UserBrief(BaseModel):
     avatar_url: Optional[str] = Field(default=None, description="头像URL")
     flame_level: int = Field(default=1, description="火苗等级")
     flame_brightness: float = Field(default=0.5, description="火苗亮度")
+    status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="在线状态")
 
     class Config:
         from_attributes = True
+
+
+class UserStatusUpdate(BaseModel):
+    """更新用户在线状态"""
+    status: UserStatusEnum = Field(description="新状态")
+
 
 
 # ============ 好友系统 Schemas ============
@@ -333,3 +346,34 @@ class SharedResourceInfo(BaseSchema):
 
     class Config:
         from_attributes = True
+
+
+# ============ 私聊消息 Schemas ============
+
+class PrivateMessageSend(BaseModel):
+    """发送私聊消息"""
+    target_user_id: UUID = Field(description="接收用户ID")
+    message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT, description="消息类型")
+    content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
+    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
+    reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+
+    @field_validator('content')
+    @classmethod
+    def validate_content(cls, v, info):
+        msg_type = info.data.get('message_type')
+        if msg_type == MessageTypeEnum.TEXT and not v:
+            raise ValueError('文本消息必须有内容')
+        return v
+
+
+class PrivateMessageInfo(BaseSchema):
+    """私聊消息信息"""
+    sender: UserBrief = Field(description="发送者")
+    receiver: UserBrief = Field(description="接收者")
+    message_type: MessageTypeEnum = Field(description="消息类型")
+    content: Optional[str] = Field(description="消息内容")
+    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
+    reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
+    is_read: bool = Field(description="是否已读")
+    read_at: Optional[datetime] = Field(description="阅读时间")

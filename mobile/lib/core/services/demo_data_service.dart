@@ -4,6 +4,7 @@ import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/data/models/knowledge_detail_model.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoDataService {
@@ -178,6 +179,84 @@ class DemoDataService {
     return NodeStatus.unlocked;
   }
 
+  /// Get demo node detail for a specific node ID
+  KnowledgeDetailResponse getDemoNodeDetail(String nodeId) {
+    // Parse node index from ID
+    final indexStr = nodeId.replaceAll('node_', '');
+    final index = int.tryParse(indexStr) ?? 0;
+
+    final subjects = ['数据结构', '离散数学', '计算机系统', '数字电路', '摄影', '文学'];
+    final subject = subjects[index % subjects.length];
+    final isCore = index < 20;
+    final status = _determineNodeStatus(index);
+
+    // Determine sector based on index
+    final sectorValues = ['COSMOS', 'TECH', 'ART', 'CIVILIZATION', 'LIFE', 'WISDOM', 'VOID'];
+    final sectorCode = sectorValues[index % sectorValues.length];
+
+    return KnowledgeDetailResponse(
+      node: KnowledgeNodeDetail(
+        id: nodeId,
+        name: isCore ? subject : '$subject - 知识点 ${index + 1}',
+        nameEn: isCore ? subject : '$subject - Point ${index + 1}',
+        description: '这是关于$subject的知识点描述。该知识点涵盖了核心概念和应用场景，帮助你更好地理解和掌握相关内容。',
+        keywords: [subject, '计算机科学', '基础知识'],
+        importanceLevel: isCore ? 5 : _random.nextInt(3) + 1,
+        sectorCode: sectorCode,
+        isSeed: isCore,
+        sourceType: isCore ? 'seed' : 'llm_expanded',
+        parentId: isCore ? null : 'node_${index % 20}',
+        subjectId: index % subjects.length + 1,
+        subjectName: subject,
+        createdAt: DateTime.now().subtract(Duration(days: index)),
+      ),
+      relations: [
+        if (index > 0)
+          NodeRelation(
+            id: 'rel_${index}_prev',
+            sourceNodeId: 'node_${index - 1}',
+            targetNodeId: nodeId,
+            relationType: 'prerequisite',
+            strength: 0.8,
+            sourceNodeName: '$subject - 知识点 $index',
+            targetNodeName: isCore ? subject : '$subject - 知识点 ${index + 1}',
+          ),
+        if (index < 499)
+          NodeRelation(
+            id: 'rel_${index}_next',
+            sourceNodeId: nodeId,
+            targetNodeId: 'node_${index + 1}',
+            relationType: 'related',
+            strength: 0.6,
+            sourceNodeName: isCore ? subject : '$subject - 知识点 ${index + 1}',
+            targetNodeName: '$subject - 知识点 ${index + 2}',
+          ),
+      ],
+      relatedTasks: demoTasks.take(2).toList(),
+      relatedPlans: demoPlans.map((p) => RelatedPlan(
+        id: p.id,
+        title: p.name,
+        planType: p.type.toString().split('.').last,
+        status: p.isActive ? 'active' : 'completed',
+        targetDate: p.targetDate,
+      )).toList(),
+      userStats: KnowledgeUserStats(
+        masteryScore: status == NodeStatus.mastered ? 95.0 :
+                      status == NodeStatus.review ? 60.0 :
+                      status == NodeStatus.unlocked ? 30.0 : 0.0,
+        totalStudyMinutes: (index % 10 + 1) * 15,
+        studyCount: index % 5 + 1,
+        isUnlocked: status != NodeStatus.locked,
+        isFavorite: index % 7 == 0,
+        lastStudyAt: DateTime.now().subtract(Duration(days: index % 7)),
+        nextReviewAt: status == NodeStatus.review
+            ? DateTime.now().add(Duration(days: index % 3 + 1))
+            : null,
+        decayPaused: index % 10 == 0,
+      ),
+    );
+  }
+
   // --- Plan Data ---
   List<PlanModel> get demoPlans {
     final now = DateTime.now();
@@ -280,6 +359,8 @@ struct ListNode {
         'level': 15,
         'brightness': 85, 
         'today_focus_minutes': 120,
+        'tasks_completed': 3,
+        'nudge_message': '你今天已经在《数据结构》上投入了2小时，非常棒！休息一下吧。',
       },
       'sprint': {
         'id': 'plan_sprint_1',
@@ -287,6 +368,12 @@ struct ListNode {
         'progress': 0.7,
         'days_left': 7,
         'total_estimated_hours': 20.0,
+      },
+      'growth': {
+        'id': 'plan_growth_1',
+        'name': 'CS基础巩固',
+        'progress': 0.45,
+        'mastery_level': 0.3,
       },
       'next_actions': [
         {

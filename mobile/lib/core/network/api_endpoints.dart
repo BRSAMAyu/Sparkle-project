@@ -42,6 +42,9 @@ class ApiEndpoints {
   static const String galaxyGraph = '/galaxy/graph';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
   static const String galaxyEvents = '/galaxy/events';
+  static String galaxyNodeDetail(String id) => '/galaxy/node/$id';
+  static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
+  static String galaxyNodeDecayPause(String id) => '/galaxy/node/$id/decay/pause';
 
   // Community - Friends
   static const String friends = '/community/friends';
@@ -49,6 +52,9 @@ class ApiEndpoints {
   static const String friendRespond = '/community/friends/respond';
   static const String friendsPending = '/community/friends/pending';
   static const String friendsRecommendations = '/community/friends/recommendations';
+  static String privateMessages(String friendId) => '/community/friends/$friendId/messages';
+  static const String sendPrivateMessage = '/community/messages';
+  static const String searchUsers = '/community/users/search';
 
   // Community - Groups
   static const String groups = '/community/groups';

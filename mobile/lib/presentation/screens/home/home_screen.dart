@@ -17,6 +17,9 @@ import 'package:sparkle/presentation/widgets/home/prism_card.dart';
 import 'package:sparkle/presentation/widgets/home/sprint_card.dart';
 import 'package:sparkle/presentation/widgets/home/next_actions_card.dart';
 import 'package:sparkle/presentation/widgets/home/omnibar.dart';
+import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
+import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
+import 'package:sparkle/presentation/widgets/home/long_term_plan_card.dart';
 
 /// HomeScreen v2.0 - Project Cockpit
 class HomeScreen extends StatefulWidget {
@@ -178,6 +181,12 @@ class _DashboardScreen extends ConsumerWidget {
             mainAxisCellCount: 2,
             child: FocusCard(onTap: () => context.push('/focus')),
           ),
+          // Card E: Calendar Heatmap (2x1)
+          const StaggeredGridTile.count(
+            crossAxisCellCount: 2,
+            mainAxisCellCount: 1,
+            child: CalendarHeatmapCard(),
+          ),
           // Card B: Cognitive Prism (2x1)
           const StaggeredGridTile.count(
             crossAxisCellCount: 2,
@@ -190,11 +199,23 @@ class _DashboardScreen extends ConsumerWidget {
             mainAxisCellCount: 1,
             child: SprintCard(onTap: () => context.push('/plans')),
           ),
-          // Card C: Next Actions (1x2)
+          // Card C: Next Actions (1x1) - Resized
           StaggeredGridTile.count(
             crossAxisCellCount: 1,
-            mainAxisCellCount: 2,
+            mainAxisCellCount: 1,
             child: NextActionsCard(onViewAll: () => context.push('/tasks')),
+          ),
+          // Card F: Curiosity Capsule (1x1)
+          const StaggeredGridTile.count(
+            crossAxisCellCount: 1,
+            mainAxisCellCount: 1,
+            child: DashboardCuriosityCard(),
+          ),
+          // Card G: Long Term Plan (1x1) - Bottom Right
+          const StaggeredGridTile.count(
+            crossAxisCellCount: 1,
+            mainAxisCellCount: 1,
+            child: LongTermPlanCard(),
           ),
         ],
       ),
