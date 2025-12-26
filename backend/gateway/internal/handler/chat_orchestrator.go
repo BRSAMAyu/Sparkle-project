@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/agent"
@@ -78,6 +80,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			// but best to enforce JSON protocol
 			if err := json.Unmarshal(msg, &input); err == nil {
 				req := &agentv1.ChatRequest{
+					RequestId: fmt.Sprintf("req_%s", uuid.New().String()),
 					UserId:    userID,
 					SessionId: input.SessionID,
 					Input: &agentv1.ChatRequest_Message{

@@ -53,6 +53,9 @@ message ChatRequest {
 
   // Configuration for this specific request.
   ChatConfig config = 8;
+
+  // Unique identifier for this specific request/message (Trace ID).
+  string request_id = 9;
 }
 
 // UserProfile defines key user attributes for personalization.
@@ -101,6 +104,9 @@ message ChatMessage {
 message ChatResponse {
   string response_id = 1;
   int64 created_at = 2; 
+
+  // The ID of the request that triggered this response (for tracing).
+  string request_id = 10;
 
   // The main payload of the response.
   oneof content {

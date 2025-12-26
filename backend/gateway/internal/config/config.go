@@ -15,7 +15,7 @@ type Config struct {
 
 func Load() *Config {
 	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("DATABASE_URL", "postgres://user:password@localhost:5432/sparkle")
+	viper.SetDefault("DATABASE_URL", "postgres://postgres:password@localhost:5432/sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("JWT_SECRET", "change-me")
 

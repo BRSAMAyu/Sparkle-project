@@ -1,7 +1,7 @@
 .PHONY: dev-up sync-db proto-gen
 
 DB_CONTAINER=sparkle_db
-DB_USER=user
+DB_USER=postgres
 DB_NAME=sparkle
 
 # 启动基础设施
@@ -16,7 +16,7 @@ sync-db:
 	@docker ps -q -f name=$(DB_CONTAINER) > /dev/null || (echo "❌ Error: Container $(DB_CONTAINER) is not running. Run 'make dev-up' first." && exit 1)
 	@echo " 2. Dumping Schema (Structure Only)..."
 	mkdir -p backend/gateway/internal/db
-	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only > backend/gateway/internal/db/schema.sql
+	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | grep -v '^\\' > backend/gateway/internal/db/schema.sql
 	@echo "⚡ 3. Generating Go Code via SQLC..."
 	cd backend/gateway && sqlc generate
 	@echo "✅ Database Schema & Go Code Synced Successfully!"

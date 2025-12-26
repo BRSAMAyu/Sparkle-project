@@ -2,9 +2,11 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -43,7 +45,8 @@ func (c *Client) Close() {
 func (c *Client) StreamChat(ctx context.Context, userID string) (agentv1.AgentService_StreamChatClient, error) {
 	// Inject Metadata for context propagation
 	md := metadata.New(map[string]string{
-		"user-id": userID,
+		"user-id":    userID,
+		"x-trace-id": fmt.Sprintf("trace_%s", uuid.New().String()),
 	})
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 
