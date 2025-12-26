@@ -16,12 +16,6 @@ class SectorBackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
 
-    // Draw deep space background gradient
-    _drawSpaceBackground(canvas, size, center);
-
-    // Draw stars
-    _drawStars(canvas, size);
-
     // Draw each sector's nebula
     for (final entry in SectorConfig.styles.entries) {
       _drawSectorNebula(canvas, center, entry.key, entry.value);
@@ -30,39 +24,6 @@ class SectorBackgroundPainter extends CustomPainter {
     // Draw sector labels
     for (final entry in SectorConfig.styles.entries) {
       _drawSectorLabel(canvas, center, entry.value);
-    }
-  }
-
-  void _drawSpaceBackground(Canvas canvas, Size size, Offset center) {
-    // Radial gradient from slightly lighter center to dark edges
-    final gradient = ui.Gradient.radial(
-      center,
-      size.width / 2,
-      [
-        const Color(0xFF0D1B2A), // Dark blue-gray at center
-        const Color(0xFF0A1628), // Darker at edges
-        const Color(0xFF050A10), // Almost black at far edges
-      ],
-      [0.0, 0.5, 1.0],
-    );
-
-    final paint = Paint()..shader = gradient;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  void _drawStars(Canvas canvas, Size size) {
-    final random = Random(42); // Consistent seed
-    final paint = Paint()..color = Colors.white;
-    
-    // Draw 200 random stars
-    for (int i = 0; i < 200; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final radius = random.nextDouble() * 1.5;
-      final alpha = random.nextDouble() * 0.5 + 0.1;
-      
-      paint.color = Colors.white.withValues(alpha: alpha);
-      canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }
 

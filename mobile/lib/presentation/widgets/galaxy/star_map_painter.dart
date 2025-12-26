@@ -638,6 +638,9 @@ class StarMapPainter extends CustomPainter {
   void _drawNodes(Canvas canvas) {
     final nodePaint = Paint()..style = PaintingStyle.fill;
     final glowPaint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
     for (var processedNode in _processedNodes) {
       final node = processedNode.node;
@@ -645,14 +648,23 @@ class StarMapPainter extends CustomPainter {
       final color = processedNode.color;
       final radius = processedNode.radius;
 
+      // LOD: Skip small nodes when zoomed out significantly
+      if (scale < 0.3 && node.importance < 3) {
+        nodePaint.color = color.withValues(alpha: 0.5);
+        canvas.drawCircle(pos, radius * 0.5, nodePaint);
+        continue;
+      }
+
       if (node.isUnlocked) {
         // Calculate mastery-based glow intensity
         final masteryFactor = node.masteryScore / 100.0;
         final glowIntensity = 0.3 + masteryFactor * 0.5;
 
         // Outer glow (soft, large)
-        glowPaint.color = color.withValues(alpha: glowIntensity * 0.4);
-        canvas.drawCircle(pos, radius * 3.0, glowPaint);
+        if (scale > 0.5) { // Only draw glow if not too zoomed out
+          glowPaint.color = color.withValues(alpha: glowIntensity * 0.4);
+          canvas.drawCircle(pos, radius * 3.0, glowPaint);
+        }
 
         // Inner glow (brighter, smaller)
         glowPaint.color = color.withValues(alpha: glowIntensity * 0.7);
@@ -675,6 +687,48 @@ class StarMapPainter extends CustomPainter {
         canvas.drawCircle(pos, radius, nodePaint);
         nodePaint.shader = null;
 
+        // Progress Ring Logic (Study Count)
+        // 0: No ring (or very faint)
+        // 1: Half ring (Accumulating energy)
+        // >=2: Full ring + Glow (Ready to expand)
+        
+        if (scale > 0.4) { // Only draw rings if visible enough
+          final ringRadius = radius * 1.6;
+          
+          if (node.studyCount >= 2) {
+             // Full Energy Ring
+             ringPaint
+              ..color = color.withValues(alpha: 0.8)
+              ..strokeWidth = 2.0
+              ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0); // Glowy stroke
+             
+             canvas.drawCircle(pos, ringRadius, ringPaint);
+             
+             // Extra "Pulse" ring for expansion ready
+             ringPaint
+              ..color = Colors.white.withValues(alpha: 0.5)
+              ..strokeWidth = 1.0
+              ..maskFilter = null;
+             canvas.drawCircle(pos, ringRadius * 1.1, ringPaint);
+             
+          } else if (node.studyCount == 1) {
+             // Half Energy Ring
+             ringPaint
+              ..color = color.withValues(alpha: 0.6)
+              ..strokeWidth = 1.5
+              ..maskFilter = null;
+              
+             // Draw arc from -90 (top) to 90 (bottom) - right side
+             canvas.drawArc(
+               Rect.fromCircle(center: pos, radius: ringRadius),
+               -math.pi / 2, 
+               math.pi, 
+               false, 
+               ringPaint
+             );
+          }
+        }
+
         // Bright center highlight (mastery indicator)
         if (masteryFactor > 0.5) {
           final highlightRadius = radius * 0.4 * masteryFactor;
@@ -682,27 +736,32 @@ class StarMapPainter extends CustomPainter {
           canvas.drawCircle(pos, highlightRadius, nodePaint);
         }
 
-        // Sector-colored ring for high importance nodes
-        if (node.importance >= 4) {
-          final sectorStyle = SectorConfig.getStyle(node.sector);
-          final ringPaint = Paint()
-            ..color = sectorStyle.primaryColor.withValues(alpha: 0.6)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.0;
-          canvas.drawCircle(pos, radius * 1.3, ringPaint);
-        }
       } else {
         // Locked: Grey dim with subtle indication
         nodePaint.color = Colors.grey.withValues(alpha: 0.25);
         canvas.drawCircle(pos, radius * 0.8, nodePaint);
 
         // Very subtle glow for locked nodes
-        glowPaint.color = Colors.grey.withValues(alpha: 0.1);
-        canvas.drawCircle(pos, radius * 1.5, glowPaint);
+        if (scale > 0.6) {
+          glowPaint.color = Colors.grey.withValues(alpha: 0.1);
+          canvas.drawCircle(pos, radius * 1.5, glowPaint);
+        }
       }
 
-      // Text Label (only if zoomed in enough or high importance)
-      if (scale > 0.7 || node.importance >= 4) {
+      // Text Label (LOD)
+      // Zoom > 0.8: Show all labels
+      // Zoom > 0.5: Show importance >= 3
+      // Zoom <= 0.5: Show importance >= 4 only
+      bool shouldDrawLabel = false;
+      if (scale > 0.8) {
+        shouldDrawLabel = true;
+      } else if (scale > 0.5) {
+        shouldDrawLabel = node.importance >= 3;
+      } else {
+        shouldDrawLabel = node.importance >= 4;
+      }
+
+      if (shouldDrawLabel) {
         _drawNodeLabel(canvas, node, pos, color);
       }
     }

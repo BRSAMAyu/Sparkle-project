@@ -23,6 +23,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isSending = false;
+  bool _isButtonPressed = false;
 
   @override
   void initState() {
@@ -115,29 +116,45 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
             GestureDetector(
+              onTapDown: (_) => setState(() => _isButtonPressed = true),
+              onTapUp: (_) => setState(() => _isButtonPressed = false),
+              onTapCancel: () => setState(() => _isButtonPressed = false),
               onTap: canSend ? _handleSend : null,
-              child: AnimatedContainer(
-                duration: AppDesignTokens.durationFast,
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: canSend ? AppDesignTokens.primaryGradient : null,
-                  color: canSend ? null : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral300),
-                  shape: BoxShape.circle,
-                  boxShadow: canSend ? AppDesignTokens.shadowPrimary : null,
-                ),
-                child: Center(
-                  child: _isSending
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : Icon(
-                          Icons.arrow_upward,
-                          color: canSend ? Colors.white : (isDark ? Colors.white30 : Colors.black38),
-                          size: 24,
-                        ),
+              child: AnimatedScale(
+                scale: _isButtonPressed ? 0.9 : 1.0,
+                duration: const Duration(milliseconds: 100),
+                curve: Curves.easeInOut,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: canSend ? AppDesignTokens.primaryGradient : null,
+                    color: canSend ? null : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral200),
+                    shape: BoxShape.circle,
+                    boxShadow: canSend 
+                      ? [
+                          BoxShadow(
+                            color: AppDesignTokens.primaryBase.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ] 
+                      : null,
+                  ),
+                  child: Center(
+                    child: _isSending
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Icon(
+                            Icons.arrow_upward_rounded,
+                            color: canSend ? Colors.white : (isDark ? Colors.white30 : Colors.black38),
+                            size: 24,
+                          ),
+                  ),
                 ),
               ),
             ),

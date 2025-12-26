@@ -133,6 +133,9 @@ class GalaxyNodeModel {
   @JsonKey(name: 'mastery_score')
   final int masteryScore;
 
+  @JsonKey(name: 'study_count', readValue: _readStudyCount, defaultValue: 0)
+  final int studyCount;
+
   /// 节点标签
   final List<String>? tags;
 
@@ -158,6 +161,7 @@ class GalaxyNodeModel {
     required this.sector,
     required this.isUnlocked,
     required this.masteryScore,
+    this.studyCount = 0,
     this.parentId,
     this.baseColor,
     this.tags,
@@ -170,6 +174,15 @@ class GalaxyNodeModel {
   factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) =>
       _$GalaxyNodeModelFromJson(json);
   Map<String, dynamic> toJson() => _$GalaxyNodeModelToJson(this);
+
+  /// Helper to read study_count from nested user_status if present
+  static Object? _readStudyCount(Map<dynamic, dynamic> json, String key) {
+    if (json.containsKey('study_count')) return json['study_count'];
+    if (json['user_status'] != null && json['user_status'] is Map) {
+      return (json['user_status'] as Map)['study_count'];
+    }
+    return 0;
+  }
 
   /// 节点半径（基于重要程度）
   double get radius => 3.0 + importance * 2.0;
@@ -184,6 +197,7 @@ class GalaxyNodeModel {
     String? baseColor,
     bool? isUnlocked,
     int? masteryScore,
+    int? studyCount,
     List<String>? tags,
     String? description,
     NodePositionHint? positionHint,
@@ -199,6 +213,7 @@ class GalaxyNodeModel {
       baseColor: baseColor ?? this.baseColor,
       isUnlocked: isUnlocked ?? this.isUnlocked,
       masteryScore: masteryScore ?? this.masteryScore,
+      studyCount: studyCount ?? this.studyCount,
       tags: tags ?? this.tags,
       description: description ?? this.description,
       positionHint: positionHint ?? this.positionHint,

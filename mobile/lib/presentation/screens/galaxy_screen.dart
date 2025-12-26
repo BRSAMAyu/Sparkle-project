@@ -12,6 +12,7 @@ import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.da
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
+import 'package:sparkle/presentation/widgets/galaxy/parallax_star_background.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -303,6 +304,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
       backgroundColor: Colors.black, // Deep space
       body: Stack(
         children: [
+          // 0. Parallax Background (Deepest Layer)
+          Positioned.fill(
+            child: ParallaxStarBackground(
+              transformationController: _transformationController,
+            ),
+          ),
+
           // 1. Star Map (Interactive)
           GestureDetector(
             onTapUp: _handleTapUp,
