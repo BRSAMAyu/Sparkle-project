@@ -1,11 +1,10 @@
-import 'dart:math';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 
 /// Aggregation level based on zoom scale
 enum AggregationLevel {
@@ -16,6 +15,7 @@ enum AggregationLevel {
 
 class GalaxyState {
   final List<GalaxyNodeModel> nodes;
+  final List<GalaxyEdgeModel> edges;  // 节点连接
   final Map<String, Offset> nodePositions;
   final double userFlameIntensity;
   final bool isLoading;
@@ -23,9 +23,12 @@ class GalaxyState {
   final double currentScale;  // Current zoom scale
   final AggregationLevel aggregationLevel;  // Current aggregation level
   final Map<String, ClusterInfo> clusters;  // Cluster information for aggregated view
+  final Rect? viewport;  // Current visible viewport for culling
+  final String? predictedNodeId; // ID of the predicted next node to learn
 
   GalaxyState({
     this.nodes = const [],
+    this.edges = const [],
     this.nodePositions = const {},
     this.userFlameIntensity = 0.0,
     this.isLoading = false,
@@ -33,10 +36,13 @@ class GalaxyState {
     this.currentScale = 1.0,
     this.aggregationLevel = AggregationLevel.full,
     this.clusters = const {},
+    this.viewport,
+    this.predictedNodeId,
   });
 
   GalaxyState copyWith({
     List<GalaxyNodeModel>? nodes,
+    List<GalaxyEdgeModel>? edges,
     Map<String, Offset>? nodePositions,
     double? userFlameIntensity,
     bool? isLoading,
@@ -44,9 +50,12 @@ class GalaxyState {
     double? currentScale,
     AggregationLevel? aggregationLevel,
     Map<String, ClusterInfo>? clusters,
+    Rect? viewport,
+    String? predictedNodeId,
   }) {
     return GalaxyState(
       nodes: nodes ?? this.nodes,
+      edges: edges ?? this.edges,
       nodePositions: nodePositions ?? this.nodePositions,
       userFlameIntensity: userFlameIntensity ?? this.userFlameIntensity,
       isLoading: isLoading ?? this.isLoading,
@@ -54,7 +63,23 @@ class GalaxyState {
       currentScale: currentScale ?? this.currentScale,
       aggregationLevel: aggregationLevel ?? this.aggregationLevel,
       clusters: clusters ?? this.clusters,
+      viewport: viewport ?? this.viewport,
+      predictedNodeId: predictedNodeId ?? this.predictedNodeId,
     );
+  }
+
+  /// 获取可见节点（基于视口裁剪）
+  List<GalaxyNodeModel> get visibleNodes {
+    if (viewport == null) return nodes;
+    final culler = ViewportCuller(viewport: viewport!);
+    return culler.filterVisibleNodes(nodes, nodePositions);
+  }
+
+  /// 获取可见边（基于视口裁剪）
+  List<GalaxyEdgeModel> get visibleEdges {
+    if (viewport == null) return edges;
+    final culler = ViewportCuller(viewport: viewport!);
+    return culler.filterVisibleEdges(edges, nodePositions);
   }
 }
 
@@ -116,18 +141,24 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     try {
       final response = await _repository.getGraph();
 
-      // Step 1: Quick spiral layout for immediate display
-      final quickPositions = _calculateQuickLayout(response.nodes);
+      // Step 1: 使用新的布局引擎进行快速初始布局
+      final quickPositions = GalaxyLayoutEngine.calculateInitialLayout(
+        nodes: response.nodes,
+        edges: response.edges,
+        existingPositions: state.nodePositions.isNotEmpty ? state.nodePositions : null,
+      );
+
       state = state.copyWith(
         nodes: response.nodes,
+        edges: response.edges,
         nodePositions: quickPositions,
         userFlameIntensity: response.userFlameIntensity,
         isLoading: false,
         isOptimizing: true,
       );
 
-      // Step 2: Optimize in background using force-directed algorithm
-      _optimizeLayoutAsync(response.nodes, quickPositions);
+      // Step 2: 在后台进行力导向优化
+      _optimizeLayoutAsync(response.nodes, response.edges, quickPositions);
     } catch (e) {
       state = state.copyWith(isLoading: false);
       debugPrint('Error loading galaxy: $e');
@@ -136,22 +167,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   Future<void> _optimizeLayoutAsync(
     List<GalaxyNodeModel> nodes,
+    List<GalaxyEdgeModel> edges,
     Map<String, Offset> initialPositions,
   ) async {
     try {
-      // Prepare data for compute isolate
-      final data = _LayoutData(
-        nodes: nodes.map((n) => _SimpleNode(
-          id: n.id,
-          parentId: n.parentId,
-          sector: n.sector,
-          importance: n.importance,
-        )).toList(),
+      // 使用新的布局引擎进行力导向优化
+      final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
+        nodes: nodes,
+        edges: edges,
         initialPositions: initialPositions,
       );
-
-      // Run force-directed optimization in isolate
-      final optimizedPositions = await compute(_forceDirectedLayout, data);
 
       // Only update if we're still mounted and not loading something new
       if (mounted && !state.isLoading) {
@@ -166,6 +191,11 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     }
   }
 
+  /// 更新视口（用于视口裁剪优化）
+  void updateViewport(Rect viewport) {
+    state = state.copyWith(viewport: viewport);
+  }
+
   Future<void> sparkNode(String id) async {
     try {
       await _repository.sparkNode(id);
@@ -173,6 +203,19 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     } catch (e) {
       debugPrint('Error sparking node: $e');
     }
+  }
+
+  Future<String?> predictNextNode() async {
+    try {
+      final detail = await _repository.predictNextNode();
+      if (detail != null) {
+        state = state.copyWith(predictedNodeId: detail.node.id);
+        return detail.node.id;
+      }
+    } catch (e) {
+      debugPrint('Error predicting next node: $e');
+    }
+    return null;
   }
 
   /// Update current scale and recalculate aggregation level
@@ -308,185 +351,4 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return clusters;
   }
 
-  /// Quick spiral layout for immediate display
-  Map<String, Offset> _calculateQuickLayout(List<GalaxyNodeModel> nodes) {
-    final Map<String, Offset> positions = {};
-    final Random random = Random(42);
-
-    final Map<SectorEnum, List<GalaxyNodeModel>> sectorGroups = {};
-    for (final node in nodes) {
-      sectorGroups.putIfAbsent(node.sector, () => []);
-      sectorGroups[node.sector]!.add(node);
-    }
-
-    for (final sector in sectorGroups.keys) {
-      sectorGroups[sector]!.sort((a, b) {
-        if (a.parentId == null && b.parentId != null) return -1;
-        if (a.parentId != null && b.parentId == null) return 1;
-        return b.importance.compareTo(a.importance);
-      });
-    }
-
-    for (final entry in sectorGroups.entries) {
-      final sector = entry.key;
-      final sectorNodes = entry.value;
-      final style = SectorConfig.getStyle(sector);
-
-      final baseAngleRad = (style.baseAngle - 90) * pi / 180;
-      final sweepAngleRad = style.sweepAngle * pi / 180;
-
-      int index = 0;
-      for (final node in sectorNodes) {
-        if (node.parentId == null) {
-          final radius = 180 + index * 35;
-          final angleOffset = (index * 0.3) % 1.0;
-          final angle = baseAngleRad + sweepAngleRad * (0.2 + angleOffset * 0.6);
-          final noise = (random.nextDouble() - 0.5) * 20;
-          positions[node.id] = Offset(
-            (radius + noise) * cos(angle),
-            (radius + noise) * sin(angle),
-          );
-          index++;
-        } else {
-          final parentPos = positions[node.parentId];
-          if (parentPos != null) {
-            final dist = 50.0 + (5 - node.importance) * 12.0;
-            final angle = random.nextDouble() * 2 * pi;
-            final noise = (random.nextDouble() - 0.5) * 10;
-            positions[node.id] = parentPos + Offset(
-              (dist + noise) * cos(angle),
-              (dist + noise) * sin(angle),
-            );
-          } else {
-            final radius = 250 + random.nextDouble() * 100;
-            final angle = baseAngleRad + random.nextDouble() * sweepAngleRad;
-            positions[node.id] = Offset(radius * cos(angle), radius * sin(angle));
-          }
-        }
-      }
-    }
-    return positions;
-  }
-}
-
-class _SimpleNode {
-  final String id;
-  final String? parentId;
-  final SectorEnum sector;
-  final int importance;
-
-  _SimpleNode({
-    required this.id,
-    this.parentId,
-    required this.sector,
-    required this.importance,
-  });
-}
-
-class _LayoutData {
-  final List<_SimpleNode> nodes;
-  final Map<String, Offset> initialPositions;
-
-  _LayoutData({required this.nodes, required this.initialPositions});
-}
-
-Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
-  final nodes = data.nodes;
-  final positions = Map<String, Offset>.from(data.initialPositions);
-  if (nodes.isEmpty) return positions;
-
-  const int iterations = 80;
-  const double repulsionStrength = 800.0;
-  const double attractionStrength = 0.02;
-  const double minDistance = 40.0;
-  const double maxDisplacement = 30.0;
-  const double damping = 0.85;
-
-  final Map<String, List<String>> children = {};
-  for (final node in nodes) {
-    if (node.parentId != null) {
-      children.putIfAbsent(node.parentId!, () => []);
-      children[node.parentId]!.add(node.id);
-    }
-  }
-
-  final sectorStyles = <String, (double, double)>{};
-  for (final node in nodes) {
-    final style = SectorConfig.getStyle(node.sector);
-    sectorStyles[node.id] = (
-      (style.baseAngle - 90) * pi / 180,
-      style.sweepAngle * pi / 180,
-    );
-  }
-
-  final velocity = <String, Offset>{};
-  for (final node in nodes) {
-    velocity[node.id] = Offset.zero;
-  }
-
-  for (int iter = 0; iter < iterations; iter++) {
-    final temp = 1.0 - (iter / iterations);
-    for (final nodeA in nodes) {
-      var force = Offset.zero;
-      final posA = positions[nodeA.id]!;
-      for (final nodeB in nodes) {
-        if (nodeA.id == nodeB.id) continue;
-        final posB = positions[nodeB.id]!;
-        final delta = posA - posB;
-        var distance = delta.distance;
-        if (distance < 1) distance = 1;
-        if (distance < minDistance * 3) {
-          final repulsion = repulsionStrength * temp / (distance * distance);
-          force += Offset(delta.dx / distance * repulsion, delta.dy / distance * repulsion);
-        }
-      }
-      if (nodeA.parentId != null) {
-        final parentPos = positions[nodeA.parentId];
-        if (parentPos != null) {
-          final delta = parentPos - posA;
-          if (delta.distance > 50) {
-            force += Offset(delta.dx * attractionStrength * temp, delta.dy * attractionStrength * temp);
-          }
-        }
-      }
-      final nodeChildren = children[nodeA.id];
-      if (nodeChildren != null) {
-        for (final childId in nodeChildren) {
-          final childPos = positions[childId];
-          if (childPos != null) {
-            final delta = childPos - posA;
-            if (delta.distance > 80) {
-              force += Offset(delta.dx * attractionStrength * 0.5 * temp, delta.dy * attractionStrength * 0.5 * temp);
-            }
-          }
-        }
-      }
-      if (posA.distance > 800) {
-        force -= Offset(posA.dx * 0.001 * temp, posA.dy * 0.001 * temp);
-      }
-      velocity[nodeA.id] = (velocity[nodeA.id]! + force) * damping;
-      var displacement = velocity[nodeA.id]!;
-      if (displacement.distance > maxDisplacement) {
-        displacement = displacement / displacement.distance * maxDisplacement;
-      }
-      var newPos = posA + displacement;
-      final (baseAngle, sweepAngle) = sectorStyles[nodeA.id]!;
-      final nodeAngle = atan2(newPos.dy, newPos.dx);
-      final endAngle = baseAngle + sweepAngle;
-      double normalizedAngle = nodeAngle;
-      while (normalizedAngle < baseAngle) {
-        normalizedAngle += 2 * pi;
-      }
-      while (normalizedAngle >= baseAngle + 2 * pi) {
-        normalizedAngle -= 2 * pi;
-      }
-      if (normalizedAngle < baseAngle || normalizedAngle > endAngle) {
-        final centerAngle = baseAngle + sweepAngle / 2;
-        final targetAngle = centerAngle + (normalizedAngle - centerAngle) * 0.9;
-        newPos = Offset(newPos.distance * cos(targetAngle), newPos.distance * sin(targetAngle));
-      }
-      positions[nodeA.id] = newPos;
-    }
-  }
-  return positions;
 }

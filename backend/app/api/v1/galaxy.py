@@ -50,6 +50,7 @@ async def get_decay_service(db: AsyncSession = Depends(get_db)) -> DecayService:
 async def get_galaxy_graph(
     sector_code: Optional[str] = Query(None, description="筛选特定星域"),
     include_locked: bool = Query(True, description="是否包含未解锁节点"),
+    zoom_level: float = Query(1.0, description="缩放级别 (LOD控制)"),
     user_id: str = Depends(get_current_user_id),
     galaxy_service: GalaxyService = Depends(get_galaxy_service)
 ):
@@ -57,11 +58,15 @@ async def get_galaxy_graph(
     获取用户的知识星图数据
 
     返回所有知识节点、关系和用户状态，用于前端渲染完整星图。
+    支持 LOD (Level of Detail):
+    - zoom_level < 0.5: 仅返回重要节点 (Level >= 3)
+    - zoom_level >= 0.5: 返回所有节点
     """
     return await galaxy_service.get_galaxy_graph(
         user_id=UUID(user_id),
         sector_code=sector_code,
-        include_locked=include_locked
+        include_locked=include_locked,
+        zoom_level=zoom_level
     )
 
 
@@ -217,6 +222,46 @@ async def pause_node_decay(
         "node_id": str(node_id),
         "decay_paused": pause
     }
+
+
+@router.post("/predict-next", response_model=Optional[NodeDetailResponse])
+async def predict_next_node(
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    预测下一个最佳学习节点
+
+    基于用户的学习历史和知识图谱结构，推荐下一个最值得学习的节点。
+    """
+    node_with_status = await galaxy_service.predict_next_node(UUID(user_id))
+    
+    if not node_with_status:
+        return None
+        
+    # 获取关系以便前端渲染连接线
+    relations_query = select(NodeRelation).where(
+        or_(
+            NodeRelation.source_node_id == node_with_status.id,
+            NodeRelation.target_node_id == node_with_status.id
+        )
+    )
+    relations_result = await db.execute(relations_query)
+    relations = relations_result.scalars().all()
+    
+    return NodeDetailResponse(
+        node=node_with_status,
+        relations=[
+            NodeRelationInfo(
+                source_node_id=rel.source_node_id,
+                target_node_id=rel.target_node_id,
+                relation_type=rel.relation_type,
+                strength=rel.strength
+            )
+            for rel in relations
+        ]
+    )
 
 
 @router.get("/stats")

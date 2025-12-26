@@ -115,12 +115,13 @@ class GalaxyService:
     # ==========================================
     # 1. 获取星图数据
     # ==========================================
-    @cached(ttl=600, key_builder=lambda self, user_id, sector_code=None, include_locked=True: f"{user_id}:{sector_code}:{include_locked}")
+    @cached(ttl=600, key_builder=lambda self, user_id, sector_code=None, include_locked=True, zoom_level=1.0: f"{user_id}:{sector_code}:{include_locked}:{zoom_level < 0.5}")
     async def get_galaxy_graph(
         self,
         user_id: UUID,
         sector_code: Optional[str] = None,
-        include_locked: bool = True
+        include_locked: bool = True,
+        zoom_level: float = 1.0
     ) -> GalaxyGraphResponse:
         """
         获取用户的知识星图数据
@@ -129,6 +130,7 @@ class GalaxyService:
             user_id: 用户 ID
             sector_code: 可选，筛选特定星域
             include_locked: 是否包含未解锁的节点
+            zoom_level: 缩放级别，用于 LOD 控制
 
         Returns:
             GalaxyGraphResponse: 包含节点、关系、用户状态的完整星图数据
@@ -148,6 +150,18 @@ class GalaxyService:
 
         if sector_code:
             query = query.where(Subject.sector_code == sector_code)
+        
+        # LOD 过滤: 低缩放级别只返回重要节点
+        if zoom_level < 0.5:
+            # 返回重要程度 >= 3 的节点，或者种子节点，或者已解锁的节点
+            # 这样用户已探索的路径始终可见，但远处的未探索细节被隐藏
+            query = query.where(
+                or_(
+                    KnowledgeNode.importance_level >= 3,
+                    KnowledgeNode.is_seed == True,
+                    UserNodeStatus.is_unlocked == True 
+                )
+            )
 
         result = await self.db.execute(query)
         nodes_with_status = result.all()
@@ -460,7 +474,100 @@ class GalaxyService:
         return result.scalar_one_or_none()
 
     # ==========================================
-    # 5. 私有辅助方法
+    # 6. 智能推荐 (Predictive Path)
+    # ==========================================
+    async def predict_next_node(self, user_id: UUID) -> Optional[NodeWithStatus]:
+        """
+        预测下一个最佳学习节点
+
+        策略：
+        1. 寻找最近学习的节点 (Anchor Node)
+        2. 探索其"未精通"的邻居 (Frontier Nodes)
+        3. 如果没有，寻找全局高优先级节点
+        """
+        # 1. 获取最近学习记录
+        stmt = (
+            select(UserNodeStatus)
+            .where(UserNodeStatus.user_id == user_id)
+            .order_by(UserNodeStatus.last_study_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        last_status = result.scalar_one_or_none()
+
+        target_node_id = None
+
+        if last_status:
+            # 策略 A: 趁热打铁 - 寻找最近节点的后续
+            # 查找以此节点为源头的关系 (Source -> Target)
+            # 优先推荐: 前置(Prerequisite) -> 衍生(Derived)
+            relations_query = (
+                select(NodeRelation)
+                .where(NodeRelation.source_node_id == last_status.node_id)
+                .order_by(NodeRelation.strength.desc())
+            )
+            rel_result = await self.db.execute(relations_query)
+            relations = rel_result.scalars().all()
+
+            best_candidate = None
+            best_score = -1.0
+
+            for rel in relations:
+                # 检查目标节点状态
+                target_status = await self._get_user_status(user_id, rel.target_node_id)
+                
+                # 评分逻辑:
+                # 1. 如果未解锁: 优先 (探索新知)
+                # 2. 如果已解锁但未精通: 次优先 (巩固)
+                # 3. 如果已精通: 跳过
+                
+                score = 0.0
+                if not target_status or not target_status.is_unlocked:
+                    score = 10.0
+                elif target_status.mastery_score < 80:
+                    score = 5.0 + (80 - target_status.mastery_score) / 20.0 # 越接近精通分越低? 不，未精通应该高
+                    # 修正: 掌握度低，优先级高
+                    score = 5.0 + (100 - target_status.mastery_score) / 10.0
+                else:
+                    continue # 已精通，跳过
+
+                # 叠加关系强度
+                score *= rel.strength
+                
+                if score > best_score:
+                    best_score = score
+                    best_candidate = rel.target_node_id
+            
+            target_node_id = best_candidate
+
+        # 策略 B: 如果策略 A 无结果 (孤立点或全精通)，寻找全局最高优先级的"种子"或"未掌握"节点
+        if not target_node_id:
+            # 寻找重要性高且未精通的节点
+            # 复杂查询: Join KnowledgeNode and UserNodeStatus
+            # 简化: 找一个重要性 5 的 Seed
+            fallback_query = (
+                select(KnowledgeNode)
+                .where(KnowledgeNode.importance_level >= 4)
+                .limit(10)
+            )
+            fallback_result = await self.db.execute(fallback_query)
+            candidates = fallback_result.scalars().all()
+            
+            for node in candidates:
+                st = await self._get_user_status(user_id, node.id)
+                if not st or st.mastery_score < 90:
+                    target_node_id = node.id
+                    break
+
+        if target_node_id:
+            node = await self.db.get(KnowledgeNode, target_node_id)
+            status = await self._get_user_status(user_id, target_node_id)
+            return NodeWithStatus.from_models(node, status)
+        
+        return None
+
+    # ==========================================
+    # 7. 私有辅助方法
     # ==========================================
     def _calculate_mastery_delta(self, study_minutes: int, importance_level: int) -> float:
         """计算掌握度增量"""

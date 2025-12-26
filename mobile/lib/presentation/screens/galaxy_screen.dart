@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
-import 'package:sparkle/presentation/widgets/galaxy/flame_core.dart';
+import 'package:sparkle/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
+import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.dart';
+import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -16,8 +18,11 @@ class GalaxyScreen extends ConsumerStatefulWidget {
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
 }
 
-class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
+class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerProviderStateMixin {
   final TransformationController _transformationController = TransformationController();
+
+  // State
+  bool _isEntering = true;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -26,7 +31,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
   // Canvas constants
   static const double _canvasSize = 4000.0;
   static const double _canvasCenter = 2000.0;
-  static const double _flameCoreSize = 200.0;
+  static const double _centralFlameSize = 60.0;
 
   // Track last scale to avoid unnecessary updates
   double _lastScale = 1.0;
@@ -76,7 +81,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
     return transformed;
   }
 
-  /// Get the screen center position (where the flame core is displayed)
+  /// Get the screen center position (where the central flame is displayed)
   Offset _getScreenCenter() {
     final size = MediaQuery.of(context).size;
     return Offset(size.width / 2, size.height / 2);
@@ -90,6 +95,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
 
   /// Handle tap on canvas to detect node clicks
   void _handleTapUp(TapUpDetails details) {
+    if (_isEntering) return;
+
     final galaxyState = ref.read(galaxyProvider);
     if (galaxyState.nodes.isEmpty) return;
 
@@ -213,6 +220,68 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
     });
   }
 
+  /// Animate camera to focus on a specific node
+  void _animateToNode(String nodeId) {
+    final galaxyState = ref.read(galaxyProvider);
+    final nodePos = galaxyState.nodePositions[nodeId];
+    if (nodePos == null) return;
+
+    final screenSize = MediaQuery.of(context).size;
+    
+    // Target scale (zoom in slightly if too far out)
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+    final targetScale = currentScale < 0.8 ? 1.0 : currentScale;
+
+    // Node position in canvas coordinates (0,0 is top-left of 4000x4000 canvas)
+    // Provider positions are relative to center (0,0), so add offset
+    final canvasX = nodePos.dx + _canvasCenter;
+    final canvasY = nodePos.dy + _canvasCenter;
+
+    // Calculate translation to center the node
+    // Tx = ScreenCenterX - NodeCanvasX * Scale
+    final tx = screenSize.width / 2 - canvasX * targetScale;
+    final ty = screenSize.height / 2 - canvasY * targetScale;
+
+    final targetMatrix = Matrix4.identity()
+      ..setTranslationRaw(tx, ty, 0.0);
+    
+    // Apply scale manually to avoid deprecation warning
+    targetMatrix[0] = targetScale;
+    targetMatrix[5] = targetScale;
+    targetMatrix[10] = 1.0;
+
+    // Animate
+    final animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: targetMatrix,
+    ).animate(CurvedAnimation(
+      parent: AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1500),
+      )..forward(),
+      curve: Curves.easeInOutCubic,
+    ));
+
+    animation.addListener(() {
+      _transformationController.value = animation.value;
+    });
+    
+    // Show a hint
+    final node = galaxyState.nodes.firstWhere((n) => n.id == nodeId);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('推荐学习: ${node.name}'),
+        backgroundColor: AppDesignTokens.primaryBase,
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: '查看',
+          textColor: Colors.white,
+          onPressed: () => context.push('/galaxy/node/$nodeId'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final galaxyState = ref.watch(galaxyProvider);
@@ -221,7 +290,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
       backgroundColor: Colors.black, // Deep space
       body: Stack(
         children: [
-          // 1. Star Map (Interactive) with FlameCore inside canvas
+          // 1. Star Map (Interactive)
           GestureDetector(
             onTapUp: _handleTapUp,
             child: InteractiveViewer(
@@ -237,9 +306,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
                   animation: _transformationController,
                   builder: (context, child) {
                     final scale = _transformationController.value.getMaxScaleOnAxis();
+                    // Calculate viewport for culling optimization
+                    final matrix = _transformationController.value;
+                    final screenSize = MediaQuery.of(context).size;
+                    final inverseMatrix = matrix.clone()..invert();
+                    final topLeft = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
+                    final bottomRight = MatrixUtils.transformPoint(
+                      inverseMatrix,
+                      Offset(screenSize.width, screenSize.height),
+                    );
+                    final viewport = Rect.fromPoints(topLeft, bottomRight);
+
                     return Stack(
                       children: [
-                        // Background: Sector nebula visualization
+                        // Background: Sector nebula and stars
                         Positioned.fill(
                           child: CustomPaint(
                             painter: SectorBackgroundPainter(
@@ -247,27 +327,35 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
                             ),
                           ),
                         ),
-                        // FlameCore at canvas center (moves with pan/zoom)
+                        
+                        // Central Flame at canvas center
                         Positioned(
-                          left: _canvasCenter - _flameCoreSize / 2,
-                          top: _canvasCenter - _flameCoreSize / 2,
-                          child: SizedBox(
-                            width: _flameCoreSize,
-                            height: _flameCoreSize,
-                            child: FlameCore(
+                          left: _canvasCenter - _centralFlameSize / 2,
+                          top: _canvasCenter - _centralFlameSize / 2,
+                          child: Opacity(
+                            opacity: _isEntering ? 0.0 : 1.0,
+                            child: CentralFlame(
                               intensity: galaxyState.userFlameIntensity,
+                              size: _centralFlameSize,
                             ),
                           ),
                         ),
+
                         // Star map on top
                         Positioned.fill(
-                          child: CustomPaint(
-                            painter: StarMapPainter(
-                              nodes: galaxyState.nodes,
-                              positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
-                              scale: scale,
-                              aggregationLevel: galaxyState.aggregationLevel,
-                              clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
+                          child: Opacity(
+                            opacity: _isEntering ? 0.0 : 1.0,
+                            child: CustomPaint(
+                              painter: StarMapPainter(
+                                nodes: galaxyState.nodes,
+                                edges: galaxyState.edges,
+                                positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
+                                scale: scale,
+                                aggregationLevel: galaxyState.aggregationLevel,
+                                clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
+                                viewport: viewport,
+                                center: const Offset(_canvasCenter, _canvasCenter),
+                              ),
                             ),
                           ),
                         ),
@@ -279,7 +367,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
             ),
           ),
 
-          // 3. Energy Transfer Animations Layer (above everything except UI)
+          // 2. Entrance Animation Layer
+          if (_isEntering)
+            GalaxyEntranceAnimation(
+              onComplete: () {
+                setState(() {
+                  _isEntering = false;
+                });
+              },
+            ),
+
+          // 3. Energy Transfer Animations Layer
           ..._activeEnergyTransfers.map(
             (transfer) => Positioned.fill(
               child: IgnorePointer(
@@ -310,34 +408,74 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
           ),
 
           // 5. UI Overlays (Back button)
-          Positioned(
-            top: 40,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+          if (!_isEntering)
+            Positioned(
+              top: 40,
+              left: 20,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
-          ),
 
-          // 6. Spark Button (Bottom Right)
-          Positioned(
-            bottom: 40,
-            right: 20,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
-              child: const Icon(Icons.bolt, color: Colors.white),
-              onPressed: () {
-                // Pick a random node to spark for demo
-                if (galaxyState.nodes.isNotEmpty) {
-                  final node = galaxyState.nodes[DateTime.now().millisecond % galaxyState.nodes.length];
-                  _sparkNodeWithAnimation(node.id);
-                }
-              },
+          // 6. Mini Map (Bottom Left)
+          if (!_isEntering)
+            Positioned(
+              bottom: 40,
+              left: 20,
+              child: GalaxyMiniMap(
+                transformationController: _transformationController,
+                canvasSize: _canvasSize,
+              ),
             ),
-          ),
 
-          if (galaxyState.isLoading)
+          // 6.1 Guide Button (Above Mini Map)
+          if (!_isEntering)
+            Positioned(
+              bottom: 180, // Above mini map
+              left: 30,    // Slightly indented
+              child: FloatingActionButton.small(
+                heroTag: 'guide_btn',
+                backgroundColor: Colors.white.withValues(alpha: 0.1),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.3))),
+                child: const Icon(Icons.explore),
+                onPressed: () async {
+                  final nodeId = await ref.read(galaxyProvider.notifier).predictNextNode();
+                  if (nodeId != null) {
+                    _animateToNode(nodeId);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('暂无推荐，请先探索一些节点吧！')),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
+
+          // 7. Spark Button (Bottom Right)
+          if (!_isEntering)
+            Positioned(
+              bottom: 40,
+              right: 20,
+              child: FloatingActionButton(
+                mini: true,
+                backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
+                child: const Icon(Icons.bolt, color: Colors.white),
+                onPressed: () {
+                  // Pick a random node to spark for demo
+                  if (galaxyState.nodes.isNotEmpty) {
+                    final node = galaxyState.nodes[DateTime.now().millisecond % galaxyState.nodes.length];
+                    _sparkNodeWithAnimation(node.id);
+                  }
+                },
+              ),
+            ),
+
+          if (galaxyState.isLoading && !_isEntering)
             const Center(child: CircularProgressIndicator()),
         ],
       ),

@@ -336,6 +336,4 @@ class CommunityRepository {
   }
 }
 
-final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
-  return CommunityRepository(ref.watch(apiClientProvider));
-});
+

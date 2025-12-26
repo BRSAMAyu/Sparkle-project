@@ -19,43 +19,230 @@ enum SectorEnum {
   voidSector
 }
 
+/// 关系类型枚举
+enum EdgeRelationType {
+  @JsonValue('prerequisite')
+  prerequisite,   // 前置知识
+  @JsonValue('derived')
+  derived,        // 衍生知识
+  @JsonValue('related')
+  related,        // 相关知识
+  @JsonValue('similar')
+  similar,        // 相似概念
+  @JsonValue('contrast')
+  contrast,       // 对比概念
+  @JsonValue('application')
+  application,    // 应用场景
+  @JsonValue('example')
+  example,        // 具体示例
+  @JsonValue('parent_child')
+  parentChild,    // 父子层级关系
+}
+
+/// 节点边/连接模型
+@JsonSerializable()
+class GalaxyEdgeModel {
+  final String id;
+
+  @JsonKey(name: 'source_id')
+  final String sourceId;
+
+  @JsonKey(name: 'target_id')
+  final String targetId;
+
+  @JsonKey(name: 'relation_type')
+  final EdgeRelationType relationType;
+
+  /// 连接强度 0.0-1.0
+  final double strength;
+
+  /// 是否双向
+  final bool bidirectional;
+
+  const GalaxyEdgeModel({
+    required this.id,
+    required this.sourceId,
+    required this.targetId,
+    this.relationType = EdgeRelationType.related,
+    this.strength = 0.5,
+    this.bidirectional = false,
+  });
+
+  factory GalaxyEdgeModel.fromJson(Map<String, dynamic> json) =>
+      _$GalaxyEdgeModelFromJson(json);
+  Map<String, dynamic> toJson() => _$GalaxyEdgeModelToJson(this);
+}
+
+/// LLM 提供的位置提示
+@JsonSerializable()
+class NodePositionHint {
+  /// 在星域内的角度偏移 (0.0-1.0)
+  @JsonKey(name: 'angle_offset')
+  final double? angleOffset;
+
+  /// 到中心的半径比例 (0.0-1.0)
+  @JsonKey(name: 'radius_ratio')
+  final double? radiusRatio;
+
+  /// 靠近的参考节点 ID
+  @JsonKey(name: 'near_node_id')
+  final String? nearNodeId;
+
+  /// 与参考节点的距离 (像素)
+  @JsonKey(name: 'distance_from_reference')
+  final double? distanceFromReference;
+
+  const NodePositionHint({
+    this.angleOffset,
+    this.radiusRatio,
+    this.nearNodeId,
+    this.distanceFromReference,
+  });
+
+  factory NodePositionHint.fromJson(Map<String, dynamic> json) =>
+      _$NodePositionHintFromJson(json);
+  Map<String, dynamic> toJson() => _$NodePositionHintToJson(this);
+
+  bool get hasValidHint =>
+      angleOffset != null ||
+      radiusRatio != null ||
+      nearNodeId != null;
+}
+
 @JsonSerializable()
 class GalaxyNodeModel {
   final String id;
+
   @JsonKey(name: 'parent_id')
   final String? parentId;
+
   final String name;
-  final int importance; // importance_level mapped to importance
+
+  /// 重要程度 1-5
+  final int importance;
+
   final SectorEnum sector;
+
   @JsonKey(name: 'base_color')
   final String? baseColor;
-  
+
   @JsonKey(name: 'is_unlocked')
   final bool isUnlocked;
+
   @JsonKey(name: 'mastery_score')
   final int masteryScore;
 
+  /// 节点标签
+  final List<String>? tags;
+
+  /// 简短描述
+  final String? description;
+
+  /// LLM 提供的位置提示
+  @JsonKey(name: 'position_hint')
+  final NodePositionHint? positionHint;
+
+  /// 出边 ID 列表（该节点作为 source）
+  @JsonKey(name: 'outgoing_edge_ids')
+  final List<String>? outgoingEdgeIds;
+
+  /// 入边 ID 列表（该节点作为 target）
+  @JsonKey(name: 'incoming_edge_ids')
+  final List<String>? incomingEdgeIds;
+
   GalaxyNodeModel({
     required this.id,
-    required this.name, required this.importance, required this.sector, required this.isUnlocked, required this.masteryScore, this.parentId,
+    required this.name,
+    required this.importance,
+    required this.sector,
+    required this.isUnlocked,
+    required this.masteryScore,
+    this.parentId,
     this.baseColor,
+    this.tags,
+    this.description,
+    this.positionHint,
+    this.outgoingEdgeIds,
+    this.incomingEdgeIds,
   });
 
-  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) => _$GalaxyNodeModelFromJson(json);
+  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) =>
+      _$GalaxyNodeModelFromJson(json);
   Map<String, dynamic> toJson() => _$GalaxyNodeModelToJson(this);
+
+  /// 节点半径（基于重要程度）
+  double get radius => 3.0 + importance * 2.0;
+
+  /// 复制并修改
+  GalaxyNodeModel copyWith({
+    String? id,
+    String? parentId,
+    String? name,
+    int? importance,
+    SectorEnum? sector,
+    String? baseColor,
+    bool? isUnlocked,
+    int? masteryScore,
+    List<String>? tags,
+    String? description,
+    NodePositionHint? positionHint,
+    List<String>? outgoingEdgeIds,
+    List<String>? incomingEdgeIds,
+  }) {
+    return GalaxyNodeModel(
+      id: id ?? this.id,
+      parentId: parentId ?? this.parentId,
+      name: name ?? this.name,
+      importance: importance ?? this.importance,
+      sector: sector ?? this.sector,
+      baseColor: baseColor ?? this.baseColor,
+      isUnlocked: isUnlocked ?? this.isUnlocked,
+      masteryScore: masteryScore ?? this.masteryScore,
+      tags: tags ?? this.tags,
+      description: description ?? this.description,
+      positionHint: positionHint ?? this.positionHint,
+      outgoingEdgeIds: outgoingEdgeIds ?? this.outgoingEdgeIds,
+      incomingEdgeIds: incomingEdgeIds ?? this.incomingEdgeIds,
+    );
+  }
 }
 
 @JsonSerializable()
 class GalaxyGraphResponse {
   final List<GalaxyNodeModel> nodes;
+
+  /// 节点间的连接关系
+  final List<GalaxyEdgeModel> edges;
+
   @JsonKey(name: 'user_flame_intensity')
   final double userFlameIntensity;
 
   GalaxyGraphResponse({
     required this.nodes,
+    this.edges = const [],
     required this.userFlameIntensity,
   });
 
-  factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) => _$GalaxyGraphResponseFromJson(json);
+  factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) =>
+      _$GalaxyGraphResponseFromJson(json);
   Map<String, dynamic> toJson() => _$GalaxyGraphResponseToJson(this);
+
+  /// 获取特定节点的所有出边
+  List<GalaxyEdgeModel> getOutgoingEdges(String nodeId) {
+    return edges.where((e) => e.sourceId == nodeId).toList();
+  }
+
+  /// 获取特定节点的所有入边
+  List<GalaxyEdgeModel> getIncomingEdges(String nodeId) {
+    return edges.where((e) => e.targetId == nodeId).toList();
+  }
+
+  /// 获取特定节点的所有相连边
+  List<GalaxyEdgeModel> getAllEdgesFor(String nodeId) {
+    return edges.where((e) =>
+      e.sourceId == nodeId ||
+      e.targetId == nodeId ||
+      (e.bidirectional && e.targetId == nodeId)
+    ).toList();
+  }
 }

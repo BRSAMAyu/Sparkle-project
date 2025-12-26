@@ -16,12 +16,15 @@ class GalaxyRepository {
 
   GalaxyRepository(this._apiClient);
 
-  Future<GalaxyGraphResponse> getGraph() async {
+  Future<GalaxyGraphResponse> getGraph({double zoomLevel = 1.0}) async {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoGalaxy;
     }
     try {
-      final response = await _apiClient.get(ApiEndpoints.galaxyGraph);
+      final response = await _apiClient.get(
+        ApiEndpoints.galaxyGraph,
+        queryParameters: {'zoom_level': zoomLevel},
+      );
       return GalaxyGraphResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw e.response?.data['detail'] ?? 'Failed to load galaxy graph';
@@ -62,6 +65,24 @@ class GalaxyRepository {
       throw e.response?.data['detail'] ?? 'Failed to load node detail';
     } catch (e) {
       throw 'An unexpected error occurred';
+    }
+  }
+
+  /// Predict the next best node to learn
+  Future<KnowledgeDetailResponse?> predictNextNode() async {
+    if (DemoDataService.isDemoMode) {
+      // Return a random unlocked node or locked neighbor
+      return null;
+    }
+    try {
+      final response = await _apiClient.post(ApiEndpoints.galaxyPredictNext);
+      if (response.data == null) return null;
+      return KnowledgeDetailResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      // It's okay if prediction fails, just return null
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 

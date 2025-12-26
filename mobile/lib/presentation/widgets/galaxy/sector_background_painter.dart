@@ -19,6 +19,9 @@ class SectorBackgroundPainter extends CustomPainter {
     // Draw deep space background gradient
     _drawSpaceBackground(canvas, size, center);
 
+    // Draw stars
+    _drawStars(canvas, size);
+
     // Draw each sector's nebula
     for (final entry in SectorConfig.styles.entries) {
       _drawSectorNebula(canvas, center, entry.key, entry.value);
@@ -45,6 +48,22 @@ class SectorBackgroundPainter extends CustomPainter {
 
     final paint = Paint()..shader = gradient;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
+
+  void _drawStars(Canvas canvas, Size size) {
+    final random = Random(42); // Consistent seed
+    final paint = Paint()..color = Colors.white;
+    
+    // Draw 200 random stars
+    for (int i = 0; i < 200; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = random.nextDouble() * 1.5;
+      final alpha = random.nextDouble() * 0.5 + 0.1;
+      
+      paint.color = Colors.white.withValues(alpha: alpha);
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
   }
 
   void _drawSectorNebula(
@@ -131,9 +150,9 @@ class SectorBackgroundPainter extends CustomPainter {
   }
 
   void _drawSectorLabel(Canvas canvas, Offset center, SectorStyle style) {
-    // Calculate label position at the outer edge of the sector
+    // Calculate label position nearer to center for readability
     final centerAngle = (style.baseAngle + style.sweepAngle / 2 - 90) * pi / 180;
-    final labelRadius = canvasSize / 2 - 350; // Position labels near the edge
+    const labelRadius = 220.0; // Fixed radius for labels, comfortably outside the flame
 
     final labelPos = Offset(
       center.dx + labelRadius * cos(centerAngle),
@@ -145,14 +164,18 @@ class SectorBackgroundPainter extends CustomPainter {
       text: TextSpan(
         text: style.name,
         style: TextStyle(
-          color: style.glowColor.withValues(alpha: 0.6),
-          fontSize: 24,
-          fontWeight: FontWeight.w300,
-          letterSpacing: 4,
+          color: style.glowColor.withValues(alpha: 0.9), // Higher opacity
+          fontSize: 16, // Smaller but clearer
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.5,
           shadows: [
             Shadow(
-              color: style.primaryColor.withValues(alpha: 0.5),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: 0.8),
+              blurRadius: 4,
+            ),
+            Shadow(
+              color: style.primaryColor,
+              blurRadius: 8,
             ),
           ],
         ),
@@ -162,25 +185,11 @@ class SectorBackgroundPainter extends CustomPainter {
 
     textPainter.layout();
 
-    // Rotate text to align with sector angle
-    canvas.save();
-    canvas.translate(labelPos.dx, labelPos.dy);
-
-    // Rotate text so it reads properly (adjust for readability)
-    double rotation = centerAngle + pi / 2;
-    // Flip text if it would be upside down
-    if (centerAngle > pi / 2 && centerAngle < 3 * pi / 2) {
-      rotation += pi;
-    }
-    canvas.rotate(rotation);
-
-    // Draw text centered at the position
+    // Draw text horizontally (no rotation)
     textPainter.paint(
       canvas,
-      Offset(-textPainter.width / 2, -textPainter.height / 2),
+      Offset(labelPos.dx - textPainter.width / 2, labelPos.dy - textPainter.height / 2),
     );
-
-    canvas.restore();
   }
 
   @override

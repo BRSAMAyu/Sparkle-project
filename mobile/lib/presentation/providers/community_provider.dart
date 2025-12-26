@@ -7,7 +7,13 @@ import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/services/chat_cache_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
+import 'package:sparkle/data/repositories/mock_community_repository.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
+
+// Mock Community Repository Provider
+final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
+  return MockCommunityRepository.instance();
+});
 
 // Token provider for WebSocket connections
 final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
