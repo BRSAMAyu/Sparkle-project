@@ -480,43 +480,46 @@ ws.onopen = () => {
 }
 ```
 
-#### 服务器 → 客户端 (流式响应)
-```json
-// 文本块
-{
-  "type": "text",
-  "message_id": "uuid",
-  "chunk_index": 1,
-  "content": "好的！我来帮你制定一个复习计划...",
-  "is_final": false
-}
+#### 服务器 → 客户端 (流式响应事件)
 
-// 工具调用
-{
-  "type": "tool_call",
-  "message_id": "uuid",
-  "name": "search_nodes",
-  "arguments": {
-    "query": "微积分基本定理"
-  }
-}
+服务器通过 WebSocket 发送 JSON 对象，每个对象包含 `type` 字段：
 
-// 完成消息
-{
-  "type": "finish",
-  "message_id": "uuid",
-  "finish_reason": "stop",
-  "tokens_used": 150,
-  "model_name": "qwen-max"
-}
+1. **`delta` (增量文本)**:
+   ```json
+   {"type": "delta", "delta": "内容片段"}
+   ```
 
-// 错误消息
-{
-  "type": "error",
-  "code": "RATE_LIMIT_EXCEEDED",
-  "message": "请求过于频繁，请稍后再试"
-}
-```
+2. **`status_update` (状态更新)**:
+   ```json
+   {"type": "status_update", "status": {"state": "THINKING", "details": "正在分析问题..."}}
+   ```
+   *状态值*: `THINKING`, `GENERATING`, `EXECUTING_TOOL`, `SEARCHING`
+
+3. **`tool_call` (工具调用)**:
+   ```json
+   {"type": "tool_call", "tool_call": {"name": "search_nodes", "arguments": "{...}"}}
+   ```
+
+4. **`full_text` (完整文本)**:
+   ```json
+   {"type": "full_text", "full_text": "AI 生成的最终完整回复"}
+   ```
+
+5. **`usage` (资源消耗)**:
+   ```json
+   {"type": "usage", "usage": {"prompt_tokens": 10, "completion_tokens": 50, "total_tokens": 60}}
+   ```
+
+6. **`error` (错误报告)**:
+   ```json
+   {"type": "error", "error": {"code": "LLM_ERROR", "message": "服务暂时不可用", "retryable": true}}
+   ```
+
+7. **流结束 (finish_reason)**:
+   包含 `finish_reason` 字段的消息表示流结束：
+   ```json
+   {"finish_reason": "stop"}
+   ```
 
 ### HTTP 聊天接口 (备用)
 

@@ -71,16 +71,16 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 - **目标平台**：Android / iOS
 
 ### 后端（混合架构）
-- **Go Gateway**：基于Gin框架，负责WebSocket长连接、用户鉴权、基础数据CRUD
-- **Python Agent Engine**：基于gRPC，负责AI推理、复杂业务逻辑、向量检索
-- **通信协议**：Protobuf定义接口，gRPC进行跨语言通信
-- **数据库**：PostgreSQL with pgvector，Go使用SQLC，Python使用SQLAlchemy
-- **数据库迁移**：Alembic (Python侧管理Schema)
+- **Go Gateway**：基于 Gin 框架，负责高并发 WebSocket 长连接、用户鉴权、会话管理、历史记录 CRUD。
+- **Python Agent Engine**：基于 gRPC，负责 AI 推理、工具调用、向量语义检索、遗忘曲线计算。
+- **通信协议**：Protobuf 定义接口，gRPC 进行跨语言双向流通信；WebSocket 与移动端进行实时事件推送。
+- **数据库**：PostgreSQL 16 + pgvector，共享数据模型。
+- **配置管理**：Pydantic v2 + python-dotenv + Viper。
 
 ### AI 服务
-- **模型**：通义千问（Qwen）/ DeepSeek
-- **接口**：统一LLM Service抽象层，支持工具调用和流式响应
-- **协议**：WebSocket实时流式对话，支持打字机效果
+- **模型**：通义千问（Qwen）/ DeepSeek / GPT-3.5
+- **接口**：统一 LLM Service 抽象层，支持 Agent 编排和实时状态机同步。
+- **视觉交互**：WebSocket 支持“思考中”、“搜索中”等 AI 内部状态可视化。
 
 ## 📁 项目结构
 
@@ -188,12 +188,13 @@ flutter run
 
 ## 🆕 最近更新
 
-### ✅ Go后端重构完成
-- **架构升级**：从Python单体转为Go+Python混合架构
-- **Go Gateway**：基于Gin+WebSocket的高性能网关
-- **Python gRPC服务**：专注AI推理和复杂逻辑
-- **实时通信**：WebSocket流式对话，支持打字机效果
-- **协议驱动**：Protobuf定义接口，gRPC跨语言通信
+### ✅ Go后端重构 & Flutter集成完成
+- **架构升级**：从 Python 单体转为 Go + Python 混合架构，显著提升高并发长连接性能。
+- **Go Gateway**：基于 Gin + Gorilla WebSocket 的高性能网关，支持协议转换与鉴权。
+- **Python Agent**：解耦 AI 推理，通过 gRPC 提供 StreamChat 流式服务。
+- **实时状态可视化**：Flutter 端实时显示“思考中”、“正在搜索”、“正在执行工具”等 AI 状态。
+- **对话系统增强**：支持会话恢复（History Loading）、自动重连、打字机效果优化。
+- **认证深度集成**：对话模块与 Auth Provider 完整打通，支持真实用户信息传递。
 
 ### ✅ 已完成功能
 - ✅ 知识星图功能（遗忘曲线、知识点拓展、向量搜索）

@@ -259,6 +259,15 @@ gRPC StreamChat → Python Agent → LLM API/工具调用 → 流式响应 (Prot
 JSON转换 → WebSocket推送 → Flutter App渲染 (打字机效果)
 ```
 
+**WebSocket 事件类型**:
+1. `delta`: 增量文本片段
+2. `status_update`: AI 内部状态（THINKING, SEARCHING, EXECUTING_TOOL）
+3. `tool_call`: 工具调用请求
+4. `full_text`: 完整响应文本
+5. `usage`: Token 使用统计
+6. `done`: 流结束标识
+7. `error`: 错误信息
+
 ### REST API流
 ```
 Flutter App → HTTP请求 → Go Gateway → 业务处理 → 数据库CRUD → HTTP响应

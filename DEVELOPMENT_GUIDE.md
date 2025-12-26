@@ -60,21 +60,19 @@ make dev-up
 #### 3. Python gRPC服务搭建
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# 或 .venv\Scripts\activate  # Windows
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
 
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env 文件，配置数据库连接、API密钥等
+# 编辑 .env 文件，注意 Pydantic v2 现在要求绝对路径或显式加载
+# 核心配置：SECRET_KEY, DATABASE_URL, LLM_API_KEY
 
 # 运行数据库迁移
 alembic upgrade head
 
-# 启动Python gRPC服务
-python grpc_server.py
-# 或使用Makefile命令
-make grpc-server
+# 启动Python gRPC服务 (默认端口 50051)
+PYTHONPATH=. python grpc_server.py
 ```
 
 #### 4. Go Gateway搭建
@@ -84,13 +82,9 @@ cd backend/gateway
 # 安装Go依赖
 go mod tidy
 
-# 构建Go Gateway
-go build -o bin/gateway ./cmd/server
-
-# 启动Go Gateway
-./bin/gateway
-# 或使用Makefile命令
-make gateway-run
+# 启动Go Gateway (默认端口 8080)
+# 需要设置 REDIS_PASSWORD 环境变量
+REDIS_PASSWORD=devpassword go run cmd/server/main.go
 ```
 
 ### 移动端环境搭建
