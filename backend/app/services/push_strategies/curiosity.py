@@ -4,7 +4,7 @@ Curiosity Push Strategy
 from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
-from app.services.push_strategies.base import PushStrategy
+from app.services.push_strategies.strategy import PushStrategy
 
 class CuriosityStrategy(PushStrategy):
     """

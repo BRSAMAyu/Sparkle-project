@@ -80,12 +80,12 @@ flutter:
   shaders:
     - shaders/core_flame.frag
   # Assets
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  assets:
+    - assets/images/
+    - assets/icons/
 
   # Fonts
   # fonts:
   #   - family: Schyler
   #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: assets/fonts/Schyler-Regular.ttf

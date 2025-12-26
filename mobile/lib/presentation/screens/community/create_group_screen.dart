@@ -140,7 +140,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         if (didPop) return;
         final shouldPop = await _onWillPop();
         if (shouldPop && mounted) {
-          Navigator.of(context).pop();
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: Scaffold(
