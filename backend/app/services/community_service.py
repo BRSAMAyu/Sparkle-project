@@ -528,8 +528,15 @@ class GroupMessageService:
         member.last_active_at = datetime.utcnow()
 
         await db.flush()
-        await db.refresh(message)
-        return message
+        
+        # Re-fetch with relationships to ensure reply_to is loaded
+        stmt = select(GroupMessage).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).where(GroupMessage.id == message.id)
+        
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def get_messages(
@@ -555,7 +562,8 @@ class GroupMessageService:
             GroupMessage.group_id == group_id,
             GroupMessage.not_deleted_filter()
         ).options(
-            selectinload(GroupMessage.sender)
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
         ).order_by(desc(GroupMessage.created_at))
 
         if before_id:
@@ -922,8 +930,16 @@ class PrivateMessageService:
         )
         db.add(message)
         await db.flush()
-        await db.refresh(message)
-        return message
+        
+        # Re-fetch with relationships
+        stmt = select(PrivateMessage).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
+        ).where(PrivateMessage.id == message.id)
+        
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def get_messages(
@@ -944,7 +960,8 @@ class PrivateMessageService:
             PrivateMessage.not_deleted_filter()
         ).options(
             selectinload(PrivateMessage.sender),
-            selectinload(PrivateMessage.receiver)
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
         ).order_by(desc(PrivateMessage.created_at))
 
         if before_id:

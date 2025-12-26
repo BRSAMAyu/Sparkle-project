@@ -1,7 +1,7 @@
 /// API Constants
 class ApiConstants {
   // Base URL (HTTP)
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'http://localhost:8080';
   static const String apiVersion = 'v1';
   static const String apiBasePath = '/api/$apiVersion';
 

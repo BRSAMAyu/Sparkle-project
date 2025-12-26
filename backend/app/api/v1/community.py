@@ -43,10 +43,99 @@ from app.services.community_service import (
     CheckinService, GroupTaskService, PrivateMessageService
 )
 from app.services.collaboration_service import collaboration_service
-from app.models.community import SharedResourceType
+from app.models.community import SharedResourceType, GroupMessage, PrivateMessage
 from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
+
+def _build_message_info(msg: GroupMessage) -> MessageInfo:
+    sender = None
+    if msg.sender:
+        sender = UserBrief(
+            id=msg.sender.id,
+            username=msg.sender.username,
+            nickname=msg.sender.nickname,
+            avatar_url=msg.sender.avatar_url,
+            flame_level=msg.sender.flame_level,
+            flame_brightness=msg.sender.flame_brightness
+        )
+    
+    quoted_message = None
+    if msg.reply_to:
+        # Simplified quote (1 level recursion)
+        quoted_sender = None
+        if msg.reply_to.sender:
+             quoted_sender = UserBrief(
+                id=msg.reply_to.sender.id,
+                username=msg.reply_to.sender.username,
+                nickname=msg.reply_to.sender.nickname,
+                avatar_url=msg.reply_to.sender.avatar_url,
+                flame_level=msg.reply_to.sender.flame_level,
+                flame_brightness=msg.reply_to.sender.flame_brightness
+            )
+        quoted_message = MessageInfo(
+            id=msg.reply_to.id,
+            created_at=msg.reply_to.created_at,
+            updated_at=msg.reply_to.updated_at,
+            sender=quoted_sender,
+            message_type=msg.reply_to.message_type,
+            content=msg.reply_to.content,
+            content_data=msg.reply_to.content_data,
+            reply_to_id=msg.reply_to.reply_to_id,
+            quoted_message=None # Stop recursion
+        )
+
+    return MessageInfo(
+        id=msg.id,
+        created_at=msg.created_at,
+        updated_at=msg.updated_at,
+        sender=sender,
+        message_type=msg.message_type,
+        content=msg.content,
+        content_data=msg.content_data,
+        reply_to_id=msg.reply_to_id,
+        quoted_message=quoted_message
+    )
+
+def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
+    sender = UserBrief.model_validate(msg.sender)
+    receiver = UserBrief.model_validate(msg.receiver)
+    
+    quoted_message = None
+    if msg.reply_to:
+        # Simplified quote (1 level recursion)
+        q_sender = UserBrief.model_validate(msg.reply_to.sender)
+        q_receiver = UserBrief.model_validate(msg.reply_to.receiver)
+        
+        quoted_message = PrivateMessageInfo(
+            id=msg.reply_to.id,
+            created_at=msg.reply_to.created_at,
+            updated_at=msg.reply_to.updated_at,
+            sender=q_sender,
+            receiver=q_receiver,
+            message_type=msg.reply_to.message_type,
+            content=msg.reply_to.content,
+            content_data=msg.reply_to.content_data,
+            reply_to_id=msg.reply_to.reply_to_id,
+            is_read=msg.reply_to.is_read,
+            read_at=msg.reply_to.read_at,
+            quoted_message=None
+        )
+
+    return PrivateMessageInfo(
+        id=msg.id,
+        created_at=msg.created_at,
+        updated_at=msg.updated_at,
+        sender=sender,
+        receiver=receiver,
+        message_type=msg.message_type,
+        content=msg.content,
+        content_data=msg.content_data,
+        reply_to_id=msg.reply_to_id,
+        is_read=msg.is_read,
+        read_at=msg.read_at,
+        quoted_message=quoted_message
+    )
 
 
 # ============ 好友系统 ============
@@ -375,23 +464,7 @@ async def send_message(
         message = await GroupMessageService.send_message(db, group_id, current_user.id, data)
         await db.commit()
 
-        message_info = MessageInfo(
-            id=message.id,
-            created_at=message.created_at,
-            updated_at=message.updated_at,
-            sender=UserBrief(
-                id=current_user.id,
-                username=current_user.username,
-                nickname=current_user.nickname,
-                avatar_url=current_user.avatar_url,
-                flame_level=current_user.flame_level,
-                flame_brightness=current_user.flame_brightness
-            ),
-            message_type=message.message_type,
-            content=message.content,
-            content_data=message.content_data,
-            reply_to_id=message.reply_to_id
-        )
+        message_info = _build_message_info(message)
 
         # 广播消息到 WebSocket
         await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
@@ -426,27 +499,7 @@ async def get_messages(
 
     result = []
     for msg in messages:
-        sender = None
-        if msg.sender:
-            sender = UserBrief(
-                id=msg.sender.id,
-                username=msg.sender.username,
-                nickname=msg.sender.nickname,
-                avatar_url=msg.sender.avatar_url,
-                flame_level=msg.sender.flame_level,
-                flame_brightness=msg.sender.flame_brightness
-            )
-
-        result.append(MessageInfo(
-            id=msg.id,
-            created_at=msg.created_at,
-            updated_at=msg.updated_at,
-            sender=sender,
-            message_type=msg.message_type,
-            content=msg.content,
-            content_data=msg.content_data,
-            reply_to_id=msg.reply_to_id
-        ))
+        result.append(_build_message_info(msg))
     return result
 
 
@@ -463,19 +516,7 @@ async def send_private_message(
         message = await PrivateMessageService.send_message(db, current_user.id, data)
         await db.commit()
 
-        msg_info = PrivateMessageInfo(
-            id=message.id,
-            created_at=message.created_at,
-            updated_at=message.updated_at,
-            sender=UserBrief.model_validate(message.sender),
-            receiver=UserBrief.model_validate(message.receiver) if message.receiver else None, # Should always be there
-            message_type=message.message_type,
-            content=message.content,
-            content_data=message.content_data,
-            reply_to_id=message.reply_to_id,
-            is_read=message.is_read,
-            read_at=message.read_at
-        )
+        msg_info = _build_private_message_info(message)
 
         # 推送 WebSocket
         await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
@@ -511,19 +552,7 @@ async def get_private_messages(
 
     result = []
     for msg in messages:
-        result.append(PrivateMessageInfo(
-            id=msg.id,
-            created_at=msg.created_at,
-            updated_at=msg.updated_at,
-            sender=UserBrief.model_validate(msg.sender),
-            receiver=UserBrief.model_validate(msg.receiver),
-            message_type=msg.message_type,
-            content=msg.content,
-            content_data=msg.content_data,
-            reply_to_id=msg.reply_to_id,
-            is_read=msg.is_read,
-            read_at=msg.read_at
-        ))
+        result.append(_build_private_message_info(msg))
     return result
 
 

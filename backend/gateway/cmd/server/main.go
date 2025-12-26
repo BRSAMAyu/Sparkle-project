@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -60,17 +62,36 @@ func main() {
 
 	// Middleware (e.g. JWT) can be added here
 
+	// WebSocket Route (Go Native)
+	r.GET("/ws/chat", chatOrchestrator.HandleWebSocket)
+
 	// API Routes
 	api := r.Group("/api/v1")
 	{
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		})
-		// api.POST("/auth/login", authHandler.Login)
+		// Go Auth routes can be added here
 	}
 
-	// WebSocket Route
-	r.GET("/ws/chat", chatOrchestrator.HandleWebSocket)
+	// Reverse Proxy for Python Backend (REST API)
+	targetURL, err := url.Parse("http://localhost:8000")
+	if err != nil {
+		log.Fatalf("Failed to parse Python backend URL: %v", err)
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	proxy.Director = func(req *http.Request) {
+		req.URL.Scheme = targetURL.Scheme
+		req.URL.Host = targetURL.Host
+		req.Host = targetURL.Host
+	}
+
+	// Forward all other requests to Python Backend
+	// This covers /api/v1/groups, /api/v1/users, etc.
+	r.NoRoute(func(c *gin.Context) {
+		proxy.ServeHTTP(c.Writer, c.Request)
+	})
 
 	log.Printf("Gateway starting on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

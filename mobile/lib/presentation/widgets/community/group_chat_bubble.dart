@@ -321,8 +321,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
   }
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {
-    // In real implementation, you would fetch the quoted message details
-    // For now, we'll show a simple placeholder
+    final quoted = widget.message.quotedMessage;
+    final quotedContent = quoted?.content ?? '引用的消息';
+    final quotedSender = quoted?.sender?.displayName ?? '成员';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -331,13 +333,30 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         borderRadius: BorderRadius.circular(8),
         border: Border(left: BorderSide(color: isMe ? Colors.white70 : AppDesignTokens.primaryBase, width: 3)),
       ),
-      child: Text(
-        '引用的消息',
-        style: TextStyle(
-          fontSize: 12,
-          color: isMe ? Colors.white.withValues(alpha: 0.9) : AppDesignTokens.neutral600,
-          fontStyle: FontStyle.italic,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (quoted != null)
+            Text(
+              quotedSender,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isMe ? Colors.white.withValues(alpha: 0.9) : AppDesignTokens.neutral700,
+              ),
+            ),
+          if (quoted != null) const SizedBox(height: 2),
+          Text(
+            quotedContent,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: isMe ? Colors.white.withValues(alpha: 0.9) : AppDesignTokens.neutral600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }

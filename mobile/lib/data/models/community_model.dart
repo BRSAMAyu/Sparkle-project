@@ -361,6 +361,11 @@ class MessageInfo {
   @HiveField(9)
   final List<String>? readBy;
 
+  // Quoted message
+  @JsonKey(name: 'quoted_message')
+  @HiveField(10)
+  final MessageInfo? quotedMessage;
+
   // Avatar URLs for read-by users (populated by service layer)
   @JsonKey(name: 'read_by_avatars', includeFromJson: false, includeToJson: false)
   final List<UserBrief>? readByUsers;
@@ -376,6 +381,7 @@ class MessageInfo {
     this.replyToId,
     this.isRevoked = false,
     this.readBy,
+    this.quotedMessage,
     this.readByUsers,
   });
 

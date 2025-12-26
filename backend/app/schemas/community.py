@@ -231,6 +231,7 @@ class MessageInfo(BaseSchema):
     content: Optional[str] = Field(description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
     reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
+    quoted_message: Optional['MessageInfo'] = Field(default=None, description="引用消息详情")
 
 
 # ============ 群任务 Schemas ============
@@ -379,3 +380,8 @@ class PrivateMessageInfo(BaseSchema):
     reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
     is_read: bool = Field(description="是否已读")
     read_at: Optional[datetime] = Field(description="阅读时间")
+    quoted_message: Optional['PrivateMessageInfo'] = Field(default=None, description="引用消息详情")
+
+# Handle recursive references
+MessageInfo.model_rebuild()
+PrivateMessageInfo.model_rebuild()
