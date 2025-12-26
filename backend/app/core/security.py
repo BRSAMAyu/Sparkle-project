@@ -19,9 +19,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
-        # Fallback for broken environment (demo mode)
-        if plain_password == "password":
-             return True
+        # Remove dangerous fallback - always return False for invalid passwords
         return False
 
 
@@ -30,8 +28,8 @@ def get_password_hash(password: str) -> str:
     try:
         return pwd_context.hash(password)
     except Exception:
-        # Fallback
-        return "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4hG5F9m7.q"
+        # Remove dangerous fallback - raise exception for hashing failures
+        raise ValueError("Failed to hash password")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
