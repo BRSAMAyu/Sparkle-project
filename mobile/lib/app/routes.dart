@@ -35,6 +35,8 @@ import 'package:sparkle/presentation/screens/focus/focus_main_screen.dart';
 import 'package:sparkle/presentation/screens/stats/calendar_stats_screen.dart';
 import 'package:sparkle/data/models/task_model.dart';
 
+import 'package:sparkle/presentation/screens/home/notification_list_screen.dart';
+
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({
   required GoRouterState state,
@@ -126,6 +128,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const HomeScreen(),
           type: SharedAxisTransitionType.scaled, // Fade/Scale in for Home
+        ),
+      ),
+
+      // Notification Routes
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const NotificationListScreen(),
         ),
       ),
 
@@ -247,16 +259,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       routes: [
         GoRoute(
           path: 'chat/group/:id',
-          builder: (context, state) => comm_chat.ChatScreen(
-            id: state.pathParameters['id']!,
-            isGroup: true,
+          builder: (context, state) => GroupChatScreen(
+            groupId: state.pathParameters['id']!,
           ),
         ),
         GoRoute(
           path: 'chat/private/:id',
-          builder: (context, state) => comm_chat.ChatScreen(
-            id: state.pathParameters['id']!,
-            isGroup: false,
+          builder: (context, state) => PrivateChatScreen(
+            friendId: state.pathParameters['id']!,
+            friendName: state.uri.queryParameters['name'],
           ),
         ),
       ],

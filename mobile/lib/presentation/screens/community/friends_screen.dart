@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Friends'),
-          bottom: const TabBar(
+          title: Text(l10n.community),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'My Friends'),
-              Tab(text: 'Requests'),
-              Tab(text: 'Discover'),
+              Tab(text: l10n.languageChinese == '简体中文' ? '我的好友' : 'My Friends'),
+              Tab(text: l10n.languageChinese == '简体中文' ? '好友请求' : 'Requests'),
+              Tab(text: l10n.languageChinese == '简体中文' ? '发现' : 'Discover'),
             ],
           ),
         ),
@@ -56,17 +58,41 @@ class _MyFriendsTab extends ConsumerWidget {
             itemBuilder: (context, index) {
               final friendInfo = friends[index];
               final friend = friendInfo.friend;
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
-                  child: friend.avatarUrl == null ? Text(friend.displayName[0]) : null,
-                ),
-                title: Text(friend.displayName),
-                subtitle: Text('Level ${friend.flameLevel} • ${friendInfo.status}'),
-                trailing: const Icon(Icons.chat_bubble_outline),
+              return InkWell(
                 onTap: () {
-                  // TODO: Navigate to chat with friend
+                  context.push('/community/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}');
                 },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
+                          child: friend.avatarUrl == null ? Text(friend.displayName[0]) : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(friend.displayName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                            Text('Lv.${friend.flameLevel}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                    ],
+                  ),
+                ),
               );
             },
           ),
@@ -97,7 +123,7 @@ class _PendingRequestsTab extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
               final request = requests[index];
-              final user = request.friend; // In pending requests, 'friend' is the other user
+              final user = request.friend;
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
@@ -105,9 +131,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                     child: user.avatarUrl == null ? Text(user.displayName[0]) : null,
                   ),
                   title: Text(user.displayName),
-                  subtitle: request.matchReason != null 
-                    ? Text('Match: ${request.matchReason.toString()}') 
-                    : const Text('Wants to be your friend'),
+                  subtitle: const Text('Wants to be your friend'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -115,7 +139,6 @@ class _PendingRequestsTab extends ConsumerWidget {
                         icon: const Icon(Icons.check, color: Colors.green),
                         onPressed: () {
                           ref.read(pendingRequestsProvider.notifier).respondToRequest(request.id, true);
-                          // Refresh friends list if accepted
                           ref.read(friendsProvider.notifier).refresh();
                         },
                       ),
@@ -165,14 +188,7 @@ class _RecommendationsTab extends ConsumerWidget {
                     child: rec.user.avatarUrl == null ? Text(rec.user.displayName[0]) : null,
                   ),
                   title: Text(rec.user.displayName),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Match: ${(rec.matchScore * 100).toInt()}%'),
-                      if (rec.matchReasons.isNotEmpty)
-                        Text(rec.matchReasons.join(', '), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
+                  subtitle: Text('Match: ${(rec.matchScore * 100).toInt()}%'),
                   trailing: IconButton(
                     icon: const Icon(Icons.person_add),
                     onPressed: () {

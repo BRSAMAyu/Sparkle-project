@@ -78,13 +78,14 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       contentData: (fields[4] as Map?)?.cast<String, dynamic>(),
       replyToId: fields[5] as String?,
       isRevoked: fields[8] as bool,
+      readBy: (fields[9] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, MessageInfo obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -102,7 +103,9 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       ..writeByte(7)
       ..write(obj.updatedAt)
       ..writeByte(8)
-      ..write(obj.isRevoked);
+      ..write(obj.isRevoked)
+      ..writeByte(9)
+      ..write(obj.readBy);
   }
 
   @override
@@ -516,6 +519,8 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
       isRevoked: json['is_revoked'] as bool? ?? false,
+      readBy:
+          (json['read_by'] as List<dynamic>?)?.map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -529,6 +534,7 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
       'is_revoked': instance.isRevoked,
+      'read_by': instance.readBy,
     };
 
 const _$MessageTypeEnumMap = {

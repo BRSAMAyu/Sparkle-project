@@ -235,8 +235,7 @@ class GalaxyGraphResponse {
 
   GalaxyGraphResponse({
     required this.nodes,
-    this.edges = const [],
-    required this.userFlameIntensity,
+    required this.userFlameIntensity, this.edges = const [],
   });
 
   factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) =>
@@ -258,7 +257,7 @@ class GalaxyGraphResponse {
     return edges.where((e) =>
       e.sourceId == nodeId ||
       e.targetId == nodeId ||
-      (e.bidirectional && e.targetId == nodeId)
+      (e.bidirectional && e.targetId == nodeId),
     ).toList();
   }
 }

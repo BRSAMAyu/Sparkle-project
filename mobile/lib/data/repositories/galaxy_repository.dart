@@ -97,7 +97,7 @@ class GalaxyRepository {
       );
       final searchResponse = GalaxySearchResponse.fromJson(response.data);
       return searchResponse.results;
-    } on DioException catch (e) {
+    } on DioException {
       return [];
     } catch (_) {
       return [];

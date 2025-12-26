@@ -82,7 +82,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.theme),
-              subtitle: Text(l10n.lightMode + '/' + l10n.darkMode),
+              subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
               trailing: DropdownButton<ThemeMode>(
                 value: ref.watch(themeModeProvider),
                 underline: const SizedBox.shrink(),
@@ -108,7 +108,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               subtitle: Text(l10n.enterToSendDescription),
               value: enterToSend,
               onChanged: (v) => ref.read(enterToSendProvider.notifier).setEnabled(v),
-              activeColor: AppDesignTokens.primaryBase,
+              activeThumbColor: AppDesignTokens.primaryBase,
             ),
             const SizedBox(height: AppDesignTokens.spacing32),
 

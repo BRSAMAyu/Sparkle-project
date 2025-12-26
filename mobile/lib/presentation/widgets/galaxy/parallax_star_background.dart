@@ -6,8 +6,7 @@ class ParallaxStarBackground extends StatelessWidget {
   final TransformationController transformationController;
 
   const ParallaxStarBackground({
-    super.key,
-    required this.transformationController,
+    required this.transformationController, super.key,
   });
 
   @override
@@ -117,7 +116,7 @@ class _ParallaxLayersPainter extends CustomPainter {
       if (y < 0) y += fieldHeight;
 
       // Draw star
-      double r = baseSize * (0.8 + random.nextDouble() * 0.4);
+      final double r = baseSize * (0.8 + random.nextDouble() * 0.4);
       // Scale star size slightly with zoom to give depth feeling (optional)
       // r = r * (0.5 + scale * 0.5); 
       

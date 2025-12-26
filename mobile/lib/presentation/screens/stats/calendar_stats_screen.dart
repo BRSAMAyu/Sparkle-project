@@ -131,15 +131,15 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         },
         style: ButtonStyle(
           visualDensity: VisualDensity.compact,
-          backgroundColor: MaterialStateProperty.resolveWith<Color>(
-            (Set<MaterialState> states) {
-              if (states.contains(MaterialState.selected)) {
+          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+            (Set<WidgetState> states) {
+              if (states.contains(WidgetState.selected)) {
                 return AppDesignTokens.primaryBase;
               }
               return Colors.white10;
             },
           ),
-          foregroundColor: MaterialStateProperty.all(Colors.white),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
         ),
       ),
     );
@@ -240,7 +240,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             }),
           ],
         );
-      }
+      },
     );
   }
 
@@ -445,7 +445,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       ),
                       title: Text(event.title, style: const TextStyle(color: Colors.white)),
                       subtitle: Text(
-                        event.isAllDay ? '全天' : '${DateFormat('HH:mm').format(event.startTime)}',
+                        event.isAllDay ? '全天' : DateFormat('HH:mm').format(event.startTime),
                         style: const TextStyle(color: Colors.white54),
                       ),
                       trailing: event.recurrenceRule != null ? const Icon(Icons.repeat, color: Colors.white30, size: 16) : null,
@@ -667,7 +667,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: const Text('全天', style: TextStyle(color: Colors.white)),
           value: _isAllDay,
           onChanged: (val) => setState(() => _isAllDay = val),
-          activeColor: AppDesignTokens.primaryBase,
+          activeThumbColor: AppDesignTokens.primaryBase,
           contentPadding: EdgeInsets.zero,
         ),
         ListTile(

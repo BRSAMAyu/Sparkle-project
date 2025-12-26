@@ -19,14 +19,12 @@ class CalendarEventModel {
     required this.title,
     required this.startTime,
     required this.endTime,
-    this.description,
+    required this.createdAt, required this.updatedAt, this.description,
     this.isAllDay = false,
     this.location,
     this.colorValue = 0xFF2196F3,
     this.reminderMinutes = const [],
     this.recurrenceRule,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory CalendarEventModel.fromJson(Map<String, dynamic> json) {

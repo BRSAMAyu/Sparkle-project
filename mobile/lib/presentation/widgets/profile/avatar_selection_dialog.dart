@@ -19,9 +19,8 @@ class AvatarSelectionDialog extends StatelessWidget {
   final Function(String) onAvatarSelected;
 
   const AvatarSelectionDialog({
-    super.key,
+    required this.onAvatarSelected, super.key,
     this.currentAvatarUrl,
-    required this.onAvatarSelected,
   });
 
   static const List<AvatarOption> presets = [
@@ -99,7 +98,7 @@ class AvatarSelectionDialog extends StatelessWidget {
                                 BoxShadow(
                                   color: AppDesignTokens.primaryBase.withValues(alpha: 0.3),
                                   blurRadius: 8,
-                                )
+                                ),
                               ]
                             : null,
                       ),

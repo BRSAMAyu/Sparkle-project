@@ -148,7 +148,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 color: AppDesignTokens.primaryBase.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
-                              )
+                              ),
                             ] 
                           : null,
                       ),
@@ -184,7 +184,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       decoration: BoxDecoration(
         color: isDark ? AppDesignTokens.neutral800 : Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
-        border: Border(
+        border: const Border(
           left: BorderSide(color: AppDesignTokens.primaryBase, width: 4),
         ),
       ),
@@ -196,7 +196,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               children: [
                 Text(
                   '引用 ${widget.quotedMessage!.sender.displayName}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: AppDesignTokens.primaryBase,

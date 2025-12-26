@@ -235,12 +235,12 @@ class GalaxyLayoutEngine {
         parentId: n.parentId,
         sector: n.sector,
         importance: n.importance,
-      )).toList(),
+      ),).toList(),
       edges: edges.map((e) => _SimpleEdge(
         sourceId: e.sourceId,
         targetId: e.targetId,
         strength: e.strength,
-      )).toList(),
+      ),).toList(),
       initialPositions: initialPositions,
     );
 
@@ -257,9 +257,7 @@ class _SimpleNode {
 
   _SimpleNode({
     required this.id,
-    this.parentId,
-    required this.sector,
-    required this.importance,
+    required this.sector, required this.importance, this.parentId,
   });
 }
 

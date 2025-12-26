@@ -263,7 +263,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
         duration: const Duration(milliseconds: 1500),
       )..forward(),
       curve: Curves.easeInOutCubic,
-    ));
+    ),);
 
     animation.addListener(() {
       _transformationController.value = animation.value;

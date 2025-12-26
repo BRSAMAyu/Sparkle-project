@@ -127,8 +127,7 @@ class StarMapPainter extends CustomPainter {
 
   StarMapPainter({
     required this.nodes,
-    this.edges = const [],
-    required this.positions,
+    required this.positions, this.edges = const [],
     this.scale = 1.0,
     this.aggregationLevel = AggregationLevel.full,
     this.clusters = const {},
@@ -180,7 +179,7 @@ class StarMapPainter extends CustomPainter {
         color: color,
         radius: radius,
         position: pos,
-      ));
+      ),);
     }
 
     // Build processed edges
@@ -215,7 +214,7 @@ class StarMapPainter extends CustomPainter {
         endColor: targetColor,
         distance: distance,
         strokeWidth: strokeWidth,
-      ));
+      ),);
     }
 
     // Also add parent-child connections if not already in edges
@@ -256,7 +255,7 @@ class StarMapPainter extends CustomPainter {
           endColor: childColor,
           distance: distance,
           strokeWidth: 1.5,
-        ));
+        ),);
       }
     }
   }
@@ -724,7 +723,7 @@ class StarMapPainter extends CustomPainter {
                -math.pi / 2, 
                math.pi, 
                false, 
-               ringPaint
+               ringPaint,
              );
           }
         }

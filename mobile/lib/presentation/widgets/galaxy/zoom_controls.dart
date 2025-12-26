@@ -6,8 +6,7 @@ class ZoomControls extends StatefulWidget {
   final double maxScale;
 
   const ZoomControls({
-    super.key,
-    required this.transformationController,
+    required this.transformationController, super.key,
     this.minScale = 0.1,
     this.maxScale = 3.0,
   });
@@ -92,13 +91,13 @@ class _ZoomControlsState extends State<ZoomControls> {
             child: RotatedBox(
               quarterTurns: 3,
               child: SliderTheme(
-                data: SliderThemeData(
+                data: const SliderThemeData(
                   trackHeight: 2,
                   activeTrackColor: Colors.white,
                   inactiveTrackColor: Colors.white24,
                   thumbColor: Colors.white,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
                 ),
                 child: Slider(
                   value: _currentScale.clamp(widget.minScale, widget.maxScale),

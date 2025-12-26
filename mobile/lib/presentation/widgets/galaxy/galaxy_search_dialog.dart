@@ -8,8 +8,7 @@ class GalaxySearchDialog extends ConsumerStatefulWidget {
   final Function(String nodeId) onNodeSelected;
 
   const GalaxySearchDialog({
-    super.key,
-    required this.onNodeSelected,
+    required this.onNodeSelected, super.key,
   });
 
   @override

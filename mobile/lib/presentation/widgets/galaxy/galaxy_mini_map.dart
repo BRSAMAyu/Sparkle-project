@@ -7,9 +7,7 @@ class GalaxyMiniMap extends StatelessWidget {
   final double minimapSize;
 
   const GalaxyMiniMap({
-    super.key,
-    required this.transformationController,
-    required this.canvasSize,
+    required this.transformationController, required this.canvasSize, super.key,
     this.minimapSize = 120.0,
   });
 

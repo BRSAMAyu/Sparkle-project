@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -7,8 +9,9 @@ import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   final MessageInfo message;
+  final Function(MessageInfo message)? onRevoke;
 
-  const GroupChatBubble({required this.message, super.key});
+  const GroupChatBubble({required this.message, this.onRevoke, super.key});
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -45,11 +48,73 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     super.dispose();
   }
 
+  void _showContextMenu(BuildContext context, bool isMe) {
+    if (widget.message.isRevoked) return;
+
+    // Allow revocation within 24 hours for own messages
+    final bool canRevoke = isMe && DateTime.now().difference(widget.message.createdAt).inHours < 24;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('复制'),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: widget.message.content ?? ''));
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
+                  );
+                },
+              ),
+              if (canRevoke && widget.onRevoke != null)
+                ListTile(
+                  leading: const Icon(Icons.undo_rounded, color: AppDesignTokens.error),
+                  title: const Text('撤回', style: TextStyle(color: AppDesignTokens.error)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onRevoke!(widget.message);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final isMe = widget.message.sender?.id == currentUser?.id;
     final isSystem = widget.message.isSystemMessage;
+
+    // Handle revoked messages
+    if (widget.message.isRevoked) {
+      return FadeTransition(
+        opacity: _fadeAnimation,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              isMe ? '你撤回了一条消息' : '${widget.message.sender?.displayName ?? "成员"}撤回了一条消息',
+              style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral400),
+            ),
+          ),
+        ),
+      );
+    }
 
     if (isSystem) {
       return FadeTransition(
@@ -72,48 +137,130 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
       );
     }
 
+    final String timeStr = DateFormat('HH:mm').format(widget.message.createdAt);
+
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isMe) ...[
-                _buildAvatar(widget.message.sender),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                  children: [
-                    if (!isMe && widget.message.sender != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 4),
-                        child: Text(
-                          widget.message.sender!.displayName,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppDesignTokens.neutral500,
+        child: GestureDetector(
+          onLongPress: () => _showContextMenu(context, isMe),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: Row(
+              mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isMe) ...[
+                  _buildAvatar(widget.message.sender),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      if (!isMe && widget.message.sender != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 4),
+                          child: Text(
+                            widget.message.sender!.displayName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppDesignTokens.neutral500,
+                            ),
                           ),
                         ),
+                      _buildContent(context, isMe),
+                      const SizedBox(height: 4),
+                      // Timestamp and read status
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              timeStr,
+                              style: const TextStyle(fontSize: 10, color: AppDesignTokens.neutral500),
+                            ),
+                            if (isMe && widget.message.readCount > 0) ...[
+                              const SizedBox(width: 8),
+                              _buildReadByIndicator(),
+                            ],
+                          ],
+                        ),
                       ),
-                    _buildContent(context, isMe),
-                    // Timestamp (optional, could be added)
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (isMe) ...[
-                const SizedBox(width: 8),
-                _buildAvatar(widget.message.sender),
+                if (isMe) ...[
+                  const SizedBox(width: 8),
+                  _buildAvatar(widget.message.sender),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReadByIndicator() {
+    final readBy = widget.message.readBy ?? [];
+    if (readBy.isEmpty) return const SizedBox.shrink();
+
+    final displayCount = readBy.length > 5 ? 5 : readBy.length;
+    final remaining = readBy.length - 5;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Display first 5 avatars
+        SizedBox(
+          width: displayCount * 14.0 + 8,
+          height: 20,
+          child: Stack(
+            children: [
+              for (int i = 0; i < displayCount; i++)
+                Positioned(
+                  left: i * 12.0,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      color: AppDesignTokens.neutral200,
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        'https://api.dicebear.com/9.x/avataaars/png?seed=${readBy[i]}',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Text(
+                            '?',
+                            style: TextStyle(fontSize: 8, color: AppDesignTokens.neutral500),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // Show +N if more than 5
+        if (remaining > 0) ...[
+          Text(
+            '+${readBy.length}',
+            style: const TextStyle(fontSize: 10, color: AppDesignTokens.info),
+          ),
+        ] else ...[
+          Text(
+            '${readBy.length}人已读',
+            style: const TextStyle(fontSize: 10, color: AppDesignTokens.info),
+          ),
+        ],
+      ],
     );
   }
 

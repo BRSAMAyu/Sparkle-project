@@ -326,7 +326,7 @@ class GroupMemberInfo {
   Map<String, dynamic> toJson() => _$GroupMemberInfoToJson(this);
 }
 
-// ============ 消息 ============ 
+// ============ 消息 ============
 
 @JsonSerializable()
 @HiveType(typeId: 13)
@@ -356,6 +356,15 @@ class MessageInfo {
   @HiveField(8)
   final bool isRevoked;
 
+  // Group chat read-by tracking
+  @JsonKey(name: 'read_by')
+  @HiveField(9)
+  final List<String>? readBy;
+
+  // Avatar URLs for read-by users (populated by service layer)
+  @JsonKey(name: 'read_by_avatars', includeFromJson: false, includeToJson: false)
+  final List<UserBrief>? readByUsers;
+
   MessageInfo({
     required this.id,
     required this.messageType,
@@ -366,6 +375,8 @@ class MessageInfo {
     this.contentData,
     this.replyToId,
     this.isRevoked = false,
+    this.readBy,
+    this.readByUsers,
   });
 
   factory MessageInfo.fromJson(Map<String, dynamic> json) =>
@@ -373,6 +384,8 @@ class MessageInfo {
   Map<String, dynamic> toJson() => _$MessageInfoToJson(this);
 
   bool get isSystemMessage => sender == null;
+
+  int get readCount => readBy?.length ?? 0;
 }
 
 @JsonSerializable()

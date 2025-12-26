@@ -65,11 +65,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   bool get _isUser {
+    final myId = widget.currentUserId ?? 'me';
     if (widget.message is ChatMessageModel) {
       return (widget.message as ChatMessageModel).role == MessageRole.user;
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
-      return msg.sender.id == widget.currentUserId;
+      return msg.sender.id == myId;
+    } else if (widget.message is MessageInfo) {
+      final msg = widget.message as MessageInfo;
+      return msg.sender?.id == myId;
     }
     return false;
   }
@@ -82,18 +86,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   String get _content => (widget.message is ChatMessageModel) 
       ? (widget.message as ChatMessageModel).content 
-      : (widget.message as PrivateMessageInfo).content ?? '';
+      : (widget.message is PrivateMessageInfo)
+          ? (widget.message as PrivateMessageInfo).content ?? ''
+          : (widget.message as MessageInfo).content ?? '';
 
   DateTime get _createdAt => (widget.message is ChatMessageModel) 
       ? (widget.message as ChatMessageModel).createdAt 
-      : (widget.message as PrivateMessageInfo).createdAt;
-
-  PrivateMessageInfo? get _quotedMessage {
-    if (widget.message is PrivateMessageInfo) {
-      return (widget.message as PrivateMessageInfo).quotedMessage;
-    }
-    return null;
-  }
+      : (widget.message is PrivateMessageInfo)
+          ? (widget.message as PrivateMessageInfo).createdAt
+          : (widget.message as MessageInfo).createdAt;
 
   void _handleDoubleTap() {
     if (_isUser || _isRevoked) return;
@@ -105,8 +106,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   void _showContextMenu(BuildContext context) {
     if (_isRevoked) return;
-    
-    final bool canRevoke = _isUser && DateTime.now().difference(_createdAt).inMinutes < 5;
+
+    // Allow revocation within 24 hours for user messages
+    final bool canRevoke = _isUser && DateTime.now().difference(_createdAt).inHours < 24;
     
     showModalBottomSheet(
       context: context,
@@ -120,7 +122,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.onQuote != null)
+              if (widget.onQuote != null && widget.message is PrivateMessageInfo)
                 ListTile(
                   leading: const Icon(Icons.format_quote_rounded),
                   title: const Text('引用'),
@@ -159,9 +161,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (_isRevoked) {
-      return _buildRevokedPlaceholder();
-    }
+    if (_isRevoked) return _buildRevokedPlaceholder();
 
     final bool isUser = _isUser;
     final String timeStr = DateFormat('HH:mm').format(_createdAt);
@@ -179,7 +179,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (!isUser && widget.showAvatar) _buildAvatar(false),
-                  if (!isUser && !widget.showAvatar) const SizedBox(width: 40), 
+                  if (!isUser && !widget.showAvatar) const SizedBox(width: 44), 
 
                   Flexible(
                     child: GestureDetector(
@@ -245,7 +245,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            if (_quotedMessage != null) _buildQuoteArea(context, isUser),
+                                            if (widget.message is PrivateMessageInfo && (widget.message as PrivateMessageInfo).quotedMessage != null)
+                                              _buildQuoteArea(context, isUser, (widget.message as PrivateMessageInfo).quotedMessage!),
                                             MarkdownBody(
                                               data: _content,
                                               styleSheet: _getMarkdownStyle(context, isUser),
@@ -259,8 +260,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                     ),
                                   ),
                                 ),
-                                
-                                // Agent Widgets
                                 if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).widgets != null)
                                   ... (widget.message as ChatMessageModel).widgets!.map((w) => 
                                     Padding(
@@ -270,7 +269,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   ),
                               ],
                             ),
-                            
                             if (_showHeart) _buildHeartAnimation(),
                           ],
                         ),
@@ -279,11 +277,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   ),
 
                   if (isUser && widget.showAvatar) _buildAvatar(true),
-                  if (isUser && !widget.showAvatar) const SizedBox(width: 40),
+                  if (isUser && !widget.showAvatar) const SizedBox(width: 44),
                 ],
               ),
               
-              // Status & Time Row
               Padding(
                 padding: EdgeInsets.only(
                   top: 4,
@@ -297,10 +294,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     const SizedBox(width: 4),
                     Text(
                       timeStr,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppDesignTokens.neutral500,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: AppDesignTokens.neutral500),
                     ),
                   ],
                 ),
@@ -312,20 +306,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuoteArea(BuildContext context, bool isUser) {
-    final msg = _quotedMessage!;
+  Widget _buildQuoteArea(BuildContext context, bool isUser, PrivateMessageInfo msg) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: isUser ? Colors.white.withValues(alpha: 0.15) : context.colors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(
-            color: isUser ? Colors.white70 : AppDesignTokens.primaryBase,
-            width: 3,
-          ),
-        ),
+        border: Border(left: BorderSide(color: isUser ? Colors.white70 : AppDesignTokens.primaryBase, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,8 +321,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           Text(
             msg.sender.displayName,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+              fontSize: 11, fontWeight: FontWeight.bold,
               color: isUser ? Colors.white : AppDesignTokens.primaryBase,
             ),
           ),
@@ -372,13 +359,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (msg.isSending) {
       return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
     }
-    
     if (msg.hasError) {
       return const Icon(Icons.error_outline, color: AppDesignTokens.error, size: 14);
     }
 
     final bool isRead = msg.isRead || msg.readAt != null;
-    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -390,10 +375,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         if (isRead)
           const Padding(
             padding: EdgeInsets.only(left: 2),
-            child: Text(
-              '已读',
-              style: TextStyle(fontSize: 10, color: AppDesignTokens.info),
-            ),
+            child: Text('已读', style: TextStyle(fontSize: 10, color: AppDesignTokens.info)),
           ),
       ],
     );
@@ -410,6 +392,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       final msg = widget.message as PrivateMessageInfo;
       avatarUrl = msg.sender.avatarUrl;
       initial = msg.sender.displayName[0].toUpperCase();
+    } else if (widget.message is MessageInfo) {
+      final msg = widget.message as MessageInfo;
+      avatarUrl = msg.sender?.avatarUrl;
+      initial = (msg.sender?.displayName ?? 'S')[0].toUpperCase();
     }
 
     return Container(
@@ -436,17 +422,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ),
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null 
-            ? Image.network(avatarUrl, fit: BoxFit.cover)
-            : Center(
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isUser ? AppDesignTokens.primaryBase : AppDesignTokens.secondaryBase,
-                  ),
-                ),
-              ),
+            ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => Center(child: Text(initial)))
+            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isUser ? AppDesignTokens.primaryBase : AppDesignTokens.secondaryBase))),
         ),
       ),
     );
@@ -454,30 +431,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
     return MarkdownStyleSheet(
-      p: TextStyle(
-        color: isUser ? Colors.white : context.colors.textPrimary,
-        fontSize: AppDesignTokens.fontSizeBase,
-        height: AppDesignTokens.lineHeightNormal,
-      ),
-      h1: TextStyle(
-        color: isUser ? Colors.white : context.colors.textPrimary,
-        fontSize: AppDesignTokens.fontSizeXl,
-        fontWeight: AppDesignTokens.fontWeightBold,
-      ),
-      code: TextStyle(
-        backgroundColor: isUser ? Colors.white.withValues(alpha: 0.2) : context.colors.surfaceElevated,
-        fontFamily: 'monospace',
-        fontSize: AppDesignTokens.fontSizeSm,
-        color: isUser ? Colors.white : AppDesignTokens.secondaryBase,
-      ),
-      codeblockDecoration: BoxDecoration(
-        color: isUser ? Colors.white.withValues(alpha: 0.1) : context.colors.surfaceElevated,
-        borderRadius: AppDesignTokens.borderRadius12,
-      ),
-      a: TextStyle(
-        color: isUser ? Colors.white : AppDesignTokens.primaryBase,
-        decoration: TextDecoration.underline,
-      ),
+      p: TextStyle(color: isUser ? Colors.white : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeBase, height: AppDesignTokens.lineHeightNormal),
+      h1: TextStyle(color: isUser ? Colors.white : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeXl, fontWeight: AppDesignTokens.fontWeightBold),
+      code: TextStyle(backgroundColor: isUser ? Colors.white.withValues(alpha: 0.2) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: AppDesignTokens.fontSizeSm, color: isUser ? Colors.white : AppDesignTokens.secondaryBase),
+      codeblockDecoration: BoxDecoration(color: isUser ? Colors.white.withValues(alpha: 0.1) : context.colors.surfaceElevated, borderRadius: AppDesignTokens.borderRadius12),
+      a: TextStyle(color: isUser ? Colors.white : AppDesignTokens.primaryBase, decoration: TextDecoration.underline),
     );
   }
 
@@ -495,19 +453,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 500),
       curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: const Icon(
-            Icons.favorite,
-            color: AppDesignTokens.error,
-            size: 48,
-            shadows: [
-              Shadow(blurRadius: 10, color: Colors.black26, offset: Offset(0, 4)),
-            ],
-          ),
-        );
-      },
+      builder: (context, value, child) => Transform.scale(scale: value, child: const Icon(Icons.favorite, color: AppDesignTokens.error, size: 48, shadows: [Shadow(blurRadius: 10, color: Colors.black26, offset: Offset(0, 4))])),
     );
   }
 }

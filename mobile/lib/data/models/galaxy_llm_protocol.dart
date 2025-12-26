@@ -291,8 +291,7 @@ class LLMNodeMoveSpec {
 
   const LLMNodeMoveSpec({
     required this.nodeId,
-    this.newSector,
-    required this.positionHint,
+    required this.positionHint, this.newSector,
   });
 
   factory LLMNodeMoveSpec.fromJson(Map<String, dynamic> json) =>

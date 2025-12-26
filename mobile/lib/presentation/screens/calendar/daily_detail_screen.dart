@@ -11,7 +11,7 @@ import 'package:sparkle/core/services/lunar_service.dart';
 class DailyDetailScreen extends ConsumerWidget {
   final DateTime date;
 
-  const DailyDetailScreen({super.key, required this.date});
+  const DailyDetailScreen({required this.date, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -173,11 +173,11 @@ class DailyDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.diamond_outlined, color: AppDesignTokens.prismPurple, size: 20),
-              const SizedBox(width: 8),
-              const Text('当日认知棱镜', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Icon(Icons.diamond_outlined, color: AppDesignTokens.prismPurple, size: 20),
+              SizedBox(width: 8),
+              Text('当日认知棱镜', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 12),
@@ -241,7 +241,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 ),
               ),
               if (event.location != null && event.location!.isNotEmpty)
-                 Icon(Icons.location_on, color: Colors.white38, size: 16),
+                 const Icon(Icons.location_on, color: Colors.white38, size: 16),
             ],
           ),
         );

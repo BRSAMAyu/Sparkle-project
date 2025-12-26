@@ -4,8 +4,7 @@ class GalaxyEntranceAnimation extends StatefulWidget {
   final VoidCallback onComplete;
 
   const GalaxyEntranceAnimation({
-    super.key,
-    required this.onComplete,
+    required this.onComplete, super.key,
   });
 
   @override
@@ -94,7 +93,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
               Opacity(
                  opacity: (_mainController.value - 0.4) / 0.2, // Fade in
                  child: const Text(
-                   "SPARKLE",
+                   'SPARKLE',
                    style: TextStyle(
                      color: Colors.white,
                      fontSize: 32,
@@ -102,7 +101,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                      letterSpacing: 10,
                    ),
                  ),
-              )
+              ),
           ],
         );
       },

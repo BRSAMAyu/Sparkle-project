@@ -4,6 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
+import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
@@ -20,18 +21,19 @@ import 'package:sparkle/presentation/widgets/home/omnibar.dart';
 import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
 import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
 import 'package:sparkle/presentation/widgets/home/long_term_plan_card.dart';
+import 'package:sparkle/presentation/widgets/home/home_notification_card.dart';
 
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// HomeScreen v2.0 - Project Cockpit
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
   List<Widget> get _screens => [
@@ -45,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final unreadCount = ref.watch(unreadMessageCountProvider);
 
     final destinations = [
       NavigationDestination(
@@ -63,8 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
         label: l10n.chat,
       ),
       NavigationDestination(
-        icon: const Icon(Icons.groups_outlined),
-        selectedIcon: const Icon(Icons.groups),
+        icon: _buildBadgedIcon(Icons.groups_outlined, unreadCount),
+        selectedIcon: _buildBadgedIcon(Icons.groups, unreadCount),
         label: l10n.community,
       ),
       NavigationDestination(
@@ -74,12 +77,41 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
-    return ResponsiveScaffold(
-      title: 'Sparkle',
-      body: _screens[_selectedIndex],
-      destinations: destinations,
-      currentIndex: _selectedIndex,
-      onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+    return InAppNotificationOverlay(
+      child: ResponsiveScaffold(
+        title: 'Sparkle',
+        body: _screens[_selectedIndex],
+        destinations: destinations,
+        currentIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+      ),
+    );
+  }
+
+  Widget _buildBadgedIcon(IconData icon, int count) {
+    if (count == 0) return Icon(icon);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        Positioned(
+          right: -8,
+          top: -4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: AppDesignTokens.error,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+            child: Text(
+              count > 99 ? '99+' : '$count',
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -114,6 +146,10 @@ class _DashboardScreen extends ConsumerWidget {
                 slivers: [
                   // Top Overlay
                   SliverToBoxAdapter(child: _buildTopOverlay(context, user, l10n)),
+                  
+                  // Message Notification Widget
+                  const SliverToBoxAdapter(child: HomeNotificationCard()),
+                  
                   const SliverToBoxAdapter(child: SizedBox(height: 10)),
                   
                   // Bento Grid
