@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/presentation/providers/locale_provider.dart';
 import 'package:sparkle/presentation/screens/profile/edit_profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/unified_settings_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-  // ... (rest of the class)
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -30,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: AppDesignTokens.spacing24),
                   const StatisticsCard(),
                   const SizedBox(height: AppDesignTokens.spacing24),
-                  _buildSettingsSection(context, ref),
+                  _buildSettingsSection(context, ref, l10n),
                   const SizedBox(height: 100), // Bottom padding
                 ],
               ),
@@ -65,10 +67,10 @@ class ProfileScreen extends ConsumerWidget {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 4),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 4),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: Colors.white.withOpacity(0.2),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -104,7 +106,7 @@ class ProfileScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Colors.white.withOpacity(0.2),
                                 borderRadius: AppDesignTokens.borderRadius20,
                               ),
                               child: Row(
@@ -123,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withOpacity(0.9),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -144,7 +146,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingsSection(BuildContext context, WidgetRef ref) {
+  Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -156,7 +158,7 @@ class ProfileScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: Icons.person_outline_rounded,
-            title: '编辑资料',
+            title: l10n.nickname,
             gradient: AppDesignTokens.primaryGradient,
             onTap: () {
               Navigator.of(context).push(
@@ -170,7 +172,7 @@ class ProfileScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: Icons.tune_rounded,
-            title: '个人偏好设置', // Unified entry
+            title: l10n.schedulePreferences,
             gradient: AppDesignTokens.secondaryGradient,
             onTap: () {
               Navigator.of(context).push(
@@ -181,28 +183,83 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
           const Divider(height: 1, indent: 60),
-           _buildSettingsTile(
+          _buildSettingsTile(
             context,
             icon: Icons.language_rounded,
-            title: '语言设置',
+            title: l10n.language,
             gradient: AppDesignTokens.infoGradient,
             onTap: () {
-              // TODO: Language settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已默认设置为中文')),
-              );
+              _showLanguageDialog(context, ref);
             },
           ),
           const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
             icon: Icons.logout_rounded,
-            title: '退出登录',
+            title: l10n.logout,
             gradient: AppDesignTokens.errorGradient,
             isDestructive: true,
             onTap: () {
+              _showLogoutDialog(context, ref, l10n);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final currentLocale = ref.read(localeProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.language),
+        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.languageChinese),
+              trailing: currentLocale.languageCode == 'zh' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              onTap: () {
+                ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text(l10n.languageEnglish),
+              trailing: currentLocale.languageCode == 'en' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              onTap: () {
+                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.logout),
+        content: Text(l10n.confirmLogout),
+        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
+            child: Text(l10n.confirm, style: const TextStyle(color: AppDesignTokens.error)),
           ),
         ],
       ),

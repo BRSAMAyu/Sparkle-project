@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/presentation/providers/settings_provider.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
 import 'package:sparkle/presentation/widgets/settings/learning_mode_control.dart';
 import 'package:sparkle/presentation/widgets/settings/weekly_agenda_grid.dart';
@@ -21,16 +23,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final enterToSend = ref.watch(enterToSendProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('个人偏好设置'),
+        title: Text(l10n.schedulePreferences), // Using generic settings title from l10n or keeping consistent
         actions: [
           TextButton(
             onPressed: () {
               // TODO: Save all settings
               Navigator.pop(context);
             },
-            child: const Text('保存'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -39,7 +44,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(Icons.psychology, '学习模式'),
+            _buildSectionHeader(Icons.psychology, l10n.learningMode),
             const SizedBox(height: AppDesignTokens.spacing16),
             const Text(
               '拖动控制点，调整你的AI辅导风格',
@@ -58,7 +63,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
             const SizedBox(height: AppDesignTokens.spacing32),
 
-            _buildSectionHeader(Icons.schedule, '每周日程'),
+            _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
             const SizedBox(height: AppDesignTokens.spacing16),
             const Text(
               '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
@@ -72,12 +77,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ),
             const SizedBox(height: AppDesignTokens.spacing32),
 
-            _buildSectionHeader(Icons.brightness_6, '显示设置'),
+            _buildSectionHeader(Icons.brightness_6, l10n.theme),
             const SizedBox(height: AppDesignTokens.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('外观模式'),
-              subtitle: const Text('选择浅色或深色界面体验'),
+              title: Text(l10n.theme),
+              subtitle: Text(l10n.lightMode + '/' + l10n.darkMode),
               trailing: DropdownButton<ThemeMode>(
                 value: ref.watch(themeModeProvider),
                 underline: const SizedBox.shrink(),
@@ -86,16 +91,28 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     ref.read(themeModeProvider.notifier).state = newValue;
                   }
                 },
-                items: const [
-                  DropdownMenuItem(value: ThemeMode.system, child: Text('跟随系统')),
-                  DropdownMenuItem(value: ThemeMode.light, child: Text('浅色模式')),
-                  DropdownMenuItem(value: ThemeMode.dark, child: Text('深色模式')),
+                items: [
+                  DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.followSystem)),
+                  DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.lightMode)),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.darkMode)),
                 ],
               ),
             ),
             const SizedBox(height: AppDesignTokens.spacing32),
 
-            _buildSectionHeader(Icons.notifications, '通知设置'),
+            _buildSectionHeader(Icons.touch_app, l10n.interactionSettings),
+            const SizedBox(height: AppDesignTokens.spacing16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.enterToSend),
+              subtitle: Text(l10n.enterToSendDescription),
+              value: enterToSend,
+              onChanged: (v) => ref.read(enterToSendProvider.notifier).setEnabled(v),
+              activeColor: AppDesignTokens.primaryBase,
+            ),
+            const SizedBox(height: AppDesignTokens.spacing32),
+
+            _buildSectionHeader(Icons.notifications, l10n.notificationSettings),
             const SizedBox(height: AppDesignTokens.spacing16),
             SwitchListTile(
               title: const Text('启用通知'),

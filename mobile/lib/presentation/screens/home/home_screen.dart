@@ -21,6 +21,8 @@ import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
 import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
 import 'package:sparkle/presentation/widgets/home/long_term_plan_card.dart';
 
+import 'package:sparkle/l10n/app_localizations.dart';
+
 /// HomeScreen v2.0 - Project Cockpit
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,40 +42,42 @@ class _HomeScreenState extends State<HomeScreen> {
         const ProfileScreen(),
       ];
 
-  static const _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: '驾驶舱',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.auto_awesome_outlined),
-      selectedIcon: Icon(Icons.auto_awesome),
-      label: '星图',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.forum_outlined),
-      selectedIcon: Icon(Icons.forum),
-      label: '对话',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.groups_outlined),
-      selectedIcon: Icon(Icons.groups),
-      label: '社群',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.person_outlined),
-      selectedIcon: Icon(Icons.person),
-      label: '我的',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final destinations = [
+      NavigationDestination(
+        icon: const Icon(Icons.home_outlined),
+        selectedIcon: const Icon(Icons.home),
+        label: l10n.home,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.auto_awesome_outlined),
+        selectedIcon: const Icon(Icons.auto_awesome),
+        label: l10n.galaxy,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.forum_outlined),
+        selectedIcon: const Icon(Icons.forum),
+        label: l10n.chat,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.groups_outlined),
+        selectedIcon: const Icon(Icons.groups),
+        label: l10n.community,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.person_outlined),
+        selectedIcon: const Icon(Icons.person),
+        label: l10n.profile,
+      ),
+    ];
+
     return ResponsiveScaffold(
       title: 'Sparkle',
       body: _screens[_selectedIndex],
-      destinations: _destinations,
+      destinations: destinations,
       currentIndex: _selectedIndex,
       onDestinationSelected: (index) => setState(() => _selectedIndex = index),
     );
@@ -87,6 +91,7 @@ class _DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       extendBody: true,
@@ -108,7 +113,7 @@ class _DashboardScreen extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   // Top Overlay
-                  SliverToBoxAdapter(child: _buildTopOverlay(context, user)),
+                  SliverToBoxAdapter(child: _buildTopOverlay(context, user, l10n)),
                   const SliverToBoxAdapter(child: SizedBox(height: 10)),
                   
                   // Bento Grid
@@ -126,18 +131,18 @@ class _DashboardScreen extends ConsumerWidget {
           ),
 
           // Layer 3: Omni-Bar
-          const Positioned(
+          Positioned(
             left: 16,
             right: 16,
             bottom: 16, // Adjusted for ResponsiveScaffold which puts this inside body
-            child: OmniBar(),
+            child: OmniBar(hintText: l10n.typeMessage),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTopOverlay(BuildContext context, dynamic user) {
+  Widget _buildTopOverlay(BuildContext context, dynamic user, AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
@@ -157,7 +162,7 @@ class _DashboardScreen extends ConsumerWidget {
                 style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
               ),
               Text(
-                user?.nickname ?? '探索者',
+                user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ],

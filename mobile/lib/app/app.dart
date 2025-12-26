@@ -5,6 +5,7 @@ import 'package:sparkle/app/routes.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
+import 'package:sparkle/presentation/providers/locale_provider.dart';
 
 /// Sparkle Application Root Widget
 class SparkleApp extends ConsumerWidget {
@@ -14,6 +15,7 @@ class SparkleApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'Sparkle - 星火',
@@ -22,6 +24,7 @@ class SparkleApp extends ConsumerWidget {
       darkTheme: AppThemes.darkTheme,
       themeMode: themeMode,
       routerConfig: router,
+      locale: locale,
       // Localization
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
@@ -30,7 +33,6 @@ class SparkleApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'), // Default to Chinese
     );
   }
 }

@@ -86,6 +86,24 @@ class GalaxyRepository {
     }
   }
 
+  Future<List<GalaxySearchResult>> searchNodes(String query) async {
+    if (DemoDataService.isDemoMode) {
+      return [];
+    }
+    try {
+      final response = await _apiClient.post(
+        ApiEndpoints.galaxySearch,
+        data: {'query': query},
+      );
+      final searchResponse = GalaxySearchResponse.fromJson(response.data);
+      return searchResponse.results;
+    } on DioException catch (e) {
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Toggle favorite status for a knowledge node
   Future<void> toggleFavorite(String nodeId) async {
     if (DemoDataService.isDemoMode) {

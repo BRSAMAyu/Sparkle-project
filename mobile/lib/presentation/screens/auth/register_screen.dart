@@ -74,7 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1A237E),
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
                 const SizedBox(height: 32),

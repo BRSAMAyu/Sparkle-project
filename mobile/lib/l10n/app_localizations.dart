@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @home.
   ///
   /// In zh, this message translates to:
-  /// **'首页'**
+  /// **'驾驶舱'**
   String get home;
 
   /// No description provided for @community.
@@ -146,6 +146,72 @@ abstract class AppLocalizations {
   /// **'计划'**
   String get plans;
 
+  /// No description provided for @galaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图'**
+  String get galaxy;
+
+  /// No description provided for @login.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录'**
+  String get login;
+
+  /// No description provided for @register.
+  ///
+  /// In zh, this message translates to:
+  /// **'注册'**
+  String get register;
+
+  /// No description provided for @username.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户名'**
+  String get username;
+
+  /// No description provided for @password.
+  ///
+  /// In zh, this message translates to:
+  /// **'密码'**
+  String get password;
+
+  /// No description provided for @email.
+  ///
+  /// In zh, this message translates to:
+  /// **'邮箱'**
+  String get email;
+
+  /// No description provided for @nickname.
+  ///
+  /// In zh, this message translates to:
+  /// **'昵称'**
+  String get nickname;
+
+  /// No description provided for @noAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有账号？'**
+  String get noAccount;
+
+  /// No description provided for @hasAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有账号？'**
+  String get hasAccount;
+
+  /// No description provided for @loginFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录失败'**
+  String get loginFailed;
+
+  /// No description provided for @registerFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'注册失败'**
+  String get registerFailed;
+
   /// No description provided for @weeklyAgenda.
   ///
   /// In zh, this message translates to:
@@ -155,19 +221,19 @@ abstract class AppLocalizations {
   /// No description provided for @agendaBusy.
   ///
   /// In zh, this message translates to:
-  /// **'繁忙 (专注于课业/工作)'**
+  /// **'繁忙'**
   String get agendaBusy;
 
   /// No description provided for @agendaFragmented.
   ///
   /// In zh, this message translates to:
-  /// **'碎片 (高效利用时间)'**
+  /// **'碎片'**
   String get agendaFragmented;
 
   /// No description provided for @agendaRelax.
   ///
   /// In zh, this message translates to:
-  /// **'放松 (休息/娱乐)'**
+  /// **'放松'**
   String get agendaRelax;
 
   /// No description provided for @learningMode.
@@ -197,8 +263,20 @@ abstract class AppLocalizations {
   /// No description provided for @language.
   ///
   /// In zh, this message translates to:
-  /// **'语言'**
+  /// **'语言切换'**
   String get language;
+
+  /// No description provided for @languageChinese.
+  ///
+  /// In zh, this message translates to:
+  /// **'简体中文'**
+  String get languageChinese;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
 
   /// No description provided for @schedulePreferences.
   ///
@@ -215,8 +293,44 @@ abstract class AppLocalizations {
   /// No description provided for @theme.
   ///
   /// In zh, this message translates to:
-  /// **'主题'**
+  /// **'主题样式'**
   String get theme;
+
+  /// No description provided for @darkMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'深色模式'**
+  String get darkMode;
+
+  /// No description provided for @lightMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'浅色模式'**
+  String get lightMode;
+
+  /// No description provided for @followSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随系统'**
+  String get followSystem;
+
+  /// No description provided for @interactionSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'交互设置'**
+  String get interactionSettings;
+
+  /// No description provided for @enterToSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'回车发送消息'**
+  String get enterToSend;
+
+  /// No description provided for @enterToSendDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'在对话框中按回车键直接发送'**
+  String get enterToSendDescription;
 
   /// No description provided for @taskCard.
   ///
@@ -241,6 +355,102 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'查看详情'**
   String get viewDetails;
+
+  /// No description provided for @finishTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成任务'**
+  String get finishTask;
+
+  /// No description provided for @abandonTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃任务'**
+  String get abandonTask;
+
+  /// No description provided for @estimatedTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计耗时'**
+  String get estimatedTime;
+
+  /// No description provided for @difficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get difficulty;
+
+  /// No description provided for @exploreGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索星图'**
+  String get exploreGalaxy;
+
+  /// No description provided for @searchNodes.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索知识节点'**
+  String get searchNodes;
+
+  /// No description provided for @sparkNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'点燃星火'**
+  String get sparkNode;
+
+  /// No description provided for @masteryScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度'**
+  String get masteryScore;
+
+  /// No description provided for @reviewSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习建议'**
+  String get reviewSuggestion;
+
+  /// No description provided for @aiTutor.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 导师'**
+  String get aiTutor;
+
+  /// No description provided for @send.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get send;
+
+  /// No description provided for @typeMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入消息...'**
+  String get typeMessage;
+
+  /// No description provided for @logout.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出登录'**
+  String get logout;
+
+  /// No description provided for @confirmLogout.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要退出登录吗？'**
+  String get confirmLogout;
+
+  /// No description provided for @cancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get cancel;
+
+  /// No description provided for @confirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定'**
+  String get confirm;
 }
 
 class _AppLocalizationsDelegate

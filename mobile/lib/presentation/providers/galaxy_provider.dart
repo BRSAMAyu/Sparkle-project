@@ -218,6 +218,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return null;
   }
 
+  Future<List<GalaxySearchResult>> searchNodes(String query) async {
+    return _repository.searchNodes(query);
+  }
+
   /// Update current scale and recalculate aggregation level
   void updateScale(double scale) {
     if ((scale - state.currentScale).abs() < 0.01) return;

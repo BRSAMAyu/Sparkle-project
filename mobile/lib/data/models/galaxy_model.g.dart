@@ -61,7 +61,7 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       name: json['name'] as String,
       importance: (json['importance'] as num).toInt(),
-      sector: $enumDecode(_$SectorEnumEnumMap, json['sector']),
+      sector: $enumDecode(_$SectorEnumEnumMap, json['sector_code']),
       isUnlocked: json['is_unlocked'] as bool,
       masteryScore: (json['mastery_score'] as num).toInt(),
       parentId: json['parent_id'] as String?,
@@ -86,7 +86,7 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'parent_id': instance.parentId,
       'name': instance.name,
       'importance': instance.importance,
-      'sector': _$SectorEnumEnumMap[instance.sector]!,
+      'sector_code': _$SectorEnumEnumMap[instance.sector]!,
       'base_color': instance.baseColor,
       'is_unlocked': instance.isUnlocked,
       'mastery_score': instance.masteryScore,
@@ -125,4 +125,28 @@ Map<String, dynamic> _$GalaxyGraphResponseToJson(
       'nodes': instance.nodes,
       'edges': instance.edges,
       'user_flame_intensity': instance.userFlameIntensity,
+    };
+
+Map<String, dynamic> _$GalaxySearchResultToJson(GalaxySearchResult instance) =>
+    <String, dynamic>{
+      'node': instance.node,
+      'similarity': instance.similarity,
+    };
+
+GalaxySearchResponse _$GalaxySearchResponseFromJson(
+        Map<String, dynamic> json) =>
+    GalaxySearchResponse(
+      query: json['query'] as String,
+      results: (json['results'] as List<dynamic>)
+          .map((e) => GalaxySearchResult.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      totalCount: (json['total_count'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$GalaxySearchResponseToJson(
+        GalaxySearchResponse instance) =>
+    <String, dynamic>{
+      'query': instance.query,
+      'results': instance.results,
+      'total_count': instance.totalCount,
     };

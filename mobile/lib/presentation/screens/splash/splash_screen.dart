@@ -25,28 +25,28 @@ class SplashScreen extends ConsumerWidget {
     });
 
     // The UI to show while the check is in progress.
-    return const Scaffold(
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Placeholder for Sparkle Logo/Animation
-            Icon(
+            const Icon(
               Icons.whatshot, // Represents the "flame"
               size: 80,
               color: Color(0xFFFF6B35), // Sparkle primary color
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'Sparkle',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A237E), // Sparkle secondary color
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
-            SizedBox(height: 40),
-            CircularProgressIndicator(),
+            const SizedBox(height: 40),
+            const CircularProgressIndicator(),
           ],
         ),
       ),

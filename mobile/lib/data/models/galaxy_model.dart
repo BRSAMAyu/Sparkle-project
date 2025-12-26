@@ -121,6 +121,7 @@ class GalaxyNodeModel {
   /// 重要程度 1-5
   final int importance;
 
+  @JsonKey(name: 'sector_code')
   final SectorEnum sector;
 
   @JsonKey(name: 'base_color')
@@ -245,4 +246,54 @@ class GalaxyGraphResponse {
       (e.bidirectional && e.targetId == nodeId)
     ).toList();
   }
+}
+
+@JsonSerializable(createFactory: false)
+class GalaxySearchResult {
+  final GalaxyNodeModel node;
+  final double similarity;
+
+  GalaxySearchResult({required this.node, required this.similarity});
+
+  factory GalaxySearchResult.fromJson(Map<String, dynamic> json) {
+    final nodeJson = json['node'] as Map<String, dynamic>;
+    final statusJson = json['user_status'] as Map<String, dynamic>?;
+    
+    // Flatten for GalaxyNodeModel
+    final flatJson = Map<String, dynamic>.from(nodeJson);
+    if (statusJson != null) {
+      flatJson.addAll(statusJson);
+    } else {
+      // Defaults
+      flatJson['mastery_score'] = 0;
+      flatJson['is_unlocked'] = false;
+    }
+    
+    // Handle sector_code if nested or root
+    // Usually handled by GalaxyNodeModel's JsonKey, but here we prep the map.
+    // If backend sends 'sector_code' inside 'node', it is already in flatJson.
+    
+    return GalaxySearchResult(
+      node: GalaxyNodeModel.fromJson(flatJson),
+      similarity: (json['similarity'] as num).toDouble(),
+    );
+  }
+}
+
+@JsonSerializable()
+class GalaxySearchResponse {
+  final String query;
+  final List<GalaxySearchResult> results;
+  @JsonKey(name: 'total_count')
+  final int totalCount;
+
+  GalaxySearchResponse({
+    required this.query,
+    required this.results,
+    required this.totalCount,
+  });
+
+  factory GalaxySearchResponse.fromJson(Map<String, dynamic> json) =>
+      _$GalaxySearchResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$GalaxySearchResponseToJson(this);
 }

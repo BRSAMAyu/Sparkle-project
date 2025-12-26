@@ -4,7 +4,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 // Global navigator key to allow navigation without context from notifications
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -19,7 +20,7 @@ class NotificationService {
   }
 
   Future<void> _initialize() async {
-    tz.initializeTimeZones();
+    tz_data.initializeTimeZones();
     // Assuming Asia/Shanghai for default, but should ideally get from device
     // tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
 
@@ -153,6 +154,51 @@ class NotificationService {
       notificationDetails,
       payload: jsonEncode(payload),
     );
+  }
+
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required Map<String, dynamic> payload,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'sparkle_calendar_reminders',
+      'Calendar Reminders',
+      channelDescription: 'Reminders for Calendar Events',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidDetails);
+
+    // Ensure we are scheduling in the future
+    if (scheduledDate.isBefore(DateTime.now())) {
+      _logger.w('Attempted to schedule notification in the past: $scheduledDate');
+      return;
+    }
+
+    await _notificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode(payload),
+    );
+    
+    _logger.i('Scheduled notification $id for $scheduledDate');
+  }
+
+  Future<void> cancelNotification(int id) async {
+    await _notificationsPlugin.cancel(id);
+    _logger.i('Cancelled notification $id');
   }
 }
 
