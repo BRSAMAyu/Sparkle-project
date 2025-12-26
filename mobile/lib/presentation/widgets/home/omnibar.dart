@@ -6,11 +6,13 @@ import 'package:sparkle/data/repositories/omnibar_repository.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/presentation/providers/settings_provider.dart';
 import 'package:sparkle/app/theme.dart';
 
 /// OmniBar - Project Cockpit Floating Dock
 class OmniBar extends ConsumerStatefulWidget {
-  const OmniBar({super.key});
+  final String? hintText;
+  const OmniBar({super.key, this.hintText});
 
   @override
   ConsumerState<OmniBar> createState() => _OmniBarState();
@@ -42,9 +44,12 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
   void _onTextChanged() {
     final text = _controller.text.toLowerCase();
     String? newIntent;
-    if (text.contains('提醒') || text.contains('做') || text.contains('任务')) {
+    // Bilingual support for keywords
+    if (text.contains('提醒') || text.contains('做') || text.contains('任务') || 
+        text.contains('task') || text.contains('remind') || text.contains('todo')) {
       newIntent = 'TASK';
-    } else if (text.contains('烦') || text.contains('想') || text.contains('！')) {
+    } else if (text.contains('烦') || text.contains('想') || text.contains('！') ||
+               text.contains('feel') || text.contains('think')) {
       newIntent = 'CAPSULE';
     } else if (text.length > 10) {
       newIntent = 'CHAT';
@@ -119,38 +124,41 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final enterToSend = ref.watch(enterToSendProvider);
+    
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
         final color = _getIntentColor();
         return Container(
-          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E).withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(28),
+            color: Colors.black.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(32),
             border: Border.all(
-              color: color.withValues(alpha: 0.3 + (_glowAnimation.value * 0.4)),
+              color: color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: _glowAnimation.value * 0.2),
-                blurRadius: 15,
+                color: color.withValues(alpha: 0.2 * _glowAnimation.value),
+                blurRadius: 12,
                 spreadRadius: 2,
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  onSubmitted: (_) => _submit(),
+                  onSubmitted: enterToSend ? (_) => _submit() : null,
                   style: TextStyle(color: AppColors.textOnDark(context), fontSize: 15),
                   decoration: InputDecoration(
-                    hintText: _isListening ? '正在聆听...' : '告诉我你的想法...',
+                    hintText: _isListening 
+                        ? 'Listening...' 
+                        : (widget.hintText ?? 'Tell me what you think...'),
                     hintStyle: TextStyle(
                       color: _isListening 
                           ? AppDesignTokens.primaryBase 

@@ -10,6 +10,8 @@ import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart'
 import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
+import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
+import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -282,6 +284,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
     );
   }
 
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => GalaxySearchDialog(
+        onNodeSelected: (nodeId) {
+          _animateToNode(nodeId);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final galaxyState = ref.watch(galaxyProvider);
@@ -302,50 +315,52 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               child: SizedBox(
                 width: _canvasSize,
                 height: _canvasSize,
-                child: AnimatedBuilder(
-                  animation: _transformationController,
-                  builder: (context, child) {
-                    final scale = _transformationController.value.getMaxScaleOnAxis();
-                    // Calculate viewport for culling optimization
-                    final matrix = _transformationController.value;
-                    final screenSize = MediaQuery.of(context).size;
-                    final inverseMatrix = matrix.clone()..invert();
-                    final topLeft = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
-                    final bottomRight = MatrixUtils.transformPoint(
-                      inverseMatrix,
-                      Offset(screenSize.width, screenSize.height),
-                    );
-                    final viewport = Rect.fromPoints(topLeft, bottomRight);
-
-                    return Stack(
-                      children: [
-                        // Background: Sector nebula and stars
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: SectorBackgroundPainter(
-                              canvasSize: _canvasSize,
-                            ),
+                child: Stack(
+                  children: [
+                    // 1. Background: Sector nebula and stars (Static, Cached)
+                    Positioned.fill(
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          painter: SectorBackgroundPainter(
+                            canvasSize: _canvasSize,
                           ),
                         ),
-                        
-                        // Central Flame at canvas center
-                        Positioned(
-                          left: _canvasCenter - _centralFlameSize / 2,
-                          top: _canvasCenter - _centralFlameSize / 2,
-                          child: Opacity(
-                            opacity: _isEntering ? 0.0 : 1.0,
-                            child: CentralFlame(
-                              intensity: galaxyState.userFlameIntensity,
-                              size: _centralFlameSize,
-                            ),
-                          ),
+                      ),
+                    ),
+                    
+                    // 2. Central Flame at canvas center (Static position)
+                    Positioned(
+                      left: _canvasCenter - _centralFlameSize / 2,
+                      top: _canvasCenter - _centralFlameSize / 2,
+                      child: Opacity(
+                        opacity: _isEntering ? 0.0 : 1.0,
+                        child: CentralFlame(
+                          intensity: galaxyState.userFlameIntensity,
+                          size: _centralFlameSize,
                         ),
+                      ),
+                    ),
 
-                        // Star map on top
-                        Positioned.fill(
-                          child: Opacity(
-                            opacity: _isEntering ? 0.0 : 1.0,
-                            child: CustomPaint(
+                    // 3. Star map on top (Dynamic with Culling)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: _isEntering ? 0.0 : 1.0,
+                        child: AnimatedBuilder(
+                          animation: _transformationController,
+                          builder: (context, child) {
+                            final scale = _transformationController.value.getMaxScaleOnAxis();
+                            // Calculate viewport for culling optimization
+                            final matrix = _transformationController.value;
+                            final screenSize = MediaQuery.of(context).size;
+                            final inverseMatrix = matrix.clone()..invert();
+                            final topLeft = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
+                            final bottomRight = MatrixUtils.transformPoint(
+                              inverseMatrix,
+                              Offset(screenSize.width, screenSize.height),
+                            );
+                            final viewport = Rect.fromPoints(topLeft, bottomRight);
+
+                            return CustomPaint(
                               painter: StarMapPainter(
                                 nodes: galaxyState.nodes,
                                 edges: galaxyState.edges,
@@ -356,12 +371,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                                 viewport: viewport,
                                 center: const Offset(_canvasCenter, _canvasCenter),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -418,6 +433,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               ),
             ),
 
+          // 5.1 Search Button (Top Right)
+          if (!_isEntering)
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.search, color: Colors.white),
+                onPressed: _showSearchDialog,
+              ),
+            ),
+
           // 6. Mini Map (Bottom Left)
           if (!_isEntering)
             Positioned(
@@ -453,6 +479,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                     }
                   }
                 },
+              ),
+            ),
+
+          // 6.2 Zoom Controls (Right side, above Spark button)
+          if (!_isEntering)
+            Positioned(
+              bottom: 120,
+              right: 20,
+              child: ZoomControls(
+                transformationController: _transformationController,
               ),
             ),
 

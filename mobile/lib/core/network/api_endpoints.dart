@@ -41,6 +41,7 @@ class ApiEndpoints {
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
   static const String galaxyPredictNext = '/galaxy/predict-next';
+  static const String galaxySearch = '/galaxy/search';
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
   static const String galaxyEvents = '/galaxy/events';
   static String galaxyNodeDetail(String id) => '/galaxy/node/$id';

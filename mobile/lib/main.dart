@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/services/chat_cache_service.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,8 @@ void main() async {
   // Initialize SharedPrefs
   await SharedPreferences.getInstance();
 
+  // Enable Demo Mode
+  DemoDataService.isDemoMode = true;
 
   // TODO: Open Hive boxes
   // await Hive.openBox('settings');
