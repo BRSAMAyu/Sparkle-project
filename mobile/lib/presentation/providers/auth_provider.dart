@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 // 1. AuthState Class
 class AuthState {
@@ -100,22 +101,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void loginAsGuest() {
     state = state.copyWith(isLoading: true, error: null);
+    DemoDataService.isDemoMode = true;
     
     // Simulate a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
-      final guestUser = UserModel(
-        id: 'guest-id',
-        username: 'Guest',
-        email: 'guest@example.com',
-        nickname: 'Sparkle Guest',
-        flameLevel: 1,
-        flameBrightness: 0.5,
-        depthPreference: 0.5,
-        curiosityPreference: 0.5,
-        isActive: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      final guestUser = DemoDataService().demoUser;
       
       state = state.copyWith(
         isLoading: false, 

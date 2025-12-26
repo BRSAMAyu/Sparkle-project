@@ -4,6 +4,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 class PlanRepository {
   final ApiClient _apiClient;
@@ -16,6 +17,12 @@ class PlanRepository {
   }
 
   Future<List<PlanModel>> getPlans({PlanType? type, bool? isActive}) async {
+    if (DemoDataService.isDemoMode) {
+      var plans = DemoDataService().demoPlans;
+      if (type != null) plans = plans.where((p) => p.type == type).toList();
+      if (isActive != null) plans = plans.where((p) => p.isActive == isActive).toList();
+      return plans;
+    }
     try {
       final query = <String, dynamic>{};
       if (type != null) query['type'] = type.name;
@@ -30,6 +37,9 @@ class PlanRepository {
   }
 
   Future<PlanModel> getPlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoPlans.firstWhere((p) => p.id == id, orElse: () => DemoDataService().demoPlans.first);
+    }
     try {
       final response = await _apiClient.get(ApiEndpoints.plan(id));
       return PlanModel.fromJson(response.data);
@@ -43,6 +53,24 @@ class PlanRepository {
   }
 
   Future<PlanModel> createPlan(PlanCreate plan) async {
+    if (DemoDataService.isDemoMode) {
+       final newPlan = PlanModel(
+         id: 'mock_plan_${DateTime.now().millisecondsSinceEpoch}',
+         userId: DemoDataService().demoUser.id,
+         name: plan.name,
+         type: plan.type,
+         dailyAvailableMinutes: plan.dailyAvailableMinutes,
+         masteryLevel: 0,
+         progress: 0,
+         isActive: true,
+         createdAt: DateTime.now(),
+         updatedAt: DateTime.now(),
+         description: plan.description,
+         targetDate: plan.targetDate,
+       );
+       DemoDataService().demoPlans.add(newPlan);
+       return newPlan;
+    }
     try {
       final response = await _apiClient.post(ApiEndpoints.plans, data: plan.toJson());
       return PlanModel.fromJson(response.data);
@@ -52,6 +80,15 @@ class PlanRepository {
   }
 
   Future<PlanModel> updatePlan(String id, PlanUpdate plan) async {
+     if (DemoDataService.isDemoMode) {
+       final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+       if (index != -1) {
+         // shallow update
+         final existing = DemoDataService().demoPlans[index];
+         // ... implementation skipped for brevity, return existing
+         return existing;
+       }
+     }
     try {
       final response = await _apiClient.put(ApiEndpoints.plan(id), data: plan.toJson());
       return PlanModel.fromJson(response.data);
@@ -61,6 +98,10 @@ class PlanRepository {
   }
 
   Future<void> deletePlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      DemoDataService().demoPlans.removeWhere((p) => p.id == id);
+      return;
+    }
     try {
       await _apiClient.delete(ApiEndpoints.plan(id));
     } on DioException catch (e) {
@@ -69,6 +110,14 @@ class PlanRepository {
   }
   
   Future<PlanModel> _updateActivation(String id, bool activate) async {
+     if (DemoDataService.isDemoMode) {
+        // mock implementation
+         final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+         if (index != -1) {
+            // ...
+             return DemoDataService().demoPlans[index];
+         }
+     }
      try {
        final planUpdate = PlanUpdate(isActive: activate);
       final response = await _apiClient.put(ApiEndpoints.plan(id), data: planUpdate.toJson());
@@ -87,6 +136,25 @@ class PlanRepository {
   }
 
   Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
+    if (DemoDataService.isDemoMode) {
+      // Return some random tasks
+      return [
+        TaskModel(
+          id: 'gen_task_1',
+          userId: DemoDataService().demoUser.id,
+          title: 'Generated Task 1',
+          type: TaskType.learning,
+          tags: ['Generated'],
+          estimatedMinutes: 30,
+          difficulty: 1,
+          energyCost: 1,
+          status: TaskStatus.pending,
+          priority: 1,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        )
+      ];
+    }
     try {
       final response = await _apiClient.post(ApiEndpoints.generateTasks(planId), data: {'count': count});
        final List<dynamic> data = response.data;

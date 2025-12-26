@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 class UserRepository {
   final ApiClient _apiClient;
@@ -9,6 +10,9 @@ class UserRepository {
 
   /// 更新用户学习偏好
   Future<UserModel> updateUserPreferences(UserPreferences preferences) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoUser; // Mock update
+    }
     try {
       final response = await _apiClient.put(
         '/users/me/preferences', 
@@ -22,15 +26,11 @@ class UserRepository {
 
   /// 更新推送偏好
   Future<UserModel> updatePushPreferences(PushPreferences prefs) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoUser; // Mock update
+    }
     try {
       // Assuming a dedicated endpoint or patching the user profile
-      // For now, let's assume we patch the user profile with a nested 'push_preference' object
-      // or a specific endpoint. 
-      // If backend logic was "update User model", likely we send data to /users/me
-      // But usually updating relations is cleaner via specific endpoint.
-      // Let's assume PATCH /api/v1/users/me/push-preference based on common patterns
-      // If not, we can adjust.
-      
       final response = await _apiClient.put(
         '/users/me/push-preference', 
         data: prefs.toJson(),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -46,7 +47,12 @@ class ChatState {
 class ChatNotifier extends StateNotifier<ChatState> {
   final ChatRepository _chatRepository;
 
-  ChatNotifier(this._chatRepository) : super(ChatState());
+  ChatNotifier(this._chatRepository) : super(ChatState()) {
+    if (DemoDataService.isDemoMode) {
+      // Load demo history
+      state = state.copyWith(messages: DemoDataService().demoChatHistory, conversationId: 'demo_conv_1');
+    }
+  }
 
   /// 发送消息 (使用 SSE 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
@@ -127,6 +133,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   void startNewSession() {
     state = state.copyWith(clearConversation: true, messages: []);
+    if (DemoDataService.isDemoMode) {
+      // Keep demo history? Or clear? 
+      // Usually "Start New Session" means clear.
+    }
   }
 }
 

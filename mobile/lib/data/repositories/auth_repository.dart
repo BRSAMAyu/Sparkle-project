@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 // Keys for Secure Storage
 const String _accessTokenKey = 'accessToken';
@@ -18,6 +19,9 @@ class AuthRepository {
 
   Future<UserModel> register(String username, String email, String password) async {
     try {
+      if (DemoDataService.isDemoMode) {
+        return DemoDataService().demoUser;
+      }
       final response = await _apiClient.post(
         ApiEndpoints.register,
         data: {
@@ -40,6 +44,15 @@ class AuthRepository {
 
   Future<TokenResponse> login(String usernameOrEmail, String password) async {
     try {
+      if (DemoDataService.isDemoMode) {
+        // Should not happen via this method usually, but for safety
+        return TokenResponse(
+          accessToken: 'demo_token', 
+          refreshToken: 'demo_refresh_token', 
+          tokenType: 'bearer',
+          expiresIn: 3600,
+        );
+      }
       final response = await _apiClient.post(
         ApiEndpoints.login,
         data: {
@@ -65,6 +78,14 @@ class AuthRepository {
     String? avatarUrl,
   }) async {
     try {
+      if (DemoDataService.isDemoMode) {
+        return TokenResponse(
+          accessToken: 'demo', 
+          refreshToken: 'demo', 
+          tokenType: 'bearer',
+          expiresIn: 3600,
+        );
+      }
       final response = await _apiClient.post(
         '/auth/social-login', // Assuming endpoint is relative to base URL prefix
         data: {
@@ -86,11 +107,23 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    if (DemoDataService.isDemoMode) {
+      DemoDataService.isDemoMode = false;
+      return;
+    }
     // In a real app, you might want to call a server endpoint to invalidate the token
     await clearTokens();
   }
 
   Future<TokenResponse> refreshToken() async {
+    if (DemoDataService.isDemoMode) {
+      return TokenResponse(
+        accessToken: 'demo', 
+        refreshToken: 'demo', 
+        tokenType: 'bearer',
+        expiresIn: 3600,
+      );
+    }
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) {
       throw 'No refresh token available.';
@@ -114,6 +147,9 @@ class AuthRepository {
 
   Future<UserModel> getCurrentUser() async {
     try {
+      if (DemoDataService.isDemoMode) {
+        return DemoDataService().demoUser;
+      }
       final response = await _apiClient.get(ApiEndpoints.me);
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
@@ -125,6 +161,10 @@ class AuthRepository {
 
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
     try {
+      if (DemoDataService.isDemoMode) {
+        // Return updated demo user (mock update)
+        return DemoDataService().demoUser; // Ideally modify the instance but readonly for now
+      }
       final response = await _apiClient.put(ApiEndpoints.me, data: data);
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
@@ -156,6 +196,7 @@ class AuthRepository {
   }
 
   Future<bool> isLoggedIn() async {
+    if (DemoDataService.isDemoMode) return true;
     return await getAccessToken() != null;
   }
 }

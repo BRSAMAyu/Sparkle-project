@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/data/models/task_completion_result.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 class TaskRepository {
   final ApiClient _apiClient;
@@ -22,18 +23,22 @@ class TaskRepository {
     int page = 1,
     int pageSize = 10,
   }) async {
+    if (DemoDataService.isDemoMode) {
+      final tasks = DemoDataService().demoTasks;
+      // Simple mock pagination
+      return PaginatedResponse(
+        items: tasks,
+        total: tasks.length,
+        page: 1,
+        pageSize: pageSize,
+      );
+    }
     try {
       final Map<String, dynamic> queryParams = {'page': page, 'page_size': pageSize};
       if (filters != null) {
         queryParams.addAll(filters.map((key, value) => MapEntry(key, value.toString())));
       }
       final response = await _apiClient.get(ApiEndpoints.tasks, queryParameters: queryParams);
-      // Assuming the paginated response is in the data field
-      // Checking for 'data' wrapper if exists, otherwise assume root
-      final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
-      // Paginated response usually has 'data' (list) and 'meta'.
-      // If backend returns {data: [tasks], meta: ...}, then PaginatedResponse.fromJson(response.data) is correct if it handles that structure.
-      // But based on previous backend code: return {"data": [...], "meta": ...}
       return PaginatedResponse.fromJson(response.data, (json) => TaskModel.fromJson(json as Map<String, dynamic>));
     } on DioException catch (e) {
       return _handleDioError(e, 'getTasks');
@@ -41,6 +46,9 @@ class TaskRepository {
   }
 
   Future<TaskModel> getTask(String id) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoTasks.firstWhere((t) => t.id == id, orElse: () => DemoDataService().demoTasks.first);
+    }
     try {
       final response = await _apiClient.get(ApiEndpoints.task(id));
       final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -51,6 +59,10 @@ class TaskRepository {
   }
 
   Future<List<TaskModel>> getTodayTasks() async {
+    if (DemoDataService.isDemoMode) {
+      // Return tasks that are pending or in progress, or recently completed
+      return DemoDataService().demoTasks.where((t) => t.status != TaskStatus.abandoned).toList();
+    }
     try {
       final response = await _apiClient.get(ApiEndpoints.todayTasks);
       final List<dynamic> data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -61,6 +73,9 @@ class TaskRepository {
   }
 
   Future<List<TaskModel>> getRecommendedTasks({int limit = 5}) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoTasks.take(limit).toList();
+    }
     try {
       final response = await _apiClient.get(ApiEndpoints.recommendedTasks, queryParameters: {'limit': limit});
       final List<dynamic> data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -71,6 +86,26 @@ class TaskRepository {
   }
 
   Future<TaskModel> createTask(TaskCreate task) async {
+    if (DemoDataService.isDemoMode) {
+      // Mock creation
+      final newTask = TaskModel(
+        id: 'mock_task_${DateTime.now().millisecondsSinceEpoch}',
+        userId: DemoDataService().demoUser.id,
+        title: task.title,
+        type: task.type,
+        tags: task.tags ?? [],
+        estimatedMinutes: task.estimatedMinutes,
+        difficulty: task.difficulty,
+        energyCost: task.energyCost,
+        status: TaskStatus.pending,
+        priority: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        dueDate: task.dueDate,
+      );
+      DemoDataService().demoTasks.add(newTask);
+      return newTask;
+    }
     try {
       final response = await _apiClient.post(ApiEndpoints.tasks, data: task.toJson());
       final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -81,6 +116,22 @@ class TaskRepository {
   }
 
   Future<TaskModel> updateTask(String id, TaskUpdate task) async {
+     if (DemoDataService.isDemoMode) {
+       // Find and mock update
+       final existingIndex = DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+       if (existingIndex != -1) {
+         // This is a shallow copy update simulation
+         final existing = DemoDataService().demoTasks[existingIndex];
+         final updated = existing.copyWith(
+           title: task.title ?? existing.title,
+           status: task.status ?? existing.status,
+           // ... other fields
+         );
+         DemoDataService().demoTasks[existingIndex] = updated;
+         return updated;
+       }
+       throw Exception('Task not found in demo data');
+     }
     try {
       final response = await _apiClient.put(ApiEndpoints.task(id), data: task.toJson());
       final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -91,6 +142,10 @@ class TaskRepository {
   }
 
   Future<void> deleteTask(String id) async {
+    if (DemoDataService.isDemoMode) {
+      DemoDataService().demoTasks.removeWhere((t) => t.id == id);
+      return;
+    }
     try {
       await _apiClient.delete(ApiEndpoints.task(id));
     } on DioException catch (e) {
@@ -99,6 +154,14 @@ class TaskRepository {
   }
 
   Future<TaskModel> startTask(String id) async {
+    if (DemoDataService.isDemoMode) {
+       final existingIndex = DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+       if (existingIndex != -1) {
+         final updated = DemoDataService().demoTasks[existingIndex].copyWith(status: TaskStatus.inProgress, startedAt: DateTime.now());
+         DemoDataService().demoTasks[existingIndex] = updated;
+         return updated;
+       }
+    }
     try {
       final response = await _apiClient.post(ApiEndpoints.startTask(id));
       final data = response.data is Map && response.data.containsKey('data') ? response.data['data'] : response.data;
@@ -109,6 +172,24 @@ class TaskRepository {
   }
 
   Future<TaskCompletionResult> completeTask(String id, int actualMinutes, String? note) async {
+     if (DemoDataService.isDemoMode) {
+       final existingIndex = DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+       if (existingIndex != -1) {
+         final updated = DemoDataService().demoTasks[existingIndex].copyWith(
+           status: TaskStatus.completed, 
+           completedAt: DateTime.now(),
+           actualMinutes: actualMinutes,
+           userNote: note
+          );
+         DemoDataService().demoTasks[existingIndex] = updated;
+         return TaskCompletionResult(
+           task: updated.toJson(),
+           feedback: "Mock feedback: Great job!",
+           flameUpdate: {'level': 15, 'brightness': 85},
+           statsUpdate: {'total_minutes': 100} 
+          );
+       }
+    }
     try {
       final taskComplete = TaskComplete(actualMinutes: actualMinutes, userNote: note);
       final response = await _apiClient.post(ApiEndpoints.completeTask(id), data: taskComplete.toJson());
@@ -120,6 +201,14 @@ class TaskRepository {
   }
 
   Future<TaskModel> abandonTask(String id) async {
+    if (DemoDataService.isDemoMode) {
+       final existingIndex = DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+       if (existingIndex != -1) {
+         final updated = DemoDataService().demoTasks[existingIndex].copyWith(status: TaskStatus.abandoned);
+         DemoDataService().demoTasks[existingIndex] = updated;
+         return updated;
+       }
+    }
     try {
       // Backend uses a POST for this action
       final response = await _apiClient.post(ApiEndpoints.abandonTask(id));
@@ -131,6 +220,15 @@ class TaskRepository {
   }
 
   Future<TaskSuggestionResponse> getSuggestions(String inputText) async {
+    if (DemoDataService.isDemoMode) {
+      return TaskSuggestionResponse(
+        intent: 'learning',
+        suggestedNodes: [SuggestedNode(name: 'Data Structures', reason: 'Relevant to your text', isNew: false)],
+        suggestedTags: ['CS'],
+        estimatedMinutes: 60,
+        difficulty: 3
+      );
+    }
     try {
       final response = await _apiClient.post(
         ApiEndpoints.taskSuggestions,
