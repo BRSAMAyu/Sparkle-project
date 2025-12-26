@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/community/group_chat_bubble.dart';
@@ -17,7 +18,8 @@ class GroupChatScreen extends ConsumerStatefulWidget {
 }
 
 class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
-  
+  MessageInfo? _quotedMessage;
+
   void _showCheckinDialog() {
     final durationController = TextEditingController(text: '60');
     final messageController = TextEditingController();
@@ -130,7 +132,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    return GroupChatBubble(message: message);
+                    return GroupChatBubble(
+                      message: message,
+                      onQuote: (msg) => setState(() {
+                        _quotedMessage = msg;
+                        ref.read(groupChatProvider(widget.groupId).notifier).setQuote(msg);
+                      }),
+                      onRevoke: (msg) => ref.read(groupChatProvider(widget.groupId).notifier).revokeMessage(msg.id),
+                    );
                   },
                 );
               },
@@ -144,8 +153,30 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             ),
           ),
           ChatInput(
+            quotedMessage: _quotedMessage != null
+                ? PrivateMessageInfo(
+                    id: _quotedMessage!.id,
+                    sender: _quotedMessage!.sender ?? UserBrief(id: '', username: 'Unknown'),
+                    receiver: UserBrief(id: '', username: ''),
+                    messageType: _quotedMessage!.messageType,
+                    content: _quotedMessage!.content,
+                    createdAt: _quotedMessage!.createdAt,
+                    updatedAt: _quotedMessage!.updatedAt,
+                    isRevoked: _quotedMessage!.isRevoked,
+                    isRead: false,
+                  )
+                : null,
+            onCancelQuote: () => setState(() {
+              _quotedMessage = null;
+              ref.read(groupChatProvider(widget.groupId).notifier).setQuote(null);
+            }),
             onSend: (text, {replyToId}) {
-              return ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(content: text);
+              final actualReplyId = _quotedMessage?.id ?? replyToId;
+              setState(() => _quotedMessage = null);
+              return ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(
+                content: text,
+                replyToId: actualReplyId,
+              );
             },
           ),
         ],

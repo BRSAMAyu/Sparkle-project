@@ -31,6 +31,8 @@ class FocusModeNotifier extends StateNotifier<bool> {
     state = !state;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('focus_mode', state);
+    // TODO: Update user status to backend when focus mode changes
+    // This would require accessing CommunityRepository here
   }
 }
 

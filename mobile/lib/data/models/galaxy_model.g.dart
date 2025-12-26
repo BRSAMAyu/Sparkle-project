@@ -116,11 +116,11 @@ GalaxyGraphResponse _$GalaxyGraphResponseFromJson(Map<String, dynamic> json) =>
       nodes: (json['nodes'] as List<dynamic>)
           .map((e) => GalaxyNodeModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      userFlameIntensity: (json['user_flame_intensity'] as num).toDouble(),
       edges: (json['edges'] as List<dynamic>?)
               ?.map((e) => GalaxyEdgeModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      userFlameIntensity: (json['user_flame_intensity'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$GalaxyGraphResponseToJson(

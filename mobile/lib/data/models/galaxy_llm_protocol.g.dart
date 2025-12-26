@@ -131,9 +131,9 @@ const _$SectorEnumEnumMap = {
 LLMNodeMoveSpec _$LLMNodeMoveSpecFromJson(Map<String, dynamic> json) =>
     LLMNodeMoveSpec(
       nodeId: json['node_id'] as String,
-      newSector: $enumDecodeNullable(_$SectorEnumEnumMap, json['new_sector']),
       positionHint:
           PositionHint.fromJson(json['position_hint'] as Map<String, dynamic>),
+      newSector: $enumDecodeNullable(_$SectorEnumEnumMap, json['new_sector']),
     );
 
 Map<String, dynamic> _$LLMNodeMoveSpecToJson(LLMNodeMoveSpec instance) =>

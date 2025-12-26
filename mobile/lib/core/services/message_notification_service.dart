@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
 
 // Notification message model
 class NotificationMessage {
@@ -100,11 +100,10 @@ class InAppNotificationOverlay extends ConsumerWidget {
   }
 }
 
-// Fallback provider if focusModeProvider is not available
+// Use focusModeProvider from community_main_screen for focus mode integration
 final _focusModeProviderOrFalse = Provider<bool>((ref) {
   try {
-    // Try to read from community_main_screen's provider
-    return false; // Default to false, will be overridden when focusModeProvider is available
+    return ref.watch(focusModeProvider);
   } catch (_) {
     return false;
   }

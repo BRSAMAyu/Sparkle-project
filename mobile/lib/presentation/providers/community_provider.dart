@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/services/chat_cache_service.dart';
+import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/mock_community_repository.dart';
@@ -306,6 +307,7 @@ final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier, AsyncV
     ref.watch(communityRepositoryProvider),
     ref.watch(authRepositoryProvider),
     groupId,
+    ref,
   );
 });
 
@@ -313,17 +315,28 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   final CommunityRepository _repository;
   final AuthRepository _authRepository;
   final String _groupId;
+  final Ref _ref;
   final WebSocketService _wsService = WebSocketService();
   final ChatCacheService _cacheService = ChatCacheService();
-  
+
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
 
-  GroupChatNotifier(this._repository, this._authRepository, this._groupId) : super(const AsyncValue.loading()) {
+  MessageInfo? _quotedMessage;
+  MessageInfo? get quotedMessage => _quotedMessage;
+
+  String? _currentUserId;
+
+  GroupChatNotifier(this._repository, this._authRepository, this._groupId, this._ref) : super(const AsyncValue.loading()) {
     _initialize();
   }
 
   Future<void> _initialize() async {
+    // Get current user ID for filtering notifications
+    // In a real implementation, you'd decode the token to get user ID
+    // For now, we'll leave it null and show all notifications
+    await _authRepository.getAccessToken();
+
     final cached = await _cacheService.getCachedGroupMessages(_groupId);
     if (cached.isNotEmpty && mounted) {
       state = AsyncValue.data(cached);
@@ -359,6 +372,23 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
             state.whenData((messages) {
               if (!messages.any((m) => m.id == message.id)) {
                 state = AsyncValue.data([message, ...messages]);
+
+                // Trigger in-app notification for incoming group messages
+                // Only notify if message is from someone else
+                if (message.sender != null && message.sender!.id != _currentUserId) {
+                  _ref.read(unreadMessageCountProvider.notifier).increment();
+                  _ref.read(inAppNotificationProvider.notifier).show(
+                    NotificationMessage(
+                      id: message.id,
+                      senderName: message.sender!.displayName,
+                      senderAvatarUrl: message.sender!.avatarUrl,
+                      content: message.content ?? '',
+                      timestamp: message.createdAt,
+                      type: NotificationType.groupMessage,
+                      targetId: _groupId,
+                    ),
+                  );
+                }
               }
             });
           } catch (e) {
@@ -391,29 +421,69 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> refresh() => loadMessages();
 
-  Future<void> sendMessage({required String content, MessageType type = MessageType.text}) async {
+  void setQuote(MessageInfo? message) {
+    _quotedMessage = message;
+  }
+
+  Future<void> sendMessage({required String content, MessageType type = MessageType.text, String? replyToId}) async {
     final nonce = const Uuid().v4();
     _pendingNonces.add(nonce);
     state.whenData((messages) => state = AsyncValue.data([...messages]));
 
     try {
       final message = await _repository.sendMessage(
-        _groupId, 
-        type: type, 
+        _groupId,
+        type: type,
         content: content,
         nonce: nonce,
+        replyToId: replyToId,
       );
-      
+
       state.whenData((messages) {
         if (!messages.any((m) => m.id == message.id)) {
           state = AsyncValue.data([message, ...messages]);
         }
       });
+      _quotedMessage = null; // Clear quote after sending
     } catch (e) {
       _pendingNonces.remove(nonce);
       state.whenData((messages) => state = AsyncValue.data([...messages]));
       rethrow;
     }
+  }
+
+  Future<void> revokeMessage(String messageId) async {
+    try {
+      // TODO: Implement revokeGroupMessage in repository
+      // await _repository.revokeGroupMessage(messageId);
+      _handleRevokedEvent(messageId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  void _handleRevokedEvent(String messageId) {
+    state.whenData((messages) {
+      final index = messages.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        final updated = [...messages];
+        final original = updated[index];
+        updated[index] = MessageInfo(
+          id: original.id,
+          content: original.content,
+          messageType: original.messageType,
+          sender: original.sender,
+          createdAt: original.createdAt,
+          updatedAt: original.updatedAt,
+          isRevoked: true,
+          contentData: original.contentData,
+          readBy: original.readBy,
+          replyToId: original.replyToId,
+          readByUsers: original.readByUsers,
+        );
+        state = AsyncValue.data(updated);
+      }
+    });
   }
 }
 
@@ -480,6 +550,7 @@ final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChat
     ref.watch(communityRepositoryProvider),
     friendId,
     stream,
+    ref,
   );
 });
 
@@ -487,14 +558,15 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   final CommunityRepository _repository;
   final String _friendId;
   final ChatCacheService _cacheService = ChatCacheService();
-  
+  final Ref _ref;
+
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
 
   PrivateMessageInfo? _quotedMessage;
   PrivateMessageInfo? get quotedMessage => _quotedMessage;
 
-  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events) : super(const AsyncValue.loading()) {
+  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events, this._ref) : super(const AsyncValue.loading()) {
     _initialize(events);
   }
 
@@ -535,6 +607,22 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
                  if (!messages.any((m) => m.id == message.id)) {
                    final updated = [message, ...messages];
                    state = AsyncValue.data(updated);
+
+                   // Trigger in-app notification for incoming messages
+                   if (message.sender.id == _friendId) {
+                     _ref.read(unreadMessageCountProvider.notifier).increment();
+                     _ref.read(inAppNotificationProvider.notifier).show(
+                       NotificationMessage(
+                         id: message.id,
+                         senderName: message.sender.displayName,
+                         senderAvatarUrl: message.sender.avatarUrl,
+                         content: message.content ?? '',
+                         timestamp: message.createdAt,
+                         type: NotificationType.privateMessage,
+                         targetId: _friendId,
+                       ),
+                     );
+                   }
                  }
                });
              }

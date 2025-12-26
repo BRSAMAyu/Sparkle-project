@@ -10,8 +10,9 @@ import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 class GroupChatBubble extends ConsumerStatefulWidget {
   final MessageInfo message;
   final Function(MessageInfo message)? onRevoke;
+  final Function(MessageInfo message)? onQuote;
 
-  const GroupChatBubble({required this.message, this.onRevoke, super.key});
+  const GroupChatBubble({required this.message, this.onRevoke, this.onQuote, super.key});
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -66,6 +67,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.onQuote != null)
+                ListTile(
+                  leading: const Icon(Icons.format_quote_rounded),
+                  title: const Text('引用'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onQuote!(widget.message);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: const Text('复制'),
@@ -287,17 +297,46 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
           bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
           bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
         ),
-        boxShadow: isMe 
-            ? [BoxShadow(color: AppDesignTokens.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] 
+        boxShadow: isMe
+            ? [BoxShadow(color: AppDesignTokens.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))]
             : AppDesignTokens.shadowSm,
         border: isMe ? null : Border.all(color: AppDesignTokens.neutral100),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.message.replyToId != null) _buildQuotePreview(context, isMe),
+          Text(
+            widget.message.content ?? '',
+            style: TextStyle(
+              color: isMe ? Colors.white : AppDesignTokens.neutral900,
+              fontSize: 16,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotePreview(BuildContext context, bool isMe) {
+    // In real implementation, you would fetch the quoted message details
+    // For now, we'll show a simple placeholder
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: isMe ? Colors.white.withValues(alpha: 0.15) : AppDesignTokens.neutral100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: isMe ? Colors.white70 : AppDesignTokens.primaryBase, width: 3)),
+      ),
       child: Text(
-        widget.message.content ?? '',
+        '引用的消息',
         style: TextStyle(
-          color: isMe ? Colors.white : AppDesignTokens.neutral900,
-          fontSize: 16,
-          height: 1.4,
+          fontSize: 12,
+          color: isMe ? Colors.white.withValues(alpha: 0.9) : AppDesignTokens.neutral600,
+          fontStyle: FontStyle.italic,
         ),
       ),
     );
