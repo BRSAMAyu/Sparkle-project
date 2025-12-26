@@ -17,3 +17,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: sparkle_redis
+    restart: always
+    volumes:
+      - ./redis_data:/data
+      - ./redis.conf:/redis-stack.conf
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-devpassword}
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 4G

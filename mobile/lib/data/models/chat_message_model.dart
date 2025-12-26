@@ -34,6 +34,8 @@ class ChatMessageModel {
   final bool? requiresConfirmation;
   @JsonKey(name: 'confirmation_data')
   final ConfirmationData? confirmationData;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? aiStatus; // Optional status for assistant messages (THINKING, etc.)
 
   ChatMessageModel({
     required this.conversationId, required this.role, required this.content, String? id,
@@ -46,6 +48,7 @@ class ChatMessageModel {
     this.errors,
     this.requiresConfirmation,
     this.confirmationData,
+    this.aiStatus,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now();
 
@@ -66,6 +69,7 @@ class ChatMessageModel {
     List<ErrorInfo>? errors,
     bool? requiresConfirmation,
     ConfirmationData? confirmationData,
+    String? aiStatus,
   }) {
     return ChatMessageModel(
       id: id ?? this.id,
@@ -81,6 +85,7 @@ class ChatMessageModel {
       errors: errors ?? this.errors,
       requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
       confirmationData: confirmationData ?? this.confirmationData,
+      aiStatus: aiStatus ?? this.aiStatus,
     );
   }
 }

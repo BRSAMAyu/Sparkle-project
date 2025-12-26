@@ -67,47 +67,81 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 - **语言**：Dart
 - **状态管理**：Riverpod
 - **本地存储**：shared_preferences + Hive
-- **网络请求**：Dio
+- **网络请求**：Dio + WebSocket
 - **目标平台**：Android / iOS
 
-### 后端（Backend）
-- **框架**：FastAPI (Python 3.11+ (tested with 3.14))
-- **ORM**：SQLAlchemy 2.0
-- **数据库**：PostgreSQL (开发环境可用 SQLite)
-- **任务调度**：APScheduler
-- **数据库迁移**：Alembic
-- **API 文档**：Swagger UI / ReDoc
+### 后端（混合架构）
+- **Go Gateway**：基于Gin框架，负责WebSocket长连接、用户鉴权、基础数据CRUD
+- **Python Agent Engine**：基于gRPC，负责AI推理、复杂业务逻辑、向量检索
+- **通信协议**：Protobuf定义接口，gRPC进行跨语言通信
+- **数据库**：PostgreSQL with pgvector，Go使用SQLC，Python使用SQLAlchemy
+- **数据库迁移**：Alembic (Python侧管理Schema)
 
 ### AI 服务
 - **模型**：通义千问（Qwen）/ DeepSeek
-- **接口**：统一 LLM Service 抽象层
-- **开发测试**：兼容 OpenAI API 格式
+- **接口**：统一LLM Service抽象层，支持工具调用和流式响应
+- **协议**：WebSocket实时流式对话，支持打字机效果
 
 ## 📁 项目结构
 
 ```
 sparkle/
-├── backend/          # Python FastAPI 后端
-├── mobile/           # Flutter 移动端
-├── docs/             # 项目文档
-├── ARCHITECTURE.md   # 项目技术架构
-├── MODULES.md        # 功能模块详解
+├── backend/
+│   ├── gateway/          # Go Gateway服务 (WebSocket/HTTP入口)
+│   │   ├── cmd/         # 服务器入口
+│   │   ├── internal/    # 内部包(handler/agent/db等)
+│   │   └── go.mod       # Go模块
+│   └── app/             # Python gRPC服务 (AI智能引擎)
+├── mobile/              # Flutter移动端
+├── proto/               # Protobuf接口定义
+├── docs/                # 项目文档
+├── ARCHITECTURE.md      # 项目技术架构
+├── MODULES.md           # 功能模块详解
 ├── COMMUNITY_FEATURES.md # 社群功能详解
-├── API_REFERENCE.md  # API接口参考
+├── API_REFERENCE.md     # API接口参考
 └── DEVELOPMENT_GUIDE.md # 开发指南
 ```
 
 ## 🚀 快速开始
 
-### 后端启动
+### 一键启动开发环境（推荐）
 
 ```bash
+# 查看完整启动指南
+make dev-all
+
+# 或按步骤启动：
+# 终端1: 启动数据库
+make dev-up
+
+# 终端2: 启动Python gRPC服务
+make grpc-server
+
+# 终端3: 启动Go Gateway
+make gateway-run
+```
+
+### 后端启动（详细步骤）
+
+```bash
+# 1. 启动数据库
+docker compose up -d
+
+# 2. 初始化Python环境
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env 配置数据库和 API 密钥
+# 编辑 .env 配置数据库和API密钥
 alembic upgrade head
-uvicorn app.main:app --reload
+
+# 3. 启动Python gRPC服务
+python grpc_server.py
+
+# 4. 启动Go Gateway（另一终端）
+cd backend/gateway
+go mod tidy
+go build -o bin/gateway ./cmd/server
+./bin/gateway
 ```
 
 ### 移动端启动
@@ -133,8 +167,9 @@ flutter run
 
 4名大二/大三计算机专业学生
 
-- 擅长：Python、AI 开发工具（Cursor、Claude）
-- 学习中：Dart、Flutter、Go、Java
+- 擅长：Python、AI开发工具（Cursor、Claude）
+- 学习中：Dart、Flutter、Go、gRPC
+- 已掌握：微服务架构、实时通信、跨语言开发
 
 ## 📄 License
 
@@ -148,14 +183,23 @@ flutter run
 
 ---
 
-**Version**: MVP v0.2.0
-**Last Updated**: 2025-12-18
+**Version**: MVP v0.3.0 (Go重构版)
+**Last Updated**: 2025-12-27
 
 ## 🆕 最近更新
 
-- ✅ 知识星图功能上线（遗忘曲线、知识点拓展、向量搜索）
-- ✅ 智能推送系统完成（基于 Persona 的个性化推送）
-- ✅ LLM 宽容模式解析增强至 v2.2
+### ✅ Go后端重构完成
+- **架构升级**：从Python单体转为Go+Python混合架构
+- **Go Gateway**：基于Gin+WebSocket的高性能网关
+- **Python gRPC服务**：专注AI推理和复杂逻辑
+- **实时通信**：WebSocket流式对话，支持打字机效果
+- **协议驱动**：Protobuf定义接口，gRPC跨语言通信
+
+### ✅ 已完成功能
+- ✅ 知识星图功能（遗忘曲线、知识点拓展、向量搜索）
+- ✅ 智能推送系统（基于Persona的个性化推送）
+- ✅ LLM宽容模式解析增强至v2.2
 - ✅ 游客模式支持
 - ✅ 推送偏好设置和通知权限配置
 - ✅ 社群功能完整实现（好友、群组、打卡、火堆系统）
+- ✅ Flutter客户端WebSocket适配完成

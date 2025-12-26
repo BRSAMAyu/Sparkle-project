@@ -1,9 +1,13 @@
 /// API Constants
 class ApiConstants {
-  // Base URL
+  // Base URL (HTTP)
   static const String baseUrl = 'http://localhost:8000';
   static const String apiVersion = 'v1';
   static const String apiBasePath = '/api/$apiVersion';
+
+  // WebSocket URL (Go Gateway)
+  static const String wsBaseUrl = 'ws://localhost:8080';
+  static const String wsChat = '/ws/chat';
 
   // Endpoints
   static const String auth = '/auth';

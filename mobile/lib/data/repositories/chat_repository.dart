@@ -3,12 +3,18 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_response_model.dart';
+import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/websocket_chat_service.dart';
 
 class ChatRepository {
   final Dio _dio;
+  final WebSocketChatService _wsService;
 
-  ChatRepository(this._dio);
+  ChatRepository(
+    this._dio, {
+    WebSocketChatService? wsService,
+  }) : _wsService = wsService ?? WebSocketChatService();
 
   /// 发送任务相关消息 (非流式)
   Future<ChatResponseModel> sendMessageToTask(String taskId, String message, String? conversationId) async {
@@ -25,20 +31,59 @@ class ChatRepository {
     return ChatResponseModel.fromJson(response.data);
   }
 
-  /// 流式聊天（SSE）
-  Stream<ChatStreamEvent> chatStream(String message, String? conversationId) {
+  /// 获取对话历史
+  Future<List<ChatMessageModel>> getConversationHistory(String conversationId) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService().demoChatHistory;
+    }
+    final response = await _dio.get('/api/v1/chat/history/$conversationId');
+    final List list = response.data;
+    return list.map((item) => ChatMessageModel.fromJson(item)).toList();
+  }
+
+  /// 获取最近对话列表
+  Future<List<Map<String, dynamic>>> getRecentConversations() async {
+    if (DemoDataService.isDemoMode) {
+      return [
+        {'id': 'demo_conv_1', 'title': '关于数学复习的建议', 'updated_at': DateTime.now().toIso8601String()},
+      ];
+    }
+    final response = await _dio.get('/api/v1/chat/sessions');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  /// 流式聊天（WebSocket）
+  Stream<ChatStreamEvent> chatStream(
+    String message,
+    String? conversationId, {
+    String? userId,
+    String? nickname,
+  }) {
     if (DemoDataService.isDemoMode) {
       // Mock stream generator
       return _mockChatStream(message);
     }
+
+    // 使用 WebSocket 服务
+    return _wsService.sendMessage(
+      message: message,
+      userId: userId ?? 'anonymous',
+      sessionId: conversationId,
+      nickname: nickname,
+    );
+  }
+
+  /// 流式聊天（SSE - 保留用于向后兼容）
+  @Deprecated('Use chatStream with WebSocket instead')
+  Stream<ChatStreamEvent> chatStreamSSE(String message, String? conversationId) {
     final controller = StreamController<ChatStreamEvent>();
-    
+
     _startSSEConnection(
       message: message,
       conversationId: conversationId,
       controller: controller,
     );
-    
+
     return controller.stream;
   }
   
@@ -139,33 +184,3 @@ class ChatRepository {
   }
 }
 
-// 事件类型定义
-abstract class ChatStreamEvent {}
-
-class TextEvent extends ChatStreamEvent {
-  final String content;
-  TextEvent({required this.content});
-}
-
-class ToolStartEvent extends ChatStreamEvent {
-  final String toolName;
-  ToolStartEvent({required this.toolName});
-}
-
-class ToolResultEvent extends ChatStreamEvent {
-  final ToolResultModel result;
-  ToolResultEvent({required this.result});
-}
-
-class WidgetEvent extends ChatStreamEvent {
-  final String widgetType;
-  final Map<String, dynamic> widgetData;
-  WidgetEvent({required this.widgetType, required this.widgetData});
-}
-
-class DoneEvent extends ChatStreamEvent {}
-
-class UnknownEvent extends ChatStreamEvent {
-  final Map<String, dynamic> data;
-  UnknownEvent({required this.data});
-}

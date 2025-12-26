@@ -13,6 +13,7 @@
 
 ### 软件依赖
 - **Python**: 3.11+ (推荐3.11.4)
+- **Go**: 1.21+ (推荐1.21.0)
 - **Flutter**: 3.16+ (推荐最新稳定版)
 - **Docker**: 20.10+ (用于数据库和缓存)
 - **Node.js**: 18+ (用于开发工具)
@@ -20,50 +21,100 @@
 
 ## 开发环境搭建
 
-### 后端环境搭建
+### 一键启动开发环境（推荐）
 
-1. **克隆项目**
+Sparkle 项目提供了完整的 Makefile 自动化脚本，可以一键启动开发环境：
+
 ```bash
-git clone https://github.com/your-username/sparkle-flutter.git
-cd sparkle-flutter/backend
+# 查看完整启动指南
+make dev-all
+
+# 按照输出提示，在多个终端分别运行：
+# 终端1: 启动数据库
+make dev-up
+
+# 终端2: 启动Python gRPC服务
+make grpc-server
+
+# 终端3: 启动Go Gateway
+make gateway-run
 ```
 
-2. **创建虚拟环境**
+### 后端环境搭建（详细步骤）
+
+#### 1. 克隆项目
 ```bash
+git clone https://github.com/BRSAMAyu/sparkle-flutter.git
+cd sparkle-flutter
+```
+
+#### 2. 启动数据库
+```bash
+# 使用Docker Compose启动PostgreSQL和Redis
+docker compose up -d
+
+# 或使用Makefile命令
+make dev-up
+```
+
+#### 3. Python gRPC服务搭建
+```bash
+cd backend
 python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
-# 或
-.venv\Scripts\activate  # Windows
-```
+# 或 .venv\Scripts\activate  # Windows
 
-3. **安装依赖**
-```bash
 pip install -r requirements.txt
-```
-
-4. **配置环境变量**
-```bash
 cp .env.example .env
 # 编辑 .env 文件，配置数据库连接、API密钥等
-```
 
-5. **数据库设置**
-```bash
-# 启动PostgreSQL (推荐使用Docker)
-docker run --name sparkle-db -e POSTGRES_DB=sparkle -e POSTGRES_USER=sparkle -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15
-
-# 或使用SQLite (开发模式)
-# 在 .env 中设置 DATABASE_URL=sqlite:///./sparkle.db
-```
-
-6. **运行数据库迁移**
-```bash
+# 运行数据库迁移
 alembic upgrade head
+
+# 启动Python gRPC服务
+python grpc_server.py
+# 或使用Makefile命令
+make grpc-server
 ```
 
-7. **启动后端服务**
+#### 4. Go Gateway搭建
 ```bash
-uvicorn app.main:app --reload
+cd backend/gateway
+
+# 安装Go依赖
+go mod tidy
+
+# 构建Go Gateway
+go build -o bin/gateway ./cmd/server
+
+# 启动Go Gateway
+./bin/gateway
+# 或使用Makefile命令
+make gateway-run
+```
+
+### 移动端环境搭建
+
+1. **安装Flutter**
+```bash
+# 根据官方指南安装Flutter SDK
+# https://docs.flutter.dev/get-started/install
+```
+
+2. **检查环境**
+```bash
+flutter doctor
+```
+
+3. **获取依赖**
+```bash
+cd mobile
+flutter pub get
+```
+
+4. **运行应用**
+```bash
+flutter run
 ```
 
 ### 移动端环境搭建
@@ -92,24 +143,50 @@ flutter run
 
 ## 项目结构
 
-### 后端结构
+### 后端结构 (混合架构)
 ```
 backend/
-├── app/                    # 应用主目录
-│   ├── main.py            # 应用入口
-│   ├── config.py          # 配置管理
-│   ├── api/               # API路由
-│   │   └── v1/            # API版本
-│   ├── services/          # 业务逻辑服务
-│   ├── models/            # 数据模型
-│   ├── schemas/           # Pydantic模型
-│   ├── workers/           # 后台任务
-│   └── core/              # 核心功能
-├── alembic/               # 数据库迁移
-├── seed_data/             # 种子数据
-├── tests/                 # 测试文件
-├── requirements.txt       # Python依赖
-└── .env.example          # 环境变量示例
+├── gateway/                          # Go Gateway服务 (WebSocket/HTTP入口)
+│   ├── cmd/server/main.go           # Go Gateway入口点
+│   ├── internal/                    # 内部包
+│   │   ├── handler/                 # HTTP/WebSocket处理器
+│   │   │   └── chat_orchestrator.go # WebSocket聊天处理器
+│   │   ├── agent/                   # gRPC客户端
+│   │   │   └── client.go            # 连接Python Agent
+│   │   ├── db/                      # 数据库访问层
+│   │   │   ├── query.sql            # SQLC查询定义
+│   │   │   ├── schema.sql           # 数据库Schema
+│   │   │   └── db.go                # 数据库连接
+│   │   ├── service/                 # 业务服务层
+│   │   │   ├── quota.go             # 配额服务
+│   │   │   ├── chat_history.go      # 聊天历史服务
+│   │   │   └── semantic_cache.go    # 语义缓存服务
+│   │   ├── config/                  # 配置管理
+│   │   └── infra/                   # 基础设施
+│   │       └── redis/client.go      # Redis客户端
+│   ├── go.mod                       # Go模块定义
+│   ├── go.sum                       # 依赖校验
+│   ├── sqlc.yaml                    # SQLC配置
+│   └── bin/gateway                  # 编译后的可执行文件
+├── app/                             # Python gRPC服务 (AI智能引擎)
+│   ├── main.py                      # FastAPI入口点 (遗留API)
+│   ├── grpc_server.py               # gRPC服务器入口点
+│   ├── config.py                    # 配置管理
+│   ├── services/                    # 业务服务层
+│   │   ├── agent_grpc_service.py    # gRPC AgentService实现
+│   │   ├── llm_service.py           # LLM服务
+│   │   ├── galaxy_service.py        # 知识星图服务
+│   │   ├── task_service.py          # 任务服务
+│   │   └── ...                      # 其他服务
+│   ├── models/                      # 数据模型
+│   ├── core/                        # 核心模块
+│   ├── tools/                       # AI工具系统
+│   └── orchestration/               # 响应编排
+├── alembic/                         # 数据库迁移 (Python侧管理)
+├── seed_data/                       # 种子数据
+├── grpc_server.py                   # gRPC服务器启动脚本
+├── test_websocket_client.py         # WebSocket集成测试
+└── requirements.txt                 # Python依赖
 ```
 
 ### 移动端结构
@@ -198,7 +275,10 @@ alembic downgrade -1
 ## 测试策略
 
 ### 后端测试
+
+#### Python gRPC服务测试
 ```bash
+cd backend
 # 运行所有测试
 pytest
 
@@ -207,10 +287,24 @@ pytest tests/test_api/
 
 # 生成覆盖率报告
 pytest --cov=app
+
+# 运行gRPC单元测试
+make grpc-test
+```
+
+#### Go Gateway测试
+```bash
+cd backend/gateway
+# 运行Go单元测试
+go test ./...
+
+# 运行WebSocket集成测试
+make integration-test
 ```
 
 ### 移动端测试
 ```bash
+cd mobile
 # 运行单元测试
 flutter test
 
@@ -222,9 +316,12 @@ flutter test integration_test/
 
 ### 后端部署
 
-#### Docker部署
+#### Docker部署 (混合架构)
+Sparkle 采用混合架构，需要分别部署 Go Gateway 和 Python gRPC 服务：
+
+**Python gRPC服务 Dockerfile**:
 ```dockerfile
-# Dockerfile
+# backend/Dockerfile.python
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -232,19 +329,89 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "grpc_server.py"]
+```
+
+**Go Gateway Dockerfile**:
+```dockerfile
+# backend/gateway/Dockerfile
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -o gateway ./cmd/server
+
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/gateway .
+EXPOSE 8080
+CMD ["./gateway"]
+```
+
+#### Docker Compose部署
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: sparkle
+      POSTGRES_USER: sparkle
+      POSTGRES_PASSWORD: your-password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+  python-grpc:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.python
+    environment:
+      DATABASE_URL: postgresql://sparkle:your-password@postgres:5432/sparkle
+      LLM_API_KEY: your-llm-api-key
+    depends_on:
+      - postgres
+      - redis
+
+  go-gateway:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://sparkle:your-password@postgres:5432/sparkle
+      AGENT_ADDRESS: python-grpc:50051
+    depends_on:
+      - python-grpc
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
 ```
 
 #### 环境变量配置
 ```bash
-# 生产环境推荐配置
-APP_NAME=sparkle
-APP_VERSION=1.0.0
-DEBUG=False
-SECRET_KEY=your-production-secret-key
+# Go Gateway生产环境配置
+PORT=8080
+DATABASE_URL=postgresql://user:password@host:port/dbname
+AGENT_ADDRESS=python-grpc:50051
+REDIS_URL=redis://redis:6379
+JWT_SECRET=your-jwt-secret-key
+
+# Python gRPC服务生产环境配置
+GRPC_PORT=50051
 DATABASE_URL=postgresql://user:password@host:port/dbname
 LLM_API_KEY=your-llm-api-key
 LLM_MODEL_NAME=qwen-max
+DEMO_MODE=False
 ```
 
 ### 移动端部署

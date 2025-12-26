@@ -9,6 +9,8 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
+import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class ChatBubble extends StatefulWidget {
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
@@ -247,6 +249,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           children: [
                                             if (widget.message is PrivateMessageInfo && (widget.message as PrivateMessageInfo).quotedMessage != null)
                                               _buildQuoteArea(context, isUser, (widget.message as PrivateMessageInfo).quotedMessage!),
+                                            if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).aiStatus != null)
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 8.0),
+                                                child: AiStatusBubble(status: (widget.message as ChatMessageModel).aiStatus!),
+                                              ),
                                             MarkdownBody(
                                               data: _content,
                                               styleSheet: _getMarkdownStyle(context, isUser),

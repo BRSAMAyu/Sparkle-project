@@ -2,22 +2,37 @@
 Application Configuration Management
 使用 pydantic-settings 管理配置
 """
+import os
 from typing import List
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from dotenv import load_dotenv
 
+# 获取当前文件的绝对路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 假设 .env 在 backend 目录下，即 app 的父目录
+env_path = os.path.join(os.path.dirname(current_dir), ".env")
+
+# 显式加载 .env 文件，强制覆盖已存在的环境变量
+load_dotenv(env_path, override=True)
 
 class Settings(BaseSettings):
     """Application settings"""
+    # 由于已经使用 load_dotenv 加载到环境中了，这里可以不需要 env_file
+    # 但保留它作为备选也是可以的
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        extra="ignore"
+    )
 
     # Application
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
-    SECRET_KEY: str
+    SECRET_KEY: str = ""
 
     # Database
-    DATABASE_URL: str
+    DATABASE_URL: str = ""
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -45,8 +60,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # LLM Service
-    LLM_API_BASE_URL: str
-    LLM_API_KEY: str
+    LLM_API_BASE_URL: str = ""
+    LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "qwen-turbo"
     LLM_PROVIDER: str = "qwen"  # 'qwen' | 'deepseek' | 'openai'
 
@@ -70,36 +85,32 @@ class Settings(BaseSettings):
     # gRPC Server
     GRPC_PORT: int = 50051
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
     def validate_secret_key(cls, v):
         if not v:
-            raise ValueError("SECRET_KEY must be set in the environment variables.")
+            return ""
         return v
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def validate_database_url(cls, v):
         if not v:
-            raise ValueError("DATABASE_URL must be set in the environment variables.")
+            return ""
         return v
 
     @field_validator("LLM_API_BASE_URL", mode="before")
     @classmethod
     def validate_llm_api_base_url(cls, v):
         if not v:
-            raise ValueError("LLM_API_BASE_URL must be set in the environment variables.")
+            return ""
         return v
 
     @field_validator("LLM_API_KEY", mode="before")
     @classmethod
     def validate_llm_api_key(cls, v):
         if not v:
-            raise ValueError("LLM_API_KEY must be set in the environment variables.")
+            return ""
         return v
 
 

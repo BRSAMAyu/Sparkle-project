@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,6 +15,7 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 var upgrader = websocket.Upgrader{
@@ -24,12 +27,18 @@ var upgrader = websocket.Upgrader{
 type ChatOrchestrator struct {
 	agentClient *agent.Client
 	queries     *db.Queries
+	chatHistory *service.ChatHistoryService
+	quota       *service.QuotaService
+	semantic    *service.SemanticCacheService
 }
 
-func NewChatOrchestrator(ac *agent.Client, q *db.Queries) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient: ac,
 		queries:     q,
+		chatHistory: ch,
+		quota:       qs,
+		semantic:    sc,
 	}
 }
 
@@ -80,6 +89,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
 			continue
 		}
+
+		// Canonicalize Input (Semantic Cache Prep)
+		_ = h.semantic.Canonicalize(input.Message)
+		// TODO: Use canonicalized input for semantic search or caching in future
 
 		// Build ChatRequest
 		req := &agentv1.ChatRequest{
@@ -139,6 +152,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		// Persist completed message to database (async)
 		if fullText != "" && input.SessionID != "" {
 			go h.saveMessage(userID, input.SessionID, "assistant", fullText)
+
+			// Also decrement quota (async)
+			go func() {
+				if _, err := h.quota.DecrQuota(context.Background(), userID); err != nil {
+					log.Printf("Failed to decrement quota: %v", err)
+				}
+			}()
 		}
 	}
 
@@ -199,13 +219,18 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
-	// TODO: Implement database persistence using h.queries
-	// ctx := context.Background()
-	// h.queries.CreateChatMessage(ctx, db.CreateChatMessageParams{
-	// 	SessionID: sessionID,
-	// 	UserID:    userID,
-	// 	Role:      role,
-	// 	Content:   content,
-	// })
-	log.Printf("TODO: Save message to DB - Session: %s, Role: %s, Length: %d", sessionID, role, len(content))
+	payload := map[string]string{
+		"session_id": sessionID,
+		"user_id":    userID,
+		"role":       role,
+		"content":    content,
+		"timestamp":  fmt.Sprintf("%d", time.Now().Unix()),
+	}
+	data, _ := json.Marshal(payload)
+
+	ctx := context.Background()
+	// Use the new reliable double-write mechanism
+	if err := h.chatHistory.SaveMessage(ctx, sessionID, data); err != nil {
+		log.Printf("Failed to save chat message: %v", err)
+	}
 }

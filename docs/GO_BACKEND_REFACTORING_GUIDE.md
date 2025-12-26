@@ -100,18 +100,28 @@
 
 **详细报告**: 见 `docs/STEP4_GO_GATEWAY_INTEGRATION_COMPLETE.md`
 
-### Step 5: Flutter 客户端适配 (Flutter Adaptation)
+### ✅ Step 5: Flutter 客户端适配 (Flutter Adaptation) - **已完成**
 **目标**: 让移动端对接新的 WebSocket 网关。
-1.  **网络层改造**: 将 HTTP/REST 调用替换为 WebSocket 连接 (`ws://localhost:8080/ws/chat`)。
-2.  **协议适配**: 解析新的 JSON 消息格式 (支持 delta, status_update, tool_call 等类型)。
-3.  **UI 优化**: 适配流式输出（delta 追加）和状态展示（THINKING, GENERATING）。
-4.  **状态管理**: 使用 Riverpod 管理 WebSocket 连接和会话状态。
+1.  ✅ **WebSocket 服务层**: 创建 `WebSocketChatService` 处理双向通信。
+2.  ✅ **事件类型系统**: 定义 `StatusUpdateEvent`, `ErrorEvent`, `UsageEvent` 等新事件。
+3.  ✅ **Repository 集成**: 更新 `ChatRepository` 使用 WebSocket 替代 SSE。
+4.  ✅ **状态管理更新**: 扩展 `ChatState` 支持 `aiStatus` 和 `aiStatusDetails`。
+5.  ✅ **事件处理逻辑**: 完整处理 7 种响应类型（delta, status_update, tool_call 等）。
+6.  ✅ **UI 组件**: 创建 `AiStatusIndicator` 和 `AiStatusBubble` Widget。
+7.  ✅ **API 配置**: 添加 WebSocket 端点常量。
+8.  ✅ **代码生成测试**: 成功运行 build_runner 和 flutter analyze。
+
+**详细报告**: 见 `docs/STEP5_FLUTTER_INTEGRATION_COMPLETE.md`
 
 ### Step 6: 联调与优化 (Integration Testing & Optimization)
 1.  **全链路测试**: Flutter App -> Go Gateway (WS) -> Python Agent (gRPC) -> LLM。
-2.  **压力测试**: 验证 Go 网关在高并发连接下的稳定性。
-3.  **性能优化**: 连接池管理、数据库持久化、监控日志。
-4.  **安全加固**: JWT 认证、CORS 限制、Rate Limiting。
+2.  **UI 集成**: 在实际聊天界面中集成 AiStatusIndicator。
+3.  **真实用户 ID**: 集成 auth_provider 获取当前用户。
+4.  **WebSocket 重连**: 实现断线自动重连机制。
+5.  **错误处理**: 优化用户错误提示和重试逻辑。
+6.  **压力测试**: 验证 Go 网关在高并发连接下的稳定性。
+7.  **性能优化**: 连接池管理、数据库持久化、监控日志。
+8.  **安全加固**: JWT 认证、CORS 限制、Rate Limiting。
 
 ---
 
