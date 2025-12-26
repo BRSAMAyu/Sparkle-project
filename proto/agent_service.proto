@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package agent.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/agent/v1;agentv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// AgentService defines the interface for the AI Agent Engine.
+// It handles complex reasoning, long-term memory retrieval, and tool orchestration.
+service AgentService {
+  // StreamChat handles the bi-directional communication for AI chat.
+  // It supports streaming responses for a "typewriter" effect and tool execution flows.
+  rpc StreamChat(ChatRequest) returns (stream ChatResponse);
+
+  // RetrieveMemory allows the gateway (or other services) to query the AI's long-term memory store (Vector DB).
+  // This is used for RAG (Retrieval-Augmented Generation) or context building.
+  rpc RetrieveMemory(MemoryQuery) returns (MemoryResult);
+}
+
+// ============================================================================
+// Chat Definitions
+// ============================================================================
+
+// ChatRequest encapsulates the user's input and necessary context for the AI.
+message ChatRequest {
+  // Unique identifier of the user interacting with the agent.
+  string user_id = 1;
+
+  // Session ID to track the conversation thread.
+  // If empty, the agent may treat it as a new stateless interaction or generate a new session.
+  string session_id = 2;
+
+  // The input can be either a new text message from the user OR a result from a requested tool execution.
+  oneof input {
+      string message = 3; // The user's text input.
+      ToolResult tool_result = 7; // The result of a tool execution requested by the Agent.
+  }
+
+  // Core user profile context (Strongly Typed).
+  // This data is usually fetched from the primary DB by the Gateway.
+  UserProfile user_profile = 4;
+
+  // Extra dynamic context (Flexible).
+  // Used for temporary or extension data (e.g. "current_weather", "frontend_version").
+  google.protobuf.Struct extra_context = 5;
+
+  // Optional: Recent conversation history if the client/gateway manages state.
+  // This history field is mainly for passing frontend temporary context, or when Session is stateless.
+  // By default, Python should prioritize reading history from the database.
+  repeated ChatMessage history = 6;
+
+  // Configuration for this specific request.
+  ChatConfig config = 8;
+}
+
+// UserProfile defines key user attributes for personalization.
+message UserProfile {
+    string nickname = 1;
+    string timezone = 2;
+    string language = 3;
+    
+    // Pro status might determine access to advanced models or tools.
+    bool is_pro = 4;
+    
+    // Dynamic preferences (e.g., "concise_mode", "role_play_enabled")
+    map<string, string> preferences = 5;
+}
+
+// ToolResult represents the output of a tool execution performed by the Client/Gateway.
+message ToolResult {
+    string tool_call_id = 1;
+    string tool_name = 2;
+    
+    // The result payload, typically JSON.
+    string result_json = 3; 
+    
+    bool is_error = 4;
+    string error_message = 5;
+}
+
+// ChatConfig allows overriding default behaviors for a specific request.
+message ChatConfig {
+    string model = 1;
+    float temperature = 2;
+    int32 max_tokens = 3;
+    bool tools_enabled = 4;
+}
+
+// ChatMessage represents a single message in the conversation history.
+message ChatMessage {
+    string role = 1; // "user", "assistant", "system", "tool"
+    string content = 2;
+    string name = 3; 
+    string tool_call_id = 4; // Required if role is "tool"
+    map<string, string> metadata = 5;
+}
+
+// ChatResponse represents a chunk of the stream from the Agent.
+message ChatResponse {
+  string response_id = 1;
+  int64 created_at = 2; 
+
+  // The main payload of the response.
+  oneof content {
+    // Text delta for the typewriter effect.
+    string delta = 3;
+    
+    // Request for the client/gateway to execute a tool.
+    // Note: If the model supports parallel function calling, multiple ToolCall frames may be streamed.
+    ToolCall tool_call = 4;
+    
+    // Log message for internal agent actions/thoughts.
+    AgentStatus status_update = 5;
+    
+    // Final complete response text.
+    string full_text = 6;
+    
+    // Error information.
+    Error error = 7;
+    
+    // Usage statistics.
+    Usage usage = 8;
+  }
+  
+  // Indicates why the generation finished.
+  FinishReason finish_reason = 9;
+}
+
+enum FinishReason {
+    NULL = 0;
+    STOP = 1; // Natural completion
+    LENGTH = 2; // Hit max tokens
+    TOOL_CALLS = 3; // Paused to wait for tool execution
+    CONTENT_FILTER = 4; // Blocked by safety filter
+    ERROR = 5;
+}
+
+message ToolCall {
+    string id = 1;
+    string name = 2;
+    string arguments = 3;
+}
+
+message AgentStatus {
+    enum State {
+        UNKNOWN = 0;
+        THINKING = 1;
+        SEARCHING = 2;
+        EXECUTING_TOOL = 3;
+        GENERATING = 4;
+    }
+    State state = 1;
+    string details = 2;
+}
+
+message Error {
+    string code = 1;
+    string message = 2;
+    bool retryable = 3;
+    map<string, string> details = 4;
+}
+
+message Usage {
+    int32 prompt_tokens = 1;
+    int32 completion_tokens = 2;
+    int32 total_tokens = 3;
+    int64 cost_micro_usd = 4;
+}
+
+// ============================================================================
+// Memory Definitions
+// ============================================================================
+
+message MemoryQuery {
+  string user_id = 1;
+  string query_text = 2;
+  int32 limit = 3;
+  float min_score = 4;
+  MemoryFilter filter = 5;
+  
+  // Hybrid search parameter.
+  // 0.0 = Keyword Search (BM25)
+  // 1.0 = Vector Search (Dense)
+  // 0.5 = Hybrid
+  float hybrid_alpha = 6;
+}
+
+message MemoryFilter {
+    repeated string tags = 1;
+    google.protobuf.Timestamp start_time = 2;
+    google.protobuf.Timestamp end_time = 3;
+    repeated string source_types = 4;
+}
+
+message MemoryResult {
+  repeated MemoryItem items = 1;
+  int32 total_found = 2;
+}
+
+message MemoryItem {
+  string id = 1;
+  string content = 2;
+  float score = 3;
+  google.protobuf.Timestamp created_at = 4;
+  map<string, string> metadata = 5;
+}

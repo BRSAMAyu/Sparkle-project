@@ -1,0 +1,19 @@
+
+
+services:
+  sparkle_db:
+    image: pgvector/pgvector:pg16
+    container_name: sparkle_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sparkle
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d sparkle"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

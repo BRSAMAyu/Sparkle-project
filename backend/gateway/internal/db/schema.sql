@@ -1,0 +1,1 @@
+-- This file will be overwritten by 'make sync-db'
