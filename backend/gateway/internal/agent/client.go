@@ -42,13 +42,14 @@ func (c *Client) Close() {
 	}
 }
 
-func (c *Client) StreamChat(ctx context.Context, userID string) (agentv1.AgentService_StreamChatClient, error) {
+func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
 	// Inject Metadata for context propagation
 	md := metadata.New(map[string]string{
-		"user-id":    userID,
+		"user-id":    req.UserId,
 		"x-trace-id": fmt.Sprintf("trace_%s", uuid.New().String()),
 	})
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 
-	return c.api.StreamChat(outCtx)
+	// StreamChat is server-side streaming: single request, stream of responses
+	return c.api.StreamChat(outCtx, req)
 }

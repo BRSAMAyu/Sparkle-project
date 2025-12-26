@@ -89,21 +89,47 @@
 
 **详细报告**: 见 `docs/STEP3_GRPC_SERVICE_COMPLETE.md`
 
-### Step 4: Flutter 客户端适配 (Flutter Adaptation)
-**目标**: 让移动端对接新的 WebSocket 网关。
-1.  **网络层改造**: 将 HTTP/REST 调用替换为 WebSocket 连接 (`go_gateway_url/ws/chat`)。
-2.  **协议适配**: 解析新的 JSON 消息格式 (匹配 `ChatResponse` proto 定义)。
-3.  **UI 优化**: 适配流式输出 (`delta` 追加) 和状态展示 (`AgentStatus`)。
+### ✅ Step 4: Go Gateway 集成 (Go Gateway Integration) - **已完成**
+**目标**: 打通 WebSocket → Go Gateway → Python gRPC 的完整链路。
+1.  ✅ **修复 client.go**: 修正 StreamChat 方法签名，正确传递 ChatRequest 参数。
+2.  ✅ **重构 chat_orchestrator.go**: 从错误的双向流改为正确的服务端流模式。
+3.  ✅ **协议转换**: 实现 Protobuf ↔ JSON 的完整转换，支持 7 种响应类型。
+4.  ✅ **端到端测试**: WebSocket Client → Go Gateway (8080) → Python gRPC (50051) → LLM 全链路验证通过。
+5.  ✅ **测试结果**: 单条消息测试通过（84 chunks, 803 chars），多轮对话测试通过。
+6.  ✅ **工具链完善**: 更新 Makefile，新增 `gateway-build`, `gateway-run`, `integration-test` 等命令。
 
-### Step 5: 联调与测试 (Integration Testing)
-1.  **全链路测试**: App -> Go Gateway (WS) -> Python Agent (gRPC) -> LLM。
+**详细报告**: 见 `docs/STEP4_GO_GATEWAY_INTEGRATION_COMPLETE.md`
+
+### Step 5: Flutter 客户端适配 (Flutter Adaptation)
+**目标**: 让移动端对接新的 WebSocket 网关。
+1.  **网络层改造**: 将 HTTP/REST 调用替换为 WebSocket 连接 (`ws://localhost:8080/ws/chat`)。
+2.  **协议适配**: 解析新的 JSON 消息格式 (支持 delta, status_update, tool_call 等类型)。
+3.  **UI 优化**: 适配流式输出（delta 追加）和状态展示（THINKING, GENERATING）。
+4.  **状态管理**: 使用 Riverpod 管理 WebSocket 连接和会话状态。
+
+### Step 6: 联调与优化 (Integration Testing & Optimization)
+1.  **全链路测试**: Flutter App -> Go Gateway (WS) -> Python Agent (gRPC) -> LLM。
 2.  **压力测试**: 验证 Go 网关在高并发连接下的稳定性。
+3.  **性能优化**: 连接池管理、数据库持久化、监控日志。
+4.  **安全加固**: JWT 认证、CORS 限制、Rate Limiting。
 
 ---
 
 ## 5. 开发者操作速查 (Developer Cheatsheet)
 
-### 启动开发环境
+### 一键启动开发环境
+```bash
+# 查看启动指南
+make dev-all
+
+# 这会输出完整的启动步骤，然后在不同终端分别运行：
+# Terminal 1: make dev-up          (启动数据库)
+# Terminal 2: make grpc-server     (启动 Python gRPC)
+# Terminal 3: make gateway-run     (启动 Go Gateway)
+# Terminal 4: make integration-test (运行测试)
+```
+
+### 初始化环境 (首次部署)
 ```bash
 # 1. 彻底重置数据库 (慎用)
 docker compose down --volumes
@@ -112,17 +138,45 @@ rm -rf postgres_data
 # 2. 启动数据库
 make dev-up
 
-# 3. 运行 Python 迁移 (在 backend/ 目录下)
-unset DATABASE_URL # 确保无残留变量
-cd backend
-alembic upgrade head
+# 3. 运行 Python 迁移
+cd backend && alembic upgrade head
 
-# 4. 同步 Go 代码 (在根目录下)
+# 4. 同步 Go 代码
 make sync-db    # 同步数据库结构到 Go
 make proto-gen  # 生成 Protobuf 代码
-cd backend/gateway && go mod tidy
+
+# 5. 构建 Go Gateway
+make gateway-build
 ```
 
-### 运行服务
-*   **Go Gateway**: `cd backend/gateway && go run cmd/server/main.go`
-*   **Python Agent**: (待实现) `python server.py`
+### 运行服务 (日常开发)
+
+**Python gRPC 服务**:
+```bash
+make grpc-server
+# 或
+cd backend && python grpc_server.py
+```
+
+**Go Gateway**:
+```bash
+make gateway-run
+# 或（开发模式，自动重编译）
+make gateway-dev
+```
+
+**运行测试**:
+```bash
+# gRPC 单元测试
+make grpc-test
+
+# WebSocket 集成测试
+make integration-test
+```
+
+### 服务地址
+- **数据库**: `localhost:5432` (postgres/password)
+- **Python gRPC**: `localhost:50051`
+- **Go Gateway HTTP**: `http://localhost:8080`
+- **Go Gateway WebSocket**: `ws://localhost:8080/ws/chat`
+- **健康检查**: `http://localhost:8080/api/v1/health`

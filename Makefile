@@ -48,3 +48,41 @@ grpc-server:
 grpc-test:
 	@echo "🧪 Testing gRPC Server..."
 	cd backend && python test_grpc_simple.py
+
+# Go Gateway 相关命令
+gateway-build:
+	@echo "🔨 Building Go Gateway..."
+	cd backend/gateway && go mod tidy && go build -o bin/gateway ./cmd/server
+	@echo "✅ Go Gateway built successfully!"
+
+gateway-run:
+	@echo "🚀 Starting Go Gateway..."
+	cd backend/gateway && ./bin/gateway
+
+gateway-dev:
+	@echo "🚀 Starting Go Gateway (dev mode with rebuild)..."
+	cd backend/gateway && go run cmd/server/main.go
+
+# 集成测试
+integration-test:
+	@echo "🧪 Running WebSocket Integration Test..."
+	@echo "⚠️  Make sure Python gRPC server and Go Gateway are running!"
+	cd backend && python test_websocket_client.py
+
+# 启动完整开发环境
+dev-all:
+	@echo "🚀 Starting Full Development Environment..."
+	@echo "1️⃣  Starting Database..."
+	make dev-up
+	@echo ""
+	@echo "2️⃣  Starting Python gRPC Server..."
+	@echo "   Run in a separate terminal: make grpc-server"
+	@echo ""
+	@echo "3️⃣  Starting Go Gateway..."
+	@echo "   Run in a separate terminal: make gateway-run"
+	@echo ""
+	@echo "✅ Development infrastructure ready!"
+	@echo "   - Database: localhost:5432"
+	@echo "   - Python gRPC: localhost:50051"
+	@echo "   - Go Gateway: localhost:8080"
+	@echo "   - WebSocket: ws://localhost:8080/ws/chat"
