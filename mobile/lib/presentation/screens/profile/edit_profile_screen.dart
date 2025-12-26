@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,8 +34,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final theme = Theme.of(context);
-    
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -187,7 +184,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             : null,
                         boxShadow: [
                           BoxShadow(
-                            color: AppDesignTokens.primaryBase.withOpacity(0.2),
+                            color: AppDesignTokens.primaryBase.withValues(alpha: 0.2),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),
@@ -376,9 +373,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               borderRadius: AppDesignTokens.borderRadius12,
               borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             ),
-            focusedBorder: const OutlineInputBorder(
+            focusedBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+              borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,

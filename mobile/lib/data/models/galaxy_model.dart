@@ -3,7 +3,20 @@ import 'package:json_annotation/json_annotation.dart';
 part 'galaxy_model.g.dart';
 
 enum SectorEnum {
-  COSMOS, TECH, ART, CIVILIZATION, LIFE, WISDOM, VOID
+  @JsonValue('COSMOS')
+  cosmos,
+  @JsonValue('TECH')
+  tech,
+  @JsonValue('ART')
+  art,
+  @JsonValue('CIVILIZATION')
+  civilization,
+  @JsonValue('LIFE')
+  life,
+  @JsonValue('WISDOM')
+  wisdom,
+  @JsonValue('VOID')
+  voidSector
 }
 
 @JsonSerializable()

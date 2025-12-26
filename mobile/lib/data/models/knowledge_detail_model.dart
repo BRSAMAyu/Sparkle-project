@@ -15,10 +15,9 @@ class KnowledgeDetailResponse {
 
   KnowledgeDetailResponse({
     required this.node,
-    this.relations = const [],
+    required this.userStats, this.relations = const [],
     this.relatedTasks = const [],
     this.relatedPlans = const [],
-    required this.userStats,
   });
 
   factory KnowledgeDetailResponse.fromJson(Map<String, dynamic> json) =>
@@ -73,19 +72,19 @@ class KnowledgeNodeDetail {
   SectorEnum get sector {
     switch (sectorCode.toUpperCase()) {
       case 'COSMOS':
-        return SectorEnum.COSMOS;
+        return SectorEnum.cosmos;
       case 'TECH':
-        return SectorEnum.TECH;
+        return SectorEnum.tech;
       case 'ART':
-        return SectorEnum.ART;
+        return SectorEnum.art;
       case 'CIVILIZATION':
-        return SectorEnum.CIVILIZATION;
+        return SectorEnum.civilization;
       case 'LIFE':
-        return SectorEnum.LIFE;
+        return SectorEnum.life;
       case 'WISDOM':
-        return SectorEnum.WISDOM;
+        return SectorEnum.wisdom;
       default:
-        return SectorEnum.VOID;
+        return SectorEnum.voidSector;
     }
   }
 

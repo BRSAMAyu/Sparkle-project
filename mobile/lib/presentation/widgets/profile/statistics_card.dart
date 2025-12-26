@@ -22,7 +22,7 @@ class StatisticsCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppDesignTokens.primaryBase.withOpacity(0.1),
+                  color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -124,8 +124,8 @@ class _WeeklyTrendChart extends StatelessWidget {
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    AppDesignTokens.primaryBase.withOpacity(0.2),
-                    AppDesignTokens.primaryBase.withOpacity(0.0),
+                    AppDesignTokens.primaryBase.withValues(alpha: 0.2),
+                    AppDesignTokens.primaryBase.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,

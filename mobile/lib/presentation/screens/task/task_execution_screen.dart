@@ -212,8 +212,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       );
     }
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Stack(
         children: [
           Scaffold(
@@ -232,8 +239,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppDesignTokens.primaryBase.withOpacity(0.05),
-                    AppDesignTokens.secondaryBase.withOpacity(0.05),
+                    AppDesignTokens.primaryBase.withValues(alpha: 0.05),
+                    AppDesignTokens.secondaryBase.withValues(alpha: 0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -297,7 +304,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: AppDesignTokens.info.withOpacity(0.3),
+                                            color: AppDesignTokens.info.withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -381,8 +388,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withOpacity(0.7),
-                      AppDesignTokens.primaryBase.withOpacity(0.3),
+                      Colors.black.withValues(alpha: 0.7),
+                      AppDesignTokens.primaryBase.withValues(alpha: 0.3),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -402,7 +409,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppDesignTokens.success.withOpacity(0.5),
+                                color: AppDesignTokens.success.withValues(alpha: 0.5),
                                 blurRadius: 30,
                                 spreadRadius: 10,
                               ),
@@ -631,7 +638,7 @@ class _BottomControls extends ConsumerWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

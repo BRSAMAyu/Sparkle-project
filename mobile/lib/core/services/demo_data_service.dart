@@ -155,19 +155,19 @@ class DemoDataService {
 
       nodes.add(GalaxyNodeModel(
         id: 'node_$i',
-        name: isCore ? '$subject' : '$subject - 知识点 ${i+1}',
+        name: isCore ? subject : '$subject - 知识点 ${i+1}',
         importance: isCore ? 5 : _random.nextInt(3) + 1,
         sector: SectorEnum.values[i % SectorEnum.values.length],
         isUnlocked: isUnlocked,
         masteryScore: mastery,
         baseColor: subjectColors[subject],
         parentId: parentId,
-      ));
+      ),);
     }
 
     return GalaxyGraphResponse(
         nodes: nodes, 
-        userFlameIntensity: 0.85
+        userFlameIntensity: 0.85,
     );
   }
 
@@ -239,7 +239,7 @@ class DemoDataService {
         planType: p.type.toString().split('.').last,
         status: p.isActive ? 'active' : 'completed',
         targetDate: p.targetDate,
-      )).toList(),
+      ),).toList(),
       userStats: KnowledgeUserStats(
         masteryScore: status == NodeStatus.mastered ? 95.0 :
                       status == NodeStatus.review ? 60.0 :
@@ -325,7 +325,7 @@ class DemoDataService {
         content: '没问题。根据你的学习进度，建议先复习 **单链表的插入与删除** 操作.\n\n正在为您生成数据结构学习计划...', 
         createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
         toolResults: [
-           ToolResultModel(success: true, toolName: 'generate_plan', data: {'status': 'completed'})
+           ToolResultModel(success: true, toolName: 'generate_plan', data: {'status': 'completed'}),
         ],
       ),
       ChatMessageModel(
@@ -398,7 +398,7 @@ struct ListNode {
         'solution_text': 'Keep it up!',
         'status': 'analyzed',
         'has_new_insight': true,
-      }
+      },
     };
   }
 }

@@ -54,15 +54,15 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.9), // Wisdom (White)
+                    color: Colors.white.withValues(alpha: 0.9), // Wisdom (White)
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         blurRadius: 40,
                         spreadRadius: 10,
                       ),
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
+                        color: Colors.blue.withValues(alpha: 0.3),
                         blurRadius: 80,
                         spreadRadius: 20,
                       ),
@@ -88,7 +88,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
               child: Text(
                 'Sparkle 6+1 知识星域',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   fontSize: 14,
                   letterSpacing: 2,
                 ),
@@ -186,7 +186,7 @@ class _SectorModelPainter extends CustomPainter {
       final starSize = random.nextDouble() * 2;
       final opacity = random.nextDouble() * 0.5 + 0.1;
 
-      paint.color = Colors.white.withOpacity(opacity);
+      paint.color = Colors.white.withValues(alpha: opacity);
       canvas.drawCircle(Offset(x, y), starSize, paint);
     }
   }
@@ -204,8 +204,8 @@ class _SectorModelPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..shader = RadialGradient(
         colors: [
-          sector.color.withOpacity(0.05),
-          sector.color.withOpacity(0.2),
+          sector.color.withValues(alpha: 0.05),
+          sector.color.withValues(alpha: 0.2),
           Colors.transparent,
         ],
         stops: const [0.0, 0.7, 1.0],
@@ -240,7 +240,7 @@ class _SectorModelPainter extends CustomPainter {
     canvas.drawCircle(
       iconPos, 
       25, 
-      Paint()..color = sector.color.withOpacity(0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      Paint()..color = sector.color.withValues(alpha: 0.2)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
     );
 
     // Draw Icon (Placeholder circle for now, or text)
@@ -259,7 +259,7 @@ class _SectorModelPainter extends CustomPainter {
           TextSpan(
             text: sector.id,
             style: TextStyle(
-              color: sector.color.withOpacity(0.7),
+              color: sector.color.withValues(alpha: 0.7),
               fontSize: 10,
               letterSpacing: 1.5,
             ),
@@ -298,7 +298,7 @@ class _SectorModelPainter extends CustomPainter {
             canvas.drawLine(
                 Offset(sx, sy), 
                 center, // Just connect to center for simple visual
-                Paint()..color = sector.color.withOpacity(0.1)..strokeWidth = 0.5,
+                Paint()..color = sector.color.withValues(alpha: 0.1)..strokeWidth = 0.5,
             );
         }
     }
@@ -307,7 +307,7 @@ class _SectorModelPainter extends CustomPainter {
   void _drawWisdomHalo(Canvas canvas, Offset center, double radius) {
     // Halo Paint
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     
     canvas.drawCircle(center, radius, paint);
@@ -315,7 +315,7 @@ class _SectorModelPainter extends CustomPainter {
     // Inner Ring
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 1;
       
     canvas.drawCircle(center, radius * 0.8, ringPaint);

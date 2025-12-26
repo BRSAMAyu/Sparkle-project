@@ -154,7 +154,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: _getFlameColor().withOpacity(0.3),
+                              color: _getFlameColor().withValues(alpha: 0.3),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -205,7 +205,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _getFlameColor().withOpacity(0.4),
+                  color: _getFlameColor().withValues(alpha: 0.4),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -316,7 +316,7 @@ class _CircularProgressPainter extends CustomPainter {
         final endPoint = Offset(endX, endY);
 
         final glowPaint = Paint()
-          ..color = Colors.white.withOpacity(0.8)
+          ..color = Colors.white.withValues(alpha: 0.8)
           ..style = PaintingStyle.fill;
 
         canvas.drawCircle(endPoint, strokeWidth / 2, glowPaint);
@@ -368,10 +368,10 @@ class CompactFlameIndicator extends StatelessWidget {
           vertical: AppDesignTokens.spacing8,
         ),
         decoration: BoxDecoration(
-          color: _getFlameColor().withOpacity(0.1),
+          color: _getFlameColor().withValues(alpha: 0.1),
           borderRadius: AppDesignTokens.borderRadius12,
           border: Border.all(
-            color: _getFlameColor().withOpacity(0.3),
+            color: _getFlameColor().withValues(alpha: 0.3),
             width: 1.0,
           ),
         ),

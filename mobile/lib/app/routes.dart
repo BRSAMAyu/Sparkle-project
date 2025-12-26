@@ -15,8 +15,9 @@ import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
-import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
+import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
+import 'package:sparkle/presentation/screens/community/chat_screen.dart' as comm_chat;
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
@@ -240,14 +241,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Profile Routes
-      GoRoute(
-        path: '/profile',
-        name: 'profile',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const ProfileScreen(),
+    GoRoute(
+      path: '/community',
+      builder: (context, state) => const CommunityMainScreen(),
+      routes: [
+        GoRoute(
+          path: 'chat/group/:id',
+          builder: (context, state) => comm_chat.ChatScreen(
+            id: state.pathParameters['id']!,
+            isGroup: true,
+          ),
         ),
-      ),
+        GoRoute(
+          path: 'chat/private/:id',
+          builder: (context, state) => comm_chat.ChatScreen(
+            id: state.pathParameters['id']!,
+            isGroup: false,
+          ),
+        ),
+      ],
+    ),
       GoRoute(
         path: '/settings/learning-mode',
         name: 'learningMode',

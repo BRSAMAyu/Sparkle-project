@@ -77,7 +77,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: Icon(Icons.chevron_left, color: Colors.white70),
+          icon: const Icon(Icons.chevron_left, color: Colors.white70),
           onPressed: () {
             setState(() {
               if (_viewMode == 'Month') {
@@ -91,7 +91,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         IconButton(
-          icon: Icon(Icons.chevron_right, color: Colors.white70),
+          icon: const Icon(Icons.chevron_right, color: Colors.white70),
           onPressed: () {
              setState(() {
               if (_viewMode == 'Month') {
@@ -162,7 +162,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           child: Center(
             child: Text(
               day,
-              style: TextStyle(fontSize: 12, color: Colors.white54),
+              style: const TextStyle(fontSize: 12, color: Colors.white54),
             ),
           ),
         );
@@ -183,7 +183,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 
     for (int i = 1; i <= daysInMonth; i++) {
       // Mock data intensity
-      int intensity = (i * 3 + _currentDate.month) % 5;
+      final int intensity = (i * 3 + _currentDate.month) % 5;
       
       cells.add(
         GestureDetector(
@@ -197,7 +197,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               borderRadius: BorderRadius.circular(6),
             ),
             alignment: Alignment.center,
-            child: Text('$i', style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ),
       );
@@ -256,8 +256,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.white70)),
-          Text(value, style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(value, style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
         ],
       ),
     );

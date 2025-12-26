@@ -13,32 +13,27 @@ class PatternCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    Color cardColor;
     Color iconColor;
     IconData icon;
     LinearGradient gradient;
 
     switch (pattern.patternType) {
       case 'cognitive':
-        cardColor = isDark ? Colors.blueGrey.shade800 : Colors.blue.shade50;
         iconColor = Colors.blue.shade700;
         icon = Icons.psychology;
         gradient = AppDesignTokens.infoGradient;
         break;
       case 'emotional':
-        cardColor = isDark ? Colors.purple.shade800 : Colors.purple.shade50;
         iconColor = Colors.purple.shade700;
         icon = Icons.sentiment_very_dissatisfied;
         gradient = AppDesignTokens.warningGradient;
         break;
       case 'execution':
-        cardColor = isDark ? Colors.green.shade800 : Colors.green.shade50;
         iconColor = Colors.green.shade700;
         icon = Icons.run_circle;
         gradient = AppDesignTokens.successGradient;
         break;
       default:
-        cardColor = isDark ? AppDesignTokens.neutral800 : Colors.white;
         iconColor = AppDesignTokens.neutral600;
         icon = Icons.help_outline;
         gradient = AppDesignTokens.primaryGradient;

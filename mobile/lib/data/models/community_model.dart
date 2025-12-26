@@ -125,7 +125,9 @@ class FriendshipInfo {
     required this.id,
     required this.friend,
     required this.status,
-    required this.createdAt, required this.updatedAt, this.matchReason,
+    required this.createdAt,
+    required this.updatedAt,
+    this.matchReason,
     this.initiatedByMe = false,
   });
 
@@ -194,7 +196,18 @@ class GroupInfo {
   GroupInfo({
     required this.id,
     required this.name,
-    required this.type, required this.focusTags, required this.memberCount, required this.totalFlamePower, required this.todayCheckinCount, required this.totalTasksCompleted, required this.maxMembers, required this.isPublic, required this.joinRequiresApproval, required this.createdAt, required this.updatedAt, this.description,
+    required this.type,
+    required this.focusTags,
+    required this.memberCount,
+    required this.totalFlamePower,
+    required this.todayCheckinCount,
+    required this.totalTasksCompleted,
+    required this.maxMembers,
+    required this.isPublic,
+    required this.joinRequiresApproval,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.avatarUrl,
     this.deadline,
     this.sprintGoal,
@@ -234,7 +247,8 @@ class GroupListItem {
     required this.type,
     required this.memberCount,
     required this.totalFlamePower,
-    required this.focusTags, this.deadline,
+    required this.focusTags,
+    this.deadline,
     this.daysRemaining,
     this.myRole,
   });
@@ -265,7 +279,8 @@ class GroupCreate {
 
   GroupCreate({
     required this.name,
-    required this.type, this.description,
+    required this.type,
+    this.description,
     this.focusTags = const [],
     this.deadline,
     this.sprintGoal,
@@ -340,10 +355,13 @@ class MessageInfo {
 
   MessageInfo({
     required this.id,
-    required this.messageType, required this.createdAt, required this.updatedAt, this.sender,
+    required this.messageType,
+    required this.createdAt,
+    required this.updatedAt,
+    this.sender,
     this.content,
     this.contentData,
-    this.reply_to_id,
+    this.replyToId,
   });
 
   factory MessageInfo.fromJson(Map<String, dynamic> json) =>
@@ -396,7 +414,7 @@ class PrivateMessageInfo {
     required this.updatedAt,
     this.content,
     this.contentData,
-    this.reply_to_id,
+    this.replyToId,
     this.readAt,
   });
 
@@ -423,7 +441,7 @@ class PrivateMessageSend {
     this.messageType = MessageType.text,
     this.content,
     this.contentData,
-    this.reply_to_id,
+    this.replyToId,
     this.nonce,
   });
 
@@ -447,7 +465,7 @@ class MessageSend {
     this.messageType = MessageType.text,
     this.content,
     this.contentData,
-    this.reply_to_id,
+    this.replyToId,
     this.nonce,
   });
 
@@ -488,7 +506,15 @@ class GroupTaskInfo {
   GroupTaskInfo({
     required this.id,
     required this.title,
-    required this.tags, required this.estimatedMinutes, required this.difficulty, required this.totalClaims, required this.totalCompletions, required this.completionRate, required this.createdAt, required this.updatedAt, this.description,
+    required this.tags,
+    required this.estimatedMinutes,
+    required this.difficulty,
+    required this.totalClaims,
+    required this.totalCompletions,
+    required this.completionRate,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.dueDate,
     this.creator,
     this.isClaimedByMe = false,
@@ -537,7 +563,8 @@ class CheckinRequest {
 
   CheckinRequest({
     required this.groupId,
-    required this.todayDurationMinutes, this.message,
+    required this.todayDurationMinutes,
+    this.message,
   });
 
   factory CheckinRequest.fromJson(Map<String, dynamic> json) =>

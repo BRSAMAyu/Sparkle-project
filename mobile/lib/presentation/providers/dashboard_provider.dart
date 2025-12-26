@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/repositories/dashboard_repository.dart';
 
@@ -16,9 +17,7 @@ class DashboardState {
     required this.weather,
     required this.flame,
     required this.sprint,
-    this.growth,
-    required this.nextActions,
-    required this.cognitive,
+    required this.nextActions, required this.cognitive, this.growth,
     this.isLoading = false,
     this.error,
   });
@@ -238,10 +237,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         nextActions: nextActions,
         cognitive: cognitive,
       );
-    } catch (e, stackTrace) {
-      state = DashboardState.error('Failed to load dashboard data: $e');
-      // In a real app, you might want to log this error
-      print('Dashboard fetch error: $e\n$stackTrace');
+    } catch (e) {
+      debugPrint('Error loading dashboard: $e');
     }
   }
   

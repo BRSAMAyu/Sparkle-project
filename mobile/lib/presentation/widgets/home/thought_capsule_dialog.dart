@@ -57,7 +57,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.primaryBase.withOpacity(0.1),
+                    color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.psychology, color: AppDesignTokens.primaryBase),

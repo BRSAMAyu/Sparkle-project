@@ -113,7 +113,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
       case 'TASK': return Colors.greenAccent;
       case 'CAPSULE': return Colors.purpleAccent;
       case 'CHAT': return Colors.blueAccent;
-      default: return AppColors.textOnDark(context).withOpacity(0.15);
+      default: return AppColors.textOnDark(context).withValues(alpha: 0.15);
     }
   }
 
@@ -126,15 +126,15 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
         return Container(
           height: 56,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E).withOpacity(0.9),
+            color: const Color(0xFF1E1E1E).withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: color.withOpacity(0.3 + (_glowAnimation.value * 0.4)),
+              color: color.withValues(alpha: 0.3 + (_glowAnimation.value * 0.4)),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(_glowAnimation.value * 0.2),
+                color: color.withValues(alpha: _glowAnimation.value * 0.2),
                 blurRadius: 15,
                 spreadRadius: 2,
               ),
@@ -177,7 +177,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                         : (_intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded),
                     color: _isListening 
                         ? Colors.redAccent 
-                        : (_intentType != null ? color : AppColors.textOnDark(context).withOpacity(0.7)),
+                        : (_intentType != null ? color : AppColors.textOnDark(context).withValues(alpha: 0.7)),
                     size: 20,
                   ),
                   onPressed: _isListening ? _toggleListening : _submit,

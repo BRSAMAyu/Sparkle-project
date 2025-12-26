@@ -83,7 +83,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                       style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -108,17 +108,10 @@ class CalendarHeatmapCard extends StatelessWidget {
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final firstWeekday = DateTime(now.year, now.month, 1).weekday; // 1=Mon, 7=Sun
 
-    // Calculate cell size
-    // 7 columns. Spacing approx 4px.
-    final availableWidth = constraints.maxWidth;
-    final cellWidth = (availableWidth - (6 * 4)) / 7;
-    // Rows needed: (days + offset) / 7 rounded up
-    final rows = ((daysInMonth + firstWeekday - 1) / 7).ceil();
-    
     // We can use a Wrap or Column of Rows. Let's use GridView for simplicity but carefully sized.
     // Or just a custom loop to build rows.
     
-    List<Widget> gridCells = [];
+    final List<Widget> gridCells = [];
     
     // Empty cells for offset
     for (int i = 0; i < firstWeekday - 1; i++) {

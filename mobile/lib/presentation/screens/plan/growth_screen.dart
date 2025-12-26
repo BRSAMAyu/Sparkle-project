@@ -106,7 +106,7 @@ class _GrowthPlanCard extends StatelessWidget {
         const SizedBox(height: 4),
         LinearProgressIndicator(
           value: progressValue,
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha: 0.2),
           color: color,
         ),
       ],

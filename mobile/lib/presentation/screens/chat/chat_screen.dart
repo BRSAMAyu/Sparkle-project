@@ -60,8 +60,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppDesignTokens.primaryBase.withOpacity(0.05),
-                    Colors.white.withOpacity(0.8),
+                    AppDesignTokens.primaryBase.withValues(alpha: 0.05),
+                    Colors.white.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -163,7 +163,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                  Container(
                    width: double.infinity,
                    padding: const EdgeInsets.all(8.0),
-                   color: AppDesignTokens.error.withOpacity(0.1),
+                   color: AppDesignTokens.error.withValues(alpha: 0.1),
                    child: Text(
                      'Error: ${chatState.error}', 
                      style: const TextStyle(color: AppDesignTokens.error),
@@ -191,7 +191,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppDesignTokens.primaryBase.withOpacity(0.1),
+                color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.auto_awesome, size: 48, color: AppDesignTokens.primaryBase),
@@ -269,10 +269,10 @@ class _QuickActionChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppDesignTokens.neutral800 : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

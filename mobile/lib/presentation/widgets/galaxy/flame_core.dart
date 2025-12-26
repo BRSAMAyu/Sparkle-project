@@ -129,19 +129,19 @@ class _FallbackFlameCore extends StatelessWidget {
                   Colors.white,
                   Colors.orange.shade300,
                   Colors.deepOrange,
-                  Colors.deepOrange.withOpacity(0.5),
+                  Colors.deepOrange.withValues(alpha: 0.5),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.2, 0.5, 0.7, 1.0],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.withOpacity(0.3 + intensity * 0.3),
+                  color: Colors.orange.withValues(alpha: 0.3 + intensity * 0.3),
                   blurRadius: 30 + intensity * 20,
                   spreadRadius: 10 + intensity * 10,
                 ),
                 BoxShadow(
-                  color: Colors.deepOrange.withOpacity(0.2 + intensity * 0.2),
+                  color: Colors.deepOrange.withValues(alpha: 0.2 + intensity * 0.2),
                   blurRadius: 50 + intensity * 30,
                   spreadRadius: 20 + intensity * 15,
                 ),

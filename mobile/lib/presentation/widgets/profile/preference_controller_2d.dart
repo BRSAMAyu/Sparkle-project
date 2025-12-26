@@ -97,8 +97,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                           colors: [
-                            Colors.grey.withOpacity(0.1), // Low Curiosity (Focus) - Left
-                            Colors.amber.withOpacity(0.3), // High Curiosity - Right
+                            Colors.grey.withValues(alpha: 0.1), // Low Curiosity (Focus) - Left
+                            Colors.amber.withValues(alpha: 0.3), // High Curiosity - Right
                           ],
                         ),
                       ),
@@ -125,7 +125,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppDesignTokens.primaryBase.withOpacity(0.5),
+                              color: AppDesignTokens.primaryBase.withValues(alpha: 0.5),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -204,11 +204,6 @@ class _GridAxisPainter extends CustomPainter {
     final paint = Paint()
       ..color = AppDesignTokens.neutral300
       ..strokeWidth = 1;
-
-    final dashPaint = Paint()
-      ..color = AppDesignTokens.neutral300.withOpacity(0.5)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
 
     // Center Cross
     canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);

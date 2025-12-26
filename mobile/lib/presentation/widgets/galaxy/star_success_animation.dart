@@ -159,7 +159,7 @@ class _SuccessAnimationPainter extends CustomPainter {
       final ringOpacity = (1 - ringProgress) * 0.8;
 
       final ringPaint = Paint()
-        ..color = color.withOpacity(ringOpacity)
+        ..color = color.withValues(alpha: ringOpacity)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3 * (1 - ringProgress);
       canvas.drawCircle(center, ringRadius, ringPaint);
@@ -171,7 +171,7 @@ class _SuccessAnimationPainter extends CustomPainter {
         final ring2Opacity = (1 - ring2Progress) * 0.5;
 
         final ring2Paint = Paint()
-          ..color = Colors.white.withOpacity(ring2Opacity)
+          ..color = Colors.white.withValues(alpha: ring2Opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2 * (1 - ring2Progress);
         canvas.drawCircle(center, ring2Radius, ring2Paint);
@@ -186,14 +186,14 @@ class _SuccessAnimationPainter extends CustomPainter {
       if (particleOpacity > 0) {
         // Glow
         final glowPaint = Paint()
-          ..color = color.withOpacity(particleOpacity * 0.4)
+          ..color = color.withValues(alpha: particleOpacity * 0.4)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
         canvas.drawCircle(pos, particle.size * 1.5, glowPaint);
 
         // Core
         final corePaint = Paint()
           ..color = Color.lerp(Colors.white, color, progress)!
-              .withOpacity(particleOpacity);
+              .withValues(alpha: particleOpacity);
         canvas.drawCircle(pos, particle.size, corePaint);
       }
     }
@@ -205,7 +205,7 @@ class _SuccessAnimationPainter extends CustomPainter {
       final flashOpacity = (1 - flashProgress) * 0.9;
 
       final flashPaint = Paint()
-        ..color = Colors.white.withOpacity(flashOpacity)
+        ..color = Colors.white.withValues(alpha: flashOpacity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * (1 - flashProgress));
       canvas.drawCircle(center, flashRadius, flashPaint);
     }

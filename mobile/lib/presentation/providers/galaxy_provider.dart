@@ -309,19 +309,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   /// Quick spiral layout for immediate display
-  /// Distributes nodes in their respective sectors using a spiral pattern
   Map<String, Offset> _calculateQuickLayout(List<GalaxyNodeModel> nodes) {
     final Map<String, Offset> positions = {};
     final Random random = Random(42);
 
-    // Group nodes by sector
     final Map<SectorEnum, List<GalaxyNodeModel>> sectorGroups = {};
     for (final node in nodes) {
       sectorGroups.putIfAbsent(node.sector, () => []);
       sectorGroups[node.sector]!.add(node);
     }
 
-    // Sort nodes in each sector: roots first, then by importance
     for (final sector in sectorGroups.keys) {
       sectorGroups[sector]!.sort((a, b) {
         if (a.parentId == null && b.parentId != null) return -1;
@@ -330,26 +327,20 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       });
     }
 
-    // Place nodes using spiral layout within each sector
     for (final entry in sectorGroups.entries) {
       final sector = entry.key;
       final sectorNodes = entry.value;
       final style = SectorConfig.getStyle(sector);
 
-      // Convert angles to radians
-      final baseAngleRad = (style.baseAngle - 90) * pi / 180; // -90 to start from top
+      final baseAngleRad = (style.baseAngle - 90) * pi / 180;
       final sweepAngleRad = style.sweepAngle * pi / 180;
 
       int index = 0;
       for (final node in sectorNodes) {
         if (node.parentId == null) {
-          // Root nodes: spiral outward from center
-          final spiralIndex = index;
-          final radius = 180 + spiralIndex * 35; // Increasing radius
-          final angleOffset = (spiralIndex * 0.3) % 1.0; // Spread within sector
+          final radius = 180 + index * 35;
+          final angleOffset = (index * 0.3) % 1.0;
           final angle = baseAngleRad + sweepAngleRad * (0.2 + angleOffset * 0.6);
-
-          // Add slight randomness for organic feel
           final noise = (random.nextDouble() - 0.5) * 20;
           positions[node.id] = Offset(
             (radius + noise) * cos(angle),
@@ -357,19 +348,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           );
           index++;
         } else {
-          // Child nodes: cluster around parent
           final parentPos = positions[node.parentId];
           if (parentPos != null) {
             final dist = 50.0 + (5 - node.importance) * 12.0;
             final angle = random.nextDouble() * 2 * pi;
             final noise = (random.nextDouble() - 0.5) * 10;
-
             positions[node.id] = parentPos + Offset(
               (dist + noise) * cos(angle),
               (dist + noise) * sin(angle),
             );
           } else {
-            // Orphan fallback: place in sector
             final radius = 250 + random.nextDouble() * 100;
             final angle = baseAngleRad + random.nextDouble() * sweepAngleRad;
             positions[node.id] = Offset(radius * cos(angle), radius * sin(angle));
@@ -377,12 +365,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         }
       }
     }
-
     return positions;
   }
 }
 
-/// Simple node data for passing to isolate
 class _SimpleNode {
   final String id;
   final String? parentId;
@@ -391,13 +377,12 @@ class _SimpleNode {
 
   _SimpleNode({
     required this.id,
-    required this.parentId,
+    this.parentId,
     required this.sector,
     required this.importance,
   });
 }
 
-/// Data package for compute isolate
 class _LayoutData {
   final List<_SimpleNode> nodes;
   final Map<String, Offset> initialPositions;
@@ -405,14 +390,11 @@ class _LayoutData {
   _LayoutData({required this.nodes, required this.initialPositions});
 }
 
-/// Force-directed layout optimization (runs in isolate)
 Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
   final nodes = data.nodes;
   final positions = Map<String, Offset>.from(data.initialPositions);
-
   if (nodes.isEmpty) return positions;
 
-  // Parameters
   const int iterations = 80;
   const double repulsionStrength = 800.0;
   const double attractionStrength = 0.02;
@@ -420,7 +402,6 @@ Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
   const double maxDisplacement = 30.0;
   const double damping = 0.85;
 
-  // Create parent-child lookup
   final Map<String, List<String>> children = {};
   for (final node in nodes) {
     if (node.parentId != null) {
@@ -429,8 +410,7 @@ Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
     }
   }
 
-  // Sector constraints (to keep nodes in their sectors)
-  final sectorStyles = <String, (double, double)>{}; // id -> (baseAngle, sweepAngle)
+  final sectorStyles = <String, (double, double)>{};
   for (final node in nodes) {
     final style = SectorConfig.getStyle(node.sector);
     sectorStyles[node.id] = (
@@ -439,99 +419,60 @@ Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
     );
   }
 
-  // Velocity for momentum
   final velocity = <String, Offset>{};
   for (final node in nodes) {
     velocity[node.id] = Offset.zero;
   }
 
   for (int iter = 0; iter < iterations; iter++) {
-    // Reduce strength over iterations (simulated annealing)
     final temp = 1.0 - (iter / iterations);
-
     for (final nodeA in nodes) {
       var force = Offset.zero;
       final posA = positions[nodeA.id]!;
-
-      // Repulsion from all other nodes
       for (final nodeB in nodes) {
         if (nodeA.id == nodeB.id) continue;
         final posB = positions[nodeB.id]!;
         final delta = posA - posB;
         var distance = delta.distance;
         if (distance < 1) distance = 1;
-
         if (distance < minDistance * 3) {
-          // Strong repulsion when close
           final repulsion = repulsionStrength * temp / (distance * distance);
-          force += Offset(
-            delta.dx / distance * repulsion,
-            delta.dy / distance * repulsion,
-          );
+          force += Offset(delta.dx / distance * repulsion, delta.dy / distance * repulsion);
         }
       }
-
-      // Attraction to parent
       if (nodeA.parentId != null) {
         final parentPos = positions[nodeA.parentId];
         if (parentPos != null) {
           final delta = parentPos - posA;
-          final distance = delta.distance;
-          if (distance > 50) {
-            force += Offset(
-              delta.dx * attractionStrength * temp,
-              delta.dy * attractionStrength * temp,
-            );
+          if (delta.distance > 50) {
+            force += Offset(delta.dx * attractionStrength * temp, delta.dy * attractionStrength * temp);
           }
         }
       }
-
-      // Mild attraction to children (to keep groups together)
       final nodeChildren = children[nodeA.id];
       if (nodeChildren != null) {
         for (final childId in nodeChildren) {
           final childPos = positions[childId];
           if (childPos != null) {
             final delta = childPos - posA;
-            final distance = delta.distance;
-            if (distance > 80) {
-              force += Offset(
-                delta.dx * attractionStrength * 0.5 * temp,
-                delta.dy * attractionStrength * 0.5 * temp,
-              );
+            if (delta.distance > 80) {
+              force += Offset(delta.dx * attractionStrength * 0.5 * temp, delta.dy * attractionStrength * 0.5 * temp);
             }
           }
         }
       }
-
-      // Center gravity (mild attraction to origin to prevent drift)
-      final distFromCenter = posA.distance;
-      if (distFromCenter > 800) {
-        force -= Offset(
-          posA.dx * 0.001 * temp,
-          posA.dy * 0.001 * temp,
-        );
+      if (posA.distance > 800) {
+        force -= Offset(posA.dx * 0.001 * temp, posA.dy * 0.001 * temp);
       }
-
-      // Update velocity with damping
       velocity[nodeA.id] = (velocity[nodeA.id]! + force) * damping;
-
-      // Clamp displacement
       var displacement = velocity[nodeA.id]!;
-      final mag = displacement.distance;
-      if (mag > maxDisplacement) {
-        displacement = displacement / mag * maxDisplacement;
+      if (displacement.distance > maxDisplacement) {
+        displacement = displacement / displacement.distance * maxDisplacement;
       }
-
-      // Apply displacement
       var newPos = posA + displacement;
-
-      // Constrain to sector (soft constraint)
       final (baseAngle, sweepAngle) = sectorStyles[nodeA.id]!;
       final nodeAngle = atan2(newPos.dy, newPos.dx);
       final endAngle = baseAngle + sweepAngle;
-
-      // Check if angle is within sector
       double normalizedAngle = nodeAngle;
       while (normalizedAngle < baseAngle) {
         normalizedAngle += 2 * pi;
@@ -539,18 +480,13 @@ Map<String, Offset> _forceDirectedLayout(_LayoutData data) {
       while (normalizedAngle >= baseAngle + 2 * pi) {
         normalizedAngle -= 2 * pi;
       }
-
       if (normalizedAngle < baseAngle || normalizedAngle > endAngle) {
-        // Gently push back toward sector center
         final centerAngle = baseAngle + sweepAngle / 2;
         final targetAngle = centerAngle + (normalizedAngle - centerAngle) * 0.9;
-        final dist = newPos.distance;
-        newPos = Offset(dist * cos(targetAngle), dist * sin(targetAngle));
+        newPos = Offset(newPos.distance * cos(targetAngle), newPos.distance * sin(targetAngle));
       }
-
       positions[nodeA.id] = newPos;
     }
   }
-
   return positions;
 }

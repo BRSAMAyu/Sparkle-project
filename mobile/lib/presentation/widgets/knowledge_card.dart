@@ -12,7 +12,7 @@ class KnowledgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nodeId = data['id'] as String;
+    final nodeId = data['id'] as String?;
     final title = data['title'] as String;
     final summary = data['summary'] as String?;
     final tags = (data['tags'] as List?)?.cast<String>() ?? [];
@@ -23,8 +23,12 @@ class KnowledgeCard extends StatelessWidget {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // 导航到知识星图页面
-          context.push('/galaxy');
+          // 导航到知识星图页面，如果有节点ID则聚焦到该节点
+          if (nodeId != null) {
+            context.push('/galaxy?nodeId=$nodeId');
+          } else {
+            context.push('/galaxy');
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -110,9 +114,9 @@ class KnowledgeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,

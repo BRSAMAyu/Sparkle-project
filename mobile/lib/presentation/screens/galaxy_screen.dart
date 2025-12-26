@@ -201,7 +201,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
       SnackBar(
         content: Text('${node.name} 点亮成功!'),
         duration: const Duration(seconds: 1),
-        backgroundColor: transfer.targetColor.withOpacity(0.9),
+        backgroundColor: transfer.targetColor.withValues(alpha: 0.9),
       ),
     );
   }
@@ -325,7 +325,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
             right: 20,
             child: FloatingActionButton(
               mini: true,
-              backgroundColor: AppDesignTokens.primaryBase.withOpacity(0.9),
+              backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
               child: const Icon(Icons.bolt, color: Colors.white),
               onPressed: () {
                 // Pick a random node to spark for demo
@@ -362,7 +362,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> {
         sector: cluster.sector,
         childNodeIds: cluster.childNodeIds,
       ),
-    ));
+    ),);
   }
 }
 

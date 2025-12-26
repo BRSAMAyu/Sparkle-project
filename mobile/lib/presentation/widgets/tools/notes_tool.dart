@@ -67,7 +67,7 @@ class _NotesToolState extends State<NotesTool> {
               decoration: BoxDecoration(
                 color: Colors.yellow[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
               ),
               child: TextField(
                 controller: _controller,

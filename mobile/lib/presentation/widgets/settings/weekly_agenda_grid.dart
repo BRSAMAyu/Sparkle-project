@@ -85,14 +85,14 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _getColor(type).withOpacity(isSelected ? 1.0 : 0.5),
+                  color: _getColor(type).withValues(alpha: isSelected ? 1.0 : 0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isSelected ? (isDark ? Colors.white : Colors.black54) : Colors.transparent,
                     width: 2,
                   ),
                   boxShadow: isSelected ? [
-                    BoxShadow(color: _getColor(type).withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 2)),
+                    BoxShadow(color: _getColor(type).withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
                   ] : null,
                 ),
                 child: Text(

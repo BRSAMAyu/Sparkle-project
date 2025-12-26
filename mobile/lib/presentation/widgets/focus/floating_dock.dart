@@ -25,7 +25,6 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
   bool _isHiding = false;
   
   late AnimationController _controller;
-  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -34,7 +33,6 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     
     // Auto-hide after 3 seconds of inactivity
     Future.delayed(const Duration(seconds: 3), () {
@@ -98,7 +96,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
           width: _isHiding ? 20 : (_isExpanded ? 180 : 60),
           height: _isExpanded ? 160 : 60,
           decoration: BoxDecoration(
-            color: AppDesignTokens.primaryBase.withOpacity(0.95),
+            color: AppDesignTokens.primaryBase.withValues(alpha: 0.95),
             borderRadius: _isHiding 
                 ? BorderRadius.horizontal(
                     left: isRightSide ? const Radius.circular(30) : Radius.zero,
@@ -107,7 +105,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
                 : BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 10,
                 spreadRadius: 2,
               ),

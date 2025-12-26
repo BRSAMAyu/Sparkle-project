@@ -219,7 +219,7 @@ class _EnergyParticlePainter extends CustomPainter {
           AppDesignTokens.primaryBase,
           targetColor,
           progress,
-        ).withOpacity(0.4 * fadeOut)
+        ).withValues(alpha: 0.4 * fadeOut)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
       canvas.drawCircle(particle.position, particle.size * fadeOut, trailPaint);
@@ -234,19 +234,19 @@ class _EnergyParticlePainter extends CustomPainter {
 
     // Outer glow (large, soft)
     final outerGlowPaint = Paint()
-      ..color = particleColor.withOpacity(0.3)
+      ..color = particleColor.withValues(alpha: 0.3)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, 20 * glowScale);
     canvas.drawCircle(currentPosition, 15 * glowScale, outerGlowPaint);
 
     // Middle glow
     final middleGlowPaint = Paint()
-      ..color = particleColor.withOpacity(0.5)
+      ..color = particleColor.withValues(alpha: 0.5)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * glowScale);
     canvas.drawCircle(currentPosition, 10 * glowScale, middleGlowPaint);
 
     // Inner glow (bright core)
     final innerGlowPaint = Paint()
-      ..color = Colors.white.withOpacity(0.8)
+      ..color = Colors.white.withValues(alpha: 0.8)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawCircle(currentPosition, 5 * glowScale, innerGlowPaint);
 
@@ -269,7 +269,7 @@ class _EnergyParticlePainter extends CustomPainter {
       final impactOpacity = (1 - impactProgress) * 0.6;
 
       final impactPaint = Paint()
-        ..color = targetColor.withOpacity(impactOpacity)
+        ..color = targetColor.withValues(alpha: impactOpacity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 15 * impactProgress);
       canvas.drawCircle(currentPosition, impactRadius, impactPaint);
     }

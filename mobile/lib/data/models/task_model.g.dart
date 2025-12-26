@@ -139,10 +139,10 @@ Map<String, dynamic> _$TaskCompleteToJson(TaskComplete instance) =>
 
 SuggestedNode _$SuggestedNodeFromJson(Map<String, dynamic> json) =>
     SuggestedNode(
-      id: json['id'] as String?,
       name: json['name'] as String,
       reason: json['reason'] as String,
       isNew: json['is_new'] as bool,
+      id: json['id'] as String?,
     );
 
 Map<String, dynamic> _$SuggestedNodeToJson(SuggestedNode instance) =>

@@ -78,7 +78,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              AppDesignTokens.prismPurple.withOpacity(_breathingAnimation.value),
+                              AppDesignTokens.prismPurple.withValues(alpha: _breathingAnimation.value),
                               Colors.transparent,
                             ],
                           ),

@@ -48,10 +48,10 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         margin: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16),
         padding: const EdgeInsets.all(AppDesignTokens.spacing12),
         decoration: BoxDecoration(
-          color: isDark ? AppDesignTokens.neutral800 : AppDesignTokens.info.withOpacity(0.1),
+          color: isDark ? AppDesignTokens.neutral800 : AppDesignTokens.info.withValues(alpha: 0.1),
           borderRadius: AppDesignTokens.borderRadius16,
           boxShadow: isDark ? null : AppDesignTokens.shadowSm,
-          border: Border.all(color: AppDesignTokens.info.withOpacity(0.3)),
+          border: Border.all(color: AppDesignTokens.info.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [

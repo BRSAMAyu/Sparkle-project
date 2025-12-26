@@ -65,7 +65,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     hintText: '搜索任务...',
                     border: InputBorder.none,
                     hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                     prefixIcon: const Icon(
                       Icons.search,
@@ -80,7 +80,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: AppDesignTokens.borderRadius8,
                       ),
                       child: const Icon(
@@ -223,7 +223,6 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
       case TaskFilterOptions.all:
-      default:
         return tasks;
     }
   }

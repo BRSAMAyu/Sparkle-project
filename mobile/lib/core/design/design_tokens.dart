@@ -102,16 +102,16 @@ class AppDesignTokens {
   static const Color neutral900 = Color(0xFF212121);
 
   /// Overlay colors (semi-transparent black/white)
-  static final Color overlay10 = Colors.black.withOpacity(0.1);
-  static final Color overlay20 = Colors.black.withOpacity(0.2);
-  static final Color overlay30 = Colors.black.withOpacity(0.3);
-  static final Color overlay40 = Colors.black.withOpacity(0.4);
-  static final Color overlay50 = Colors.black.withOpacity(0.5);
-  static final Color overlay60 = Colors.black.withOpacity(0.6);
+  static final Color overlay10 = Colors.black.withValues(alpha: 0.1);
+  static final Color overlay20 = Colors.black.withValues(alpha: 0.2);
+  static final Color overlay30 = Colors.black.withValues(alpha: 0.3);
+  static final Color overlay40 = Colors.black.withValues(alpha: 0.4);
+  static final Color overlay50 = Colors.black.withValues(alpha: 0.5);
+  static final Color overlay60 = Colors.black.withValues(alpha: 0.6);
 
-  static final Color overlayLight10 = Colors.white.withOpacity(0.1);
-  static final Color overlayLight20 = Colors.white.withOpacity(0.2);
-  static final Color overlayLight30 = Colors.white.withOpacity(0.3);
+  static final Color overlayLight10 = Colors.white.withValues(alpha: 0.1);
+  static final Color overlayLight20 = Colors.white.withValues(alpha: 0.2);
+  static final Color overlayLight30 = Colors.white.withValues(alpha: 0.3);
 
   // ==================== Deep Space Theme (v2.3) ====================
 
@@ -128,9 +128,9 @@ class AppDesignTokens {
   );
 
   /// Glassmorphism colors
-  static final Color glassBackground = Colors.white.withOpacity(0.08);
-  static final Color glassBorder = Colors.white.withOpacity(0.15);
-  static final Color glassHighlight = Colors.white.withOpacity(0.25);
+  static final Color glassBackground = Colors.white.withValues(alpha: 0.08);
+  static final Color glassBorder = Colors.white.withValues(alpha: 0.15);
+  static final Color glassHighlight = Colors.white.withValues(alpha: 0.25);
 
   /// Weather theme colors
   static const Color weatherSunny = Color(0xFFFFD93D);
@@ -211,7 +211,7 @@ class AppDesignTokens {
   /// Small elevation shadow
   static List<BoxShadow> get shadowSm => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -220,12 +220,12 @@ class AppDesignTokens {
   /// Medium elevation shadow
   static List<BoxShadow> get shadowMd => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.03),
+      color: Colors.black.withValues(alpha: 0.03),
       blurRadius: 3,
       offset: const Offset(0, 1),
     ),
@@ -234,12 +234,12 @@ class AppDesignTokens {
   /// Large elevation shadow
   static List<BoxShadow> get shadowLg => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.10),
+      color: Colors.black.withValues(alpha: 0.10),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 6,
       offset: const Offset(0, 2),
     ),
@@ -248,12 +248,12 @@ class AppDesignTokens {
   /// Extra large elevation shadow
   static List<BoxShadow> get shadowXl => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.12),
+      color: Colors.black.withValues(alpha: 0.12),
       blurRadius: 24,
       offset: const Offset(0, 12),
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.06),
+      color: Colors.black.withValues(alpha: 0.06),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
@@ -262,12 +262,12 @@ class AppDesignTokens {
   /// 2X large elevation shadow
   static List<BoxShadow> get shadow2xl => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.15),
+      color: Colors.black.withValues(alpha: 0.15),
       blurRadius: 32,
       offset: const Offset(0, 16),
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),
@@ -276,7 +276,7 @@ class AppDesignTokens {
   /// Colored shadow for primary elements
   static List<BoxShadow> get shadowPrimary => [
     BoxShadow(
-      color: primaryBase.withOpacity(0.3),
+      color: primaryBase.withValues(alpha: 0.3),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
@@ -285,7 +285,7 @@ class AppDesignTokens {
   /// Inner shadow effect
   static List<BoxShadow> get shadowInner => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 2),
       spreadRadius: -2,

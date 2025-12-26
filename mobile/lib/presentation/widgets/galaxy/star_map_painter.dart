@@ -178,7 +178,7 @@ class StarMapPainter extends CustomPainter {
   /// Draw node count badge on cluster
   void _drawClusterBadge(Canvas canvas, Offset pos, double radius, int count, Color color) {
     final badgePos = pos + Offset(radius * 0.7, -radius * 0.7);
-    final badgeRadius = 10.0;
+    const badgeRadius = 10.0;
 
     // Badge background
     final badgePaint = Paint()
@@ -353,9 +353,9 @@ class StarMapPainter extends CustomPainter {
       start,
       end,
       [
-        startColor.withOpacity(0.5), // Bright at parent (energy source)
-        Color.lerp(startColor, endColor, 0.5)!.withOpacity(0.35), // Mid transition
-        endColor.withOpacity(0.2), // Dimmer at child end
+        startColor.withValues(alpha: 0.5), // Bright at parent (energy source)
+        Color.lerp(startColor, endColor, 0.5)!.withValues(alpha: 0.35), // Mid transition
+        endColor.withValues(alpha: 0.2), // Dimmer at child end
       ],
       [0.0, 0.5, 1.0],
     );
@@ -377,8 +377,8 @@ class StarMapPainter extends CustomPainter {
         start,
         end,
         [
-          startColor.withOpacity(0.15),
-          endColor.withOpacity(0.05),
+          startColor.withValues(alpha: 0.15),
+          endColor.withValues(alpha: 0.05),
         ],
       )
       ..strokeWidth = baseWidth * 3
@@ -408,11 +408,11 @@ class StarMapPainter extends CustomPainter {
         final glowIntensity = 0.3 + masteryFactor * 0.5;
 
         // Outer glow (soft, large)
-        glowPaint.color = color.withOpacity(glowIntensity * 0.4);
+        glowPaint.color = color.withValues(alpha: glowIntensity * 0.4);
         canvas.drawCircle(pos, radius * 3.0, glowPaint);
 
         // Inner glow (brighter, smaller)
-        glowPaint.color = color.withOpacity(glowIntensity * 0.7);
+        glowPaint.color = color.withValues(alpha: glowIntensity * 0.7);
         glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
         canvas.drawCircle(pos, radius * 1.8, glowPaint);
         glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
@@ -424,16 +424,16 @@ class StarMapPainter extends CustomPainter {
         // Bright center highlight (mastery indicator)
         if (masteryFactor > 0.5) {
           final highlightRadius = radius * 0.4 * masteryFactor;
-          nodePaint.color = Colors.white.withOpacity(0.6 + masteryFactor * 0.3);
+          nodePaint.color = Colors.white.withValues(alpha: 0.6 + masteryFactor * 0.3);
           canvas.drawCircle(pos, highlightRadius, nodePaint);
         }
       } else {
         // Locked: Grey dim with subtle indication
-        nodePaint.color = Colors.grey.withOpacity(0.25);
+        nodePaint.color = Colors.grey.withValues(alpha: 0.25);
         canvas.drawCircle(pos, radius * 0.8, nodePaint);
 
         // Very subtle glow for locked nodes
-        glowPaint.color = Colors.grey.withOpacity(0.1);
+        glowPaint.color = Colors.grey.withValues(alpha: 0.1);
         canvas.drawCircle(pos, radius * 1.5, glowPaint);
       }
 
@@ -446,8 +446,8 @@ class StarMapPainter extends CustomPainter {
 
   void _drawText(Canvas canvas, String text, Offset pos, Color color, bool isUnlocked) {
     final textColor = isUnlocked
-        ? Colors.white.withOpacity(0.85)
-        : Colors.grey.withOpacity(0.5);
+        ? Colors.white.withValues(alpha: 0.85)
+        : Colors.grey.withValues(alpha: 0.5);
 
     final textSpan = TextSpan(
       text: text,
@@ -458,7 +458,7 @@ class StarMapPainter extends CustomPainter {
         shadows: isUnlocked
             ? [
                 Shadow(
-                  color: color.withOpacity(0.5),
+                  color: color.withValues(alpha: 0.5),
                   blurRadius: 4,
                 ),
               ]

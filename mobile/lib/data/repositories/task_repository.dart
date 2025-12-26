@@ -179,14 +179,14 @@ class TaskRepository {
            status: TaskStatus.completed, 
            completedAt: DateTime.now(),
            actualMinutes: actualMinutes,
-           userNote: note
+           userNote: note,
           );
          DemoDataService().demoTasks[existingIndex] = updated;
          return TaskCompletionResult(
            task: updated.toJson(),
-           feedback: "Mock feedback: Great job!",
+           feedback: 'Mock feedback: Great job!',
            flameUpdate: {'level': 15, 'brightness': 85},
-           statsUpdate: {'total_minutes': 100} 
+           statsUpdate: {'total_minutes': 100}, 
           );
        }
     }
@@ -226,7 +226,7 @@ class TaskRepository {
         suggestedNodes: [SuggestedNode(name: 'Data Structures', reason: 'Relevant to your text', isNew: false)],
         suggestedTags: ['CS'],
         estimatedMinutes: 60,
-        difficulty: 3
+        difficulty: 3,
       );
     }
     try {

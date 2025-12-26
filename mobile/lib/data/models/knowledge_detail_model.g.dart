@@ -10,6 +10,8 @@ KnowledgeDetailResponse _$KnowledgeDetailResponseFromJson(
         Map<String, dynamic> json) =>
     KnowledgeDetailResponse(
       node: KnowledgeNodeDetail.fromJson(json['node'] as Map<String, dynamic>),
+      userStats: KnowledgeUserStats.fromJson(
+          json['userStats'] as Map<String, dynamic>),
       relations: (json['relations'] as List<dynamic>?)
               ?.map((e) => NodeRelation.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -22,8 +24,6 @@ KnowledgeDetailResponse _$KnowledgeDetailResponseFromJson(
               ?.map((e) => RelatedPlan.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      userStats: KnowledgeUserStats.fromJson(
-          json['userStats'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$KnowledgeDetailResponseToJson(

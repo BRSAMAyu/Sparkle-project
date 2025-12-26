@@ -20,7 +20,6 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
   String _instruction = '准备';
   
   late AnimationController _controller;
-  late Animation<double> _animation;
   Timer? _timer;
 
   @override
@@ -162,7 +161,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.indigo.withOpacity(0.1),
+                        color: Colors.indigo.withValues(alpha: 0.1),
                         width: 2,
                       ),
                     ),
@@ -182,8 +181,8 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
                               colors: [
-                                Colors.indigo.shade200.withOpacity(0.3),
-                                Colors.indigo.shade100.withOpacity(0.1),
+                                Colors.indigo.shade200.withValues(alpha: 0.3),
+                                Colors.indigo.shade100.withValues(alpha: 0.1),
                               ],
                             ),
                           ),

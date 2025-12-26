@@ -61,7 +61,7 @@ class SectorBackgroundPainter extends CustomPainter {
     final path = Path();
 
     // Create a pie slice shape
-    final innerRadius = 100.0; // Start from center area (leave room for flame)
+    const innerRadius = 100.0; // Start from center area (leave room for flame)
     final outerRadius = canvasSize / 2 - 200; // Leave margin at edges
 
     // Move to inner arc start point
@@ -108,9 +108,9 @@ class SectorBackgroundPainter extends CustomPainter {
       gradientCenter,
       outerRadius * 0.8,
       [
-        style.primaryColor.withOpacity(0.08),
-        style.primaryColor.withOpacity(0.04),
-        style.primaryColor.withOpacity(0.01),
+        style.primaryColor.withValues(alpha: 0.08),
+        style.primaryColor.withValues(alpha: 0.04),
+        style.primaryColor.withValues(alpha: 0.01),
         Colors.transparent,
       ],
       [0.0, 0.3, 0.6, 1.0],
@@ -124,7 +124,7 @@ class SectorBackgroundPainter extends CustomPainter {
 
     // Draw a subtle glow effect at the sector center
     final glowPaint = Paint()
-      ..color = style.glowColor.withOpacity(0.03)
+      ..color = style.glowColor.withValues(alpha: 0.03)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
 
     canvas.drawCircle(gradientCenter, outerRadius * 0.3, glowPaint);
@@ -145,13 +145,13 @@ class SectorBackgroundPainter extends CustomPainter {
       text: TextSpan(
         text: style.name,
         style: TextStyle(
-          color: style.glowColor.withOpacity(0.6),
+          color: style.glowColor.withValues(alpha: 0.6),
           fontSize: 24,
           fontWeight: FontWeight.w300,
           letterSpacing: 4,
           shadows: [
             Shadow(
-              color: style.primaryColor.withOpacity(0.5),
+              color: style.primaryColor.withValues(alpha: 0.5),
               blurRadius: 10,
             ),
           ],

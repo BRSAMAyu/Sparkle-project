@@ -84,7 +84,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
             child: IconButton(
               onPressed: _translate,
               icon: const Icon(Icons.arrow_downward_rounded, color: Colors.purple),
-              style: IconButton.styleFrom(backgroundColor: Colors.purple.withOpacity(0.1)),
+              style: IconButton.styleFrom(backgroundColor: Colors.purple.withValues(alpha: 0.1)),
             ),
           ),
           const SizedBox(height: 16),
@@ -92,9 +92,9 @@ class _TranslatorToolState extends State<TranslatorTool> {
             padding: const EdgeInsets.all(16),
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.05),
+              color: Colors.purple.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.purple.withOpacity(0.1)),
+              border: Border.all(color: Colors.purple.withValues(alpha: 0.1)),
             ),
             child: _isLoading 
                 ? const Center(child: CircularProgressIndicator()) 

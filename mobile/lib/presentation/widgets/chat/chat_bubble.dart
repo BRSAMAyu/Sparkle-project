@@ -155,24 +155,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               fontWeight: AppDesignTokens.fontWeightSemibold,
                                             ),
                                             code: TextStyle(
-                                              backgroundColor: isUser ? Colors.white.withOpacity(0.2) : context.colors.surfaceElevated,
+                                              backgroundColor: isUser ? Colors.white.withValues(alpha: 0.2) : context.colors.surfaceElevated,
                                               fontFamily: 'monospace',
                                               fontSize: AppDesignTokens.fontSizeSm,
                                               color: isUser ? Colors.white : AppDesignTokens.secondaryBase,
                                             ),
                                             codeblockDecoration: BoxDecoration(
-                                              color: isUser ? Colors.white.withOpacity(0.1) : context.colors.surfaceElevated,
+                                              color: isUser ? Colors.white.withValues(alpha: 0.1) : context.colors.surfaceElevated,
                                               borderRadius: AppDesignTokens.borderRadius12,
                                             ),
                                             codeblockPadding: const EdgeInsets.all(AppDesignTokens.spacing12),
                                             blockquote: TextStyle(
-                                              color: isUser ? Colors.white.withOpacity(0.8) : context.colors.textSecondary,
+                                              color: isUser ? Colors.white.withValues(alpha: 0.8) : context.colors.textSecondary,
                                               fontStyle: FontStyle.italic,
                                             ),
                                             blockquoteDecoration: BoxDecoration(
                                               border: Border(
                                                 left: BorderSide(
-                                                  color: isUser ? Colors.white.withOpacity(0.5) : AppDesignTokens.primaryBase,
+                                                  color: isUser ? Colors.white.withValues(alpha: 0.5) : AppDesignTokens.primaryBase,
                                                   width: AppDesignTokens.spacing4 - 1.0,
                                                 ),
                                               ),

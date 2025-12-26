@@ -164,8 +164,8 @@ class _GroupListTile extends StatelessWidget {
             context.push('/community/groups/${group.id}');
           },
           borderRadius: AppDesignTokens.borderRadius16,
-          splashColor: AppDesignTokens.primaryBase.withOpacity(0.1),
-          highlightColor: AppDesignTokens.primaryBase.withOpacity(0.05),
+          splashColor: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
+          highlightColor: AppDesignTokens.primaryBase.withValues(alpha: 0.05),
           child: Padding(
             padding: const EdgeInsets.all(AppDesignTokens.spacing16),
             child: Row(
@@ -183,7 +183,7 @@ class _GroupListTile extends StatelessWidget {
                           : LinearGradient(colors: [Colors.blue.shade100, Colors.blue.shade50]),
                       boxShadow: [
                          BoxShadow(
-                           color: (isSprint ? Colors.orange : Colors.blue).withOpacity(0.2),
+                           color: (isSprint ? Colors.orange : Colors.blue).withValues(alpha: 0.2),
                            blurRadius: 8,
                            offset: const Offset(0, 4),
                          ),

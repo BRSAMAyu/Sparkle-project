@@ -152,7 +152,7 @@ class PlanRepository {
           priority: 1,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-        )
+        ),
       ];
     }
     try {

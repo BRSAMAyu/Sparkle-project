@@ -114,7 +114,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.cyan.withOpacity(0.1),
+                  color: Colors.cyan.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.search_rounded, color: Colors.cyan, size: 24),
@@ -261,9 +261,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.cyan.withOpacity(0.05),
+          color: Colors.cyan.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.cyan.withOpacity(0.2)),
+          border: Border.all(color: Colors.cyan.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +300,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.cyan.withOpacity(0.2),
+                  color: Colors.cyan.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(

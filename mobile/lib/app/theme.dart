@@ -142,7 +142,7 @@ class AppThemes {
         borderRadius: AppDesignTokens.borderRadius12,
       ),
       color: AppColors.lightCard,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
     ),
 
     // Elevated button theme with gradient support
@@ -368,7 +368,7 @@ class AppThemes {
         borderRadius: AppDesignTokens.borderRadius12,
       ),
       color: AppColors.darkCard,
-      shadowColor: Colors.black.withOpacity(0.3),
+      shadowColor: Colors.black.withValues(alpha: 0.3),
     ),
 
     // Elevated button theme
@@ -761,7 +761,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   LinearGradient getTaskGradient(String taskType) {
     final color = getTaskColor(taskType);
     return LinearGradient(
-      colors: [color, color.withOpacity(0.7)],
+      colors: [color, color.withValues(alpha: 0.7)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );

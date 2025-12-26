@@ -68,7 +68,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                     border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
                     boxShadow: [
                        BoxShadow(
-                          color: AppDesignTokens.primaryBase.withOpacity(0.15 * _currentCuriosity),
+                          color: AppDesignTokens.primaryBase.withValues(alpha: 0.15 * _currentCuriosity),
                           blurRadius: 16,
                           spreadRadius: 2,
                        ),
@@ -120,7 +120,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppDesignTokens.primaryBase.withOpacity(0.6),
+                                  color: AppDesignTokens.primaryBase.withValues(alpha: 0.6),
                                   blurRadius: 8,
                                   spreadRadius: 1,
                                 ),
@@ -163,7 +163,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : AppDesignTokens.primaryBase.withOpacity(0.1),
+        color: isDark ? Colors.white10 : AppDesignTokens.primaryBase.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(

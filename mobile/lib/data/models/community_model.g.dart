@@ -76,6 +76,7 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       sender: fields[1] as UserBrief?,
       content: fields[3] as String?,
       contentData: (fields[4] as Map?)?.cast<String, dynamic>(),
+      replyToId: fields[5] as String?,
     );
   }
 
@@ -132,6 +133,7 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       updatedAt: fields[10] as DateTime,
       content: fields[4] as String?,
       contentData: (fields[5] as Map?)?.cast<String, dynamic>(),
+      replyToId: fields[6] as String?,
       readAt: fields[8] as DateTime?,
     );
   }
@@ -506,6 +508,7 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
           : UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
+      replyToId: json['reply_to_id'] as String?,
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -515,6 +518,7 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'message_type': _$MessageTypeEnumMap[instance.messageType]!,
       'content': instance.content,
       'content_data': instance.contentData,
+      'reply_to_id': instance.replyToId,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -539,6 +543,7 @@ PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updated_at'] as String),
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
+      replyToId: json['reply_to_id'] as String?,
       readAt: json['read_at'] == null
           ? null
           : DateTime.parse(json['read_at'] as String),
@@ -552,6 +557,7 @@ Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
       'message_type': _$MessageTypeEnumMap[instance.messageType]!,
       'content': instance.content,
       'content_data': instance.contentData,
+      'reply_to_id': instance.replyToId,
       'is_read': instance.isRead,
       'read_at': instance.readAt?.toIso8601String(),
       'created_at': instance.createdAt.toIso8601String(),
@@ -567,6 +573,7 @@ PrivateMessageSend _$PrivateMessageSendFromJson(Map<String, dynamic> json) =>
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      nonce: json['nonce'] as String?,
     );
 
 Map<String, dynamic> _$PrivateMessageSendToJson(PrivateMessageSend instance) =>
@@ -576,6 +583,7 @@ Map<String, dynamic> _$PrivateMessageSendToJson(PrivateMessageSend instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'nonce': instance.nonce,
     };
 
 MessageSend _$MessageSendFromJson(Map<String, dynamic> json) => MessageSend(
@@ -585,6 +593,7 @@ MessageSend _$MessageSendFromJson(Map<String, dynamic> json) => MessageSend(
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      nonce: json['nonce'] as String?,
     );
 
 Map<String, dynamic> _$MessageSendToJson(MessageSend instance) =>
@@ -593,6 +602,7 @@ Map<String, dynamic> _$MessageSendToJson(MessageSend instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'nonce': instance.nonce,
     };
 
 GroupTaskInfo _$GroupTaskInfoFromJson(Map<String, dynamic> json) =>

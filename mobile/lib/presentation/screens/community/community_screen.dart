@@ -193,17 +193,17 @@ class _DiscoverTab extends StatelessWidget {
   ) {
     return Card(
       elevation: 0,
-      color: bgColor.withOpacity(0.3),
+      color: bgColor.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: bgColor.withOpacity(0.5)),
+        side: BorderSide(color: bgColor.withValues(alpha: 0.5)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Colors.black87),
@@ -431,7 +431,7 @@ class _FriendsTab extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
-                        backgroundColor: AppDesignTokens.primaryBase.withOpacity(0.2),
+                        backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.2),
                         child: friend.avatarUrl == null
                             ? Text(
                                 friend.displayName[0].toUpperCase(),

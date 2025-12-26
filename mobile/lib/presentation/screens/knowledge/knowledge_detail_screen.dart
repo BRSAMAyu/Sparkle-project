@@ -8,7 +8,7 @@ import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 class KnowledgeDetailScreen extends ConsumerWidget {
   final String nodeId;
 
-  const KnowledgeDetailScreen({super.key, required this.nodeId});
+  const KnowledgeDetailScreen({required this.nodeId, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

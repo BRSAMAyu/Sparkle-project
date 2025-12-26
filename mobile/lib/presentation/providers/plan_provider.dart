@@ -111,8 +111,8 @@ class PlanNotifier extends StateNotifier<PlanListState> {
       await _planRepository.generateTasks(planId, count: count);
       // Also refresh the tasks list
       _ref.read(taskListProvider.notifier).refreshTasks();
-      // And refresh the plan details to show the new tasks
-      _ref.refresh(planDetailProvider(planId));
+      // Invalidate the plan details to show the new tasks
+      _ref.invalidate(planDetailProvider(planId));
     });
   }
 

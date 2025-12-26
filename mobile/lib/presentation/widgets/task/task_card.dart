@@ -58,7 +58,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     final taskColor = context.colors.getTaskColor(type.name);
     return LinearGradient(
       colors: [
-        taskColor.withOpacity(0.05),
+        taskColor.withValues(alpha: 0.05),
         context.colors.surfaceCard,
       ],
       begin: Alignment.topLeft,
@@ -104,9 +104,9 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                   foregroundDecoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0),
-                        Colors.white.withOpacity(0.1), // Subtle shimmer/highlight
-                        Colors.white.withOpacity(0),
+                        Colors.white.withValues(alpha: 0),
+                        Colors.white.withValues(alpha: 0.1), // Subtle shimmer/highlight
+                        Colors.white.withValues(alpha: 0),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                       begin: Alignment.topLeft,
@@ -231,7 +231,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                               child: Container(
-                                color: AppDesignTokens.error.withOpacity(0.8),
+                                color: AppDesignTokens.error.withValues(alpha: 0.8),
                                 child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -319,7 +319,7 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 20, color: color),
@@ -391,9 +391,9 @@ class _TaskTypeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: AppDesignTokens.borderRadius12,
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
@@ -432,9 +432,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: AppDesignTokens.borderRadius12,
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         toBeginningOfSentenceCase(status.name)!,

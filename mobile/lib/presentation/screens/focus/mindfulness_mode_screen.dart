@@ -122,7 +122,6 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   Future<void> _handleExit() async {
     if (_isExiting) return;
 
-    final state = ref.read(mindfulnessProvider);
     final confirmed = await showExitConfirmation(
       context,
       elapsedMinutes: ref.read(mindfulnessProvider.notifier).elapsedMinutes,
@@ -144,8 +143,15 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   Widget build(BuildContext context) {
     final mindfulness = ref.watch(mindfulnessProvider);
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         backgroundColor: AppDesignTokens.deepSpaceStart,
         body: Stack(

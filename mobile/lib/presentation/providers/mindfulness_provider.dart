@@ -77,6 +77,7 @@ class MindfulnessState {
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   Timer? _timer;
+  // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
 
   MindfulnessNotifier() : super(const MindfulnessState());

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/app/theme.dart';
 
 class FocusMainScreen extends ConsumerWidget {
   const FocusMainScreen({super.key});
@@ -112,6 +111,10 @@ class FocusMainScreen extends ConsumerWidget {
             title: '快速专注',
             type: TaskType.learning,
             estimatedMinutes: 25,
+            difficulty: 1,
+            energyCost: 1,
+            priority: 1,
+            tags: [],
             status: TaskStatus.pending,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),

@@ -62,7 +62,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      baseColor.withOpacity(0.1 + (_controller.value * 0.1)),
+                      baseColor.withValues(alpha: 0.1 + (_controller.value * 0.1)),
                       Colors.transparent,
                     ],
                     stops: const [0.4, 1.0],
@@ -85,7 +85,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        baseColor.withOpacity(0.2),
+                        baseColor.withValues(alpha: 0.2),
                         Colors.transparent,
                       ],
                     ),
@@ -104,7 +104,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
             child: Icon(
               Icons.local_fire_department,
               size: widget.size * scaleFactor,
-              color: baseColor.withOpacity(0.5),
+              color: baseColor.withValues(alpha: 0.5),
             ),
           ),
           
@@ -129,10 +129,10 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppDesignTokens.shadowSm,
-                border: Border.all(color: baseColor.withOpacity(0.3)),
+                border: Border.all(color: baseColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

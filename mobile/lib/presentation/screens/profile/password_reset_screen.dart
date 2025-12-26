@@ -184,9 +184,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               borderRadius: AppDesignTokens.borderRadius12,
               borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             ),
-            focusedBorder: const OutlineInputBorder(
+            focusedBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+              borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),

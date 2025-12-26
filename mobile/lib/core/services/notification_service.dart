@@ -64,7 +64,7 @@ class NotificationService {
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationResponse(NotificationResponse details) {
     // Handle background actions (snooze, dismiss)
-    print('Background notification action: ${details.actionId}');
+    debugPrint('Background notification action: ${details.actionId}');
   }
 
   void _onNotificationResponse(NotificationResponse details) {

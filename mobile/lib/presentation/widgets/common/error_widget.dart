@@ -140,11 +140,11 @@ class CustomErrorWidget extends StatelessWidget {
   Color _getLightBackgroundColor() {
     switch (severity) {
       case ErrorSeverity.error:
-        return AppDesignTokens.errorLight.withOpacity(0.1);
+        return AppDesignTokens.errorLight.withValues(alpha: 0.1);
       case ErrorSeverity.warning:
-        return AppDesignTokens.warningLight.withOpacity(0.1);
+        return AppDesignTokens.warningLight.withValues(alpha: 0.1);
       case ErrorSeverity.info:
-        return AppDesignTokens.infoLight.withOpacity(0.1);
+        return AppDesignTokens.infoLight.withValues(alpha: 0.1);
     }
   }
 
@@ -198,7 +198,7 @@ class CustomErrorWidget extends StatelessWidget {
                   borderRadius: AppDesignTokens.borderRadiusFull,
                   boxShadow: [
                     BoxShadow(
-                      color: _getBackgroundColor().withOpacity(0.3),
+                      color: _getBackgroundColor().withValues(alpha: 0.3),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     ),
@@ -324,7 +324,7 @@ class CustomErrorWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: _getLightBackgroundColor(),
         border: Border.all(
-          color: _getBackgroundColor().withOpacity(0.3),
+          color: _getBackgroundColor().withValues(alpha: 0.3),
           width: 1.0,
         ),
         borderRadius: AppDesignTokens.borderRadius12,

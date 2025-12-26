@@ -140,7 +140,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
           bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
         ),
         boxShadow: isMe 
-            ? [BoxShadow(color: AppDesignTokens.primaryBase.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] 
+            ? [BoxShadow(color: AppDesignTokens.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] 
             : AppDesignTokens.shadowSm,
         border: isMe ? null : Border.all(color: AppDesignTokens.neutral100),
       ),

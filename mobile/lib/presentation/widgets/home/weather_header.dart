@@ -51,7 +51,7 @@ class WeatherHeader extends ConsumerWidget {
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textOnDark(context).withOpacity(0.6),
+                    color: AppColors.textOnDark(context).withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -195,7 +195,7 @@ class _WeatherParticlePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withOpacity(0.05);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
 
     switch (type) {
       case 'sunny':
@@ -216,7 +216,7 @@ class _WeatherParticlePainter extends CustomPainter {
         break;
       case 'rainy':
         paint.style = PaintingStyle.fill;
-        paint.color = Colors.white.withOpacity(0.1);
+        paint.color = Colors.white.withValues(alpha: 0.1);
         for (int i = 0; i < 30; i++) {
           final x = (size.width * 0.1) + (i % 6) * 60;
           final y = (size.height * 0.1) + (i ~/ 6) * 80;
@@ -226,7 +226,7 @@ class _WeatherParticlePainter extends CustomPainter {
       case 'meteor':
         paint.style = PaintingStyle.stroke;
         paint.strokeWidth = 1.5;
-        paint.color = Colors.white.withOpacity(0.2);
+        paint.color = Colors.white.withValues(alpha: 0.2);
         for (int i = 0; i < 3; i++) {
           final start = Offset(size.width * (0.3 + i * 0.2), size.height * (0.1 + i * 0.1));
           canvas.drawLine(start, Offset(start.dx + 40, start.dy + 30), paint);

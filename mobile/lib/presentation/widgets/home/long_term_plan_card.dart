@@ -37,7 +37,7 @@ class LongTermPlanCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
@@ -59,7 +59,7 @@ class LongTermPlanCard extends ConsumerWidget {
             children: [
               Text(
                 '${(growth.progress * 100).toInt()}%',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppDesignTokens.success,
@@ -105,11 +105,11 @@ class LongTermPlanCard extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Column(
+    return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_circle_outline, color: Colors.white30, size: 32),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           '创建长期计划',
           style: TextStyle(fontSize: 12, color: Colors.white54),

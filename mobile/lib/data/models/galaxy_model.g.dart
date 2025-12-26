@@ -31,13 +31,13 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
     };
 
 const _$SectorEnumEnumMap = {
-  SectorEnum.COSMOS: 'COSMOS',
-  SectorEnum.TECH: 'TECH',
-  SectorEnum.ART: 'ART',
-  SectorEnum.CIVILIZATION: 'CIVILIZATION',
-  SectorEnum.LIFE: 'LIFE',
-  SectorEnum.WISDOM: 'WISDOM',
-  SectorEnum.VOID: 'VOID',
+  SectorEnum.cosmos: 'COSMOS',
+  SectorEnum.tech: 'TECH',
+  SectorEnum.art: 'ART',
+  SectorEnum.civilization: 'CIVILIZATION',
+  SectorEnum.life: 'LIFE',
+  SectorEnum.wisdom: 'WISDOM',
+  SectorEnum.voidSector: 'VOID',
 };
 
 GalaxyGraphResponse _$GalaxyGraphResponseFromJson(Map<String, dynamic> json) =>

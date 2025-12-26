@@ -45,7 +45,7 @@ class GalaxyRepository {
   Stream<SSEEvent> getGalaxyEventsStream() {
     if (DemoDataService.isDemoMode) {
       // In the future we can simulate events here
-      return Stream.empty();
+      return const Stream.empty();
     }
     return _apiClient.getStream(ApiEndpoints.galaxyEvents);
   }

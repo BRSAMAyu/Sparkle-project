@@ -120,9 +120,9 @@ class FocusStatsTool extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +130,7 @@ class FocusStatsTool extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -157,7 +157,7 @@ class FocusStatsTool extends StatelessWidget {
           width: 24,
           height: 100 * percentage,
           decoration: BoxDecoration(
-            color: percentage > 0.6 ? Colors.deepPurple : Colors.deepPurple.withOpacity(0.3),
+            color: percentage > 0.6 ? Colors.deepPurple : Colors.deepPurple.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         ),

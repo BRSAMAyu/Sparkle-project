@@ -106,15 +106,15 @@ class _ChatInputState extends State<ChatInput>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withOpacity(0.9),
-                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withOpacity(0.95),
+                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withValues(alpha: 0.9),
+                  (isDark ? AppDesignTokens.neutral900 : Colors.white).withValues(alpha: 0.95),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
               border: Border(
                 top: BorderSide(
-                  color: (isDark ? Colors.white12 : AppDesignTokens.neutral200).withOpacity(0.5),
+                  color: (isDark ? Colors.white12 : AppDesignTokens.neutral200).withValues(alpha: 0.5),
                   width: 1.0,
                 ),
               ),
@@ -128,7 +128,7 @@ class _ChatInputState extends State<ChatInput>
                     decoration: BoxDecoration(
                       color: _isFocused
                           ? (isDark ? AppDesignTokens.neutral800 : Colors.white)
-                          : (isDark ? AppDesignTokens.neutral800.withOpacity(0.5) : AppDesignTokens.neutral100),
+                          : (isDark ? AppDesignTokens.neutral800.withValues(alpha: 0.5) : AppDesignTokens.neutral100),
                       borderRadius: AppDesignTokens.borderRadius24,
                       border: Border.all(
                         color: _isFocused

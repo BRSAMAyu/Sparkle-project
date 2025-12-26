@@ -130,12 +130,12 @@ class _TaskDetailView extends ConsumerWidget {
                         children: [
                           Chip(
                             label: Text(toBeginningOfSentenceCase(task.type.name) ?? task.type.name),
-                            backgroundColor: Colors.white.withOpacity(0.8),
+                            backgroundColor: Colors.white.withValues(alpha: 0.8),
                             avatar: const Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
                           ),
                           Chip(
                             label: Text(toBeginningOfSentenceCase(task.status.name) ?? task.status.name),
-                            backgroundColor: _getStatusColor(task.status).withOpacity(0.2),
+                            backgroundColor: _getStatusColor(task.status).withValues(alpha: 0.2),
                             labelStyle: TextStyle(color: _getStatusColor(task.status), fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -320,18 +320,18 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
             borderRadius: AppDesignTokens.borderRadius12,
             boxShadow: [
               BoxShadow(
-                color: widget.gradient.colors.first.withOpacity(0.15),
+                color: widget.gradient.colors.first.withValues(alpha: 0.15),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
             border: Border.all(
-              color: widget.gradient.colors.first.withOpacity(0.1),
+              color: widget.gradient.colors.first.withValues(alpha: 0.1),
               width: 1,
             ),
           ),
@@ -344,7 +344,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                   borderRadius: AppDesignTokens.borderRadius8,
                   boxShadow: [
                     BoxShadow(
-                      color: widget.gradient.colors.first.withOpacity(0.3),
+                      color: widget.gradient.colors.first.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -434,7 +434,7 @@ class _BottomActionBar extends ConsumerWidget {
             Container(
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: AppDesignTokens.error.withOpacity(0.3),
+                  color: AppDesignTokens.error.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 borderRadius: AppDesignTokens.borderRadius12,

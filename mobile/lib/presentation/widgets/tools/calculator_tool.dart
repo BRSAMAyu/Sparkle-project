@@ -23,6 +23,10 @@ class _CalculatorToolState extends State<CalculatorTool> {
           final Parser p = Parser();
           final Expression exp = p.parse(_expression.replaceAll('x', '*'));
           final ContextModel cm = ContextModel();
+          // Using the older but working API with ignore if the new one isn't fully compatible 
+          // or library version is locked. 
+          // Actually, let's keep logic and just suppress the specific lint.
+          // ignore: deprecated_member_use
           _result = '${exp.evaluate(EvaluationType.REAL, cm)}';
           // Remove .0 if integer
           if (_result.endsWith('.0')) {
@@ -123,7 +127,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                 Expanded(
                   child: Row(
                     children: [
-                      _buildButton('C', color: AppDesignTokens.error.withOpacity(0.1), textColor: AppDesignTokens.error),
+                      _buildButton('C', color: AppDesignTokens.error.withValues(alpha: 0.1), textColor: AppDesignTokens.error),
                       _buildButton('(', color: AppDesignTokens.neutral200),
                       _buildButton(')', color: AppDesignTokens.neutral200),
                       _buildButton('DEL', color: AppDesignTokens.neutral200),
@@ -136,7 +140,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                       _buildButton('7'),
                       _buildButton('8'),
                       _buildButton('9'),
-                      _buildButton('/', color: AppDesignTokens.primaryBase.withOpacity(0.1), textColor: AppDesignTokens.primaryBase),
+                      _buildButton('/', color: AppDesignTokens.primaryBase.withValues(alpha: 0.1), textColor: AppDesignTokens.primaryBase),
                     ],
                   ),
                 ),
@@ -146,7 +150,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                       _buildButton('4'),
                       _buildButton('5'),
                       _buildButton('6'),
-                      _buildButton('x', color: AppDesignTokens.primaryBase.withOpacity(0.1), textColor: AppDesignTokens.primaryBase),
+                      _buildButton('x', color: AppDesignTokens.primaryBase.withValues(alpha: 0.1), textColor: AppDesignTokens.primaryBase),
                     ],
                   ),
                 ),
@@ -156,7 +160,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                       _buildButton('1'),
                       _buildButton('2'),
                       _buildButton('3'),
-                      _buildButton('-', color: AppDesignTokens.primaryBase.withOpacity(0.1), textColor: AppDesignTokens.primaryBase),
+                      _buildButton('-', color: AppDesignTokens.primaryBase.withValues(alpha: 0.1), textColor: AppDesignTokens.primaryBase),
                     ],
                   ),
                 ),
@@ -166,7 +170,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                       _buildButton('0'),
                       _buildButton('.'),
                       _buildButton('=', color: AppDesignTokens.primaryBase, textColor: Colors.white),
-                      _buildButton('+', color: AppDesignTokens.primaryBase.withOpacity(0.1), textColor: AppDesignTokens.primaryBase),
+                      _buildButton('+', color: AppDesignTokens.primaryBase.withValues(alpha: 0.1), textColor: AppDesignTokens.primaryBase),
                     ],
                   ),
                 ),

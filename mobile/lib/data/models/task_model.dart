@@ -238,13 +238,7 @@ class TaskComplete {
 
     SuggestedNode({
 
-      this.id,
-
-      required this.name,
-
-      required this.reason,
-
-      required this.isNew,
+      required this.name, required this.reason, required this.isNew, this.id,
 
     });
 
