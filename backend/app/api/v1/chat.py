@@ -9,7 +9,7 @@ import asyncio
 from uuid import UUID
 
 from app.db.session import get_db
-from app.core.security import get_current_user
+from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.llm_service import llm_service, LLMResponse, StreamChunk
 from app.services.analytics_service import AnalyticsService
@@ -556,7 +556,8 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
         context["analytics_summary"] = await analytics_service.get_user_profile_summary(user_id)
 
         # 1. 获取用户基本信息（火花等级和亮度）
-        user_stmt = select(User).where(User.id == user_id)        user_result = await db.execute(user_stmt)
+        user_stmt = select(User).where(User.id == user_id)
+        user_result = await db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
 
         if user:

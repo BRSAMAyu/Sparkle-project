@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
@@ -75,12 +76,12 @@ class WebSocketChatService {
           _handleMessage(data);
         },
         onError: (error) {
-          print('WebSocket Error: $error');
+          debugPrint('WebSocket Error: $error');
           _handleReconnect(userId, message, sessionId, nickname);
         },
         onDone: () {
           if (!_isManuallyClosed) {
-            print('WebSocket closed unexpectedly');
+            debugPrint('WebSocket closed unexpectedly');
             _handleReconnect(userId, message, sessionId, nickname);
           } else {
             if (!(_streamController?.isClosed ?? true)) {
@@ -99,7 +100,7 @@ class WebSocketChatService {
         nickname: nickname,
       );
     } catch (e) {
-      print('WebSocket connection error: $e');
+      debugPrint('WebSocket connection error: $e');
       _handleReconnect(userId, message, sessionId, nickname);
     }
   }
@@ -112,7 +113,7 @@ class WebSocketChatService {
           code: 'CONNECTION_FAILED',
           message: '无法建立连接，请检查网络设置',
           retryable: true,
-        ));
+        ),);
         _streamController?.close();
       }
       return;
@@ -120,7 +121,7 @@ class WebSocketChatService {
 
     _retryCount++;
     final delaySeconds = pow(2, _retryCount).toInt(); // 指数退避: 2, 4, 8, 16, 32 秒
-    print('Attempting reconnect in $delaySeconds seconds (Attempt $_retryCount/$_maxRetries)...');
+    debugPrint('Attempting reconnect in $delaySeconds seconds (Attempt $_retryCount/$_maxRetries)...');
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
@@ -159,7 +160,7 @@ class WebSocketChatService {
       }
     } catch (e) {
       // 忽略解析错误
-      print('WebSocket message parse error: $e');
+      debugPrint('WebSocket message parse error: $e');
     }
   }
 

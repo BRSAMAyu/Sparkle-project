@@ -23,8 +23,8 @@ void main() async {
   DemoDataService.isDemoMode = true;
 
   // TODO: Open Hive boxes
-  // await Hive.openBox('settings');
-  // await Hive.openBox('user');
+  await Hive.openBox('settings');
+  await Hive.openBox('user');
 
   runApp(
     const ProviderScope(

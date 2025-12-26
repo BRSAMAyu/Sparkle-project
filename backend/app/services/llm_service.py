@@ -124,9 +124,20 @@ class LLMService:
     """
     
     def __init__(self):
+        # 根据提供商选择配置
+        provider_type = settings.LLM_PROVIDER.lower()
+        
+        if provider_type == "deepseek":
+            api_key = settings.DEEPSEEK_API_KEY
+            base_url = settings.DEEPSEEK_BASE_URL
+        else:
+            # 默认使用通用 LLM 配置 (OpenAI, Qwen 等)
+            api_key = settings.LLM_API_KEY
+            base_url = settings.LLM_API_BASE_URL
+            
         self.provider: LLMProvider = OpenAICompatibleProvider(
-            api_key=settings.LLM_API_KEY,
-            base_url=settings.LLM_API_BASE_URL
+            api_key=api_key,
+            base_url=base_url
         )
         self.default_model = settings.LLM_MODEL_NAME
         self.demo_mode = getattr(settings, 'DEMO_MODE', False)

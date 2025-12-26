@@ -81,8 +81,6 @@ class GalaxyRepository {
     } catch (e) {
       // It's okay if prediction fails, just return null
       return null;
-    } catch (_) {
-      return null;
     }
   }
 

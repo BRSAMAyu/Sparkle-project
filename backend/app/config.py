@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     LLM_MODEL_NAME: str = "qwen-turbo"
     LLM_PROVIDER: str = "qwen"  # 'qwen' | 'deepseek' | 'openai'
 
+    # DeepSeek Specific
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+
     # Embedding Service
     EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
     EMBEDDING_DIM: int = 1536  # 向量维度
@@ -111,6 +115,20 @@ class Settings(BaseSettings):
     def validate_llm_api_key(cls, v):
         if not v:
             return ""
+        return v
+
+    @field_validator("DEEPSEEK_API_KEY", mode="before")
+    @classmethod
+    def validate_deepseek_api_key(cls, v):
+        if not v:
+            return ""
+        return v
+
+    @field_validator("DEEPSEEK_BASE_URL", mode="before")
+    @classmethod
+    def validate_deepseek_base_url(cls, v):
+        if not v:
+            return "https://api.deepseek.com"
         return v
 
 

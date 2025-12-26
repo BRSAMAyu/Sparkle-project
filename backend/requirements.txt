@@ -44,3 +44,5 @@ json-repair
 typing-extensions
 email-validator>=2.0.0
 slowapi>=0.1.9
+tenacity
+prometheus-fastapi-instrumentator

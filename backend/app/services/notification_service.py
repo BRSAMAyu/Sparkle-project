@@ -50,3 +50,5 @@ class NotificationService:
             await db.commit()
             await db.refresh(notification)
         return notification
+
+notification_service = NotificationService()

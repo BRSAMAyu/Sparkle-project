@@ -76,7 +76,14 @@ class ChatRepository {
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(String message, String? conversationId) {
-    final controller = StreamController<ChatStreamEvent>();
+    late StreamController<ChatStreamEvent> controller;
+    controller = StreamController<ChatStreamEvent>(
+      onCancel: () {
+        if (!controller.isClosed) {
+          controller.close();
+        }
+      },
+    );
 
     _startSSEConnection(
       message: message,

@@ -14,7 +14,6 @@ from app.core.security import get_password_hash, verify_password
 
 
 class UserService:
-// ...
     @staticmethod
     async def update(
         db: AsyncSession, db_obj: User, obj_in: UserUpdate

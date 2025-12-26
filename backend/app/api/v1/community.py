@@ -8,7 +8,8 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.db.session import get_db
-from app.core.security import get_current_user, decode_token
+from app.core.security import decode_token
+from app.api.deps import get_current_user
 from app.core.websocket import manager
 from app.core.rate_limiting import limiter
 from app.models.user import User, UserStatus
