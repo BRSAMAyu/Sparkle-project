@@ -66,6 +66,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
+  /// 加载历史对话
+  Future<void> loadConversationHistory(String conversationId) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final history = await _chatRepository.getConversationHistory(conversationId);
+      state = state.copyWith(
+        isLoading: false,
+        messages: history,
+        conversationId: conversationId,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: '加载历史失败: $e',
+      );
+    }
+  }
+
+  /// 获取最近对话列表
+  Future<List<Map<String, dynamic>>> getRecentConversations() async {
+    return _chatRepository.getRecentConversations();
+  }
+
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
     // 获取当前用户信息
@@ -93,6 +116,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     String accumulatedContent = '';
+    String? lastAiStatus;
     final List<WidgetPayload> accumulatedWidgets = [];
 
     try {
@@ -107,10 +131,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedContent += event.content;
           state = state.copyWith(
             streamingContent: accumulatedContent,
-            clearAiStatus: true, // 开始输出文本时清除状态
           );
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
+          lastAiStatus = event.state;
           state = state.copyWith(
             aiStatus: event.state,
             aiStatusDetails: event.details,
@@ -137,6 +161,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           );
         } else if (event is ToolStartEvent) {
           // 显示"正在使用工具: xxx"
+          lastAiStatus = 'EXECUTING_TOOL';
           state = state.copyWith(
             aiStatus: 'EXECUTING_TOOL',
             aiStatusDetails: '正在使用 ${event.toolName}...',
@@ -163,6 +188,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           content: accumulatedContent,
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
+          aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
         );
 
         state = state.copyWith(

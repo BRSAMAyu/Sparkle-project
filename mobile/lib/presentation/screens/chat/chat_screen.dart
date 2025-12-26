@@ -112,9 +112,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.history, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
-            onPressed: () {
-              // TODO: History
-            },
+            onPressed: () => _showHistoryBottomSheet(context),
           ),
           IconButton(
             icon: Icon(Icons.add_comment_outlined, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
@@ -136,6 +134,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: SafeArea(
           child: Column(
             children: [
+              if (chatState.isLoading)
+                const LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
+                  minHeight: 2,
+                ),
               Expanded(
                 child: messages.isEmpty && chatState.streamingContent.isEmpty && chatState.aiStatus == null
                     ? _buildQuickActions(context)
@@ -210,6 +214,111 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showHistoryBottomSheet(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: isDark ? AppDesignTokens.neutral900 : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: AppDesignTokens.primaryBase),
+                  const SizedBox(width: 12),
+                  Text(
+                    '历史对话',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: ref.read(chatProvider.notifier).getRecentConversations(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (snapshot.hasError) {
+                    return Center(child: Text('加载失败: ${snapshot.error}'));
+                  }
+                  
+                  final sessions = snapshot.data ?? [];
+                  if (sessions.isEmpty) {
+                    return const Center(child: Text('暂无历史记录'));
+                  }
+                  
+                  return ListView.builder(
+                    itemCount: sessions.length,
+                    itemBuilder: (context, index) {
+                      final session = sessions[index];
+                      final bool isCurrent = session['id'] == ref.read(chatProvider).conversationId;
+                      
+                      return ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isCurrent ? AppDesignTokens.primaryBase.withValues(alpha: 0.1) : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral100),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 18,
+                            color: isCurrent ? AppDesignTokens.primaryBase : AppDesignTokens.neutral500,
+                          ),
+                        ),
+                        title: Text(
+                          session['title'] ?? '未命名会话',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: Text(
+                          session['updated_at']?.split('T')[0] ?? '',
+                          style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral500),
+                        ),
+                        trailing: isCurrent ? const Icon(Icons.check_circle, color: AppDesignTokens.primaryBase, size: 18) : null,
+                        onTap: () {
+                          Navigator.pop(context);
+                          ref.read(chatProvider.notifier).loadConversationHistory(session['id']);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
