@@ -6,6 +6,47 @@ import 'package:sparkle/data/repositories/auth_repository.dart';
 
 final authInterceptorProvider = Provider((ref) => AuthInterceptor(ref));
 final loggingInterceptorProvider = Provider((ref) => LoggingInterceptor());
+final retryInterceptorProvider = Provider.family<RetryInterceptor, Dio>((ref, dio) => RetryInterceptor(dio: dio));
+
+class RetryInterceptor extends Interceptor {
+  final Dio dio;
+  final int maxRetries;
+  final List<int> retryableStatuses;
+
+  RetryInterceptor({
+    required this.dio,
+    this.maxRetries = 3,
+    this.retryableStatuses = const [502, 503, 504],
+  });
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (retryableStatuses.contains(err.response?.statusCode) && 
+        _shouldRetry(err)) {
+      
+      final retries = err.requestOptions.extra['retries'] as int? ?? 0;
+      if (retries < maxRetries) {
+        err.requestOptions.extra['retries'] = retries + 1;
+        
+        // Exponential backoff
+        final delay = Duration(milliseconds: 500 * (1 << retries));
+        await Future.delayed(delay);
+
+        try {
+          final response = await dio.fetch(err.requestOptions);
+          return handler.resolve(response);
+        } catch (e) {
+          // If retry fails, continue to next error handler
+        }
+      }
+    }
+    super.onError(err, handler);
+  }
+
+  bool _shouldRetry(DioException err) {
+    return err.type != DioExceptionType.cancel;
+  }
+}
 
 class AuthInterceptor extends Interceptor {
   final Ref _ref;

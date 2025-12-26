@@ -13,6 +13,7 @@ type Config struct {
 	JWTSecret     string `mapstructure:"JWT_SECRET"`
 	RedisURL      string `mapstructure:"REDIS_URL"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	BackendURL    string `mapstructure:"BACKEND_URL"`
 }
 
 func Load() *Config {
@@ -22,6 +23,7 @@ func Load() *Config {
 	viper.SetDefault("JWT_SECRET", "change-me")
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")
+	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 
 	viper.AutomaticEnv()
 

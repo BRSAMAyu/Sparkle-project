@@ -140,6 +140,86 @@ func (q *Queries) GetChatHistory(ctx context.Context, sessionID pgtype.UUID) ([]
 	return items, nil
 }
 
+const getGroupMessages = `-- name: GetGroupMessages :many
+SELECT 
+    gm.id, gm.group_id, gm.sender_id, gm.message_type, gm.content, gm.content_data, gm.reply_to_id, gm.created_at, gm.updated_at,
+    u.username as sender_username, u.nickname as sender_nickname, u.avatar_url as sender_avatar_url,
+    rm.id as reply_id, rm.content as reply_content, rm.message_type as reply_type,
+    ru.username as reply_sender_username, ru.nickname as reply_sender_nickname
+FROM group_messages gm
+LEFT JOIN users u ON gm.sender_id = u.id
+LEFT JOIN group_messages rm ON gm.reply_to_id = rm.id
+LEFT JOIN users ru ON rm.sender_id = ru.id
+WHERE gm.group_id = $1 
+AND gm.deleted_at IS NULL
+ORDER BY gm.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetGroupMessagesParams struct {
+	GroupID pgtype.UUID `json:"group_id"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type GetGroupMessagesRow struct {
+	ID                  pgtype.UUID      `json:"id"`
+	GroupID             pgtype.UUID      `json:"group_id"`
+	SenderID            pgtype.UUID      `json:"sender_id"`
+	MessageType         Messagetype      `json:"message_type"`
+	Content             pgtype.Text      `json:"content"`
+	ContentData         []byte           `json:"content_data"`
+	ReplyToID           pgtype.UUID      `json:"reply_to_id"`
+	CreatedAt           pgtype.Timestamp `json:"created_at"`
+	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
+	SenderUsername      pgtype.Text      `json:"sender_username"`
+	SenderNickname      pgtype.Text      `json:"sender_nickname"`
+	SenderAvatarUrl     pgtype.Text      `json:"sender_avatar_url"`
+	ReplyID             pgtype.UUID      `json:"reply_id"`
+	ReplyContent        pgtype.Text      `json:"reply_content"`
+	ReplyType           NullMessagetype  `json:"reply_type"`
+	ReplySenderUsername pgtype.Text      `json:"reply_sender_username"`
+	ReplySenderNickname pgtype.Text      `json:"reply_sender_nickname"`
+}
+
+func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesParams) ([]GetGroupMessagesRow, error) {
+	rows, err := q.db.Query(ctx, getGroupMessages, arg.GroupID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGroupMessagesRow
+	for rows.Next() {
+		var i GetGroupMessagesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GroupID,
+			&i.SenderID,
+			&i.MessageType,
+			&i.Content,
+			&i.ContentData,
+			&i.ReplyToID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SenderUsername,
+			&i.SenderNickname,
+			&i.SenderAvatarUrl,
+			&i.ReplyID,
+			&i.ReplyContent,
+			&i.ReplyType,
+			&i.ReplySenderUsername,
+			&i.ReplySenderNickname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
 `

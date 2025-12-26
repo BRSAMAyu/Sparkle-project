@@ -24,6 +24,7 @@ class ApiClient {
     );
     _dio = Dio(options);
     _dio.interceptors.add(_ref.read(authInterceptorProvider));
+    _dio.interceptors.add(_ref.read(retryInterceptorProvider(_dio)));
     _dio.interceptors.add(_ref.read(loggingInterceptorProvider));
   }
 
