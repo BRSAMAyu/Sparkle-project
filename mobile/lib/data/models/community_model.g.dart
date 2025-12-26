@@ -3,6 +3,282 @@
 part of 'community_model.dart';
 
 // **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
+class UserBriefAdapter extends TypeAdapter<UserBrief> {
+  @override
+  final int typeId = 12;
+
+  @override
+  UserBrief read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return UserBrief(
+      id: fields[0] as String,
+      username: fields[1] as String,
+      nickname: fields[2] as String?,
+      avatarUrl: fields[3] as String?,
+      flameLevel: fields[4] as int,
+      flameBrightness: fields[5] as double,
+      status: fields[6] as UserStatus,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, UserBrief obj) {
+    writer
+      ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.username)
+      ..writeByte(2)
+      ..write(obj.nickname)
+      ..writeByte(3)
+      ..write(obj.avatarUrl)
+      ..writeByte(4)
+      ..write(obj.flameLevel)
+      ..writeByte(5)
+      ..write(obj.flameBrightness)
+      ..writeByte(6)
+      ..write(obj.status);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserBriefAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
+  @override
+  final int typeId = 13;
+
+  @override
+  MessageInfo read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return MessageInfo(
+      id: fields[0] as String,
+      messageType: fields[2] as MessageType,
+      createdAt: fields[6] as DateTime,
+      updatedAt: fields[7] as DateTime,
+      sender: fields[1] as UserBrief?,
+      content: fields[3] as String?,
+      contentData: (fields[4] as Map?)?.cast<String, dynamic>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MessageInfo obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.sender)
+      ..writeByte(2)
+      ..write(obj.messageType)
+      ..writeByte(3)
+      ..write(obj.content)
+      ..writeByte(4)
+      ..write(obj.contentData)
+      ..writeByte(5)
+      ..write(obj.replyToId)
+      ..writeByte(6)
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.updatedAt);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MessageInfoAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
+  @override
+  final int typeId = 14;
+
+  @override
+  PrivateMessageInfo read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return PrivateMessageInfo(
+      id: fields[0] as String,
+      sender: fields[1] as UserBrief,
+      receiver: fields[2] as UserBrief,
+      messageType: fields[3] as MessageType,
+      isRead: fields[7] as bool,
+      createdAt: fields[9] as DateTime,
+      updatedAt: fields[10] as DateTime,
+      content: fields[4] as String?,
+      contentData: (fields[5] as Map?)?.cast<String, dynamic>(),
+      readAt: fields[8] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, PrivateMessageInfo obj) {
+    writer
+      ..writeByte(11)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.sender)
+      ..writeByte(2)
+      ..write(obj.receiver)
+      ..writeByte(3)
+      ..write(obj.messageType)
+      ..writeByte(4)
+      ..write(obj.content)
+      ..writeByte(5)
+      ..write(obj.contentData)
+      ..writeByte(6)
+      ..write(obj.replyToId)
+      ..writeByte(7)
+      ..write(obj.isRead)
+      ..writeByte(8)
+      ..write(obj.readAt)
+      ..writeByte(9)
+      ..write(obj.createdAt)
+      ..writeByte(10)
+      ..write(obj.updatedAt);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PrivateMessageInfoAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class MessageTypeAdapter extends TypeAdapter<MessageType> {
+  @override
+  final int typeId = 11;
+
+  @override
+  MessageType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return MessageType.text;
+      case 1:
+        return MessageType.taskShare;
+      case 2:
+        return MessageType.progress;
+      case 3:
+        return MessageType.achievement;
+      case 4:
+        return MessageType.checkin;
+      case 5:
+        return MessageType.system;
+      default:
+        return MessageType.text;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, MessageType obj) {
+    switch (obj) {
+      case MessageType.text:
+        writer.writeByte(0);
+        break;
+      case MessageType.taskShare:
+        writer.writeByte(1);
+        break;
+      case MessageType.progress:
+        writer.writeByte(2);
+        break;
+      case MessageType.achievement:
+        writer.writeByte(3);
+        break;
+      case MessageType.checkin:
+        writer.writeByte(4);
+        break;
+      case MessageType.system:
+        writer.writeByte(5);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MessageTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class UserStatusAdapter extends TypeAdapter<UserStatus> {
+  @override
+  final int typeId = 10;
+
+  @override
+  UserStatus read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return UserStatus.online;
+      case 1:
+        return UserStatus.offline;
+      case 2:
+        return UserStatus.invisible;
+      default:
+        return UserStatus.online;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, UserStatus obj) {
+    switch (obj) {
+      case UserStatus.online:
+        writer.writeByte(0);
+        break;
+      case UserStatus.offline:
+        writer.writeByte(1);
+        break;
+      case UserStatus.invisible:
+        writer.writeByte(2);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserStatusAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+// **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
@@ -13,6 +289,8 @@ UserBrief _$UserBriefFromJson(Map<String, dynamic> json) => UserBrief(
       avatarUrl: json['avatar_url'] as String?,
       flameLevel: (json['flame_level'] as num?)?.toInt() ?? 1,
       flameBrightness: (json['flame_brightness'] as num?)?.toDouble() ?? 0.5,
+      status: $enumDecodeNullable(_$UserStatusEnumMap, json['status']) ??
+          UserStatus.offline,
     );
 
 Map<String, dynamic> _$UserBriefToJson(UserBrief instance) => <String, dynamic>{
@@ -22,7 +300,14 @@ Map<String, dynamic> _$UserBriefToJson(UserBrief instance) => <String, dynamic>{
       'avatar_url': instance.avatarUrl,
       'flame_level': instance.flameLevel,
       'flame_brightness': instance.flameBrightness,
+      'status': _$UserStatusEnumMap[instance.status]!,
     };
+
+const _$UserStatusEnumMap = {
+  UserStatus.online: 'online',
+  UserStatus.offline: 'offline',
+  UserStatus.invisible: 'invisible',
+};
 
 FriendshipInfo _$FriendshipInfoFromJson(Map<String, dynamic> json) =>
     FriendshipInfo(
@@ -221,7 +506,6 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
           : UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
-      replyToId: json['reply_to_id'] as String?,
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -231,7 +515,6 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'message_type': _$MessageTypeEnumMap[instance.messageType]!,
       'content': instance.content,
       'content_data': instance.contentData,
-      'reply_to_id': instance.replyToId,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -256,7 +539,6 @@ PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updated_at'] as String),
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
-      replyToId: json['reply_to_id'] as String?,
       readAt: json['read_at'] == null
           ? null
           : DateTime.parse(json['read_at'] as String),
@@ -270,7 +552,6 @@ Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
       'message_type': _$MessageTypeEnumMap[instance.messageType]!,
       'content': instance.content,
       'content_data': instance.contentData,
-      'reply_to_id': instance.replyToId,
       'is_read': instance.isRead,
       'read_at': instance.readAt?.toIso8601String(),
       'created_at': instance.createdAt.toIso8601String(),

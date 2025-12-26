@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:hive/hive.dart';
 
 part 'community_model.g.dart';
 
@@ -20,18 +21,25 @@ enum GroupRole {
   member,
 }
 
+@HiveType(typeId: 11)
 enum MessageType {
   @JsonValue('text')
+  @HiveField(0)
   text,
   @JsonValue('task_share')
+  @HiveField(1)
   taskShare,
   @JsonValue('progress')
+  @HiveField(2)
   progress,
   @JsonValue('achievement')
+  @HiveField(3)
   achievement,
   @JsonValue('checkin')
+  @HiveField(4)
   checkin,
   @JsonValue('system')
+  @HiveField(5)
   system,
 }
 
@@ -44,28 +52,40 @@ enum FriendshipStatus {
   blocked,
 }
 
+@HiveType(typeId: 10)
 enum UserStatus {
   @JsonValue('online')
+  @HiveField(0)
   online,
   @JsonValue('offline')
+  @HiveField(1)
   offline,
   @JsonValue('invisible')
+  @HiveField(2)
   invisible,
 }
 
 // ============ 用户简要信息 ============
 
 @JsonSerializable()
+@HiveType(typeId: 12)
 class UserBrief {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String username;
+  @HiveField(2)
   final String? nickname;
   @JsonKey(name: 'avatar_url')
+  @HiveField(3)
   final String? avatarUrl;
   @JsonKey(name: 'flame_level')
+  @HiveField(4)
   final int flameLevel;
   @JsonKey(name: 'flame_brightness')
+  @HiveField(5)
   final double flameBrightness;
+  @HiveField(6)
   final UserStatus status;
 
   UserBrief({
@@ -291,22 +311,31 @@ class GroupMemberInfo {
   Map<String, dynamic> toJson() => _$GroupMemberInfoToJson(this);
 }
 
-// ============ 群消息 ============
+// ============ 群消息 ============ 
 
 @JsonSerializable()
+@HiveType(typeId: 13)
 class MessageInfo {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final UserBrief? sender;
   @JsonKey(name: 'message_type')
+  @HiveField(2)
   final MessageType messageType;
+  @HiveField(3)
   final String? content;
   @JsonKey(name: 'content_data')
+  @HiveField(4)
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
+  @HiveField(5)
   final String? replyToId;
   @JsonKey(name: 'created_at')
+  @HiveField(6)
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
+  @HiveField(7)
   final DateTime updatedAt;
 
   MessageInfo({
@@ -314,7 +343,7 @@ class MessageInfo {
     required this.messageType, required this.createdAt, required this.updatedAt, this.sender,
     this.content,
     this.contentData,
-    this.replyToId,
+    this.reply_to_id,
   });
 
   factory MessageInfo.fromJson(Map<String, dynamic> json) =>
@@ -325,24 +354,36 @@ class MessageInfo {
 }
 
 @JsonSerializable()
+@HiveType(typeId: 14)
 class PrivateMessageInfo {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final UserBrief sender;
+  @HiveField(2)
   final UserBrief receiver;
   @JsonKey(name: 'message_type')
+  @HiveField(3)
   final MessageType messageType;
+  @HiveField(4)
   final String? content;
   @JsonKey(name: 'content_data')
+  @HiveField(5)
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
+  @HiveField(6)
   final String? replyToId;
   @JsonKey(name: 'is_read')
+  @HiveField(7)
   final bool isRead;
   @JsonKey(name: 'read_at')
+  @HiveField(8)
   final DateTime? readAt;
   @JsonKey(name: 'created_at')
+  @HiveField(9)
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
+  @HiveField(10)
   final DateTime updatedAt;
 
   PrivateMessageInfo({
@@ -355,7 +396,7 @@ class PrivateMessageInfo {
     required this.updatedAt,
     this.content,
     this.contentData,
-    this.replyToId,
+    this.reply_to_id,
     this.readAt,
   });
 
@@ -363,7 +404,6 @@ class PrivateMessageInfo {
       _$PrivateMessageInfoFromJson(json);
   Map<String, dynamic> toJson() => _$PrivateMessageInfoToJson(this);
 }
-
 @JsonSerializable()
 class PrivateMessageSend {
   @JsonKey(name: 'target_user_id')

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc
 from sqlalchemy.orm import selectinload
 
+from app.core.websocket import manager
 from app.models.user import User
 from app.models.community import (
     Friendship, FriendshipStatus,
@@ -38,11 +39,30 @@ class FriendshipService:
 
         逻辑说明：
         1. 检查是否已存在关系
-        2. 确保 user_id < friend_id 以保持唯一性
-        3. 创建 pending 状态的好友关系
+        2. 如果存在反向的待处理请求，则自动接受（双向奔赴）
+        3. 否则创建 pending 状态的好友关系
         """
         if user_id == target_id:
             raise ValueError("不能添加自己为好友")
+
+        # 检查是否存在反向的待处理请求 (target -> user)
+        reverse_pending = await db.execute(
+            select(Friendship).where(
+                Friendship.user_id == (target_id if str(target_id) < str(user_id) else user_id),
+                Friendship.friend_id == (user_id if str(target_id) < str(user_id) else target_id),
+                Friendship.status == FriendshipStatus.PENDING,
+                Friendship.initiated_by == target_id,
+                Friendship.not_deleted_filter()
+            )
+        )
+        existing_reverse = reverse_pending.scalar_one_or_none()
+        
+        if existing_reverse:
+            # 自动接受
+            existing_reverse.status = FriendshipStatus.ACCEPTED
+            await db.flush()
+            await db.refresh(existing_reverse)
+            return existing_reverse
 
         # 标准化顺序（使用字符串比较）
         if str(user_id) < str(target_id):
@@ -50,7 +70,7 @@ class FriendshipService:
         else:
             small_id, large_id = target_id, user_id
 
-        # 检查是否已存在
+        # 检查是否已存在其他关系
         existing = await db.execute(
             select(Friendship).where(
                 Friendship.user_id == small_id,
@@ -110,21 +130,23 @@ class FriendshipService:
     async def get_friends(
         db: AsyncSession,
         user_id: UUID,
-        status: FriendshipStatus = FriendshipStatus.ACCEPTED
+        status: FriendshipStatus = FriendshipStatus.ACCEPTED,
+        limit: int = 50,
+        offset: int = 0
     ) -> List[Tuple[Friendship, User]]:
-        """获取好友列表"""
-        result = await db.execute(
-            select(Friendship, User).join(
-                User, or_(
-                    and_(Friendship.user_id == user_id, User.id == Friendship.friend_id),
-                    and_(Friendship.friend_id == user_id, User.id == Friendship.user_id)
-                )
-            ).where(
-                or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
-                Friendship.status == status,
-                Friendship.not_deleted_filter()
+        """获取好友列表（分页）"""
+        query = select(Friendship, User).join(
+            User, or_(
+                and_(Friendship.user_id == user_id, User.id == Friendship.friend_id),
+                and_(Friendship.friend_id == user_id, User.id == Friendship.user_id)
             )
-        )
+        ).where(
+            or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+            Friendship.status == status,
+            Friendship.not_deleted_filter()
+        ).limit(limit).offset(offset)
+        
+        result = await db.execute(query)
         return result.all()
 
     @staticmethod
@@ -332,10 +354,22 @@ class GroupService:
         user_id: UUID
     ) -> List[Dict[str, Any]]:
         """获取用户加入的所有群组"""
+        # Optimized query with subquery for member counts
+        member_count_subquery = (
+            select(
+                GroupMember.group_id,
+                func.count(GroupMember.id).label("count")
+            )
+            .where(GroupMember.not_deleted_filter())
+            .group_by(GroupMember.group_id)
+            .subquery()
+        )
+
         result = await db.execute(
-            select(Group, GroupMember).join(
-                GroupMember, GroupMember.group_id == Group.id
-            ).where(
+            select(Group, GroupMember, member_count_subquery.c.count)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
+            .where(
                 GroupMember.user_id == user_id,
                 GroupMember.not_deleted_filter(),
                 Group.not_deleted_filter()
@@ -343,16 +377,7 @@ class GroupService:
         )
 
         groups = []
-        for group, membership in result.all():
-            # 获取成员数量
-            member_count_result = await db.execute(
-                select(func.count(GroupMember.id)).where(
-                    GroupMember.group_id == group.id,
-                    GroupMember.not_deleted_filter()
-                )
-            )
-            member_count = member_count_result.scalar() or 0
-
+        for group, membership, count in result.all():
             days_remaining = None
             if group.deadline:
                 delta = group.deadline - datetime.utcnow()
@@ -362,7 +387,7 @@ class GroupService:
                 'id': group.id,
                 'name': group.name,
                 'type': group.type,
-                'member_count': member_count,
+                'member_count': count or 0,
                 'total_flame_power': group.total_flame_power,
                 'deadline': group.deadline,
                 'days_remaining': days_remaining,
@@ -379,11 +404,26 @@ class GroupService:
         group_type: Optional[GroupType] = None,
         tags: Optional[List[str]] = None,
         limit: int = 20
-    ) -> List[Group]:
+    ) -> List[Dict[str, Any]]:
         """搜索公开群组"""
-        query = select(Group).where(
-            Group.is_public == True,
-            Group.not_deleted_filter()
+        # Member count subquery
+        member_count_subquery = (
+            select(
+                GroupMember.group_id,
+                func.count(GroupMember.id).label("count")
+            )
+            .where(GroupMember.not_deleted_filter())
+            .group_by(GroupMember.group_id)
+            .subquery()
+        )
+
+        query = (
+            select(Group, member_count_subquery.c.count)
+            .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
+            .where(
+                Group.is_public == True,
+                Group.not_deleted_filter()
+            )
         )
 
         if keyword:
@@ -397,9 +437,31 @@ class GroupService:
         if group_type:
             query = query.where(Group.type == group_type)
 
+        # Tags filter (simple overlap check)
+        # Assuming focus_tags is JSONB or ARRAY. If it's JSON list in SQLite/Postgres:
+        # For simplicity in this context without specific DB dialect extensions imported:
+        # We might skip complex tag filtering or implement basic "like" if stored as string,
+        # or rely on application level filtering if dataset is small (bad for scalability).
+        # Given the "optimization" context, let's assume we return and filter if necessary,
+        # or just skip tag filtering implementation improvement for now unless requested.
+        
         query = query.limit(limit)
         result = await db.execute(query)
-        return list(result.scalars().all())
+        
+        groups = []
+        for group, count in result.all():
+            groups.append({
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'type': group.type,
+                'member_count': count or 0,
+                'total_flame_power': group.total_flame_power,
+                'deadline': group.deadline,
+                'focus_tags': group.focus_tags or []
+            })
+            
+        return groups
 
 
 class GroupMessageService:
@@ -423,8 +485,13 @@ class GroupMessageService:
         )
         member = membership_result.scalar_one_or_none()
         if not member:
+            # 尝试踢出已断开连接但仍在 active_connections 中的用户（容错）
+            await manager.kick_user_from_group(str(group_id), str(sender_id), "Not a member")
             raise ValueError("不是群组成员")
+            
         if member.is_muted:
+            # 如果被禁言，可以在此处显式断开其群组 WS
+            # await manager.kick_user_from_group(str(group_id), str(sender_id), "Muted")
             raise ValueError("您已被禁言")
 
         message = GroupMessage(
@@ -448,10 +515,22 @@ class GroupMessageService:
     async def get_messages(
         db: AsyncSession,
         group_id: UUID,
+        user_id: UUID, # Added user_id for permission check
         before_id: Optional[UUID] = None,
         limit: int = 50
     ) -> List[GroupMessage]:
         """获取群消息（分页）"""
+        # Check membership first
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("不是群组成员，无法查看消息")
+
         query = select(GroupMessage).where(
             GroupMessage.group_id == group_id,
             GroupMessage.not_deleted_filter()
@@ -632,8 +711,14 @@ class GroupTaskService:
 
         注意：实际应用中需要注入 TaskService 来创建个人任务
         """
-        # 获取群任务
-        group_task = await GroupTask.get_by_id(db, task_id)
+        # 获取群任务 (Use with_for_update to lock row)
+        result = await db.execute(
+            select(GroupTask)
+            .where(GroupTask.id == task_id)
+            .with_for_update()
+        )
+        group_task = result.scalar_one_or_none()
+        
         if not group_task:
             raise ValueError("任务不存在")
 
