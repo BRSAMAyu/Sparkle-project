@@ -2,7 +2,7 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
@@ -10,6 +10,7 @@ from uuid import UUID
 from app.db.session import get_db
 from app.core.security import get_current_user, decode_token
 from app.core.websocket import manager
+from app.core.rate_limiting import limiter
 from app.models.user import User, UserStatus
 from app.models.community import GroupType
 from app.schemas.community import (
@@ -50,7 +51,9 @@ router = APIRouter()
 # ============ 好友系统 ============
 
 @router.post("/friends/request", summary="发送好友请求")
+@limiter.limit("5/minute")
 async def send_friend_request(
+    request: Request,
     data: FriendRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -90,11 +93,13 @@ async def respond_to_friend_request(
 
 @router.get("/friends", response_model=List[FriendshipInfo], summary="获取好友列表")
 async def get_friends(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """获取当前用户的好友列表"""
-    friends = await FriendshipService.get_friends(db, current_user.id)
+    friends = await FriendshipService.get_friends(db, current_user.id, limit=limit, offset=offset)
     result = []
     for friendship, friend in friends:
         result.append(FriendshipInfo(
@@ -127,7 +132,9 @@ async def get_pending_requests(
 
 
 @router.get("/users/search", response_model=List[UserBrief], summary="搜索用户")
+@limiter.limit("20/minute")
 async def search_users(
+    request: Request,
     keyword: str = Query(..., min_length=1),
     limit: int = Query(default=20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
@@ -293,22 +300,23 @@ async def search_groups(
     groups = await GroupService.search_groups(db, keyword, model_type, tags, limit)
 
     result = []
-    for group in groups:
+    for group_dict in groups:
         days_remaining = None
-        if group.deadline:
+        deadline = group_dict.get('deadline')
+        if deadline:
             from datetime import datetime
-            delta = group.deadline - datetime.utcnow()
+            delta = deadline - datetime.utcnow()
             days_remaining = max(0, delta.days)
 
         result.append(GroupListItem(
-            id=group.id,
-            name=group.name,
-            type=GroupTypeEnum(group.type.value),
-            member_count=0,  # 需要额外查询
-            total_flame_power=group.total_flame_power,
-            deadline=group.deadline,
+            id=group_dict['id'],
+            name=group_dict['name'],
+            type=GroupTypeEnum(group_dict['type'].value),
+            member_count=group_dict['member_count'], 
+            total_flame_power=group_dict['total_flame_power'],
+            deadline=deadline,
             days_remaining=days_remaining,
-            focus_tags=group.focus_tags or []
+            focus_tags=group_dict.get('focus_tags', [])
         ))
     return result
 
@@ -362,7 +370,10 @@ async def get_messages(
     db: AsyncSession = Depends(get_db)
 ):
     """获取群消息（分页）"""
-    messages = await GroupMessageService.get_messages(db, group_id, before_id, limit)
+    try:
+        messages = await GroupMessageService.get_messages(db, group_id, current_user.id, before_id, limit)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
     result = []
     for msg in messages:

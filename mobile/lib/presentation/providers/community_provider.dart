@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/core/services/chat_cache_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
@@ -278,9 +279,23 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   final AuthRepository _authRepository;
   final String _groupId;
   final WebSocketService _wsService = WebSocketService();
+  final ChatCacheService _cacheService = ChatCacheService();
 
   GroupChatNotifier(this._repository, this._authRepository, this._groupId) : super(const AsyncValue.loading()) {
-    loadMessages();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // 1. Load from cache immediately
+    final cached = await _cacheService.getCachedGroupMessages(_groupId);
+    if (cached.isNotEmpty && mounted) {
+      state = AsyncValue.data(cached);
+    }
+    
+    // 2. Start loading from remote
+    await loadMessages();
+    
+    // 3. Connect WS
     _connectWebSocket();
   }
 
@@ -305,7 +320,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
             // Append to state if it's a new message
             state.whenData((messages) {
               if (!messages.any((m) => m.id == message.id)) {
-                state = AsyncValue.data([message, ...messages]);
+                final updated = [message, ...messages];
+                state = AsyncValue.data(updated);
+                // Also update cache if needed, or wait for next full load
               }
             });
           } catch (e) {
@@ -325,12 +342,19 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   Future<void> loadMessages() async {
-    state = const AsyncValue.loading();
+    // If we have cached data, don't show loading spinner (optional UI choice)
     try {
       final messages = await _repository.getMessages(_groupId);
       state = AsyncValue.data(messages);
+      // Update cache
+      await _cacheService.saveGroupMessages(_groupId, messages);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      // Only set error if we don't have data
+      if (state.hasValue) {
+         // Keep existing data but maybe show a toast
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
@@ -411,78 +435,76 @@ class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> 
 
 // 7. Private Chat Provider (Family)
 final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>((ref, friendId) {
+  final stream = ref.watch(communityEventsStreamProvider);
   return PrivateChatNotifier(
     ref.watch(communityRepositoryProvider),
-    ref.watch(authRepositoryProvider),
     friendId,
+    stream,
   );
 });
 
 class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
   final CommunityRepository _repository;
-  final AuthRepository _authRepository;
   final String _friendId;
-  final WebSocketService _wsService = WebSocketService();
+  final ChatCacheService _cacheService = ChatCacheService();
 
-  PrivateChatNotifier(this._repository, this._authRepository, this._friendId) : super(const AsyncValue.loading()) {
-    loadMessages();
-    _connectWebSocket();
+  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events) : super(const AsyncValue.loading()) {
+    _initialize(events);
   }
 
-  void _connectWebSocket() {
-    final token = _authRepository.getAccessToken();
-    if (token == null) return;
+  Future<void> _initialize(Stream<dynamic> events) async {
+    // 1. Load from cache immediately
+    final cached = await _cacheService.getCachedPrivateMessages(_friendId);
+    if (cached.isNotEmpty && mounted) {
+      state = AsyncValue.data(cached);
+    }
+    
+    // 2. Start loading from remote
+    await loadMessages();
+    
+    // 3. Listen to events
+    events.listen(_handleEvent);
+  }
 
-    // Convert http/https to ws/wss
-    final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
-    // Final URL: ws://host/api/v1/community/ws/connect?token={token}
-    final wsUrl = '$baseUrl/community/ws/connect?token=$token';
-
-    try {
-      _wsService.connect(wsUrl);
-      _wsService.stream?.listen((data) {
-        if (data is String) {
-          try {
-            final jsonData = jsonDecode(data);
-            // Check if it matches PrivateMessage structure
-            // In a real app we might wrap messages in envelopes {type: 'private_chat', data: ...}
-            // For now assume direct mapping or check fields
-            if (jsonData['sender'] != null && jsonData['receiver'] != null) {
-               final message = PrivateMessageInfo.fromJson(jsonData);
-               
-               // Filter: only relevant to this conversation
-               // Either sent by friend OR sent by me to friend (if echoed back)
-               if (message.sender.id == _friendId || message.receiver.id == _friendId) {
-                 state.whenData((messages) {
-                   if (!messages.any((m) => m.id == message.id)) {
-                     state = AsyncValue.data([message, ...messages]);
-                   }
-                 });
-               }
-            }
-          } catch (e) {
-            print('WS Parse Error (Private): $e');
-          }
+  void _handleEvent(dynamic data) {
+    if (data is String) {
+      try {
+        final jsonData = jsonDecode(data);
+        // Check if it matches PrivateMessage structure and is related to this friend
+        if (jsonData['sender'] != null && jsonData['receiver'] != null) {
+           // We try-catch parse because event might not be a private message
+           try {
+             final message = PrivateMessageInfo.fromJson(jsonData);
+             if (message.sender.id == _friendId || message.receiver.id == _friendId) {
+               state.whenData((messages) {
+                 if (!messages.any((m) => m.id == message.id)) {
+                   final updated = [message, ...messages];
+                   state = AsyncValue.data(updated);
+                 }
+               });
+             }
+           } catch (_) {
+             // Not a private message or mismatch structure
+           }
         }
-      });
-    } catch (e) {
-      print('WS Connect Error (Private): $e');
+      } catch (e) {
+        print('WS Parse Error (Private): $e');
+      }
     }
   }
 
-  @override
-  void dispose() {
-    _wsService.disconnect();
-    super.dispose();
-  }
-
   Future<void> loadMessages() async {
-    state = const AsyncValue.loading();
     try {
       final messages = await _repository.getPrivateMessages(_friendId);
       state = AsyncValue.data(messages);
+      // Update cache
+      await _cacheService.savePrivateMessages(_friendId, messages);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (state.hasValue) {
+        // Keep existing
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 

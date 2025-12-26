@@ -22,6 +22,7 @@ from loguru import logger
 from app.api.v1.router import api_router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
 from app.api.v1.health import set_start_time
+from app.core.websocket import manager
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi.responses import JSONResponse
@@ -41,6 +42,8 @@ async def lifespan(app: FastAPI):
     
     # Initialize Cache (Redis)
     await cache_service.init_redis()
+    # Initialize WebSocket Redis
+    await manager.init_redis()
     
     async with AsyncSessionLocal() as db:
         try:
@@ -76,6 +79,8 @@ async def lifespan(app: FastAPI):
     
     # Close Cache
     await cache_service.close()
+    # Close WebSocket Redis
+    await manager.close_redis()
 
     logger.info("Sparkle API Server stopped")
 
