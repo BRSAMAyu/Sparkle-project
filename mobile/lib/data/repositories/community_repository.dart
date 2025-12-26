@@ -126,6 +126,18 @@ class CommunityRepository {
     }
   }
 
+  /// 更新在线状态
+  Future<void> updateStatus(UserStatus status) async {
+    try {
+      await _apiClient.put(
+        ApiEndpoints.userStatus,
+        data: {'status': status.name},
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'updateStatus');
+    }
+  }
+
   // ============ 群组管理 ============
 
   /// 创建群组

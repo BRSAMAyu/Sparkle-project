@@ -8,6 +8,28 @@ import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 
+Color _getStatusColor(UserStatus status) {
+  switch (status) {
+    case UserStatus.online:
+      return Colors.green;
+    case UserStatus.offline:
+      return Colors.grey;
+    case UserStatus.invisible:
+      return Colors.grey; // Shows as grey
+  }
+}
+
+String _getStatusText(UserStatus status) {
+  switch (status) {
+    case UserStatus.online:
+      return '在线';
+    case UserStatus.offline:
+      return '离线';
+    case UserStatus.invisible:
+      return '离线'; // Shows as offline
+  }
+}
+
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
 
@@ -20,6 +42,50 @@ class CommunityScreen extends StatelessWidget {
           title: const Text('社群'),
           centerTitle: true,
           actions: [
+            Consumer(
+              builder: (context, ref, child) {
+                final currentStatus = ref.watch(currentUserStatusProvider);
+                return PopupMenuButton<UserStatus>(
+                  icon: Icon(Icons.circle, color: _getStatusColor(currentStatus), size: 18),
+                  tooltip: '设置状态',
+                  onSelected: (status) {
+                    ref.read(currentUserStatusProvider.notifier).updateStatus(status);
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: UserStatus.online,
+                      child: Row(
+                        children: [
+                          Icon(Icons.circle, color: _getStatusColor(UserStatus.online), size: 14),
+                          const SizedBox(width: 8),
+                          const Text('在线'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: UserStatus.invisible,
+                      child: Row(
+                        children: [
+                          Icon(Icons.circle, color: _getStatusColor(UserStatus.invisible), size: 14),
+                          const SizedBox(width: 8),
+                          const Text('隐身'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: UserStatus.offline,
+                      child: Row(
+                        children: [
+                          Icon(Icons.circle, color: _getStatusColor(UserStatus.offline), size: 14),
+                          const SizedBox(width: 8),
+                          const Text('离线'),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () {
@@ -361,25 +427,42 @@ class _FriendsTab extends ConsumerWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: AppDesignTokens.spacing8),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
-                    backgroundColor: AppDesignTokens.primaryBase.withOpacity(0.2),
-                    child: friend.avatarUrl == null
-                        ? Text(
-                            friend.displayName[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: AppDesignTokens.primaryBase,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : null,
+                  leading: Stack(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
+                        backgroundColor: AppDesignTokens.primaryBase.withOpacity(0.2),
+                        child: friend.avatarUrl == null
+                            ? Text(
+                                friend.displayName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppDesignTokens.primaryBase,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(friend.status),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   title: Text(
                     friend.displayName,
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   subtitle: Text(
-                    'Lv.${friend.flameLevel} · ${friendInfo.status}',
+                    'Lv.${friend.flameLevel} · ${_getStatusText(friend.status)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white54 : Colors.grey.shade600,

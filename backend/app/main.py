@@ -1,9 +1,11 @@
 """
 Sparkle Backend - FastAPI Application Entry Point
 """
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from app.core.rate_limiting import setup_rate_limiting
 from app.config import settings
@@ -32,6 +34,10 @@ async def lifespan(app: FastAPI):
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
+    
+    # Ensure upload directory exists
+    if not os.path.exists(settings.UPLOAD_DIR):
+        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     
     # Initialize Cache (Redis)
     await cache_service.init_redis()
@@ -92,7 +98,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        response.headers["Content-Security-Policy"] = "default-src 'self' *; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: *;"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -142,6 +148,11 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+
+# Mount static files for uploads
+# Make sure the directory exists
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 @app.exception_handler(SparkleException)
 async def sparkle_exception_handler(request: Request, exc: SparkleException):

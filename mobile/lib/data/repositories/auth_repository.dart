@@ -162,13 +162,53 @@ class AuthRepository {
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
     try {
       if (DemoDataService.isDemoMode) {
-        // Return updated demo user (mock update)
-        return DemoDataService().demoUser; // Ideally modify the instance but readonly for now
+        return DemoDataService().demoUser;
       }
       final response = await _apiClient.put(ApiEndpoints.me, data: data);
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
       throw e.response?.data['detail'] ?? 'Could not update profile.';
+    } catch (e) {
+      throw 'An unexpected error occurred';
+    }
+  }
+
+  Future<UserModel> updateAvatar(String filePath) async {
+    try {
+      if (DemoDataService.isDemoMode) {
+        return DemoDataService().demoUser;
+      }
+      
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+
+      final response = await _apiClient.post(
+        '${ApiEndpoints.me}/avatar',
+        data: formData,
+      );
+      return UserModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw e.response?.data['detail'] ?? 'Could not update avatar.';
+    } catch (e) {
+      throw 'An unexpected error occurred';
+    }
+  }
+
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    try {
+      if (DemoDataService.isDemoMode) {
+        return;
+      }
+      await _apiClient.post(
+        '${ApiEndpoints.me}/password',
+        data: {
+          'old_password': oldPassword,
+          'new_password': newPassword,
+        },
+      );
+    } on DioException catch (e) {
+      throw e.response?.data['detail'] ?? 'Could not change password.';
     } catch (e) {
       throw 'An unexpected error occurred';
     }

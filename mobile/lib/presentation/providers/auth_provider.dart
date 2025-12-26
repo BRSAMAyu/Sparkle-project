@@ -138,6 +138,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> updateAvatar(String filePath) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final user = await _authRepository.updateAvatar(filePath);
+      state = state.copyWith(isLoading: false, user: user);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _authRepository.changePassword(oldPassword, newPassword);
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     state = AuthState(); // Reset to initial state

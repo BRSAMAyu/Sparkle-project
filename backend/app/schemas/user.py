@@ -2,10 +2,17 @@
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID
+import enum
 
 from app.schemas.common import BaseSchema
 
 # ========== Request Schemas ==========
+
+class UserStatusEnum(str, enum.Enum):
+    ONLINE = "online"
+    OFFLINE = "offline"
+    INVISIBLE = "invisible"
+
 
 class UserRegister(BaseModel):
     """User registration"""
@@ -22,9 +29,11 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     """User information update"""
     nickname: Optional[str] = Field(default=None, max_length=100, description="Nickname")
+    email: Optional[EmailStr] = Field(default=None, description="Email")
     avatar_url: Optional[str] = Field(default=None, max_length=500, description="Avatar URL")
     depth_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
     curiosity_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
+    status: Optional[UserStatusEnum] = Field(default=None, description="Status update") # Allow update here too?
 
 class PasswordChange(BaseModel):
     """Password change"""
@@ -63,6 +72,7 @@ class UserProfile(UserBase):
     depth_preference: float = Field(description="Depth preference")
     curiosity_preference: float = Field(description="Curiosity preference")
     is_active: bool = Field(description="Is active")
+    status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="Status")
     created_at: str = Field(description="Registration time")
 
 class UserFlameStatus(BaseModel):

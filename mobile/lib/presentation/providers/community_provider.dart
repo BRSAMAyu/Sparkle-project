@@ -7,16 +7,89 @@ import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
+// Global Community Events Stream
+final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref) {
+  final wsService = WebSocketService();
+  final authRepo = ref.watch(authRepositoryProvider);
+  final token = authRepo.getAccessToken();
+  
+  if (token == null) return const Stream.empty();
+
+  final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
+  final wsUrl = '$baseUrl/community/ws/connect?token=$token';
+
+  try {
+    wsService.connect(wsUrl);
+  } catch (e) {
+    print('WS Connect Error: $e');
+  }
+  
+  ref.onDispose(() {
+    wsService.disconnect();
+  });
+
+  return wsService.stream ?? const Stream.empty();
+});
+
 // 1. Friends Provider
 final friendsProvider = StateNotifierProvider<FriendsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) {
-  return FriendsNotifier(ref.watch(communityRepositoryProvider));
+  final stream = ref.watch(communityEventsStreamProvider);
+  return FriendsNotifier(ref.watch(communityRepositoryProvider), stream);
 });
 
 class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   final CommunityRepository _repository;
 
-  FriendsNotifier(this._repository) : super(const AsyncValue.loading()) {
+  FriendsNotifier(this._repository, Stream<dynamic> events) : super(const AsyncValue.loading()) {
     loadFriends();
+    events.listen(_handleEvent);
+  }
+
+  void _handleEvent(dynamic data) {
+    if (data is String) {
+      try {
+        final json = jsonDecode(data);
+        if (json['type'] == 'status_update') {
+           _updateFriendStatus(json['user_id'], json['status']);
+        }
+      } catch (e) {
+        print('Event Error: $e');
+      }
+    }
+  }
+
+  void _updateFriendStatus(String userId, String statusStr) {
+    state.whenData((friends) {
+      final newStatus = UserStatus.values.firstWhere(
+        (e) => e.name == statusStr,
+        orElse: () => UserStatus.offline,
+      );
+      
+      final updatedFriends = friends.map((f) {
+        if (f.friend.id == userId) {
+          return FriendshipInfo(
+            id: f.id,
+            friend: UserBrief(
+              id: f.friend.id,
+              username: f.friend.username,
+              nickname: f.friend.nickname,
+              avatarUrl: f.friend.avatarUrl,
+              flameLevel: f.friend.flameLevel,
+              flameBrightness: f.friend.flameBrightness,
+              status: newStatus,
+            ),
+            status: f.status,
+            createdAt: f.createdAt,
+            updatedAt: f.updatedAt,
+            initiatedByMe: f.initiatedByMe,
+            matchReason: f.matchReason,
+          );
+        }
+        return f;
+      }).toList();
+      
+      state = AsyncValue.data(updatedFriends);
+    });
   }
 
   Future<void> loadFriends() async {
@@ -431,6 +504,25 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       });
     } catch (e) {
       rethrow;
+    }
+  }
+}
+
+// 8. Current User Status Provider
+final currentUserStatusProvider = StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) {
+  return CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider));
+});
+
+class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
+  final CommunityRepository _repository;
+  CurrentUserStatusNotifier(this._repository) : super(UserStatus.online); // Default assume online
+
+  Future<void> updateStatus(UserStatus newStatus) async {
+    try {
+      state = newStatus;
+      await _repository.updateStatus(newStatus);
+    } catch (e) {
+      print('Update Status Failed: $e');
     }
   }
 }

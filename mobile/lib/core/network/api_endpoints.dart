@@ -55,6 +55,7 @@ class ApiEndpoints {
   static String privateMessages(String friendId) => '/community/friends/$friendId/messages';
   static const String sendPrivateMessage = '/community/messages';
   static const String searchUsers = '/community/users/search';
+  static const String userStatus = '/community/status';
 
   // Community - Groups
   static const String groups = '/community/groups';

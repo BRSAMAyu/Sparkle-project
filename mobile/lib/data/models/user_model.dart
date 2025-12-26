@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/data/models/community_model.dart';
 
 part 'user_model.g.dart';
 
@@ -20,6 +21,8 @@ class UserModel {
   final double curiosityPreference;
   @JsonKey(name: 'is_active')
   final bool isActive;
+  @JsonKey(name: 'status')
+  final UserStatus status;
   @JsonKey(name: 'schedule_preferences')
   final Map<String, dynamic>? schedulePreferences;
   @JsonKey(name: 'push_preference')
@@ -35,6 +38,7 @@ class UserModel {
     required this.email,
     required this.flameLevel, required this.flameBrightness, required this.depthPreference, required this.curiosityPreference, required this.isActive, required this.createdAt, required this.updatedAt, this.nickname,
     this.avatarUrl,
+    this.status = UserStatus.offline,
     this.schedulePreferences,
     this.pushPreferences,
   });
