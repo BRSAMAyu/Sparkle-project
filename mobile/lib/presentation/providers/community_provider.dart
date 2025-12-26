@@ -8,6 +8,8 @@ import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
+import 'package:uuid/uuid.dart';
+
 // Global Community Events Stream
 final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref) {
   final wsService = WebSocketService();
@@ -280,6 +282,10 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   final String _groupId;
   final WebSocketService _wsService = WebSocketService();
   final ChatCacheService _cacheService = ChatCacheService();
+  
+  // Track messages waiting for ACK
+  final Set<String> _pendingNonces = {};
+  Set<String> get pendingNonces => _pendingNonces;
 
   GroupChatNotifier(this._repository, this._authRepository, this._groupId) : super(const AsyncValue.loading()) {
     _initialize();
@@ -303,10 +309,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     final token = _authRepository.getAccessToken();
     if (token == null) return;
 
-    // Convert http/https to ws/wss
-    // Assumes ApiEndpoints.baseUrl is like 'http://host/api/v1'
     final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
-    // Final URL: ws://host/api/v1/community/groups/{id}/ws?token={token}
     final wsUrl = '$baseUrl/community/groups/$_groupId/ws?token=$token';
 
     try {
@@ -315,6 +318,18 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         if (data is String) {
           try {
             final jsonData = jsonDecode(data);
+            
+            // Handle ACK
+            if (jsonData['type'] == 'ack') {
+              final nonce = jsonData['nonce'];
+              if (nonce != null && _pendingNonces.contains(nonce)) {
+                _pendingNonces.remove(nonce);
+                // Optional: Update UI state to show 'Sent'
+                if (mounted) setState(() {}); 
+              }
+              return;
+            }
+
             final message = MessageInfo.fromJson(jsonData);
 
             // Append to state if it's a new message
@@ -322,7 +337,6 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
               if (!messages.any((m) => m.id == message.id)) {
                 final updated = [message, ...messages];
                 state = AsyncValue.data(updated);
-                // Also update cache if needed, or wait for next full load
               }
             });
           } catch (e) {
@@ -342,21 +356,44 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   Future<void> loadMessages() async {
-    // If we have cached data, don't show loading spinner (optional UI choice)
     try {
       final messages = await _repository.getMessages(_groupId);
       state = AsyncValue.data(messages);
-      // Update cache
       await _cacheService.saveGroupMessages(_groupId, messages);
     } catch (e, st) {
-      // Only set error if we don't have data
-      if (state.hasValue) {
-         // Keep existing data but maybe show a toast
-      } else {
+      if (!state.hasValue) {
         state = AsyncValue.error(e, st);
       }
     }
   }
+
+  Future<void> refresh() => loadMessages();
+
+  Future<void> sendMessage({required String content, MessageType type = MessageType.text}) async {
+    final nonce = const Uuid().v4();
+    _pendingNonces.add(nonce);
+    if (mounted) setState(() {});
+
+    try {
+      final message = await _repository.sendMessage(
+        _groupId, 
+        type: type, 
+        content: content,
+        nonce: nonce,
+      );
+      
+      state.whenData((messages) {
+        if (!messages.any((m) => m.id == message.id)) {
+          state = AsyncValue.data([message, ...messages]);
+        }
+      });
+    } catch (e) {
+      _pendingNonces.remove(nonce);
+      if (mounted) setState(() {});
+      rethrow;
+    }
+  }
+}
 
   Future<void> refresh() => loadMessages();
 
@@ -447,6 +484,9 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   final CommunityRepository _repository;
   final String _friendId;
   final ChatCacheService _cacheService = ChatCacheService();
+  
+  final Set<String> _pendingNonces = {};
+  Set<String> get pendingNonces => _pendingNonces;
 
   PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events) : super(const AsyncValue.loading()) {
     _initialize(events);
@@ -470,9 +510,19 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     if (data is String) {
       try {
         final jsonData = jsonDecode(data);
+        
+        // Handle ACK
+        if (jsonData['type'] == 'ack') {
+          final nonce = jsonData['nonce'];
+          if (nonce != null && _pendingNonces.contains(nonce)) {
+            _pendingNonces.remove(nonce);
+            if (mounted) setState(() {});
+          }
+          return;
+        }
+
         // Check if it matches PrivateMessage structure and is related to this friend
         if (jsonData['sender'] != null && jsonData['receiver'] != null) {
-           // We try-catch parse because event might not be a private message
            try {
              final message = PrivateMessageInfo.fromJson(jsonData);
              if (message.sender.id == _friendId || message.receiver.id == _friendId) {
@@ -483,9 +533,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
                  }
                });
              }
-           } catch (_) {
-             // Not a private message or mismatch structure
-           }
+           } catch (_) {}
         }
       } catch (e) {
         print('WS Parse Error (Private): $e');
@@ -497,24 +545,26 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     try {
       final messages = await _repository.getPrivateMessages(_friendId);
       state = AsyncValue.data(messages);
-      // Update cache
       await _cacheService.savePrivateMessages(_friendId, messages);
     } catch (e, st) {
-      if (state.hasValue) {
-        // Keep existing
-      } else {
+      if (!state.hasValue) {
         state = AsyncValue.error(e, st);
       }
     }
   }
 
   Future<void> sendMessage({required String content, MessageType type = MessageType.text}) async {
+    final nonce = const Uuid().v4();
+    _pendingNonces.add(nonce);
+    if (mounted) setState(() {});
+
     try {
       final message = await _repository.sendPrivateMessage(
         PrivateMessageSend(
           targetUserId: _friendId,
           content: content,
           messageType: type,
+          nonce: nonce,
         ),
       );
       
@@ -525,6 +575,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
         }
       });
     } catch (e) {
+      _pendingNonces.remove(nonce);
+      if (mounted) setState(() {});
       rethrow;
     }
   }

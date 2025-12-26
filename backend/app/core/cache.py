@@ -3,6 +3,7 @@ Redis Caching Module
 负责缓存管理，提供装饰器和工具函数
 """
 import json
+import asyncio
 from typing import Any, Optional, Callable, Union
 from functools import wraps
 import hashlib
@@ -11,6 +12,8 @@ from datetime import timedelta
 
 import redis.asyncio as redis
 from app.config import settings
+
+from contextlib import asynccontextmanager
 
 class CacheService:
     def __init__(self):
@@ -24,6 +27,37 @@ class CacheService:
             encoding="utf-8", 
             decode_responses=False # We use pickle for complex objects
         )
+
+    @asynccontextmanager
+    async def distributed_lock(self, lock_key: str, expire: int = 10):
+        """
+        简单 Redis 分布式锁
+        """
+        if not self.redis:
+            yield # Fallback: No lock if redis is not ready
+            return
+
+        # key naming
+        key = f"lock:{lock_key}"
+        # try to acquire
+        locked = await self.redis.set(key, "1", ex=expire, nx=True)
+        
+        if not locked:
+            # Retry once after 1s? Or just fail? For simplicity, we fail or wait.
+            # In MVP, let's wait a bit.
+            for _ in range(3):
+                await asyncio.sleep(0.5)
+                locked = await self.redis.set(key, "1", ex=expire, nx=True)
+                if locked: break
+        
+        if not locked:
+            raise Exception(f"Failed to acquire lock for {lock_key}")
+            
+        try:
+            yield
+        finally:
+            # safe release (only if exists)
+            await self.redis.delete(key)
 
     async def close(self):
         if self.redis:

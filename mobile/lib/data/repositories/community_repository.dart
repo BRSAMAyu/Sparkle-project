@@ -246,6 +246,7 @@ class CommunityRepository {
     String? content,
     Map<String, dynamic>? contentData,
     String? replyToId,
+    String? nonce,
   }) async {
     try {
       final response = await _apiClient.post(
@@ -255,6 +256,7 @@ class CommunityRepository {
           'content': content,
           'content_data': contentData,
           'reply_to_id': replyToId,
+          'nonce': nonce,
         },
       );
       return MessageInfo.fromJson(response.data);

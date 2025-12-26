@@ -213,6 +213,7 @@ class MessageSend(BaseModel):
     content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
     reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+    nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
     @classmethod
@@ -357,6 +358,7 @@ class PrivateMessageSend(BaseModel):
     content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
     reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+    nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
     @classmethod

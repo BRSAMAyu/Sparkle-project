@@ -311,7 +311,7 @@ class GroupMemberInfo {
   Map<String, dynamic> toJson() => _$GroupMemberInfoToJson(this);
 }
 
-// ============ 群消息 ============ 
+// ============ 消息 ============ 
 
 @JsonSerializable()
 @HiveType(typeId: 13)
@@ -404,6 +404,7 @@ class PrivateMessageInfo {
       _$PrivateMessageInfoFromJson(json);
   Map<String, dynamic> toJson() => _$PrivateMessageInfoToJson(this);
 }
+
 @JsonSerializable()
 class PrivateMessageSend {
   @JsonKey(name: 'target_user_id')
@@ -415,13 +416,15 @@ class PrivateMessageSend {
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
   final String? replyToId;
+  final String? nonce;
 
   PrivateMessageSend({
     required this.targetUserId,
     this.messageType = MessageType.text,
     this.content,
     this.contentData,
-    this.replyToId,
+    this.reply_to_id,
+    this.nonce,
   });
 
   factory PrivateMessageSend.fromJson(Map<String, dynamic> json) =>
@@ -438,12 +441,14 @@ class MessageSend {
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
   final String? replyToId;
+  final String? nonce;
 
   MessageSend({
     this.messageType = MessageType.text,
     this.content,
     this.contentData,
-    this.replyToId,
+    this.reply_to_id,
+    this.nonce,
   });
 
   factory MessageSend.fromJson(Map<String, dynamic> json) =>

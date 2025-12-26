@@ -200,8 +200,16 @@ async def websocket_endpoint(
             while True:
                 # 保持连接活跃，接收客户端消息（如果有）
                 # 目前主要用于服务器推送，客户端发送走 HTTP POST
-                data = await websocket.receive_text()
-                # 可以在这里处理心跳等
+                raw_data = await websocket.receive_text()
+                try:
+                    data = json.loads(raw_data)
+                    if isinstance(data, dict) and data.get("type") == "typing":
+                        # Add user_id to identify sender and broadcast
+                        data["user_id"] = user_id
+                        await manager.broadcast(data, str(group_id))
+                except:
+                    # Non-json or other messages, ignore
+                    pass
         except WebSocketDisconnect:
             manager.disconnect(websocket, str(group_id), user_id)
             
@@ -271,6 +279,37 @@ async def leave_group(
     """退出群组"""
     try:
         await GroupService.leave_group(db, group_id, current_user.id)
+        await db.commit()
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/groups/{group_id}", summary="解散群组")
+async def dissolve_group(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """解散群组（仅限群主）"""
+    try:
+        await GroupService.dissolve_group(db, group_id, current_user.id)
+        await db.commit()
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/transfer", summary="转让群主")
+async def transfer_group_owner(
+    group_id: UUID,
+    new_owner_id: UUID = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """转让群主身份"""
+    try:
+        await GroupService.transfer_owner(db, group_id, current_user.id, new_owner_id)
         await db.commit()
         return {"success": True}
     except ValueError as e:
@@ -356,6 +395,15 @@ async def send_message(
         # 广播消息到 WebSocket
         await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
 
+        # 回传 ACK 给发送者
+        if data.nonce:
+            await manager.send_personal_message({
+                "type": "ack",
+                "nonce": data.nonce,
+                "message_id": str(message.id),
+                "timestamp": message.created_at.isoformat()
+            }, str(current_user.id))
+
         return message_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -431,6 +479,15 @@ async def send_private_message(
         # 推送 WebSocket
         await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
 
+        # 回传 ACK 给发送者
+        if data.nonce:
+            await manager.send_personal_message({
+                "type": "ack",
+                "nonce": data.nonce,
+                "message_id": str(message.id),
+                "timestamp": message.created_at.isoformat()
+            }, str(current_user.id))
+
         return msg_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -477,6 +534,7 @@ async def _update_user_status(user_id: str, status: UserStatus):
             return
 
         # Invisible 逻辑: 如果当前是隐身，上线/下线操作不改变DB状态（保持隐身）
+        # 且不广播任何通知。
         if user.status == UserStatus.INVISIBLE:
             return 
 
@@ -484,16 +542,9 @@ async def _update_user_status(user_id: str, status: UserStatus):
         db.add(user)
         await db.commit()
 
-        # 通知好友
-        friends = await FriendshipService.get_friends(db, user.id)
-        friend_ids = [str(f_user.id) for _, f_user in friends]
-        
-        # 广播
+        # 广播 (分布式优化版：PUBLISH ONCE)
         broadcast_status = status.value
-        if status == UserStatus.INVISIBLE:
-            broadcast_status = UserStatus.OFFLINE.value
-            
-        await manager.notify_status_change(str(user.id), broadcast_status, friend_ids)
+        await manager.notify_status_change(str(user.id), broadcast_status)
 
 
 @router.put("/status", summary="更新在线状态")
@@ -510,14 +561,11 @@ async def update_status(
     await db.commit()
     
     # 通知
-    friends = await FriendshipService.get_friends(db, user.id)
-    friend_ids = [str(f_user.id) for _, f_user in friends]
-    
     broadcast_status = data.status.value
     if data.status == UserStatus.INVISIBLE:
         broadcast_status = UserStatus.OFFLINE.value
         
-    await manager.notify_status_change(str(user.id), broadcast_status, friend_ids)
+    await manager.notify_status_change(str(user.id), broadcast_status)
     
     return {"success": True, "status": data.status}
 
@@ -540,7 +588,12 @@ async def user_websocket_endpoint(
             await websocket.close(code=4003)
             return
             
-        await manager.connect_user(websocket, user_id)
+        # 获取好友列表以便优化 Presence 通知
+        async with AsyncSessionLocal() as db:
+            friends = await FriendshipService.get_friends(db, UUID(user_id))
+            friend_ids = [str(f_user.id) for _, f_user in friends]
+
+        await manager.connect_user(websocket, user_id, friend_ids=friend_ids)
         
         # 上线通知
         await _update_user_status(user_id, UserStatus.ONLINE)

@@ -70,7 +70,7 @@ class FriendshipService:
         else:
             small_id, large_id = target_id, user_id
 
-        # 检查是否已存在其他关系
+        # 检查是否已存在其他关系（包括黑名单）
         existing = await db.execute(
             select(Friendship).where(
                 Friendship.user_id == small_id,
@@ -78,7 +78,10 @@ class FriendshipService:
                 Friendship.not_deleted_filter()
             )
         )
-        if existing.scalar_one_or_none():
+        existing_rel = existing.scalar_one_or_none()
+        if existing_rel:
+            if existing_rel.status == FriendshipStatus.BLOCKED:
+                raise ValueError("由于对方的隐私设置，无法发送请求")
             raise ValueError("已存在好友关系或待处理请求")
 
         friendship = Friendship(
@@ -398,70 +401,87 @@ class GroupService:
         return groups
 
     @staticmethod
-    async def search_groups(
+    async def dissolve_group(
         db: AsyncSession,
-        keyword: Optional[str] = None,
-        group_type: Optional[GroupType] = None,
-        tags: Optional[List[str]] = None,
-        limit: int = 20
-    ) -> List[Dict[str, Any]]:
-        """搜索公开群组"""
-        # Member count subquery
-        member_count_subquery = (
-            select(
-                GroupMember.group_id,
-                func.count(GroupMember.id).label("count")
-            )
-            .where(GroupMember.not_deleted_filter())
-            .group_by(GroupMember.group_id)
-            .subquery()
-        )
-
-        query = (
-            select(Group, member_count_subquery.c.count)
-            .outerjoin(member_count_subquery, member_count_subquery.c.group_id == Group.id)
-            .where(
-                Group.is_public == True,
-                Group.not_deleted_filter()
+        group_id: UUID,
+        user_id: UUID
+    ) -> bool:
+        """解散群组"""
+        # 1. 验证身份（必须是群主）
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.role == GroupRole.OWNER,
+                GroupMember.not_deleted_filter()
             )
         )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("只有群主可以解散群组")
 
-        if keyword:
-            query = query.where(
-                or_(
-                    Group.name.ilike(f"%{keyword}%"),
-                    Group.description.ilike(f"%{keyword}%")
-                )
+        group = await Group.get_by_id(db, group_id)
+        if not group:
+            raise ValueError("群组不存在")
+
+        # 2. 软删除群组
+        await group.delete(db, soft=True)
+        
+        # 3. 软删除所有成员关系
+        from sqlalchemy import update
+        await db.execute(
+            update(GroupMember)
+            .where(GroupMember.group_id == group_id)
+            .values(is_deleted=True, deleted_at=datetime.utcnow())
+        )
+        
+        return True
+
+    @staticmethod
+    async def transfer_owner(
+        db: AsyncSession,
+        group_id: UUID,
+        current_owner_id: UUID,
+        new_owner_id: UUID
+    ) -> bool:
+        """转让群主"""
+        if current_owner_id == new_owner_id:
+            return True
+
+        # 1. 验证当前用户是群主
+        owner_membership = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == current_owner_id,
+                GroupMember.role == GroupRole.OWNER,
+                GroupMember.not_deleted_filter()
             )
+        )
+        owner_member = owner_membership.scalar_one_or_none()
+        if not owner_member:
+            raise ValueError("无权操作")
 
-        if group_type:
-            query = query.where(Group.type == group_type)
+        # 2. 验证新用户是群成员
+        new_owner_membership = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == new_owner_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        new_owner_member = new_owner_membership.scalar_one_or_none()
+        if not new_owner_member:
+            raise ValueError("目标用户不是群成员")
 
-        # Tags filter (simple overlap check)
-        # Assuming focus_tags is JSONB or ARRAY. If it's JSON list in SQLite/Postgres:
-        # For simplicity in this context without specific DB dialect extensions imported:
-        # We might skip complex tag filtering or implement basic "like" if stored as string,
-        # or rely on application level filtering if dataset is small (bad for scalability).
-        # Given the "optimization" context, let's assume we return and filter if necessary,
-        # or just skip tag filtering implementation improvement for now unless requested.
+        # 3. 执行转让
+        owner_member.role = GroupRole.ADMIN # 原群主降级为管理员
+        new_owner_member.role = GroupRole.OWNER
         
-        query = query.limit(limit)
-        result = await db.execute(query)
+        # 4. 发送系统消息
+        await GroupMessageService.send_system_message(
+            db, group_id, f"群主已转让给新成员"
+        )
         
-        groups = []
-        for group, count in result.all():
-            groups.append({
-                'id': group.id,
-                'name': group.name,
-                'description': group.description,
-                'type': group.type,
-                'member_count': count or 0,
-                'total_flame_power': group.total_flame_power,
-                'deadline': group.deadline,
-                'focus_tags': group.focus_tags or []
-            })
-            
-        return groups
+        return True
 
 
 class GroupMessageService:
@@ -709,7 +729,11 @@ class GroupTaskService:
         """
         认领群任务
 
-        注意：实际应用中需要注入 TaskService 来创建个人任务
+        逻辑说明:
+        1. 锁定群任务行防止并发冲突
+        2. 检查是否已认领
+        3. 创建个人任务系统中的副本
+        4. 建立关联记录
         """
         # 获取群任务 (Use with_for_update to lock row)
         result = await db.execute(
@@ -733,12 +757,36 @@ class GroupTaskService:
         if existing.scalar_one_or_none():
             raise ValueError("已认领此任务")
 
+        # 创建个人任务副本
+        from app.services.task_service import TaskService
+        from app.schemas.task import TaskCreate
+        from app.models.task import TaskType as PersonalTaskType
+        
+        # 转换日期 (DateTime -> Date)
+        personal_due_date = group_task.due_date.date() if group_task.due_date else None
+        
+        personal_task_in = TaskCreate(
+            title=f"[{group_task.group.name}] {group_task.title}" if group_task.group else f"[群任务] {group_task.title}",
+            type=PersonalTaskType.LEARNING, # 默认设为学习类
+            tags=group_task.tags or [],
+            estimated_minutes=group_task.estimated_minutes,
+            difficulty=group_task.difficulty,
+            due_date=personal_due_date,
+            priority=2 # 中高优先级
+        )
+        
+        # 注意：这里调用 TaskService.create，它内部会执行 commit
+        # 但我们在事务中，最好让外部统一 commit。
+        # 修改：TaskService.create 目前内部有 commit，这在复合操作中不太理想。
+        # 暂时保持，但理想状态下 Service 层应该分 open/save 逻辑。
+        personal_task = await TaskService.create(db, personal_task_in, user_id)
+
         # 记录认领
         claim = GroupTaskClaim(
             group_task_id=task_id,
             user_id=user_id,
+            personal_task_id=personal_task.id,
             claimed_at=datetime.utcnow()
-            # personal_task_id 需要在实际创建个人任务后设置
         )
         db.add(claim)
 
@@ -846,14 +894,23 @@ class PrivateMessageService:
     async def send_message(
         db: AsyncSession,
         sender_id: UUID,
-        data: Any # PrivateMessageSend type hint omitted to avoid import cycle or error if not imported yet
+        data: Any # PrivateMessageSend
     ) -> Any: # PrivateMessage
         """发送私聊消息"""
-        from app.models.community import PrivateMessage
+        from app.models.community import PrivateMessage, Friendship, FriendshipStatus
         
-        # Check if friendship exists? (Optional, usually we allow messaging if not blocked)
-        # For simplicity, we assume allowed if not blocked.
-        
+        # 检查是否被拉黑
+        u1, u2 = (sender_id, data.target_user_id) if str(sender_id) < str(data.target_user_id) else (data.target_user_id, sender_id)
+        rel_result = await db.execute(
+            select(Friendship).where(
+                Friendship.user_id == u1,
+                Friendship.friend_id == u2,
+                Friendship.status == FriendshipStatus.BLOCKED
+            )
+        )
+        if rel_result.scalar_one_or_none():
+            raise ValueError("消息发送失败")
+
         message = PrivateMessage(
             sender_id=sender_id,
             receiver_id=data.target_user_id,
