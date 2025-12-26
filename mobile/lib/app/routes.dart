@@ -17,7 +17,6 @@ import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
-import 'package:sparkle/presentation/screens/community/chat_screen.dart' as comm_chat;
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
 import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
@@ -34,8 +33,6 @@ import 'package:sparkle/presentation/screens/focus/mindfulness_mode_screen.dart'
 import 'package:sparkle/presentation/screens/focus/focus_main_screen.dart';
 import 'package:sparkle/presentation/screens/stats/calendar_stats_screen.dart';
 import 'package:sparkle/data/models/task_model.dart';
-
-import 'package:sparkle/presentation/screens/home/notification_list_screen.dart';
 
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({
@@ -128,16 +125,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const HomeScreen(),
           type: SharedAxisTransitionType.scaled, // Fade/Scale in for Home
-        ),
-      ),
-
-      // Notification Routes
-      GoRoute(
-        path: '/notifications',
-        name: 'notifications',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const NotificationListScreen(),
         ),
       ),
 

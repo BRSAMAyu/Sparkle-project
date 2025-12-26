@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeNotificationCard extends ConsumerWidget {
@@ -12,6 +12,15 @@ class HomeNotificationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(unreadNotificationsProvider);
+    final unreadMessageCount = ref.watch(unreadMessageCountProvider);
+
+    // Show community messages notification if there are unread messages
+    if (unreadMessageCount > 0) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: _buildCommunityNotificationCard(context, unreadMessageCount),
+      );
+    }
 
     return notificationsAsync.when(
       data: (notifications) {
@@ -138,5 +147,87 @@ class HomeNotificationCard extends ConsumerWidget {
       default:
         return Colors.purpleAccent;
     }
+  }
+
+  Widget _buildCommunityNotificationCard(BuildContext context, int unreadCount) {
+    return GestureDetector(
+      onTap: () => context.push('/community'),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppDesignTokens.glassBackground,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppDesignTokens.glassBorder),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.forum_outlined,
+                    color: Colors.purple,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        '社交消息',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '你有 $unreadCount 条未读消息',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppDesignTokens.error,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.3),
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

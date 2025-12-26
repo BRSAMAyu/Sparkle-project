@@ -244,11 +244,28 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<MessageInfo> sendMessage(String groupId, {required MessageType type, String? content, Map<String, dynamic>? contentData, String? replyToId, String? nonce}) async {
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final currentUser = _mockUsers.firstWhere((u) => u.id == currentUserId);
     final newMsg = MessageInfo(
-      id: const Uuid().v4(), messageType: type, content: content, sender: _mockUsers.firstWhere((u) => u.id == 'me'),
-      createdAt: DateTime.now(), updatedAt: DateTime.now(),
+      id: const Uuid().v4(),
+      messageType: type,
+      content: content,
+      contentData: contentData,
+      replyToId: replyToId,
+      sender: currentUser,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
-    _mockGroupMessages[groupId]?.insert(0, newMsg);
+
+    // Add to the beginning of the list (reverse chronological order)
+    if (_mockGroupMessages[groupId] != null) {
+      _mockGroupMessages[groupId]!.insert(0, newMsg);
+    } else {
+      _mockGroupMessages[groupId] = [newMsg];
+    }
+
     return newMsg;
   }
 
