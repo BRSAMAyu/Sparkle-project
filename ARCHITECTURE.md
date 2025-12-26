@@ -7,101 +7,135 @@ Sparkle 是一款面向大学生的 AI 学习助手应用，采用前后端分�
 ## 整体架构
 
 ```
-┌─────────────────┐    HTTP/HTTPS     ┌──────────────────┐
-│   Mobile App    │ ◄───────────────► │   FastAPI API    │
-│   (Flutter)     │                   │   (Python)       │
-└─────────────────┘                   └──────────────────┘
-                                              │
-                                    ┌──────────────────┐
-                                    │  AI/LLM Service  │
-                                    │  (Qwen/DeepSeek) │
-                                    └──────────────────┘
-                                              │
-                                    ┌──────────────────┐
-                                    │  PostgreSQL DB   │
-                                    │  (with pgvector) │
-                                    └──────────────────┘
+┌─────────────────┐       WebSocket (ws://)      ┌─────────────────┐
+│  Flutter App    │ ◄───────────────────────────►│  Go Gateway     │
+│  (Mobile)       │     HTTP/HTTPS (REST API)    │  :8080          │
+└─────────────────┘                               └────────┬────────┘
+                                                           │ gRPC
+                                                           │ (StreamChat)
+                                                           │
+                                                  ┌────────▼────────┐
+                                                  │ Python Agent    │
+                                                  │ gRPC Server     │
+                                                  │ :50051          │
+                                                  └────────┬────────┘
+                                                           │
+                                        ┌──────────────────┼──────────────────┐
+                                        │                  │                  │
+                                        ▼                  ▼                  ▼
+                               ┌────────────┐      ┌────────────┐      ┌──────────────┐
+                               │ PostgreSQL │      │ LLM Service│      │ Vector Store │
+                               │ (pgvector) │      │ (Qwen/     │      │ (pgvector)   │
+                               │ :5432      │      │ DeepSeek)  │      │              │
+                               └────────────┘      └────────────┘      └──────────────┘
 ```
 
-## 后端架构
+**架构说明**:
+1. **Go Gateway**: 流量入口，处理WebSocket长连接和HTTP REST API
+2. **Python Agent**: AI智能引擎，通过gRPC提供AI推理服务
+3. **数据库**: PostgreSQL with pgvector，Go和Python共享同一数据源
+4. **通信协议**: WebSocket用于实时对话，HTTP用于其他API，gRPC用于跨语言服务调用
 
-### 技术栈
-- **框架**: FastAPI (Python 3.11+)
-- **数据库**: PostgreSQL (生产) / SQLite (开发) 通过 SQLAlchemy 2.0 (异步)
-- **AI服务**: OpenAI兼容API (支持Qwen/DeepSeek)
-- **向量数据库**: pgvector
-- **缓存/队列**: Redis
-- **异步处理**: APScheduler, 后台任务
+## 后端架构 (混合架构)
+
+### Go Gateway (`backend/gateway`)
+**职责**: 高并发IO处理、用户鉴权、基础数据CRUD、实时通信桥接
+
+**技术栈**:
+- **框架**: Gin (HTTP/WebSocket) + Gorilla WebSocket
+- **数据库访问**: SQLC (类型安全SQL代码生成) + pgx驱动
+- **通信**: gRPC客户端 (连接Python Agent)
+- **认证**: JWT Token解析和验证
+- **并发**: Goroutine处理数千并发WebSocket连接
+
+**核心功能**:
+- WebSocket长连接管理，支持流式对话
+- 用户认证和会话管理
+- 基础数据CRUD (users, chat_history等表)
+- 协议转换: JSON ↔ Protobuf
+- 请求路由到Python gRPC服务
+
+### Python Agent Engine (`backend/app`)
+**职责**: AI推理、复杂业务逻辑、工具调用、向量检索
+
+**技术栈**:
+- **框架**: FastAPI (遗留API) + gRPC Server
+- **数据库**: SQLAlchemy 2.0 (异步) + Alembic迁移
+- **AI框架**: LangChain/LangGraph (Agent编排)
+- **向量检索**: pgvector扩展
+- **任务调度**: APScheduler
+
+**核心功能**:
+- gRPC AgentService实现 (`StreamChat`等)
+- LLM交互和Prompt工程
+- 工具调用系统 (知识查询、任务生成等)
+- 向量语义搜索 (RAG)
+- 复杂业务逻辑处理
+
+### 共享基础设施
+- **数据库**: PostgreSQL 16+ with pgvector扩展
+- **缓存**: Redis (会话、限流等)
+- **消息协议**: Protobuf (`.proto`文件定义接口)
+- **容器化**: Docker Compose统一开发环境
 
 ### 核心服务层
-- **UserService**: 用户认证与管理 (基础实现)
-- **GalaxyService**: 知识星图核心服务 (完整实现)
-- **TaskService**: 任务管理服务 (完整实现)
-- **PlanService**: 计划管理服务 (API定义完整，实现有限)
-- **LLMService**: 大语言模型服务 (完整实现)
-- **PushService**: 智能推送服务 (完整实现)
-- **CommunityService**: 社群服务 (新增)
+- **认证服务**: Go Gateway处理JWT，Python处理业务逻辑
+- **聊天服务**: Go处理WebSocket连接，Python处理AI推理
+- **知识星图**: Python处理向量检索和知识拓展，Go处理状态同步
+- **任务服务**: Python处理任务生成逻辑，Go处理任务状态更新
+- **推送服务**: Python处理推送策略，Go处理消息推送
+- **社群服务**: Go处理实时群聊，Python处理社群分析
 
 ### 项目结构
 ```
 backend/
-├── app/
-│   ├── main.py                           # 应用入口点，包含 lifespan 管理
-│   ├── config.py                         # 配置管理，使用 pydantic-settings
-│   ├── api/
-│   │   ├── v1/
-│   │   │   ├── router.py                 # API 路由聚合
-│   │   │   ├── galaxy.py                 # 知识星图 API
-│   │   │   ├── chat.py                   # 聊天 API，支持工具调用和流式响应
-│   │   │   ├── tasks.py                  # 任务 API
-│   │   │   ├── plans.py                  # 计划 API
-│   │   │   ├── auth.py                   # 认证 API
-│   │   │   ├── community.py              # 社群 API
-│   │   │   └── ...                       # 其他 API
+├── gateway/                          # Go Gateway服务
+│   ├── cmd/
+│   │   └── server/
+│   │       └── main.go              # Go Gateway入口点
+│   ├── internal/
+│   │   ├── handler/
+│   │   │   └── chat_orchestrator.go # WebSocket处理器，协议转换
+│   │   ├── agent/
+│   │   │   └── client.go            # gRPC客户端，连接Python Agent
+│   │   ├── db/
+│   │   │   ├── query.sql            # SQLC查询定义
+│   │   │   ├── schema.sql           # 数据库Schema (从Python同步)
+│   │   │   └── db.go                # 数据库连接和查询
+│   │   ├── service/
+│   │   │   ├── quota.go             # 配额服务
+│   │   │   ├── chat_history.go      # 聊天历史服务
+│   │   │   └── semantic_cache.go    # 语义缓存服务
+│   │   ├── config/
+│   │   │   └── config.go            # 配置管理
+│   │   └── infra/
+│   │       └── redis/
+│   │           └── client.go        # Redis客户端
+│   ├── go.mod                       # Go模块定义
+│   ├── go.sum                       # 依赖校验
+│   ├── sqlc.yaml                    # SQLC配置
+│   └── bin/
+│       └── gateway                  # 编译后的可执行文件
+├── app/                             # Python gRPC服务 (原FastAPI应用)
+│   ├── main.py                      # FastAPI入口点 (遗留API)
+│   ├── grpc_server.py               # gRPC服务器入口点
+│   ├── config.py                    # 配置管理
 │   ├── services/
-│   │   ├── galaxy_service.py             # 知识星图核心服务，处理星图数据、节点点亮、语义搜索
-│   │   ├── expansion_service.py          # 知识拓展服务，使用 LLM 自动拓展知识节点
-│   │   ├── decay_service.py              # 遗忘衰减服务，实现艾宾浩斯遗忘曲线
-│   │   ├── llm_service.py                # LLM 服务，与大语言模型交互
-│   │   ├── task_service.py               # 任务服务，处理任务业务逻辑
-│   │   ├── plan_service.py               # 计划服务，处理计划业务逻辑
-│   │   ├── user_service.py               # 用户服务，处理用户业务逻辑
-│   │   ├── notification_service.py       # 通知服务，处理系统通知
-│   │   ├── push_service.py               # 智能推送服务，实现个性化推送
-│   │   ├── scheduler_service.py          # 调度服务，定时任务管理
-│   │   ├── community_service.py          # 社群服务，处理社群功能
-│   │   └── ...                           # 其他服务
-│   ├── models/
-│   │   ├── galaxy.py                     # 知识星图模型，包含 KnowledgeNode、UserNodeStatus 等
-│   │   ├── task.py                       # 任务模型
-│   │   ├── plan.py                       # 计划模型
-│   │   ├── user.py                       # 用户模型
-│   │   ├── chat.py                       # 聊天消息模型
-│   │   ├── community.py                  # 社群模型
-│   │   ├── notification.py               # 通知模型
-│   │   └── ...                           # 其他模型
-│   ├── workers/
-│   │   └── expansion_worker.py           # 知识拓展后台任务，处理节点拓展队列
-│   ├── core/
-│   │   ├── sse.py                        # SSE 管理，实现实时事件推送
-│   │   ├── exceptions.py                 # 异常处理
-│   │   ├── security.py                   # 安全相关，JWT token 处理
-│   │   └── ...                           # 核心模块
-│   ├── tools/
-│   │   ├── registry.py                   # 工具注册表
-│   │   ├── base.py                       # 工具基类
-│   │   ├── knowledge_tools.py            # 知识相关工具
-│   │   ├── task_tools.py                 # 任务相关工具
-│   │   ├── community_tools.py            # 社群相关工具
-│   │   └── schemas.py                    # 工具 Schema 定义
-│   └── orchestration/
-│       ├── composer.py                   # 响应编排
-│       ├── executor.py                   # 工具执行器
-│       ├── prompts.py                    # Prompt 管理
-│       └── error_handler.py              # 错误处理
-├── alembic/                              # 数据库迁移
-├── seed_data/                            # 种子数据
-└── ...                                   # 其他文件
+│   │   ├── agent_grpc_service.py    # gRPC AgentService实现
+│   │   ├── llm_service.py           # LLM服务
+│   │   ├── galaxy_service.py        # 知识星图服务
+│   │   ├── task_service.py          # 任务服务
+│   │   └── ...                      # 其他服务
+│   ├── models/                      # 数据模型
+│   ├── core/                        # 核心模块
+│   ├── tools/                       # AI工具系统
+│   └── orchestration/               # 响应编排
+├── alembic/                         # 数据库迁移 (Python侧管理)
+├── logs/                            # 日志目录
+├── seed_data/                       # 种子数据
+├── grpc_server.py                   # gRPC服务器启动脚本
+├── test_websocket_client.py         # WebSocket集成测试
+└── requirements.txt                 # Python依赖
 ```
 
 ## 前端架构
@@ -218,11 +252,29 @@ mobile/
 
 ## 数据流向
 
-1. **用户认证流**: 用户模块 → 认证 → 其他所有模块
-2. **学习流**: 知识星图 → 任务 → 执行 → 反馈 → 计划
-3. **AI交互流**: 用户输入 → LLM模块 → 工具执行 → 结果返回
-4. **推送流**: 各模块状态 → 推送策略 → 用户通知
-5. **社群流**: 用户 → 社群模块 → 群组/好友 → 互动/打卡
+### 实时对话流 (核心路径)
+```
+Flutter App → WebSocket消息 → Go Gateway → JSON解析 → ChatRequest (Protobuf) →
+gRPC StreamChat → Python Agent → LLM API/工具调用 → 流式响应 (Protobuf) →
+JSON转换 → WebSocket推送 → Flutter App渲染 (打字机效果)
+```
+
+### REST API流
+```
+Flutter App → HTTP请求 → Go Gateway → 业务处理 → 数据库CRUD → HTTP响应
+```
+
+### 后台处理流
+```
+定时任务/事件 → Python Agent → 复杂业务逻辑 → 数据库更新 → Go Gateway推送通知
+```
+
+### 核心业务流
+1. **用户认证流**: Go Gateway处理JWT → 用户信息查询 → 权限验证
+2. **学习流**: 知识星图状态 → Python分析 → 任务生成 → Go同步状态
+3. **AI交互流**: 用户输入 → Go转发 → Python推理 → 工具调用 → 结果返回
+4. **推送流**: Python分析策略 → 生成内容 → Go推送通知
+5. **社群流**: Go处理实时消息 → Python分析互动 → 火堆状态更新
 
 ## 关键业务流程
 
@@ -247,19 +299,29 @@ mobile/
 
 ## 技术亮点
 
-### 后端亮点
-- **异步处理**: 全面采用异步操作提升性能
-- **向量搜索**: 基于pgvector的语义搜索
-- **工具系统**: 可扩展的AI工具调用机制
-- **SSE推送**: 实时事件推送机制
-- **遗忘曲线**: 艾宾浩斯遗忘曲线算法
+### 架构亮点
+- **混合架构优势**: Go处理高并发IO，Python处理复杂AI逻辑，各取所长
+- **协议驱动开发**: Protobuf严格定义接口，确保跨语言通信类型安全
+- **数据主权分离**: Python定义Schema，Go消费数据，职责清晰
+- **实时通信优化**: WebSocket长连接 + gRPC流式响应，实现真正打字机效果
+
+### Go Gateway亮点
+- **高性能并发**: Goroutine轻量级线程，支持数千并发WebSocket连接
+- **零反射数据库访问**: SQLC生成类型安全代码，避免ORM性能开销
+- **优雅错误处理**: 多层错误传播和恢复机制
+- **生产级特性**: 结构化日志、健康检查、优雅关闭
+
+### Python Agent亮点
+- **AI能力集成**: LangChain/LangGraph支持复杂Agent编排
+- **向量检索**: pgvector实现高效语义搜索和RAG
+- **工具生态系统**: 可扩展的工具调用框架
+- **遗忘曲线算法**: 基于艾宾浩斯曲线的智能复习提醒
 
 ### 前端亮点
+- **实时交互**: WebSocket支持流式对话和状态更新
 - **可视化星图**: 基于Shader的动态星图渲染
-- **状态管理**: Riverpod驱动的状态管理
-- **响应式设计**: 适配不同屏幕尺寸
-- **动画效果**: 流畅的交互动画
-- **社群互动**: 丰富的社群功能
+- **状态管理**: Riverpod驱动的响应式状态管理
+- **社群互动**: 丰富的社群功能和动画效果
 
 ## 扩展性与维护性
 

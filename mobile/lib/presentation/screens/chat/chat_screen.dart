@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
+import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -136,31 +137,57 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: Column(
             children: [
               Expanded(
-                child: messages.isEmpty && chatState.streamingContent.isEmpty
+                child: messages.isEmpty && chatState.streamingContent.isEmpty && chatState.aiStatus == null
                     ? _buildQuickActions(context)
                     : ListView.builder(
                         controller: _scrollController,
                         reverse: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-                        // 🆕 显示流式内容或加载指示器
-                        itemCount: messages.length + (chatState.isSending ? 1 : 0),
+                        // 🆕 显示状态指示器、流式内容或加载指示器
+                        itemCount: messages.length + (chatState.isSending ? 1 : 0) + (chatState.aiStatus != null ? 1 : 0),
                         itemBuilder: (context, index) {
-                          if (chatState.isSending && index == 0) {
-                            // 如果有流式内容，显示它；否则显示加载指示器
+                          // 1. 如果有 AI 状态更新，在最底部显示（reversed 模式下 index 为 0）
+                          if (chatState.aiStatus != null && index == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: AiStatusIndicator(
+                                status: chatState.aiStatus,
+                                details: chatState.aiStatusDetails,
+                              ),
+                            );
+                          }
+
+                          // 2. 如果正在发送/接收，显示流式内容或打字指示器
+                          final isStatusShowing = chatState.aiStatus != null;
+                          final streamIndex = isStatusShowing ? 1 : 0;
+                          
+                          if (chatState.isSending && index == streamIndex) {
+                            // 如果有流式内容，显示它
                             if (chatState.streamingContent.isNotEmpty) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
                                 child: _StreamingBubble(content: chatState.streamingContent),
                               );
                             }
-                            return const Padding(
-                              padding: EdgeInsets.only(bottom: 12.0),
-                              child: _TypingIndicator(),
-                            );
+                            
+                            // 如果没有流式内容且也没有显示状态指示器，则显示通用打字指示器
+                            if (!isStatusShowing) {
+                              return const Padding(
+                                padding: EdgeInsets.only(bottom: 12.0),
+                                child: _TypingIndicator(),
+                              );
+                            }
+                            
+                            return const SizedBox.shrink();
                           }
 
-                          // Adjust index if we have a loading indicator at 0
-                          final msgIndex = chatState.isSending ? index - 1 : index;
+                          // 3. 计算正式消息的索引
+                          int msgIndex = index;
+                          if (isStatusShowing) msgIndex--;
+                          if (chatState.isSending) msgIndex--;
+                          
+                          if (msgIndex < 0) return const SizedBox.shrink();
+                          
                           final message = messages[messages.length - 1 - msgIndex];
                           return ChatBubble(message: message);
                         },

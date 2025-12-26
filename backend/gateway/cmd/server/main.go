@@ -11,6 +11,8 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/handler"
+	"github.com/sparkle/gateway/internal/infra/redis"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 func main() {
@@ -25,6 +27,18 @@ func main() {
 	defer conn.Close(ctx)
 	queries := db.New(conn)
 
+	// Connect to Redis
+	rdb, err := redis.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Unable to connect to Redis: %v", err)
+	}
+	defer rdb.Close()
+
+	// Initialize Services
+	quotaService := service.NewQuotaService(rdb)
+	chatHistoryService := service.NewChatHistoryService(rdb)
+	semanticCacheService := service.NewSemanticCacheService(rdb)
+
 	// Connect to Agent Service
 	agentClient, err := agent.NewClient(cfg.AgentAddress)
 	if err != nil {
@@ -33,7 +47,13 @@ func main() {
 	defer agentClient.Close()
 
 	// Initialize Handlers
-	chatOrchestrator := handler.NewChatOrchestrator(agentClient, queries)
+	chatOrchestrator := handler.NewChatOrchestrator(
+		agentClient,
+		queries,
+		chatHistoryService,
+		quotaService,
+		semanticCacheService,
+	)
 
 	// Setup Router
 	r := gin.Default()

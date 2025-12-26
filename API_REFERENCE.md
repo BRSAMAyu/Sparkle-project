@@ -2,15 +2,22 @@
 
 ## 概述
 
-本文档提供了 Sparkle 应用的完整 API 接口参考，包括请求格式、响应格式和错误处理。
+本文档提供了 Sparkle 应用的完整 API 接口参考，基于 Go + Python 混合架构。包括 HTTP REST API、WebSocket 实时接口以及 gRPC 内部接口。
+
+## 架构说明
+
+Sparkle 采用混合架构，API 由两部分组成：
+1. **Go Gateway** (`:8080`): 处理 HTTP REST API、WebSocket 连接、用户认证和基础数据 CRUD
+2. **Python gRPC 服务** (`:50051`): 处理 AI 推理、复杂业务逻辑、工具调用（通过 Go Gateway 代理）
 
 ## 基本信息
 
-- **Base URL**: `http://localhost:8000` (开发环境) 或 `https://api.sparkle-learning.com` (生产环境)
+- **Go Gateway Base URL**: `http://localhost:8080` (开发环境) 或 `https://api.sparkle-learning.com` (生产环境)
+- **WebSocket URL**: `ws://localhost:8080/ws/chat` (开发环境) 或 `wss://api.sparkle-learning.com/ws/chat` (生产环境)
 - **API Version**: `v1`
 - **API Base Path**: `/api/v1`
-- **认证方式**: JWT Bearer Token
-- **数据格式**: JSON
+- **认证方式**: JWT Bearer Token (HTTP) / JWT Token (WebSocket)
+- **数据格式**: JSON (HTTP/WebSocket), Protobuf (内部 gRPC)
 
 ## 认证
 
@@ -76,7 +83,8 @@ Authorization: Bearer {refresh_token}
 ```json
 {
   "access_token": "string",
-  "refresh_token": "string"
+  "refresh_token": "string",
+  "expires_in": 3600
 }
 ```
 
@@ -104,6 +112,11 @@ Authorization: Bearer {access_token}
     "morning": true,
     "afternoon": false,
     "evening": true
+  },
+  "stats": {
+    "total_study_minutes": 1200,
+    "streak_days": 7,
+    "completed_tasks": 35
   },
   "created_at": "2025-01-15T10:00:00Z",
   "updated_at": "2025-01-15T10:00:00Z"
@@ -433,9 +446,79 @@ Content-Type: application/json
 }
 ```
 
-## AI对话
+## 实时对话 (WebSocket)
 
-### 发送消息
+### WebSocket 连接建立
+
+**连接URL**: `ws://localhost:8080/ws/chat`
+
+**连接参数**:
+```javascript
+// 连接示例 (JavaScript)
+const ws = new WebSocket('ws://localhost:8080/ws/chat');
+
+// 连接建立后发送认证消息
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    "type": "auth",
+    "token": "JWT_ACCESS_TOKEN"
+  }));
+};
+```
+
+### 消息格式
+
+#### 客户端 → 服务器
+```json
+{
+  "type": "chat",
+  "message_id": "uuid (客户端生成)",
+  "session_id": "uuid (可选，新会话自动生成)",
+  "content": "我想准备计算机网络的期末考试",
+  "task_id": "uuid (可选)",
+  "tools_enabled": true
+}
+```
+
+#### 服务器 → 客户端 (流式响应)
+```json
+// 文本块
+{
+  "type": "text",
+  "message_id": "uuid",
+  "chunk_index": 1,
+  "content": "好的！我来帮你制定一个复习计划...",
+  "is_final": false
+}
+
+// 工具调用
+{
+  "type": "tool_call",
+  "message_id": "uuid",
+  "name": "search_nodes",
+  "arguments": {
+    "query": "微积分基本定理"
+  }
+}
+
+// 完成消息
+{
+  "type": "finish",
+  "message_id": "uuid",
+  "finish_reason": "stop",
+  "tokens_used": 150,
+  "model_name": "qwen-max"
+}
+
+// 错误消息
+{
+  "type": "error",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "message": "请求过于频繁，请稍后再试"
+}
+```
+
+### HTTP 聊天接口 (备用)
 
 **请求**:
 ```http
@@ -472,30 +555,31 @@ Content-Type: application/json
 }
 ```
 
-### 流式对话
+### 工具调用确认
 
 **请求**:
 ```http
-POST /api/v1/chat/stream
+POST /api/v1/chat/confirm
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-  "session_id": "uuid (optional)",
-  "content": "解释一下微积分的基本定理",
-  "task_id": "uuid (optional)"
+  "message_id": "uuid",
+  "tool_name": "search_nodes",
+  "confirmation": "allow",
+  "custom_input": "可选的自定义输入"
 }
 ```
 
-**响应** (SSE流):
-```
-data: {"type": "text", "content": "微积分基本定理建立了微分和积分之间的关系"}
-
-data: {"type": "text", "content": "它包含两个部分"}
-
-data: {"type": "tool_call", "name": "search_nodes", "arguments": {"query": "微积分基本定理"}}
-
-data: {"type": "finish", "finish_reason": "stop"}
+**响应**:
+```json
+{
+  "success": true,
+  "result": {
+    "type": "tool_result",
+    "content": "找到了3个相关知识点"
+  }
+}
 ```
 
 ## 社群功能
@@ -684,6 +768,24 @@ Authorization: Bearer {access_token}
 }
 ```
 
+## 速率限制与配额
+
+### HTTP API 速率限制
+- **普通请求**: 每分钟 60 次
+- **认证请求**: 每分钟 100 次  
+- **搜索请求**: 每分钟 30 次
+- **超出限制**: 返回 `429 Too Many Requests` 错误
+
+### WebSocket 连接限制
+- **最大并发连接数**: 每个用户 3 个
+- **消息频率限制**: 每秒 10 条消息
+- **连接超时**: 无活动 5 分钟后断开
+
+### AI 服务配额
+- **免费用户**: 每天 100 条 AI 对话
+- **高级用户**: 每天 1000 条 AI 对话
+- **超出配额**: 返回 `QUOTA_EXCEEDED` 错误
+
 ## 错误响应
 
 所有 API 在发生错误时返回统一格式：
@@ -693,12 +795,23 @@ Authorization: Bearer {access_token}
   "error": {
     "code": "ERROR_CODE",
     "message": "错误描述",
-    "detail": {}
+    "detail": {},
+    "request_id": "请求唯一标识"
   }
 }
 ```
 
-常见状态码：
+常见错误码：
+- `AUTH_REQUIRED`: 需要认证
+- `INVALID_TOKEN`: 令牌无效
+- `PERMISSION_DENIED`: 权限不足
+- `RATE_LIMIT_EXCEEDED`: 超出速率限制
+- `QUOTA_EXCEEDED`: 超出配额限制
+- `RESOURCE_NOT_FOUND`: 资源不存在
+- `VALIDATION_ERROR`: 数据验证失败
+- `INTERNAL_SERVER_ERROR`: 服务器内部错误
+
+常见 HTTP 状态码：
 - `200`: 成功
 - `201`: 创建成功
 - `400`: 请求参数错误
@@ -706,12 +819,54 @@ Authorization: Bearer {access_token}
 - `403`: 权限不足
 - `404`: 资源不存在
 - `422`: 数据验证失败
+- `429`: 超出速率限制
 - `500`: 服务器内部错误
+- `503`: 服务不可用 (AI 服务暂时不可用)
 
-## 速率限制
+## WebSocket 状态码
 
-API 实施速率限制以保护服务器：
-- 普通请求：每分钟60次
-- 认证请求：每分钟100次
-- 搜索请求：每分钟30次
-- 超出限制将返回 `429 Too Many Requests` 错误
+WebSocket 连接可能返回以下关闭码：
+- `1000`: 正常关闭
+- `1001`: 端点离开
+- `1008`: 策略违规
+- `1011`: 服务器内部错误
+- `4001`: 认证失败
+- `4002`: 令牌过期
+- `4003`: 超出配额
+- `4004`: 并发连接数超限
+
+## 健康检查
+
+### 服务器健康状态
+```http
+GET /health
+```
+
+**响应**:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-15T10:00:00Z",
+  "services": {
+    "go_gateway": "healthy",
+    "python_agent": "healthy",
+    "database": "healthy",
+    "redis": "healthy"
+  }
+}
+```
+
+### 服务版本信息
+```http
+GET /version
+```
+
+**响应**:
+```json
+{
+  "name": "sparkle-gateway",
+  "version": "0.3.0",
+  "commit": "40d7bb3ba95976ba9e71cd81088cc544f9df7026",
+  "build_time": "2025-12-27T02:00:00Z"
+}
+```
