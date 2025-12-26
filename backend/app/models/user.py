@@ -16,37 +16,21 @@ class UserStatus(str, enum.Enum):
     INVISIBLE = "invisible"
 
 
+class AvatarStatus(str, enum.Enum):
+    """头像审核状态"""
+    APPROVED = "approved"   # 审核通过
+    PENDING = "pending"     # 待审核
+    REJECTED = "rejected"   # 审核驳回
+
+
 class User(BaseModel):
-    """
-    用户模型
-
-    字段:
-        username: 用户名
-        email: 邮箱
-        hashed_password: 加密密码
-        nickname: 昵称
-        avatar_url: 头像URL
-        flame_level: 火花等级 (1-10)
-        flame_brightness: 火花亮度 (0-1)
-        depth_preference: 深度偏好 (0-1)
-        curiosity_preference: 好奇偏好 (0-1)
-        is_active: 是否激活
-
-    关系:
-        tasks: 用户的所有任务
-        plans: 用户的所有计划
-        chat_messages: 用户聊天消息
-        error_records: 用户错题档案
-    """
-
-    __tablename__ = "users"
-
-    # 基本信息
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
+// ...
     nickname = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
+    
+    # 头像审核系统
+    avatar_status = Column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
+    pending_avatar_url = Column(String(500), nullable=True)
 
     # 火花系统
     flame_level = Column(Integer, default=1, nullable=False)

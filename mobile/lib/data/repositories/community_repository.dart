@@ -112,6 +112,15 @@ class CommunityRepository {
     }
   }
 
+  /// 撤销私信
+  Future<void> revokePrivateMessage(String messageId) async {
+    try {
+      await _apiClient.post(ApiEndpoints.revokePrivateMessage(messageId));
+    } on DioException catch (e) {
+      return _handleDioError(e, 'revokePrivateMessage');
+    }
+  }
+
   /// 搜索用户
   Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async {
     try {

@@ -3,6 +3,15 @@ import 'package:sparkle/data/models/community_model.dart';
 
 part 'user_model.g.dart';
 
+enum AvatarStatus {
+  @JsonValue('approved')
+  approved,
+  @JsonValue('pending')
+  pending,
+  @JsonValue('rejected')
+  rejected,
+}
+
 /// 用户数据模型
 @JsonSerializable()
 class UserModel {
@@ -11,6 +20,13 @@ class UserModel {
   final String email;
   final String? nickname;
   final String? avatarUrl;
+  
+  @JsonKey(name: 'avatar_status')
+  final AvatarStatus avatarStatus;
+  
+  @JsonKey(name: 'pending_avatar_url')
+  final String? pendingAvatarUrl;
+
   @JsonKey(name: 'flame_level')
   final int flameLevel;
   @JsonKey(name: 'flame_brightness')
@@ -36,8 +52,17 @@ class UserModel {
     required this.id,
     required this.username,
     required this.email,
-    required this.flameLevel, required this.flameBrightness, required this.depthPreference, required this.curiosityPreference, required this.isActive, required this.createdAt, required this.updatedAt, this.nickname,
+    required this.flameLevel,
+    required this.flameBrightness,
+    required this.depthPreference,
+    required this.curiosityPreference,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+    this.nickname,
     this.avatarUrl,
+    this.avatarStatus = AvatarStatus.approved,
+    this.pendingAvatarUrl,
     this.status = UserStatus.offline,
     this.schedulePreferences,
     this.pushPreferences,

@@ -63,13 +63,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 // Refresh chat to see the checkin message
                 ref.invalidate(groupChatProvider(widget.groupId));
                 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checked in successfully!')));
-                }
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checked in successfully!')));
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                }
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
               }
             },
             child: const Text('Check-in'),
@@ -146,7 +144,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             ),
           ),
           ChatInput(
-            onSend: (text) {
+            onSend: (text, {replyToId}) {
               return ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(content: text);
             },
           ),

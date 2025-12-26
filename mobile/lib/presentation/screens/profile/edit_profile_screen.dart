@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/profile/password_reset_screen.dart';
+import 'package:sparkle/presentation/widgets/profile/avatar_selection_dialog.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
+import 'package:sparkle/data/models/user_model.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -34,21 +37,27 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _pickAndUploadAvatar() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final user = ref.read(currentUserProvider);
+    final source = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.face_retouching_natural_rounded),
+              title: const Text('从系统推荐中选择'),
+              onTap: () => Navigator.pop(context, 'preset'),
+            ),
+            ListTile(
               leading: const Icon(Icons.camera_alt_rounded),
               title: const Text('拍照'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
+              onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
               title: const Text('从相册选择'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
+              onTap: () => Navigator.pop(context, 'gallery'),
             ),
           ],
         ),
@@ -57,8 +66,39 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (source == null) return;
 
+    if (source == 'preset') {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AvatarSelectionDialog(
+          currentAvatarUrl: user?.avatarUrl,
+          onAvatarSelected: (url) async {
+            setState(() => _isLoading = true);
+            try {
+              await ref.read(authProvider.notifier).updateAvatar(url);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('头像更新成功'), backgroundColor: Colors.green),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('更新失败: $e'), backgroundColor: Colors.red),
+                );
+              }
+            } finally {
+              if (mounted) setState(() => _isLoading = false);
+            }
+          },
+        ),
+      );
+      return;
+    }
+
+    final imageSource = source == 'camera' ? ImageSource.camera : ImageSource.gallery;
     final pickedFile = await _picker.pickImage(
-      source: source,
+      source: imageSource,
       maxWidth: 512,
       maxHeight: 512,
       imageQuality: 75,
@@ -170,38 +210,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 onTap: _isLoading ? null : _pickAndUploadAvatar,
                 child: Stack(
                   children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                        image: user?.avatarUrl != null
-                            ? DecorationImage(
-                                image: NetworkImage(user!.avatarUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppDesignTokens.primaryBase.withValues(alpha: 0.2),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: user?.avatarUrl == null
-                          ? Center(
-                              child: Text(
-                                (user?.nickname ?? user?.username ?? 'U')[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppDesignTokens.primaryBase,
-                                ),
-                              ),
-                            )
-                          : null,
+                    SparkleAvatar(
+                      radius: 50,
+                      backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      url: user?.avatarStatus == AvatarStatus.pending 
+                          ? (user?.pendingAvatarUrl ?? user?.avatarUrl) 
+                          : user?.avatarUrl,
+                      fallbackText: user?.nickname ?? user?.username ?? 'U',
+                      status: user?.avatarStatus ?? AvatarStatus.approved,
                     ),
                     Positioned(
                       bottom: 0,
@@ -227,6 +243,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
             ),
+            if (user?.avatarStatus == AvatarStatus.pending) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.hourglass_empty_rounded, size: 14, color: Colors.amber),
+                    SizedBox(width: 6),
+                    Text(
+                      '新头像正在审核中...',
+                      style: TextStyle(fontSize: 12, color: Colors.amber, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             TextButton(
               onPressed: _isLoading ? null : _pickAndUploadAvatar,

@@ -162,6 +162,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     required Map<String, dynamic> payload,
+    DateTimeComponents? matchDateTimeComponents,
   }) async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -175,8 +176,9 @@ class NotificationService {
     const NotificationDetails notificationDetails =
         NotificationDetails(android: androidDetails);
 
-    // Ensure we are scheduling in the future
-    if (scheduledDate.isBefore(DateTime.now())) {
+    // Ensure we are scheduling in the future (unless it's a recurring event, logic might differ but for simple schedule, yes)
+    // For recurring, zonedSchedule handles it if matchDateTimeComponents is set
+    if (matchDateTimeComponents == null && scheduledDate.isBefore(DateTime.now())) {
       _logger.w('Attempted to schedule notification in the past: $scheduledDate');
       return;
     }
@@ -191,9 +193,10 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode(payload),
+      matchDateTimeComponents: matchDateTimeComponents,
     );
     
-    _logger.i('Scheduled notification $id for $scheduledDate');
+    _logger.i('Scheduled notification $id for $scheduledDate with match: $matchDateTimeComponents');
   }
 
   Future<void> cancelNotification(int id) async {

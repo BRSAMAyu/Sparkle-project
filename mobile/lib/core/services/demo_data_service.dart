@@ -17,13 +17,15 @@ class DemoDataService {
   final _uuid = const Uuid();
   final _random = Random();
 
+  String? _currentAvatarUrl;
+
   // --- User Data ---
   UserModel get demoUser => UserModel(
     id: 'CS_Sophomore_12345',
     username: 'AI_Learner_02',
     email: 'learner@sparkle.ai',
     nickname: 'AI_Learner_02',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/png?seed=AI_Learner_02',
+    avatarUrl: _currentAvatarUrl ?? 'https://api.dicebear.com/9.x/avataaars/png?seed=AI_Learner_02',
     flameLevel: 15,
     flameBrightness: 0.85,
     depthPreference: 0.7,
@@ -38,6 +40,10 @@ class DemoDataService {
       dailyCap: 5,
     ),
   );
+
+  void updateDemoAvatar(String url) {
+    _currentAvatarUrl = url;
+  }
 
   // --- Task Data ---
   List<TaskModel> get demoTasks {

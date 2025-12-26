@@ -176,9 +176,15 @@ class AuthRepository {
   Future<UserModel> updateAvatar(String filePath) async {
     try {
       if (DemoDataService.isDemoMode) {
+        DemoDataService().updateDemoAvatar(filePath);
         return DemoDataService().demoUser;
       }
       
+      // If it's a network URL (from system presets), use updateProfile instead of upload
+      if (filePath.startsWith('http')) {
+        return await updateProfile({'avatar_url': filePath});
+      }
+
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(filePath),
       });

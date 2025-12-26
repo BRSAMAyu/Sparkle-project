@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
+import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
-import 'package:sparkle/presentation/widgets/community/private_chat_bubble.dart';
+import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 
@@ -24,6 +25,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(privateChatProvider(widget.friendId));
+    final notifier = ref.read(privateChatProvider(widget.friendId).notifier);
+    final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,11 +42,16 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                 }
                 return ListView.builder(
                   reverse: true, 
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    return PrivateChatBubble(message: message);
+                    return ChatBubble(
+                      message: message,
+                      currentUserId: currentUser?.id,
+                      onQuote: (msg) => setState(() => notifier.setQuote(msg)),
+                      onRevoke: (msg) => notifier.revokeMessage(msg.id),
+                    );
                   },
                 );
               },
@@ -57,8 +65,10 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             ),
           ),
           ChatInput(
-            onSend: (text) {
-              return ref.read(privateChatProvider(widget.friendId).notifier).sendMessage(content: text);
+            quotedMessage: notifier.quotedMessage,
+            onCancelQuote: () => setState(() => notifier.setQuote(null)),
+            onSend: (text, {replyToId}) {
+              return notifier.sendMessage(content: text, replyToId: replyToId);
             },
           ),
         ],

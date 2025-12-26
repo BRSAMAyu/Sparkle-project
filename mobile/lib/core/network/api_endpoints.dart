@@ -55,6 +55,7 @@ class ApiEndpoints {
   static const String friendsPending = '/community/friends/pending';
   static const String friendsRecommendations = '/community/friends/recommendations';
   static String privateMessages(String friendId) => '/community/friends/$friendId/messages';
+  static String revokePrivateMessage(String messageId) => '/community/messages/$messageId/revoke';
   static const String sendPrivateMessage = '/community/messages';
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';

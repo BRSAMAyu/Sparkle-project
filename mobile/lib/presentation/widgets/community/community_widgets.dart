@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 /// 带有在线状态指示器的头像
 class StatusAvatar extends StatelessWidget {
   final String? url;
   final UserStatus status;
   final double size;
+  final String? fallbackText;
 
   const StatusAvatar({
     required this.status, super.key,
     this.url,
     this.size = 48,
+    this.fallbackText,
   });
 
   @override
@@ -27,11 +30,10 @@ class StatusAvatar extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: SparkleTheme.primary.withValues(alpha: 0.1), width: 2),
           ),
-          child: CircleAvatar(
+          child: SparkleAvatar(
             radius: size / 2,
-            backgroundColor: Colors.grey[200],
-            backgroundImage: url != null ? NetworkImage(url!) : null,
-            child: url == null ? const Icon(Icons.person, color: Colors.grey) : null,
+            url: url,
+            fallbackText: fallbackText,
           ),
         ),
         Positioned(

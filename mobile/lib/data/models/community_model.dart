@@ -352,6 +352,9 @@ class MessageInfo {
   @JsonKey(name: 'updated_at')
   @HiveField(7)
   final DateTime updatedAt;
+  @JsonKey(name: 'is_revoked')
+  @HiveField(8)
+  final bool isRevoked;
 
   MessageInfo({
     required this.id,
@@ -362,6 +365,7 @@ class MessageInfo {
     this.content,
     this.contentData,
     this.replyToId,
+    this.isRevoked = false,
   });
 
   factory MessageInfo.fromJson(Map<String, dynamic> json) =>
@@ -403,6 +407,19 @@ class PrivateMessageInfo {
   @JsonKey(name: 'updated_at')
   @HiveField(10)
   final DateTime updatedAt;
+  @JsonKey(name: 'is_revoked')
+  @HiveField(11)
+  final bool isRevoked;
+  
+  // Client-side transient status
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final bool isSending;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final bool hasError;
+  
+  // Quote support
+  @JsonKey(name: 'quoted_message')
+  final PrivateMessageInfo? quotedMessage;
 
   PrivateMessageInfo({
     required this.id,
@@ -416,11 +433,51 @@ class PrivateMessageInfo {
     this.contentData,
     this.replyToId,
     this.readAt,
+    this.isSending = false,
+    this.hasError = false,
+    this.isRevoked = false,
+    this.quotedMessage,
   });
 
   factory PrivateMessageInfo.fromJson(Map<String, dynamic> json) =>
       _$PrivateMessageInfoFromJson(json);
   Map<String, dynamic> toJson() => _$PrivateMessageInfoToJson(this);
+
+  PrivateMessageInfo copyWith({
+    String? id,
+    UserBrief? sender,
+    UserBrief? receiver,
+    MessageType? messageType,
+    String? content,
+    Map<String, dynamic>? contentData,
+    String? replyToId,
+    bool? isRead,
+    DateTime? readAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isSending,
+    bool? hasError,
+    bool? isRevoked,
+    PrivateMessageInfo? quotedMessage,
+  }) {
+    return PrivateMessageInfo(
+      id: id ?? this.id,
+      sender: sender ?? this.sender,
+      receiver: receiver ?? this.receiver,
+      messageType: messageType ?? this.messageType,
+      content: content ?? this.content,
+      contentData: contentData ?? this.contentData,
+      replyToId: replyToId ?? this.replyToId,
+      isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isSending: isSending ?? this.isSending,
+      hasError: hasError ?? this.hasError,
+      isRevoked: isRevoked ?? this.isRevoked,
+      quotedMessage: quotedMessage ?? this.quotedMessage,
+    );
+  }
 }
 
 @JsonSerializable()

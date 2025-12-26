@@ -431,7 +431,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
           ),
 
           // 5. UI Overlays (Back button)
-          if (!_isEntering)
+          if (!_isEntering && Navigator.canPop(context))
             Positioned(
               top: 40,
               left: 20,
@@ -477,14 +477,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                 child: const Icon(Icons.explore),
                 onPressed: () async {
                   final nodeId = await ref.read(galaxyProvider.notifier).predictNextNode();
+                  if (!mounted) return;
                   if (nodeId != null) {
                     _animateToNode(nodeId);
                   } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('暂无推荐，请先探索一些节点吧！')),
-                      );
-                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('暂无推荐，请先探索一些节点吧！')),
+                    );
                   }
                 },
               ),

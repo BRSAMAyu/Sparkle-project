@@ -49,6 +49,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -60,13 +61,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppDesignTokens.primaryBase.withValues(alpha: 0.05),
-                    Colors.white.withValues(alpha: 0.8),
+                    (isDark ? AppDesignTokens.deepSpaceStart : Colors.white).withValues(alpha: 0.8),
+                    (isDark ? AppDesignTokens.deepSpaceEnd : Colors.white).withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
-                border: const Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                border: Border(bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05), width: 0.5)),
               ),
             ),
           ),
@@ -84,14 +85,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'AI学习助手',
                   style: TextStyle(
-                    color: AppDesignTokens.neutral900,
+                    color: isDark ? Colors.white : AppDesignTokens.neutral900,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     fontSize: AppDesignTokens.fontSizeBase,
                   ),
@@ -99,7 +100,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   '随时为你解答',
                   style: TextStyle(
-                    color: AppDesignTokens.neutral600,
+                    color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral600,
                     fontSize: AppDesignTokens.fontSizeXs,
                   ),
                 ),
@@ -109,21 +110,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history, color: AppDesignTokens.neutral700),
+            icon: Icon(Icons.history, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
             onPressed: () {
               // TODO: History
             },
           ),
           IconButton(
-            icon: const Icon(Icons.add_comment_outlined, color: AppDesignTokens.neutral700),
+            icon: Icon(Icons.add_comment_outlined, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
             tooltip: 'New Chat',
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
           ),
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          color: AppDesignTokens.neutral50,
+        decoration: BoxDecoration(
+          gradient: isDark 
+            ? AppDesignTokens.deepSpaceGradient 
+            : const LinearGradient(
+                colors: [AppDesignTokens.neutral50, Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
         ),
         child: SafeArea(
           child: Column(
@@ -172,7 +179,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                  ),
               ChatInput(
                 enabled: !chatState.isSending,
-                onSend: (text) => ref.read(chatProvider.notifier).sendMessage(text),
+                onSend: (text, {replyToId}) => ref.read(chatProvider.notifier).sendMessage(text),
               ),
             ],
           ),
@@ -182,6 +189,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -201,13 +209,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppDesignTokens.neutral900,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppDesignTokens.neutral600,
+                color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral600,
               ),
             ),
             const SizedBox(height: 40),
@@ -329,6 +338,7 @@ class _StreamingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -337,7 +347,7 @@ class _StreamingBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppDesignTokens.neutral800 : Colors.white,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
@@ -345,7 +355,7 @@ class _StreamingBubble extends StatelessWidget {
             bottomLeft: Radius.circular(4),
           ),
           boxShadow: AppDesignTokens.shadowSm,
-          border: Border.all(color: AppDesignTokens.neutral200),
+          border: Border.all(color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -354,8 +364,8 @@ class _StreamingBubble extends StatelessWidget {
             Flexible(
               child: Text(
                 content,
-                style: const TextStyle(
-                  color: AppDesignTokens.neutral900,
+                style: TextStyle(
+                  color: isDark ? Colors.white : AppDesignTokens.neutral900,
                   fontSize: AppDesignTokens.fontSizeBase,
                 ),
               ),
@@ -432,10 +442,11 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppDesignTokens.neutral800 : Colors.white,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
@@ -443,7 +454,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
           bottomLeft: Radius.circular(4),
         ),
         boxShadow: AppDesignTokens.shadowSm,
-        border: Border.all(color: AppDesignTokens.neutral200),
+        border: Border.all(color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -461,8 +472,8 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppDesignTokens.neutral400,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral300,
                     shape: BoxShape.circle,
                   ),
                 ),

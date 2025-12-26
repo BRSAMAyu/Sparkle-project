@@ -7,6 +7,8 @@ import 'package:sparkle/presentation/providers/locale_provider.dart';
 import 'package:sparkle/presentation/screens/profile/edit_profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/unified_settings_screen.dart';
 import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
+import 'package:sparkle/data/models/user_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -76,17 +78,14 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
+                        child: SparkleAvatar(
                           radius: 40,
                           backgroundColor: Colors.white,
-                          child: Text(
-                            user.username[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: AppDesignTokens.fontWeightBold,
-                              color: AppDesignTokens.primaryBase,
-                            ),
-                          ),
+                          url: user.avatarStatus == AvatarStatus.pending 
+                              ? (user.pendingAvatarUrl ?? user.avatarUrl) 
+                              : user.avatarUrl,
+                          fallbackText: user.nickname ?? user.username,
+                          status: user.avatarStatus,
                         ),
                       ),
                       const SizedBox(width: AppDesignTokens.spacing20),

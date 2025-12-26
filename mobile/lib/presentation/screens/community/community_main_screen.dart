@@ -5,6 +5,7 @@ import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
 import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class CommunityMainScreen extends ConsumerWidget {
   const CommunityMainScreen({super.key});
@@ -79,9 +80,10 @@ class CommunityMainScreen extends ConsumerWidget {
           final g = groups[index];
           return Card(
             child: ListTile(
-              leading: CircleAvatar(
+              leading: SparkleAvatar(
+                radius: 20,
                 backgroundColor: SparkleTheme.primary.withValues(alpha: 0.1),
-                child: Text(g.name[0]),
+                fallbackText: g.name,
               ),
               title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('${g.memberCount} 成员 · 火力 ${g.totalFlamePower}'),

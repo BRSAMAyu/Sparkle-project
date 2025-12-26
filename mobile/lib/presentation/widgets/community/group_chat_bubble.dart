@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   final MessageInfo message;
@@ -307,16 +308,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: AppDesignTokens.shadowSm,
       ),
-      child: CircleAvatar(
+      child: SparkleAvatar(
         radius: 16,
-        backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-        backgroundColor: AppDesignTokens.neutral200,
-        child: user?.avatarUrl == null
-            ? Text(
-                user?.displayName.substring(0, 1).toUpperCase() ?? '?',
-                style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral600),
-              )
-            : null,
+        url: user?.avatarUrl,
+        fallbackText: user?.displayName,
       ),
     );
   }

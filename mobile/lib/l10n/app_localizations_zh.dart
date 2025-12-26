@@ -99,7 +99,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageEnglish => 'English';
 
   @override
-  String get schedulePreferences => '日程偏好';
+  String get schedulePreferences => '个人偏好';
 
   @override
   String get notificationSettings => '通知设置';

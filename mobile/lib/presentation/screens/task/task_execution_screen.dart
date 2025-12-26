@@ -217,7 +217,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (shouldPop && mounted) {
+        if (!mounted) return;
+        if (shouldPop) {
           Navigator.of(context).pop();
         }
       },

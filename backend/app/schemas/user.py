@@ -14,6 +14,13 @@ class UserStatusEnum(str, enum.Enum):
     INVISIBLE = "invisible"
 
 
+class AvatarStatus(str, enum.Enum):
+    """头像审核状态"""
+    APPROVED = "approved"   # 审核通过
+    PENDING = "pending"     # 待审核
+    REJECTED = "rejected"   # 审核驳回
+
+
 class UserRegister(BaseModel):
     """User registration"""
     username: str = Field(min_length=3, max_length=50, description="Username")
@@ -31,6 +38,8 @@ class UserUpdate(BaseModel):
     nickname: Optional[str] = Field(default=None, max_length=100, description="Nickname")
     email: Optional[EmailStr] = Field(default=None, description="Email")
     avatar_url: Optional[str] = Field(default=None, max_length=500, description="Avatar URL")
+    avatar_status: Optional[AvatarStatus] = Field(default=None, description="Avatar audit status")
+    pending_avatar_url: Optional[str] = Field(default=None, max_length=500, description="Pending Avatar URL")
     depth_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
     curiosity_preference: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
     status: Optional[UserStatusEnum] = Field(default=None, description="Status update") # Allow update here too?
@@ -61,6 +70,8 @@ class UserBase(BaseModel):
     email: str = Field(description="Email")
     nickname: Optional[str] = Field(description="Nickname")
     avatar_url: Optional[str] = Field(description="Avatar URL")
+    avatar_status: AvatarStatus = Field(default=AvatarStatus.APPROVED, description="Avatar status")
+    pending_avatar_url: Optional[str] = Field(default=None, description="Pending avatar URL")
 
     class Config:
         from_attributes = True

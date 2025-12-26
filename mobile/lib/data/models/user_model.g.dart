@@ -19,6 +19,10 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       updatedAt: DateTime.parse(json['updated_at'] as String),
       nickname: json['nickname'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
+      avatarStatus:
+          $enumDecodeNullable(_$AvatarStatusEnumMap, json['avatar_status']) ??
+              AvatarStatus.approved,
+      pendingAvatarUrl: json['pending_avatar_url'] as String?,
       status: $enumDecodeNullable(_$UserStatusEnumMap, json['status']) ??
           UserStatus.offline,
       schedulePreferences:
@@ -35,6 +39,8 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'email': instance.email,
       'nickname': instance.nickname,
       'avatarUrl': instance.avatarUrl,
+      'avatar_status': _$AvatarStatusEnumMap[instance.avatarStatus]!,
+      'pending_avatar_url': instance.pendingAvatarUrl,
       'flame_level': instance.flameLevel,
       'flame_brightness': instance.flameBrightness,
       'depth_preference': instance.depthPreference,
@@ -46,6 +52,12 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
+
+const _$AvatarStatusEnumMap = {
+  AvatarStatus.approved: 'approved',
+  AvatarStatus.pending: 'pending',
+  AvatarStatus.rejected: 'rejected',
+};
 
 const _$UserStatusEnumMap = {
   UserStatus.online: 'online',

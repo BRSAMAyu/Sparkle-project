@@ -148,7 +148,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (shouldPop && mounted) {
+        if (!mounted) return;
+        if (shouldPop) {
           Navigator.of(context).pop();
         }
       },

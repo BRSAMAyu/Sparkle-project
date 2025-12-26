@@ -28,7 +28,6 @@ final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref
 
   final token = tokenAsync.valueOrNull;
   if (token == null) {
-    // Return empty stream if no token yet
     return const Stream.empty();
   }
 
@@ -492,6 +491,9 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
 
+  PrivateMessageInfo? _quotedMessage;
+  PrivateMessageInfo? get quotedMessage => _quotedMessage;
+
   PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events) : super(const AsyncValue.loading()) {
     _initialize(events);
   }
@@ -519,6 +521,12 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
           return;
         }
 
+        if (jsonData['type'] == 'revoked') {
+          final messageId = jsonData['message_id'];
+          _handleRevokedEvent(messageId);
+          return;
+        }
+
         if (jsonData['sender'] != null && jsonData['receiver'] != null) {
            try {
              final message = PrivateMessageInfo.fromJson(jsonData);
@@ -538,6 +546,17 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     }
   }
 
+  void _handleRevokedEvent(String messageId) {
+    state.whenData((messages) {
+      final index = messages.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        final updated = [...messages];
+        updated[index] = updated[index].copyWith(isRevoked: true);
+        state = AsyncValue.data(updated);
+      }
+    });
+  }
+
   Future<void> loadMessages() async {
     try {
       final messages = await _repository.getPrivateMessages(_friendId);
@@ -550,11 +569,20 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     }
   }
 
-  Future<void> sendMessage({required String content, MessageType type = MessageType.text}) async {
+  void setQuote(PrivateMessageInfo? message) {
+    _quotedMessage = message;
+    // We trigger a state update to the same list to notify listeners of notifier itself
+    // Actually, simple getter is fine if we call it from UI, but for reactive UI
+    // we might need a separate StateProvider for quotedMessage. 
+    // Let's keep it simple for now as it's passed back to ChatInput.
+  }
+
+  Future<void> sendMessage({required String content, MessageType type = MessageType.text, String? replyToId}) async {
     final nonce = const Uuid().v4();
     _pendingNonces.add(nonce);
-    state.whenData((messages) => state = AsyncValue.data([...messages]));
-
+    
+    // Optimistic UI could be added here
+    
     try {
       final message = await _repository.sendPrivateMessage(
         PrivateMessageSend(
@@ -562,6 +590,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
           content: content,
           messageType: type,
           nonce: nonce,
+          replyToId: replyToId,
         ),
       );
       
@@ -570,9 +599,18 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
           state = AsyncValue.data([message, ...messages]);
         }
       });
+      _quotedMessage = null; // Clear quote after sending
     } catch (e) {
       _pendingNonces.remove(nonce);
-      state.whenData((messages) => state = AsyncValue.data([...messages]));
+      rethrow;
+    }
+  }
+
+  Future<void> revokeMessage(String messageId) async {
+    try {
+      await _repository.revokePrivateMessage(messageId);
+      _handleRevokedEvent(messageId);
+    } catch (e) {
       rethrow;
     }
   }

@@ -9,7 +9,10 @@ import 'package:sparkle/presentation/widgets/home/weather_header.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
+import 'package:sparkle/presentation/screens/calendar/daily_detail_screen.dart';
 import 'package:uuid/uuid.dart';
+
+enum CalendarViewMode { month, twoWeeks, year }
 
 class CalendarStatsScreen extends ConsumerStatefulWidget {
   const CalendarStatsScreen({super.key});
@@ -19,7 +22,7 @@ class CalendarStatsScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  CalendarViewMode _viewMode = CalendarViewMode.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   final LunarService _lunarService = LunarService();
@@ -30,10 +33,19 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     _selectedDay = _focusedDay;
   }
 
+  CalendarFormat get _tableCalendarFormat {
+    switch (_viewMode) {
+      case CalendarViewMode.twoWeeks:
+        return CalendarFormat.twoWeeks;
+      default:
+        return CalendarFormat.month;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final calendarState = ref.watch(calendarProvider);
     final notifier = ref.read(calendarProvider.notifier);
+    // For list below calendar (only shown in non-year mode)
     final selectedEvents = notifier.getEventsForDay(_selectedDay ?? _focusedDay);
 
     return Scaffold(
@@ -50,41 +62,20 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             child: Column(
               children: [
                 _buildHeader(context),
+                _buildViewSwitcher(),
+                const SizedBox(height: 10),
                 Expanded(
-                  child: Column(
-                    children: [
-                      _buildTableCalendar(notifier),
-                      const Divider(color: Colors.white10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Row(
+                  child: _viewMode == CalendarViewMode.year
+                      ? _buildYearView()
+                      : Column(
                           children: [
-                            Text(
-                              '${DateFormat('MM月dd日').format(_selectedDay!)} ${_getWeekDay(_selectedDay!)}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
+                            _buildTableCalendar(notifier),
+                            const Divider(color: Colors.white10),
                             Expanded(
-                              child: Text(
-                                _lunarService.getLunarInfo(_selectedDay!)['lunarDate'],
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white60,
-                                ),
-                              ),
+                              child: _buildEventList(selectedEvents, notifier),
                             ),
                           ],
                         ),
-                      ),
-                      Expanded(
-                        child: _buildEventList(selectedEvents, notifier),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -94,41 +85,162 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
   }
 
-  String _getWeekDay(DateTime date) {
-    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-    return weekdays[date.weekday - 1];
-  }
-
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textOnDark(context)),
             onPressed: () => context.pop(),
           ),
           Text(
-            '专注日历',
+            '日程与日历',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppColors.textOnDark(context),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.calendar_view_week, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                _calendarFormat = _calendarFormat == CalendarFormat.month
-                    ? CalendarFormat.twoWeeks
-                    : CalendarFormat.month;
-              });
-            },
+          const Spacer(),
+          // Year display
+          Text(
+            DateFormat('yyyy年').format(_focusedDay),
+            style: const TextStyle(color: Colors.white54, fontSize: 16),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildViewSwitcher() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      width: double.infinity,
+      child: SegmentedButton<CalendarViewMode>(
+        segments: const [
+           ButtonSegment(value: CalendarViewMode.month, label: Text('月视图')),
+           ButtonSegment(value: CalendarViewMode.twoWeeks, label: Text('双周')),
+           ButtonSegment(value: CalendarViewMode.year, label: Text('年视图')),
+        ],
+        selected: {_viewMode},
+        onSelectionChanged: (Set<CalendarViewMode> newSelection) {
+          setState(() {
+            _viewMode = newSelection.first;
+          });
+        },
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.selected)) {
+                return AppDesignTokens.primaryBase;
+              }
+              return Colors.white10;
+            },
+          ),
+          foregroundColor: MaterialStateProperty.all(Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYearView() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate cell size to fit 3 columns
+        final monthWidth = (constraints.maxWidth - 40) / 3;
+        final monthHeight = (constraints.maxHeight - 40) / 4;
+        
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: monthWidth / monthHeight,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: 12,
+          itemBuilder: (context, index) {
+            final monthDate = DateTime(_focusedDay.year, index + 1, 1);
+            final isCurrentMonth = monthDate.month == DateTime.now().month && monthDate.year == DateTime.now().year;
+            
+            return GestureDetector(
+              onTap: () {
+                 setState(() {
+                   _focusedDay = monthDate;
+                   _viewMode = CalendarViewMode.month;
+                 });
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isCurrentMonth ? AppDesignTokens.primaryBase.withAlpha(30) : Colors.white.withAlpha(5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: isCurrentMonth ? Border.all(color: AppDesignTokens.primaryBase.withAlpha(100)) : null,
+                ),
+                child: Column(
+                  children: [
+                    // Month Name
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        '${index + 1}月',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isCurrentMonth ? AppDesignTokens.primaryBase : Colors.white70,
+                        ),
+                      ),
+                    ),
+                    // Custom Mini Grid
+                    Expanded(
+                      child: _buildMiniMonthGrid(monthDate),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMiniMonthGrid(DateTime monthDate) {
+    final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
+    final firstWeekday = DateTime(monthDate.year, monthDate.month, 1).weekday;
+    final offset = firstWeekday % 7; // Sunday is 7, but in mini grid let's assume standard Sun-Sat or Mon-Sun. TableCalendar defaults to Mon start usually? Let's stick to Mon=1.
+    // Actually DateTime.weekday: Mon=1, Sun=7.
+    // Let's assume Mon start for consistency with TableCalendar default.
+    // If Mon start, offset for Mon(1) is 0. offset for Sun(7) is 6.
+    final startOffset = firstWeekday - 1; 
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate simple grid
+        return GridView.count(
+          crossAxisCount: 7,
+          padding: const EdgeInsets.all(2),
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            // Empty slots
+            ...List.generate(startOffset, (_) => const SizedBox()),
+            // Days
+            ...List.generate(daysInMonth, (i) {
+              final day = i + 1;
+              return Center(
+                child: Text(
+                  '$day',
+                  style: const TextStyle(
+                    fontSize: 8,
+                    color: Colors.white38,
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      }
     );
   }
 
@@ -137,7 +249,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       firstDay: DateTime.utc(2020, 10, 16),
       lastDay: DateTime.utc(2030, 3, 14),
       focusedDay: _focusedDay,
-      calendarFormat: _calendarFormat,
+      calendarFormat: _tableCalendarFormat,
       selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
       onDaySelected: (selectedDay, focusedDay) {
         if (!isSameDay(_selectedDay, selectedDay)) {
@@ -145,14 +257,24 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             _selectedDay = selectedDay;
             _focusedDay = focusedDay;
           });
+          // Navigate to detail screen on second tap or button click? 
+          // Requirement: "Clicking each specific date's detail page"
+          // Let's implement single tap selects, and we add a way to open detail.
+          // Or open detail immediately? Usually calendar selects first. 
+          // Let's assume selecting updates the list below.
+          // Adding a small button or gesture to open full detail.
+          // Actually, let's open it immediately on tap if already selected?
+          // Or just provide a button.
+          // Let's add an "Enter Detail" button in the list header or make the list tapable.
+        } else {
+           // If tapping already selected day, open detail
+           Navigator.of(context).push(
+             MaterialPageRoute(builder: (_) => DailyDetailScreen(date: selectedDay)),
+           );
         }
       },
       onFormatChanged: (format) {
-        if (_calendarFormat != format) {
-          setState(() {
-            _calendarFormat = format;
-          });
-        }
+         // managed by view switcher
       },
       onPageChanged: (focusedDay) {
         _focusedDay = focusedDay;
@@ -173,12 +295,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           shape: BoxShape.circle,
         ),
       ),
-      headerStyle: HeaderStyle(
+      headerStyle: const HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
-        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16),
-        leftChevronIcon: const Icon(Icons.chevron_left, color: Colors.white),
-        rightChevronIcon: const Icon(Icons.chevron_right, color: Colors.white),
+        titleTextStyle: TextStyle(color: Colors.white, fontSize: 16),
+        leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+        rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
       ),
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, date, events) {
@@ -205,7 +327,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
            return _buildCalendarCell(day, false);
         },
         todayBuilder: (context, day, focusedDay) {
-           return _buildCalendarCell(day, true); // Highlight today if needed, but standard style handles bg
+           return _buildCalendarCell(day, true);
         },
         selectedBuilder: (context, day, focusedDay) {
           return _buildCalendarCell(day, false, isSelected: true);
@@ -219,10 +341,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     
     return Container(
       margin: const EdgeInsets.all(4),
-      decoration: isSelected ? BoxDecoration(
+      decoration: isSelected ? const BoxDecoration(
         color: AppDesignTokens.primaryBase,
         shape: BoxShape.circle,
-      ) : isToday ? BoxDecoration(
+      ) : isToday ? const BoxDecoration(
         color: Colors.white24,
         shape: BoxShape.circle,
       ) : null,
@@ -241,7 +363,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               lunarData.displayString,
               style: TextStyle(
                 fontSize: 9,
-                color: isSelected ? Colors.white : AppDesignTokens.secondaryBase,
+                color: isSelected ? Colors.white : Colors.orangeAccent, // Orange for festivals
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -261,100 +383,80 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   }
 
   Widget _buildEventList(List<CalendarEventModel> events, CalendarNotifier notifier) {
-    if (events.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, size: 48, color: Colors.white.withAlpha(50)),
-            const SizedBox(height: 10),
-            Text(
-              '今天没有安排',
-              style: TextStyle(color: Colors.white.withAlpha(100)),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: events.length,
-      itemBuilder: (context, index) {
-        final event = events[index];
-        return Dismissible(
-          key: Key(event.id),
-          direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            notifier.deleteEvent(event.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('事件已删除')),
-            );
-          },
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 20),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(20),
-              borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: Color(event.colorValue), width: 4),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      event.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      event.isAllDay
-                          ? '全天'
-                          : '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-                if (event.description != null && event.description!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    event.description!,
-                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+     // Header for the list
+     return Column(
+       children: [
+         Padding(
+           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+           child: Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               Text(
+                 '${DateFormat('MM月dd日').format(_selectedDay ?? _focusedDay)} 日程',
+                 style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+               ),
+               TextButton.icon(
+                 onPressed: () {
+                   Navigator.of(context).push(
+                     MaterialPageRoute(builder: (_) => DailyDetailScreen(date: _selectedDay ?? _focusedDay)),
+                   );
+                 },
+                 icon: const Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
+                 label: const Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
+               ),
+             ],
+           ),
+         ),
+         Expanded(
+           child: events.isEmpty 
+           ? Center(
+               child: Text('暂无日程', style: TextStyle(color: Colors.white.withAlpha(100))),
+             )
+           : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: events.length,
+              itemBuilder: (context, index) {
+                final event = events[index];
+                return Dismissible(
+                  key: Key(event.id),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    notifier.deleteEvent(event.id);
+                  },
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                ],
-                if (event.location != null && event.location!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 12, color: Colors.white54),
-                      const SizedBox(width: 4),
-                      Text(
-                        event.location!,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      tileColor: Colors.white10,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      leading: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Color(event.colorValue),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ],
+                      title: Text(event.title, style: const TextStyle(color: Colors.white)),
+                      subtitle: Text(
+                        event.isAllDay ? '全天' : '${DateFormat('HH:mm').format(event.startTime)}',
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                      trailing: event.recurrenceRule != null ? const Icon(Icons.repeat, color: Colors.white30, size: 16) : null,
+                    ),
                   ),
-                ],
-              ],
+                );
+              },
             ),
-          ),
-        );
-      },
-    );
+         ),
+       ],
+     );
   }
 
   void _showAddEventDialog(BuildContext context) {
@@ -389,7 +491,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   late DateTime _endTime;
   bool _isAllDay = false;
   int _colorValue = 0xFF2196F3;
-  int _reminderMinutes = 15; // Default 15 min
+  int _reminderMinutes = 15;
+  String? _recurrenceRule; // null, daily, weekly, monthly
 
   final List<int> _colorOptions = [
     0xFF2196F3, // Blue
@@ -467,13 +570,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           const SizedBox(height: 10),
           _buildTimeRow(),
           const SizedBox(height: 10),
-          SwitchListTile(
-            title: const Text('全天', style: TextStyle(color: Colors.white)),
-            value: _isAllDay,
-            onChanged: (val) => setState(() => _isAllDay = val),
-            activeColor: AppDesignTokens.primaryBase,
-            contentPadding: EdgeInsets.zero,
-          ),
+          _buildOptionsRow(),
           const SizedBox(height: 10),
           _buildColorPicker(),
           const SizedBox(height: 10),
@@ -563,6 +660,56 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
     );
   }
 
+  Widget _buildOptionsRow() {
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text('全天', style: TextStyle(color: Colors.white)),
+          value: _isAllDay,
+          onChanged: (val) => setState(() => _isAllDay = val),
+          activeColor: AppDesignTokens.primaryBase,
+          contentPadding: EdgeInsets.zero,
+        ),
+        ListTile(
+          title: const Text('提醒', style: TextStyle(color: Colors.white)),
+          trailing: DropdownButton<int>(
+            value: _reminderMinutes,
+            dropdownColor: const Color(0xFF2C2C2C),
+            style: const TextStyle(color: Colors.white),
+            underline: Container(),
+            items: const [
+              DropdownMenuItem(value: 0, child: Text('日程开始时')),
+              DropdownMenuItem(value: 5, child: Text('5分钟前')),
+              DropdownMenuItem(value: 15, child: Text('15分钟前')),
+              DropdownMenuItem(value: 30, child: Text('30分钟前')),
+              DropdownMenuItem(value: 60, child: Text('1小时前')),
+              DropdownMenuItem(value: 1440, child: Text('1天前')),
+            ],
+            onChanged: (val) => setState(() => _reminderMinutes = val!),
+          ),
+          contentPadding: EdgeInsets.zero,
+        ),
+        ListTile(
+          title: const Text('重复', style: TextStyle(color: Colors.white)),
+          trailing: DropdownButton<String?>(
+            value: _recurrenceRule,
+            dropdownColor: const Color(0xFF2C2C2C),
+            style: const TextStyle(color: Colors.white),
+            underline: Container(),
+            items: const [
+              DropdownMenuItem(value: null, child: Text('不重复')),
+              DropdownMenuItem(value: 'daily', child: Text('每天')),
+              DropdownMenuItem(value: 'weekly', child: Text('每周')),
+              DropdownMenuItem(value: 'monthly', child: Text('每月')),
+            ],
+            onChanged: (val) => setState(() => _recurrenceRule = val),
+          ),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
   Widget _buildColorPicker() {
     return Row(
       children: _colorOptions.map((color) {
@@ -639,7 +786,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       endTime: _endTime,
       isAllDay: _isAllDay,
       colorValue: _colorValue,
-      reminderMinutes: [_reminderMinutes], // Default reminder
+      reminderMinutes: [_reminderMinutes], 
+      recurrenceRule: _recurrenceRule,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

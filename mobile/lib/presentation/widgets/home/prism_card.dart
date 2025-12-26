@@ -43,7 +43,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
     final weeklyPattern = cognitive.weeklyPattern;
 
     return GestureDetector(
-      onTap: () => context.go('/cognitive/patterns'),
+      onTap: () => context.push('/cognitive/patterns'),
       child: ClipRRect(
         borderRadius: AppDesignTokens.borderRadius20,
         child: BackdropFilter(

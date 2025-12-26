@@ -28,7 +28,7 @@ class GalaxyRepository {
       return GalaxyGraphResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw e.response?.data['detail'] ?? 'Failed to load galaxy graph';
-    } catch (e) {
+    } catch (_) {
       throw 'An unexpected error occurred';
     }
   }
@@ -63,7 +63,7 @@ class GalaxyRepository {
       return KnowledgeDetailResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw e.response?.data['detail'] ?? 'Failed to load node detail';
-    } catch (e) {
+    } catch (_) {
       throw 'An unexpected error occurred';
     }
   }
@@ -78,10 +78,10 @@ class GalaxyRepository {
       final response = await _apiClient.post(ApiEndpoints.galaxyPredictNext);
       if (response.data == null) return null;
       return KnowledgeDetailResponse.fromJson(response.data);
-    } on DioException catch (e) {
+    } catch (e) {
       // It's okay if prediction fails, just return null
       return null;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -99,7 +99,7 @@ class GalaxyRepository {
       return searchResponse.results;
     } on DioException catch (e) {
       return [];
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }

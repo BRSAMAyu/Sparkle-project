@@ -77,13 +77,14 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       content: fields[3] as String?,
       contentData: (fields[4] as Map?)?.cast<String, dynamic>(),
       replyToId: fields[5] as String?,
+      isRevoked: fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, MessageInfo obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -99,7 +100,9 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       ..writeByte(6)
       ..write(obj.createdAt)
       ..writeByte(7)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(8)
+      ..write(obj.isRevoked);
   }
 
   @override
@@ -135,13 +138,14 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       contentData: (fields[5] as Map?)?.cast<String, dynamic>(),
       replyToId: fields[6] as String?,
       readAt: fields[8] as DateTime?,
+      isRevoked: fields[11] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, PrivateMessageInfo obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -163,7 +167,9 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       ..writeByte(9)
       ..write(obj.createdAt)
       ..writeByte(10)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(11)
+      ..write(obj.isRevoked);
   }
 
   @override
@@ -509,6 +515,7 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      isRevoked: json['is_revoked'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
@@ -521,6 +528,7 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'reply_to_id': instance.replyToId,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
+      'is_revoked': instance.isRevoked,
     };
 
 const _$MessageTypeEnumMap = {
@@ -547,6 +555,11 @@ PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
       readAt: json['read_at'] == null
           ? null
           : DateTime.parse(json['read_at'] as String),
+      isRevoked: json['is_revoked'] as bool? ?? false,
+      quotedMessage: json['quoted_message'] == null
+          ? null
+          : PrivateMessageInfo.fromJson(
+              json['quoted_message'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
@@ -562,6 +575,8 @@ Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
       'read_at': instance.readAt?.toIso8601String(),
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
+      'is_revoked': instance.isRevoked,
+      'quoted_message': instance.quotedMessage,
     };
 
 PrivateMessageSend _$PrivateMessageSendFromJson(Map<String, dynamic> json) =>

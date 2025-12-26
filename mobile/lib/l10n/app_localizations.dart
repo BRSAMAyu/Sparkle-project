@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// No description provided for @schedulePreferences.
   ///
   /// In zh, this message translates to:
-  /// **'日程偏好'**
+  /// **'个人偏好'**
   String get schedulePreferences;
 
   /// No description provided for @notificationSettings.

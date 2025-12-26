@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -19,7 +20,6 @@ class CalendarRepository {
   Future<List<CalendarEventModel>> getEvents() async {
     final box = await _getBox();
     return box.values.map((e) {
-      // Handle potential dynamic/Map casting
       if (e is Map) {
         return CalendarEventModel.fromJson(Map<String, dynamic>.from(e));
       }
@@ -36,8 +36,8 @@ class CalendarRepository {
   Future<void> updateEvent(CalendarEventModel event) async {
     final box = await _getBox();
     await box.put(event.id, event.toJson());
-    _cancelReminders(event.id); // Cancel old
-    _scheduleReminders(event); // Schedule new
+    _cancelReminders(event.id); 
+    _scheduleReminders(event); 
   }
 
   Future<void> deleteEvent(String id) async {
@@ -47,20 +47,29 @@ class CalendarRepository {
   }
 
   void _scheduleReminders(CalendarEventModel event) {
-    // Generate unique int ID for notification from string ID hash
     final baseId = event.id.hashCode;
     
+    DateTimeComponents? matchComponents;
+    if (event.recurrenceRule == 'daily') {
+      matchComponents = DateTimeComponents.time;
+    } else if (event.recurrenceRule == 'weekly') {
+      matchComponents = DateTimeComponents.dayOfWeekAndTime;
+    } else if (event.recurrenceRule == 'monthly') {
+      matchComponents = DateTimeComponents.dayOfMonthAndTime;
+    }
+
     for (int i = 0; i < event.reminderMinutes.length; i++) {
       final minutes = event.reminderMinutes[i];
       final reminderTime = event.startTime.subtract(Duration(minutes: minutes));
       
-      if (reminderTime.isAfter(DateTime.now())) {
+      if (matchComponents != null || reminderTime.isAfter(DateTime.now())) {
         _notificationService.scheduleNotification(
-          id: baseId + i, // Offset to avoid collision for multiple reminders
+          id: baseId + i, 
           title: '日程提醒: ${event.title}',
           body: minutes == 0 ? '现在开始' : '还有 $minutes 分钟开始',
           scheduledDate: reminderTime,
           payload: {'eventId': event.id},
+          matchDateTimeComponents: matchComponents,
         );
       }
     }

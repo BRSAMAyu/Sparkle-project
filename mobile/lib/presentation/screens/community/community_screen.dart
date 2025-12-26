@@ -7,6 +7,7 @@ import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 Color _getStatusColor(UserStatus status) {
   switch (status) {
@@ -429,18 +430,11 @@ class _FriendsTab extends ConsumerWidget {
                 child: ListTile(
                   leading: Stack(
                     children: [
-                      CircleAvatar(
-                        backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
+                      SparkleAvatar(
+                        radius: 20,
+                        url: friend.avatarUrl,
+                        fallbackText: friend.displayName,
                         backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.2),
-                        child: friend.avatarUrl == null
-                            ? Text(
-                                friend.displayName[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: AppDesignTokens.primaryBase,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null,
                       ),
                       Positioned(
                         right: 0,
