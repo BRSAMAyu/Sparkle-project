@@ -79,12 +79,15 @@
 
 ## 4. 接下来的计划 (Next Steps)
 
-### Step 3: Python 后端重构 (Refactor Python Backend)
+### ✅ Step 3: Python 后端重构 (Refactor Python Backend) - **已完成**
 **目标**: 将现有的 FastAPI 单体应用改造为 gRPC 微服务。
-1.  **依赖升级**: 引入 `grpcio`, `grpcio-tools`。
-2.  **服务实现**: 编写 `AgentService` 实现类，对接现有的 `llm_service`。
-3.  **入口改造**: 创建 `server.py` 启动 gRPC 服务，移除或缩减 FastAPI 路由。
-4.  **RAG 适配**: 确保 Python 端能通过 `asyncpg`/`psycopg` 正确连接 Postgres 并操作向量数据。
+1.  ✅ **依赖升级**: 引入 `grpcio`, `grpcio-tools`, `grpcio-reflection`。
+2.  ✅ **服务实现**: 编写 `AgentService` 实现类（`app/services/agent_grpc_service.py`），对接现有的 `llm_service`。
+3.  ✅ **入口改造**: 创建 `grpc_server.py` 启动 gRPC 服务。
+4.  ✅ **流式通信验证**: 测试打字机效果（84个响应块，803字符）。
+5.  ⏳ **RAG 适配**: 基础框架已搭建，待实现 pgvector 向量检索。
+
+**详细报告**: 见 `docs/STEP3_GRPC_SERVICE_COMPLETE.md`
 
 ### Step 4: Flutter 客户端适配 (Flutter Adaptation)
 **目标**: 让移动端对接新的 WebSocket 网关。

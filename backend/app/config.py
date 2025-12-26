@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     # Idempotency Store
     IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
 
+    # gRPC Server
+    GRPC_PORT: int = 50051
+
     class Config:
         env_file = ".env"
         case_sensitive = True

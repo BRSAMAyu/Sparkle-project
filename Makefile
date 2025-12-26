@@ -24,8 +24,27 @@ sync-db:
 # 生成 Protobuf 代码
 proto-gen:
 	@echo "🚀 Generating Protobuf Code..."
+	@echo "  → Go..."
 	mkdir -p backend/gateway/gen/agent/v1
 	protoc --proto_path=proto \
 	       --go_out=backend/gateway/gen/agent/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/agent/v1 --go-grpc_opt=paths=source_relative \
 	       proto/agent_service.proto
+	@echo "  → Python..."
+	mkdir -p backend/app/gen/agent/v1
+	python -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen/agent/v1 \
+	       --grpc_python_out=backend/app/gen/agent/v1 \
+	       --pyi_out=backend/app/gen/agent/v1 \
+	       proto/agent_service.proto
+	@echo "✅ Protobuf code generated successfully!"
+
+# Python gRPC 服务相关命令
+grpc-server:
+	@echo "🚀 Starting Python gRPC Server..."
+	cd backend && python grpc_server.py
+
+grpc-test:
+	@echo "🧪 Testing gRPC Server..."
+	cd backend && python test_grpc_simple.py
