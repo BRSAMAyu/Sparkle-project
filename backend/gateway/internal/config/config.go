@@ -14,6 +14,7 @@ type Config struct {
 	RedisURL      string `mapstructure:"REDIS_URL"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
 	BackendURL    string `mapstructure:"BACKEND_URL"`
+	AppleClientID string `mapstructure:"APPLE_CLIENT_ID"`
 }
 
 func Load() *Config {
@@ -24,6 +25,9 @@ func Load() *Config {
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
+	viper.SetDefault("APPLE_CLIENT_ID", "")
+>>>>+++ REPLACE
+
 
 	// Read from .env file if it exists
 	viper.SetConfigFile(".env")

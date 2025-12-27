@@ -1,6 +1,20 @@
 -- name: GetUserByEmail :one
 SELECT * FROM users WHERE email = $1 LIMIT 1;
 
+-- name: GetUserByAppleID :one
+SELECT * FROM users WHERE apple_id = $1 LIMIT 1;
+
+-- name: CreateSocialUser :one
+INSERT INTO users (
+    id, username, email, hashed_password, nickname, 
+    registration_source, is_active, apple_id, updated_at, created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+RETURNING *;
+
+-- name: UpdateUserLastLogin :exec
+UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1;
+
 -- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
