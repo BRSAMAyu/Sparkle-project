@@ -133,7 +133,7 @@ func (x AgentStatus_State) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentStatus_State.Descriptor instead.
 func (AgentStatus_State) EnumDescriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{7, 0}
+	return file_agent_service_proto_rawDescGZIP(), []int{9, 0}
 }
 
 // ChatRequest encapsulates the user's input and necessary context for the AI.
@@ -609,6 +609,7 @@ type ChatResponse struct {
 	//	*ChatResponse_FullText
 	//	*ChatResponse_Error
 	//	*ChatResponse_Usage
+	//	*ChatResponse_Citations
 	Content isChatResponse_Content `protobuf_oneof:"content"`
 	// Indicates why the generation finished.
 	FinishReason  FinishReason `protobuf:"varint,9,opt,name=finish_reason,json=finishReason,proto3,enum=agent.v1.FinishReason" json:"finish_reason,omitempty"`
@@ -728,6 +729,15 @@ func (x *ChatResponse) GetUsage() *Usage {
 	return nil
 }
 
+func (x *ChatResponse) GetCitations() *CitationBlock {
+	if x != nil {
+		if x, ok := x.Content.(*ChatResponse_Citations); ok {
+			return x.Citations
+		}
+	}
+	return nil
+}
+
 func (x *ChatResponse) GetFinishReason() FinishReason {
 	if x != nil {
 		return x.FinishReason
@@ -770,6 +780,11 @@ type ChatResponse_Usage struct {
 	Usage *Usage `protobuf:"bytes,8,opt,name=usage,proto3,oneof"`
 }
 
+type ChatResponse_Citations struct {
+	// Citations from RAG.
+	Citations *CitationBlock `protobuf:"bytes,11,opt,name=citations,proto3,oneof"`
+}
+
 func (*ChatResponse_Delta) isChatResponse_Content() {}
 
 func (*ChatResponse_ToolCall) isChatResponse_Content() {}
@@ -782,6 +797,136 @@ func (*ChatResponse_Error) isChatResponse_Content() {}
 
 func (*ChatResponse_Usage) isChatResponse_Content() {}
 
+func (*ChatResponse_Citations) isChatResponse_Content() {}
+
+type CitationBlock struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Citations     []*Citation            `protobuf:"bytes,1,rep,name=citations,proto3" json:"citations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CitationBlock) Reset() {
+	*x = CitationBlock{}
+	mi := &file_agent_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CitationBlock) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CitationBlock) ProtoMessage() {}
+
+func (x *CitationBlock) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CitationBlock.ProtoReflect.Descriptor instead.
+func (*CitationBlock) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CitationBlock) GetCitations() []*Citation {
+	if x != nil {
+		return x.Citations
+	}
+	return nil
+}
+
+type Citation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	SourceType    string                 `protobuf:"bytes,4,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
+	Url           string                 `protobuf:"bytes,5,opt,name=url,proto3" json:"url,omitempty"`
+	Score         float32                `protobuf:"fixed32,6,opt,name=score,proto3" json:"score,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Citation) Reset() {
+	*x = Citation{}
+	mi := &file_agent_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Citation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Citation) ProtoMessage() {}
+
+func (x *Citation) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Citation.ProtoReflect.Descriptor instead.
+func (*Citation) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Citation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Citation) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Citation) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *Citation) GetSourceType() string {
+	if x != nil {
+		return x.SourceType
+	}
+	return ""
+}
+
+func (x *Citation) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Citation) GetScore() float32 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
 type ToolCall struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -793,7 +938,7 @@ type ToolCall struct {
 
 func (x *ToolCall) Reset() {
 	*x = ToolCall{}
-	mi := &file_agent_service_proto_msgTypes[6]
+	mi := &file_agent_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +950,7 @@ func (x *ToolCall) String() string {
 func (*ToolCall) ProtoMessage() {}
 
 func (x *ToolCall) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[6]
+	mi := &file_agent_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +963,7 @@ func (x *ToolCall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolCall.ProtoReflect.Descriptor instead.
 func (*ToolCall) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{6}
+	return file_agent_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ToolCall) GetId() string {
@@ -852,7 +997,7 @@ type AgentStatus struct {
 
 func (x *AgentStatus) Reset() {
 	*x = AgentStatus{}
-	mi := &file_agent_service_proto_msgTypes[7]
+	mi := &file_agent_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -864,7 +1009,7 @@ func (x *AgentStatus) String() string {
 func (*AgentStatus) ProtoMessage() {}
 
 func (x *AgentStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[7]
+	mi := &file_agent_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -877,7 +1022,7 @@ func (x *AgentStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStatus.ProtoReflect.Descriptor instead.
 func (*AgentStatus) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{7}
+	return file_agent_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AgentStatus) GetState() AgentStatus_State {
@@ -906,7 +1051,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_agent_service_proto_msgTypes[8]
+	mi := &file_agent_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -918,7 +1063,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[8]
+	mi := &file_agent_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -931,7 +1076,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{8}
+	return file_agent_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Error) GetCode() string {
@@ -974,7 +1119,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_agent_service_proto_msgTypes[9]
+	mi := &file_agent_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -986,7 +1131,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[9]
+	mi := &file_agent_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -999,7 +1144,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{9}
+	return file_agent_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Usage) GetPromptTokens() int32 {
@@ -1048,7 +1193,7 @@ type MemoryQuery struct {
 
 func (x *MemoryQuery) Reset() {
 	*x = MemoryQuery{}
-	mi := &file_agent_service_proto_msgTypes[10]
+	mi := &file_agent_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1060,7 +1205,7 @@ func (x *MemoryQuery) String() string {
 func (*MemoryQuery) ProtoMessage() {}
 
 func (x *MemoryQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[10]
+	mi := &file_agent_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1073,7 +1218,7 @@ func (x *MemoryQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryQuery.ProtoReflect.Descriptor instead.
 func (*MemoryQuery) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{10}
+	return file_agent_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MemoryQuery) GetUserId() string {
@@ -1130,7 +1275,7 @@ type MemoryFilter struct {
 
 func (x *MemoryFilter) Reset() {
 	*x = MemoryFilter{}
-	mi := &file_agent_service_proto_msgTypes[11]
+	mi := &file_agent_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1142,7 +1287,7 @@ func (x *MemoryFilter) String() string {
 func (*MemoryFilter) ProtoMessage() {}
 
 func (x *MemoryFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[11]
+	mi := &file_agent_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1155,7 +1300,7 @@ func (x *MemoryFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryFilter.ProtoReflect.Descriptor instead.
 func (*MemoryFilter) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{11}
+	return file_agent_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *MemoryFilter) GetTags() []string {
@@ -1196,7 +1341,7 @@ type MemoryResult struct {
 
 func (x *MemoryResult) Reset() {
 	*x = MemoryResult{}
-	mi := &file_agent_service_proto_msgTypes[12]
+	mi := &file_agent_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1208,7 +1353,7 @@ func (x *MemoryResult) String() string {
 func (*MemoryResult) ProtoMessage() {}
 
 func (x *MemoryResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[12]
+	mi := &file_agent_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1221,7 +1366,7 @@ func (x *MemoryResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryResult.ProtoReflect.Descriptor instead.
 func (*MemoryResult) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{12}
+	return file_agent_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MemoryResult) GetItems() []*MemoryItem {
@@ -1251,7 +1396,7 @@ type MemoryItem struct {
 
 func (x *MemoryItem) Reset() {
 	*x = MemoryItem{}
-	mi := &file_agent_service_proto_msgTypes[13]
+	mi := &file_agent_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1263,7 +1408,7 @@ func (x *MemoryItem) String() string {
 func (*MemoryItem) ProtoMessage() {}
 
 func (x *MemoryItem) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[13]
+	mi := &file_agent_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1276,7 +1421,7 @@ func (x *MemoryItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryItem.ProtoReflect.Descriptor instead.
 func (*MemoryItem) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{13}
+	return file_agent_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *MemoryItem) GetId() string {
@@ -1367,7 +1512,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2#.agent.v1.ChatMessage.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xaf\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe8\x03\n" +
 	"\fChatResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -1381,9 +1526,20 @@ const file_agent_service_proto_rawDesc = "" +
 	"\rstatus_update\x18\x05 \x01(\v2\x15.agent.v1.AgentStatusH\x00R\fstatusUpdate\x12\x1d\n" +
 	"\tfull_text\x18\x06 \x01(\tH\x00R\bfullText\x12'\n" +
 	"\x05error\x18\a \x01(\v2\x0f.agent.v1.ErrorH\x00R\x05error\x12'\n" +
-	"\x05usage\x18\b \x01(\v2\x0f.agent.v1.UsageH\x00R\x05usage\x12;\n" +
+	"\x05usage\x18\b \x01(\v2\x0f.agent.v1.UsageH\x00R\x05usage\x127\n" +
+	"\tcitations\x18\v \x01(\v2\x17.agent.v1.CitationBlockH\x00R\tcitations\x12;\n" +
 	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReasonB\t\n" +
-	"\acontent\"L\n" +
+	"\acontent\"A\n" +
+	"\rCitationBlock\x120\n" +
+	"\tcitations\x18\x01 \x03(\v2\x12.agent.v1.CitationR\tcitations\"\x93\x01\n" +
+	"\bCitation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1f\n" +
+	"\vsource_type\x18\x04 \x01(\tR\n" +
+	"sourceType\x12\x10\n" +
+	"\x03url\x18\x05 \x01(\tR\x03url\x12\x14\n" +
+	"\x05score\x18\x06 \x01(\x02R\x05score\"L\n" +
 	"\bToolCall\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -1467,7 +1623,7 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agent_service_proto_goTypes = []any{
 	(FinishReason)(0),             // 0: agent.v1.FinishReason
 	(AgentStatus_State)(0),        // 1: agent.v1.AgentStatus.State
@@ -1477,51 +1633,55 @@ var file_agent_service_proto_goTypes = []any{
 	(*ChatConfig)(nil),            // 5: agent.v1.ChatConfig
 	(*ChatMessage)(nil),           // 6: agent.v1.ChatMessage
 	(*ChatResponse)(nil),          // 7: agent.v1.ChatResponse
-	(*ToolCall)(nil),              // 8: agent.v1.ToolCall
-	(*AgentStatus)(nil),           // 9: agent.v1.AgentStatus
-	(*Error)(nil),                 // 10: agent.v1.Error
-	(*Usage)(nil),                 // 11: agent.v1.Usage
-	(*MemoryQuery)(nil),           // 12: agent.v1.MemoryQuery
-	(*MemoryFilter)(nil),          // 13: agent.v1.MemoryFilter
-	(*MemoryResult)(nil),          // 14: agent.v1.MemoryResult
-	(*MemoryItem)(nil),            // 15: agent.v1.MemoryItem
-	nil,                           // 16: agent.v1.UserProfile.PreferencesEntry
-	nil,                           // 17: agent.v1.ChatMessage.MetadataEntry
-	nil,                           // 18: agent.v1.Error.DetailsEntry
-	nil,                           // 19: agent.v1.MemoryItem.MetadataEntry
-	(*structpb.Struct)(nil),       // 20: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 21: google.protobuf.Timestamp
+	(*CitationBlock)(nil),         // 8: agent.v1.CitationBlock
+	(*Citation)(nil),              // 9: agent.v1.Citation
+	(*ToolCall)(nil),              // 10: agent.v1.ToolCall
+	(*AgentStatus)(nil),           // 11: agent.v1.AgentStatus
+	(*Error)(nil),                 // 12: agent.v1.Error
+	(*Usage)(nil),                 // 13: agent.v1.Usage
+	(*MemoryQuery)(nil),           // 14: agent.v1.MemoryQuery
+	(*MemoryFilter)(nil),          // 15: agent.v1.MemoryFilter
+	(*MemoryResult)(nil),          // 16: agent.v1.MemoryResult
+	(*MemoryItem)(nil),            // 17: agent.v1.MemoryItem
+	nil,                           // 18: agent.v1.UserProfile.PreferencesEntry
+	nil,                           // 19: agent.v1.ChatMessage.MetadataEntry
+	nil,                           // 20: agent.v1.Error.DetailsEntry
+	nil,                           // 21: agent.v1.MemoryItem.MetadataEntry
+	(*structpb.Struct)(nil),       // 22: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
 }
 var file_agent_service_proto_depIdxs = []int32{
 	4,  // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
 	3,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
-	20, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
+	22, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
 	6,  // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
 	5,  // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
-	16, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
-	17, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
-	8,  // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
-	9,  // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
-	10, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
-	11, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
-	0,  // 11: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
-	1,  // 12: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
-	18, // 13: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
-	13, // 14: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
-	21, // 15: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
-	21, // 16: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
-	15, // 17: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
-	21, // 18: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
-	19, // 19: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
-	2,  // 20: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
-	12, // 21: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
-	7,  // 22: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
-	14, // 23: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
-	22, // [22:24] is the sub-list for method output_type
-	20, // [20:22] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	18, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
+	19, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
+	10, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
+	11, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
+	12, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
+	13, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
+	8,  // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
+	0,  // 12: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
+	9,  // 13: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
+	1,  // 14: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
+	20, // 15: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
+	15, // 16: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
+	23, // 17: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
+	23, // 18: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
+	17, // 19: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
+	23, // 20: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
+	21, // 21: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
+	2,  // 22: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
+	14, // 23: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
+	7,  // 24: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
+	16, // 25: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
+	24, // [24:26] is the sub-list for method output_type
+	22, // [22:24] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -1540,6 +1700,7 @@ func file_agent_service_proto_init() {
 		(*ChatResponse_FullText)(nil),
 		(*ChatResponse_Error)(nil),
 		(*ChatResponse_Usage)(nil),
+		(*ChatResponse_Citations)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1547,7 +1708,7 @@ func file_agent_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

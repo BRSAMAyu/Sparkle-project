@@ -368,6 +368,15 @@ class WebSocketChatServiceV2 {
         }
         return UnknownEvent(data: data);
 
+      case 'citations':
+        final list = data['citations'] as List<dynamic>?;
+        if (list != null) {
+          return CitationEvent(
+            citations: list.map((e) => e as Map<String, dynamic>).toList(),
+          );
+        }
+        return UnknownEvent(data: data);
+
       case 'pong':
         // 心跳响应，静默处理
         return UnknownEvent(data: data);

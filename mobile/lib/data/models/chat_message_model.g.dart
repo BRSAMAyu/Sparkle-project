@@ -32,9 +32,7 @@ ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
           ? null
           : ConfirmationData.fromJson(
               json['confirmation_data'] as Map<String, dynamic>),
-      reasoningSteps: (json['reasoning_steps'] as List<dynamic>?)
-          ?.map((e) => ReasoningStep.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      reasoningSteps: _reasoningStepsFromJson(json['reasoning_steps'] as List?),
       reasoningSummary: json['reasoning_summary'] as String?,
       isReasoningComplete: json['is_reasoning_complete'] as bool?,
       meta: json['meta'] == null
@@ -57,7 +55,7 @@ Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
       'errors': instance.errors,
       'requires_confirmation': instance.requiresConfirmation,
       'confirmation_data': instance.confirmationData,
-      'reasoning_steps': instance.reasoningSteps,
+      'reasoning_steps': _reasoningStepsToJson(instance.reasoningSteps),
       'reasoning_summary': instance.reasoningSummary,
       'is_reasoning_complete': instance.isReasoningComplete,
       'meta': instance.meta,
