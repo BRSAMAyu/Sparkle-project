@@ -17,6 +17,8 @@ import (
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/service"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var upgrader = websocket.Upgrader{
@@ -64,6 +66,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	log.Printf("WebSocket connected for user: %s", userID)
 
+	tracer := otel.Tracer("chat-orchestrator")
+
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
 	for {
 		// Read message from WebSocket client
@@ -93,6 +97,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			continue
 		}
 
+		// Start a new span for this message processing
+		ctx, span := tracer.Start(c.Request.Context(), "HandleMessage")
+		span.SetAttributes(
+			attribute.String("user_id", userID),
+			attribute.String("session_id", input.SessionID),
+		)
+
 		// Sanitize Input (Security Hygiene)
 		p := bluemonday.UGCPolicy()
 		input.Message = p.Sanitize(input.Message)
@@ -119,10 +130,12 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 
 		// Call Python Agent via gRPC (server-side streaming)
-		stream, err := h.agentClient.StreamChat(c.Request.Context(), req)
+		// Use the new span context
+		stream, err := h.agentClient.StreamChat(ctx, req)
 		if err != nil {
 			log.Printf("Failed to call StreamChat: %v", err)
 			conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
+			span.End()
 			continue
 		}
 
@@ -154,13 +167,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				span.End()
 				return
 			}
 		}
 
 		// Add metadata for the final state
 		latency := time.Since(startTime).Milliseconds()
-		qLen, _ := h.chatHistory.GetQueueLength(c.Request.Context())
+		qLen, _ := h.chatHistory.GetQueueLength(ctx)
 		threshold := h.chatHistory.GetBreakerThreshold()
 
 		meta := map[string]interface{}{
@@ -190,6 +204,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 			}()
 		}
+		span.End()
 	}
 
 	log.Printf("WebSocket disconnected for user: %s", userID)

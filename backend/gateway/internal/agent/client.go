@@ -2,13 +2,11 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -27,6 +25,8 @@ func NewClient(addr string) (*Client, error) {
 	conn, err := grpc.DialContext(ctx, addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
 	if err != nil {
 		log.Printf("Failed to connect to agent service at %s: %v", addr, err)
@@ -44,21 +44,14 @@ func (c *Client) Close() {
 }
 
 func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
-	// Inject Metadata for context propagation
+	// Inject Metadata for business context
 	md := metadata.New(map[string]string{
 		"user-id": req.UserId,
 	})
 
-	// Inject OTel Trace ID
-	span := trace.SpanFromContext(ctx)
-	if span.SpanContext().IsValid() {
-		md.Set("x-trace-id", span.SpanContext().TraceID().String())
-	} else {
-		md.Set("x-trace-id", fmt.Sprintf("trace_%s", uuid.New().String()))
-	}
-
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 
 	// StreamChat is server-side streaming: single request, stream of responses
+	// otelgrpc interceptor will handle the TraceContext propagation automatically
 	return c.api.StreamChat(outCtx, req)
 }

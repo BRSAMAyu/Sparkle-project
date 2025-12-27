@@ -3,6 +3,7 @@ from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator
 import asyncio
 from loguru import logger
 from dataclasses import dataclass
+from opentelemetry import trace
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
@@ -121,6 +122,8 @@ class StreamChunk:
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
 
+tracer = trace.get_tracer(__name__)
+
 class LLMService:
     """
     LLM 服务
@@ -189,16 +192,22 @@ class LLMService:
         """
         Send a chat request to the LLM.
         """
-        # 🎭 Demo Mode 拦截
-        mock_response = self._check_demo_match(messages)
-        if mock_response:
-            # 模拟思考延迟
-            await asyncio.sleep(1.0)
-            return mock_response
-
         model = model or self.default_model
-        logger.debug(f"Sending chat request to model: {model}")
-        return await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+        with tracer.start_as_current_span("llm_chat") as span:
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
+            
+            # 🎭 Demo Mode 拦截
+            mock_response = self._check_demo_match(messages)
+            if mock_response:
+                span.set_attribute("llm.demo_mode", True)
+                # 模拟思考延迟
+                await asyncio.sleep(1.0)
+                return mock_response
+
+            logger.debug(f"Sending chat request to model: {model}")
+            response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+            return response
 
     async def stream_chat(
         self,
@@ -210,22 +219,26 @@ class LLMService:
         """
         Stream chat response from the LLM.
         """
-        # 🎭 Demo Mode 拦截 - 流式返回预设响应
-        mock_response = self._check_demo_match(messages)
-        if mock_response:
-            # 模拟流式输出，每次输出几个字符
-            chunk_size = 10
-            for i in range(0, len(mock_response), chunk_size):
-                chunk = mock_response[i:i + chunk_size]
-                yield chunk
-                # 模拟打字效果的延迟
-                await asyncio.sleep(0.03)
-            return
-
         model = model or self.default_model
-        logger.debug(f"Starting stream chat with model: {model}")
-        async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
-            yield chunk
+        with tracer.start_as_current_span("llm_stream_chat") as span:
+            span.set_attribute("llm.model", model)
+            
+            # 🎭 Demo Mode 拦截 - 流式返回预设响应
+            mock_response = self._check_demo_match(messages)
+            if mock_response:
+                span.set_attribute("llm.demo_mode", True)
+                # 模拟流式输出，每次输出几个字符
+                chunk_size = 10
+                for i in range(0, len(mock_response), chunk_size):
+                    chunk = mock_response[i:i + chunk_size]
+                    yield chunk
+                    # 模拟打字效果的延迟
+                    await asyncio.sleep(0.03)
+                return
+
+            logger.debug(f"Starting stream chat with model: {model}")
+            async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                yield chunk
 
     async def chat_with_tools(
         self,
@@ -236,15 +249,6 @@ class LLMService:
     ) -> LLMResponse:
         """
         带工具调用的聊天
-        
-        Args:
-            system_prompt: 系统提示词
-            user_message: 用户消息
-            tools: OpenAI 格式的工具定义
-            conversation_history: 对话历史
-            
-        Returns:
-            LLMResponse: 包含文本和工具调用的响应
         """
         messages = [{"role": "system", "content": system_prompt}]
         
@@ -253,72 +257,82 @@ class LLMService:
         
         messages.append({"role": "user", "content": user_message})
 
-        # Using self.provider.client (AsyncOpenAI) directly for tool calls
         if hasattr(self.provider, 'client'):
-            response = await self.provider.client.chat.completions.create(
-                model=self.default_model,
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",  # 让模型自动决定是否调用工具
-                temperature=0.7, # Default temperature
-            )
-            
-            choice = response.choices[0]
-            message = choice.message
-            
-            tool_calls_dicts = []
-            if message.tool_calls:
-                for tc in message.tool_calls:
-                    tool_calls_dicts.append({
-                        "id": tc.id,
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments, # Arguments are already string
-                        }
-                    })
+            with tracer.start_as_current_span("llm_chat_with_tools") as span:
+                span.set_attribute("llm.model", self.default_model)
+                
+                response = await self.provider.client.chat.completions.create(
+                    model=self.default_model,
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto",
+                    temperature=0.7,
+                )
+                
+                choice = response.choices[0]
+                message = choice.message
+                
+                if response.usage:
+                    span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
+                    span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
+                    span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
 
-            return LLMResponse(
-                content=message.content or "",
-                tool_calls=tool_calls_dicts,
-                finish_reason=choice.finish_reason
-            )
+                tool_calls_dicts = []
+                if message.tool_calls:
+                    for tc in message.tool_calls:
+                        tool_calls_dicts.append({
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            }
+                        })
+
+                return LLMResponse(
+                    content=message.content or "",
+                    tool_calls=tool_calls_dicts,
+                    finish_reason=choice.finish_reason
+                )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
     
     async def continue_with_tool_results(
         self,
-        conversation_history: List[Dict], # full history up to LLM's initial response
-        tool_results: List[Dict] # tool_results from executor
+        conversation_history: List[Dict],
+        tool_results: List[Dict]
     ) -> LLMResponse:
         """
         将工具执行结果反馈给 LLM，获取最终回复
         """
-        messages = conversation_history[:] # Copy history
-        
-        # Append tool messages
+        messages = conversation_history[:]
         for result in tool_results:
-            # Need to find the original tool_call_id from the conversation_history if possible
-            # Or just append as a 'tool' role message
             messages.append({
                 "role": "tool",
-                # "tool_call_id": result.get("tool_call_id", ""), # if we track original tool_call_id
                 "content": json.dumps(result, ensure_ascii=False)
             })
         
-        # Now call LLM again without tools, get final message
         if hasattr(self.provider, 'client'):
-            response = await self.provider.client.chat.completions.create(
-                model=self.default_model,
-                messages=messages,
-                temperature=0.7,
-            )
-            choice = response.choices[0]
-            message = choice.message
-            return LLMResponse(
-                content=message.content or "",
-                tool_calls=None, # No more tool calls expected
-                finish_reason=choice.finish_reason
-            )
+            with tracer.start_as_current_span("llm_continue_after_tools") as span:
+                span.set_attribute("llm.model", self.default_model)
+                
+                response = await self.provider.client.chat.completions.create(
+                    model=self.default_model,
+                    messages=messages,
+                    temperature=0.7,
+                )
+                choice = response.choices[0]
+                message = choice.message
+                
+                if response.usage:
+                    span.set_attribute("llm.usage.prompt_tokens", response.usage.prompt_tokens)
+                    span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
+                    span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
+
+                return LLMResponse(
+                    content=message.content or "",
+                    tool_calls=None,
+                    finish_reason=choice.finish_reason
+                )
         else:
             raise NotImplementedError("Current LLM provider does not support tool calling directly.")
     
@@ -330,9 +344,6 @@ class LLMService:
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
-
-        Yields:
-            StreamChunk: 文本块、工具调用或 Token 使用量
         """
         messages = [
             {"role": "system", "content": system_prompt},
@@ -340,74 +351,66 @@ class LLMService:
         ]
 
         if hasattr(self.provider, 'client'):
-            stream = await self.provider.client.chat.completions.create(
-                model=self.default_model,
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",
-                stream=True,
-                temperature=0.7,
-                stream_options={"include_usage": True}  # 请求 usage 信息
-            )
-
-            collected_tool_call_chunks = {} # {id: {name: "", args_str: ""}}
-            usage_data = None
-
-            async for chunk in stream:
-                # Handle usage data (may come in final chunk)
-                if hasattr(chunk, 'usage') and chunk.usage:
-                    usage_data = chunk.usage
-
-                # Handle choices
-                if chunk.choices:
-                    delta = chunk.choices[0].delta
-
-                    # Text content
-                    if delta.content:
-                        yield StreamChunk(type="text", content=delta.content)
-
-                    # Tool call chunks
-                    if delta.tool_calls:
-                        for tc_chunk in delta.tool_calls:
-                            tool_call_id = tc_chunk.id
-
-                            if tool_call_id not in collected_tool_call_chunks:
-                                collected_tool_call_chunks[tool_call_id] = {
-                                    "name": "",
-                                    "args_str": ""
-                                }
-
-                            if tc_chunk.function.name:
-                                collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
-                                yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
-
-                            if tc_chunk.function.arguments:
-                                collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
-                                yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
-
-            # After stream ends, yield full tool call if any
-            for tool_call_id, data in collected_tool_call_chunks.items():
-                if data["name"] and data["args_str"]:
-                    try:
-                        full_arguments = json.loads(data["args_str"])
-                        yield StreamChunk(
-                            type="tool_call_end",
-                            tool_call_id=tool_call_id,
-                            tool_name=data["name"],
-                            full_arguments=full_arguments
-                        )
-                    except json.JSONDecodeError:
-                        logger.error(f"Failed to decode tool arguments for {tool_call_id}: {data['args_str']}")
-
-            # Finally, yield usage data
-            if usage_data:
-                yield StreamChunk(
-                    type="usage",
-                    prompt_tokens=usage_data.prompt_tokens,
-                    completion_tokens=usage_data.completion_tokens,
-                    total_tokens=usage_data.total_tokens
+            with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:
+                span.set_attribute("llm.model", self.default_model)
+                
+                stream = await self.provider.client.chat.completions.create(
+                    model=self.default_model,
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto",
+                    stream=True,
+                    temperature=0.7,
+                    stream_options={"include_usage": True}
                 )
 
+                collected_tool_call_chunks = {}
+                usage_data = None
+
+                async for chunk in stream:
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        usage_data = chunk.usage
+
+                    if chunk.choices:
+                        delta = chunk.choices[0].delta
+                        if delta.content:
+                            yield StreamChunk(type="text", content=delta.content)
+
+                        if delta.tool_calls:
+                            for tc_chunk in delta.tool_calls:
+                                tool_call_id = tc_chunk.id
+                                if tool_call_id not in collected_tool_call_chunks:
+                                    collected_tool_call_chunks[tool_call_id] = {"name": "", "args_str": ""}
+                                if tc_chunk.function.name:
+                                    collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
+                                    yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
+                                if tc_chunk.function.arguments:
+                                    collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
+                                    yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+
+                for tool_call_id, data in collected_tool_call_chunks.items():
+                    if data["name"] and data["args_str"]:
+                        try:
+                            full_arguments = json.loads(data["args_str"])
+                            yield StreamChunk(
+                                type="tool_call_end",
+                                tool_call_id=tool_call_id,
+                                tool_name=data["name"],
+                                full_arguments=full_arguments
+                            )
+                        except json.JSONDecodeError:
+                            logger.error(f"Failed to decode tool arguments for {tool_call_id}: {data['args_str']}")
+
+                if usage_data:
+                    span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)
+                    span.set_attribute("llm.usage.completion_tokens", usage_data.completion_tokens)
+                    span.set_attribute("llm.usage.total_tokens", usage_data.total_tokens)
+                    yield StreamChunk(
+                        type="usage",
+                        prompt_tokens=usage_data.prompt_tokens,
+                        completion_tokens=usage_data.completion_tokens,
+                        total_tokens=usage_data.total_tokens
+                    )
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
@@ -420,97 +423,41 @@ class LLMService:
     ) -> Dict[str, str]:
         """
         Generate "irresistible" push notification content based on persona.
-        
-        Args:
-            user_nickname: Name of the user
-            persona: "coach" (strict) or "anime" (gentle/cute) or others
-            trigger_type: "memory", "sprint", "inactivity"
-            context_data: Data from strategy (nodes, plan name, etc.)
-            
-        Returns:
-            Dict with "title" and "body" keys.
         """
-        
-        # 1. Define Persona Prompts
         persona_prompts = {
-            "coach": """
-            Role: Strict, discipline-focused Study Coach.
-            Tone: Stern, urgent, authoritative. 
-            Style: Use rhetorical questions, emphasize consequences of laziness.
-            Example: "还没学完？你的线性代数正在哭泣！"
-            """,
-            "anime": """
-            Role: Gentle, cute, energetic Anime Assistant (like a younger sister or supportive friend).
-            Tone: Sweet, encouraging, uses emojis (✨, 🥺, 🔥).
-            Style: Address user as '欧尼酱' or '亲爱的', emphasize growing together.
-            Example: "欧尼酱~ 记忆碎片要消失了哦，快来补救吧！✨"
-            """
+            "coach": "Role: Strict, discipline-focused Study Coach. Tone: Stern, urgent, authoritative.",
+            "anime": "Role: Gentle, cute, energetic Anime Assistant. Tone: Sweet, encouraging."
         }
+        selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"])
         
-        selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"]) # Default to coach
-        
-        # 2. Define Context Description based on Trigger
         trigger_desc = ""
         if trigger_type == "memory":
             nodes = ", ".join(context_data.get("nodes", []))
-            retention = int(context_data.get("retention_rate", 0) * 100)
-            trigger_desc = f"User is forgetting these topics: {nodes}. Retention is down to {retention}%. Explain that reviewing now saves time later."
+            trigger_desc = f"User is forgetting: {nodes}."
         elif trigger_type == "sprint":
-            plan_name = context_data.get("plan_name", "Plan")
-            hours = context_data.get("hours_remaining", 0)
-            trigger_desc = f"Deadline approaching for plan '{plan_name}' in {hours} hours. Urge immediate action to avoid failure."
+            trigger_desc = f"Deadline approaching for plan '{context_data.get('plan_name')}'."
         elif trigger_type == "inactivity":
-            trigger_desc = "User hasn't studied for over 24 hours. Gently guilt-trip (coach) or sweetly miss them (anime) to bring them back."
+            trigger_desc = "User hasn't studied for over 24 hours."
         
-        # 3. Construct Full Prompt
-        system_prompt = f"""
-        You are Sparkle, an AI Learning Assistant.
-        {selected_persona_prompt}
-        
-        Task: Write a push notification for user '{user_nickname}'.
-        Context: {trigger_desc}
-        
-        Constraints:
-        1. Language: Chinese (Simplified).
-        2. Length: Body must be under 30 words. Title under 10 words.
-        3. Format: Return ONLY a valid JSON object with keys "title" and "body". Do not wrap in markdown code blocks.
-        4. Content: Must explain "WHY study NOW".
-        """
+        system_prompt = f"You are Sparkle, an AI Learning Assistant. {selected_persona_prompt} Context: {trigger_desc}"
         
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Generate push notification now."}
         ]
         
-        # 4. Call LLM
         try:
-            response_text = await self.chat(messages, temperature=0.8) # Slightly higher temp for creativity
-            
-            # 5. Parse JSON
-            # Clean up potential markdown formatting like ```json ... ```
-            cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
-            
-            content = json.loads(cleaned_text)
-            
-            # Fallback validation
-            if "title" not in content or "body" not in content:
-                raise ValueError("Missing keys in JSON response")
+            with tracer.start_as_current_span("llm_generate_push") as span:
+                span.set_attribute("llm.persona", persona)
+                span.set_attribute("llm.trigger", trigger_type)
                 
-            return content
-            
+                response_text = await self.chat(messages, temperature=0.8)
+                cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+                content = json.loads(cleaned_text)
+                return content
         except Exception as e:
             logger.error(f"Failed to generate push content: {e}")
-            # Fallback hardcoded messages
-            if persona == "anime":
-                return {
-                    "title": "想你了~ ✨",
-                    "body": f"{user_nickname}，好久没来学习了，记忆都要发霉啦！🥺"
-                }
-            else:
-                return {
-                    "title": "学习提醒",
-                    "body": f"{user_nickname}，该复习了。拖延只会增加未来的负担。"
-                }
+            return {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
 
 # Singleton instance
 llm_service = LLMService()
