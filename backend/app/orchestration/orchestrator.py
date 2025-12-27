@@ -1,0 +1,374 @@
+import json
+import asyncio
+from typing import AsyncGenerator, List, Dict, Optional, Any
+from loguru import logger
+from datetime import datetime
+import uuid
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.services.llm_service import llm_service
+from app.services.knowledge_service import KnowledgeService
+from app.services.user_service import UserService
+from app.orchestration.prompts import build_system_prompt
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.state_manager import SessionStateManager, FSMState
+from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.validator import RequestValidator, ValidationResult
+from app.orchestration.composer import ResponseComposer
+from app.gen.agent.v1 import agent_service_pb2
+from app.config import settings
+
+# FSM States
+STATE_INIT = "INIT"
+STATE_THINKING = "THINKING"
+STATE_GENERATING = "GENERATING"
+STATE_TOOL_CALLING = "TOOL_CALLING"
+STATE_DONE = "DONE"
+STATE_FAILED = "FAILED"
+
+
+class ChatOrchestrator:
+    """
+    Enhanced ChatOrchestrator with production-ready features:
+    1. Redis-based session state persistence
+    2. Dynamic tool registry
+    3. User context integration
+    4. Request validation
+    5. Idempotency support
+    6. Response composition
+    """
+
+    def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None):
+        self.db_session = db_session
+        self.redis = redis_client
+        
+        # Initialize components
+        self.state_manager = SessionStateManager(redis_client) if redis_client else None
+        self.validator = RequestValidator()
+        self.tool_executor = ToolExecutor()
+        self.response_composer = ResponseComposer()
+        
+        # Initialize tool registry (auto-discover tools)
+        if redis_client:  # Only log if initialized
+            logger.info("ChatOrchestrator initialized with all components")
+        
+        # Ensure tools are registered
+        self._ensure_tools_registered()
+
+    def _ensure_tools_registered(self):
+        """Ensure tools are registered in the registry"""
+        try:
+            # Check if tools are already registered
+            if len(dynamic_tool_registry.get_all_tools()) == 0:
+                # Auto-discover tools from app.tools package
+                dynamic_tool_registry.register_from_package("app.tools")
+                logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
+        except Exception as e:
+            logger.warning(f"Tool registration failed: {e}")
+
+    async def _update_state(self, session_id: str, state: str, details: str = ""):
+        """Update FSM State in Redis with persistence"""
+        if self.state_manager:
+            await self.state_manager.update_state(
+                session_id=session_id,
+                state=state,
+                details=details,
+                request_id=None,  # Will be set in process_stream
+                user_id=None
+            )
+        logger.info(f"Session {session_id} State: {state} ({details})")
+
+    async def _check_idempotency(self, session_id: str, request_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Check if request was already processed
+        
+        Returns:
+            Optional[Dict]: Cached response if duplicate, None otherwise
+        """
+        if not self.state_manager:
+            return None
+        
+        return await self.state_manager.get_cached_response(session_id, request_id)
+
+    async def _acquire_session_lock(self, session_id: str, request_id: str) -> bool:
+        """Acquire distributed lock for session"""
+        if not self.state_manager:
+            return True
+        
+        return await self.state_manager.acquire_lock(session_id, request_id)
+
+    async def _release_session_lock(self, session_id: str, request_id: str):
+        """Release distributed lock"""
+        if self.state_manager:
+            await self.state_manager.release_lock(session_id, request_id)
+
+    async def _cache_response(self, session_id: str, request_id: str, response_data: Dict[str, Any]):
+        """Cache response for idempotency"""
+        if self.state_manager:
+            await self.state_manager.cache_response(session_id, request_id, response_data)
+
+    async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """
+        Build comprehensive user context from UserService
+        
+        Returns:
+            Dict containing user context and analytics
+        """
+        try:
+            user_service = UserService(db_session)
+            
+            # Get user context for LLM
+            user_context = await user_service.get_context(uuid.UUID(user_id))
+            
+            # Get analytics summary
+            analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
+            
+            if user_context:
+                return {
+                    "user_context": user_context,
+                    "analytics_summary": analytics,
+                    "preferences": {
+                        "depth_preference": user_context.preferences.get("depth_preference", 0.5),
+                        "curiosity_preference": user_context.preferences.get("curiosity_preference", 0.5),
+                    }
+                }
+            else:
+                # Fallback to basic context
+                logger.warning(f"User {user_id} not found, using fallback context")
+                return {
+                    "user_context": None,
+                    "analytics_summary": {"is_active": True, "engagement_level": "medium"},
+                    "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to build user context: {e}")
+            # Fallback
+            return {
+                "user_context": None,
+                "analytics_summary": {"is_active": True, "engagement_level": "medium"},
+                "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
+            }
+
+    async def _get_tools_schema(self) -> List[Dict[str, Any]]:
+        """Get tools from dynamic registry"""
+        try:
+            return dynamic_tool_registry.get_openai_tools_schema()
+        except Exception as e:
+            logger.error(f"Failed to get tools schema: {e}")
+            return []
+
+    async def process_stream(
+        self,
+        request: agent_service_pb2.ChatRequest,
+        db_session: Optional[AsyncSession] = None,
+        context_data: Dict[str, Any] = None
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        """
+        Process the incoming chat request with enhanced features
+        """
+        request_id = request.request_id
+        session_id = request.session_id
+        user_id = request.user_id
+        
+        # Use provided session or instance session
+        active_db = db_session or self.db_session
+        
+        # Step 0: Request Validation
+        validation_result = self.validator.validate_chat_request(request)
+        if not validation_result.is_valid:
+            logger.error(f"Validation failed: {validation_result.error_message}")
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                error=agent_service_pb2.Error(
+                    code="VALIDATION_ERROR",
+                    message=validation_result.error_message,
+                    retryable=False
+                ),
+                finish_reason=agent_service_pb2.ERROR
+            )
+            return
+
+        # Step 1: Check Idempotency
+        cached_response = await self._check_idempotency(session_id, request_id)
+        if cached_response:
+            logger.info(f"Cache hit for session {session_id}, request {request_id}")
+            # Return cached response
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                full_text=cached_response.get("full_text", ""),
+                finish_reason=agent_service_pb2.STOP
+            )
+            return
+
+        # Step 2: Acquire Distributed Lock
+        lock_acquired = await self._acquire_session_lock(session_id, request_id)
+        if not lock_acquired:
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                error=agent_service_pb2.Error(
+                    code="CONFLICT",
+                    message="Another request is processing for this session",
+                    retryable=True
+                ),
+                finish_reason=agent_service_pb2.ERROR
+            )
+            return
+
+        try:
+            # Step 3: Initialize State
+            await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+            
+            # Update state with request info
+            if self.state_manager:
+                await self.state_manager.update_state(
+                    session_id=session_id,
+                    state=STATE_INIT,
+                    details=f"Processing request {request_id}",
+                    request_id=request_id,
+                    user_id=user_id
+                )
+
+            # Step 4: Input Processing
+            user_message = ""
+            if request.HasField("message"):
+                user_message = request.message
+            elif request.HasField("tool_result"):
+                tool_result = request.tool_result
+                user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
+
+            # Step 5: Build User Context
+            await self._update_state(session_id, STATE_THINKING, "Building user context...")
+            user_context_data = await self._build_user_context(user_id, active_db)
+
+            # Step 6: RAG Retrieval
+            await self._update_state(session_id, STATE_THINKING, "Retrieving relevant knowledge...")
+            knowledge_context = ""
+            if active_db and user_id:
+                try:
+                    ks = KnowledgeService(active_db)
+                    knowledge_context = await ks.retrieve_context(
+                        user_id=uuid.UUID(user_id),
+                        query=user_message
+                    )
+                except Exception as e:
+                    logger.warning(f"Knowledge retrieval failed: {e}")
+
+            # Step 7: Build Prompt
+            await self._update_state(session_id, STATE_THINKING, "Building system prompt...")
+            
+            # Use real user context instead of mock
+            base_system_prompt = build_system_prompt(
+                user_context_data, 
+                conversation_history=""
+            )
+            
+            full_system_prompt = base_system_prompt
+            if knowledge_context:
+                full_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"
+
+            # Yield Thinking Status
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.THINKING,
+                    details="Analyzing your request and preparing response..."
+                )
+            )
+
+            # Step 8: LLM Generation with Dynamic Tools
+            await self._update_state(session_id, STATE_GENERATING)
+            
+            # Get tools from dynamic registry (NO MORE HARD-CODING!)
+            tools = await self._get_tools_schema()
+            
+            if not tools:
+                logger.warning("No tools available from registry")
+
+            full_response = ""
+            tool_execution_results = []
+            
+            # Call LLM Service
+            async for chunk in llm_service.chat_stream_with_tools(
+                system_prompt=full_system_prompt,
+                user_message=user_message,
+                tools=tools
+            ):
+                # Map StreamChunk to ChatResponse
+                if chunk.type == "text":
+                    full_response += chunk.content
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=f"resp_{uuid.uuid4()}",
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        delta=chunk.content
+                    )
+                
+                elif chunk.type == "tool_call_end":
+                    # Tool call is ready
+                    await self._update_state(session_id, STATE_TOOL_CALLING, f"Calling {chunk.tool_name}...")
+                    
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=f"resp_{uuid.uuid4()}",
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.TOOL_CALLING,
+                            details=f"Executing {chunk.tool_name}..."
+                        ),
+                        tool_call=agent_service_pb2.ToolCall(
+                            id=chunk.tool_call_id,
+                            name=chunk.tool_name,
+                            arguments=json.dumps(chunk.full_arguments)
+                        )
+                    )
+
+            # Step 9: Compose Final Response
+            await self._update_state(session_id, STATE_DONE, "Composing response...")
+            
+            # Use ResponseComposer to build unified response
+            final_response_data = self.response_composer.compose_response(
+                llm_text=full_response,
+                tool_results=tool_execution_results,
+                requires_confirmation=False,
+                confirmation_data=None
+            )
+
+            # Cache response for idempotency
+            await self._cache_response(session_id, request_id, final_response_data)
+
+            # Yield final response
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                full_text=final_response_data.get("message", full_response),
+                finish_reason=agent_service_pb2.STOP
+            )
+
+        except Exception as e:
+            logger.error(f"Orchestration Error: {e}", exc_info=True)
+            await self._update_state(session_id, STATE_FAILED, str(e))
+            yield agent_service_pb2.ChatResponse(
+                response_id=f"resp_{uuid.uuid4()}",
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                error=agent_service_pb2.Error(
+                    code="INTERNAL_ERROR",
+                    message=str(e),
+                    retryable=True
+                ),
+                finish_reason=agent_service_pb2.ERROR
+            )
+        
+        finally:
+            # Always release lock
+            await self._release_session_lock(session_id, request_id)
