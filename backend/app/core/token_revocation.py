@@ -48,15 +48,16 @@ class TokenRevocationService:
             token_jti: JWT ID (unique identifier for the token)
             
         Returns:
-            bool: True if token is blacklisted
+            bool: True if token is blacklisted or if cache service is down (Fail-closed)
         """
         try:
             key = f"{self.blacklist_prefix}{token_jti}"
             result = await cache_service.get(key)
             return result is not None
         except Exception as e:
-            logger.error(f"Error checking token blacklist for {token_jti}: {e}")
-            return False
+            logger.critical(f"REDIS DOWN: Cannot check token blacklist for {token_jti}. "
+                            f"Failing-closed for security: {e}")
+            return True  # Fail-closed: treat as blacklisted if we can't verify
     
     async def revoke_refresh_token(self, user_id: str, refresh_token_jti: str) -> bool:
         """

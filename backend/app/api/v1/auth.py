@@ -23,6 +23,7 @@ from app.schemas.user import (
 )
 from app.config import settings
 from app.core.rate_limiting import limiter
+from app.core.account_lockout import account_lockout_service
 
 from loguru import logger
 
@@ -94,8 +95,25 @@ async def login(
     )
     user = result.scalars().first()
     
-    if not user or not verify_password(data.password, user.hashed_password):
+    if not user:
+        logger.warning(f"Login attempt for non-existent user: {data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Check if account is locked
+    if await account_lockout_service.check_and_handle_lockout(str(user.id), db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account locked due to too many failed attempts. Please try again in 15 minutes."
+        )
+    
+    if not verify_password(data.password, user.hashed_password):
         logger.warning(f"Login failed for user: {data.username}")
+        # Record failed attempt
+        await account_lockout_service.record_failed_login(str(user.id))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -105,6 +123,9 @@ async def login(
     if not user.is_active:
         logger.warning(f"Login attempt for inactive user: {user.username}")
         raise HTTPException(status_code=400, detail="Inactive user")
+
+    # Successful login - reset failed attempts
+    await account_lockout_service.handle_successful_login(str(user.id))
 
     logger.info(f"User logged in: {user.username} (ID: {user.id})")
 

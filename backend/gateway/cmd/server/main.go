@@ -63,7 +63,8 @@ func main() {
 	// Setup Router
 	r := gin.Default()
 
-	// Middleware (e.g. JWT) can be added here
+	// Apply Security Headers
+	r.Use(middleware.SecurityHeadersMiddleware())
 
 	// WebSocket Route (Go Native)
 	r.GET("/ws/chat", middleware.AuthMiddleware(cfg), chatOrchestrator.HandleWebSocket)

@@ -23,27 +23,42 @@ class AccountLockoutService:
     
     async def get_failed_attempts(self, user_id: str) -> int:
         """Get number of failed login attempts for a user"""
-        key = f"lockout:{user_id}"
-        attempts = await cache_service.get(key)
-        return int(attempts) if attempts else 0
+        try:
+            key = f"lockout:{user_id}"
+            attempts = await cache_service.get(key)
+            return int(attempts) if attempts else 0
+        except Exception as e:
+            logger.error(f"Redis error in get_failed_attempts: {e}")
+            return 0  # Fallback to 0 if Redis is down
     
     async def increment_failed_attempts(self, user_id: str) -> int:
         """Increment failed login attempts counter"""
-        key = f"lockout:{user_id}"
-        attempts = await cache_service.incr(key)
-        # Set expiration for the lockout counter
-        await cache_service.expire(key, int(self.lockout_duration.total_seconds()))
-        return attempts
+        try:
+            key = f"lockout:{user_id}"
+            attempts = await cache_service.incr(key)
+            # Set expiration for the lockout counter
+            await cache_service.expire(key, int(self.lockout_duration.total_seconds()))
+            return attempts
+        except Exception as e:
+            logger.error(f"Redis error in increment_failed_attempts: {e}")
+            return 0
     
     async def reset_failed_attempts(self, user_id: str):
         """Reset failed login attempts counter"""
-        key = f"lockout:{user_id}"
-        await cache_service.delete(key)
+        try:
+            key = f"lockout:{user_id}"
+            await cache_service.delete(key)
+        except Exception as e:
+            logger.error(f"Redis error in reset_failed_attempts: {e}")
     
     async def is_account_locked(self, user_id: str) -> bool:
         """Check if account is currently locked"""
-        attempts = await self.get_failed_attempts(user_id)
-        return attempts >= self.max_failed_attempts
+        try:
+            attempts = await self.get_failed_attempts(user_id)
+            return attempts >= self.max_failed_attempts
+        except Exception as e:
+            logger.error(f"Redis error in is_account_locked: {e}")
+            return False  # Allow login if Redis is down
     
     async def check_and_handle_lockout(self, user_id: str, db: AsyncSession) -> bool:
         """

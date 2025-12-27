@@ -5,16 +5,31 @@ import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_response_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/core/services/websocket_chat_service.dart';
+import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
 
 class ChatRepository {
   final Dio _dio;
-  final WebSocketChatService _wsService;
+  final WebSocketChatServiceV2 _wsService;
 
   ChatRepository(
     this._dio, {
-    WebSocketChatService? wsService,
-  }) : _wsService = wsService ?? WebSocketChatService();
+    WebSocketChatServiceV2? wsService,
+  }) : _wsService = wsService ?? WebSocketChatServiceV2();
+
+  /// 获取 WebSocket 连接状态流
+  Stream<WsConnectionState> get connectionStateStream =>
+      _wsService.connectionStateStream;
+
+  /// 当前 WebSocket 连接状态
+  WsConnectionState get connectionState => _wsService.connectionState;
+
+  /// 手动触发重连
+  Future<void> reconnect() => _wsService.manualReconnect();
+
+  /// 释放资源
+  void dispose() {
+    _wsService.dispose();
+  }
 
   /// 发送任务相关消息 (非流式)
   Future<ChatResponseModel> sendMessageToTask(String taskId, String message, String? conversationId) async {
@@ -32,11 +47,24 @@ class ChatRepository {
   }
 
   /// 获取对话历史
-  Future<List<ChatMessageModel>> getConversationHistory(String conversationId) async {
+  Future<List<ChatMessageModel>> getConversationHistory(
+    String conversationId, {
+    int? limit,
+    int? offset,
+  }) async {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoChatHistory;
     }
-    final response = await _dio.get('/api/v1/chat/history/$conversationId');
+
+    final queryParams = <String, dynamic>{};
+    if (limit != null) queryParams['limit'] = limit;
+    if (offset != null) queryParams['offset'] = offset;
+
+    final response = await _dio.get(
+      '/api/v1/chat/history/$conversationId',
+      queryParameters: queryParams.isEmpty ? null : queryParams,
+    );
+
     final List list = response.data;
     return list.map((item) => ChatMessageModel.fromJson(item)).toList();
   }
