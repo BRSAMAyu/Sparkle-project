@@ -31,15 +31,17 @@ type ChatOrchestrator struct {
 	chatHistory *service.ChatHistoryService
 	quota       *service.QuotaService
 	semantic    *service.SemanticCacheService
+	billing     *service.CostCalculator
 }
 
-func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient: ac,
 		queries:     q,
 		chatHistory: ch,
 		quota:       qs,
 		semantic:    sc,
+		billing:     bc,
 	}
 }
 
@@ -99,6 +101,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		_ = h.semantic.Canonicalize(input.Message)
 		// TODO: Use canonicalized input for semantic search or caching in future
 
+		startTime := time.Now()
+
 		// Build ChatRequest
 		req := &agentv1.ChatRequest{
 			RequestId: fmt.Sprintf("req_%s", uuid.New().String()),
@@ -153,6 +157,27 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				return
 			}
 		}
+
+		// Add metadata for the final state
+		latency := time.Since(startTime).Milliseconds()
+		qLen, _ := h.chatHistory.GetQueueLength(c.Request.Context())
+		threshold := h.chatHistory.GetBreakerThreshold()
+
+		meta := map[string]interface{}{
+			"latency_ms":     latency,
+			"is_cache_hit":   false, // Set to true if semantic cache hit (to be implemented)
+			"cost_saved":     0.0,
+			"breaker_status": "closed",
+		}
+		if qLen >= threshold {
+			meta["breaker_status"] = "open"
+		}
+
+		// Send final metadata
+		conn.WriteJSON(gin.H{
+			"type": "meta",
+			"meta": meta,
+		})
 
 		// Persist completed message to database (async)
 		if fullText != "" && input.SessionID != "" {
