@@ -26,45 +26,130 @@ AGENT_SYSTEM_PROMPT = """你是一个 Sparkle 星火的 AI 学习导师，一个
 ## 当前用户上下文
 {user_context}
 
-## 对话历史
-{conversation_history}"""
+{conversation_history_section}"""
 
-def build_system_prompt(user_context: dict, conversation_history: str) -> str:
-    """构建完整的 System Prompt"""
+
+def build_system_prompt(user_context: dict, conversation_history: dict = None) -> str:
+    """
+    构建完整的 System Prompt
+
+    Args:
+        user_context: 用户上下文数据
+        conversation_history: 修剪后的对话历史（Dict格式）
+            {
+                "messages": [...],
+                "summary": "...",
+                "original_count": int,
+                "pruned_count": int,
+                "summary_used": bool
+            }
+    """
     formatted_user_context = format_user_context(user_context)
-    
-    depth_pref = user_context.get("learning_preferences", {}).get("depth_preference", 0.5)
-    curiosity_pref = user_context.get("learning_preferences", {}).get("curiosity_preference", 0.5)
+
+    depth_pref = user_context.get("preferences", {}).get("depth_preference", 0.5)
+    curiosity_pref = user_context.get("preferences", {}).get("curiosity_preference", 0.5)
 
     depth_text = "深入详尽" if depth_pref >= 0.7 else ("适中" if depth_pref >= 0.3 else "简洁概览")
     curiosity_text = "倾向探索、扩展知识" if curiosity_pref >= 0.7 else ("适中" if curiosity_pref >= 0.3 else "倾向专注、不发散")
 
+    # 构建对话历史部分
+    conversation_history_section = _format_conversation_history(conversation_history)
+
     return AGENT_SYSTEM_PROMPT.format(
         user_context=formatted_user_context,
-        conversation_history=conversation_history,
+        conversation_history_section=conversation_history_section,
         depth_preference_text=depth_text,
         curiosity_preference_text=curiosity_text
     )
 
+
+def _format_conversation_history(conversation_history: dict = None) -> str:
+    """
+    格式化对话历史
+
+    策略:
+    - 有总结：显示总结 + 最近几条消息
+    - 无总结但有历史：显示最近消息
+    - 无历史：不显示此部分
+    """
+    if not conversation_history:
+        return ""
+
+    messages = conversation_history.get("messages", [])
+    summary = conversation_history.get("summary")
+    original_count = conversation_history.get("original_count", 0)
+    pruned_count = conversation_history.get("pruned_count", 0)
+    summary_used = conversation_history.get("summary_used", False)
+
+    if not messages and not summary:
+        return ""
+
+    parts = ["\n\n## 对话历史"]
+
+    # 如果使用了总结，先显示总结
+    if summary_used and summary:
+        parts.append("\n### 前情提要")
+        parts.append(f"{summary}")
+        parts.append("\n### 最近对话")
+    elif summary and not summary_used:
+        # 有总结但未使用（可能只是缓存），可以选择显示或不显示
+        parts.append("\n### 历史摘要")
+        parts.append(f"{summary}")
+
+    # 显示最近的消息
+    if messages:
+        if summary_used:
+            # 已显示总结，只显示最近几条作为补充
+            parts.append("（以下是最近的对话片段）")
+        else:
+            parts.append("\n### 最近对话")
+
+        for msg in messages:
+            role = "用户" if msg["role"] == "user" else "助手"
+            content = msg.get("content", "")
+            # 限制每条消息长度，避免过长
+            if len(content) > 200:
+                content = content[:200] + "..."
+            parts.append(f"{role}: {content}")
+
+    # 添加统计信息（用于调试）
+    if original_count > pruned_count:
+        parts.append(f"\n\n（历史记录: {original_count} 条 → 优化为 {pruned_count} 条）")
+
+    return "\n".join(parts)
+
+
 def format_user_context(context: dict) -> str:
     """格式化用户上下文"""
     lines = []
-    
-    # 优先展示分析摘要
-    if context.get("analytics_summary"):
-        lines.append(context["analytics_summary"])
-        lines.append("-" * 20)
 
-    if context.get("recent_tasks"):
-        lines.append(f"近期任务: {len(context['recent_tasks'])} 个")
-    if context.get("active_plans"):
-        lines.append(f"进行中计划: {len(context['active_plans'])} 个")
-    if context.get("flame_level"):
-        lines.append(f"火花等级: {context['flame_level']}")
-    
-    # Add learning preferences
-    if "learning_preferences" in context:
-        lp = context["learning_preferences"]
-        lines.append(f"学习偏好 - 深度: {lp['depth_preference']:.1f}, 好奇心: {lp['curiosity_preference']:.1f}")
+    # 用户基本信息
+    if context.get("user_context"):
+        user_ctx = context["user_context"]
+        lines.append(f"用户昵称: {user_ctx.get('nickname', '未知')}")
+        lines.append(f"时区: {user_ctx.get('timezone', 'Asia/Shanghai')}")
+        lines.append(f"Pro状态: {'是' if user_ctx.get('is_pro') else '否'}")
+
+    # 分析摘要
+    if context.get("analytics_summary"):
+        analytics = context["analytics_summary"]
+        lines.append("-" * 20)
+        if analytics.get("is_active"):
+            lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
+            lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
+        else:
+            lines.append("状态: 不活跃")
+
+    # 火花等级
+    if context.get("user_context") and context["user_context"].get("preferences"):
+        prefs = context["user_context"]["preferences"]
+        if "flame_level" in prefs:
+            lines.append(f"火花等级: {prefs['flame_level']}")
+
+    # 学习偏好
+    if context.get("preferences"):
+        prefs = context["preferences"]
+        lines.append("-" * 20)
+        lines.append(f"学习偏好 - 深度: {prefs.get('depth_preference', 0.5):.1f}, 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
     return "\n".join(lines) if lines else "暂无上下文信息"

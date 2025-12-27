@@ -66,6 +66,7 @@ func main() {
 	quotaService := service.NewQuotaService(rdb)
 	chatHistoryService := service.NewChatHistoryService(rdb)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
+	billingService := service.NewCostCalculator()
 
 	// Connect to Agent Service
 	agentClient, err := agent.NewClient(cfg.AgentAddress)
@@ -81,8 +82,10 @@ func main() {
 		chatHistoryService,
 		quotaService,
 		semanticCacheService,
+		billingService,
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
+	chaosHandler := handler.NewChaosHandler(chatHistoryService)
 
 	// Setup Router
 	r := gin.Default()
@@ -123,6 +126,8 @@ func main() {
 	admin := r.Group("/admin")
 	{
 		admin.POST("/chaos/inject", chaosManager.HandleInject)
+		admin.POST("/chaos/config", chaosHandler.SetThreshold)
+		admin.GET("/chaos/status", chaosHandler.GetStatus)
 	}
 
 	// Reverse Proxy for Python Backend (REST API)

@@ -36,6 +36,7 @@ class ChatMessageModel {
   final ConfirmationData? confirmationData;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? aiStatus; // Optional status for assistant messages (THINKING, etc.)
+  final MessageMeta? meta; // Metadata for FinOps and Chaos
 
   ChatMessageModel({
     required this.conversationId, required this.role, required this.content, String? id,
@@ -70,6 +71,7 @@ class ChatMessageModel {
     bool? requiresConfirmation,
     ConfirmationData? confirmationData,
     String? aiStatus,
+    MessageMeta? meta,
   }) {
     return ChatMessageModel(
       id: id ?? this.id,
@@ -86,8 +88,31 @@ class ChatMessageModel {
       requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
       confirmationData: confirmationData ?? this.confirmationData,
       aiStatus: aiStatus ?? this.aiStatus,
+      meta: meta ?? this.meta,
     );
   }
+}
+
+@JsonSerializable()
+class MessageMeta {
+  @JsonKey(name: 'latency_ms')
+  final int? latencyMs;
+  @JsonKey(name: 'is_cache_hit')
+  final bool? isCacheHit;
+  @JsonKey(name: 'cost_saved')
+  final double? costSaved;
+  @JsonKey(name: 'breaker_status')
+  final String? breakerStatus; // 'open' | 'closed'
+
+  MessageMeta({
+    this.latencyMs,
+    this.isCacheHit,
+    this.costSaved,
+    this.breakerStatus,
+  });
+
+  factory MessageMeta.fromJson(Map<String, dynamic> json) => _$MessageMetaFromJson(json);
+  Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
 }
 
 @JsonSerializable()

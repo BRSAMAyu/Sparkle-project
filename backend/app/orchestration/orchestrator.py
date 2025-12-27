@@ -15,6 +15,7 @@ from app.orchestration.state_manager import SessionStateManager, FSMState
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.validator import RequestValidator, ValidationResult
 from app.orchestration.composer import ResponseComposer
+from app.orchestration.context_pruner import ContextPruner
 from app.gen.agent.v1 import agent_service_pb2
 from app.config import settings
 
@@ -41,17 +42,28 @@ class ChatOrchestrator:
     def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None):
         self.db_session = db_session
         self.redis = redis_client
-        
+
         # Initialize components
         self.state_manager = SessionStateManager(redis_client) if redis_client else None
-        self.validator = RequestValidator()
+        self.validator = RequestValidator(redis_client) if redis_client else None
         self.tool_executor = ToolExecutor()
         self.response_composer = ResponseComposer()
-        
+
+        # Initialize ContextPruner (P0 feature)
+        self.context_pruner = None
+        if redis_client:
+            self.context_pruner = ContextPruner(
+                redis_client=redis_client,
+                max_history_messages=10,      # 保留最近10轮对话
+                summary_threshold=20,         # 超过20轮触发总结
+                summary_cache_ttl=3600        # 总结缓存1小时
+            )
+            logger.info("ChatOrchestrator initialized with ContextPruner")
+
         # Initialize tool registry (auto-discover tools)
         if redis_client:  # Only log if initialized
             logger.info("ChatOrchestrator initialized with all components")
-        
+
         # Ensure tools are registered
         self._ensure_tools_registered()
 
@@ -110,19 +122,20 @@ class ChatOrchestrator:
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
-        
+
         Returns:
             Dict containing user context and analytics
         """
         try:
-            user_service = UserService(db_session)
-            
-            # Get user context for LLM
+            # Pass redis_client to UserService for caching
+            user_service = UserService(db_session, self.redis)
+
+            # Get user context for LLM (with Redis caching)
             user_context = await user_service.get_context(uuid.UUID(user_id))
-            
-            # Get analytics summary
+
+            # Get analytics summary (with Redis caching)
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
-            
+
             if user_context:
                 return {
                     "user_context": user_context,
@@ -140,7 +153,7 @@ class ChatOrchestrator:
                     "analytics_summary": {"is_active": True, "engagement_level": "medium"},
                     "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
                 }
-                
+
         except Exception as e:
             logger.error(f"Failed to build user context: {e}")
             # Fallback
@@ -149,6 +162,35 @@ class ChatOrchestrator:
                 "analytics_summary": {"is_active": True, "engagement_level": "medium"},
                 "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
             }
+
+    async def _build_conversation_context(self, session_id: str, user_id: str) -> Dict[str, Any]:
+        """
+        Build conversation context with ContextPruner
+
+        Returns:
+            Dict containing pruned history and summary
+        """
+        if not self.context_pruner:
+            logger.warning("ContextPruner not initialized, returning empty context")
+            return {"messages": [], "summary": None}
+
+        try:
+            pruned_result = await self.context_pruner.get_pruned_history(
+                session_id=session_id,
+                user_id=user_id
+            )
+
+            logger.debug(
+                f"Conversation context for session {session_id}: "
+                f"{pruned_result['original_count']} -> {pruned_result['pruned_count']} messages, "
+                f"summary_used={pruned_result['summary_used']}"
+            )
+
+            return pruned_result
+
+        except Exception as e:
+            logger.error(f"Failed to prune conversation history: {e}")
+            return {"messages": [], "summary": None}
 
     async def _get_tools_schema(self) -> List[Dict[str, Any]]:
         """Get tools from dynamic registry"""
@@ -247,7 +289,11 @@ class ChatOrchestrator:
             await self._update_state(session_id, STATE_THINKING, "Building user context...")
             user_context_data = await self._build_user_context(user_id, active_db)
 
-            # Step 6: RAG Retrieval
+            # Step 6: Build Conversation Context with ContextPruner (NEW!)
+            await self._update_state(session_id, STATE_THINKING, "Pruning conversation history...")
+            conversation_context = await self._build_conversation_context(session_id, user_id)
+
+            # Step 7: RAG Retrieval
             await self._update_state(session_id, STATE_THINKING, "Retrieving relevant knowledge...")
             knowledge_context = ""
             if active_db and user_id:
@@ -260,15 +306,15 @@ class ChatOrchestrator:
                 except Exception as e:
                     logger.warning(f"Knowledge retrieval failed: {e}")
 
-            # Step 7: Build Prompt
+            # Step 8: Build Prompt with ContextPruner
             await self._update_state(session_id, STATE_THINKING, "Building system prompt...")
-            
-            # Use real user context instead of mock
+
+            # Use real user context + pruned conversation history
             base_system_prompt = build_system_prompt(
-                user_context_data, 
-                conversation_history=""
+                user_context_data,
+                conversation_history=conversation_context  # 传递修剪后的历史
             )
-            
+
             full_system_prompt = base_system_prompt
             if knowledge_context:
                 full_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"

@@ -6,6 +6,7 @@ import 'package:sparkle/presentation/providers/settings_provider.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
 import 'package:sparkle/presentation/widgets/settings/learning_mode_control.dart';
 import 'package:sparkle/presentation/widgets/settings/weekly_agenda_grid.dart';
+import 'package:sparkle/presentation/widgets/chaos/chaos_control_dialog.dart';
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {
   const UnifiedSettingsScreen({super.key});
@@ -127,11 +128,31 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: AppDesignTokens.primaryBase,
             ),
+
+            const SizedBox(height: AppDesignTokens.spacing64),
+            Center(
+              child: GestureDetector(
+                onLongPress: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ChaosControlDialog(),
+                  );
+                },
+                child: const Text(
+                  'Sparkle v2.1.0-stable\n© 2025 Sparkle Team',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 10),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppDesignTokens.spacing32),
           ],
         ),
       ),
     );
   }
+>>>>+++ REPLACE
+
 
   Widget _buildSectionHeader(IconData icon, String title) {
     return Row(
