@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
+import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -24,6 +25,7 @@ class ChatState {
   final String? aiStatus; // THINKING, GENERATING, etc.
   final String? aiStatusDetails;
   final WsConnectionState wsConnectionState; // WebSocket 连接状态
+  final GraphRAGTrace? graphragTrace; // 🔥 必杀技 A: GraphRAG 追踪信息
 
   ChatState({
     this.isLoading = false,
@@ -39,6 +41,7 @@ class ChatState {
     this.aiStatus,
     this.aiStatusDetails,
     this.wsConnectionState = WsConnectionState.disconnected,
+    this.graphragTrace,
   });
 
   ChatState copyWith({
@@ -58,6 +61,8 @@ class ChatState {
     bool clearAiStatus = false,
     String? aiStatusDetails,
     WsConnectionState? wsConnectionState,
+    GraphRAGTrace? graphragTrace,
+    bool clearGraphragTrace = false,
   }) {
     return ChatState(
       isLoading: isLoading ?? this.isLoading,
@@ -73,6 +78,7 @@ class ChatState {
       aiStatus: clearAiStatus ? null : aiStatus ?? this.aiStatus,
       aiStatusDetails: clearAiStatus ? null : aiStatusDetails ?? this.aiStatusDetails,
       wsConnectionState: wsConnectionState ?? this.wsConnectionState,
+      graphragTrace: clearGraphragTrace ? null : graphragTrace ?? this.graphragTrace,
     );
   }
 }

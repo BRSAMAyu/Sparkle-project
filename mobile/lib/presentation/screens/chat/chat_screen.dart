@@ -7,6 +7,7 @@ import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -123,24 +124,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Container(
         decoration: BoxDecoration(
-          gradient: isDark 
-            ? AppDesignTokens.deepSpaceGradient 
+          gradient: isDark
+            ? AppDesignTokens.deepSpaceGradient
             : const LinearGradient(
                 colors: [AppDesignTokens.neutral50, Colors.white],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              if (chatState.isLoading)
-                const LinearProgressIndicator(
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
-                  minHeight: 2,
-                ),
-              Expanded(
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  if (chatState.isLoading)
+                    const LinearProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
+                      minHeight: 2,
+                    ),
+                  Expanded(
                 child: messages.isEmpty && chatState.streamingContent.isEmpty && chatState.aiStatus == null
                     ? _buildQuickActions(context)
                     : ListView.builder(
@@ -208,12 +211,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                      textAlign: TextAlign.center,
                    ),
                  ),
-              ChatInput(
-                enabled: !chatState.isSending,
-                onSend: (text, {replyToId}) => ref.read(chatProvider.notifier).sendMessage(text),
+                  ChatInput(
+                    enabled: !chatState.isSending,
+                    onSend: (text, {replyToId}) => ref.read(chatProvider.notifier).sendMessage(text),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // 🔥 必杀技 A: GraphRAG 实时可视化
+            if (chatState.graphragTrace != null)
+              GraphRAGVisualizer(
+                trace: chatState.graphragTrace,
+                isVisible: true,
+              ),
+          ],
         ),
       ),
     );

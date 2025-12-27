@@ -89,7 +89,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('队列水位: $_queueLength / $_currentThreshold',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold),),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,
