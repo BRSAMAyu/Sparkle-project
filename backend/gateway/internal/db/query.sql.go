@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cleanupOldProcessedEvents = `-- name: CleanupOldProcessedEvents :execrows
+DELETE FROM processed_events
+WHERE processed_at < NOW() - INTERVAL '1 day' * $1
+`
+
+func (q *Queries) CleanupOldProcessedEvents(ctx context.Context, dollar_1 interface{}) (int64, error) {
+	result, err := q.db.Exec(ctx, cleanupOldProcessedEvents, dollar_1)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countPostLikes = `-- name: CountPostLikes :one
 SELECT COUNT(*) FROM post_likes
 WHERE post_id = $1
@@ -224,6 +237,20 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteOldOutboxEntries = `-- name: DeleteOldOutboxEntries :execrows
+DELETE FROM event_outbox
+WHERE published_at IS NOT NULL
+  AND published_at < NOW() - INTERVAL '1 day' * $1
+`
+
+func (q *Queries) DeleteOldOutboxEntries(ctx context.Context, dollar_1 interface{}) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteOldOutboxEntries, dollar_1)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deletePostLike = `-- name: DeletePostLike :exec
 DELETE FROM post_likes
 WHERE user_id = $1 AND post_id = $2
@@ -237,6 +264,55 @@ type DeletePostLikeParams struct {
 func (q *Queries) DeletePostLike(ctx context.Context, arg DeletePostLikeParams) error {
 	_, err := q.db.Exec(ctx, deletePostLike, arg.UserID, arg.PostID)
 	return err
+}
+
+const deleteSnapshotsByProjection = `-- name: DeleteSnapshotsByProjection :execrows
+DELETE FROM projection_snapshots
+WHERE projection_name = $1
+`
+
+func (q *Queries) DeleteSnapshotsByProjection(ctx context.Context, projectionName string) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSnapshotsByProjection, projectionName)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getAllProjectionMetadata = `-- name: GetAllProjectionMetadata :many
+SELECT projection_name, last_processed_position, last_processed_at,
+       version, status, error_message, created_at, updated_at
+FROM projection_metadata
+ORDER BY projection_name
+`
+
+func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMetadatum, error) {
+	rows, err := q.db.Query(ctx, getAllProjectionMetadata)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectionMetadatum
+	for rows.Next() {
+		var i ProjectionMetadatum
+		if err := rows.Scan(
+			&i.ProjectionName,
+			&i.LastProcessedPosition,
+			&i.LastProcessedAt,
+			&i.Version,
+			&i.Status,
+			&i.ErrorMessage,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getChatHistory = `-- name: GetChatHistory :many
@@ -269,6 +345,106 @@ func (q *Queries) GetChatHistory(ctx context.Context, sessionID pgtype.UUID) ([]
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEventStoreCount = `-- name: GetEventStoreCount :one
+SELECT COUNT(*) FROM event_store WHERE aggregate_type = $1
+`
+
+func (q *Queries) GetEventStoreCount(ctx context.Context, aggregateType string) (int64, error) {
+	row := q.db.QueryRow(ctx, getEventStoreCount, aggregateType)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getEventsAfterSequence = `-- name: GetEventsAfterSequence :many
+SELECT id, aggregate_type, aggregate_id, event_type,
+       event_version, sequence_number, payload, metadata, created_at
+FROM event_store
+WHERE aggregate_type = $1
+  AND aggregate_id = $2
+  AND sequence_number > $3
+ORDER BY sequence_number ASC
+`
+
+type GetEventsAfterSequenceParams struct {
+	AggregateType  string      `json:"aggregate_type"`
+	AggregateID    pgtype.UUID `json:"aggregate_id"`
+	SequenceNumber int64       `json:"sequence_number"`
+}
+
+func (q *Queries) GetEventsAfterSequence(ctx context.Context, arg GetEventsAfterSequenceParams) ([]EventStore, error) {
+	rows, err := q.db.Query(ctx, getEventsAfterSequence, arg.AggregateType, arg.AggregateID, arg.SequenceNumber)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventStore
+	for rows.Next() {
+		var i EventStore
+		if err := rows.Scan(
+			&i.ID,
+			&i.AggregateType,
+			&i.AggregateID,
+			&i.EventType,
+			&i.EventVersion,
+			&i.SequenceNumber,
+			&i.Payload,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEventsByAggregate = `-- name: GetEventsByAggregate :many
+SELECT id, aggregate_type, aggregate_id, event_type,
+       event_version, sequence_number, payload, metadata, created_at
+FROM event_store
+WHERE aggregate_type = $1 AND aggregate_id = $2
+ORDER BY sequence_number ASC
+`
+
+type GetEventsByAggregateParams struct {
+	AggregateType string      `json:"aggregate_type"`
+	AggregateID   pgtype.UUID `json:"aggregate_id"`
+}
+
+func (q *Queries) GetEventsByAggregate(ctx context.Context, arg GetEventsByAggregateParams) ([]EventStore, error) {
+	rows, err := q.db.Query(ctx, getEventsByAggregate, arg.AggregateType, arg.AggregateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventStore
+	for rows.Next() {
+		var i EventStore
+		if err := rows.Scan(
+			&i.ID,
+			&i.AggregateType,
+			&i.AggregateID,
+			&i.EventType,
+			&i.EventVersion,
+			&i.SequenceNumber,
+			&i.Payload,
+			&i.Metadata,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -360,6 +536,98 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 	return items, nil
 }
 
+const getKnowledgeNodeByID = `-- name: GetKnowledgeNodeByID :one
+
+SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, embedding, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
+`
+
+// =====================
+// Knowledge Galaxy Queries
+// =====================
+func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (KnowledgeNode, error) {
+	row := q.db.QueryRow(ctx, getKnowledgeNodeByID, id)
+	var i KnowledgeNode
+	err := row.Scan(
+		&i.SubjectID,
+		&i.ParentID,
+		&i.Name,
+		&i.NameEn,
+		&i.Description,
+		&i.Keywords,
+		&i.ImportanceLevel,
+		&i.IsSeed,
+		&i.SourceType,
+		&i.SourceTaskID,
+		&i.Embedding,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getLatestSnapshot = `-- name: GetLatestSnapshot :one
+
+SELECT id, projection_name, aggregate_id, snapshot_data, stream_position, created_at
+FROM projection_snapshots
+WHERE projection_name = $1
+  AND (aggregate_id = $2 OR ($2 IS NULL AND aggregate_id IS NULL))
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLatestSnapshotParams struct {
+	ProjectionName string      `json:"projection_name"`
+	AggregateID    pgtype.UUID `json:"aggregate_id"`
+}
+
+// =====================
+// CQRS: Snapshot Queries
+// =====================
+func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotParams) (ProjectionSnapshot, error) {
+	row := q.db.QueryRow(ctx, getLatestSnapshot, arg.ProjectionName, arg.AggregateID)
+	var i ProjectionSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectionName,
+		&i.AggregateID,
+		&i.SnapshotData,
+		&i.StreamPosition,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getNextSequenceNumber = `-- name: GetNextSequenceNumber :one
+SELECT COALESCE(MAX(sequence_number), 0) + 1
+FROM event_store
+WHERE aggregate_type = $1 AND aggregate_id = $2
+`
+
+type GetNextSequenceNumberParams struct {
+	AggregateType string      `json:"aggregate_type"`
+	AggregateID   pgtype.UUID `json:"aggregate_id"`
+}
+
+func (q *Queries) GetNextSequenceNumber(ctx context.Context, arg GetNextSequenceNumberParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getNextSequenceNumber, arg.AggregateType, arg.AggregateID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const getOutboxPendingCount = `-- name: GetOutboxPendingCount :one
+SELECT COUNT(*) FROM event_outbox WHERE published_at IS NULL
+`
+
+func (q *Queries) GetOutboxPendingCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getOutboxPendingCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getPost = `-- name: GetPost :one
 SELECT id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at FROM posts
 WHERE id = $1 AND deleted_at IS NULL
@@ -379,6 +647,124 @@ func (q *Queries) GetPost(ctx context.Context, id pgtype.UUID) (Post, error) {
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const getProjectionMetadata = `-- name: GetProjectionMetadata :one
+
+SELECT projection_name, last_processed_position, last_processed_at,
+       version, status, error_message, created_at, updated_at
+FROM projection_metadata
+WHERE projection_name = $1
+`
+
+// =====================
+// CQRS: Projection Metadata Queries
+// =====================
+func (q *Queries) GetProjectionMetadata(ctx context.Context, projectionName string) (ProjectionMetadatum, error) {
+	row := q.db.QueryRow(ctx, getProjectionMetadata, projectionName)
+	var i ProjectionMetadatum
+	err := row.Scan(
+		&i.ProjectionName,
+		&i.LastProcessedPosition,
+		&i.LastProcessedAt,
+		&i.Version,
+		&i.Status,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSnapshotCount = `-- name: GetSnapshotCount :one
+SELECT COUNT(*) FROM projection_snapshots WHERE projection_name = $1
+`
+
+func (q *Queries) GetSnapshotCount(ctx context.Context, projectionName string) (int64, error) {
+	row := q.db.QueryRow(ctx, getSnapshotCount, projectionName)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTaskByID = `-- name: GetTaskByID :one
+
+SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, completed_at, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, id, created_at, updated_at, deleted_at FROM tasks WHERE id = $1 AND deleted_at IS NULL
+`
+
+// =====================
+// Task Queries
+// =====================
+func (q *Queries) GetTaskByID(ctx context.Context, id pgtype.UUID) (Task, error) {
+	row := q.db.QueryRow(ctx, getTaskByID, id)
+	var i Task
+	err := row.Scan(
+		&i.UserID,
+		&i.PlanID,
+		&i.Title,
+		&i.Type,
+		&i.Tags,
+		&i.EstimatedMinutes,
+		&i.Difficulty,
+		&i.EnergyCost,
+		&i.GuideContent,
+		&i.Status,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.ActualMinutes,
+		&i.UserNote,
+		&i.Priority,
+		&i.DueDate,
+		&i.KnowledgeNodeID,
+		&i.AutoExpandEnabled,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUnpublishedOutboxEntries = `-- name: GetUnpublishedOutboxEntries :many
+SELECT id, aggregate_type, aggregate_id, event_type,
+       event_version, payload, metadata, sequence_number,
+       created_at, published_at
+FROM event_outbox
+WHERE published_at IS NULL
+ORDER BY created_at ASC
+LIMIT $1
+FOR UPDATE SKIP LOCKED
+`
+
+func (q *Queries) GetUnpublishedOutboxEntries(ctx context.Context, limit int32) ([]EventOutbox, error) {
+	rows, err := q.db.Query(ctx, getUnpublishedOutboxEntries, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventOutbox
+	for rows.Next() {
+		var i EventOutbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.AggregateType,
+			&i.AggregateID,
+			&i.EventType,
+			&i.EventVersion,
+			&i.Payload,
+			&i.Metadata,
+			&i.SequenceNumber,
+			&i.CreatedAt,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUser = `-- name: GetUser :one
@@ -495,11 +881,246 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserNodeStatus = `-- name: GetUserNodeStatus :one
+SELECT user_id, node_id, mastery_score, total_minutes, total_study_minutes, study_count, is_unlocked, is_collapsed, is_favorite, last_study_at, last_interacted_at, decay_paused, next_review_at, first_unlock_at, created_at, updated_at FROM user_node_status WHERE user_id = $1 AND node_id = $2
+`
+
+type GetUserNodeStatusParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	NodeID pgtype.UUID `json:"node_id"`
+}
+
+func (q *Queries) GetUserNodeStatus(ctx context.Context, arg GetUserNodeStatusParams) (UserNodeStatus, error) {
+	row := q.db.QueryRow(ctx, getUserNodeStatus, arg.UserID, arg.NodeID)
+	var i UserNodeStatus
+	err := row.Scan(
+		&i.UserID,
+		&i.NodeID,
+		&i.MasteryScore,
+		&i.TotalMinutes,
+		&i.TotalStudyMinutes,
+		&i.StudyCount,
+		&i.IsUnlocked,
+		&i.IsCollapsed,
+		&i.IsFavorite,
+		&i.LastStudyAt,
+		&i.LastInteractedAt,
+		&i.DecayPaused,
+		&i.NextReviewAt,
+		&i.FirstUnlockAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertEventStoreEntry = `-- name: InsertEventStoreEntry :exec
+
+INSERT INTO event_store (
+    id, aggregate_type, aggregate_id, event_type,
+    event_version, sequence_number, payload, metadata, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+`
+
+type InsertEventStoreEntryParams struct {
+	ID             pgtype.UUID      `json:"id"`
+	AggregateType  string           `json:"aggregate_type"`
+	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	EventType      string           `json:"event_type"`
+	EventVersion   int32            `json:"event_version"`
+	SequenceNumber int64            `json:"sequence_number"`
+	Payload        []byte           `json:"payload"`
+	Metadata       []byte           `json:"metadata"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+}
+
+// =====================
+// CQRS: Event Store Queries
+// =====================
+func (q *Queries) InsertEventStoreEntry(ctx context.Context, arg InsertEventStoreEntryParams) error {
+	_, err := q.db.Exec(ctx, insertEventStoreEntry,
+		arg.ID,
+		arg.AggregateType,
+		arg.AggregateID,
+		arg.EventType,
+		arg.EventVersion,
+		arg.SequenceNumber,
+		arg.Payload,
+		arg.Metadata,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertOutboxEntry = `-- name: InsertOutboxEntry :exec
+
+INSERT INTO event_outbox (
+    id, aggregate_type, aggregate_id, event_type,
+    event_version, payload, metadata, created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type InsertOutboxEntryParams struct {
+	ID            pgtype.UUID      `json:"id"`
+	AggregateType string           `json:"aggregate_type"`
+	AggregateID   pgtype.UUID      `json:"aggregate_id"`
+	EventType     string           `json:"event_type"`
+	EventVersion  int32            `json:"event_version"`
+	Payload       []byte           `json:"payload"`
+	Metadata      []byte           `json:"metadata"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+}
+
+// =====================
+// CQRS: Outbox Queries
+// =====================
+func (q *Queries) InsertOutboxEntry(ctx context.Context, arg InsertOutboxEntryParams) error {
+	_, err := q.db.Exec(ctx, insertOutboxEntry,
+		arg.ID,
+		arg.AggregateType,
+		arg.AggregateID,
+		arg.EventType,
+		arg.EventVersion,
+		arg.Payload,
+		arg.Metadata,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const isEventProcessed = `-- name: IsEventProcessed :one
+
+SELECT EXISTS(
+    SELECT 1 FROM processed_events
+    WHERE event_id = $1 AND consumer_group = $2
+)
+`
+
+type IsEventProcessedParams struct {
+	EventID       string `json:"event_id"`
+	ConsumerGroup string `json:"consumer_group"`
+}
+
+// =====================
+// CQRS: Idempotency Queries
+// =====================
+func (q *Queries) IsEventProcessed(ctx context.Context, arg IsEventProcessedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isEventProcessed, arg.EventID, arg.ConsumerGroup)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const markEventProcessed = `-- name: MarkEventProcessed :exec
+INSERT INTO processed_events (event_id, consumer_group, processed_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT (event_id) DO NOTHING
+`
+
+type MarkEventProcessedParams struct {
+	EventID       string `json:"event_id"`
+	ConsumerGroup string `json:"consumer_group"`
+}
+
+func (q *Queries) MarkEventProcessed(ctx context.Context, arg MarkEventProcessedParams) error {
+	_, err := q.db.Exec(ctx, markEventProcessed, arg.EventID, arg.ConsumerGroup)
+	return err
+}
+
+const markOutboxEntriesPublished = `-- name: MarkOutboxEntriesPublished :exec
+UPDATE event_outbox
+SET published_at = NOW()
+WHERE id = ANY($1::uuid[])
+`
+
+func (q *Queries) MarkOutboxEntriesPublished(ctx context.Context, dollar_1 []pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markOutboxEntriesPublished, dollar_1)
+	return err
+}
+
+const saveSnapshot = `-- name: SaveSnapshot :exec
+INSERT INTO projection_snapshots (
+    id, projection_name, aggregate_id, snapshot_data, stream_position, created_at
+) VALUES ($1, $2, $3, $4, $5, NOW())
+ON CONFLICT (projection_name, aggregate_id)
+DO UPDATE SET
+    snapshot_data = $4,
+    stream_position = $5,
+    created_at = NOW()
+`
+
+type SaveSnapshotParams struct {
+	ID             pgtype.UUID `json:"id"`
+	ProjectionName string      `json:"projection_name"`
+	AggregateID    pgtype.UUID `json:"aggregate_id"`
+	SnapshotData   []byte      `json:"snapshot_data"`
+	StreamPosition string      `json:"stream_position"`
+}
+
+func (q *Queries) SaveSnapshot(ctx context.Context, arg SaveSnapshotParams) error {
+	_, err := q.db.Exec(ctx, saveSnapshot,
+		arg.ID,
+		arg.ProjectionName,
+		arg.AggregateID,
+		arg.SnapshotData,
+		arg.StreamPosition,
+	)
+	return err
+}
+
+const setProjectionStatus = `-- name: SetProjectionStatus :exec
+UPDATE projection_metadata
+SET status = $2,
+    error_message = $3,
+    updated_at = NOW()
+WHERE projection_name = $1
+`
+
+type SetProjectionStatusParams struct {
+	ProjectionName string      `json:"projection_name"`
+	Status         string      `json:"status"`
+	ErrorMessage   pgtype.Text `json:"error_message"`
+}
+
+func (q *Queries) SetProjectionStatus(ctx context.Context, arg SetProjectionStatusParams) error {
+	_, err := q.db.Exec(ctx, setProjectionStatus, arg.ProjectionName, arg.Status, arg.ErrorMessage)
+	return err
+}
+
+const updateProjectionPosition = `-- name: UpdateProjectionPosition :exec
+UPDATE projection_metadata
+SET last_processed_position = $2,
+    last_processed_at = NOW(),
+    updated_at = NOW()
+WHERE projection_name = $1
+`
+
+type UpdateProjectionPositionParams struct {
+	ProjectionName        string      `json:"projection_name"`
+	LastProcessedPosition pgtype.Text `json:"last_processed_position"`
+}
+
+func (q *Queries) UpdateProjectionPosition(ctx context.Context, arg UpdateProjectionPositionParams) error {
+	_, err := q.db.Exec(ctx, updateProjectionPosition, arg.ProjectionName, arg.LastProcessedPosition)
+	return err
+}
+
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :exec
 UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) UpdateUserLastLogin(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, updateUserLastLogin, id)
+	return err
+}
+
+const upsertProjectionMetadata = `-- name: UpsertProjectionMetadata :exec
+INSERT INTO projection_metadata (projection_name, status, version, created_at, updated_at)
+VALUES ($1, 'active', 1, NOW(), NOW())
+ON CONFLICT (projection_name) DO UPDATE SET updated_at = NOW()
+`
+
+func (q *Queries) UpsertProjectionMetadata(ctx context.Context, projectionName string) error {
+	_, err := q.db.Exec(ctx, upsertProjectionMetadata, projectionName)
 	return err
 }

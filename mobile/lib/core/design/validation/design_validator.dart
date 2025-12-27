@@ -98,7 +98,7 @@ class DesignValidator {
           type: ViolationType.color,
           message: '颜色透明度超出范围: ${color.opacity}',
           severity: Severity.medium,
-        ));
+        ),);
       }
     }
 
@@ -109,7 +109,7 @@ class DesignValidator {
           type: ViolationType.spacing,
           message: '间距不是4的倍数: $spacing',
           severity: Severity.low,
-        ));
+        ),);
       }
     }
 
@@ -120,7 +120,7 @@ class DesignValidator {
           type: ViolationType.typography,
           message: '字体大小超出范围: $size',
           severity: Severity.medium,
-        ));
+        ),);
       }
     }
 
@@ -131,7 +131,7 @@ class DesignValidator {
           type: ViolationType.animation,
           message: '动画时长超出范围: ${duration.inMilliseconds}ms',
           severity: Severity.low,
-        ));
+        ),);
       }
     }
 
@@ -142,7 +142,7 @@ class DesignValidator {
           type: ViolationType.accessibility,
           message: '触控目标太小: ${size.width}x${size.height}',
           severity: Severity.high,
-        ));
+        ),);
       }
     }
 
@@ -151,7 +151,7 @@ class DesignValidator {
                   durations.length + touchTargets.length,
       violations: violations,
       score: _calculateScore(violations.length, colors.length + spacings.length +
-                  fontSizes.length + durations.length + touchTargets.length),
+                  fontSizes.length + durations.length + touchTargets.length,),
     );
   }
 
@@ -289,7 +289,7 @@ extension WidgetValidation on Widget {
   Future<ValidationReport> validateDesign() async {
     // 这里可以实现更复杂的Widget树分析
     // 例如：遍历子widget，检查是否使用了硬编码值
-    return ValidationReport(
+    return const ValidationReport(
       totalChecks: 0,
       violations: [],
       score: 1.0,
@@ -309,17 +309,17 @@ class DesignSystemChecker {
         type: ViolationType.typography,
         message: '文本缩放比例过高: ${media.textScaleFactor}',
         severity: Severity.medium,
-      ));
+      ),);
     }
 
     // 检查安全区域
     final padding = media.padding;
     if (padding.top < 0 || padding.bottom < 0) {
-      violations.add(Violation(
+      violations.add(const Violation(
         type: ViolationType.layout,
         message: '安全区域边距异常',
         severity: Severity.high,
-      ));
+      ),);
     }
 
     // 检查屏幕尺寸
@@ -329,7 +329,7 @@ class DesignSystemChecker {
         type: ViolationType.layout,
         message: '屏幕尺寸过小: ${size.width}x${size.height}',
         severity: Severity.medium,
-      ));
+      ),);
     }
 
     return ValidationReport(

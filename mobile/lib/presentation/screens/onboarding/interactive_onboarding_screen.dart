@@ -214,13 +214,13 @@ class _InteractiveOnboardingScreenState
 
           // Features preview
           _buildFeaturePreview(
-              Icons.auto_graph, '知识星图', '可视化学习网络'),
+              Icons.auto_graph, '知识星图', '可视化学习网络',),
           const SizedBox(height: 16),
           _buildFeaturePreview(
-              Icons.psychology, 'AI 对话', '智能学习伙伴'),
+              Icons.psychology, 'AI 对话', '智能学习伙伴',),
           const SizedBox(height: 16),
           _buildFeaturePreview(
-              Icons.task_alt, '智能任务', '个性化学习计划'),
+              Icons.task_alt, '智能任务', '个性化学习计划',),
         ],
       ),
     );
@@ -533,7 +533,7 @@ class _InteractiveOnboardingScreenState
           Switch(
             value: value,
             onChanged: (v) {},
-            activeColor: Colors.blue.shade400,
+            activeThumbColor: Colors.blue.shade400,
           ),
         ],
       ),

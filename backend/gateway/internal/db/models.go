@@ -635,6 +635,31 @@ type ErrorRecord struct {
 	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
 }
 
+type EventOutbox struct {
+	ID             pgtype.UUID      `json:"id"`
+	AggregateType  string           `json:"aggregate_type"`
+	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	EventType      string           `json:"event_type"`
+	EventVersion   int32            `json:"event_version"`
+	Payload        []byte           `json:"payload"`
+	Metadata       []byte           `json:"metadata"`
+	SequenceNumber pgtype.Int8      `json:"sequence_number"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	PublishedAt    pgtype.Timestamp `json:"published_at"`
+}
+
+type EventStore struct {
+	ID             pgtype.UUID      `json:"id"`
+	AggregateType  string           `json:"aggregate_type"`
+	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	EventType      string           `json:"event_type"`
+	EventVersion   int32            `json:"event_version"`
+	SequenceNumber int64            `json:"sequence_number"`
+	Payload        []byte           `json:"payload"`
+	Metadata       []byte           `json:"metadata"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+}
+
 type FocusSession struct {
 	UserID          pgtype.UUID      `json:"user_id"`
 	TaskID          pgtype.UUID      `json:"task_id"`
@@ -875,6 +900,32 @@ type PrivateMessage struct {
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 	DeletedAt   pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ProcessedEvent struct {
+	EventID       string           `json:"event_id"`
+	ConsumerGroup string           `json:"consumer_group"`
+	ProcessedAt   pgtype.Timestamp `json:"processed_at"`
+}
+
+type ProjectionMetadatum struct {
+	ProjectionName        string           `json:"projection_name"`
+	LastProcessedPosition pgtype.Text      `json:"last_processed_position"`
+	LastProcessedAt       pgtype.Timestamp `json:"last_processed_at"`
+	Version               int32            `json:"version"`
+	Status                string           `json:"status"`
+	ErrorMessage          pgtype.Text      `json:"error_message"`
+	CreatedAt             pgtype.Timestamp `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
+}
+
+type ProjectionSnapshot struct {
+	ID             pgtype.UUID      `json:"id"`
+	ProjectionName string           `json:"projection_name"`
+	AggregateID    pgtype.UUID      `json:"aggregate_id"`
+	SnapshotData   []byte           `json:"snapshot_data"`
+	StreamPosition string           `json:"stream_position"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
 }
 
 type PushHistory struct {

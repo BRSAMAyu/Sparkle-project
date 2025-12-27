@@ -2703,3 +2703,90 @@ ALTER TABLE ONLY public.post_likes
     ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 CREATE INDEX idx_post_likes_post_id ON public.post_likes USING btree (post_id);
+
+--
+-- CQRS Infrastructure Tables
+--
+
+-- 1. Outbox table (transactional event publishing)
+CREATE TABLE public.event_outbox (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    event_type character varying(100) NOT NULL,
+    event_version integer NOT NULL DEFAULT 1,
+    payload jsonb NOT NULL,
+    metadata jsonb,
+    sequence_number bigserial,
+    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
+    published_at timestamp without time zone,
+
+    CONSTRAINT unique_aggregate_sequence
+        UNIQUE (aggregate_type, aggregate_id, sequence_number)
+);
+
+ALTER TABLE public.event_outbox OWNER TO postgres;
+
+CREATE INDEX idx_outbox_unpublished ON public.event_outbox (created_at)
+    WHERE published_at IS NULL;
+
+-- 2. Event Store (complete event history)
+CREATE TABLE public.event_store (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    event_type character varying(100) NOT NULL,
+    event_version integer NOT NULL,
+    sequence_number bigint NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb,
+    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT unique_event
+        UNIQUE (aggregate_type, aggregate_id, sequence_number)
+);
+
+ALTER TABLE public.event_store OWNER TO postgres;
+
+CREATE INDEX idx_event_store_aggregate
+    ON public.event_store (aggregate_type, aggregate_id, sequence_number);
+CREATE INDEX idx_event_store_type ON public.event_store (event_type, created_at);
+
+-- 3. Idempotency tracking
+CREATE TABLE public.processed_events (
+    event_id character varying(100) PRIMARY KEY,
+    consumer_group character varying(100) NOT NULL,
+    processed_at timestamp without time zone NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.processed_events OWNER TO postgres;
+
+CREATE INDEX idx_processed_events_cleanup ON public.processed_events (processed_at);
+
+-- 4. Projection metadata
+CREATE TABLE public.projection_metadata (
+    projection_name character varying(100) PRIMARY KEY,
+    last_processed_position character varying(100),
+    last_processed_at timestamp without time zone,
+    version integer NOT NULL DEFAULT 1,
+    status character varying(20) NOT NULL DEFAULT 'active',
+    error_message text,
+    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
+    updated_at timestamp without time zone NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.projection_metadata OWNER TO postgres;
+
+-- 5. Projection snapshots
+CREATE TABLE public.projection_snapshots (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    projection_name character varying(100) NOT NULL,
+    aggregate_id uuid,
+    snapshot_data jsonb NOT NULL,
+    stream_position character varying(100) NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT unique_snapshot UNIQUE (projection_name, aggregate_id)
+);
+
+ALTER TABLE public.projection_snapshots OWNER TO postgres;

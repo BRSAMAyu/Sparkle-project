@@ -37,7 +37,7 @@ class ReasoningVisualizationDemo extends StatefulWidget {
 
 class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo> {
   bool _showRealTime = false;
-  bool _showCompleted = false;
+  final bool _showCompleted = false;
 
   // Mock: Real-time reasoning steps (streaming in)
   final List<ReasoningStep> _realTimeSteps = [

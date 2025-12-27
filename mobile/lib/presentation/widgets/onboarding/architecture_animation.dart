@@ -88,7 +88,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     return Container(
       height: 500,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -293,24 +293,24 @@ class _ArchitecturePainter extends CustomPainter {
     // Draw layers
     if (currentStep >= 0) {
       _drawLayer(canvas, mobilePos, 'Flutter\nMobile', Icons.phone_android.codePoint,
-          currentStep >= 0 ? fadeValue : 0, Colors.blue.shade400);
+          currentStep >= 0 ? fadeValue : 0, Colors.blue.shade400,);
     }
     if (currentStep >= 1) {
       _drawLayer(canvas, gatewayPos, 'Go\nGateway', Icons.swap_horiz.codePoint,
-          currentStep >= 1 ? fadeValue : 0, Colors.green.shade400);
+          currentStep >= 1 ? fadeValue : 0, Colors.green.shade400,);
     }
     if (currentStep >= 2) {
       _drawLayer(canvas, agentPos, 'Python\nAgent', Icons.psychology.codePoint,
-          currentStep >= 2 ? fadeValue : 0, Colors.purple.shade400);
+          currentStep >= 2 ? fadeValue : 0, Colors.purple.shade400,);
     }
     if (currentStep >= 3) {
       _drawLayer(canvas, dbPos, 'PostgreSQL\n+ Redis', Icons.storage.codePoint,
-          currentStep >= 3 ? fadeValue : 0, Colors.orange.shade400);
+          currentStep >= 3 ? fadeValue : 0, Colors.orange.shade400,);
     }
   }
 
   void _drawLayer(Canvas canvas, Offset position, String label, int iconCode,
-      double opacity, Color color) {
+      double opacity, Color color,) {
     final paint = Paint()
       ..color = color.withValues(alpha: opacity * 0.3)
       ..style = PaintingStyle.fill;
@@ -366,7 +366,7 @@ class _ArchitecturePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final angle = math.atan2(end.dy - start.dy, end.dx - start.dx);
-    final arrowSize = 10.0;
+    const arrowSize = 10.0;
 
     final path = Path()
       ..moveTo(end.dx, end.dy)

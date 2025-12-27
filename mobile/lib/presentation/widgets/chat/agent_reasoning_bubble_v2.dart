@@ -19,8 +19,7 @@ class AgentReasoningBubble extends StatefulWidget {
   final int? totalDurationMs;
 
   const AgentReasoningBubble({
-    super.key,
-    required this.steps,
+    required this.steps, super.key,
     this.isThinking = false,
     this.totalDurationMs,
   });
@@ -79,7 +78,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: theme.colorScheme.primary.withOpacity(0.2),
@@ -404,7 +403,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         return const Icon(Icons.error, color: Colors.red, size: 16);
       case StepStatus.pending:
         return Icon(Icons.radio_button_unchecked,
-            color: Colors.grey[400], size: 16);
+            color: Colors.grey[400], size: 16,);
     }
   }
 
@@ -472,7 +471,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   Color _getStatusColor(
-      ReasoningStep? activeStep, bool isCompleted, ThemeData theme) {
+      ReasoningStep? activeStep, bool isCompleted, ThemeData theme,) {
     if (isCompleted) return Colors.green;
     if (widget.isThinking && activeStep != null) {
       return _getAgentColor(activeStep.agent);
@@ -521,8 +520,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
   final bool isComplete;
 
   const MultiAgentCollaborationBubble({
-    super.key,
-    required this.contributions,
+    required this.contributions, super.key,
     this.summary,
     this.isComplete = false,
   });
@@ -591,7 +589,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   Container(
                     margin: const EdgeInsets.only(left: 8),
                     child: const Icon(Icons.check_circle,
-                        color: Colors.green, size: 18),
+                        color: Colors.green, size: 18,),
                   ),
               ],
             ),

@@ -26,12 +26,7 @@ class AgentReasoningBubble extends StatefulWidget {
   final List<Map<String, dynamic>>? citations;
 
   const AgentReasoningBubble({
-    super.key,
-    required this.agentName,
-    required this.agentType,
-    required this.reasoning,
-    required this.responseText,
-    required this.agentColor,
+    required this.agentName, required this.agentType, required this.reasoning, required this.responseText, required this.agentColor, super.key,
     this.confidence,
     this.citations,
   });
@@ -124,7 +119,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 '引用来源 (${widget.citations!.length})',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: widget.agentColor,
-                  fontWeight: FontWeight.bold
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -153,7 +148,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         color: Colors.black.withOpacity(0.03),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
-                      )
+                      ),
                     ],
                   ),
                   child: Column(
@@ -166,7 +161,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
-                          color: widget.agentColor
+                          color: widget.agentColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -359,8 +354,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
   final String? summary;
 
   const MultiAgentCollaborationBubble({
-    super.key,
-    required this.contributions,
+    required this.contributions, super.key,
     this.summary,
   });
 

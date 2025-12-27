@@ -15,8 +15,7 @@ class AgentAvatarStack extends StatefulWidget {
   final bool animate;
 
   const AgentAvatarStack({
-    super.key,
-    required this.activeAgents,
+    required this.activeAgents, super.key,
     this.size = 40,
     this.animate = true,
   });
@@ -213,9 +212,7 @@ class AgentHandoffAnimation extends StatefulWidget {
   final VoidCallback? onComplete;
 
   const AgentHandoffAnimation({
-    super.key,
-    required this.fromAgent,
-    required this.toAgent,
+    required this.fromAgent, required this.toAgent, super.key,
     this.onComplete,
   });
 
@@ -259,7 +256,7 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
       animation: _curveAnimation,
       builder: (context, child) {
         return CustomPaint(
-          size: Size(200, 100),
+          size: const Size(200, 100),
           painter: _HandoffPainter(
             progress: _curveAnimation.value,
             fromColor: widget.fromAgent.color,

@@ -7,14 +7,21 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/agent"
+	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
+	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
+	"github.com/sparkle/gateway/internal/cqrs/metrics"
+	"github.com/sparkle/gateway/internal/cqrs/outbox"
+	"github.com/sparkle/gateway/internal/cqrs/projection"
+	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
-	"github.com/sparkle/gateway/internal/event"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/infra/otel"
@@ -22,7 +29,6 @@ import (
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/sparkle/gateway/internal/worker"
-	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 
@@ -46,8 +52,15 @@ func main() {
 		}
 	}()
 
-	// Connect to DB
+	// Connect to DB (pool for CQRS operations)
 	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Unable to create connection pool: %v", err)
+	}
+	defer pool.Close()
+
+	// Also create single connection for legacy compatibility
 	conn, err := pgx.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v", err)
@@ -97,15 +110,152 @@ func main() {
 	}
 	authHandler := handler.NewAuthHandler(cfg, queries, appleAuthService)
 
-	// Community Module (CQRS)
-	eventBus := event.NewRedisEventBus(rdb)
-	commCmdService := service.NewCommunityCommandService(queries, eventBus)
+	// ==================== CQRS Infrastructure Initialization ====================
+
+	// Initialize CQRS Metrics
+	cqrsMetrics := metrics.NewCQRSMetrics("sparkle")
+
+	// Initialize Event Bus (Redis Streams)
+	eventBus := cqrsEvent.NewRedisEventBus(rdb)
+
+	// Initialize Outbox Repository
+	outboxRepo := outbox.NewPostgresRepository(pool)
+
+	// Outbox Publisher Worker (publishes events from outbox to Redis streams)
+	outboxPublisher := outbox.NewPublisher(outboxRepo, eventBus, cqrsMetrics, logger.Log)
+	go func() {
+		if err := outboxPublisher.Run(context.Background()); err != nil {
+			logger.Log.Error("Outbox publisher stopped", zap.Error(err))
+		}
+	}()
+
+	// Outbox Cleaner (removes old published entries)
+	// Runs every hour, keeps entries for 7 days
+	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, logger.Log)
+	go func() {
+		if err := outboxCleaner.Run(context.Background()); err != nil {
+			logger.Log.Error("Outbox cleaner stopped", zap.Error(err))
+		}
+	}()
+
+	// DLQ Cleaner (removes old dead letter queue entries)
+	// Runs every 24 hours, keeps entries for 7 days
+	dlqHandler := cqrsWorker.NewDLQHandler(rdb, logger.Log)
+	dlqCleaner := cqrsWorker.NewDLQCleaner(dlqHandler, 24*time.Hour, logger.Log)
+	go func() {
+		if err := dlqCleaner.Run(context.Background()); err != nil {
+			logger.Log.Error("DLQ cleaner stopped", zap.Error(err))
+		}
+	}()
+
+	// Initialize Projection Manager
+	projectionManager := projection.NewManager(pool, logger.Log)
+
+	// Initialize Snapshot Manager
+	snapshotManager := projection.NewSnapshotManager(pool, logger.Log)
+
+	// Initialize Projection Builder
+	projectionBuilder := projection.NewBuilder(pool, projectionManager, snapshotManager, cqrsMetrics, logger.Log)
+
+	// Register Projection Handlers
+	// Community Projection Handler
+	communityProjectionHandler := projection.NewCommunityProjectionHandler(rdb, pool, logger.Log)
+	if err := projectionManager.RegisterHandler(communityProjectionHandler); err != nil {
+		logger.Log.Error("Failed to register community projection handler", zap.Error(err))
+	}
+
+	// Task Projection Handler
+	taskProjectionHandler := projection.NewTaskProjectionHandler(rdb, pool, logger.Log)
+	if err := projectionManager.RegisterHandler(taskProjectionHandler); err != nil {
+		logger.Log.Error("Failed to register task projection handler", zap.Error(err))
+	}
+
+	// Galaxy Projection Handler
+	galaxyProjectionHandler := projection.NewGalaxyProjectionHandler(rdb, pool, logger.Log)
+	if err := projectionManager.RegisterHandler(galaxyProjectionHandler); err != nil {
+		logger.Log.Error("Failed to register galaxy projection handler", zap.Error(err))
+	}
+
+	// ==================== Community Module (CQRS) ====================
+
+	// Community Command Service (uses Outbox Pattern)
+	commCmdService := service.NewCommunityCommandService(pool)
 	commQueryService := service.NewCommunityQueryService(rdb)
 	commHandler := v1.NewCommunityHandler(commCmdService, commQueryService)
-	commSyncWorker := worker.NewCommunitySyncWorker(rdb, queries)
 
-	// Start Sync Worker (Background)
-	go commSyncWorker.Run(context.Background())
+	// Community Sync Worker (consumes events from Redis, updates projections)
+	commSyncWorker := worker.NewCommunitySyncWorker(rdb, pool, cqrsMetrics, logger.Log)
+
+	// Start Community Sync Worker
+	go func() {
+		if err := commSyncWorker.Run(context.Background()); err != nil {
+			logger.Log.Error("Community sync worker stopped", zap.Error(err))
+		}
+	}()
+
+	// ==================== Task Module (CQRS) ====================
+
+	// Task Command Service (uses Outbox Pattern)
+	_ = service.NewTaskCommandService(pool)
+
+	// Task Sync Worker (consumes events from Redis, updates projections)
+	taskSyncWorker := worker.NewTaskSyncWorker(rdb, pool, cqrsMetrics, logger.Log)
+
+	// Start Task Sync Worker
+	go func() {
+		if err := taskSyncWorker.Run(context.Background()); err != nil {
+			logger.Log.Error("Task sync worker stopped", zap.Error(err))
+		}
+	}()
+
+	// ==================== Galaxy Module (CQRS) ====================
+
+	// Galaxy Command Service (uses Outbox Pattern)
+	_ = service.NewGalaxyCommandService(pool)
+
+	// Galaxy Sync Worker (consumes events from Redis, updates projections)
+	galaxySyncWorker := worker.NewGalaxySyncWorker(rdb, pool, cqrsMetrics, logger.Log)
+
+	// Start Galaxy Sync Worker
+	go func() {
+		if err := galaxySyncWorker.Run(context.Background()); err != nil {
+			logger.Log.Error("Galaxy sync worker stopped", zap.Error(err))
+		}
+	}()
+
+	// ==================== CQRS Health Check ====================
+
+	// Register CQRS health check endpoint
+	cqrsHealthHandler := func(c *gin.Context) {
+		// Check outbox publisher status
+		outboxPendingCount, err := outboxRepo.GetPendingCount(context.Background())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  err.Error(),
+			})
+			return
+		}
+
+		// Check worker status
+		commRunning := commSyncWorker.IsRunning()
+		taskRunning := taskSyncWorker.IsRunning()
+		galaxyRunning := galaxySyncWorker.IsRunning()
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+			"components": gin.H{
+				"outbox_publisher": gin.H{
+					"pending_events": outboxPendingCount,
+				},
+				"workers": gin.H{
+					"community": commRunning,
+					"task":      taskRunning,
+					"galaxy":    galaxyRunning,
+				},
+			},
+		})
+	}
 
 	// Setup Router
 	r := gin.Default()
@@ -125,9 +275,11 @@ func main() {
 	// API Routes
 	api := r.Group("/api/v1")
 	{
+		// Health Checks
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		})
+		api.GET("/health/cqrs", cqrsHealthHandler)
 
 		// Auth
 		api.POST("/auth/apple", authHandler.AppleLogin)
@@ -142,13 +294,249 @@ func main() {
 	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Admin Routes (Chaos Engineering)
+	// Admin Routes (Chaos Engineering + CQRS Management)
 	// In production, this should be protected by a strong admin secret or VPN
 	admin := r.Group("/admin")
 	{
+		// Chaos Engineering
 		admin.POST("/chaos/inject", chaosManager.HandleInject)
 		admin.POST("/chaos/config", chaosHandler.SetThreshold)
 		admin.GET("/chaos/status", chaosHandler.GetStatus)
+
+		// CQRS Projection Management
+		admin.GET("/cqrs/projections", func(c *gin.Context) {
+			projections, err := projectionManager.GetAllProjections(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, projections)
+		})
+
+		admin.GET("/cqrs/projections/:name", func(c *gin.Context) {
+			name := c.Param("name")
+			info, err := projectionManager.GetProjectionInfo(c.Request.Context(), name)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, info)
+		})
+
+		admin.POST("/cqrs/projections/:name/reset", func(c *gin.Context) {
+			name := c.Param("name")
+			if err := projectionManager.ResetProjection(c.Request.Context(), name); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"status": "resetting"})
+		})
+
+		admin.POST("/cqrs/projections/:name/pause", func(c *gin.Context) {
+			name := c.Param("name")
+			if err := projectionManager.PauseProjection(c.Request.Context(), name); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"status": "paused"})
+		})
+
+		admin.POST("/cqrs/projections/:name/resume", func(c *gin.Context) {
+			name := c.Param("name")
+			if err := projectionManager.ResumeProjection(c.Request.Context(), name); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"status": "resumed"})
+		})
+
+		// Snapshot Management
+		admin.GET("/cqrs/snapshots/:name/count", func(c *gin.Context) {
+			name := c.Param("name")
+			count, err := snapshotManager.GetSnapshotCount(c.Request.Context(), name)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"count": count})
+		})
+
+		// Projection Rebuild
+		// POST /admin/cqrs/projections/:name/rebuild - Rebuild projection from event store
+		admin.POST("/cqrs/projections/:name/rebuild", func(c *gin.Context) {
+			name := c.Param("name")
+
+			// Determine aggregate type based on projection name
+			var aggregateType cqrsEvent.AggregateType
+			switch name {
+			case "community_projection":
+				aggregateType = cqrsEvent.AggregatePost
+			case "task_projection":
+				aggregateType = cqrsEvent.AggregateTask
+			case "galaxy_projection":
+				aggregateType = cqrsEvent.AggregateKnowledgeNode
+			default:
+				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown projection name: " + name})
+				return
+			}
+
+			// Start rebuild in background
+			go func() {
+				ctx := context.Background()
+				opts := projection.DefaultRebuildOptions()
+				progress, err := projectionBuilder.RebuildFromEventStore(ctx, name, aggregateType, opts)
+				if err != nil {
+					logger.Log.Error("Projection rebuild failed",
+						zap.String("projection", name),
+						zap.Error(err),
+					)
+				} else {
+					logger.Log.Info("Projection rebuild completed",
+						zap.String("projection", name),
+						zap.Int64("processed", progress.ProcessedEvents),
+						zap.Duration("duration", progress.Duration),
+					)
+				}
+			}()
+
+			c.JSON(http.StatusOK, gin.H{
+				"status":  "rebuild_started",
+				"message": "Rebuild is running in background. Check /admin/cqrs/projections/" + name + " for status",
+			})
+		})
+
+		// POST /admin/cqrs/projections/:name/rebuild/snapshot - Rebuild from latest snapshot
+		admin.POST("/cqrs/projections/:name/rebuild/snapshot", func(c *gin.Context) {
+			name := c.Param("name")
+
+			var aggregateType cqrsEvent.AggregateType
+			switch name {
+			case "community_projection":
+				aggregateType = cqrsEvent.AggregatePost
+			case "task_projection":
+				aggregateType = cqrsEvent.AggregateTask
+			case "galaxy_projection":
+				aggregateType = cqrsEvent.AggregateKnowledgeNode
+			default:
+				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown projection name: " + name})
+				return
+			}
+
+			go func() {
+				ctx := context.Background()
+				opts := projection.DefaultRebuildOptions()
+				progress, err := projectionBuilder.RebuildFromSnapshot(ctx, name, aggregateType, opts)
+				if err != nil {
+					logger.Log.Error("Projection rebuild from snapshot failed",
+						zap.String("projection", name),
+						zap.Error(err),
+					)
+				} else {
+					logger.Log.Info("Projection rebuild from snapshot completed",
+						zap.String("projection", name),
+						zap.Int64("processed", progress.ProcessedEvents),
+						zap.Duration("duration", progress.Duration),
+					)
+				}
+			}()
+
+			c.JSON(http.StatusOK, gin.H{
+				"status":  "rebuild_started",
+				"message": "Rebuild from snapshot is running in background",
+			})
+		})
+
+		// POST /admin/cqrs/projections/:name/snapshot - Create snapshot
+		admin.POST("/cqrs/projections/:name/snapshot", func(c *gin.Context) {
+			name := c.Param("name")
+
+			// Get projection info to get current position
+			info, err := projectionManager.GetProjectionInfo(c.Request.Context(), name)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			// For simplicity, create empty snapshot data
+			// In production, you'd serialize the actual projection state
+			snapshotData := map[string]interface{}{
+				"projection_name": name,
+				"position":        info.LastProcessedPosition,
+				"status":          info.Status,
+				"version":         info.Version,
+			}
+
+			if err := projectionBuilder.CreateSnapshot(c.Request.Context(), name, snapshotData); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"status":   "snapshot_created",
+				"position": info.LastProcessedPosition,
+			})
+		})
+
+		// GET /admin/cqrs/dlq/stats - Get DLQ statistics
+		admin.GET("/cqrs/dlq/stats", func(c *gin.Context) {
+			stats, err := dlqHandler.GetStats(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, stats)
+		})
+
+		// POST /admin/cqrs/dlq/cleanup - Manually trigger DLQ cleanup
+		admin.POST("/cqrs/dlq/cleanup", func(c *gin.Context) {
+			deleted, err := dlqHandler.Cleanup(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"status":        "cleanup_completed",
+				"deleted_count": deleted,
+			})
+		})
+
+		// POST /admin/cqrs/dlq/retry/:message_id - Retry a DLQ entry
+		admin.POST("/cqrs/dlq/retry/:message_id", func(c *gin.Context) {
+			messageID := c.Param("message_id")
+			if err := dlqHandler.RetryEntry(c.Request.Context(), messageID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"status":     "retry_submitted",
+				"message_id": messageID,
+			})
+		})
+
+		// DELETE /admin/cqrs/dlq/:message_id - Delete a DLQ entry
+		admin.DELETE("/cqrs/dlq/:message_id", func(c *gin.Context) {
+			messageID := c.Param("message_id")
+			if err := dlqHandler.DeleteEntry(c.Request.Context(), messageID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"status":     "deleted",
+				"message_id": messageID,
+			})
+		})
+
+		// GET /admin/cqrs/outbox/stats - Get outbox statistics
+		admin.GET("/cqrs/outbox/stats", func(c *gin.Context) {
+			pendingCount, err := outboxRepo.GetPendingCount(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"pending_count": pendingCount,
+			})
+		})
 	}
 
 	// Reverse Proxy for Python Backend (REST API)

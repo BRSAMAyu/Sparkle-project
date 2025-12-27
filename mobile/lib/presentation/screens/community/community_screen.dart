@@ -96,15 +96,15 @@ class CommunityScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           // Filter Tabs (Placeholder)
-          SingleChildScrollView(
+          const SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 _FilterChip(label: 'Global Feed', isSelected: true),
-                const SizedBox(width: 8),
-                const _FilterChip(label: 'My Squad', isSelected: false),
-                const SizedBox(width: 8),
-                const _FilterChip(label: 'Following', isSelected: false),
+                SizedBox(width: 8),
+                _FilterChip(label: 'My Squad', isSelected: false),
+                SizedBox(width: 8),
+                _FilterChip(label: 'Following', isSelected: false),
               ],
             ),
           ),

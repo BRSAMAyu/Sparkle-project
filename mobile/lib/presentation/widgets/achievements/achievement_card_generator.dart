@@ -42,7 +42,7 @@ class AchievementCardGenerator {
         alignment: Alignment.center,
         child: repaintBoundary,
       ),
-      configuration: ViewConfiguration(), // Use default configuration
+      configuration: const ViewConfiguration(), // Use default configuration
     );
 
     // Prepare the pipeline
@@ -75,7 +75,7 @@ class AchievementCardGenerator {
 
   /// 构建成就卡片 Widget
   static Widget _buildAchievementCard(
-      String achievementType, Map<String, dynamic> data) {
+      String achievementType, Map<String, dynamic> data,) {
     switch (achievementType) {
       case 'learning_milestone':
         return _LearningMilestoneCard(data: data);
@@ -106,7 +106,7 @@ class _LearningMilestoneCard extends StatelessWidget {
     return Container(
       width: 800,
       height: 1200,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

@@ -91,7 +91,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               style: const TextStyle(color: AppDesignTokens.secondaryBase),
               decoration: const InputDecoration(
                 prefixText: '# ',
-                hintText: "Topic (optional)",
+                hintText: 'Topic (optional)',
                 hintStyle: TextStyle(color: Colors.white30),
                 border: InputBorder.none,
               ),

@@ -72,11 +72,11 @@ class PredictiveInsightsCard extends StatelessWidget {
               child: Icon(Icons.trending_up, color: Colors.blue.shade600, size: 24),
             ),
             const SizedBox(width: 12),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '活跃度预测',
                     style: TextStyle(
                       fontSize: AppDesignTokens.fontSizeBase,
@@ -226,9 +226,9 @@ class PredictiveInsightsCard extends StatelessWidget {
         // Estimated Time
         Row(
           children: [
-            Icon(Icons.schedule,
+            const Icon(Icons.schedule,
               color: AppDesignTokens.neutral500,
-              size: AppDesignTokens.iconSizeXs),
+              size: AppDesignTokens.iconSizeXs,),
             const SizedBox(width: AppDesignTokens.spacing8),
             Text(
               '预计学习时长: ${estimatedHours.toStringAsFixed(1)} 小时',
@@ -248,9 +248,9 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber,
+                const Icon(Icons.warning_amber,
                   color: AppDesignTokens.warning,
-                  size: AppDesignTokens.iconSizeXs),
+                  size: AppDesignTokens.iconSizeXs,),
                 const SizedBox(width: AppDesignTokens.spacing8),
                 Text(
                   '建议先学习 $missingCount 个前置知识',
@@ -353,9 +353,9 @@ class PredictiveInsightsCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.lightbulb_outline,
+                    const Icon(Icons.lightbulb_outline,
                       color: AppDesignTokens.accent,
-                      size: AppDesignTokens.iconSizeXs),
+                      size: AppDesignTokens.iconSizeXs,),
                     const SizedBox(width: AppDesignTokens.spacing8),
                     Expanded(
                       child: Text(

@@ -215,13 +215,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               ],
             ),
           ),
-          Container(
+          SizedBox(
             width: AppDesignTokens.touchTargetMinSize,
             height: AppDesignTokens.touchTargetMinSize,
             child: IconButton(
-              icon: Icon(Icons.close_rounded,
+              icon: const Icon(Icons.close_rounded,
                 size: AppDesignTokens.iconSizeSm,
-                color: AppDesignTokens.neutral600),
+                color: AppDesignTokens.neutral600,),
               onPressed: widget.onCancelQuote,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

@@ -10,9 +10,7 @@ class AgentCollaborationTimeline extends StatefulWidget {
   final double executionTime;
 
   const AgentCollaborationTimeline({
-    super.key,
-    required this.steps,
-    required this.workflowType,
+    required this.steps, required this.workflowType, super.key,
     this.executionTime = 0.0,
   });
 

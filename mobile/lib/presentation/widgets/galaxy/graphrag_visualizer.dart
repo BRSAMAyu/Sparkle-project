@@ -20,11 +20,11 @@ class GraphRAGVisualizer extends StatefulWidget {
   final bool isVisible;
 
   const GraphRAGVisualizer({
-    Key? key,
+    super.key,
     this.trace,
     this.alignment = Alignment.bottomRight,
     this.isVisible = true,
-  }) : super(key: key);
+  });
 
   @override
   State<GraphRAGVisualizer> createState() => _GraphRAGVisualizerState();

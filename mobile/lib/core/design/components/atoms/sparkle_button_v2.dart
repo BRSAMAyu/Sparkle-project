@@ -24,8 +24,7 @@ class SparkleButton extends StatelessWidget {
   final FocusNode? focusNode;
 
   const SparkleButton({
-    super.key,
-    required this.label,
+    required this.label, super.key,
     this.onPressed,
     this.variant = ButtonVariant.primary,
     this.size = ButtonSize.medium,
@@ -311,8 +310,7 @@ class SparkleButtonGroup extends StatelessWidget {
   final double spacing;
 
   const SparkleButtonGroup({
-    super.key,
-    required this.buttons,
+    required this.buttons, super.key,
     this.direction = Axis.horizontal,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.mainAxisSize = MainAxisSize.max,
@@ -328,7 +326,7 @@ class SparkleButtonGroup extends StatelessWidget {
         children.add(SizedBox(
           width: direction == Axis.horizontal ? spacing : 0,
           height: direction == Axis.vertical ? spacing : 0,
-        ));
+        ),);
       }
     }
 
@@ -351,8 +349,7 @@ class SparkleIconButton extends StatelessWidget {
   final String? semanticLabel;
 
   const SparkleIconButton({
-    super.key,
-    required this.icon,
+    required this.icon, super.key,
     this.onPressed,
     this.variant = ButtonVariant.primary,
     this.size = 48.0,
@@ -432,9 +429,7 @@ class SparkleLoadingButton extends StatefulWidget {
   final String? semanticLabel;
 
   const SparkleLoadingButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
+    required this.label, required this.onPressed, super.key,
     this.variant = ButtonVariant.primary,
     this.size = ButtonSize.medium,
     this.icon,

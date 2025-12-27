@@ -8,9 +8,7 @@ class LearningPathDialog extends ConsumerWidget {
   final String targetNodeName;
 
   const LearningPathDialog({
-    super.key,
-    required this.targetNodeId,
-    required this.targetNodeName,
+    required this.targetNodeId, required this.targetNodeName, super.key,
   });
 
   @override
@@ -47,7 +45,7 @@ class LearningPathDialog extends ConsumerWidget {
             child: pathAsync.when(
               data: (path) {
                 if (path.isEmpty) {
-                  return const Center(child: Text("No prerequisites found. You can start learning!"));
+                  return const Center(child: Text('No prerequisites found. You can start learning!'));
                 }
                 return ListView.builder(
                   itemCount: path.length,

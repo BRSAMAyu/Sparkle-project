@@ -152,8 +152,8 @@ class SparkleThemeData {
     return SparkleThemeData(
       colors: SparkleColors.light(highContrast: highContrast),
       typography: SparkleTypography.standard(),
-      spacing: SparkleSpacing(),
-      animations: SparkleAnimations(),
+      spacing: const SparkleSpacing(),
+      animations: const SparkleAnimations(),
       shadows: SparkleShadows.light(),
     );
   }
@@ -162,8 +162,8 @@ class SparkleThemeData {
     return SparkleThemeData(
       colors: SparkleColors.dark(highContrast: highContrast),
       typography: SparkleTypography.standard(),
-      spacing: SparkleSpacing(),
-      animations: SparkleAnimations(),
+      spacing: const SparkleSpacing(),
+      animations: const SparkleAnimations(),
       shadows: SparkleShadows.dark(),
     );
   }

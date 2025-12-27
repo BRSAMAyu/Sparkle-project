@@ -92,7 +92,7 @@ class AnimationConfig {
             weight: 1,
           ),
         ],
-      ));
+      ),);
     }
 
     if (offset != null) {
@@ -107,7 +107,7 @@ class AnimationConfig {
             weight: 1,
           ),
         ],
-      ));
+      ),);
     }
 
     if (opacity != null) {
@@ -122,7 +122,7 @@ class AnimationConfig {
             weight: 1,
           ),
         ],
-      ));
+      ),);
     }
 
     return sequences;
@@ -257,9 +257,7 @@ class AnimatedSlide extends ImplicitlyAnimatedWidget {
   final Offset from;
 
   const AnimatedSlide({
-    super.key,
-    required this.child,
-    required this.offset,
+    required this.child, required this.offset, super.key,
     this.from = Offset.zero,
     super.duration = AnimationSystem.normal,
     super.curve = Curves.easeOut,
@@ -303,9 +301,7 @@ class AnimatedScale extends ImplicitlyAnimatedWidget {
   final double from;
 
   const AnimatedScale({
-    super.key,
-    required this.child,
-    required this.scale,
+    required this.child, required this.scale, super.key,
     this.from = 1.0,
     super.duration = AnimationSystem.normal,
     super.curve = Curves.easeOut,

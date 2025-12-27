@@ -23,12 +23,12 @@ class InteractiveDecayTimeline extends StatefulWidget {
   final int initialDays;
 
   const InteractiveDecayTimeline({
-    Key? key,
+    super.key,
     required this.onDaysChanged,
     required this.onSimulateIntervention,
     this.selectedNodeIds = const [],
     this.initialDays = 30,
-  }) : super(key: key);
+  });
 
   @override
   State<InteractiveDecayTimeline> createState() =>
@@ -203,7 +203,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: _getTrackColor(_currentDays),
-            inactiveTrackColor: theme.colorScheme.surfaceVariant,
+            inactiveTrackColor: theme.colorScheme.surfaceContainerHighest,
             thumbColor: _getTrackColor(_currentDays),
             overlayColor: _getTrackColor(_currentDays).withOpacity(0.2),
             thumbShape: const RoundSliderThumbShape(

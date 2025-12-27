@@ -103,7 +103,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                     if (targetDate != null) ...[
                       Icon(Icons.calendar_today,
                         size: AppDesignTokens.iconSizeSm,
-                        color: Theme.of(context).hintColor),
+                        color: Theme.of(context).hintColor,),
                       const SizedBox(width: AppDesignTokens.spacing4),
                       Text('目标日期: $targetDate'),
                       const SizedBox(width: AppDesignTokens.spacing16),
@@ -111,15 +111,15 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                     if (mastery != null) ...[
                       Icon(Icons.grade,
                         size: AppDesignTokens.iconSizeSm,
-                        color: Theme.of(context).hintColor),
+                        color: Theme.of(context).hintColor,),
                       const SizedBox(width: AppDesignTokens.spacing4),
                       Text('目标掌握度: ${(mastery * 100).toInt()}%'),
                     ],
                     const Spacer(),
                     // Just a visual indicator now - not interactive so smaller is acceptable
-                    Icon(Icons.arrow_forward_ios,
+                    const Icon(Icons.arrow_forward_ios,
                       size: AppDesignTokens.iconSizeXs,
-                      color: AppDesignTokens.neutral400),
+                      color: AppDesignTokens.neutral400,),
                   ],
                 ),
               ],

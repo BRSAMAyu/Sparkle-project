@@ -53,7 +53,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
         content: content,
         imageUrls: imageUrls,
         topic: topic,
-      ));
+      ),);
       
       // 4. Wait a bit for Worker to sync (Optional hack for MVP)
       // In a real CQRS app, we might just leave the optimistic one until next refresh
@@ -66,7 +66,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     } catch (e) {
       // Revert if failed
       state = AsyncValue.data(currentList);
-      throw e;
+      rethrow;
     }
   }
 }

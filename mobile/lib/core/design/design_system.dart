@@ -29,6 +29,7 @@
 ///   ),
 /// );
 /// ```
+library;
 
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/spacing_token.dart';
@@ -43,7 +44,7 @@ export 'validation/design_validator.dart';
 
 // 便捷导入
 import 'package:flutter/material.dart';
-import 'theme_manager.dart';
+import 'package:sparkle/core/design/theme_manager.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {

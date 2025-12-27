@@ -27,7 +27,7 @@ void main() {
   // JSON serialization
   final stepJson = step1.toJson();
   print('\n✓ JSON Output:');
-  print('  ${JsonEncoder.withIndent('  ').convert(stepJson)}');
+  print('  ${const JsonEncoder.withIndent('  ').convert(stepJson)}');
 
   final step1FromJson = ReasoningStep.fromJson(stepJson);
   print('\n✓ Deserialized: $step1FromJson');
@@ -121,7 +121,7 @@ void main() {
   print('  - Step: ${event.step.description}');
 
   // Summary
-  print('\n\n' + '=' * 60);
+  print('\n\n${'=' * 60}');
   print('✅ ALL TESTS PASSED');
   print('=' * 60);
   print('\nSummary:');

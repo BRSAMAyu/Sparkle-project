@@ -7,7 +7,7 @@ class FeedPostCard extends StatelessWidget {
   final Post post;
   final VoidCallback? onLike;
 
-  const FeedPostCard({super.key, required this.post, this.onLike});
+  const FeedPostCard({required this.post, super.key, this.onLike});
 
   @override
   Widget build(BuildContext context) {

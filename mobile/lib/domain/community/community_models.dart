@@ -20,11 +20,9 @@ class Post with _$Post {
     required String id,
     @JsonKey(name: 'user_id') required String userId,
     required String content,
-    @JsonKey(name: 'image_urls') List<String>? imageUrls,
+    @JsonKey(name: 'created_at') required DateTime createdAt, required PostUser user, @JsonKey(name: 'image_urls') List<String>? imageUrls,
     String? topic,
     @JsonKey(name: 'like_count') @Default(0) int likeCount,
-    @JsonKey(name: 'created_at') required DateTime createdAt,
-    required PostUser user,
     @Default(false) bool isOptimistic, // For optimistic UI
   }) = _Post;
 
