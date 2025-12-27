@@ -195,11 +195,19 @@ class _DashboardScreen extends ConsumerWidget {
             children: [
               Text(
                 'Lv.${user?.flameLevel ?? 1}',
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
+                style: const TextStyle(
+                  fontSize: AppDesignTokens.fontSizeXs,
+                  fontWeight: AppDesignTokens.fontWeightBold,
+                  color: AppDesignTokens.warning,
+                ),
               ),
               Text(
                 user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: AppDesignTokens.fontSizeSm,
+                  fontWeight: AppDesignTokens.fontWeightBold,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),

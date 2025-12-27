@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/onboarding/architecture_animation.dart';
 
 /// 交互式引导流程 - Week 7
@@ -54,7 +55,7 @@ class _InteractiveOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppDesignTokens.deepSpaceStart,
       body: SafeArea(
         child: Column(
           children: [

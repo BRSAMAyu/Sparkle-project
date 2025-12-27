@@ -175,7 +175,7 @@ class ToolCall(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
 
 class AgentStatus(_message.Message):
-    __slots__ = ("state", "details")
+    __slots__ = ("state", "details", "current_agent_name")
     class State(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         UNKNOWN: _ClassVar[AgentStatus.State]
@@ -190,9 +190,11 @@ class AgentStatus(_message.Message):
     GENERATING: AgentStatus.State
     STATE_FIELD_NUMBER: _ClassVar[int]
     DETAILS_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
     state: AgentStatus.State
     details: str
-    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ...) -> None: ...
+    current_agent_name: str
+    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ...) -> None: ...
 
 class Error(_message.Message):
     __slots__ = ("code", "message", "retryable", "details")
