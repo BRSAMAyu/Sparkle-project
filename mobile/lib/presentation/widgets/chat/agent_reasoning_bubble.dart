@@ -22,6 +22,9 @@ class AgentReasoningBubble extends StatefulWidget {
   /// 置信度
   final double? confidence;
 
+  /// 引用资料
+  final List<Map<String, dynamic>>? citations;
+
   const AgentReasoningBubble({
     super.key,
     required this.agentName,
@@ -30,6 +33,7 @@ class AgentReasoningBubble extends StatefulWidget {
     required this.responseText,
     required this.agentColor,
     this.confidence,
+    this.citations,
   });
 
   @override
@@ -72,6 +76,118 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         _animationController.reverse();
       }
     });
+  }
+
+  void _showCitationDetails(BuildContext context, Map<String, dynamic> cite) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(cite['title'] ?? '详情'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (cite['score'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Chip(
+                    label: Text('相关度: ${(cite['score'] * 100).toStringAsFixed(0)}%'),
+                    backgroundColor: widget.agentColor.withOpacity(0.1),
+                    labelStyle: TextStyle(color: widget.agentColor, fontSize: 12),
+                  ),
+                ),
+              Text(cite['content'] ?? '', style: const TextStyle(fontSize: 14, height: 1.5)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCitations(BuildContext context) {
+    if (widget.citations == null || widget.citations!.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Row(
+            children: [
+              Icon(Icons.library_books, size: 14, color: widget.agentColor),
+              const SizedBox(width: 4),
+              Text(
+                '引用来源 (${widget.citations!.length})',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: widget.agentColor,
+                  fontWeight: FontWeight.bold
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: widget.citations!.length,
+            itemBuilder: (context, index) {
+              final cite = widget.citations![index];
+              return GestureDetector(
+                onTap: () => _showCitationDetails(context, cite),
+                child: Container(
+                  width: 160,
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: widget.agentColor.withOpacity(0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        cite['title'] ?? '未知来源',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: widget.agentColor
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Expanded(
+                        child: Text(
+                          cite['content'] ?? '',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   @override
@@ -152,6 +268,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               ),
             ),
           ),
+
+          // 引用资料 (Citations)
+          _buildCitations(context),
 
           // 响应内容（始终显示）
           Padding(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 预测洞察卡片 - 显示AI预测的学习建议
 ///
@@ -77,11 +78,17 @@ class PredictiveInsightsCard extends StatelessWidget {
                 children: [
                   const Text(
                     '活跃度预测',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeBase,
+                      fontWeight: AppDesignTokens.fontWeightBold,
+                    ),
                   ),
                   Text(
                     'AI 基于学习习惯的预测',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeXs,
+                      color: AppDesignTokens.neutral500,
+                    ),
                   ),
                 ],
               ),
@@ -161,11 +168,17 @@ class PredictiveInsightsCard extends StatelessWidget {
                 children: [
                   Text(
                     '难度预测',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeBase,
+                      fontWeight: AppDesignTokens.fontWeightBold,
+                    ),
                   ),
                   Text(
                     'AI 基于前置知识的评估',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeXs,
+                      color: AppDesignTokens.neutral500,
+                    ),
                   ),
                 ],
               ),
@@ -182,12 +195,15 @@ class PredictiveInsightsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('预测难度', style: TextStyle(fontSize: 12)),
+                const Text(
+                  '预测难度',
+                  style: TextStyle(fontSize: AppDesignTokens.fontSizeXs),
+                ),
                 Text(
                   _getDifficultyLabel(difficultyScore),
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: AppDesignTokens.fontSizeXs,
+                    fontWeight: AppDesignTokens.fontWeightBold,
                     color: _getDifficultyColor(difficultyScore),
                   ),
                 ),
@@ -210,11 +226,13 @@ class PredictiveInsightsCard extends StatelessWidget {
         // Estimated Time
         Row(
           children: [
-            Icon(Icons.schedule, color: Colors.grey.shade600, size: 16),
-            const SizedBox(width: 8),
+            Icon(Icons.schedule,
+              color: AppDesignTokens.neutral500,
+              size: AppDesignTokens.iconSizeXs),
+            const SizedBox(width: AppDesignTokens.spacing8),
             Text(
               '预计学习时长: ${estimatedHours.toStringAsFixed(1)} 小时',
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: AppDesignTokens.fontSizeSm),
             ),
           ],
         ),
@@ -223,18 +241,23 @@ class PredictiveInsightsCard extends StatelessWidget {
         // Prerequisites Status
         if (!prerequisitesReady)
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppDesignTokens.spacing8),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
+              color: AppDesignTokens.warning.withValues(alpha: 0.1),
+              borderRadius: AppDesignTokens.borderRadius8,
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 16),
-                const SizedBox(width: 8),
+                Icon(Icons.warning_amber,
+                  color: AppDesignTokens.warning,
+                  size: AppDesignTokens.iconSizeXs),
+                const SizedBox(width: AppDesignTokens.spacing8),
                 Text(
                   '建议先学习 $missingCount 个前置知识',
-                  style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
+                  style: const TextStyle(
+                    fontSize: AppDesignTokens.fontSizeXs,
+                    color: AppDesignTokens.warning,
+                  ),
                 ),
               ],
             ),
@@ -274,11 +297,17 @@ class PredictiveInsightsCard extends StatelessWidget {
                 children: [
                   Text(
                     '学习风险评估',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeBase,
+                      fontWeight: AppDesignTokens.fontWeightBold,
+                    ),
                   ),
                   Text(
                     'AI 持续关注您的学习状态',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: AppDesignTokens.fontSizeXs,
+                      color: AppDesignTokens.neutral500,
+                    ),
                   ),
                 ],
               ),
@@ -292,9 +321,9 @@ class PredictiveInsightsCard extends StatelessWidget {
         Text(
           '风险指数: ${riskScore.toInt()}/100',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: AppDesignTokens.fontSizeSm,
             color: _getRiskColor(riskLevel),
-            fontWeight: FontWeight.bold,
+            fontWeight: AppDesignTokens.fontWeightBold,
           ),
         ),
         const SizedBox(height: 8),
@@ -313,20 +342,27 @@ class PredictiveInsightsCard extends StatelessWidget {
         if (suggestions.isNotEmpty) ...[
           const Text(
             'AI 建议:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: AppDesignTokens.fontSizeSm,
+              fontWeight: AppDesignTokens.fontWeightBold,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppDesignTokens.spacing8),
           ...suggestions.take(2).map((suggestion) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.only(bottom: AppDesignTokens.spacing4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.lightbulb_outline, color: Colors.amber.shade700, size: 16),
-                    const SizedBox(width: 8),
+                    Icon(Icons.lightbulb_outline,
+                      color: AppDesignTokens.accent,
+                      size: AppDesignTokens.iconSizeXs),
+                    const SizedBox(width: AppDesignTokens.spacing8),
                     Expanded(
                       child: Text(
                         suggestion.toString(),
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: AppDesignTokens.fontSizeXs,
+                        ),
                       ),
                     ),
                   ],

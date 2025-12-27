@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 成就分享卡片生成器 - Week 7
 ///
@@ -41,10 +42,7 @@ class AchievementCardGenerator {
         alignment: Alignment.center,
         child: repaintBoundary,
       ),
-      configuration: ViewConfiguration(
-        size: const Size(800, 1200), // Card size
-        devicePixelRatio: 3.0,
-      ),
+      configuration: ViewConfiguration(), // Use default configuration
     );
 
     // Prepare the pipeline
@@ -113,9 +111,9 @@ class _LearningMilestoneCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF0F172A),
-            Colors.blue.shade900,
-            Colors.purple.shade900,
+            AppDesignTokens.deepSpaceStart,
+            AppDesignTokens.deepSpaceEnd,
+            AppDesignTokens.secondaryDark,
           ],
         ),
       ),

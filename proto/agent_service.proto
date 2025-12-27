@@ -175,6 +175,7 @@ message AgentStatus {
     }
     State state = 1;
     string details = 2;
+    string current_agent_name = 3;
 }
 
 message Error {

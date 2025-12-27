@@ -454,13 +454,18 @@ class _QuickActionChipState extends State<_QuickActionChip> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: _isPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
+        duration: AppDesignTokens.durationFast,
+        curve: AppDesignTokens.curveEaseOut,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          // Ensure minimum 48px touch target
+          height: AppDesignTokens.touchTargetMinSize,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDesignTokens.spacing16,
+            vertical: AppDesignTokens.spacing8,
+          ),
           decoration: BoxDecoration(
             color: isDark ? AppDesignTokens.neutral800 : Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: AppDesignTokens.borderRadius20,
             border: Border.all(
               color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
               width: _isPressed ? 1.5 : 1.0,
@@ -476,13 +481,17 @@ class _QuickActionChipState extends State<_QuickActionChip> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, size: 18, color: widget.color),
-              const SizedBox(width: 8),
+              Icon(
+                widget.icon,
+                size: AppDesignTokens.iconSizeSm,
+                color: widget.color,
+              ),
+              const SizedBox(width: AppDesignTokens.spacing8),
               Text(
                 widget.label,
                 style: TextStyle(
                   color: isDark ? Colors.white : AppDesignTokens.neutral900,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: AppDesignTokens.fontWeightMedium,
                 ),
               ),
             ],

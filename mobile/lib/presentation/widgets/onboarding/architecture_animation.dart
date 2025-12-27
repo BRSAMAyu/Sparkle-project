@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 架构可视化动画 - 必杀技 C
 ///
@@ -91,8 +92,8 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF0F172A),
-            Colors.blue.shade900,
+            AppDesignTokens.deepSpaceStart,
+            AppDesignTokens.deepSpaceEnd,
           ],
         ),
         borderRadius: BorderRadius.circular(16),

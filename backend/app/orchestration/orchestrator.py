@@ -350,7 +350,8 @@ class ChatOrchestrator:
                             citations=agent_service_pb2.CitationBlock(citations=citation_protos),
                             status_update=agent_service_pb2.AgentStatus(
                                 state=agent_service_pb2.AgentStatus.SEARCHING,
-                                details=f"Found {len(citation_protos)} relevant knowledge points"
+                                details=f"Found {len(citation_protos)} relevant knowledge points",
+                                current_agent_name="SearchAgent"
                             )
                         )
 

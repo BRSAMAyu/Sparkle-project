@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/decay/interactive_decay_timeline.dart';
 
 class GalaxyScreen extends StatefulWidget {
@@ -30,7 +31,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Void (Base)
+      backgroundColor: AppDesignTokens.deepSpaceStart, // Void (Base)
       body: Stack(
         children: [
           // 1. The Dynamic Galaxy Painter

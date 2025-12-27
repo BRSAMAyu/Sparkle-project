@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/insights/predictive_insights_card.dart';
 import 'package:sparkle/presentation/widgets/charts/engagement_heatmap.dart';
 
@@ -73,7 +74,7 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppDesignTokens.deepSpaceStart,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
