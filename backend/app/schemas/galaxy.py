@@ -51,6 +51,7 @@ class NodeBase(BaseModel):
     importance_level: int
     sector_code: SectorCode
     is_seed: bool
+    parent_name: Optional[str] = None # Added for context
     
     model_config = ConfigDict(from_attributes=True)
 

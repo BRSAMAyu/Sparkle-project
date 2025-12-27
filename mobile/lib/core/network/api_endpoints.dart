@@ -48,6 +48,9 @@ class ApiEndpoints {
   static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
   static String galaxyNodeDecayPause(String id) => '/galaxy/node/$id/decay/pause';
 
+  // Learning Paths
+  static String learningPath(String targetNodeId) => '/learning-paths/$targetNodeId';
+
   // Community - Friends
   static const String friends = '/community/friends';
   static const String friendRequest = '/community/friends/request';

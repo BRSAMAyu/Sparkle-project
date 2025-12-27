@@ -2,12 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:sparkle/data/models/reasoning_step_model.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
+import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -24,6 +26,12 @@ class ChatState {
   final String? aiStatus; // THINKING, GENERATING, etc.
   final String? aiStatusDetails;
   final WsConnectionState wsConnectionState; // WebSocket 连接状态
+  final GraphRAGTrace? graphragTrace; // 🔥 必杀技 A: GraphRAG 追踪信息
+
+  // New: Chain of Thought Visualization
+  final List<ReasoningStep> reasoningSteps; // Real-time reasoning steps
+  final bool isReasoningActive; // Currently showing reasoning
+  final int? reasoningStartTime; // Timestamp for duration calculation
 
   ChatState({
     this.isLoading = false,
@@ -39,6 +47,10 @@ class ChatState {
     this.aiStatus,
     this.aiStatusDetails,
     this.wsConnectionState = WsConnectionState.disconnected,
+    this.graphragTrace,
+    this.reasoningSteps = const [],
+    this.isReasoningActive = false,
+    this.reasoningStartTime,
   });
 
   ChatState copyWith({
@@ -58,6 +70,12 @@ class ChatState {
     bool clearAiStatus = false,
     String? aiStatusDetails,
     WsConnectionState? wsConnectionState,
+    GraphRAGTrace? graphragTrace,
+    bool clearGraphragTrace = false,
+    List<ReasoningStep>? reasoningSteps,
+    bool? isReasoningActive,
+    int? reasoningStartTime,
+    bool clearReasoning = false,
   }) {
     return ChatState(
       isLoading: isLoading ?? this.isLoading,
@@ -73,6 +91,10 @@ class ChatState {
       aiStatus: clearAiStatus ? null : aiStatus ?? this.aiStatus,
       aiStatusDetails: clearAiStatus ? null : aiStatusDetails ?? this.aiStatusDetails,
       wsConnectionState: wsConnectionState ?? this.wsConnectionState,
+      graphragTrace: clearGraphragTrace ? null : graphragTrace ?? this.graphragTrace,
+      reasoningSteps: clearReasoning ? [] : reasoningSteps ?? this.reasoningSteps,
+      isReasoningActive: clearReasoning ? false : isReasoningActive ?? this.isReasoningActive,
+      reasoningStartTime: clearReasoning ? null : reasoningStartTime ?? this.reasoningStartTime,
     );
   }
 }
@@ -220,6 +242,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String accumulatedContent = '';
     String? lastAiStatus;
     final List<WidgetPayload> accumulatedWidgets = [];
+    final List<ReasoningStep> accumulatedReasoningSteps = [];
+    int? reasoningStartTime;
 
     try {
       await for (final event in _chatRepository.chatStream(
@@ -282,6 +306,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is UsageEvent) {
           // Token 使用统计（可选显示）
           // print('Usage: ${event.totalTokens} tokens');
+        } else if (event is ReasoningStepEvent) {
+          // 🆕 推理步骤事件 - Chain of Thought Visualization
+          reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
+
+          // Add timestamp to step
+          final stepWithTime = event.step.copyWith(
+            createdAt: event.step.createdAt ?? DateTime.now(),
+          );
+
+          accumulatedReasoningSteps.add(stepWithTime);
+
+          // Update state with new reasoning steps
+          state = state.copyWith(
+            reasoningSteps: List.from(accumulatedReasoningSteps),
+            isReasoningActive: true,
+            reasoningStartTime: reasoningStartTime,
+          );
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -290,6 +331,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // 流结束后，将累积的内容转为正式消息
       if (accumulatedContent.isNotEmpty || accumulatedWidgets.isNotEmpty) {
+        // Calculate total duration if reasoning steps exist
+        String? reasoningSummary;
+        if (accumulatedReasoningSteps.isNotEmpty && reasoningStartTime != null) {
+          final durationMs = DateTime.now().millisecondsSinceEpoch - reasoningStartTime;
+          reasoningSummary = '完成于 ${(durationMs / 1000).toStringAsFixed(1)}s，${accumulatedReasoningSteps.length}个步骤';
+        }
+
         final aiMessage = ChatMessageModel(
           id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'ai_assistant',
@@ -299,6 +347,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           createdAt: DateTime.now(),
           widgets: accumulatedWidgets.isNotEmpty ? accumulatedWidgets : null,
           aiStatus: lastAiStatus, // 持久化最后的 AI 状态（如：EXECUTING_TOOL）
+          reasoningSteps: accumulatedReasoningSteps.isNotEmpty ? accumulatedReasoningSteps : null,
+          reasoningSummary: reasoningSummary,
+          isReasoningComplete: accumulatedReasoningSteps.isNotEmpty,
         );
 
         state = state.copyWith(
@@ -306,12 +357,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
           messages: [...state.messages, aiMessage],
           streamingContent: '',
           clearAiStatus: true,
+          clearReasoning: true, // Clear real-time reasoning state
         );
       } else {
         state = state.copyWith(
           isSending: false,
           streamingContent: '',
           clearAiStatus: true,
+          clearReasoning: true,
         );
       }
 

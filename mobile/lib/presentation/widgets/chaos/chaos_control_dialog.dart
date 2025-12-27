@@ -79,7 +79,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.Bolt, color: Colors.orange),
+          Icon(Icons.flash_on, color: Colors.orange),
           SizedBox(width: 8),
           Text('Sparkle 混沌控制台'),
         ],
@@ -89,7 +89,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('队列水位: $_queueLength / $_currentThreshold',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold),),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,

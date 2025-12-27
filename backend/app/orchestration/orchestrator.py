@@ -1,5 +1,6 @@
 import json
 import asyncio
+import time
 from typing import AsyncGenerator, List, Dict, Optional, Any
 from loguru import logger
 from datetime import datetime
@@ -8,7 +9,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
-from app.services.graph_knowledge_service import GraphKnowledgeService
+from app.services.galaxy_service import GalaxyService
 from app.services.user_service import UserService
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
@@ -31,6 +32,59 @@ STATE_GENERATING = "GENERATING"
 STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
+
+
+def get_agent_type_for_tool(tool_name: str) -> int:
+    """
+    Map tool names to AgentType enum for multi-agent visualization.
+
+    Returns:
+        AgentType enum value (int)
+    """
+    tool_lower = tool_name.lower()
+
+    # Knowledge-related tools -> KNOWLEDGE agent
+    if any(keyword in tool_lower for keyword in ['knowledge', 'query', 'search', 'retrieve', 'vector', 'graphrag']):
+        return agent_service_pb2.KNOWLEDGE
+
+    # Math/calculation tools -> MATH agent
+    if any(keyword in tool_lower for keyword in ['math', 'calculate', 'wolfram', 'compute', 'formula', 'equation']):
+        return agent_service_pb2.MATH
+
+    # Code/system tools -> CODE agent
+    if any(keyword in tool_lower for keyword in ['code', 'execute', 'run', 'system', 'debug', 'compile']):
+        return agent_service_pb2.CODE
+
+    # Data analysis tools -> DATA_ANALYSIS agent
+    if any(keyword in tool_lower for keyword in ['data', 'analyze', 'statistic', 'chart', 'plot', 'visualize', 'pandas', 'numpy']):
+        return agent_service_pb2.DATA_ANALYSIS
+
+    # Translation tools -> TRANSLATION agent
+    if any(keyword in tool_lower for keyword in ['translate', 'language', 'localize', 'i18n']):
+        return agent_service_pb2.TRANSLATION
+
+    # Image tools -> IMAGE agent
+    if any(keyword in tool_lower for keyword in ['image', 'photo', 'picture', 'draw', 'generate_image', 'edit_image']):
+        return agent_service_pb2.IMAGE
+
+    # Audio tools -> AUDIO agent
+    if any(keyword in tool_lower for keyword in ['audio', 'sound', 'music', 'speech', 'voice', 'tts', 'stt']):
+        return agent_service_pb2.AUDIO
+
+    # Writing/content tools -> WRITING agent
+    if any(keyword in tool_lower for keyword in ['write', 'summarize', 'compose', 'draft', 'edit_text']):
+        return agent_service_pb2.WRITING
+
+    # Reasoning/logic tools -> REASONING agent
+    if any(keyword in tool_lower for keyword in ['reason', 'logic', 'solve', 'deduce', 'infer', 'prove']):
+        return agent_service_pb2.REASONING
+
+    # Task/orchestration tools -> ORCHESTRATOR
+    if any(keyword in tool_lower for keyword in ['task', 'plan', 'create', 'update', 'batch', 'orchestrate']):
+        return agent_service_pb2.ORCHESTRATOR
+
+    # Default to ORCHESTRATOR
+    return agent_service_pb2.ORCHESTRATOR
 
 
 class ChatOrchestrator:
@@ -308,37 +362,57 @@ class ChatOrchestrator:
             # Step 7: GraphRAG Retrieval (Enhanced with graph database)
             await self._update_state(session_id, STATE_THINKING, "Retrieving relevant knowledge...")
             knowledge_context = ""
+            
             if active_db and user_id:
                 try:
-                    # Use GraphKnowledgeService for enhanced GraphRAG
-                    graph_ks = GraphKnowledgeService(active_db)
-                    rag_result = await graph_ks.graph_rag_search(
-                        query=user_message,
+                    # Use RAG v2.0 Hybrid Search via GalaxyService
+                    galaxy_svc = GalaxyService(active_db)
+                    search_results = await galaxy_svc.hybrid_search(
                         user_id=uuid.UUID(user_id),
-                        depth=2,
-                        top_k=5
+                        query=user_message,
+                        limit=5,
+                        use_reranker=True
                     )
-                    knowledge_context = rag_result.get("context", "")
+                    
+                    citation_protos = []
+                    context_parts = []
+                    
+                    for item in search_results:
+                        node = item.node
+                        score = item.similarity
+                        
+                        # Build Context
+                        context_parts.append(f"[{node.name}]: {node.description}")
+                        
+                        # Build Citation Proto
+                        citation_protos.append(agent_service_pb2.Citation(
+                            id=str(node.id),
+                            title=node.name,
+                            content=node.description[:300] if node.description else "",
+                            source_type="hybrid",
+                            score=float(score)
+                        ))
+                    
+                    knowledge_context = "\n\n".join(context_parts)
+                    
+                    # Yield Citations to client
+                    if citation_protos:
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=f"resp_{uuid.uuid4()}",
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            citations=agent_service_pb2.CitationBlock(citations=citation_protos),
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.SEARCHING,
+                                details=f"Found {len(citation_protos)} relevant knowledge points",
+                                current_agent_name="SearchAgent",
+                                active_agent=agent_service_pb2.KNOWLEDGE
+                            )
+                        )
 
-                    # Log GraphRAG metrics
-                    if rag_result.get("metadata"):
-                        logger.info(
-                            f"GraphRAG results: "
-                            f"vector={rag_result['metadata'].get('vector_count', 0)}, "
-                            f"graph={rag_result['metadata'].get('graph_count', 0)}, "
-                            f"fused={rag_result['metadata'].get('fusion_count', 0)}"
-                        )
                 except Exception as e:
-                    logger.warning(f"GraphRAG retrieval failed: {e}, falling back to vector search")
-                    # Fallback to regular KnowledgeService
-                    try:
-                        ks = KnowledgeService(active_db)
-                        knowledge_context = await ks.retrieve_context(
-                            user_id=uuid.UUID(user_id),
-                            query=user_message
-                        )
-                    except Exception as e2:
-                        logger.error(f"Fallback knowledge retrieval also failed: {e2}")
+                    logger.warning(f"RAG retrieval failed: {e}")
+
 
             # Step 8: Build Prompt with ContextPruner
             await self._update_state(session_id, STATE_THINKING, "Building system prompt...")
@@ -360,7 +434,8 @@ class ChatOrchestrator:
                 request_id=request_id,
                 status_update=agent_service_pb2.AgentStatus(
                     state=agent_service_pb2.AgentStatus.THINKING,
-                    details="Analyzing your request and preparing response..."
+                    details="Analyzing your request and preparing response...",
+                    active_agent=agent_service_pb2.ORCHESTRATOR
                 )
             )
 
@@ -405,8 +480,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             status_update=agent_service_pb2.AgentStatus(
-                                state=agent_service_pb2.AgentStatus.TOOL_CALLING,
-                                details=f"[{chunk.tool_name}] {message} ({progress}%)"
+                                state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                                details=f"[{chunk.tool_name}] {message} ({progress}%)",
+                                active_agent=get_agent_type_for_tool(chunk.tool_name)
                             )
                         )
 
@@ -415,8 +491,9 @@ class ChatOrchestrator:
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.TOOL_CALLING,
-                            details=f"Executing {chunk.tool_name}..."
+                            state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                            details=f"Executing {chunk.tool_name}...",
+                            active_agent=get_agent_type_for_tool(chunk.tool_name)
                         ),
                         tool_call=agent_service_pb2.ToolCall(
                             id=chunk.tool_call_id,

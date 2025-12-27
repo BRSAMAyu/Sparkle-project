@@ -7,6 +7,8 @@ import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -123,32 +125,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Container(
         decoration: BoxDecoration(
-          gradient: isDark 
-            ? AppDesignTokens.deepSpaceGradient 
+          gradient: isDark
+            ? AppDesignTokens.deepSpaceGradient
             : const LinearGradient(
                 colors: [AppDesignTokens.neutral50, Colors.white],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              if (chatState.isLoading)
-                const LinearProgressIndicator(
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
-                  minHeight: 2,
-                ),
-              Expanded(
-                child: messages.isEmpty && chatState.streamingContent.isEmpty && chatState.aiStatus == null
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  if (chatState.isLoading)
+                    const LinearProgressIndicator(
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
+                      minHeight: 2,
+                    ),
+                  Expanded(
+                child: messages.isEmpty && chatState.streamingContent.isEmpty && chatState.aiStatus == null && !chatState.isReasoningActive
                     ? _buildQuickActions(context)
                     : ListView.builder(
                         controller: _scrollController,
                         reverse: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-                        // 🆕 显示状态指示器、流式内容或加载指示器
-                        itemCount: messages.length + (chatState.isSending ? 1 : 0) + (chatState.aiStatus != null ? 1 : 0),
+                        // 🆕 显示状态指示器、推理气泡、流式内容或消息
+                        itemCount: messages.length +
+                            (chatState.isSending ? 1 : 0) +
+                            (chatState.aiStatus != null ? 1 : 0) +
+                            (chatState.isReasoningActive ? 1 : 0),
                         itemBuilder: (context, index) {
                           // 1. 如果有 AI 状态更新，在最底部显示（reversed 模式下 index 为 0）
                           if (chatState.aiStatus != null && index == 0) {
@@ -161,10 +168,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             );
                           }
 
-                          // 2. 如果正在发送/接收，显示流式内容或打字指示器
+                          // 2. 🆕 如果正在显示推理过程，显示 Chain of Thought Bubble
                           final isStatusShowing = chatState.aiStatus != null;
-                          final streamIndex = isStatusShowing ? 1 : 0;
-                          
+                          final reasoningIndex = isStatusShowing ? 1 : 0;
+
+                          if (chatState.isReasoningActive && index == reasoningIndex) {
+                            final durationMs = chatState.reasoningStartTime != null
+                                ? DateTime.now().millisecondsSinceEpoch - chatState.reasoningStartTime!
+                                : null;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: AgentReasoningBubble(
+                                steps: chatState.reasoningSteps,
+                                isThinking: true,
+                                totalDurationMs: durationMs,
+                              ),
+                            );
+                          }
+
+                          // 3. 如果正在发送/接收，显示流式内容或打字指示器
+                          final streamIndex = isStatusShowing ? (chatState.isReasoningActive ? 2 : 1) : (chatState.isReasoningActive ? 1 : 0);
+
                           if (chatState.isSending && index == streamIndex) {
                             // 如果有流式内容，显示它
                             if (chatState.streamingContent.isNotEmpty) {
@@ -173,25 +198,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 child: _StreamingBubble(content: chatState.streamingContent),
                               );
                             }
-                            
+
                             // 如果没有流式内容且也没有显示状态指示器，则显示通用打字指示器
-                            if (!isStatusShowing) {
+                            if (!isStatusShowing && !chatState.isReasoningActive) {
                               return const Padding(
                                 padding: EdgeInsets.only(bottom: 12.0),
                                 child: _TypingIndicator(),
                               );
                             }
-                            
+
                             return const SizedBox.shrink();
                           }
 
-                          // 3. 计算正式消息的索引
+                          // 4. 计算正式消息的索引
                           int msgIndex = index;
                           if (isStatusShowing) msgIndex--;
+                          if (chatState.isReasoningActive) msgIndex--;
                           if (chatState.isSending) msgIndex--;
-                          
+
                           if (msgIndex < 0) return const SizedBox.shrink();
-                          
+
                           final message = messages[messages.length - 1 - msgIndex];
                           return ChatBubble(message: message);
                         },
@@ -208,12 +234,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                      textAlign: TextAlign.center,
                    ),
                  ),
-              ChatInput(
-                enabled: !chatState.isSending,
-                onSend: (text, {replyToId}) => ref.read(chatProvider.notifier).sendMessage(text),
+                  ChatInput(
+                    enabled: !chatState.isSending,
+                    onSend: (text, {replyToId}) => ref.read(chatProvider.notifier).sendMessage(text),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // 🔥 必杀技 A: GraphRAG 实时可视化
+            if (chatState.graphragTrace != null)
+              GraphRAGVisualizer(
+                trace: chatState.graphragTrace,
+                isVisible: true,
+              ),
+          ],
         ),
       ),
     );
@@ -420,13 +454,18 @@ class _QuickActionChipState extends State<_QuickActionChip> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: _isPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
+        duration: AppDesignTokens.durationFast,
+        curve: AppDesignTokens.curveEaseOut,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          // Ensure minimum 48px touch target
+          height: AppDesignTokens.touchTargetMinSize,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDesignTokens.spacing16,
+            vertical: AppDesignTokens.spacing8,
+          ),
           decoration: BoxDecoration(
             color: isDark ? AppDesignTokens.neutral800 : Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: AppDesignTokens.borderRadius20,
             border: Border.all(
               color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
               width: _isPressed ? 1.5 : 1.0,
@@ -442,13 +481,17 @@ class _QuickActionChipState extends State<_QuickActionChip> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, size: 18, color: widget.color),
-              const SizedBox(width: 8),
+              Icon(
+                widget.icon,
+                size: AppDesignTokens.iconSizeSm,
+                color: widget.color,
+              ),
+              const SizedBox(width: AppDesignTokens.spacing8),
               Text(
                 widget.label,
                 style: TextStyle(
                   color: isDark ? Colors.white : AppDesignTokens.neutral900,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: AppDesignTokens.fontWeightMedium,
                 ),
               ),
             ],

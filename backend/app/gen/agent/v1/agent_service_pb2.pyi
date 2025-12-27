@@ -19,12 +19,37 @@ class FinishReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TOOL_CALLS: _ClassVar[FinishReason]
     CONTENT_FILTER: _ClassVar[FinishReason]
     ERROR: _ClassVar[FinishReason]
+
+class AgentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    AGENT_UNKNOWN: _ClassVar[AgentType]
+    ORCHESTRATOR: _ClassVar[AgentType]
+    KNOWLEDGE: _ClassVar[AgentType]
+    MATH: _ClassVar[AgentType]
+    CODE: _ClassVar[AgentType]
+    DATA_ANALYSIS: _ClassVar[AgentType]
+    TRANSLATION: _ClassVar[AgentType]
+    IMAGE: _ClassVar[AgentType]
+    AUDIO: _ClassVar[AgentType]
+    WRITING: _ClassVar[AgentType]
+    REASONING: _ClassVar[AgentType]
 NULL: FinishReason
 STOP: FinishReason
 LENGTH: FinishReason
 TOOL_CALLS: FinishReason
 CONTENT_FILTER: FinishReason
 ERROR: FinishReason
+AGENT_UNKNOWN: AgentType
+ORCHESTRATOR: AgentType
+KNOWLEDGE: AgentType
+MATH: AgentType
+CODE: AgentType
+DATA_ANALYSIS: AgentType
+TRANSLATION: AgentType
+IMAGE: AgentType
+AUDIO: AgentType
+WRITING: AgentType
+REASONING: AgentType
 
 class ChatRequest(_message.Message):
     __slots__ = ("user_id", "session_id", "message", "tool_result", "user_profile", "extra_context", "history", "config", "request_id")
@@ -117,7 +142,7 @@ class ChatMessage(_message.Message):
     def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ChatResponse(_message.Message):
-    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "finish_reason")
+    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "finish_reason")
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
@@ -127,6 +152,7 @@ class ChatResponse(_message.Message):
     FULL_TEXT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     USAGE_FIELD_NUMBER: _ClassVar[int]
+    CITATIONS_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     response_id: str
     created_at: int
@@ -137,8 +163,31 @@ class ChatResponse(_message.Message):
     full_text: str
     error: Error
     usage: Usage
+    citations: CitationBlock
     finish_reason: FinishReason
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ...) -> None: ...
+    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ...) -> None: ...
+
+class CitationBlock(_message.Message):
+    __slots__ = ("citations",)
+    CITATIONS_FIELD_NUMBER: _ClassVar[int]
+    citations: _containers.RepeatedCompositeFieldContainer[Citation]
+    def __init__(self, citations: _Optional[_Iterable[_Union[Citation, _Mapping]]] = ...) -> None: ...
+
+class Citation(_message.Message):
+    __slots__ = ("id", "title", "content", "source_type", "url", "score")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    title: str
+    content: str
+    source_type: str
+    url: str
+    score: float
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., source_type: _Optional[str] = ..., url: _Optional[str] = ..., score: _Optional[float] = ...) -> None: ...
 
 class ToolCall(_message.Message):
     __slots__ = ("id", "name", "arguments")
@@ -151,7 +200,7 @@ class ToolCall(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
 
 class AgentStatus(_message.Message):
-    __slots__ = ("state", "details")
+    __slots__ = ("state", "details", "current_agent_name", "active_agent")
     class State(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         UNKNOWN: _ClassVar[AgentStatus.State]
@@ -166,9 +215,13 @@ class AgentStatus(_message.Message):
     GENERATING: AgentStatus.State
     STATE_FIELD_NUMBER: _ClassVar[int]
     DETAILS_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_AGENT_FIELD_NUMBER: _ClassVar[int]
     state: AgentStatus.State
     details: str
-    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ...) -> None: ...
+    current_agent_name: str
+    active_agent: AgentType
+    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ..., active_agent: _Optional[_Union[AgentType, str]] = ...) -> None: ...
 
 class Error(_message.Message):
     __slots__ = ("code", "message", "retryable", "details")

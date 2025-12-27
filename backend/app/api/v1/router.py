@@ -25,7 +25,11 @@ from app.api.v1 import (
     vocabulary,
     audit,
     health_production,
-    graph_monitor
+    graph_monitor,
+    graphrag_trace,
+    decay_timemachine,
+    multi_agent,
+    learning_paths
 )
 
 api_router = APIRouter()
@@ -33,6 +37,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
+api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
@@ -50,6 +55,9 @@ api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
 api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
+api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
+api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 
 
 @api_router.get("/")

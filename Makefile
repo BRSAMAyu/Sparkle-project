@@ -21,6 +21,15 @@ sync-db:
 	cd backend/gateway && sqlc generate
 	@echo "✅ Database Schema & Go Code Synced Successfully!"
 
+# RAG 相关命令 (v2.0)
+init-rag:
+	@echo "🏗️ Initializing Redis Index..."
+	python backend/scripts/init_redis_index.py
+
+sync-rag:
+	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
+	python backend/scripts/sync_pg_to_redis.py
+
 # 生成 Protobuf 代码
 proto-gen:
 	@echo "🚀 Generating Protobuf Code..."

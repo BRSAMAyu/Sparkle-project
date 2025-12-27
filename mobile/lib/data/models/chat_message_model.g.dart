@@ -32,6 +32,12 @@ ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
           ? null
           : ConfirmationData.fromJson(
               json['confirmation_data'] as Map<String, dynamic>),
+      reasoningSteps: _reasoningStepsFromJson(json['reasoning_steps'] as List?),
+      reasoningSummary: json['reasoning_summary'] as String?,
+      isReasoningComplete: json['is_reasoning_complete'] as bool?,
+      meta: json['meta'] == null
+          ? null
+          : MessageMeta.fromJson(json['meta'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
@@ -49,6 +55,10 @@ Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
       'errors': instance.errors,
       'requires_confirmation': instance.requiresConfirmation,
       'confirmation_data': instance.confirmationData,
+      'reasoning_steps': _reasoningStepsToJson(instance.reasoningSteps),
+      'reasoning_summary': instance.reasoningSummary,
+      'is_reasoning_complete': instance.isReasoningComplete,
+      'meta': instance.meta,
     };
 
 const _$MessageRoleEnumMap = {
@@ -56,6 +66,21 @@ const _$MessageRoleEnumMap = {
   MessageRole.assistant: 'assistant',
   MessageRole.system: 'system',
 };
+
+MessageMeta _$MessageMetaFromJson(Map<String, dynamic> json) => MessageMeta(
+      latencyMs: (json['latency_ms'] as num?)?.toInt(),
+      isCacheHit: json['is_cache_hit'] as bool?,
+      costSaved: (json['cost_saved'] as num?)?.toDouble(),
+      breakerStatus: json['breaker_status'] as String?,
+    );
+
+Map<String, dynamic> _$MessageMetaToJson(MessageMeta instance) =>
+    <String, dynamic>{
+      'latency_ms': instance.latencyMs,
+      'is_cache_hit': instance.isCacheHit,
+      'cost_saved': instance.costSaved,
+      'breaker_status': instance.breakerStatus,
+    };
 
 WidgetPayload _$WidgetPayloadFromJson(Map<String, dynamic> json) =>
     WidgetPayload(

@@ -5,6 +5,10 @@ WORKDIR /app
 # Install git for go mod download if needed
 RUN apk add --no-cache git
 
+# Configure Go module proxy for better connectivity in China
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GO111MODULE=on
+
 COPY go.mod go.sum ./
 RUN go mod download
 

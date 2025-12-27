@@ -2,17 +2,22 @@
 知识星图核心服务 (Galaxy Service)
 处理星图数据、节点点亮、语义搜索等核心功能
 """
+import asyncio
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_, func, or_
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord
 from app.models.subject import Subject
 from app.services.embedding_service import embedding_service
 from app.services.expansion_service import ExpansionService
+from app.services.rerank_service import rerank_service
 from app.core.cache import cached, cache_service
+from app.core.redis_search_client import redis_search_client
+from redis.commands.search.query import Query
 from app.config import settings
 from app.schemas.galaxy import (
     GalaxyGraphResponse, NodeWithStatus, SparkEvent,
@@ -99,18 +104,216 @@ class GalaxyService:
          user_id: UUID,
          query: str,
          subject_id: Optional[int] = None,
-         limit: int = 10
+         limit: int = 20
     ) -> List[KnowledgeNode]:
-        """Keyword search for nodes"""
-        stmt = select(KnowledgeNode).where(
-            KnowledgeNode.name.ilike(f"%{query}%")
+        """
+        Keyword search for nodes (Sparse Retrieval)
+        Searches in name, description, and keywords.
+        """
+        # Multi-field keyword search
+        stmt = (
+            select(KnowledgeNode)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(
+                or_(
+                    KnowledgeNode.name.ilike(f"%{query}%"),
+                    KnowledgeNode.description.ilike(f"%{query}%"),
+                    func.json_extract_path_text(KnowledgeNode.keywords, '0').ilike(f"%{query}%") # Basic JSON search fallback
+                )
+            )
         )
+        
         if subject_id:
              stmt = stmt.where(KnowledgeNode.subject_id == subject_id)
         
         stmt = stmt.limit(limit)
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
+
+    async def hybrid_search(
+        self,
+        user_id: UUID,
+        query: str,
+        vector_query: Optional[str] = None,
+        subject_id: Optional[int] = None,
+        limit: int = 5,
+        threshold: float = 0.3,
+        use_reranker: bool = True
+    ) -> List[SearchResultItem]:
+        """
+        RAG v2.0 Hybrid Search: Redis Vector + Redis BM25 -> RRF -> Rerank
+        """
+        # 1. Prepare Queries
+        actual_vector_text = vector_query if vector_query else query
+        query_embedding = await embedding_service.get_embedding(actual_vector_text)
+        
+        # 2. Parallel Retrieval (Path A & Path B)
+        # We use asyncio.gather to trigger both searches simultaneously
+        vector_limit = limit * 10
+        keyword_limit = limit * 10
+        
+        # Path B Query Cleaning
+        cleaned_query = " ".join([w for w in query.split() if len(w) > 1])
+        if not cleaned_query:
+            cleaned_query = "*"
+            
+        bm25_q = (
+            Query(cleaned_query)
+            .paging(0, keyword_limit)
+            .return_fields("id", "parent_id", "content", "parent_name", "importance")
+            .dialect(2)
+        )
+
+        vector_task = redis_search_client.hybrid_search(
+            text_query="*", 
+            vector=query_embedding,
+            top_k=vector_limit
+        )
+        keyword_task = redis_search_client.search(bm25_q)
+        
+        vector_res, keyword_res = await asyncio.gather(vector_task, keyword_task)
+        
+        # Unpack Redis results
+        vec_docs = vector_res.docs if vector_res else []
+        kw_docs = keyword_res.docs if keyword_res else []
+        
+        # 3. RRF Fusion
+        # Fuse based on 'id' (Chunk ID). 
+        # If multiple chunks from same parent appear, we treat them as distinct candidates for now.
+        fused_results = rerank_service.reciprocal_rank_fusion([vec_docs, kw_docs])
+        
+        # 4. Reranking
+        candidates = [item for item, score in fused_results]
+        
+        # Extract unique parent_ids to avoid fetching same node multiple times?
+        # But Reranker needs content.
+        
+        if use_reranker and candidates:
+            # Rerank the chunks
+            final_chunks = await rerank_service.rerank(query, candidates, top_k=limit)
+        else:
+            final_chunks = candidates[:limit]
+            
+        # 5. Fetch Nodes from DB
+        # We need to map chunks back to KnowledgeNodes
+        parent_ids = list(set([chunk.parent_id for chunk in final_chunks]))
+        
+        if not parent_ids:
+            return []
+            
+        stmt = (
+            select(KnowledgeNode)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(KnowledgeNode.id.in_(parent_ids))
+        )
+        result = await self.db.execute(stmt)
+        nodes_map = {str(node.id): node for node in result.scalars().all()}
+        
+        # 6. Assemble Result
+        search_results = []
+        seen_parents = set()
+        
+        for chunk in final_chunks:
+            pid = chunk.parent_id
+            if pid not in nodes_map or pid in seen_parents:
+                continue
+            
+            seen_parents.add(pid)
+            node = nodes_map[pid]
+            
+            # Use rerank score if available? We don't have it easily from rerank_service (it returns items).
+            # We assign 1.0 or logic based on rank.
+            
+            user_status = await self._get_user_status(user_id, node.id)
+            
+            # Format NodeBase
+            sector_code_str = node.subject.sector_code if node.subject else 'VOID'
+            from app.schemas.galaxy import SectorCode, NodeBase, UserStatusInfo
+            try:
+                sector_enum = SectorCode(sector_code_str)
+            except ValueError:
+                sector_enum = SectorCode.VOID
+
+            node_base = NodeBase(
+                id=node.id,
+                name=node.name,
+                name_en=node.name_en,
+                description=node.description, # Could replace with chunk.content for specific highlight?
+                importance_level=node.importance_level,
+                sector_code=sector_enum,
+                is_seed=node.is_seed,
+                parent_name=node.parent.name if node.parent else None
+            )
+
+            # Format UserStatus
+            user_status_info = None
+            if user_status:
+                visual_status = self._calculate_visual_status(user_status)
+                brightness = self._calculate_brightness(user_status)
+
+                user_status_info = UserStatusInfo(
+                    mastery_score=user_status.mastery_score,
+                    total_study_minutes=user_status.total_study_minutes,
+                    study_count=user_status.study_count,
+                    is_unlocked=user_status.is_unlocked,
+                    is_collapsed=user_status.is_collapsed,
+                    is_favorite=user_status.is_favorite,
+                    last_study_at=user_status.last_study_at,
+                    next_review_at=user_status.next_review_at,
+                    decay_paused=user_status.decay_paused,
+                    status=visual_status,
+                    brightness=brightness
+                )
+
+            search_results.append(SearchResultItem(
+                node=node_base,
+                similarity=1.0, 
+                user_status=user_status_info
+            ))
+            
+        return search_results
+
+    async def semantic_search_nodes(
+        self,
+        query: str,
+        subject_id: Optional[int] = None,
+        limit: int = 10,
+        threshold: float = 0.3
+    ) -> List[KnowledgeNode]:
+        """Internal semantic search that returns KnowledgeNode models"""
+        query_embedding = await embedding_service.get_embedding(query)
+        
+        search_query = (
+            select(
+                KnowledgeNode,
+                KnowledgeNode.embedding.cosine_distance(query_embedding).label('distance')
+            )
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(KnowledgeNode.embedding.isnot(None))
+        )
+        
+        if subject_id:
+            search_query = search_query.where(KnowledgeNode.subject_id == subject_id)
+            
+        search_query = (
+            search_query
+            .order_by('distance')
+            .limit(limit)
+        )
+
+        result = await self.db.execute(search_query)
+        matches = result.all()
+        
+        return [node for node, distance in matches if distance <= threshold]
 
     # ==========================================
     # 1. 获取星图数据

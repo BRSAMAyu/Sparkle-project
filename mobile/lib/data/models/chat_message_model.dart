@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 part 'chat_message_model.g.dart';
 
@@ -36,6 +37,17 @@ class ChatMessageModel {
   final ConfirmationData? confirmationData;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? aiStatus; // Optional status for assistant messages (THINKING, etc.)
+
+  // New: Chain of Thought Visualization support
+  @JsonKey(name: 'reasoning_steps', fromJson: _reasoningStepsFromJson, toJson: _reasoningStepsToJson)
+  final List<ReasoningStep>? reasoningSteps; // Step-by-step thinking process
+
+  @JsonKey(name: 'reasoning_summary')
+  final String? reasoningSummary; // "Completed in 2.1s with 3 agents"
+
+  @JsonKey(name: 'is_reasoning_complete')
+  final bool? isReasoningComplete; // For real-time updates
+
   final MessageMeta? meta; // Metadata for FinOps and Chaos
 
   ChatMessageModel({
@@ -50,6 +62,10 @@ class ChatMessageModel {
     this.requiresConfirmation,
     this.confirmationData,
     this.aiStatus,
+    this.reasoningSteps,
+    this.reasoningSummary,
+    this.isReasoningComplete,
+    this.meta,
   }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now();
 
@@ -71,6 +87,9 @@ class ChatMessageModel {
     bool? requiresConfirmation,
     ConfirmationData? confirmationData,
     String? aiStatus,
+    List<ReasoningStep>? reasoningSteps,
+    String? reasoningSummary,
+    bool? isReasoningComplete,
     MessageMeta? meta,
   }) {
     return ChatMessageModel(
@@ -88,6 +107,9 @@ class ChatMessageModel {
       requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
       confirmationData: confirmationData ?? this.confirmationData,
       aiStatus: aiStatus ?? this.aiStatus,
+      reasoningSteps: reasoningSteps ?? this.reasoningSteps,
+      reasoningSummary: reasoningSummary ?? this.reasoningSummary,
+      isReasoningComplete: isReasoningComplete ?? this.isReasoningComplete,
       meta: meta ?? this.meta,
     );
   }
@@ -113,6 +135,17 @@ class MessageMeta {
 
   factory MessageMeta.fromJson(Map<String, dynamic> json) => _$MessageMetaFromJson(json);
   Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
+}
+
+// Helper functions for ReasoningStep serialization
+List<ReasoningStep>? _reasoningStepsFromJson(List<dynamic>? json) {
+  if (json == null) return null;
+  return json.map((e) => ReasoningStep.fromJson(e as Map<String, dynamic>)).toList();
+}
+
+List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
+  if (steps == null) return null;
+  return steps.map((e) => e.toJson()).toList();
 }
 
 @JsonSerializable()

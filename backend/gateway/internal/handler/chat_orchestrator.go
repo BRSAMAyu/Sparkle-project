@@ -253,6 +253,20 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			"completion_tokens": content.Usage.CompletionTokens,
 			"total_tokens":      content.Usage.TotalTokens,
 		}
+	case *agentv1.ChatResponse_Citations:
+		result["type"] = "citations"
+		citations := make([]map[string]interface{}, len(content.Citations.Citations))
+		for i, c := range content.Citations.Citations {
+			citations[i] = map[string]interface{}{
+				"id":          c.Id,
+				"title":       c.Title,
+				"content":     c.Content,
+				"source_type": c.SourceType,
+				"score":       c.Score,
+				"url":         c.Url,
+			}
+		}
+		result["citations"] = citations
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {

@@ -44,3 +44,28 @@ WHERE gm.group_id = $1
 AND gm.deleted_at IS NULL
 ORDER BY gm.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: CreatePost :one
+INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING *;
+
+-- name: GetPost :one
+SELECT * FROM posts
+WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: CreatePostLike :exec
+INSERT INTO post_likes (user_id, post_id, created_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT DO NOTHING;
+
+-- name: DeletePostLike :exec
+DELETE FROM post_likes
+WHERE user_id = $1 AND post_id = $2;
+
+-- name: CountPostLikes :one
+SELECT COUNT(*) FROM post_likes
+WHERE post_id = $1;
+
+-- name: GetUser :one
+SELECT * FROM users WHERE id = $1;

@@ -1,4 +1,5 @@
 import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 /// 聊天流事件基类
 abstract class ChatStreamEvent {}
@@ -83,4 +84,17 @@ class UsageEvent extends ChatStreamEvent {
     required this.completionTokens,
     required this.totalTokens,
   });
+}
+
+/// 推理步骤事件（Chain of Thought Visualization）
+class ReasoningStepEvent extends ChatStreamEvent {
+  final ReasoningStep step;
+
+  ReasoningStepEvent({required this.step});
+}
+
+/// 引用事件
+class CitationEvent extends ChatStreamEvent {
+  final List<Map<String, dynamic>> citations;
+  CitationEvent({required this.citations});
 }

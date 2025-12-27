@@ -101,19 +101,25 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                 Row(
                   children: [
                     if (targetDate != null) ...[
-                      Icon(Icons.calendar_today, size: 16, color: Theme.of(context).hintColor),
-                      const SizedBox(width: 4),
+                      Icon(Icons.calendar_today,
+                        size: AppDesignTokens.iconSizeSm,
+                        color: Theme.of(context).hintColor),
+                      const SizedBox(width: AppDesignTokens.spacing4),
                       Text('目标日期: $targetDate'),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: AppDesignTokens.spacing16),
                     ],
                     if (mastery != null) ...[
-                      Icon(Icons.grade, size: 16, color: Theme.of(context).hintColor),
-                      const SizedBox(width: 4),
+                      Icon(Icons.grade,
+                        size: AppDesignTokens.iconSizeSm,
+                        color: Theme.of(context).hintColor),
+                      const SizedBox(width: AppDesignTokens.spacing4),
                       Text('目标掌握度: ${(mastery * 100).toInt()}%'),
                     ],
                     const Spacer(),
-                    // Just a visual indicator now
-                    const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                    // Just a visual indicator now - not interactive so smaller is acceptable
+                    Icon(Icons.arrow_forward_ios,
+                      size: AppDesignTokens.iconSizeXs,
+                      color: AppDesignTokens.neutral400),
                   ],
                 ),
               ],
@@ -127,28 +133,31 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
   Widget _buildTypeIcon(String type) {
     IconData icon;
     Color color;
-    
+
     switch (type) {
       case 'sprint':
         icon = Icons.directions_run;
-        color = Colors.red;
+        color = AppDesignTokens.warning;
         break;
       case 'growth':
         icon = Icons.trending_up;
-        color = Colors.green;
+        color = AppDesignTokens.success;
         break;
       default:
         icon = Icons.assignment;
-        color = Colors.grey;
+        color = AppDesignTokens.neutral500;
     }
-    
+
+    // Ensure minimum 48x48 touch target
     return Container(
-      padding: const EdgeInsets.all(6),
+      width: AppDesignTokens.touchTargetMinSize,
+      height: AppDesignTokens.touchTargetMinSize,
+      padding: const EdgeInsets.all(AppDesignTokens.spacing8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppDesignTokens.borderRadius8,
       ),
-      child: Icon(icon, size: 20, color: color),
+      child: Icon(icon, size: AppDesignTokens.iconSizeBase, color: color),
     );
   }
 

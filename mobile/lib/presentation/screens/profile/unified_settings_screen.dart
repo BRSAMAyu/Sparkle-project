@@ -151,8 +151,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       ),
     );
   }
->>>>+++ REPLACE
-
 
   Widget _buildSectionHeader(IconData icon, String title) {
     return Row(
