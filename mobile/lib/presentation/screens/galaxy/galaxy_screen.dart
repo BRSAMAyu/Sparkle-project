@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:sparkle/presentation/widgets/decay/interactive_decay_timeline.dart';
 
 class GalaxyScreen extends StatefulWidget {
   const GalaxyScreen({super.key});
@@ -81,7 +82,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
           
           // 3. Floating Legend (Optional)
           Positioned(
-            bottom: 40,
+            bottom: 180,
             left: 20,
             right: 20,
             child: Center(
@@ -93,6 +94,27 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                   letterSpacing: 2,
                 ),
               ),
+            ),
+          ),
+
+          // 🔥 必杀技 B: 交互式衰减时间线
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: InteractiveDecayTimeline(
+              onDaysChanged: (days) {
+                // TODO: 更新Galaxy节点颜色/透明度
+                // 调用 GalaxyProvider 的 projectFutureDecay(days)
+                print('预测未来 $days 天的知识衰减');
+              },
+              onSimulateIntervention: (nodeIds, days) {
+                // TODO: 模拟复习效果
+                // 调用 GalaxyProvider 的 simulateReview(nodeIds, days)
+                print('模拟复习 ${nodeIds.length} 个节点');
+              },
+              selectedNodeIds: const [], // TODO: 从provider获取选中节点
+              initialDays: 30,
             ),
           ),
         ],

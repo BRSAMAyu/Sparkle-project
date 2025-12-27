@@ -25,7 +25,10 @@ from app.api.v1 import (
     vocabulary,
     audit,
     health_production,
-    graph_monitor
+    graph_monitor,
+    graphrag_trace,
+    decay_timemachine,
+    multi_agent
 )
 
 api_router = APIRouter()
@@ -50,6 +53,9 @@ api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
 api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
+api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
+api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 
 
 @api_router.get("/")

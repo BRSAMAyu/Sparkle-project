@@ -6,13 +6,38 @@ GraphRAG 检索器
 
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from loguru import logger
 import json
+import uuid
+from datetime import datetime
 
 from app.core.age_client import get_age_client
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service
+
+
+@dataclass
+class RetrievalTrace:
+    """检索追踪信息 - 用于可视化"""
+    trace_id: str
+    query: str
+    timestamp: datetime
+
+    # 节点信息
+    nodes_retrieved: List[Dict[str, Any]]  # 被检索的节点列表
+    node_sources: Dict[str, str]  # node_id -> source_method (vector/graph/user_interest)
+
+    # 关系信息
+    relationships: List[Dict[str, Any]]  # 图检索中的关系
+
+    # 检索方法详情
+    vector_search_results: List[Dict[str, Any]]
+    graph_search_results: List[Dict[str, Any]]
+    user_interest_nodes: List[str]
+
+    # 性能指标
+    timing: Dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -24,6 +49,9 @@ class GraphRAGResult:
     graph_results: List[Dict[str, Any]]
     fused_context: str
     metadata: Dict[str, Any]
+
+    # 新增：检索追踪信息
+    trace: Optional[RetrievalTrace] = None
 
 
 class GraphRAGRetriever:
@@ -121,7 +149,7 @@ class GraphRAGRetriever:
             logger.error(f"向量检索失败: {e}")
             return []
 
-    async def graph_search(self, entities: List[str], depth: int = 2) -> List[Dict[str, Any]]:
+    async def graph_search(self, entities: List[str], depth: int = 2) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         图检索（结构关联）
 
@@ -130,12 +158,13 @@ class GraphRAGRetriever:
             depth: 搜索深度
 
         Returns:
-            检索结果
+            (节点检索结果, 关系列表)
         """
         if not entities:
-            return []
+            return [], []
 
         results = []
+        relationships = []  # 新增：收集关系信息
 
         for entity in entities:
             try:
@@ -145,6 +174,8 @@ class GraphRAGRetriever:
                 -[r*1..{depth}]-(related)
                 WHERE ALL(edge IN r WHERE edge.strength > $min_strength)
                 RETURN
+                    start.id as start_id,
+                    start.name as start_name,
                     related.id as id,
                     related.name as name,
                     related.description as description,
@@ -160,18 +191,28 @@ class GraphRAGRetriever:
                     {"entity": entity, "min_strength": self.min_strength}
                 )
 
-                # 添加元数据
+                # 添加元数据并收集关系
                 for item in result:
                     item["source"] = "graph"
                     item["query_entity"] = entity
+
+                    # 收集关系信息（用于可视化）
+                    relationships.append({
+                        "from_id": item.get("start_id"),
+                        "from_name": item.get("start_name", entity),
+                        "to_id": item.get("id"),
+                        "to_name": item.get("name"),
+                        "relation_type": item.get("relation_type"),
+                        "strength": item.get("strength")
+                    })
 
                 results.extend(result)
 
             except Exception as e:
                 logger.warning(f"图检索失败 for {entity}: {e}")
 
-        logger.debug(f"图检索: {len(results)} 条结果")
-        return results
+        logger.debug(f"图检索: {len(results)} 条结果, {len(relationships)} 个关系")
+        return results, relationships
 
     async def get_user_interests(self, user_id: str) -> List[str]:
         """
@@ -262,7 +303,7 @@ class GraphRAGRetriever:
 
         return "\n\n".join(context_parts), fused
 
-    async def retrieve(self, query: str, user_id: str, depth: int = 2) -> GraphRAGResult:
+    async def retrieve(self, query: str, user_id: str, depth: int = 2, enable_trace: bool = True) -> GraphRAGResult:
         """
         GraphRAG 主检索流程
 
@@ -270,28 +311,46 @@ class GraphRAGRetriever:
             query: 用户查询
             user_id: 用户ID
             depth: 图搜索深度
+            enable_trace: 是否启用检索追踪（用于可视化）
 
         Returns:
             GraphRAGResult
         """
+        import time
         logger.info(f"GraphRAG 检索: query='{query}', user='{user_id}'")
 
+        # 性能追踪
+        timing = {}
+        start_time = time.time()
+
         # 1. 实体识别
+        t0 = time.time()
         entities = await self.extract_entities(query)
+        timing["entity_extraction"] = time.time() - t0
 
         # 2. 向量检索 (语义相似)
+        t0 = time.time()
         vector_results = await self.vector_search(query, top_k=5)
+        timing["vector_search"] = time.time() - t0
 
         # 3. 图检索 (结构关联)
-        graph_results = await self.graph_search(entities, depth)
+        t0 = time.time()
+        graph_results, relationships = await self.graph_search(entities, depth)
+        timing["graph_search"] = time.time() - t0
 
         # 4. 用户个性化
+        t0 = time.time()
         user_interests = await self.get_user_interests(user_id)
+        timing["user_interests"] = time.time() - t0
 
         # 5. 融合与去重
+        t0 = time.time()
         fused_context, unique_results = self.fuse_results(
             vector_results, graph_results, user_interests
         )
+        timing["fusion"] = time.time() - t0
+
+        timing["total"] = time.time() - start_time
 
         # 6. 构建元数据
         metadata = {
@@ -300,8 +359,32 @@ class GraphRAGRetriever:
             "fusion_count": len(unique_results),
             "entities": entities,
             "user_interests": user_interests,
-            "query": query
+            "query": query,
+            "timing": timing
         }
+
+        # 7. 构建检索追踪信息（用于前端可视化）
+        trace = None
+        if enable_trace:
+            # 构建节点来源映射
+            node_sources = {}
+            for node in vector_results:
+                node_sources[node["id"]] = "vector"
+            for node in graph_results:
+                node_sources[node["id"]] = "graph"
+
+            trace = RetrievalTrace(
+                trace_id=str(uuid.uuid4()),
+                query=query,
+                timestamp=datetime.now(),
+                nodes_retrieved=unique_results,
+                node_sources=node_sources,
+                relationships=relationships,
+                vector_search_results=vector_results,
+                graph_search_results=graph_results,
+                user_interest_nodes=user_interests,
+                timing=timing
+            )
 
         result = GraphRAGResult(
             query=query,
@@ -309,12 +392,14 @@ class GraphRAGRetriever:
             vector_results=vector_results,
             graph_results=graph_results,
             fused_context=fused_context,
-            metadata=metadata
+            metadata=metadata,
+            trace=trace
         )
 
         logger.info(
             f"GraphRAG 完成: vector={len(vector_results)}, "
-            f"graph={len(graph_results)}, fused={len(unique_results)}"
+            f"graph={len(graph_results)}, fused={len(unique_results)}, "
+            f"total_time={timing['total']:.3f}s"
         )
 
         return result
