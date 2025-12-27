@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'sparkle_gateway'
+    static_configs:
+      - targets: ['sparkle_gateway:8080']
+
+  - job_name: 'sparkle_backend'
+    static_configs:
+      - targets: ['sparkle_backend:8000']

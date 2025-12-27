@@ -3,22 +3,41 @@ package service
 import (
 	"context"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	MaxQueueSize   = 10000
-	ChatHistoryTTL = 30 * time.Minute
+	DefaultMaxQueueSize = 10000
+	ChatHistoryTTL      = 30 * time.Minute
 )
 
 type ChatHistoryService struct {
-	rdb *redis.Client
+	rdb              *redis.Client
+	breakerThreshold atomic.Int64
 }
 
 func NewChatHistoryService(rdb *redis.Client) *ChatHistoryService {
-	return &ChatHistoryService{rdb: rdb}
+	s := &ChatHistoryService{rdb: rdb}
+	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	return s
+}
+
+// SetBreakerThreshold updates the circuit breaker limit dynamically
+func (s *ChatHistoryService) SetBreakerThreshold(val int64) {
+	s.breakerThreshold.Store(val)
+}
+
+// GetBreakerThreshold returns the current limit
+func (s *ChatHistoryService) GetBreakerThreshold() int64 {
+	return s.breakerThreshold.Load()
+}
+
+// GetQueueLength returns the current persistent queue size
+func (s *ChatHistoryService) GetQueueLength(ctx context.Context) (int64, error) {
+	return s.rdb.LLen(ctx, "queue:persist:history").Result()
 }
 
 func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []byte) error {
@@ -44,11 +63,12 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 		return err
 	}
 
-	if qLen < MaxQueueSize {
+	threshold := s.breakerThreshold.Load()
+	if qLen < threshold {
 		pipe.RPush(ctx, queueKey, msg)
 	} else {
 		// Circuit Breaker triggered
-		log.Printf("Persistence queue overloaded (%d), dropping message for session %s", qLen, sid)
+		log.Printf("Persistence queue overloaded (%d/%d), dropping message for session %s", qLen, threshold, sid)
 		// We execute the pipeline (to save to cache) but skip the DB queue push.
 	}
 

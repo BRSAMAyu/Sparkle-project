@@ -54,3 +54,323 @@ $3
 DEL
 $29
 chat:history:test_session_456
+*2
+$6
+SELECT
+$2
+15
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_1
+$64
+{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_1
+$64
+{"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_1
+$64
+{"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 3", "timestamp": 1003}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 4", "timestamp": 1004}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 5", "timestamp": 1005}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 6", "timestamp": 1006}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_2
+$64
+{"role": "user", "content": "\u6d88\u606f 7", "timestamp": 1007}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 3", "timestamp": 1003}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 4", "timestamp": 1004}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 5", "timestamp": 1005}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 6", "timestamp": 1006}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 7", "timestamp": 1007}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 8", "timestamp": 1008}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$64
+{"role": "user", "content": "\u6d88\u606f 9", "timestamp": 1009}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$65
+{"role": "user", "content": "\u6d88\u606f 10", "timestamp": 1010}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$65
+{"role": "user", "content": "\u6d88\u606f 11", "timestamp": 1011}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$65
+{"role": "user", "content": "\u6d88\u606f 12", "timestamp": 1012}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$65
+{"role": "user", "content": "\u6d88\u606f 13", "timestamp": 1013}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_3
+$65
+{"role": "user", "content": "\u6d88\u606f 14", "timestamp": 1014}
+*3
+$5
+RPUSH
+$19
+queue:summarization
+$781
+{"session_id": "test_session_3", "history": [{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}, {"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}, {"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}, {"role": "user", "content": "\u6d88\u606f 3", "timestamp": 1003}, {"role": "user", "content": "\u6d88\u606f 4", "timestamp": 1004}, {"role": "user", "content": "\u6d88\u606f 5", "timestamp": 1005}, {"role": "user", "content": "\u6d88\u606f 6", "timestamp": 1006}, {"role": "user", "content": "\u6d88\u606f 7", "timestamp": 1007}, {"role": "user", "content": "\u6d88\u606f 8", "timestamp": 1008}, {"role": "user", "content": "\u6d88\u606f 9", "timestamp": 1009}], "user_id": "user_123", "timestamp": 1766813101.7453141, "priority": "high"}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 3", "timestamp": 1003}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 4", "timestamp": 1004}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 5", "timestamp": 1005}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 6", "timestamp": 1006}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 7", "timestamp": 1007}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 8", "timestamp": 1008}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$64
+{"role": "user", "content": "\u6d88\u606f 9", "timestamp": 1009}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$65
+{"role": "user", "content": "\u6d88\u606f 10", "timestamp": 1010}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$65
+{"role": "user", "content": "\u6d88\u606f 11", "timestamp": 1011}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$65
+{"role": "user", "content": "\u6d88\u606f 12", "timestamp": 1012}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$65
+{"role": "user", "content": "\u6d88\u606f 13", "timestamp": 1013}
+*3
+$5
+RPUSH
+$27
+chat:history:test_session_4
+$65
+{"role": "user", "content": "\u6d88\u606f 14", "timestamp": 1014}
+*3
+$5
+RPUSH
+$19
+queue:summarization
+$780
+{"session_id": "test_session_4", "history": [{"role": "user", "content": "\u6d88\u606f 0", "timestamp": 1000}, {"role": "user", "content": "\u6d88\u606f 1", "timestamp": 1001}, {"role": "user", "content": "\u6d88\u606f 2", "timestamp": 1002}, {"role": "user", "content": "\u6d88\u606f 3", "timestamp": 1003}, {"role": "user", "content": "\u6d88\u606f 4", "timestamp": 1004}, {"role": "user", "content": "\u6d88\u606f 5", "timestamp": 1005}, {"role": "user", "content": "\u6d88\u606f 6", "timestamp": 1006}, {"role": "user", "content": "\u6d88\u606f 7", "timestamp": 1007}, {"role": "user", "content": "\u6d88\u606f 8", "timestamp": 1008}, {"role": "user", "content": "\u6d88\u606f 9", "timestamp": 1009}], "user_id": "user_123", "timestamp": 1766813101.753231, "priority": "high"}
+*5
+$3
+SET
+$22
+summary:test_session_4
+$41
+用户之前询问了 Python 学习问题
+$4
+PXAT
+$13
+1766816701753
+*1
+$7
+FLUSHDB

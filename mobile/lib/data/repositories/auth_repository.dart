@@ -86,8 +86,9 @@ class AuthRepository {
           expiresIn: 3600,
         );
       }
+      final endpoint = provider == 'apple' ? '/auth/apple' : '/auth/social-login';
       final response = await _apiClient.post(
-        '/auth/social-login', // Assuming endpoint is relative to base URL prefix
+        endpoint,
         data: {
           'provider': provider,
           'token': token,
@@ -96,6 +97,8 @@ class AuthRepository {
           'avatar_url': avatarUrl,
         },
       );
+>>>>+++ REPLACE
+
       final tokenResponse = TokenResponse.fromJson(response.data);
       await saveTokens(tokenResponse);
       return tokenResponse;

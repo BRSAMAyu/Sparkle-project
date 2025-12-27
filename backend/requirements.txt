@@ -46,3 +46,11 @@ email-validator>=2.0.0
 slowapi>=0.1.9
 tenacity
 prometheus-fastapi-instrumentator
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-grpc
+opentelemetry-instrumentation-sqlalchemy

@@ -1,20 +1,30 @@
-FROM golang:1.24.0 AS builder
+FROM golang:1.24.0-alpine AS builder
 
 WORKDIR /app
+
+# Install git for go mod download if needed
+RUN apk add --no-cache git
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o gateway cmd/server/main.go
+# Build the binary
+# -ldflags="-w -s" strips debug information to reduce size
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gateway cmd/server/main.go
 
 FROM alpine:latest
 
+# Install CA certificates and Timezone data
+RUN apk --no-cache add ca-certificates tzdata
+
 WORKDIR /app
 
+# Copy the binary from builder
 COPY --from=builder /app/gateway .
-COPY --from=builder /app/.env . 
 
+# Expose port
 EXPOSE 8080
 
+# Run the binary
 CMD ["./gateway"]

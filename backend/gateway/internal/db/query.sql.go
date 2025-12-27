@@ -43,6 +43,69 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 	return i, err
 }
 
+const createSocialUser = `-- name: CreateSocialUser :one
+INSERT INTO users (
+    id, username, email, hashed_password, nickname, 
+    registration_source, is_active, apple_id, updated_at, created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at
+`
+
+type CreateSocialUserParams struct {
+	ID                 pgtype.UUID `json:"id"`
+	Username           string      `json:"username"`
+	Email              string      `json:"email"`
+	HashedPassword     string      `json:"hashed_password"`
+	Nickname           pgtype.Text `json:"nickname"`
+	RegistrationSource string      `json:"registration_source"`
+	IsActive           bool        `json:"is_active"`
+	AppleID            pgtype.Text `json:"apple_id"`
+}
+
+func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createSocialUser,
+		arg.ID,
+		arg.Username,
+		arg.Email,
+		arg.HashedPassword,
+		arg.Nickname,
+		arg.RegistrationSource,
+		arg.IsActive,
+		arg.AppleID,
+	)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Nickname,
+		&i.AvatarUrl,
+		&i.AvatarStatus,
+		&i.PendingAvatarUrl,
+		&i.FlameLevel,
+		&i.FlameBrightness,
+		&i.DepthPreference,
+		&i.CuriosityPreference,
+		&i.SchedulePreferences,
+		&i.WeatherPreferences,
+		&i.IsActive,
+		&i.IsSuperuser,
+		&i.Status,
+		&i.GoogleID,
+		&i.AppleID,
+		&i.WechatUnionid,
+		&i.RegistrationSource,
+		&i.LastLoginAt,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
@@ -220,6 +283,44 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 	return items, nil
 }
 
+const getUserByAppleID = `-- name: GetUserByAppleID :one
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at FROM users WHERE apple_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByAppleID, appleID)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Nickname,
+		&i.AvatarUrl,
+		&i.AvatarStatus,
+		&i.PendingAvatarUrl,
+		&i.FlameLevel,
+		&i.FlameBrightness,
+		&i.DepthPreference,
+		&i.CuriosityPreference,
+		&i.SchedulePreferences,
+		&i.WeatherPreferences,
+		&i.IsActive,
+		&i.IsSuperuser,
+		&i.Status,
+		&i.GoogleID,
+		&i.AppleID,
+		&i.WechatUnionid,
+		&i.RegistrationSource,
+		&i.LastLoginAt,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at FROM users WHERE email = $1 LIMIT 1
 `
@@ -256,4 +357,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const updateUserLastLogin = `-- name: UpdateUserLastLogin :exec
+UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) UpdateUserLastLogin(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, updateUserLastLogin, id)
+	return err
 }

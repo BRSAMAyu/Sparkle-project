@@ -5,10 +5,8 @@ Login, Register, Refresh Token, Social Login
 from datetime import timedelta
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import ValidationError
 
 from app.db.session import get_db
 from app.core.security import (
@@ -19,7 +17,7 @@ from app.core.security import (
 from app.models.user import User
 from app.schemas.user import (
     UserRegister, UserLogin, RefreshTokenRequest, 
-    SocialLoginRequest, UserBase
+    SocialLoginRequest
 )
 from app.config import settings
 from app.core.rate_limiting import limiter
@@ -156,10 +154,16 @@ async def social_login(
 ):
     """
     Social login (Google, Apple, WeChat)
-    Production-ready implementation with proper token verification
+    Note: Apple login is handled by Go Gateway for performance and security.
+    This endpoint remains for Google and WeChat.
     """
     # Validate provider
-    if data.provider not in ['google', 'apple', 'wechat']:
+    if data.provider not in ['google', 'wechat']:
+        if data.provider == 'apple':
+             raise HTTPException(
+                 status_code=400, 
+                 detail="Apple login should be performed via /api/v1/auth/apple on the Gateway"
+             )
         raise HTTPException(status_code=400, detail="Unsupported provider")
     
     # Verify social token with provider
@@ -189,25 +193,6 @@ async def social_login(
                     'picture': token_info.get('picture')
                 }
         
-        elif data.provider == 'apple':
-            # Apple token verification (simplified - in production, use proper JWT verification)
-            # Apple requires verifying the signature and claims
-            import jwt
-            try:
-                # Decode without verification first to get header
-                unverified_header = jwt.get_unverified_header(data.token)
-                # In production, verify signature with Apple's public keys
-                # This is a simplified version for demonstration
-                payload = jwt.decode(data.token, options={"verify_signature": False})
-                social_id = payload.get('sub')
-                user_info = {
-                    'email': payload.get('email'),
-                    'name': payload.get('name'),
-                    'picture': None
-                }
-            except Exception:
-                raise HTTPException(status_code=401, detail="Invalid Apple token")
-        
         elif data.provider == 'wechat':
             # WeChat token verification
             import httpx
@@ -230,6 +215,8 @@ async def social_login(
                     'picture': None
                 }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Social login verification failed for {data.provider}: {e}")
         raise HTTPException(status_code=401, detail=f"Social login verification failed: {str(e)}")
@@ -241,8 +228,6 @@ async def social_login(
     query = select(User)
     if data.provider == 'google':
         query = query.where(User.google_id == social_id)
-    elif data.provider == 'apple':
-        query = query.where(User.apple_id == social_id)
     elif data.provider == 'wechat':
         query = query.where(User.wechat_unionid == social_id)
     else:
@@ -269,8 +254,6 @@ async def social_login(
         
         if data.provider == 'google':
             user.google_id = social_id
-        elif data.provider == 'apple':
-            user.apple_id = social_id
         elif data.provider == 'wechat':
             user.wechat_unionid = social_id
 

@@ -43,10 +43,13 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
       - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       sparkle_db:
         condition: service_healthy
       redis:
+        condition: service_started
+      tempo:
         condition: service_started
 
   sparkle_gateway:
@@ -64,8 +67,62 @@ services:
       - AGENT_ADDRESS=sparkle_backend:50051
       - BACKEND_URL=http://sparkle_backend:8000
       - JWT_SECRET=change-me
+      - OTEL_EXPORTER_OTLP_ENDPOINT=sparkle_tempo:4317
     depends_on:
       sparkle_backend:
         condition: service_started
       sparkle_db:
         condition: service_healthy
+      tempo:
+        condition: service_started
+
+  # ==================== Observability Stack ====================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sparkle_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: sparkle_loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: sparkle_promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: sparkle_tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "3200:3200" # Tempo HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sparkle_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    depends_on:
+      - prometheus
+      - loki
+      - tempo

@@ -4,6 +4,7 @@ from .base import BaseTool, ToolCategory
 # 导入所有工具
 from .task_tools import CreateTaskTool, UpdateTaskStatusTool, BatchCreateTasksTool
 from .knowledge_tools import CreateKnowledgeNodeTool, QueryKnowledgeTool, LinkNodesTool
+from .ops_tools import CheckSystemStatusTool, QueryErrorLogsTool
 
 class ToolRegistry:
     """
@@ -30,6 +31,9 @@ class ToolRegistry:
             CreateKnowledgeNodeTool(),
             QueryKnowledgeTool(),
             LinkNodesTool(),
+            # 运维工具 (AIOps)
+            CheckSystemStatusTool(),
+            QueryErrorLogsTool(),
             # TODO: 添加更多工具
             # CreatePlanTool(),
             # GenerateTasksForPlanTool(),
