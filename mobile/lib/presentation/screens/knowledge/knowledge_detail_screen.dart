@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/presentation/widgets/learning_path/learning_path_dialog.dart';
 
 class KnowledgeDetailScreen extends ConsumerWidget {
   final String nodeId;
@@ -14,10 +15,10 @@ class KnowledgeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(knowledgeDetailProvider(nodeId));
 
-    return Scaffold(
-      body: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
+    return detailAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -30,8 +31,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
-        data: (detail) => _buildContent(context, ref, detail),
       ),
+      data: (detail) => _buildContent(context, ref, detail),
     );
   }
 
@@ -43,9 +44,27 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final sectorStyle = SectorConfig.getStyle(detail.node.sector);
     final theme = Theme.of(context);
 
-    return CustomScrollView(
-      slivers: [
-        // Hero Header with sector gradient
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'learning_path_fab',
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => LearningPathDialog(
+              targetNodeId: nodeId,
+              targetNodeName: detail.node.name,
+            ),
+          );
+        },
+        label: const Text('生成学习路径'),
+        icon: const Icon(Icons.timeline),
+        backgroundColor: sectorStyle.primaryColor,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          // Hero Header with sector gradient
         SliverAppBar(
           expandedHeight: 200,
           pinned: true,
@@ -261,10 +280,11 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           child: SizedBox(height: 100),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
-  IconData _getRelationIcon(String relationType) {
+IconData _getRelationIcon(String relationType) {
     switch (relationType) {
       case 'prerequisite':
         return Icons.arrow_upward;

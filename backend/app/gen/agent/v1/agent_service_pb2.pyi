@@ -19,12 +19,37 @@ class FinishReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TOOL_CALLS: _ClassVar[FinishReason]
     CONTENT_FILTER: _ClassVar[FinishReason]
     ERROR: _ClassVar[FinishReason]
+
+class AgentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    AGENT_UNKNOWN: _ClassVar[AgentType]
+    ORCHESTRATOR: _ClassVar[AgentType]
+    KNOWLEDGE: _ClassVar[AgentType]
+    MATH: _ClassVar[AgentType]
+    CODE: _ClassVar[AgentType]
+    DATA_ANALYSIS: _ClassVar[AgentType]
+    TRANSLATION: _ClassVar[AgentType]
+    IMAGE: _ClassVar[AgentType]
+    AUDIO: _ClassVar[AgentType]
+    WRITING: _ClassVar[AgentType]
+    REASONING: _ClassVar[AgentType]
 NULL: FinishReason
 STOP: FinishReason
 LENGTH: FinishReason
 TOOL_CALLS: FinishReason
 CONTENT_FILTER: FinishReason
 ERROR: FinishReason
+AGENT_UNKNOWN: AgentType
+ORCHESTRATOR: AgentType
+KNOWLEDGE: AgentType
+MATH: AgentType
+CODE: AgentType
+DATA_ANALYSIS: AgentType
+TRANSLATION: AgentType
+IMAGE: AgentType
+AUDIO: AgentType
+WRITING: AgentType
+REASONING: AgentType
 
 class ChatRequest(_message.Message):
     __slots__ = ("user_id", "session_id", "message", "tool_result", "user_profile", "extra_context", "history", "config", "request_id")
@@ -175,7 +200,7 @@ class ToolCall(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
 
 class AgentStatus(_message.Message):
-    __slots__ = ("state", "details", "current_agent_name")
+    __slots__ = ("state", "details", "current_agent_name", "active_agent")
     class State(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         UNKNOWN: _ClassVar[AgentStatus.State]
@@ -191,10 +216,12 @@ class AgentStatus(_message.Message):
     STATE_FIELD_NUMBER: _ClassVar[int]
     DETAILS_FIELD_NUMBER: _ClassVar[int]
     CURRENT_AGENT_NAME_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_AGENT_FIELD_NUMBER: _ClassVar[int]
     state: AgentStatus.State
     details: str
     current_agent_name: str
-    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ...) -> None: ...
+    active_agent: AgentType
+    def __init__(self, state: _Optional[_Union[AgentStatus.State, str]] = ..., details: _Optional[str] = ..., current_agent_name: _Optional[str] = ..., active_agent: _Optional[_Union[AgentType, str]] = ...) -> None: ...
 
 class Error(_message.Message):
     __slots__ = ("code", "message", "retryable", "details")

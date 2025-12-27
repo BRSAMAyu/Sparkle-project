@@ -46,6 +46,11 @@ const _$AgentTypeEnumMap = {
   AgentType.science: 'science',
   AgentType.knowledge: 'knowledge',
   AgentType.search: 'search',
+  AgentType.dataAnalysis: 'data_analysis',
+  AgentType.translation: 'translation',
+  AgentType.image: 'image',
+  AgentType.audio: 'audio',
+  AgentType.reasoning: 'reasoning',
 };
 
 const _$StepStatusEnumMap = {

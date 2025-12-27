@@ -17,7 +17,7 @@ enum StepStatus {
   failed,
 }
 
-/// 智能体类型枚举
+/// 智能体类型枚举 (与protobuf AgentType保持同步)
 enum AgentType {
   @JsonValue('orchestrator')
   orchestrator,  // 协调者
@@ -32,13 +32,28 @@ enum AgentType {
   writing,       // 写作专家
 
   @JsonValue('science')
-  science,       // 科学专家
+  science,       // 科学专家（保留用于兼容性）
 
   @JsonValue('knowledge')
   knowledge,     // 知识检索专家
 
   @JsonValue('search')
-  search,        // 搜索专家
+  search,        // 搜索专家（保留用于兼容性）
+
+  @JsonValue('data_analysis')
+  dataAnalysis,  // 数据分析专家
+
+  @JsonValue('translation')
+  translation,   // 翻译专家
+
+  @JsonValue('image')
+  image,         // 图像处理专家
+
+  @JsonValue('audio')
+  audio,         // 音频处理专家
+
+  @JsonValue('reasoning')
+  reasoning,     // 逻辑推理专家
 }
 
 /// 推理步骤模型

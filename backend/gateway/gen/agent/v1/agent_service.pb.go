@@ -81,6 +81,80 @@ func (FinishReason) EnumDescriptor() ([]byte, []int) {
 	return file_agent_service_proto_rawDescGZIP(), []int{0}
 }
 
+// AgentType defines the different types of specialized agents in the system.
+type AgentType int32
+
+const (
+	AgentType_AGENT_UNKNOWN AgentType = 0
+	AgentType_ORCHESTRATOR  AgentType = 1  // Main brain - understands intent, decomposes tasks, aggregates results
+	AgentType_KNOWLEDGE     AgentType = 2  // Librarian - handles GraphRAG retrieval, document search
+	AgentType_MATH          AgentType = 3  // Calculator - numerical computation, formula derivation
+	AgentType_CODE          AgentType = 4  // Engineer - code generation, debugging, execution
+	AgentType_DATA_ANALYSIS AgentType = 5  // Data Scientist - data processing, statistics, visualization
+	AgentType_TRANSLATION   AgentType = 6  // Translator - language translation, localization
+	AgentType_IMAGE         AgentType = 7  // Image Specialist - image generation, editing, analysis
+	AgentType_AUDIO         AgentType = 8  // Audio Engineer - audio processing, speech-to-text, music
+	AgentType_WRITING       AgentType = 9  // Writer - content creation, summarization, editing
+	AgentType_REASONING     AgentType = 10 // Logic Expert - complex reasoning, problem solving
+)
+
+// Enum value maps for AgentType.
+var (
+	AgentType_name = map[int32]string{
+		0:  "AGENT_UNKNOWN",
+		1:  "ORCHESTRATOR",
+		2:  "KNOWLEDGE",
+		3:  "MATH",
+		4:  "CODE",
+		5:  "DATA_ANALYSIS",
+		6:  "TRANSLATION",
+		7:  "IMAGE",
+		8:  "AUDIO",
+		9:  "WRITING",
+		10: "REASONING",
+	}
+	AgentType_value = map[string]int32{
+		"AGENT_UNKNOWN": 0,
+		"ORCHESTRATOR":  1,
+		"KNOWLEDGE":     2,
+		"MATH":          3,
+		"CODE":          4,
+		"DATA_ANALYSIS": 5,
+		"TRANSLATION":   6,
+		"IMAGE":         7,
+		"AUDIO":         8,
+		"WRITING":       9,
+		"REASONING":     10,
+	}
+)
+
+func (x AgentType) Enum() *AgentType {
+	p := new(AgentType)
+	*p = x
+	return p
+}
+
+func (x AgentType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentType) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_service_proto_enumTypes[1].Descriptor()
+}
+
+func (AgentType) Type() protoreflect.EnumType {
+	return &file_agent_service_proto_enumTypes[1]
+}
+
+func (x AgentType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentType.Descriptor instead.
+func (AgentType) EnumDescriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{1}
+}
+
 type AgentStatus_State int32
 
 const (
@@ -120,11 +194,11 @@ func (x AgentStatus_State) String() string {
 }
 
 func (AgentStatus_State) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_service_proto_enumTypes[1].Descriptor()
+	return file_agent_service_proto_enumTypes[2].Descriptor()
 }
 
 func (AgentStatus_State) Type() protoreflect.EnumType {
-	return &file_agent_service_proto_enumTypes[1]
+	return &file_agent_service_proto_enumTypes[2]
 }
 
 func (x AgentStatus_State) Number() protoreflect.EnumNumber {
@@ -988,11 +1062,13 @@ func (x *ToolCall) GetArguments() string {
 }
 
 type AgentStatus struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	State         AgentStatus_State      `protobuf:"varint,1,opt,name=state,proto3,enum=agent.v1.AgentStatus_State" json:"state,omitempty"`
-	Details       string                 `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	State            AgentStatus_State      `protobuf:"varint,1,opt,name=state,proto3,enum=agent.v1.AgentStatus_State" json:"state,omitempty"`
+	Details          string                 `protobuf:"bytes,2,opt,name=details,proto3" json:"details,omitempty"`
+	CurrentAgentName string                 `protobuf:"bytes,3,opt,name=current_agent_name,json=currentAgentName,proto3" json:"current_agent_name,omitempty"`         // Legacy: Human-readable agent name
+	ActiveAgent      AgentType              `protobuf:"varint,4,opt,name=active_agent,json=activeAgent,proto3,enum=agent.v1.AgentType" json:"active_agent,omitempty"` // Type-safe agent identifier for UI visualization
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AgentStatus) Reset() {
@@ -1037,6 +1113,20 @@ func (x *AgentStatus) GetDetails() string {
 		return x.Details
 	}
 	return ""
+}
+
+func (x *AgentStatus) GetCurrentAgentName() string {
+	if x != nil {
+		return x.CurrentAgentName
+	}
+	return ""
+}
+
+func (x *AgentStatus) GetActiveAgent() AgentType {
+	if x != nil {
+		return x.ActiveAgent
+	}
+	return AgentType_AGENT_UNKNOWN
 }
 
 type Error struct {
@@ -1543,10 +1633,12 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bToolCall\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
-	"\targuments\x18\x03 \x01(\tR\targuments\"\xb1\x01\n" +
+	"\targuments\x18\x03 \x01(\tR\targuments\"\x97\x02\n" +
 	"\vAgentStatus\x121\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1b.agent.v1.AgentStatus.StateR\x05state\x12\x18\n" +
-	"\adetails\x18\x02 \x01(\tR\adetails\"U\n" +
+	"\adetails\x18\x02 \x01(\tR\adetails\x12,\n" +
+	"\x12current_agent_name\x18\x03 \x01(\tR\x10currentAgentName\x126\n" +
+	"\factive_agent\x18\x04 \x01(\x0e2\x13.agent.v1.AgentTypeR\vactiveAgent\"U\n" +
 	"\x05State\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\f\n" +
 	"\bTHINKING\x10\x01\x12\r\n" +
@@ -1604,7 +1696,20 @@ const file_agent_service_proto_rawDesc = "" +
 	"\n" +
 	"TOOL_CALLS\x10\x03\x12\x12\n" +
 	"\x0eCONTENT_FILTER\x10\x04\x12\t\n" +
-	"\x05ERROR\x10\x052\x8e\x01\n" +
+	"\x05ERROR\x10\x05*\xa9\x01\n" +
+	"\tAgentType\x12\x11\n" +
+	"\rAGENT_UNKNOWN\x10\x00\x12\x10\n" +
+	"\fORCHESTRATOR\x10\x01\x12\r\n" +
+	"\tKNOWLEDGE\x10\x02\x12\b\n" +
+	"\x04MATH\x10\x03\x12\b\n" +
+	"\x04CODE\x10\x04\x12\x11\n" +
+	"\rDATA_ANALYSIS\x10\x05\x12\x0f\n" +
+	"\vTRANSLATION\x10\x06\x12\t\n" +
+	"\x05IMAGE\x10\a\x12\t\n" +
+	"\x05AUDIO\x10\b\x12\v\n" +
+	"\aWRITING\x10\t\x12\r\n" +
+	"\tREASONING\x10\n" +
+	"2\x8e\x01\n" +
 	"\fAgentService\x12=\n" +
 	"\n" +
 	"StreamChat\x12\x15.agent.v1.ChatRequest\x1a\x16.agent.v1.ChatResponse0\x01\x12?\n" +
@@ -1622,66 +1727,68 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 	return file_agent_service_proto_rawDescData
 }
 
-var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agent_service_proto_goTypes = []any{
 	(FinishReason)(0),             // 0: agent.v1.FinishReason
-	(AgentStatus_State)(0),        // 1: agent.v1.AgentStatus.State
-	(*ChatRequest)(nil),           // 2: agent.v1.ChatRequest
-	(*UserProfile)(nil),           // 3: agent.v1.UserProfile
-	(*ToolResult)(nil),            // 4: agent.v1.ToolResult
-	(*ChatConfig)(nil),            // 5: agent.v1.ChatConfig
-	(*ChatMessage)(nil),           // 6: agent.v1.ChatMessage
-	(*ChatResponse)(nil),          // 7: agent.v1.ChatResponse
-	(*CitationBlock)(nil),         // 8: agent.v1.CitationBlock
-	(*Citation)(nil),              // 9: agent.v1.Citation
-	(*ToolCall)(nil),              // 10: agent.v1.ToolCall
-	(*AgentStatus)(nil),           // 11: agent.v1.AgentStatus
-	(*Error)(nil),                 // 12: agent.v1.Error
-	(*Usage)(nil),                 // 13: agent.v1.Usage
-	(*MemoryQuery)(nil),           // 14: agent.v1.MemoryQuery
-	(*MemoryFilter)(nil),          // 15: agent.v1.MemoryFilter
-	(*MemoryResult)(nil),          // 16: agent.v1.MemoryResult
-	(*MemoryItem)(nil),            // 17: agent.v1.MemoryItem
-	nil,                           // 18: agent.v1.UserProfile.PreferencesEntry
-	nil,                           // 19: agent.v1.ChatMessage.MetadataEntry
-	nil,                           // 20: agent.v1.Error.DetailsEntry
-	nil,                           // 21: agent.v1.MemoryItem.MetadataEntry
-	(*structpb.Struct)(nil),       // 22: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
+	(AgentType)(0),                // 1: agent.v1.AgentType
+	(AgentStatus_State)(0),        // 2: agent.v1.AgentStatus.State
+	(*ChatRequest)(nil),           // 3: agent.v1.ChatRequest
+	(*UserProfile)(nil),           // 4: agent.v1.UserProfile
+	(*ToolResult)(nil),            // 5: agent.v1.ToolResult
+	(*ChatConfig)(nil),            // 6: agent.v1.ChatConfig
+	(*ChatMessage)(nil),           // 7: agent.v1.ChatMessage
+	(*ChatResponse)(nil),          // 8: agent.v1.ChatResponse
+	(*CitationBlock)(nil),         // 9: agent.v1.CitationBlock
+	(*Citation)(nil),              // 10: agent.v1.Citation
+	(*ToolCall)(nil),              // 11: agent.v1.ToolCall
+	(*AgentStatus)(nil),           // 12: agent.v1.AgentStatus
+	(*Error)(nil),                 // 13: agent.v1.Error
+	(*Usage)(nil),                 // 14: agent.v1.Usage
+	(*MemoryQuery)(nil),           // 15: agent.v1.MemoryQuery
+	(*MemoryFilter)(nil),          // 16: agent.v1.MemoryFilter
+	(*MemoryResult)(nil),          // 17: agent.v1.MemoryResult
+	(*MemoryItem)(nil),            // 18: agent.v1.MemoryItem
+	nil,                           // 19: agent.v1.UserProfile.PreferencesEntry
+	nil,                           // 20: agent.v1.ChatMessage.MetadataEntry
+	nil,                           // 21: agent.v1.Error.DetailsEntry
+	nil,                           // 22: agent.v1.MemoryItem.MetadataEntry
+	(*structpb.Struct)(nil),       // 23: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 24: google.protobuf.Timestamp
 }
 var file_agent_service_proto_depIdxs = []int32{
-	4,  // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
-	3,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
-	22, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
-	6,  // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
-	5,  // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
-	18, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
-	19, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
-	10, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
-	11, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
-	12, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
-	13, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
-	8,  // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
+	5,  // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
+	4,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
+	23, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
+	7,  // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
+	6,  // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
+	19, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
+	20, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
+	11, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
+	12, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
+	13, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
+	14, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
+	9,  // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
 	0,  // 12: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
-	9,  // 13: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
-	1,  // 14: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
-	20, // 15: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
-	15, // 16: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
-	23, // 17: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
-	23, // 18: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
-	17, // 19: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
-	23, // 20: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
-	21, // 21: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
-	2,  // 22: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
-	14, // 23: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
-	7,  // 24: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
-	16, // 25: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
-	24, // [24:26] is the sub-list for method output_type
-	22, // [22:24] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	10, // 13: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
+	2,  // 14: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
+	1,  // 15: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
+	21, // 16: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
+	16, // 17: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
+	24, // 18: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
+	24, // 19: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
+	18, // 20: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
+	24, // 21: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
+	22, // 22: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
+	3,  // 23: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
+	15, // 24: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
+	8,  // 25: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
+	17, // 26: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
+	25, // [25:27] is the sub-list for method output_type
+	23, // [23:25] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -1707,7 +1814,7 @@ func file_agent_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,

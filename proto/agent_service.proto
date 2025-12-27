@@ -165,6 +165,21 @@ message ToolCall {
     string arguments = 3;
 }
 
+// AgentType defines the different types of specialized agents in the system.
+enum AgentType {
+    AGENT_UNKNOWN = 0;
+    ORCHESTRATOR = 1;     // Main brain - understands intent, decomposes tasks, aggregates results
+    KNOWLEDGE = 2;        // Librarian - handles GraphRAG retrieval, document search
+    MATH = 3;             // Calculator - numerical computation, formula derivation
+    CODE = 4;             // Engineer - code generation, debugging, execution
+    DATA_ANALYSIS = 5;    // Data Scientist - data processing, statistics, visualization
+    TRANSLATION = 6;      // Translator - language translation, localization
+    IMAGE = 7;            // Image Specialist - image generation, editing, analysis
+    AUDIO = 8;            // Audio Engineer - audio processing, speech-to-text, music
+    WRITING = 9;          // Writer - content creation, summarization, editing
+    REASONING = 10;       // Logic Expert - complex reasoning, problem solving
+}
+
 message AgentStatus {
     enum State {
         UNKNOWN = 0;
@@ -175,7 +190,8 @@ message AgentStatus {
     }
     State state = 1;
     string details = 2;
-    string current_agent_name = 3;
+    string current_agent_name = 3;  // Legacy: Human-readable agent name
+    AgentType active_agent = 4;     // Type-safe agent identifier for UI visualization
 }
 
 message Error {
