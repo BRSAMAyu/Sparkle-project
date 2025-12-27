@@ -21,6 +21,7 @@ from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
+from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
 from app.core.websocket import manager
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -74,16 +75,22 @@ async def lifespan(app: FastAPI):
 
             # 🆕 4. 启动知识拓展后台任务
             await start_expansion_worker()
+
+            # 🆕 5. 启动图同步 Worker (AGE)
+            await start_sync_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
 
     logger.info("Sparkle API Server started successfully")
-    
+
     yield
-    
+
     # ==================== 关闭时 ====================
     logger.info("Shutting down Sparkle API Server...")
+
+    # 停止图同步 Worker
+    await stop_sync_worker()
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()
@@ -109,8 +116,14 @@ app = FastAPI(
 FastAPIInstrumentor.instrument_app(app)
 # Auto-instrument SQLAlchemy
 SQLAlchemyInstrumentor().instrument()
+# Auto-instrument Requests (for LLM API calls)
+RequestsInstrumentor().instrument()
+# Auto-instrument Redis
+RedisInstrumentor().instrument()
 
 setup_rate_limiting(app)
+>>>>+++ REPLACE
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

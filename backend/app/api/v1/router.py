@@ -23,7 +23,9 @@ from app.api.v1 import (
     stt,
     focus,
     vocabulary,
-    audit
+    audit,
+    health_production,
+    graph_monitor
 )
 
 api_router = APIRouter()
@@ -46,6 +48,8 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
+api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
+api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
 
 
 @api_router.get("/")

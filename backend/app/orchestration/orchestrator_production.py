@@ -32,6 +32,7 @@ except ImportError:
 
 from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
+from app.services.graph_knowledge_service import GraphKnowledgeService
 from app.services.user_service import UserService
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
@@ -561,17 +562,48 @@ class ProductionChatOrchestrator:
                 user_context_data = await self._build_user_context(user_id, active_db)
                 conversation_context = await self._build_conversation_context(session_id, user_id)
 
-                # RAG 检索（带降级）
+                # GraphRAG 检索（增强版，带降级）
                 knowledge_context = ""
                 try:
                     if active_db and user_id:
-                        ks = KnowledgeService(active_db)
-                        knowledge_context = await ks.retrieve_context(
+                        # 使用 GraphKnowledgeService 进行增强的 GraphRAG 检索
+                        graph_ks = GraphKnowledgeService(active_db)
+                        rag_result = await graph_ks.graph_rag_search(
+                            query=request.message if request.HasField("message") else "",
                             user_id=uuid.UUID(user_id),
-                            query=request.message if request.HasField("message") else ""
+                            depth=2,
+                            top_k=5
                         )
+                        knowledge_context = rag_result.get("context", "")
+
+                        # 记录 GraphRAG 指标
+                        if rag_result.get("metadata"):
+                            logger.info(
+                                f"GraphRAG results: "
+                                f"vector={rag_result['metadata'].get('vector_count', 0)}, "
+                                f"graph={rag_result['metadata'].get('graph_count', 0)}, "
+                                f"fused={rag_result['metadata'].get('fusion_count', 0)}"
+                            )
+
+                        # Prometheus 指标
+                        if PROMETHEUS_AVAILABLE:
+                            REQUEST_COUNTER.labels(status="graphrag_success", session_id=session_id).inc()
                 except Exception as e:
-                    logger.warning(f"Knowledge retrieval failed: {e}, continuing without RAG")
+                    logger.warning(f"GraphRAG retrieval failed: {e}, falling back to vector search")
+                    # 降级到普通向量检索
+                    try:
+                        if active_db and user_id:
+                            ks = KnowledgeService(active_db)
+                            knowledge_context = await ks.retrieve_context(
+                                user_id=uuid.UUID(user_id),
+                                query=request.message if request.HasField("message") else ""
+                            )
+                            if PROMETHEUS_AVAILABLE:
+                                REQUEST_COUNTER.labels(status="vector_success", session_id=session_id).inc()
+                    except Exception as e2:
+                        logger.error(f"Fallback knowledge retrieval also failed: {e2}")
+                        if PROMETHEUS_AVAILABLE:
+                            REQUEST_COUNTER.labels(status="rag_failed", session_id=session_id).inc()
 
             # 构建 Prompt
             base_system_prompt = build_system_prompt(
