@@ -10,6 +10,7 @@ import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 
 class ChatBubble extends StatefulWidget {
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
@@ -253,6 +254,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                 padding: const EdgeInsets.only(bottom: 8.0),
                                                 child: AiStatusBubble(status: (widget.message as ChatMessageModel).aiStatus!),
                                               ),
+                                            if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).reasoningSteps != null)
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 8.0),
+                                                child: AgentReasoningBubble(
+                                                  steps: (widget.message as ChatMessageModel).reasoningSteps!,
+                                                  isThinking: false,
+                                                  totalDurationMs: _calculateReasoningDuration(widget.message as ChatMessageModel),
+                                                ),
+                                              ),
                                             MarkdownBody(
                                               data: _content,
                                               styleSheet: _getMarkdownStyle(context, isUser),
@@ -454,6 +464,33 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
+  int? _calculateReasoningDuration(ChatMessageModel message) {
+    if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
+      return null;
+    }
+
+    // Calculate from first step to last completed step
+    final firstStep = message.reasoningSteps!.first;
+    final lastStep = message.reasoningSteps!.last;
+
+    if (firstStep.createdAt != null && lastStep.completedAt != null) {
+      return lastStep.completedAt!.difference(firstStep.createdAt!).inMilliseconds;
+    }
+
+    // Fallback to summary parsing if available
+    if (message.reasoningSummary != null) {
+      final match = RegExp(r'(\d+(?:\.\d+)?)s').firstMatch(message.reasoningSummary!);
+      if (match != null) {
+        final seconds = double.tryParse(match.group(1)!);
+        if (seconds != null) {
+          return (seconds * 1000).toInt();
+        }
+      }
+    }
+
+    return null;
+  }
+
   Widget _buildHeartAnimation() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -491,4 +528,3 @@ class _MetaTag extends StatelessWidget {
     );
   }
 }
->>>>+++ REPLACE

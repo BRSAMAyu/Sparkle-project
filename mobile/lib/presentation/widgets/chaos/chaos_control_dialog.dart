@@ -79,7 +79,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.Bolt, color: Colors.orange),
+          Icon(Icons.flash_on, color: Colors.orange),
           SizedBox(width: 8),
           Text('Sparkle 混沌控制台'),
         ],

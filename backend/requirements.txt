@@ -36,6 +36,9 @@ mypy>=1.8.0
 
 # LLM & AI
 openai>=1.10.0
+sentence-transformers>=2.2.2
+langchain-text-splitters>=0.0.1
+tiktoken>=0.5.2
 
 # Discovered Dependencies
 sse-starlette

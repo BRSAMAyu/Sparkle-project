@@ -97,7 +97,6 @@ class AuthRepository {
           'avatar_url': avatarUrl,
         },
       );
->>>>+++ REPLACE
 
       final tokenResponse = TokenResponse.fromJson(response.data);
       await saveTokens(tokenResponse);
