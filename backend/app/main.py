@@ -30,6 +30,8 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import SparkleException
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
 import sys
 
 # Configure Loguru
