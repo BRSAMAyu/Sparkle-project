@@ -27,6 +27,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi.responses import JSONResponse
 from app.core.exceptions import SparkleException
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+import sys
+
+# Configure Loguru
+logger.remove()
+logger.add(
+    sys.stderr,
+    level=settings.LOG_LEVEL,
+    serialize=not settings.DEBUG, # JSON format in production
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -93,6 +104,11 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Auto-instrument FastAPI
+FastAPIInstrumentor.instrument_app(app)
+# Auto-instrument SQLAlchemy
+SQLAlchemyInstrumentor().instrument()
 
 setup_rate_limiting(app)
 

@@ -13,14 +13,14 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # 假设 .env 在 backend 目录下，即 app 的父目录
 env_path = os.path.join(os.path.dirname(current_dir), ".env")
 
-# 显式加载 .env 文件，强制覆盖已存在的环境变量
-load_dotenv(env_path, override=True)
+# 不再显式加载 .env，交给 pydantic-settings 处理，以支持环境变量覆盖
+# load_dotenv(env_path, override=True)
 
 class Settings(BaseSettings):
     """Application settings"""
-    # 由于已经使用 load_dotenv 加载到环境中了，这里可以不需要 env_file
-    # 但保留它作为备选也是可以的
     model_config = SettingsConfigDict(
+        env_file=env_path,
+        env_file_encoding='utf-8',
         case_sensitive=True,
         extra="ignore"
     )

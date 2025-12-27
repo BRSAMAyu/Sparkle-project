@@ -25,6 +25,10 @@ func Load() *Config {
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 
+	// Read from .env file if it exists
+	viper.SetConfigFile(".env")
+	viper.ReadInConfig() // Ignore error if file not found
+
 	viper.AutomaticEnv()
 
 	var cfg Config

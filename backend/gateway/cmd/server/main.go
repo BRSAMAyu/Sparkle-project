@@ -11,16 +11,37 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/sparkle/gateway/internal/agent"
+	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/handler"
+	"github.com/sparkle/gateway/internal/infra/logger"
+	"github.com/sparkle/gateway/internal/infra/otel"
 	"github.com/sparkle/gateway/internal/infra/redis"
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.uber.org/zap"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	// _ "github.com/sparkle/gateway/docs" // Uncomment after running `swag init`
 )
 
 func main() {
+	// Initialize Zap Logger
+	logger.Init("sparkle-gateway")
+	defer logger.Log.Sync()
+
 	cfg := config.Load()
+
+	// Initialize OpenTelemetry
+	shutdown := otel.InitTracer("sparkle-gateway")
+	defer func() {
+		if err := shutdown(context.Background()); err != nil {
+			logger.Log.Error("Error shutting down tracer provider", zap.Error(err))
+		}
+	}()
 
 	// Connect to DB
 	ctx := context.Background()
@@ -29,7 +50,10 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 	defer conn.Close(ctx)
-	queries := db.New(conn)
+
+	// Initialize Chaos Manager (Wraps DB Connection)
+	chaosManager := chaos.NewManager(conn)
+	queries := db.New(chaosManager)
 
 	// Connect to Redis
 	rdb, err := redis.NewClient(cfg)
@@ -63,6 +87,9 @@ func main() {
 	// Setup Router
 	r := gin.Default()
 
+	// Apply OTel Middleware
+	r.Use(otelgin.Middleware("sparkle-gateway"))
+
 	// Apply Security Headers
 	r.Use(middleware.SecurityHeadersMiddleware())
 
@@ -81,6 +108,16 @@ func main() {
 
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
+	}
+
+	// Swagger UI
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Admin Routes (Chaos Engineering)
+	// In production, this should be protected by a strong admin secret or VPN
+	admin := r.Group("/admin")
+	{
+		admin.POST("/chaos/inject", chaosManager.HandleInject)
 	}
 
 	// Reverse Proxy for Python Backend (REST API)
@@ -130,8 +167,8 @@ func main() {
 		proxy.ServeHTTP(c.Writer, c.Request)
 	})
 
-	log.Printf("Gateway starting on :%s", cfg.Port)
+	logger.Log.Info("Gateway starting", zap.String("port", cfg.Port))
 	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
+		logger.Log.Fatal("Failed to run server", zap.Error(err))
 	}
 }

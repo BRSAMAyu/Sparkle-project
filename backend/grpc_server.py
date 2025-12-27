@@ -9,6 +9,7 @@ from concurrent import futures
 from loguru import logger
 import grpc
 from grpc_reflection.v1alpha import reflection
+from opentelemetry.instrumentation.grpc import GrpcAioInstrumentorServer
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.services.agent_grpc_service import AgentServiceImpl
@@ -89,6 +90,10 @@ async def serve():
     logger.info("=" * 60)
 
     # 启动服务器
+    # Auto-instrument gRPC Server
+    grpc_server_instrumentor = GrpcAioInstrumentorServer()
+    grpc_server_instrumentor.instrument()
+
     await server.start()
     logger.success("✅ gRPC server started successfully!")
 

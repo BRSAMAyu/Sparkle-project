@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/microcosm-cc/bluemonday"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
@@ -89,6 +90,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
 			continue
 		}
+
+		// Sanitize Input (Security Hygiene)
+		p := bluemonday.UGCPolicy()
+		input.Message = p.Sanitize(input.Message)
 
 		// Canonicalize Input (Semantic Cache Prep)
 		_ = h.semantic.Canonicalize(input.Message)

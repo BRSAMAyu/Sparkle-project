@@ -23,7 +23,7 @@ class GuestService {
     }
 
     // 生成新的访客 ID
-    final uuid = const Uuid();
+    const uuid = Uuid();
     final guestId = 'guest_${uuid.v4()}';
 
     await _prefs.setString(_guestIdKey, guestId);
