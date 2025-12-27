@@ -8,6 +8,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
+from app.services.graph_knowledge_service import GraphKnowledgeService
 from app.services.user_service import UserService
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
@@ -299,18 +300,40 @@ class ChatOrchestrator:
             await self._update_state(session_id, STATE_THINKING, "Pruning conversation history...")
             conversation_context = await self._build_conversation_context(session_id, user_id)
 
-            # Step 7: RAG Retrieval
+            # Step 7: GraphRAG Retrieval (Enhanced with graph database)
             await self._update_state(session_id, STATE_THINKING, "Retrieving relevant knowledge...")
             knowledge_context = ""
             if active_db and user_id:
                 try:
-                    ks = KnowledgeService(active_db)
-                    knowledge_context = await ks.retrieve_context(
+                    # Use GraphKnowledgeService for enhanced GraphRAG
+                    graph_ks = GraphKnowledgeService(active_db)
+                    rag_result = await graph_ks.graph_rag_search(
+                        query=user_message,
                         user_id=uuid.UUID(user_id),
-                        query=user_message
+                        depth=2,
+                        top_k=5
                     )
+                    knowledge_context = rag_result.get("context", "")
+
+                    # Log GraphRAG metrics
+                    if rag_result.get("metadata"):
+                        logger.info(
+                            f"GraphRAG results: "
+                            f"vector={rag_result['metadata'].get('vector_count', 0)}, "
+                            f"graph={rag_result['metadata'].get('graph_count', 0)}, "
+                            f"fused={rag_result['metadata'].get('fusion_count', 0)}"
+                        )
                 except Exception as e:
-                    logger.warning(f"Knowledge retrieval failed: {e}")
+                    logger.warning(f"GraphRAG retrieval failed: {e}, falling back to vector search")
+                    # Fallback to regular KnowledgeService
+                    try:
+                        ks = KnowledgeService(active_db)
+                        knowledge_context = await ks.retrieve_context(
+                            user_id=uuid.UUID(user_id),
+                            query=user_message
+                        )
+                    except Exception as e2:
+                        logger.error(f"Fallback knowledge retrieval also failed: {e2}")
 
             # Step 8: Build Prompt with ContextPruner
             await self._update_state(session_id, STATE_THINKING, "Building system prompt...")
