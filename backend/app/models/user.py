@@ -95,6 +95,13 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    token_usage = relationship(
+        "TokenUsage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     error_records = relationship(
         "ErrorRecord",
         back_populates="user",

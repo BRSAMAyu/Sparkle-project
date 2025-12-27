@@ -110,12 +110,16 @@ class LLMResponse:
 
 @dataclass
 class StreamChunk:
-    type: str  # "text" | "tool_call_chunk" | "tool_call_end"
+    type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage"
     content: Optional[str] = None
     tool_call_id: Optional[str] = None
     tool_name: Optional[str] = None
     arguments: Optional[str] = None # For tool_call_chunk
     full_arguments: Optional[Dict] = None # For tool_call_end
+    # Token usage fields
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 class LLMService:
     """
@@ -326,15 +330,15 @@ class LLMService:
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
-        
+
         Yields:
-            StreamChunk: 文本块或工具调用
+            StreamChunk: 文本块、工具调用或 Token 使用量
         """
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
-        
+
         if hasattr(self.provider, 'client'):
             stream = await self.provider.client.chat.completions.create(
                 model=self.default_model,
@@ -343,36 +347,44 @@ class LLMService:
                 tool_choice="auto",
                 stream=True,
                 temperature=0.7,
+                stream_options={"include_usage": True}  # 请求 usage 信息
             )
-            
+
             collected_tool_call_chunks = {} # {id: {name: "", args_str: ""}}
-            
+            usage_data = None
+
             async for chunk in stream:
-                delta = chunk.choices[0].delta
-                
-                # Text content
-                if delta.content:
-                    yield StreamChunk(type="text", content=delta.content)
-                
-                # Tool call chunks
-                if delta.tool_calls:
-                    for tc_chunk in delta.tool_calls:
-                        tool_call_id = tc_chunk.id
-                        
-                        if tool_call_id not in collected_tool_call_chunks:
-                            collected_tool_call_chunks[tool_call_id] = {
-                                "name": "",
-                                "args_str": ""
-                            }
-                            
-                        if tc_chunk.function.name:
-                            collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
-                            yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
-                            
-                        if tc_chunk.function.arguments:
-                            collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
-                            yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
-            
+                # Handle usage data (may come in final chunk)
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    usage_data = chunk.usage
+
+                # Handle choices
+                if chunk.choices:
+                    delta = chunk.choices[0].delta
+
+                    # Text content
+                    if delta.content:
+                        yield StreamChunk(type="text", content=delta.content)
+
+                    # Tool call chunks
+                    if delta.tool_calls:
+                        for tc_chunk in delta.tool_calls:
+                            tool_call_id = tc_chunk.id
+
+                            if tool_call_id not in collected_tool_call_chunks:
+                                collected_tool_call_chunks[tool_call_id] = {
+                                    "name": "",
+                                    "args_str": ""
+                                }
+
+                            if tc_chunk.function.name:
+                                collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
+                                yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
+
+                            if tc_chunk.function.arguments:
+                                collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
+                                yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+
             # After stream ends, yield full tool call if any
             for tool_call_id, data in collected_tool_call_chunks.items():
                 if data["name"] and data["args_str"]:
@@ -386,6 +398,15 @@ class LLMService:
                         )
                     except json.JSONDecodeError:
                         logger.error(f"Failed to decode tool arguments for {tool_call_id}: {data['args_str']}")
+
+            # Finally, yield usage data
+            if usage_data:
+                yield StreamChunk(
+                    type="usage",
+                    prompt_tokens=usage_data.prompt_tokens,
+                    completion_tokens=usage_data.completion_tokens,
+                    total_tokens=usage_data.total_tokens
+                )
 
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")

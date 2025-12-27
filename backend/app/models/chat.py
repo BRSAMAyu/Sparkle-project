@@ -4,10 +4,11 @@ ChatMessage Model - 用户与AI的对话记录
 """
 import enum
 import uuid
-from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean
+from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean, Float
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
+from sqlalchemy import DateTime
 
 
 class MessageRole(str, enum.Enum):
@@ -67,9 +68,50 @@ class ChatMessage(BaseModel):
         return f"<ChatMessage(role={self.role}, session_id={self.session_id})>"
 
 
+class TokenUsage(BaseModel):
+    """
+    Token 使用量记录模型
+
+    用于计费和统计分析
+
+    字段:
+        user_id: 用户ID
+        session_id: 会话ID
+        request_id: 请求ID
+        prompt_tokens: 输入Token数
+        completion_tokens: 输出Token数
+        total_tokens: 总Token数
+        model: 模型名称
+        cost: 估算成本（美元）
+    """
+
+    __tablename__ = "token_usage"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), nullable=False, index=True)
+    request_id = Column(String(100), nullable=False, unique=True)
+
+    prompt_tokens = Column(Integer, nullable=False, default=0)
+    completion_tokens = Column(Integer, nullable=False, default=0)
+    total_tokens = Column(Integer, nullable=False, default=0)
+
+    model = Column(String(100), nullable=False, default="gpt-4")
+    cost = Column(Float, nullable=True)  # 估算成本（美元）
+
+    # 关系
+    user = relationship("User", back_populates="token_usage")
+
+    def __repr__(self):
+        return f"<TokenUsage(user_id={self.user_id}, tokens={self.total_tokens}, cost={self.cost})>"
+
+
 # 创建索引
 Index("idx_chat_user_id", ChatMessage.user_id)
 Index("idx_chat_session_id", ChatMessage.session_id)
 Index("idx_chat_task_id", ChatMessage.task_id)
 Index("idx_chat_created_at", ChatMessage.created_at)
 Index("idx_chat_role", ChatMessage.role)
+
+Index("idx_token_usage_user_id", TokenUsage.user_id)
+Index("idx_token_usage_session_id", TokenUsage.session_id)
+Index("idx_token_usage_created_at", TokenUsage.created_at)

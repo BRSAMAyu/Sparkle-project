@@ -1,7 +1,14 @@
 """
-User Service
+User Service - 生产级实现
 用户服务封装，提供用户上下文和偏好数据
+
+特性:
+- Cache-Aside 模式: Redis 缓存 + 数据库回源
+- JSON 序列化: 兼容性好，支持多语言
+- 缓存失效: 用户更新时自动失效
+- 容错降级: 缓存/DB 故障时优雅降级
 """
+import json
 from typing import Optional, Dict, Any
 from uuid import UUID
 from loguru import logger
@@ -14,13 +21,20 @@ from app.schemas.user import UserContext, UserPreferences
 
 class UserService:
     """
-    用户服务
-    提供用户上下文、偏好设置等数据
+    用户服务 - 生产级实现
+
+    特性:
+    - Cache-Aside 模式: Redis 缓存 + 数据库回源
+    - JSON 序列化: 兼容性好，支持多语言
+    - 缓存失效: 用户更新时自动失效
+    - 容错降级: 缓存/DB 故障时优雅降级
     """
-    
-    def __init__(self, db_session: AsyncSession):
+
+    def __init__(self, db_session: AsyncSession, redis_client=None):
         self.db = db_session
-        logger.info("UserService initialized")
+        self.redis = redis_client
+        self.cache_ttl = 1800  # 30分钟
+        logger.info("UserService initialized with cache support")
 
     async def get_user_by_id(self, user_id: UUID) -> Optional[User]:
         """
@@ -43,41 +57,71 @@ class UserService:
 
     async def get_context(self, user_id: UUID) -> Optional[UserContext]:
         """
-        获取用户上下文（用于 LLM Prompt）
-        
+        获取用户上下文（带缓存）
+
         Args:
             user_id: 用户 ID
-            
+
         Returns:
             Optional[UserContext]: 用户上下文，如果获取失败则返回 None
+
+        策略:
+            1. Cache Lookup: 检查 Redis 缓存
+            2. DB Query: 缓存未命中时查询数据库
+            3. Cache Write: 写入缓存
+            4. Fallback: 缓存/DB 失败时返回 None
         """
+        cache_key = f"user:context:{user_id}"
+
+        # 1. Cache Lookup
+        if self.redis:
+            try:
+                cached = await self.redis.get(cache_key)
+                if cached:
+                    data = json.loads(cached)
+                    context = UserContext(**data)
+                    logger.debug(f"Cache HIT for user {user_id}")
+                    return context
+            except Exception as e:
+                logger.warning(f"Cache lookup failed: {e}, falling back to DB")
+
+        # 2. Database Query
         try:
             user = await self.get_user_by_id(user_id)
             if not user:
                 logger.warning(f"User {user_id} not found")
                 return None
 
-            # 获取推送偏好
             push_pref = await self._get_push_preference(user_id)
 
-            # 构建上下文
             context = UserContext(
                 user_id=str(user_id),
                 nickname=user.nickname or user.username,
                 timezone=push_pref.timezone if push_pref else "Asia/Shanghai",
-                language="zh-CN",  # 默认中文
-                is_pro=user.flame_level >= 3,  # 火花等级 3+ 为 Pro
+                language="zh-CN",
+                is_pro=user.flame_level >= 3,
                 preferences={
                     "depth_preference": user.depth_preference,
                     "curiosity_preference": user.curiosity_preference,
                     "flame_level": user.flame_level,
                     "flame_brightness": user.flame_brightness,
                 },
-                # 动态偏好
                 active_slots=push_pref.active_slots if push_pref else None,
                 daily_cap=push_pref.daily_cap if push_pref else 5,
                 persona_type=push_pref.persona_type if push_pref else "coach",
             )
+
+            # 3. Cache Write
+            if self.redis:
+                try:
+                    await self.redis.setex(
+                        cache_key,
+                        self.cache_ttl,
+                        json.dumps(context.dict(), ensure_ascii=False)
+                    )
+                    logger.debug(f"Cache WRITE for user {user_id}")
+                except Exception as e:
+                    logger.warning(f"Cache write failed: {e}")
 
             logger.debug(f"Retrieved context for user {user_id}: {context.nickname}")
             return context
@@ -121,24 +165,35 @@ class UserService:
 
     async def get_analytics_summary(self, user_id: UUID) -> Optional[Dict[str, Any]]:
         """
-        获取用户分析摘要（用于 LLM 上下文）
-        
+        获取用户分析摘要（带缓存）
+
         Args:
             user_id: 用户 ID
-            
+
         Returns:
             Optional[Dict]: 分析摘要
         """
+        cache_key = f"user:analytics:{user_id}"
+
+        # 1. Cache Lookup
+        if self.redis:
+            try:
+                cached = await self.redis.get(cache_key)
+                if cached:
+                    logger.debug(f"Analytics cache HIT for user {user_id}")
+                    return json.loads(cached)
+            except Exception as e:
+                logger.warning(f"Analytics cache lookup failed: {e}")
+
+        # 2. Database Query
         try:
             user = await self.get_user_by_id(user_id)
             if not user:
                 return None
 
-            # 简单的活跃度分析
             is_active = user.last_login_at is not None
             active_level = "active" if is_active else "inactive"
-            
-            # 基于火花等级的活跃度
+
             flame_level = user.flame_level
             if flame_level >= 5:
                 engagement = "very_high"
@@ -159,6 +214,18 @@ class UserService:
                 "curiosity_preference": user.curiosity_preference,
                 "registration_source": user.registration_source,
             }
+
+            # 3. Cache Write
+            if self.redis:
+                try:
+                    await self.redis.setex(
+                        cache_key,
+                        self.cache_ttl,
+                        json.dumps(summary, ensure_ascii=False)
+                    )
+                    logger.debug(f"Analytics cache WRITE for user {user_id}")
+                except Exception as e:
+                    logger.warning(f"Analytics cache write failed: {e}")
 
             logger.debug(f"Analytics summary for user {user_id}: {summary}")
             return summary

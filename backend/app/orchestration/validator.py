@@ -8,6 +8,7 @@ from loguru import logger
 from dataclasses import dataclass
 
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.token_tracker import TokenTracker
 
 
 @dataclass
@@ -35,7 +36,7 @@ class RequestValidator:
     
     # 正则模式
     PATTERN_SESSION_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
-    PATTERN_USER_ID = re.compile(r'^[a-zA-Z0-9-]{1,100}$')
+    PATTERN_USER_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
     PATTERN_REQUEST_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
     
     # 敏感词过滤（简单示例）
@@ -46,10 +47,20 @@ class RequestValidator:
         re.compile(r'onerror=', re.IGNORECASE),
     ]
     
-    def __init__(self):
-        logger.info("RequestValidator initialized")
+    def __init__(self, redis_client=None, daily_quota: int = 100000):
+        """
+        初始化 RequestValidator
 
-    def validate_chat_request(self, request: agent_service_pb2.ChatRequest) -> ValidationResult:
+        Args:
+            redis_client: Redis 客户端（用于配额检查）
+            daily_quota: 每日 Token 配额限制
+        """
+        self.redis = redis_client
+        self.daily_quota = daily_quota
+        self.token_tracker = TokenTracker(redis_client) if redis_client else None
+        logger.info(f"RequestValidator initialized with daily_quota={daily_quota}")
+
+    async def validate_chat_request(self, request: agent_service_pb2.ChatRequest) -> ValidationResult:
         """
         验证 ChatRequest
         
@@ -112,12 +123,39 @@ class RequestValidator:
                 if not result.is_valid:
                     return result
             
+            # 6. 配额检查（如果启用了 Redis）
+            if self.token_tracker:
+                quota_check = await self.token_tracker.check_quota(
+                    user_id=request.user_id,
+                    daily_limit=self.daily_quota
+                )
+
+                if not quota_check["within_quota"]:
+                    error_msg = (
+                        f"Daily token quota exceeded. "
+                        f"Used: {quota_check['used']}/{quota_check['limit']} tokens "
+                        f"({quota_check['percentage']}). "
+                        f"Please try again tomorrow or upgrade your plan."
+                    )
+                    logger.warning(
+                        f"Quota exceeded for user {request.user_id}: "
+                        f"{quota_check['used']}/{quota_check['limit']}"
+                    )
+                    return ValidationResult(False, error_msg)
+
+                # 记录配额使用情况到日志
+                logger.debug(
+                    f"Quota check passed for user {request.user_id}: "
+                    f"{quota_check['used']}/{quota_check['limit']} "
+                    f"({quota_check['percentage']})"
+                )
+
             return ValidationResult(True, sanitized_data={
                 "user_id": request.user_id,
                 "session_id": request.session_id,
                 "request_id": request.request_id,
             })
-            
+
         except Exception as e:
             logger.error(f"Error validating request: {e}")
             return ValidationResult(False, f"Validation error: {str(e)}")
