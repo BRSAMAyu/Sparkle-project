@@ -14,12 +14,15 @@ import (
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/event"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/infra/otel"
 	"github.com/sparkle/gateway/internal/infra/redis"
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
+	"github.com/sparkle/gateway/internal/worker"
+	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 
@@ -87,6 +90,23 @@ func main() {
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService)
 
+	// Auth Service
+	appleAuthService, err := service.NewAppleAuthService(cfg)
+	if err != nil {
+		log.Printf("Warning: Apple Auth Service init failed: %v", err)
+	}
+	authHandler := handler.NewAuthHandler(cfg, queries, appleAuthService)
+
+	// Community Module (CQRS)
+	eventBus := event.NewRedisEventBus(rdb)
+	commCmdService := service.NewCommunityCommandService(queries, eventBus)
+	commQueryService := service.NewCommunityQueryService(rdb)
+	commHandler := v1.NewCommunityHandler(commCmdService, commQueryService)
+	commSyncWorker := worker.NewCommunitySyncWorker(rdb, queries)
+
+	// Start Sync Worker (Background)
+	go commSyncWorker.Run(context.Background())
+
 	// Setup Router
 	r := gin.Default()
 
@@ -114,6 +134,9 @@ func main() {
 
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
+
+		// Community Routes
+		commHandler.RegisterRoutes(api)
 	}
 
 	// Swagger UI

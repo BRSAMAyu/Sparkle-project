@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPostLikes = `-- name: CountPostLikes :one
+SELECT COUNT(*) FROM post_likes
+WHERE post_id = $1
+`
+
+func (q *Queries) CountPostLikes(ctx context.Context, postID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countPostLikes, postID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createChatMessage = `-- name: CreateChatMessage :one
 INSERT INTO chat_messages (id, session_id, user_id, role, content, created_at)
 VALUES ($1, $2, $3, $4, $5, NOW())
@@ -41,6 +53,56 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 	var i CreateChatMessageRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
+}
+
+const createPost = `-- name: CreatePost :one
+INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at
+`
+
+type CreatePostParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	Content   string      `json:"content"`
+	ImageUrls []byte      `json:"image_urls"`
+	Topic     pgtype.Text `json:"topic"`
+}
+
+func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
+	row := q.db.QueryRow(ctx, createPost,
+		arg.UserID,
+		arg.Content,
+		arg.ImageUrls,
+		arg.Topic,
+	)
+	var i Post
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.ImageUrls,
+		&i.Topic,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const createPostLike = `-- name: CreatePostLike :exec
+INSERT INTO post_likes (user_id, post_id, created_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT DO NOTHING
+`
+
+type CreatePostLikeParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	PostID pgtype.UUID `json:"post_id"`
+}
+
+func (q *Queries) CreatePostLike(ctx context.Context, arg CreatePostLikeParams) error {
+	_, err := q.db.Exec(ctx, createPostLike, arg.UserID, arg.PostID)
+	return err
 }
 
 const createSocialUser = `-- name: CreateSocialUser :one
@@ -162,6 +224,21 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deletePostLike = `-- name: DeletePostLike :exec
+DELETE FROM post_likes
+WHERE user_id = $1 AND post_id = $2
+`
+
+type DeletePostLikeParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	PostID pgtype.UUID `json:"post_id"`
+}
+
+func (q *Queries) DeletePostLike(ctx context.Context, arg DeletePostLikeParams) error {
+	_, err := q.db.Exec(ctx, deletePostLike, arg.UserID, arg.PostID)
+	return err
+}
+
 const getChatHistory = `-- name: GetChatHistory :many
 SELECT user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, id, created_at, updated_at, deleted_at FROM chat_messages 
 WHERE session_id = $1 
@@ -281,6 +358,65 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const getPost = `-- name: GetPost :one
+SELECT id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at FROM posts
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetPost(ctx context.Context, id pgtype.UUID) (Post, error) {
+	row := q.db.QueryRow(ctx, getPost, id)
+	var i Post
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.ImageUrls,
+		&i.Topic,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUser = `-- name: GetUser :one
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, id, created_at, updated_at, deleted_at FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Nickname,
+		&i.AvatarUrl,
+		&i.AvatarStatus,
+		&i.PendingAvatarUrl,
+		&i.FlameLevel,
+		&i.FlameBrightness,
+		&i.DepthPreference,
+		&i.CuriosityPreference,
+		&i.SchedulePreferences,
+		&i.WeatherPreferences,
+		&i.IsActive,
+		&i.IsSuperuser,
+		&i.Status,
+		&i.GoogleID,
+		&i.AppleID,
+		&i.WechatUnionid,
+		&i.RegistrationSource,
+		&i.LastLoginAt,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const getUserByAppleID = `-- name: GetUserByAppleID :one

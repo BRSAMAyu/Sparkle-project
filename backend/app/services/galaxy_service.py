@@ -150,33 +150,30 @@ class GalaxyService:
         query_embedding = await embedding_service.get_embedding(actual_vector_text)
         
         # 2. Parallel Retrieval (Path A & Path B)
-        # Path A: Vector Search (Dense)
-        # (*)=>[KNN 50 @vector $vec AS vector_score]
+        # We use asyncio.gather to trigger both searches simultaneously
         vector_limit = limit * 10
-        vector_res = await redis_search_client.hybrid_search(
-            text_query="*", # No text filter for pure vector path
-            vector=query_embedding,
-            top_k=vector_limit
-        )
-        
-        # Path B: Keyword Search (Sparse BM25)
-        # @content:query | @keywords:query
         keyword_limit = limit * 10
-        q_str = f"@content|keywords:{query}"
-        # If query has spaces, might need tokenization or Exact phrase? 
-        # Redis simple syntax is union by default for spaces? No, intersection?
-        # Let's clean query: simple words.
+        
+        # Path B Query Cleaning
         cleaned_query = " ".join([w for w in query.split() if len(w) > 1])
         if not cleaned_query:
             cleaned_query = "*"
-        
+            
         bm25_q = (
             Query(cleaned_query)
             .paging(0, keyword_limit)
             .return_fields("id", "parent_id", "content", "parent_name", "importance")
             .dialect(2)
         )
-        keyword_res = await redis_search_client.search(bm25_q)
+
+        vector_task = redis_search_client.hybrid_search(
+            text_query="*", 
+            vector=query_embedding,
+            top_k=vector_limit
+        )
+        keyword_task = redis_search_client.search(bm25_q)
+        
+        vector_res, keyword_res = await asyncio.gather(vector_task, keyword_task)
         
         # Unpack Redis results
         vec_docs = vector_res.docs if vector_res else []

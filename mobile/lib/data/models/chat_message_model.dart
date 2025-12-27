@@ -137,6 +137,17 @@ class MessageMeta {
   Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
 }
 
+// Helper functions for ReasoningStep serialization
+List<ReasoningStep>? _reasoningStepsFromJson(List<dynamic>? json) {
+  if (json == null) return null;
+  return json.map((e) => ReasoningStep.fromJson(e as Map<String, dynamic>)).toList();
+}
+
+List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
+  if (steps == null) return null;
+  return steps.map((e) => e.toJson()).toList();
+}
+
 @JsonSerializable()
 class WidgetPayload {
   final String type;  // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'

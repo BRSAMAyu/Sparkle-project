@@ -2657,3 +2657,49 @@ ALTER TABLE ONLY public.word_books
 --
 
 
+
+
+--
+-- Community Module Tables
+--
+
+CREATE TABLE public.posts (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    image_urls json,
+    topic character varying(100),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+ALTER TABLE public.posts OWNER TO postgres;
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+CREATE INDEX idx_posts_user_id ON public.posts USING btree (user_id);
+CREATE INDEX idx_posts_created_at ON public.posts USING btree (created_at);
+
+CREATE TABLE public.post_likes (
+    user_id uuid NOT NULL,
+    post_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.post_likes OWNER TO postgres;
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_pkey PRIMARY KEY (user_id, post_id);
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+CREATE INDEX idx_post_likes_post_id ON public.post_likes USING btree (post_id);

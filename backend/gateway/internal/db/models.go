@@ -845,6 +845,23 @@ type Plan struct {
 	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
 }
 
+type Post struct {
+	ID        pgtype.UUID      `json:"id"`
+	UserID    pgtype.UUID      `json:"user_id"`
+	Content   string           `json:"content"`
+	ImageUrls []byte           `json:"image_urls"`
+	Topic     pgtype.Text      `json:"topic"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+}
+
+type PostLike struct {
+	UserID    pgtype.UUID      `json:"user_id"`
+	PostID    pgtype.UUID      `json:"post_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
 type PrivateMessage struct {
 	SenderID    pgtype.UUID      `json:"sender_id"`
 	ReceiverID  pgtype.UUID      `json:"receiver_id"`

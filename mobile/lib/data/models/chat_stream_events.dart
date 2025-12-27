@@ -92,3 +92,9 @@ class ReasoningStepEvent extends ChatStreamEvent {
 
   ReasoningStepEvent({required this.step});
 }
+
+/// 引用事件
+class CitationEvent extends ChatStreamEvent {
+  final List<Map<String, dynamic>> citations;
+  CitationEvent({required this.citations});
+}
