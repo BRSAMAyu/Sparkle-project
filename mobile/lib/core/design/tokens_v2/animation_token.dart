@@ -1,0 +1,343 @@
+import 'package:flutter/material.dart';
+
+/// 动画系统 - 物理模拟 + 语义化
+@immutable
+class AnimationSystem {
+  const AnimationSystem._();
+
+  // 物理模拟曲线
+  static const Curve spring = Curves.elasticOut;
+  static const Curve bounce = Curves.bounceOut;
+  static const Curve smooth = Curves.easeInOutCubic;
+  static const Curve easeOut = Curves.easeOut;
+  static const Curve easeIn = Curves.easeIn;
+
+  // 语义化时长
+  static const Duration instant = Duration(milliseconds: 0);
+  static const Duration quick = Duration(milliseconds: 150);
+  static const Duration normal = Duration(milliseconds: 250);
+  static const Duration slow = Duration(milliseconds: 400);
+  static const Duration deliberate = Duration(milliseconds: 600);
+
+  // 组合配置
+  static const Map<AnimationPurpose, AnimationConfig> configs = {
+    AnimationPurpose.buttonTap: AnimationConfig(
+      duration: Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+      scale: 0.95,
+    ),
+    AnimationPurpose.pageTransition: AnimationConfig(
+      duration: Duration(milliseconds: 350),
+      curve: Curves.easeInOutCubic,
+      offset: Offset(0.1, 0),
+    ),
+    AnimationPurpose.loading: AnimationConfig(
+      duration: Duration(milliseconds: 1000),
+      curve: Curves.linear,
+      rotation: 2 * 3.14159,
+    ),
+    AnimationPurpose.expand: AnimationConfig(
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    ),
+    AnimationPurpose.feedback: AnimationConfig(
+      duration: Duration(milliseconds: 50),
+      curve: Curves.easeOut,
+      scale: 0.98,
+    ),
+  };
+}
+
+enum AnimationPurpose {
+  buttonTap,
+  pageTransition,
+  loading,
+  feedback,
+  expand,
+  fade,
+  slide,
+}
+
+@immutable
+class AnimationConfig {
+  final Duration duration;
+  final Curve curve;
+  final double? scale;
+  final Offset? offset;
+  final double? rotation;
+  final double? opacity;
+
+  const AnimationConfig({
+    required this.duration,
+    required this.curve,
+    this.scale,
+    this.offset,
+    this.rotation,
+    this.opacity,
+  });
+
+  /// 创建动画Tween序列
+  List<TweenSequence<dynamic>> createTweenSequence() {
+    final sequences = <TweenSequence<dynamic>>[];
+
+    if (scale != null) {
+      sequences.add(TweenSequence<double>(
+        [
+          TweenSequenceItem(
+            tween: Tween(begin: 1.0, end: scale!),
+            weight: 1,
+          ),
+          TweenSequenceItem(
+            tween: Tween(begin: scale!, end: 1.0),
+            weight: 1,
+          ),
+        ],
+      ));
+    }
+
+    if (offset != null) {
+      sequences.add(TweenSequence<Offset>(
+        [
+          TweenSequenceItem(
+            tween: Tween(begin: Offset.zero, end: offset!),
+            weight: 1,
+          ),
+          TweenSequenceItem(
+            tween: Tween(begin: offset!, end: Offset.zero),
+            weight: 1,
+          ),
+        ],
+      ));
+    }
+
+    if (opacity != null) {
+      sequences.add(TweenSequence<double>(
+        [
+          TweenSequenceItem(
+            tween: Tween(begin: 1.0, end: opacity!),
+            weight: 1,
+          ),
+          TweenSequenceItem(
+            tween: Tween(begin: opacity!, end: 1.0),
+            weight: 1,
+          ),
+        ],
+      ));
+    }
+
+    return sequences;
+  }
+
+  /// 应用动画到Widget
+  Widget animate({
+    required Widget child,
+    required AnimationController controller,
+  }) {
+    final animation = controller.drive(
+      TweenSequence(createTweenSequence()),
+    );
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        Widget result = child!;
+
+        if (scale != null) {
+          result = Transform.scale(
+            scale: animation.value,
+            child: result,
+          );
+        }
+
+        if (offset != null) {
+          result = Transform.translate(
+            offset: Offset.lerp(
+              Offset.zero,
+              offset!,
+              controller.value,
+            )!,
+            child: result,
+          );
+        }
+
+        if (rotation != null) {
+          result = Transform.rotate(
+            angle: controller.value * rotation!,
+            child: result,
+          );
+        }
+
+        if (opacity != null) {
+          result = Opacity(
+            opacity: animation.value,
+            child: result,
+          );
+        }
+
+        return result;
+      },
+      child: child,
+    );
+  }
+}
+
+/// 动画令牌 - 语义化命名
+@immutable
+class AnimationToken {
+  final String name;
+  final Duration duration;
+  final Curve curve;
+
+  const AnimationToken(this.name, this.duration, this.curve);
+
+  /// 创建动画控制器配置
+  AnimationConfig toConfig({double? scale, Offset? offset, double? rotation}) {
+    return AnimationConfig(
+      duration: duration,
+      curve: curve,
+      scale: scale,
+      offset: offset,
+      rotation: rotation,
+    );
+  }
+
+  /// 应用到动画
+  Animation<double> apply(AnimationController controller) {
+    return controller.drive(CurveTween(curve: curve));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AnimationToken &&
+          runtimeType == other.runtimeType &&
+          duration == other.duration &&
+          curve == other.curve;
+
+  @override
+  int get hashCode => Object.hash(duration, curve);
+}
+
+/// 便捷动画扩展
+extension AnimationExtensions on Widget {
+  /// 淡入动画
+  Widget fadeIn({Duration duration = AnimationSystem.normal}) {
+    return AnimatedOpacity(
+      opacity: 1.0,
+      duration: duration,
+      child: this,
+    );
+  }
+
+  /// 上滑动画
+  Widget slideUp({Duration duration = AnimationSystem.normal}) {
+    return AnimatedSlide(
+      offset: const Offset(0, 0),
+      from: const Offset(0, 0.2),
+      duration: duration,
+      child: this,
+    );
+  }
+
+  /// 缩放动画
+  Widget scaleIn({Duration duration = AnimationSystem.normal}) {
+    return AnimatedScale(
+      scale: 1.0,
+      from: 0.8,
+      duration: duration,
+      child: this,
+    );
+  }
+}
+
+/// 自定义AnimatedSlide扩展
+class AnimatedSlide extends ImplicitlyAnimatedWidget {
+  final Widget child;
+  final Offset offset;
+  final Offset from;
+
+  const AnimatedSlide({
+    super.key,
+    required this.child,
+    required this.offset,
+    this.from = Offset.zero,
+    super.duration = AnimationSystem.normal,
+    super.curve = Curves.easeOut,
+  });
+
+  @override
+  ImplicitlyAnimatedWidgetState<AnimatedSlide> createState() => _AnimatedSlideState();
+}
+
+class _AnimatedSlideState extends ImplicitlyAnimatedWidgetState<AnimatedSlide> {
+  Tween<Offset>? _offsetTween;
+  Animation<Offset>? _offsetAnimation;
+
+  @override
+  void forEachTween(TweenVisitor<dynamic> visitor) {
+    _offsetTween = visitor(
+      _offsetTween,
+      widget.offset,
+      (dynamic value) => Tween<Offset>(begin: value),
+    ) as Tween<Offset>?;
+  }
+
+  @override
+  void didUpdateTweens() {
+    _offsetAnimation = animation.drive(_offsetTween!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _offsetAnimation!,
+      child: widget.child,
+    );
+  }
+}
+
+/// 自定义AnimatedScale扩展
+class AnimatedScale extends ImplicitlyAnimatedWidget {
+  final Widget child;
+  final double scale;
+  final double from;
+
+  const AnimatedScale({
+    super.key,
+    required this.child,
+    required this.scale,
+    this.from = 1.0,
+    super.duration = AnimationSystem.normal,
+    super.curve = Curves.easeOut,
+  });
+
+  @override
+  ImplicitlyAnimatedWidgetState<AnimatedScale> createState() => _AnimatedScaleState();
+}
+
+class _AnimatedScaleState extends ImplicitlyAnimatedWidgetState<AnimatedScale> {
+  Tween<double>? _scaleTween;
+  Animation<double>? _scaleAnimation;
+
+  @override
+  void forEachTween(TweenVisitor<dynamic> visitor) {
+    _scaleTween = visitor(
+      _scaleTween,
+      widget.scale,
+      (dynamic value) => Tween<double>(begin: value),
+    ) as Tween<double>?;
+  }
+
+  @override
+  void didUpdateTweens() {
+    _scaleAnimation = animation.drive(_scaleTween!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation!,
+      child: widget.child,
+    );
+  }
+}

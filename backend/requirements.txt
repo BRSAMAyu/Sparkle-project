@@ -58,4 +58,4 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-grpc
 opentelemetry-instrumentation-sqlalchemy
 opentelemetry-instrumentation-requests
-opentelemetry-instrumentation-redis
+opentelemetry-instrumentation-redisnetworkx>=3.2.1

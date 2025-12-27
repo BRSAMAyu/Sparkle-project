@@ -34,6 +34,59 @@ STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
 
 
+def get_agent_type_for_tool(tool_name: str) -> int:
+    """
+    Map tool names to AgentType enum for multi-agent visualization.
+
+    Returns:
+        AgentType enum value (int)
+    """
+    tool_lower = tool_name.lower()
+
+    # Knowledge-related tools -> KNOWLEDGE agent
+    if any(keyword in tool_lower for keyword in ['knowledge', 'query', 'search', 'retrieve', 'vector', 'graphrag']):
+        return agent_service_pb2.KNOWLEDGE
+
+    # Math/calculation tools -> MATH agent
+    if any(keyword in tool_lower for keyword in ['math', 'calculate', 'wolfram', 'compute', 'formula', 'equation']):
+        return agent_service_pb2.MATH
+
+    # Code/system tools -> CODE agent
+    if any(keyword in tool_lower for keyword in ['code', 'execute', 'run', 'system', 'debug', 'compile']):
+        return agent_service_pb2.CODE
+
+    # Data analysis tools -> DATA_ANALYSIS agent
+    if any(keyword in tool_lower for keyword in ['data', 'analyze', 'statistic', 'chart', 'plot', 'visualize', 'pandas', 'numpy']):
+        return agent_service_pb2.DATA_ANALYSIS
+
+    # Translation tools -> TRANSLATION agent
+    if any(keyword in tool_lower for keyword in ['translate', 'language', 'localize', 'i18n']):
+        return agent_service_pb2.TRANSLATION
+
+    # Image tools -> IMAGE agent
+    if any(keyword in tool_lower for keyword in ['image', 'photo', 'picture', 'draw', 'generate_image', 'edit_image']):
+        return agent_service_pb2.IMAGE
+
+    # Audio tools -> AUDIO agent
+    if any(keyword in tool_lower for keyword in ['audio', 'sound', 'music', 'speech', 'voice', 'tts', 'stt']):
+        return agent_service_pb2.AUDIO
+
+    # Writing/content tools -> WRITING agent
+    if any(keyword in tool_lower for keyword in ['write', 'summarize', 'compose', 'draft', 'edit_text']):
+        return agent_service_pb2.WRITING
+
+    # Reasoning/logic tools -> REASONING agent
+    if any(keyword in tool_lower for keyword in ['reason', 'logic', 'solve', 'deduce', 'infer', 'prove']):
+        return agent_service_pb2.REASONING
+
+    # Task/orchestration tools -> ORCHESTRATOR
+    if any(keyword in tool_lower for keyword in ['task', 'plan', 'create', 'update', 'batch', 'orchestrate']):
+        return agent_service_pb2.ORCHESTRATOR
+
+    # Default to ORCHESTRATOR
+    return agent_service_pb2.ORCHESTRATOR
+
+
 class ChatOrchestrator:
     """
     Enhanced ChatOrchestrator with production-ready features:
@@ -352,7 +405,8 @@ class ChatOrchestrator:
                             status_update=agent_service_pb2.AgentStatus(
                                 state=agent_service_pb2.AgentStatus.SEARCHING,
                                 details=f"Found {len(citation_protos)} relevant knowledge points",
-                                current_agent_name="SearchAgent"
+                                current_agent_name="SearchAgent",
+                                active_agent=agent_service_pb2.KNOWLEDGE
                             )
                         )
 
@@ -380,7 +434,8 @@ class ChatOrchestrator:
                 request_id=request_id,
                 status_update=agent_service_pb2.AgentStatus(
                     state=agent_service_pb2.AgentStatus.THINKING,
-                    details="Analyzing your request and preparing response..."
+                    details="Analyzing your request and preparing response...",
+                    active_agent=agent_service_pb2.ORCHESTRATOR
                 )
             )
 
@@ -425,8 +480,9 @@ class ChatOrchestrator:
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             status_update=agent_service_pb2.AgentStatus(
-                                state=agent_service_pb2.AgentStatus.TOOL_CALLING,
-                                details=f"[{chunk.tool_name}] {message} ({progress}%)"
+                                state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                                details=f"[{chunk.tool_name}] {message} ({progress}%)",
+                                active_agent=get_agent_type_for_tool(chunk.tool_name)
                             )
                         )
 
@@ -435,8 +491,9 @@ class ChatOrchestrator:
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.TOOL_CALLING,
-                            details=f"Executing {chunk.tool_name}..."
+                            state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                            details=f"Executing {chunk.tool_name}...",
+                            active_agent=get_agent_type_for_tool(chunk.tool_name)
                         ),
                         tool_call=agent_service_pb2.ToolCall(
                             id=chunk.tool_call_id,
