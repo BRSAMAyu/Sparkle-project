@@ -2,6 +2,7 @@
 知识星图核心服务 (Galaxy Service)
 处理星图数据、节点点亮、语义搜索等核心功能
 """
+import asyncio
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime, timedelta

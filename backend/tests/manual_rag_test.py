@@ -3,7 +3,7 @@ import sys
 import os
 import uuid
 from loguru import logger
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List
 
 # Add backend directory to path
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -12,6 +12,7 @@ from app.orchestration.orchestrator import ChatOrchestrator
 from app.gen.agent.v1 import agent_service_pb2
 from app.db.session import AsyncSessionLocal
 from app.services.llm_service import llm_service
+from app.services.embedding_service import embedding_service
 from redis.asyncio import Redis
 from app.config import settings
 
@@ -19,19 +20,23 @@ from app.config import settings
 async def mock_chat_stream(*args, **kwargs):
     yield type('Chunk', (), {'type': 'text', 'content': 'Answer based on RAG.'})()
 
+# Mock Embedding Service
+async def mock_get_embedding(text: str) -> List[float]:
+    return [0.0] * 1536
+
 async def test_rag_flow():
     # Setup
     redis = Redis.from_url(settings.REDIS_URL, password=settings.REDIS_PASSWORD, decode_responses=True)
     
-    # Mock LLM
+    # Apply Mocks
     llm_service.chat_stream_with_tools = mock_chat_stream
+    embedding_service.get_embedding = mock_get_embedding
     
     orchestrator = ChatOrchestrator(redis_client=redis)
     
     req_id = str(uuid.uuid4())
     session_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4()) # Needs to be a valid UUID for UUID(user_id) conversion in code?
-    # Actually Orchestrator converts to UUID, so string must be valid UUID format.
+    user_id = str(uuid.uuid4()) 
     
     request = agent_service_pb2.ChatRequest(
         request_id=req_id,
@@ -43,7 +48,6 @@ async def test_rag_flow():
     logger.info("🚀 Starting RAG Flow Test...")
     
     async with AsyncSessionLocal() as session:
-        # Mock UserService if needed or ensure it handles missing user gracefully (it does fallback)
         async for response in orchestrator.process_stream(request, db_session=session):
             if response.HasField("status_update"):
                 status = response.status_update
