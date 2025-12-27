@@ -14,7 +14,8 @@ class ToolExecutor:
         tool_name: str,
         arguments: Dict[str, Any],
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        progress_callback: Optional[Any] = None
     ) -> ToolResult:
         """
         执行单个工具调用
@@ -50,7 +51,11 @@ class ToolExecutor:
             )
         
         # 执行工具
-        result = await tool.execute(validated_params, user_id, db_session)
+        # 如果工具有 is_long_running 属性，可以传递进度回调
+        if getattr(tool, "is_long_running", False) and progress_callback:
+            result = await tool.execute(validated_params, user_id, db_session, progress_callback=progress_callback)
+        else:
+            result = await tool.execute(validated_params, user_id, db_session)
         return result
     
     async def execute_tool_calls(

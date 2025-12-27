@@ -20,6 +20,9 @@ from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.token_tracker import TokenTracker
 from app.gen.agent.v1 import agent_service_pb2
 from app.config import settings
+from app.core.metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE, TOOL_EXECUTION_COUNT, ACTIVE_SESSIONS
+)
 
 # FSM States
 STATE_INIT = "INIT"
@@ -216,6 +219,8 @@ class ChatOrchestrator:
         """
         Process the incoming chat request with enhanced features
         """
+        start_time = time.time()
+        ACTIVE_SESSIONS.inc()
         request_id = request.request_id
         session_id = request.session_id
         user_id = request.user_id
@@ -393,6 +398,18 @@ class ChatOrchestrator:
                     # Tool call is ready
                     await self._update_state(session_id, STATE_TOOL_CALLING, f"Calling {chunk.tool_name}...")
 
+                    # Create a progress callback for the tool
+                    async def send_progress(progress: int, message: str, task_id: str = None):
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=f"resp_{uuid.uuid4()}",
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            status_update=agent_service_pb2.AgentStatus(
+                                state=agent_service_pb2.AgentStatus.TOOL_CALLING,
+                                details=f"[{chunk.tool_name}] {message} ({progress}%)"
+                            )
+                        )
+
                     yield agent_service_pb2.ChatResponse(
                         response_id=f"resp_{uuid.uuid4()}",
                         created_at=int(datetime.now().timestamp()),
@@ -412,6 +429,10 @@ class ChatOrchestrator:
                 elif chunk.type == "usage" and self.token_tracker:
                     total_prompt_tokens = chunk.prompt_tokens or 0
                     total_completion_tokens = chunk.completion_tokens or 0
+                    
+                    # Record to Prometheus
+                    TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
+                    TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
 
                     # Send usage info to client
                     yield agent_service_pb2.ChatResponse(
@@ -447,8 +468,11 @@ class ChatOrchestrator:
                 full_text=final_response_data.get("message", full_response),
                 finish_reason=agent_service_pb2.STOP
             )
+            
+            REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
 
         except Exception as e:
+            REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
             logger.error(f"Orchestration Error: {e}", exc_info=True)
             await self._update_state(session_id, STATE_FAILED, str(e))
             yield agent_service_pb2.ChatResponse(
@@ -464,6 +488,10 @@ class ChatOrchestrator:
             )
         
         finally:
+            ACTIVE_SESSIONS.dec()
+            latency = time.time() - start_time
+            REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
+            
             # Always release lock
             await self._release_session_lock(session_id, request_id)
 

@@ -154,6 +154,7 @@ app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
 @app.on_event("startup")
 async def startup_event():
     """Startup event to instrument and expose metrics"""
+    # prometheus_fastapi_instrumentator 已经提供了基本的 metrics 暴露
     Instrumentator().instrument(app).expose(app)
 
 

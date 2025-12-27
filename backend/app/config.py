@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_PASSWORD: str = "devpassword"
 
     # Database Pool Settings (for PostgreSQL)
     DB_POOL_SIZE: int = 20  # 连接池大小

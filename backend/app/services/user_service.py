@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from app.models.user import User, PushPreference
 from app.schemas.user import UserContext, UserPreferences
+from app.core.metrics import CACHE_HIT_COUNT
 
 
 class UserService:
@@ -78,10 +79,12 @@ class UserService:
             try:
                 cached = await self.redis.get(cache_key)
                 if cached:
+                    CACHE_HIT_COUNT.labels(cache_name="user_context", result="hit").inc()
                     data = json.loads(cached)
                     context = UserContext(**data)
                     logger.debug(f"Cache HIT for user {user_id}")
                     return context
+                CACHE_HIT_COUNT.labels(cache_name="user_context", result="miss").inc()
             except Exception as e:
                 logger.warning(f"Cache lookup failed: {e}, falling back to DB")
 
@@ -229,8 +232,10 @@ class UserService:
             try:
                 cached = await self.redis.get(cache_key)
                 if cached:
+                    CACHE_HIT_COUNT.labels(cache_name="user_analytics", result="hit").inc()
                     logger.debug(f"Analytics cache HIT for user {user_id}")
                     return json.loads(cached)
+                CACHE_HIT_COUNT.labels(cache_name="user_analytics", result="miss").inc()
             except Exception as e:
                 logger.warning(f"Analytics cache lookup failed: {e}")
 
