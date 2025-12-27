@@ -26,8 +26,6 @@ func Load() *Config {
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
->>>>+++ REPLACE
-
 
 	// Read from .env file if it exists
 	viper.SetConfigFile(".env")

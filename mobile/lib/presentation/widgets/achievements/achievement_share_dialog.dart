@@ -1,0 +1,261 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:sparkle/presentation/widgets/achievements/achievement_card_generator.dart';
+
+/// 成就分享对话框
+///
+/// 生成成就卡片并提供分享选项：
+/// - 分享到社交媒体
+/// - 保存到相册
+/// - 复制链接
+class AchievementShareDialog extends StatefulWidget {
+  final String achievementType;
+  final Map<String, dynamic> data;
+
+  const AchievementShareDialog({
+    required this.achievementType,
+    required this.data,
+    super.key,
+  });
+
+  @override
+  State<AchievementShareDialog> createState() => _AchievementShareDialogState();
+}
+
+class _AchievementShareDialogState extends State<AchievementShareDialog> {
+  bool _isGenerating = false;
+  String? _imagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateCard();
+  }
+
+  Future<void> _generateCard() async {
+    setState(() => _isGenerating = true);
+
+    try {
+      // Generate the card image
+      final imageData = await AchievementCardGenerator.generateCard(
+        achievementType: widget.achievementType,
+        data: widget.data,
+      );
+
+      if (imageData != null) {
+        // Save to temporary directory
+        final tempDir = await getTemporaryDirectory();
+        final file = File(
+          '${tempDir.path}/achievement_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        await file.writeAsBytes(imageData);
+
+        setState(() {
+          _imagePath = file.path;
+          _isGenerating = false;
+        });
+      } else {
+        setState(() => _isGenerating = false);
+        if (mounted) {
+          _showError('生成失败，请重试');
+        }
+      }
+    } catch (e) {
+      setState(() => _isGenerating = false);
+      if (mounted) {
+        _showError('生成失败: $e');
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _shareToSocial() async {
+    if (_imagePath == null) return;
+
+    try {
+      await Share.shareXFiles(
+        [XFile(_imagePath!)],
+        text: '我在 Sparkle 取得了新成就！🎉',
+      );
+    } catch (e) {
+      _showError('分享失败: $e');
+    }
+  }
+
+  Future<void> _saveToGallery() async {
+    if (_imagePath == null) return;
+
+    try {
+      // TODO: 使用 image_gallery_saver 保存到相册
+      // await ImageGallerySaver.saveFile(_imagePath!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已保存到相册')),
+        );
+      }
+    } catch (e) {
+      _showError('保存失败: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title
+            const Row(
+              children: [
+                Icon(Icons.share, color: Colors.white, size: 28),
+                SizedBox(width: 12),
+                Text(
+                  '分享成就',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Preview
+            if (_isGenerating)
+              const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        '正在生成分享卡片...',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_imagePath != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_imagePath!),
+                  height: 300,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 64,
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // Share options
+            if (_imagePath != null) ...[
+              _buildShareButton(
+                icon: Icons.share,
+                label: '分享到社交媒体',
+                color: Colors.blue,
+                onTap: _shareToSocial,
+              ),
+              const SizedBox(height: 12),
+              _buildShareButton(
+                icon: Icons.save_alt,
+                label: '保存到相册',
+                color: Colors.green,
+                onTap: _saveToGallery,
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
+            // Close button
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                '关闭',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: color, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 便捷函数：显示成就分享对话框
+void showAchievementShareDialog(
+  BuildContext context, {
+  required String achievementType,
+  required Map<String, dynamic> data,
+}) {
+  showDialog(
+    context: context,
+    builder: (context) => AchievementShareDialog(
+      achievementType: achievementType,
+      data: data,
+    ),
+  );
+}

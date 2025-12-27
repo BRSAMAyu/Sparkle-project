@@ -115,8 +115,6 @@ func main() {
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
 	}
->>>>+++ REPLACE
-
 
 	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
