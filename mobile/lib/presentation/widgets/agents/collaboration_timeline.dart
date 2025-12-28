@@ -42,7 +42,7 @@ class _AgentCollaborationTimelineState
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -65,7 +65,7 @@ class _AgentCollaborationTimelineState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           _buildTimeline(),
         ],
       ),
@@ -74,7 +74,7 @@ class _AgentCollaborationTimelineState
   Widget _buildHeader() => Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: Colors.purple.shade100,
             borderRadius: BorderRadius.circular(8),
@@ -85,7 +85,7 @@ class _AgentCollaborationTimelineState
             size: 20,
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +153,7 @@ class _AgentCollaborationTimelineState
         children: [
           // 时间轴节点
           _buildTimelineNode(step),
-          const SizedBox(width: DS.md),
+          SizedBox(width: DS.md),
           // 内容卡片
           Expanded(child: _buildStepCard(step)),
         ],
@@ -168,7 +168,7 @@ class _AgentCollaborationTimelineState
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: step.agentColor,
-            border: Border.all(color: DS.brandPrimary, width: 3),
+            border: Border.all(color: DS.brandPrimaryConst, width: 3),
             boxShadow: [
               BoxShadow(
                 color: step.agentColor.withOpacity(0.4),
@@ -179,7 +179,7 @@ class _AgentCollaborationTimelineState
           ),
           child: Icon(
             step.agentIcon,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             size: 20,
           ),
         )
@@ -209,7 +209,7 @@ class _AgentCollaborationTimelineState
   Widget _buildStepCard(AgentTimelineStep step) => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: step.agentColor.withOpacity(0.2),
@@ -236,7 +236,7 @@ class _AgentCollaborationTimelineState
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               if (step.timestamp != null)
                 Container(
                   padding:
@@ -256,7 +256,7 @@ class _AgentCollaborationTimelineState
                 ),
             ],
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             step.action,
             style: TextStyle(
@@ -266,7 +266,7 @@ class _AgentCollaborationTimelineState
             ),
           ),
           if (step.outputSummary != null) ...[
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             _buildExpandableDetails(step),
           ],
         ],
@@ -283,7 +283,7 @@ class _AgentCollaborationTimelineState
             size: 14,
             color: step.agentColor,
           ),
-          const SizedBox(width: DS.xs),
+          SizedBox(width: DS.xs),
           Text(
             '查看详情',
             style: TextStyle(

@@ -35,10 +35,10 @@ class _TranslatorToolState extends State<TranslatorTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 500,
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -57,18 +57,18 @@ class _TranslatorToolState extends State<TranslatorTool> {
               ),
             ),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           Row(
             children: [
-              const Icon(Icons.translate, color: Colors.purple),
-              const SizedBox(width: DS.sm),
+              Icon(Icons.translate, color: Colors.purple),
+              SizedBox(width: DS.sm),
               Text(
                 '快速翻译',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           TextField(
             controller: _inputController,
             maxLines: 4,
@@ -79,17 +79,17 @@ class _TranslatorToolState extends State<TranslatorTool> {
               fillColor: AppDesignTokens.neutral50,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Center(
             child: IconButton(
               onPressed: _translate,
-              icon: const Icon(Icons.arrow_downward_rounded, color: Colors.purple),
+              icon: Icon(Icons.arrow_downward_rounded, color: Colors.purple),
               style: IconButton.styleFrom(backgroundColor: Colors.purple.withValues(alpha: 0.1)),
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Container(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             height: 120,
             decoration: BoxDecoration(
               color: Colors.purple.withValues(alpha: 0.05),
@@ -97,7 +97,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
               border: Border.all(color: Colors.purple.withValues(alpha: 0.1)),
             ),
             child: _isLoading 
-                ? const Center(child: CircularProgressIndicator()) 
+                ? Center(child: CircularProgressIndicator()) 
                 : SingleChildScrollView(
                     child: Text(
                       _output.isEmpty ? '翻译结果将显示在这里' : _output,

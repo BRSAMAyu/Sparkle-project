@@ -21,7 +21,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -41,7 +41,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
                   // 导航到任务列表页面
                   context.push('/tasks');
                 },
-                icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                icon: Icon(Icons.arrow_forward_ios, size: 16),
                 label: const Text('查看所有任务'),
               ),
             ),
@@ -62,7 +62,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
       child: Row(
         children: [
           _buildTaskIcon(type),
-          const SizedBox(width: DS.sm),
+          SizedBox(width: DS.sm),
           Expanded(
             child: Text(
               title,
@@ -71,7 +71,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
           ),
           _buildStatusChip(context, status),
           IconButton(
-            icon: const Icon(Icons.info_outline, size: 20),
+            icon: Icon(Icons.info_outline, size: 20),
             onPressed: () {
               // 导航到任务详情页面
               context.push('/tasks/$id');

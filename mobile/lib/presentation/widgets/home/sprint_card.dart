@@ -35,7 +35,7 @@ class SprintCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: sprint != null
                 ? _buildSprintContent(sprint)
                 : _buildEmptyState(),
@@ -59,7 +59,7 @@ class SprintCard extends ConsumerWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: DS.brandPrimary70,
+            color: DS.brandPrimary70Const,
           ),
         ),
 
@@ -110,10 +110,10 @@ class SprintCard extends ConsumerWidget {
         // Sprint name
         Text(
           sprint.name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -134,12 +134,12 @@ class SprintCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(DS.sm),
+          padding: EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withAlpha(20),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.flash_on_rounded,
             color: DS.brandPrimary54,
             size: 20,
@@ -153,10 +153,10 @@ class SprintCard extends ConsumerWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: DS.brandPrimary70,
+            color: DS.brandPrimary70Const,
           ),
         ),
-        const SizedBox(height: DS.xs),
+        SizedBox(height: DS.xs),
         Text(
           '点击创建',
           style: TextStyle(

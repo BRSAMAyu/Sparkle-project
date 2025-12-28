@@ -34,7 +34,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: AppDesignTokens.deepSpaceGradient,
         ),
         child: SafeArea(
@@ -48,7 +48,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 child: RefreshIndicator(
                   onRefresh: _loadPatterns,
                   child: cognitiveState.isLoading && cognitiveState.patterns.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
                           ),
@@ -71,7 +71,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
+            icon: Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
           ),
           const Expanded(
             child: Text(
@@ -79,19 +79,19 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(DS.sm),
+            padding: EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
               color: AppDesignTokens.prismPurple.withAlpha(40),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.diamond_outlined,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               size: 20,
             ),
           ),
@@ -101,13 +101,13 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 
   Widget _buildEmptyState() => SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(DS.xxl),
+      padding: EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 80),
           Container(
-            padding: const EdgeInsets.all(DS.xl),
+            padding: EdgeInsets.all(DS.xl),
             decoration: BoxDecoration(
               color: AppDesignTokens.prismPurple.withAlpha(30),
               shape: BoxShape.circle,
@@ -118,16 +118,16 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               color: AppDesignTokens.prismPurple.withAlpha(150),
             ),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           const Text(
             '暂无行为定式',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             '继续记录你的想法和情绪\nAI 会为你发现行为模式',
             textAlign: TextAlign.center,
@@ -187,17 +187,17 @@ class _PatternCard extends StatelessWidget {
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: DS.md),
+                  SizedBox(width: DS.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           pattern.patternName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -235,7 +235,7 @@ class _PatternCard extends StatelessWidget {
 
               // Description
               if (pattern.description != null) ...[
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
                 Text(
                   pattern.description!,
                   style: TextStyle(
@@ -248,9 +248,9 @@ class _PatternCard extends StatelessWidget {
 
               // Solution
               if (pattern.solutionText != null) ...[
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
                 Container(
-                  padding: const EdgeInsets.all(DS.md),
+                  padding: EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.success.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
@@ -261,7 +261,7 @@ class _PatternCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.lightbulb_outline_rounded,
                         color: AppDesignTokens.success,
                         size: 18,
@@ -270,7 +270,7 @@ class _PatternCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           pattern.solutionText!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppDesignTokens.successLight,
                             height: 1.4,
@@ -283,7 +283,7 @@ class _PatternCard extends StatelessWidget {
               ],
 
               // Date
-              const SizedBox(height: DS.md),
+              SizedBox(height: DS.md),
               Text(
                 '发现于 ${_formatDate(pattern.createdAt)}',
                 style: TextStyle(

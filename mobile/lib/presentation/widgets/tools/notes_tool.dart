@@ -16,10 +16,10 @@ class _NotesToolState extends State<NotesTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 600, // Taller for notes
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -38,14 +38,14 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
-                  const SizedBox(width: DS.sm),
+                  Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
+                  SizedBox(width: DS.sm),
                   Text(
                     '随手记',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -61,12 +61,12 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ],
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               decoration: BoxDecoration(
-                color: DS.warning[50],
+                color: DS.warning.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
               ),
@@ -78,11 +78,11 @@ class _NotesToolState extends State<NotesTool> {
                   hintText: '在这里记录想法...',
                   border: InputBorder.none,
                 ),
-                style: const TextStyle(fontSize: 16, height: 1.5),
+                style: TextStyle(fontSize: 16, height: 1.5),
               ),
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           CustomButton.primary(
             text: '复制到剪贴板',
             onPressed: () {
@@ -90,7 +90,7 @@ class _NotesToolState extends State<NotesTool> {
                Navigator.pop(context);
                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('笔记已保存 (Mock)')));
             },
-            size: ButtonSize.medium,
+            size: CustomButtonSize.medium,
           ),
         ],
       ),

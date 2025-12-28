@@ -46,7 +46,7 @@ class StatusAvatar extends StatelessWidget {
             decoration: BoxDecoration(
               color: statusColor,
               shape: BoxShape.circle,
-              border: Border.all(color: DS.brandPrimary, width: 2),
+              border: Border.all(color: DS.brandPrimaryConst, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: statusColor.withValues(alpha: 0.4),
@@ -79,7 +79,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
           color: isMe ? SparkleTheme.primary : DS.brandPrimary,
@@ -107,7 +107,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                 fontSize: 15,
               ),
             ),
-            const SizedBox(height: DS.xs),
+            SizedBox(height: DS.xs),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -119,7 +119,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                   ),
                 ),
                 if (isMe) ...[
-                  const SizedBox(width: DS.xs),
+                  SizedBox(width: DS.xs),
                   Icon(
                     isSent ? Icons.done_all : Icons.access_time,
                     size: 12,

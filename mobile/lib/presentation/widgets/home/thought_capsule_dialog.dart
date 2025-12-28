@@ -55,12 +55,12 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(DS.sm),
+                  padding: EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
+                  child: Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
                 ),
                 const SizedBox(width: AppDesignTokens.spacing12),
                 Text(
@@ -104,7 +104,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                   icon: Icons.send_rounded,
                   onPressed: _isSubmitting ? () {} : _submit,
                   isLoading: _isSubmitting,
-                  size: ButtonSize.small,
+                  size: CustomButtonSize.small,
                 ),
               ],
             ),

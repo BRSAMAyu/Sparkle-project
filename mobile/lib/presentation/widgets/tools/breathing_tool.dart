@@ -111,8 +111,8 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
   @override
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -123,14 +123,14 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.indigo.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.air, color: Colors.indigo),
+                child: Icon(Icons.air, color: Colors.indigo),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               const Text(
                 '呼吸练习',
                 style: TextStyle(
@@ -140,12 +140,12 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Breathing Circle Animation
           Center(
@@ -221,7 +221,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             ),
           ),
           
-          const SizedBox(height: DS.xxxl),
+          SizedBox(height: DS.xxxl),
 
           // Duration Selector
           if (!_isPlaying)
@@ -258,7 +258,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
               }),
             ),
 
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Control Button
           CustomButton.primary(
@@ -267,7 +267,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             onPressed: _isPlaying ? _stopBreathing : _startBreathing,
             customGradient: _isPlaying 
               ? AppDesignTokens.warningGradient 
-              : const LinearGradient(colors: [Colors.indigo, DS.brandPrimary]),
+              : LinearGradient(colors: [Colors.indigo, DS.brandPrimaryConst]),
           ),
         ],
       ),

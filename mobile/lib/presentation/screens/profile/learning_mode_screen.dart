@@ -120,7 +120,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                     borderRadius: AppDesignTokens.borderRadius12,
                   ),
                 ),
-                child: _isLoading ? const CircularProgressIndicator() : const Text('保存偏好'),
+                child: _isLoading ? CircularProgressIndicator() : const Text('保存偏好'),
               ),
             ),
           ],

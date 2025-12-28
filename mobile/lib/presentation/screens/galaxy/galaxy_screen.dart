@@ -69,11 +69,11 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(Icons.psychology, size: 40, color: DS.brandPrimary87),
                   ),
                 ),
-                const SizedBox(height: DS.xl),
+                SizedBox(height: DS.xl),
                 // Text is now drawn by painter to avoid rotation issues, 
                 // but main title can stay here
               ],

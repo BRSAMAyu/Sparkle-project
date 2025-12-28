@@ -84,10 +84,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     final state = ref.watch(vocabularyProvider);
 
     return Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 550,
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -107,20 +107,20 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Header
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.cyan.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.search_rounded, color: Colors.cyan, size: 24),
+                child: Icon(Icons.search_rounded, color: Colors.cyan, size: 24),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Text(
                 '查词',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -129,7 +129,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Search Input
           Row(
@@ -151,13 +151,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       borderSide: const BorderSide(color: Colors.cyan, width: 2),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    prefixIcon: const Icon(Icons.translate_rounded, color: AppDesignTokens.neutral400),
+                    prefixIcon: Icon(Icons.translate_rounded, color: AppDesignTokens.neutral400),
                   ),
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _lookup(),
                 ),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
@@ -171,12 +171,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                   ),
                   child: state.isLookingUp
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                           ),
                         )
                       : const Text('查询'),
@@ -184,7 +184,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ],
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
 
           // Result Area
           Expanded(
@@ -199,7 +199,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                 text: '加入生词本',
                 icon: Icons.add_rounded,
                 onPressed: state.isLoading ? null : _addToWordbook,
-                customGradient: const LinearGradient(
+                customGradient: LinearGradient(
                   colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
                 ),
               ),
@@ -215,15 +215,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.search_off_rounded,
               size: 48,
               color: AppDesignTokens.neutral300,
             ),
-            const SizedBox(height: DS.md),
+            SizedBox(height: DS.md),
             Text(
               state.error!,
-              style: const TextStyle(color: AppDesignTokens.neutral500),
+              style: TextStyle(color: AppDesignTokens.neutral500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -232,7 +232,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     }
 
     if (state.lookupResult == null) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -260,7 +260,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     return SingleChildScrollView(
       child: Container(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
           color: Colors.cyan.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
@@ -282,10 +282,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   ),
                 ),
                 if (phonetic != null) ...[
-                  const SizedBox(width: DS.md),
+                  SizedBox(width: DS.md),
                   Text(
                     phonetic,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppDesignTokens.neutral500,
                       fontSize: 16,
                       fontStyle: FontStyle.italic,
@@ -297,7 +297,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
             // Part of Speech
             if (pos != null) ...[
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -306,7 +306,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                 ),
                 child: Text(
                   pos,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.cyan,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -314,7 +314,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                 ),
               ),
             ],
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Definitions
             if (definitions != null) ...[
@@ -326,13 +326,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
               ..._buildDefinitions(definitions),
             ],
 
             // Examples
             if (examples != null && (examples is List && examples.isNotEmpty)) ...[
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               const Text(
                 '例句',
                 style: TextStyle(
@@ -341,13 +341,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
               ..._buildExamples(examples),
             ],
 
             // Associations
             if (state.associations.isNotEmpty) ...[
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               const Text(
                 '相关词汇',
                 style: TextStyle(
@@ -356,7 +356,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -368,7 +368,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                       _lookup();
                     },
                     backgroundColor: AppDesignTokens.neutral100,
-                    labelStyle: const TextStyle(
+                    labelStyle: TextStyle(
                       color: AppDesignTokens.neutral700,
                       fontSize: 12,
                     ),
@@ -391,7 +391,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             children: [
               Text(
                 '${entry.key + 1}. ',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppDesignTokens.neutral500,
                   fontWeight: FontWeight.w500,
                 ),
@@ -399,7 +399,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               Expanded(
                 child: Text(
                   entry.value.toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppDesignTokens.neutral700,
                     height: 1.4,
                   ),
@@ -412,7 +412,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       return [
         Text(
           definitions.toString(),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppDesignTokens.neutral700,
             height: 1.4,
           ),
@@ -428,16 +428,16 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.format_quote_rounded,
                 size: 16,
                 color: AppDesignTokens.neutral400,
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Expanded(
                 child: Text(
                   example.toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppDesignTokens.neutral600,
                     fontStyle: FontStyle.italic,
                     height: 1.4,

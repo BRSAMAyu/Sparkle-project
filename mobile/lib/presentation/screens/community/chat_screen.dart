@@ -35,7 +35,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.isGroup ? '学习小组' : '好友对话', style: const TextStyle(fontSize: 16)),
+            Text(widget.isGroup ? '学习小组' : '好友对话', style: TextStyle(fontSize: 16)),
             const Row(
               children: [
                 TypingIndicator(),
@@ -84,7 +84,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 },
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('加载失败: $e')),
             ),
           ),
@@ -95,9 +95,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildInputArea() => Container(
-      padding: const EdgeInsets.all(DS.md),
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      padding: EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         boxShadow: [BoxShadow(color: DS.brandPrimary12, blurRadius: 4)],
       ),
       child: SafeArea(
@@ -119,10 +119,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: DS.sm),
+            SizedBox(width: DS.sm),
             IconButton.filled(
               onPressed: _sendMessage,
-              icon: const Icon(Icons.send),
+              icon: Icon(Icons.send),
               style: IconButton.styleFrom(backgroundColor: SparkleTheme.primary),
             ),
           ],

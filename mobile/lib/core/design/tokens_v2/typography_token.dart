@@ -37,56 +37,56 @@ class TypographySystem {
   static const double trackingWide = 0.02;
 
   /// 标准文本样式
-  static TextStyle displayLarge() => const TextStyle(
+  static TextStyle displayLarge() => TextStyle(
     fontSize: size3xl,
     fontWeight: weightExtrabold,
     height: leadingTight,
     letterSpacing: trackingTight,
   );
 
-  static TextStyle headingLarge() => const TextStyle(
+  static TextStyle headingLarge() => TextStyle(
     fontSize: size2xl,
     fontWeight: weightBold,
     height: leadingTight,
     letterSpacing: trackingTight,
   );
 
-  static TextStyle headingMedium() => const TextStyle(
+  static TextStyle headingMedium() => TextStyle(
     fontSize: sizeXl,
     fontWeight: weightSemibold,
     height: leadingTight,
     letterSpacing: trackingNormal,
   );
 
-  static TextStyle titleLarge() => const TextStyle(
+  static TextStyle titleLarge() => TextStyle(
     fontSize: sizeLg,
     fontWeight: weightSemibold,
     height: leadingNormal,
     letterSpacing: trackingNormal,
   );
 
-  static TextStyle bodyLarge() => const TextStyle(
+  static TextStyle bodyLarge() => TextStyle(
     fontSize: sizeMd,
     fontWeight: weightRegular,
     height: leadingNormal,
     letterSpacing: trackingNormal,
   );
 
-  static TextStyle bodyMedium() => const TextStyle(
+  static TextStyle bodyMedium() => TextStyle(
     fontSize: sizeSm,
     fontWeight: weightRegular,
     height: leadingNormal,
     letterSpacing: trackingNormal,
   );
 
-  static TextStyle labelLarge() => const TextStyle(
+  static TextStyle labelLarge() => TextStyle(
     fontSize: sizeSm,
     fontWeight: weightMedium,
     height: leadingTight,
     letterSpacing: trackingWide,
   );
 
-  static TextStyle labelSmall() => const TextStyle(
+  static TextStyle labelSmall() => TextStyle(
     fontSize: sizeXs,
     fontWeight: weightMedium,
     height: leadingTight,

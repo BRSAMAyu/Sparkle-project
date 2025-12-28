@@ -50,7 +50,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
       child: InkWell(
         onTap: () => _onPressed(text),
         child: Container(
-          margin: const EdgeInsets.all(DS.xs),
+          margin: EdgeInsets.all(DS.xs),
           decoration: BoxDecoration(
             color: color ?? AppDesignTokens.neutral100,
             borderRadius: BorderRadius.circular(12),
@@ -71,10 +71,10 @@ class _CalculatorToolState extends State<CalculatorTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       height: 500,
-      decoration: const BoxDecoration(
-        color: DS.brandPrimary,
+      decoration: BoxDecoration(
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -91,11 +91,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           // Display
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             alignment: Alignment.bottomRight,
             decoration: BoxDecoration(
               color: AppDesignTokens.neutral50,
@@ -107,17 +107,17 @@ class _CalculatorToolState extends State<CalculatorTool> {
               children: [
                 Text(
                   _expression,
-                  style: const TextStyle(fontSize: 24, color: AppDesignTokens.neutral500),
+                  style: TextStyle(fontSize: 24, color: AppDesignTokens.neutral500),
                 ),
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
                 Text(
                   _result.isEmpty ? '0' : _result,
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           // Buttons
           Expanded(
             child: Column(

@@ -86,17 +86,17 @@ class SparkleAvatar extends StatelessWidget {
                   SizedBox(
                     width: radius * 0.6,
                     height: radius * 0.6,
-                    child: const CircularProgressIndicator(
+                    child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
                     ),
                   ),
                   if (radius > 25) ...[
-                    const SizedBox(height: DS.xs),
+                    SizedBox(height: DS.xs),
                     Text(
                       '审核中',
                       style: TextStyle(
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                         fontSize: radius * 0.3,
                         fontWeight: FontWeight.bold,
                       ),

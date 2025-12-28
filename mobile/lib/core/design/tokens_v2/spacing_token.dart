@@ -158,5 +158,5 @@ class SpacingTokenVariant {
     return mobile;
   }
 
-  EdgeInsets get edge => EdgeInsets.all(resolve(context));
+  EdgeInsets edge(BuildContext context) => EdgeInsets.all(resolve(context));
 }

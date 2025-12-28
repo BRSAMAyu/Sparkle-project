@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
@@ -405,3 +406,6 @@ struct ListNode {
 }
 
 enum NodeStatus { locked, unlocked, review, mastered }
+
+/// Provider for DemoDataService
+final demoDataServiceProvider = Provider<DemoDataService>((ref) => DemoDataService());

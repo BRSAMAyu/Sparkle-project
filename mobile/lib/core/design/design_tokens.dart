@@ -400,4 +400,11 @@ class AppDesignTokens {
   static const double elevationLow = 2.0;
   static const double elevationMedium = 4.0;
   static const double elevationHigh = 8.0;
+
+  /// Accent colors (for backward compatibility)
+  static final Color warningAccent = warning.withValues(alpha: 0.2);
+
+  /// Surface and border colors (for backward compatibility)
+  static const Color surface = neutral100;
+  static const Color border = neutral300;
 }

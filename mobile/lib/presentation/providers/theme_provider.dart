@@ -1,8 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 
 /// Provider to manage the application's ThemeMode (Light, Dark, System)
-final themeModeProvider = StateProvider<ThemeMode>((ref) {
+final themeModeProvider = StateProvider<AppThemeMode>((ref) {
   // Persistence: Load theme mode from SharedPreferences on init
-  return ThemeMode.system;
+  return AppThemeMode.system;
 });
+
+/// Helper to convert AppThemeMode to ThemeMode
+ThemeMode appThemeModeToThemeMode(AppThemeMode mode) {
+  switch (mode) {
+    case AppThemeMode.light:
+      return ThemeMode.light;
+    case AppThemeMode.dark:
+      return ThemeMode.dark;
+    case AppThemeMode.system:
+      return ThemeMode.system;
+  }
+}
+
+/// Helper to convert ThemeMode to AppThemeMode
+AppThemeMode themeModeToAppThemeMode(ThemeMode mode) {
+  switch (mode) {
+    case ThemeMode.light:
+      return AppThemeMode.light;
+    case ThemeMode.dark:
+      return AppThemeMode.dark;
+    case ThemeMode.system:
+      return AppThemeMode.system;
+  }
+}

@@ -135,7 +135,7 @@ class LoadingIndicator extends StatelessWidget {
           const SizedBox(height: AppDesignTokens.spacing12),
           Text(
             loadingText ?? '加载中...',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppDesignTokens.fontSizeSm,
               color: AppDesignTokens.neutral600,
             ),
@@ -198,7 +198,7 @@ class LoadingIndicator extends StatelessWidget {
                   gradient: AppDesignTokens.primaryGradient,
                   borderRadius: AppDesignTokens.borderRadiusFull,
                 ),
-                child: const Center(
+                child: Center(
                   child: SizedBox(
                     width: 40.0,
                     height: 40.0,
@@ -213,7 +213,7 @@ class LoadingIndicator extends StatelessWidget {
                 const SizedBox(height: AppDesignTokens.spacing20),
                 Text(
                   loadingText!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppDesignTokens.fontSizeBase,
                     fontWeight: AppDesignTokens.fontWeightMedium,
                     color: AppDesignTokens.neutral900,
@@ -275,7 +275,7 @@ class TaskCardSkeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           borderRadius: AppDesignTokens.borderRadius16,
           boxShadow: AppDesignTokens.shadowSm,
         ),
@@ -412,7 +412,7 @@ class ProfileCardSkeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           borderRadius: AppDesignTokens.borderRadius20,
           boxShadow: AppDesignTokens.shadowMd,
         ),

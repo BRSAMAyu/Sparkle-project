@@ -47,7 +47,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     return Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: AppDesignTokens.primaryGradient,
           ),
         ),
@@ -58,8 +58,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('search'),
                   controller: _searchController,
                   autofocus: true,
-                  style: const TextStyle(
-                    color: DS.brandPrimary,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
                     fontSize: AppDesignTokens.fontSizeBase,
                   ),
                   decoration: InputDecoration(
@@ -68,9 +68,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     hintStyle: TextStyle(
                       color: DS.brandPrimary.withValues(alpha: 0.7),
                     ),
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.search,
-                      color: DS.brandPrimary70,
+                      color: DS.brandPrimary70Const,
                     ),
                   ),
                   onChanged: (value) => setState(() {}),
@@ -79,22 +79,22 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: AppDesignTokens.borderRadius8,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.task_alt_rounded,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                         size: 20,
                       ),
                     ),
-                    const SizedBox(width: DS.md),
-                    const Text(
+                    SizedBox(width: DS.md),
+                    Text(
                       '我的任务',
                       style: TextStyle(
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                         fontWeight: AppDesignTokens.fontWeightBold,
                       ),
                     ),
@@ -104,7 +104,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -140,9 +140,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             shape: BoxShape.circle,
             boxShadow: AppDesignTokens.shadowPrimary,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.add_rounded,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             size: 32,
           ),
         ),
@@ -236,7 +236,7 @@ class _FilterChips extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         boxShadow: AppDesignTokens.shadowSm,
       ),
       child: SizedBox(

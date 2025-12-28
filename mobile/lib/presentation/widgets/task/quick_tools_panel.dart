@@ -36,7 +36,7 @@ class QuickToolsPanel extends StatelessWidget { // 当前任务ID，用于关联
         _ToolButton(
           icon: Icons.calculate_outlined,
           label: '计算器',
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           onTap: () => _showTool(context, const CalculatorTool()),
         ),
         _ToolButton(
@@ -48,7 +48,7 @@ class QuickToolsPanel extends StatelessWidget { // 当前任务ID，用于关联
         _ToolButton(
           icon: Icons.note_alt_outlined,
           label: '笔记',
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           onTap: () => _showTool(context, const NotesTool()),
         ),
         _ToolButton(
@@ -105,15 +105,15 @@ class _ToolButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.circular(12),
           boxShadow: AppDesignTokens.shadowSm,
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 28),
-            const SizedBox(height: DS.xs),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            SizedBox(height: DS.xs),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),
       ),

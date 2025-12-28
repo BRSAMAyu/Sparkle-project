@@ -25,7 +25,7 @@ class AgentStatsDashboard extends StatelessWidget {
     final byAgent = statsData['by_agent'] as List<dynamic>? ?? [];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,18 +36,18 @@ class AgentStatsDashboard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             '过去 ${statsData['period_days'] ?? 30} 天',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Overall Stats Cards
           _buildOverallStats(theme, overall),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Usage Pie Chart
           if (byAgent.isNotEmpty) ...[
@@ -57,9 +57,9 @@ class AgentStatsDashboard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
             _buildUsagePieChart(theme, byAgent),
-            const SizedBox(height: DS.xl),
+            SizedBox(height: DS.xl),
           ],
 
           // Top Agents List
@@ -70,7 +70,7 @@ class AgentStatsDashboard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
             ...byAgent.take(5).map((agent) => _buildAgentCard(theme, agent)),
           ],
         ],
@@ -86,20 +86,20 @@ class AgentStatsDashboard extends StatelessWidget {
             title: '总执行次数',
             value: '${overall['total_executions'] ?? 0}',
             icon: Icons.sync_alt,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: _buildStatCard(
             theme,
             title: '平均耗时',
             value: '${overall['avg_duration_ms'] ?? 0}ms',
             icon: Icons.timer,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: _buildStatCard(
             theme,
@@ -119,7 +119,7 @@ class AgentStatsDashboard extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) => Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -131,7 +131,7 @@ class AgentStatsDashboard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 24),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
@@ -139,7 +139,7 @@ class AgentStatsDashboard extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(height: DS.xs),
+          SizedBox(height: DS.xs),
           Text(
             title,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -164,10 +164,10 @@ class AgentStatsDashboard extends StatelessWidget {
               title: '${agent['count']}次',
               color: config.color,
               radius: 100,
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             );
           }).toList(),
@@ -187,7 +187,7 @@ class AgentStatsDashboard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -210,7 +210,7 @@ class AgentStatsDashboard extends StatelessWidget {
             agentType: agentType,
             size: 48,
           ),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
 
           // Agent Info
           Expanded(
@@ -224,7 +224,7 @@ class AgentStatsDashboard extends StatelessWidget {
                     color: config.color,
                   ),
                 ),
-                const SizedBox(height: DS.xs),
+                SizedBox(height: DS.xs),
                 Row(
                   children: [
                     Icon(
@@ -232,18 +232,18 @@ class AgentStatsDashboard extends StatelessWidget {
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: DS.xs),
+                    SizedBox(width: DS.xs),
                     Text(
                       '$count 次执行',
                       style: theme.textTheme.bodySmall,
                     ),
-                    const SizedBox(width: DS.lg),
+                    SizedBox(width: DS.lg),
                     Icon(
                       Icons.timer_outlined,
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: DS.xs),
+                    SizedBox(width: DS.xs),
                     Text(
                       '${avgDuration}ms',
                       style: theme.textTheme.bodySmall,
@@ -323,7 +323,7 @@ class AgentPerformanceChart extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
@@ -337,7 +337,7 @@ class AgentPerformanceChart extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           SizedBox(
             height: 200,
             child: LineChart(
@@ -349,7 +349,7 @@ class AgentPerformanceChart extends StatelessWidget {
                       reservedSize: 30,
                       getTitlesWidget: (value, meta) => Text(
                           value.toInt().toString(),
-                          style: const TextStyle(fontSize: 10),
+                          style: TextStyle(fontSize: 10),
                         ),
                     ),
                   ),
@@ -359,7 +359,7 @@ class AgentPerformanceChart extends StatelessWidget {
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) => Text(
                           '${value.toInt()}ms',
-                          style: const TextStyle(fontSize: 10),
+                          style: TextStyle(fontSize: 10),
                         ),
                     ),
                   ),
@@ -382,7 +382,7 @@ class AgentPerformanceChart extends StatelessWidget {
                             ),)
                         .toList(),
                     isCurved: true,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     barWidth: 3,
                     dotData: const FlDotData(show: false),
                   ),

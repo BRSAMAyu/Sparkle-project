@@ -121,7 +121,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
         shape: BoxShape.circle,
         color: agent.color,
         border: Border.all(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           width: 2,
         ),
         boxShadow: [
@@ -135,7 +135,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
       child: Center(
         child: Icon(
           agent.icon,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           size: widget.size * 0.5,
         ),
       ),

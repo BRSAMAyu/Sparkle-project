@@ -79,10 +79,10 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
     final isTripped = _queueLength >= _currentThreshold;
 
     return AlertDialog(
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.flash_on, color: DS.brandPrimary),
-          SizedBox(width: DS.sm),
+          Icon(Icons.flash_on, color: DS.brandPrimaryConst),
+          SizedBox(width: DS.smConst),
           Text('Sparkle 混沌控制台'),
         ],
       ),
@@ -91,22 +91,22 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('队列水位: $_queueLength / $_currentThreshold',
-              style: const TextStyle(fontWeight: FontWeight.bold),),
-          const SizedBox(height: DS.sm),
+              style: TextStyle(fontWeight: FontWeight.bold),),
+          SizedBox(height: DS.sm),
           LinearProgressIndicator(
             value: _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,
             color: isTripped ? DS.error : DS.success,
-            backgroundColor: DS.brandPrimary[200],
+            backgroundColor: DS.brandPrimary200,
           ),
-          const SizedBox(height: DS.lg),
-          const Text('选择运行模式:', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.lg),
+          Text("brandPrimary"),
+          SizedBox(height: DS.sm),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : () => _setThreshold(10000),
-                  icon: const Icon(Icons.check_circle_outline),
+                  icon: Icon(Icons.check_circle_outline),
                   label: const Text('正常模式'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: DS.success.withValues(alpha: 0.1),
@@ -114,11 +114,11 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
                   ),
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : () => _setThreshold(5),
-                  icon: const Icon(Icons.error_outline),
+                  icon: Icon(Icons.error_outline),
                   label: const Text('施压模式'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: DS.error.withValues(alpha: 0.1),

@@ -54,20 +54,20 @@ class GroupDetailScreen extends ConsumerWidget {
           flexibleSpace: FlexibleSpaceBar(
             title: Text(
               group.name,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
               ),
             ),
             background: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: isSprint 
-                    ? const LinearGradient(
+                    ? LinearGradient(
                         colors: [Colors.deepOrange, AppDesignTokens.warningAccent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
-                    : const LinearGradient(
+                    : LinearGradient(
                         colors: [AppDesignTokens.primaryBase, AppDesignTokens.secondaryBase],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -88,7 +88,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     child: Icon(
                       isSprint ? Icons.timer_outlined : Icons.school_outlined,
                       size: 40,
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                     ),
                   ),
                 ),
@@ -98,7 +98,7 @@ class GroupDetailScreen extends ConsumerWidget {
           actions: [
             if (isMember)
               IconButton(
-                icon: const Icon(Icons.more_vert, color: DS.brandPrimary),
+                icon: Icon(Icons.more_vert, color: DS.brandPrimary),
                 onPressed: () => _showGroupOptions(context, ref, group),
               ),
           ],
@@ -129,7 +129,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 
-                const SizedBox(height: DS.xl),
+                SizedBox(height: DS.xl),
                 
                 // Bonfire with fade-in animation
                 TweenAnimationBuilder<double>(
@@ -148,30 +148,30 @@ class GroupDetailScreen extends ConsumerWidget {
                   ),
                 ),
 
-                const SizedBox(height: DS.xxl),
+                SizedBox(height: DS.xxl),
 
                 // Stats Cards
                 Row(
                   children: [
                     Expanded(child: _buildStatCard(context, 'Members', '${group.memberCount}/${group.maxMembers}', Icons.people)),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Expanded(child: _buildStatCard(context, 'Total Flame', '${group.totalFlamePower}', Icons.local_fire_department)),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Expanded(child: _buildStatCard(context, 'Check-ins', '${group.todayCheckinCount}', Icons.check_circle)),
                   ],
                 ),
 
-                const SizedBox(height: DS.xxl),
+                SizedBox(height: DS.xxl),
 
                 // Description
                 Text('About', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
                 Text(
                   group.description ?? 'No description provided.',
                   style: theme.textTheme.bodyMedium?.copyWith(color: AppDesignTokens.neutral700, height: 1.5),
                 ),
 
-                const SizedBox(height: DS.xl),
+                SizedBox(height: DS.xl),
 
                 // Tags
                 if (group.focusTags.isNotEmpty) ...[
@@ -181,10 +181,10 @@ class GroupDetailScreen extends ConsumerWidget {
                     children: group.focusTags.map((tag) => Chip(
                       label: Text(tag),
                       backgroundColor: AppDesignTokens.neutral100,
-                      labelStyle: const TextStyle(color: AppDesignTokens.neutral800),
+                      labelStyle: TextStyle(color: AppDesignTokens.neutral800),
                     ),).toList(),
                   ),
-                  const SizedBox(height: DS.xxl),
+                  SizedBox(height: DS.xxl),
                 ],
 
                 // Actions
@@ -192,12 +192,12 @@ class GroupDetailScreen extends ConsumerWidget {
                   CustomButton.primary(
                     text: 'Enter Chat',
                     icon: Icons.chat_bubble_outline,
-                    size: ButtonSize.large,
+                    size: CustomButtonSize.large,
                     onPressed: () {
                       context.push('/community/groups/$groupId/chat');
                     },
                   ),
-                  const SizedBox(height: DS.lg),
+                  SizedBox(height: DS.lg),
                   Row(
                     children: [
                       Expanded(
@@ -209,7 +209,7 @@ class GroupDetailScreen extends ConsumerWidget {
                           },
                         ),
                       ),
-                      const SizedBox(width: DS.lg),
+                      SizedBox(width: DS.lg),
                       Expanded(
                         child: CustomButton.secondary(
                           text: 'Members',
@@ -256,7 +256,7 @@ class GroupDetailScreen extends ConsumerWidget {
   Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) => Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppDesignTokens.shadowSm,
         border: Border.all(color: AppDesignTokens.neutral100),
@@ -264,19 +264,19 @@ class GroupDetailScreen extends ConsumerWidget {
       child: Column(
         children: [
           Icon(icon, color: AppDesignTokens.primaryBase, size: 24),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppDesignTokens.neutral900,
             ),
           ),
-          const SizedBox(height: DS.xs),
+          SizedBox(height: DS.xs),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppDesignTokens.neutral500,
             ),
@@ -291,8 +291,8 @@ class GroupDetailScreen extends ConsumerWidget {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DecoratedBox(
-        decoration: const BoxDecoration(
-          color: DS.brandPrimary,
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
@@ -310,7 +310,7 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: Container(
-                  padding: const EdgeInsets.all(DS.sm),
+                  padding: EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(color: DS.error.shade50, shape: BoxShape.circle),
                   child: Icon(Icons.exit_to_app, color: DS.error.shade700, size: 20),
                 ),
@@ -343,7 +343,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   }
                 },
               ),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
             ],
           ),
         ),
@@ -363,7 +363,7 @@ class _DetailLoading extends StatelessWidget {
         children: [
           Container(height: 200, color: DS.brandPrimary),
           Padding(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               children: [
                 Container(height: 20, width: 200, color: DS.brandPrimary),

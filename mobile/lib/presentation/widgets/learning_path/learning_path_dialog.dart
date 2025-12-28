@@ -17,7 +17,7 @@ class LearningPathDialog extends ConsumerWidget {
     final pathAsync = ref.watch(learningPathProvider(targetNodeId));
 
     return Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -36,17 +36,17 @@ class LearningPathDialog extends ConsumerWidget {
                     ),
               ),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Expanded(
             child: pathAsync.when(
               data: (path) {
                 if (path.isEmpty) {
-                  return const Center(child: Text('No prerequisites found. You can start learning!'));
+                  return Center(child: Text('No prerequisites found. You can start learning!'));
                 }
                 return ListView.builder(
                   itemCount: path.length,
@@ -57,7 +57,7 @@ class LearningPathDialog extends ConsumerWidget {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
           ),
@@ -94,7 +94,7 @@ class LearningPathDialog extends ConsumerWidget {
                   shape: BoxShape.circle,
                   color: statusColor.withOpacity(0.2),
                 ),
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 child: Icon(statusIcon, color: statusColor, size: 20),
               ),
               if (!isLast)
@@ -107,7 +107,7 @@ class LearningPathDialog extends ConsumerWidget {
                 ),
             ],
           ),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
@@ -121,7 +121,7 @@ class LearningPathDialog extends ConsumerWidget {
                           color: node.isTarget ? Theme.of(context).primaryColor : null,
                         ),
                   ),
-                  const SizedBox(height: DS.xs),
+                  SizedBox(height: DS.xs),
                   Text(
                     node.status.toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(

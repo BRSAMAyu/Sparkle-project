@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/domain/community/community_models.dart';
@@ -10,11 +9,11 @@ final communityRepositoryProvider = Provider((ref) {
 
 class CommunityRepository {
 
-  CommunityRepository(this._dio);
-  final Dio _dio;
+  CommunityRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<List<Post>> getFeed({int page = 1, int limit = 20}) async {
-    final response = await _dio.get(
+    final response = await _apiClient.get(
       '/api/v1/community/feed',
       queryParameters: {'page': page, 'limit': limit},
     );
@@ -28,7 +27,7 @@ class CommunityRepository {
   }
 
   Future<String> createPost(CreatePostRequest request) async {
-    final response = await _dio.post(
+    final response = await _apiClient.post(
       '/api/v1/community/posts',
       data: request.toJson(),
     );
@@ -41,7 +40,7 @@ class CommunityRepository {
   }
 
   Future<void> likePost(String postId, String userId) async {
-    await _dio.post(
+    await _apiClient.post(
       '/api/v1/community/posts/$postId/like',
       data: {'user_id': userId},
     );

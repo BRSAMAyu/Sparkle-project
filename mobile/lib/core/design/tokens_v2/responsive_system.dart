@@ -86,19 +86,20 @@ class ResponsiveSystem {
 
   /// 比例缩放
   static double scale(BuildContext context, double base, {double min = 0.75, double max = 1.5}) {
-    final width = MediaQuery.of(context).size.width;
-    final ratio = width / 375.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final ratio = screenWidth / 375.0;
     return (base * ratio).clamp(base * min, base * max);
   }
 
   /// 生成响应式断点信息
   static BreakpointInfo getBreakpointInfo(BuildContext context) {
-    final width = width(context);
+    final screenWidth = width(context);
     final category = getCategory(context);
     final density = getDensity(context);
 
     return BreakpointInfo(
-      width: width,
+      context: context,
+      width: screenWidth,
       category: category,
       density: density,
       isMobile: isMobile(context),
@@ -130,6 +131,7 @@ enum Density {
 class BreakpointInfo {
 
   const BreakpointInfo({
+    required this.context,
     required this.width,
     required this.category,
     required this.density,
@@ -138,6 +140,7 @@ class BreakpointInfo {
     required this.isDesktop,
     required this.orientation,
   });
+  final BuildContext context;
   final double width;
   final DeviceCategory category;
   final Density density;

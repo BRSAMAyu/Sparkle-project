@@ -28,7 +28,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                   itemBuilder: (context, index) => CuriosityCapsuleCard(capsule: capsules[index]),
                 ),
               ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('加载失败: $err')),
       ),
     );
@@ -39,15 +39,15 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.lightbulb_outline, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           const Text(
             '今天还没有新的好奇心胶囊',
-            style: TextStyle(color: DS.brandPrimary, fontSize: 16),
+            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           const Text(
             '继续学习，激发更多灵感吧！',
-            style: TextStyle(color: DS.brandPrimary, fontSize: 14),
+            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
           ),
         ],
       ),

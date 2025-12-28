@@ -102,7 +102,7 @@ class _RelationStyle {
         );
       case EdgeRelationType.parentChild:
         return const _RelationStyle(
-          color: DS.brandPrimary,
+          color: Color(0xFFFF6B35), // DS.brandPrimary
           baseWidth: 1.8,
         );
     }
@@ -119,6 +119,10 @@ class StarMapPainter extends CustomPainter {
     this.clusters = const {},
     this.viewport,
     this.center = Offset.zero,
+    this.selectedNodeId,
+    this.expandedEdgeNodeIds = const {},
+    this.nodeAnimationProgress = const {},
+    this.selectionPulse = 0.0,
   }) {
     _preprocessData();
   }
@@ -130,15 +134,46 @@ class StarMapPainter extends CustomPainter {
   final Map<String, ClusterInfo> clusters;
   final Rect? viewport;  // 可选视口用于裁剪
   final Offset center;   // 宇宙中心点
+  final String? selectedNodeId;
+  final Set<String> expandedEdgeNodeIds;
+  final Map<String, double> nodeAnimationProgress; // 0.0 to 1.0
+  final double selectionPulse; // 0.0 to 1.0 for selection animation
 
-  // Pre-processed data (computed once in constructor)
+  // Cache storage
+  static final Map<int, List<ProcessedNode>> _nodeCache = {};
+  static final Map<int, List<ProcessedEdge>> _edgeCache = {};
+  static final Map<int, Map<String, Color>> _colorCacheStorage = {};
+  static final Map<int, Map<String, Offset>> _positionCacheStorage = {};
+
+  // Instance data
   late final List<ProcessedNode> _processedNodes;
   late final List<ProcessedEdge> _processedEdges;
   late final Map<String, Color> _colorCache;
   late final Map<String, Offset> _positionCache;
 
+  int _generateCacheKey() {
+    // Generate a unique key based on the data that affects the processed output
+    // Note: 'nodes' and 'edges' lists usually change reference when filtered
+    // 'positions' map reference also likely changes on layout updates
+    return Object.hash(
+      identityHashCode(nodes),
+      identityHashCode(edges),
+      identityHashCode(positions),
+    );
+  }
+
   /// Pre-process all data in the constructor to avoid repeated work in paint()
   void _preprocessData() {
+    final cacheKey = _generateCacheKey();
+
+    if (_nodeCache.containsKey(cacheKey)) {
+      _processedNodes = _nodeCache[cacheKey]!;
+      _processedEdges = _edgeCache[cacheKey]!;
+      _colorCache = _colorCacheStorage[cacheKey]!;
+      _positionCache = _positionCacheStorage[cacheKey]!;
+      return;
+    }
+
     // Build caches
     _colorCache = {};
     _positionCache = {};
@@ -156,21 +191,12 @@ class StarMapPainter extends CustomPainter {
       }
     }
 
-    // Build processed nodes with viewport culling
+    // Build processed nodes
+    // Note: 'nodes' passed here are already filtered by Provider for Visibility & LOD
     _processedNodes = [];
     for (final node in nodes) {
       final pos = _positionCache[node.id];
       if (pos == null) continue;
-
-      // Viewport culling
-      if (viewport != null) {
-        if (pos.dx < viewport!.left - 50 ||
-            pos.dx > viewport!.right + 50 ||
-            pos.dy < viewport!.top - 50 ||
-            pos.dy > viewport!.bottom + 50) {
-          continue;
-        }
-      }
 
       final color = _colorCache[node.id] ?? DS.brandPrimary;
       final radius = node.radius;
@@ -183,6 +209,7 @@ class StarMapPainter extends CustomPainter {
     }
 
     // Build processed edges
+    // Note: 'edges' passed here are already filtered by Provider
     _processedEdges = [];
 
     // First, add edges from the edges list
@@ -191,14 +218,6 @@ class StarMapPainter extends CustomPainter {
       final end = _positionCache[edge.targetId];
 
       if (start == null || end == null) continue;
-
-      // Viewport culling for edges
-      if (viewport != null) {
-        final edgeRect = Rect.fromPoints(start, end);
-        if (!edgeRect.overlaps(viewport!.inflate(50))) {
-          continue;
-        }
-      }
 
       final sourceColor = _colorCache[edge.sourceId] ?? DS.brandPrimary;
       final targetColor = _colorCache[edge.targetId] ?? DS.brandPrimary;
@@ -228,15 +247,8 @@ class StarMapPainter extends CustomPainter {
         final end = _positionCache[node.id];
 
         if (start == null || end == null) continue;
-
-        // Viewport culling
-        if (viewport != null) {
-          final edgeRect = Rect.fromPoints(start, end);
-          if (!edgeRect.overlaps(viewport!.inflate(50))) {
-            continue;
-          }
-        }
-
+        
+        // Skip if parent is not in visible positions (might be culled)
         final parentColor = _colorCache[node.parentId] ?? DS.brandPrimary;
         final childColor = _colorCache[node.id] ?? DS.brandPrimary;
         final distance = (end - start).distance;
@@ -258,21 +270,72 @@ class StarMapPainter extends CustomPainter {
         ),);
       }
     }
+
+    // Store in cache
+    // Limit cache size to prevent memory issues (simple LRU-like: keep last 5)
+    if (_nodeCache.length > 5) {
+      final firstKey = _nodeCache.keys.first;
+      _nodeCache.remove(firstKey);
+      _edgeCache.remove(firstKey);
+      _colorCacheStorage.remove(firstKey);
+      _positionCacheStorage.remove(firstKey);
+    }
+
+    _nodeCache[cacheKey] = _processedNodes;
+    _edgeCache[cacheKey] = _processedEdges;
+    _colorCacheStorage[cacheKey] = _colorCache;
+    _positionCacheStorage[cacheKey] = _positionCache;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Base layer: Connections
+    _drawRootConnections(canvas);
+    _drawEdges(canvas);
+
+    // Nodes and overlays based on level
     switch (aggregationLevel) {
-      case AggregationLevel.full:
-        _drawRootConnections(canvas);
-        _drawEdges(canvas);
-        _drawNodes(canvas);
-      case AggregationLevel.clustered:
-        _drawRootConnections(canvas); // Also draw roots in clustered view? Maybe not.
-        _drawClusteredView(canvas);
-      case AggregationLevel.sectors:
+      case AggregationLevel.universe:
         _drawSectorView(canvas);
+        
+      case AggregationLevel.galaxy:
+        _drawSectorView(canvas); // Still show sectors in background/context
+        _drawNodes(canvas); // Draw only roots (filtered by provider)
+        
+      case AggregationLevel.cluster:
+        _drawClusteredView(canvas);
+        _drawNodes(canvas); // Draw importance >= 3
+        
+      case AggregationLevel.nebula:
+        _drawClusteredView(canvas); // Faint clusters
+        _drawNodes(canvas); // Draw importance >= 2
+        
+      case AggregationLevel.full:
+        _drawNodes(canvas); // All nodes
     }
+    
+    // Draw selected node highlight if any
+    if (selectedNodeId != null && _positionCache.containsKey(selectedNodeId)) {
+      _drawSelectionHighlight(canvas, _positionCache[selectedNodeId]!);
+    }
+  }
+
+  void _drawSelectionHighlight(Canvas canvas, Offset pos) {
+    // Pulse effect driven by selectionPulse value (0.0 to 1.0)
+    final radius = 40.0 + (selectionPulse * 8.0); // 40 to 48
+    final opacity = 0.3 + (selectionPulse * 0.2); // 0.3 to 0.5
+    
+    final paint = Paint()
+      ..color = DS.brandPrimary.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0 + (selectionPulse * 1.0);
+      
+    canvas.drawCircle(pos, radius, paint);
+    
+    // Inner fill
+    paint.color = DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(pos, 40, paint);
   }
 
   /// Draw connections from Universe Center to Sector Roots
@@ -591,7 +654,7 @@ class StarMapPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: style.name,
         style: TextStyle(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           fontSize: 16,
           fontWeight: FontWeight.bold,
           shadows: [
@@ -644,10 +707,17 @@ class StarMapPainter extends CustomPainter {
       final color = processedNode.color;
       final radius = processedNode.radius;
 
+      // Get animation progress (0.0 to 1.0)
+      final animationProgress = nodeAnimationProgress[node.id] ?? 1.0;
+
+      // Apply bloom animation: scale and opacity
+      final animatedRadius = radius * (0.3 + animationProgress * 0.7); // 0.3x to 1.0x
+      final animatedOpacity = animationProgress;
+
       // LOD: Skip small nodes when zoomed out significantly
       if (scale < 0.3 && node.importance < 3) {
-        nodePaint.color = color.withValues(alpha: 0.5);
-        canvas.drawCircle(pos, radius * 0.5, nodePaint);
+        nodePaint.color = color.withValues(alpha: 0.5 * animatedOpacity);
+        canvas.drawCircle(pos, animatedRadius * 0.5, nodePaint);
         continue;
       }
 
@@ -656,91 +726,87 @@ class StarMapPainter extends CustomPainter {
         final masteryFactor = node.masteryScore / 100.0;
         final glowIntensity = 0.3 + masteryFactor * 0.5;
 
-        // Outer glow (soft, large)
+        // Outer glow (soft, large) - scaled with animation
         if (scale > 0.5) { // Only draw glow if not too zoomed out
-          glowPaint.color = color.withValues(alpha: glowIntensity * 0.4);
-          canvas.drawCircle(pos, radius * 3.0, glowPaint);
+          glowPaint.color = color.withValues(alpha: glowIntensity * 0.4 * animatedOpacity);
+          canvas.drawCircle(pos, animatedRadius * 3.0, glowPaint);
         }
 
         // Inner glow (brighter, smaller)
-        glowPaint.color = color.withValues(alpha: glowIntensity * 0.7);
+        glowPaint.color = color.withValues(alpha: glowIntensity * 0.7 * animatedOpacity);
         glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-        canvas.drawCircle(pos, radius * 1.8, glowPaint);
+        canvas.drawCircle(pos, animatedRadius * 1.8, glowPaint);
         glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
 
         // Core fill with gradient
         final nodeGradient = ui.Gradient.radial(
           pos,
-          radius,
+          animatedRadius,
           [
-            DS.brandPrimary.withValues(alpha: 0.9),
-            color,
-            color.withValues(alpha: 0.8),
+            DS.brandPrimary.withValues(alpha: 0.9 * animatedOpacity),
+            color.withValues(alpha: animatedOpacity),
+            color.withValues(alpha: 0.8 * animatedOpacity),
           ],
           [0.0, 0.3, 1.0],
         );
         nodePaint.shader = nodeGradient;
-        canvas.drawCircle(pos, radius, nodePaint);
+        canvas.drawCircle(pos, animatedRadius, nodePaint);
         nodePaint.shader = null;
 
         // Progress Ring Logic (Study Count)
-        // 0: No ring (or very faint)
-        // 1: Half ring (Accumulating energy)
-        // >=2: Full ring + Glow (Ready to expand)
-        
-        if (scale > 0.4) { // Only draw rings if visible enough
-          final ringRadius = radius * 1.6;
-          
+        // Only draw rings when animation is mostly complete (>= 0.7)
+        if (scale > 0.4 && animationProgress > 0.7) {
+          final ringRadius = animatedRadius * 1.6;
+
           if (node.studyCount >= 2) {
              // Full Energy Ring
              ringPaint
-              ..color = color.withValues(alpha: 0.8)
+              ..color = color.withValues(alpha: 0.8 * animatedOpacity)
               ..strokeWidth = 2.0
-              ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0); // Glowy stroke
-             
+              ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
+
              canvas.drawCircle(pos, ringRadius, ringPaint);
-             
+
              // Extra "Pulse" ring for expansion ready
              ringPaint
-              ..color = DS.brandPrimary.withValues(alpha: 0.5)
+              ..color = DS.brandPrimary.withValues(alpha: 0.5 * animatedOpacity)
               ..strokeWidth = 1.0
               ..maskFilter = null;
              canvas.drawCircle(pos, ringRadius * 1.1, ringPaint);
-             
+
           } else if (node.studyCount == 1) {
              // Half Energy Ring
              ringPaint
-              ..color = color.withValues(alpha: 0.6)
+              ..color = color.withValues(alpha: 0.6 * animatedOpacity)
               ..strokeWidth = 1.5
               ..maskFilter = null;
-              
-             // Draw arc from -90 (top) to 90 (bottom) - right side
+
              canvas.drawArc(
                Rect.fromCircle(center: pos, radius: ringRadius),
-               -math.pi / 2, 
-               math.pi, 
-               false, 
+               -math.pi / 2,
+               math.pi,
+               false,
                ringPaint,
              );
           }
         }
 
         // Bright center highlight (mastery indicator)
-        if (masteryFactor > 0.5) {
-          final highlightRadius = radius * 0.4 * masteryFactor;
-          nodePaint.color = DS.brandPrimary.withValues(alpha: 0.6 + masteryFactor * 0.3);
+        if (masteryFactor > 0.5 && animationProgress > 0.5) {
+          final highlightRadius = animatedRadius * 0.4 * masteryFactor;
+          nodePaint.color = DS.brandPrimary.withValues(alpha: (0.6 + masteryFactor * 0.3) * animatedOpacity);
           canvas.drawCircle(pos, highlightRadius, nodePaint);
         }
 
       } else {
         // Locked: Grey dim with subtle indication
-        nodePaint.color = DS.brandPrimary.withValues(alpha: 0.25);
-        canvas.drawCircle(pos, radius * 0.8, nodePaint);
+        nodePaint.color = DS.brandPrimary.withValues(alpha: 0.25 * animatedOpacity);
+        canvas.drawCircle(pos, animatedRadius * 0.8, nodePaint);
 
         // Very subtle glow for locked nodes
         if (scale > 0.6) {
-          glowPaint.color = DS.brandPrimary.withValues(alpha: 0.1);
-          canvas.drawCircle(pos, radius * 1.5, glowPaint);
+          glowPaint.color = DS.brandPrimary.withValues(alpha: 0.1 * animatedOpacity);
+          canvas.drawCircle(pos, animatedRadius * 1.5, glowPaint);
         }
       }
 
@@ -782,8 +848,8 @@ class StarMapPainter extends CustomPainter {
                   color: sectorStyle.primaryColor.withValues(alpha: 0.6),
                   blurRadius: 6,
                 ),
-                const Shadow(
-                  color: DS.brandPrimary54,
+                Shadow(
+                  color: DS.brandPrimary.withValues(alpha: 0.54),
                   blurRadius: 2,
                 ),
               ]
@@ -807,6 +873,9 @@ class StarMapPainter extends CustomPainter {
         oldDelegate.scale != scale ||
         oldDelegate.aggregationLevel != aggregationLevel ||
         oldDelegate.clusters != clusters ||
-        oldDelegate.viewport != viewport;
+        oldDelegate.viewport != viewport ||
+        oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.nodeAnimationProgress != nodeAnimationProgress ||
+        oldDelegate.selectionPulse != selectionPulse;
   }
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -23,11 +22,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for dev
-	},
-}
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
 
@@ -76,9 +70,10 @@ type ChatOrchestrator struct {
 	quota       *service.QuotaService
 	semantic    *service.SemanticCacheService
 	billing     *service.CostCalculator
+	wsFactory   *WebSocketFactory
 }
 
-func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient: ac,
 		queries:     q,
@@ -86,10 +81,21 @@ func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistor
 		quota:       qs,
 		semantic:    sc,
 		billing:     bc,
+		wsFactory:   wsFactory,
 	}
 }
 
 func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
+	// Use WebSocketFactory for secure origin checking
+	var upgrader websocket.Upgrader
+	if h.wsFactory != nil {
+		upgrader = h.wsFactory.CreateUpgrader()
+	} else {
+		// Fallback to development upgrader (for backward compatibility)
+		upgrader = DefaultUpgrader()
+		log.Printf("[WARNING] Using development WebSocket upgrader - configure WebSocketFactory for production")
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade WS: %v", err)

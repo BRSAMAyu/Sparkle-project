@@ -217,7 +217,7 @@ class EmptyState extends StatelessWidget {
             // 描述
             Text(
               description ?? _getDefaultDescription(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppDesignTokens.fontSizeBase,
                 color: AppDesignTokens.neutral600,
                 height: AppDesignTokens.lineHeightNormal,
@@ -256,7 +256,7 @@ class EmptyState extends StatelessWidget {
       child: Icon(
         icon ?? _getDefaultIcon(),
         size: AppDesignTokens.iconSize3xl,
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
       ),
     );
 
@@ -300,7 +300,7 @@ class CompactEmptyState extends StatelessWidget {
             Container(
               width: 64.0,
               height: 64.0,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppDesignTokens.neutral100,
                 shape: BoxShape.circle,
               ),
@@ -314,7 +314,7 @@ class CompactEmptyState extends StatelessWidget {
           ],
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppDesignTokens.fontSizeBase,
               color: AppDesignTokens.neutral600,
             ),
@@ -325,7 +325,7 @@ class CompactEmptyState extends StatelessWidget {
             CustomButton.text(
               text: actionText!,
               onPressed: onAction,
-              size: ButtonSize.small,
+              size: CustomButtonSize.small,
             ),
           ],
         ],

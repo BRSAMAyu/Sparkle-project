@@ -48,9 +48,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           children: [
             _buildSectionHeader(Icons.psychology, l10n.learningMode),
             const SizedBox(height: AppDesignTokens.spacing16),
-            const Text(
+            Text(
               '拖动控制点，调整你的AI辅导风格',
-              style: TextStyle(color: DS.brandPrimary, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
             const SizedBox(height: AppDesignTokens.spacing16),
             LearningModeControl(
@@ -67,9 +67,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
             _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
             const SizedBox(height: AppDesignTokens.spacing16),
-            const Text(
+            Text(
               '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
-              style: TextStyle(color: DS.brandPrimary, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
             const SizedBox(height: AppDesignTokens.spacing16),
             WeeklyAgendaGrid(
@@ -85,18 +85,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.theme),
               subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
-              trailing: DropdownButton<ThemeMode>(
+              trailing: DropdownButton<AppThemeMode>(
                 value: ref.watch(themeModeProvider),
                 underline: const SizedBox.shrink(),
-                onChanged: (ThemeMode? newValue) {
+                onChanged: (AppThemeMode? newValue) {
                   if (newValue != null) {
                     ref.read(themeModeProvider.notifier).state = newValue;
                   }
                 },
                 items: [
-                  DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.followSystem)),
-                  DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.lightMode)),
-                  DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.darkMode)),
+                  DropdownMenuItem(value: AppThemeMode.system, child: Text(l10n.followSystem)),
+                  DropdownMenuItem(value: AppThemeMode.light, child: Text(l10n.lightMode)),
+                  DropdownMenuItem(value: AppThemeMode.dark, child: Text(l10n.darkMode)),
                 ],
               ),
             ),
@@ -139,10 +139,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     builder: (context) => const ChaosControlDialog(),
                   );
                 },
-                child: const Text(
+                child: Text(
                   'Sparkle v2.1.0-stable\n© 2025 Sparkle Team',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: DS.brandPrimary, fontSize: 10),
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10),
                 ),
               ),
             ),
@@ -156,10 +156,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget _buildSectionHeader(IconData icon, String title) => Row(
       children: [
         Icon(icon, color: AppDesignTokens.primaryBase),
-        const SizedBox(width: DS.sm),
+        SizedBox(width: DS.sm),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

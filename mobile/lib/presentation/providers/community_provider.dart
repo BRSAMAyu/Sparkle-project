@@ -8,12 +8,11 @@ import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
-import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/mock_community_repository.dart';
 import 'package:uuid/uuid.dart';
 
 // Mock Community Repository Provider
-final communityRepositoryProvider = Provider<CommunityRepository>((ref) => MockCommunityRepository.instance());
+final communityRepositoryProvider = Provider<MockCommunityRepository>((ref) => MockCommunityRepository.instance());
 
 // Token provider for WebSocket connections
 final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
@@ -58,7 +57,7 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
     loadFriends();
     events.listen(_handleEvent);
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   void _handleEvent(dynamic data) {
     if (data is String) {
@@ -126,7 +125,7 @@ class PendingRequestsNotifier extends StateNotifier<AsyncValue<List<FriendshipIn
   PendingRequestsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadPendingRequests();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> loadPendingRequests() async {
     state = const AsyncValue.loading();
@@ -158,7 +157,7 @@ class FriendRecommendationsNotifier extends StateNotifier<AsyncValue<List<Friend
   FriendRecommendationsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadRecommendations();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> loadRecommendations() async {
     state = const AsyncValue.loading();
@@ -187,7 +186,7 @@ final userSearchProvider = StateNotifierProvider<UserSearchNotifier, AsyncValue<
 class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
 
   UserSearchNotifier(this._repository) : super(const AsyncValue.data([]));
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> search(String keyword) async {
     if (keyword.isEmpty) {
@@ -214,7 +213,7 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   GroupDetailNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
     loadDetail();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
   final String _groupId;
 
   Future<void> loadDetail() async {
@@ -263,7 +262,7 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   MyGroupsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadGroups();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> loadGroups() async {
     state = const AsyncValue.loading();
@@ -301,7 +300,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   GroupChatNotifier(this._repository, this._authRepository, this._groupId, this._ref) : super(const AsyncValue.loading()) {
     _initialize();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
   final AuthRepository _authRepository;
   final String _groupId;
   final Ref _ref;
@@ -478,7 +477,7 @@ final groupSearchProvider = StateNotifierProvider<GroupSearchNotifier, AsyncValu
 class GroupSearchNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
 
   GroupSearchNotifier(this._repository) : super(const AsyncValue.data([]));
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> search(String keyword) async {
     state = const AsyncValue.loading();
@@ -499,7 +498,7 @@ class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> 
   GroupTasksNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
     loadTasks();
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
   final String _groupId;
 
   Future<void> loadTasks() async {
@@ -540,7 +539,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events, this._ref) : super(const AsyncValue.loading()) {
     _initialize(events);
   }
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
   final String _friendId;
   final ChatCacheService _cacheService = ChatCacheService();
   final Ref _ref;
@@ -690,7 +689,7 @@ final currentUserStatusProvider = StateNotifierProvider<CurrentUserStatusNotifie
 
 class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
   CurrentUserStatusNotifier(this._repository) : super(UserStatus.online);
-  final CommunityRepository _repository;
+  final MockCommunityRepository _repository;
 
   Future<void> updateStatus(UserStatus newStatus) async {
     try {

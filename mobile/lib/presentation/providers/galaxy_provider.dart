@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,11 +8,13 @@ import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
-/// Aggregation level based on zoom scale
+/// Aggregation level based on zoom scale (5 levels)
 enum AggregationLevel {
-  full,      // Show all individual nodes (scale >= 0.6)
-  clustered, // Aggregate by parent node (scale >= 0.3)
-  sectors,   // Only show sector centroids (scale < 0.3)
+  universe,  // < 0.2: Sector centroids only
+  galaxy,    // 0.2-0.4: Root nodes only
+  cluster,   // 0.4-0.6: Importance >= 3
+  nebula,    // 0.6-0.8: Importance >= 2
+  full,      // >= 0.8: All nodes
 }
 
 class GalaxyState { // ID of the predicted next node to learn
@@ -20,6 +23,8 @@ class GalaxyState { // ID of the predicted next node to learn
     this.nodes = const [],
     this.edges = const [],
     this.nodePositions = const {},
+    this.visibleNodes = const [],
+    this.visibleEdges = const [],
     this.userFlameIntensity = 0.0,
     this.isLoading = false,
     this.isOptimizing = false,
@@ -28,10 +33,18 @@ class GalaxyState { // ID of the predicted next node to learn
     this.clusters = const {},
     this.viewport,
     this.predictedNodeId,
+    this.selectedNodeId,
+    this.expandedEdgeNodeIds = const {},
+    this.nodeAnimationProgress = const {},
   });
   final List<GalaxyNodeModel> nodes;
-  final List<GalaxyEdgeModel> edges;  // 节点连接
+  final List<GalaxyEdgeModel> edges;  // All edges
   final Map<String, Offset> nodePositions;
+  
+  // Pre-computed visible subset for rendering
+  final List<GalaxyNodeModel> visibleNodes;
+  final List<GalaxyEdgeModel> visibleEdges;
+
   final double userFlameIntensity;
   final bool isLoading;
   final bool isOptimizing;  // Whether force-directed optimization is running
@@ -40,11 +53,18 @@ class GalaxyState { // ID of the predicted next node to learn
   final Map<String, ClusterInfo> clusters;  // Cluster information for aggregated view
   final Rect? viewport;  // Current visible viewport for culling
   final String? predictedNodeId;
+  
+  // Interaction state
+  final String? selectedNodeId;
+  final Set<String> expandedEdgeNodeIds; // Nodes whose connections should be fully visible
+  final Map<String, double> nodeAnimationProgress; // 0.0 to 1.0 for bloom/shrink animation
 
   GalaxyState copyWith({
     List<GalaxyNodeModel>? nodes,
     List<GalaxyEdgeModel>? edges,
     Map<String, Offset>? nodePositions,
+    List<GalaxyNodeModel>? visibleNodes,
+    List<GalaxyEdgeModel>? visibleEdges,
     double? userFlameIntensity,
     bool? isLoading,
     bool? isOptimizing,
@@ -53,10 +73,15 @@ class GalaxyState { // ID of the predicted next node to learn
     Map<String, ClusterInfo>? clusters,
     Rect? viewport,
     String? predictedNodeId,
+    String? selectedNodeId,
+    Set<String>? expandedEdgeNodeIds,
+    Map<String, double>? nodeAnimationProgress,
   }) => GalaxyState(
       nodes: nodes ?? this.nodes,
       edges: edges ?? this.edges,
       nodePositions: nodePositions ?? this.nodePositions,
+      visibleNodes: visibleNodes ?? this.visibleNodes,
+      visibleEdges: visibleEdges ?? this.visibleEdges,
       userFlameIntensity: userFlameIntensity ?? this.userFlameIntensity,
       isLoading: isLoading ?? this.isLoading,
       isOptimizing: isOptimizing ?? this.isOptimizing,
@@ -65,21 +90,10 @@ class GalaxyState { // ID of the predicted next node to learn
       clusters: clusters ?? this.clusters,
       viewport: viewport ?? this.viewport,
       predictedNodeId: predictedNodeId ?? this.predictedNodeId,
+      selectedNodeId: selectedNodeId ?? this.selectedNodeId,
+      expandedEdgeNodeIds: expandedEdgeNodeIds ?? this.expandedEdgeNodeIds,
+      nodeAnimationProgress: nodeAnimationProgress ?? this.nodeAnimationProgress,
     );
-
-  /// 获取可见节点（基于视口裁剪）
-  List<GalaxyNodeModel> get visibleNodes {
-    if (viewport == null) return nodes;
-    final culler = ViewportCuller(viewport: viewport!);
-    return culler.filterVisibleNodes(nodes, nodePositions);
-  }
-
-  /// 获取可见边（基于视口裁剪）
-  List<GalaxyEdgeModel> get visibleEdges {
-    if (viewport == null) return edges;
-    final culler = ViewportCuller(viewport: viewport!);
-    return culler.filterVisibleEdges(edges, nodePositions);
-  }
 }
 
 /// Information about a cluster of nodes
@@ -116,9 +130,17 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   final GalaxyRepository _repository;
   StreamSubscription? _eventsSubscription;
 
+  // Animation timer for bloom/shrink effects
+  Timer? _animationTimer;
+  static const double _animationDuration = 300; // ms
+  static const int _animationFps = 60;
+  static const double _animationStep = 1000 / _animationFps; // ~16.67ms
+
   @override
   void dispose() {
     _eventsSubscription?.cancel();
+    _animationTimer?.cancel();
+    _viewportThrottleTimer?.cancel();
     super.dispose();
   }
 
@@ -170,6 +192,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     Map<String, Offset> initialPositions,
   ) async {
     try {
+      debugPrint('Starting layout optimization for ${nodes.length} nodes, ${edges.length} edges');
+
       // 使用新的布局引擎进行力导向优化
       final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
         nodes: nodes,
@@ -177,22 +201,112 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         initialPositions: initialPositions,
       );
 
+      debugPrint('Layout optimization completed successfully');
+
       // Only update if we're still mounted and not loading something new
       if (mounted && !state.isLoading) {
         state = state.copyWith(
           nodePositions: optimizedPositions,
           isOptimizing: false,
         );
+      } else {
+        debugPrint('Skipping layout update: ${!mounted ? "not mounted" : "loading new data"}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error optimizing layout: $e');
-      state = state.copyWith(isOptimizing: false);
+      debugPrint('Stack trace: $stackTrace');
+
+      // 即使优化失败，也保留初始布局并重置状态
+      if (mounted && !state.isLoading) {
+        debugPrint('Falling back to initial layout positions');
+        state = state.copyWith(
+          isOptimizing: false,
+          // 保留现有的nodePositions（即initialPositions）
+        );
+      } else {
+        debugPrint('Cannot update state: ${!mounted ? "not mounted" : "loading new data"}');
+      }
     }
   }
 
+  // Throttling for viewport updates
+  Timer? _viewportThrottleTimer;
+  Rect? _pendingViewport;
+
   /// 更新视口（用于视口裁剪优化）
   void updateViewport(Rect viewport) {
-    state = state.copyWith(viewport: viewport);
+    _pendingViewport = viewport;
+
+    // Cancel existing throttle timer
+    _viewportThrottleTimer?.cancel();
+
+    // Throttle to 100ms (60fps friendly)
+    _viewportThrottleTimer = Timer(const Duration(milliseconds: 100), () {
+      if (_pendingViewport == null) return;
+
+      final viewport = _pendingViewport!;
+      _pendingViewport = null;
+
+      // Only update if viewport changed significantly
+      if (state.viewport != null) {
+        final old = state.viewport!;
+        final dx = (old.center.dx - viewport.center.dx).abs();
+        final dy = (old.center.dy - viewport.center.dy).abs();
+
+        // If moved less than 50px, skip update
+        if (dx < 50 && dy < 50) {
+          return;
+        }
+      }
+
+      state = state.copyWith(viewport: viewport);
+      _recalculateVisibility();
+    });
+  }
+
+  /// Handle node selection
+  void selectNode(String nodeId) {
+    if (state.selectedNodeId == nodeId) return;
+    
+    // Find related nodes to expand connections
+    final expanded = <String>{nodeId};
+    // Also add neighbors if needed
+    for (final edge in state.edges) {
+      if (edge.sourceId == nodeId) expanded.add(edge.targetId);
+      if (edge.targetId == nodeId) expanded.add(edge.sourceId);
+    }
+
+    state = state.copyWith(
+      selectedNodeId: nodeId,
+      expandedEdgeNodeIds: expanded,
+    );
+    _recalculateVisibility();
+  }
+
+  /// Handle deselection
+  void deselectNode() {
+    if (state.selectedNodeId == null) return;
+    
+    // Manually create new state to ensure null is set
+    state = GalaxyState(
+      nodes: state.nodes,
+      edges: state.edges,
+      nodePositions: state.nodePositions,
+      visibleNodes: state.visibleNodes,
+      visibleEdges: state.visibleEdges,
+      userFlameIntensity: state.userFlameIntensity,
+      isLoading: state.isLoading,
+      isOptimizing: state.isOptimizing,
+      currentScale: state.currentScale,
+      aggregationLevel: state.aggregationLevel,
+      clusters: state.clusters,
+      viewport: state.viewport,
+      predictedNodeId: state.predictedNodeId,
+      selectedNodeId: null, // CLEAR
+      expandedEdgeNodeIds: {}, // CLEAR
+      nodeAnimationProgress: state.nodeAnimationProgress,
+    );
+    _recalculateVisibility();
   }
 
   Future<void> sparkNode(String id) async {
@@ -223,14 +337,18 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   void updateScale(double scale) {
     if ((scale - state.currentScale).abs() < 0.01) return;
 
-    // Determine aggregation level based on scale thresholds
+    // Determine aggregation level based on 5-level LOD
     AggregationLevel newLevel;
-    if (scale >= 0.6) {
-      newLevel = AggregationLevel.full;
-    } else if (scale >= 0.3) {
-      newLevel = AggregationLevel.clustered;
+    if (scale < 0.2) {
+      newLevel = AggregationLevel.universe;
+    } else if (scale < 0.4) {
+      newLevel = AggregationLevel.galaxy;
+    } else if (scale < 0.6) {
+      newLevel = AggregationLevel.cluster;
+    } else if (scale < 0.8) {
+      newLevel = AggregationLevel.nebula;
     } else {
-      newLevel = AggregationLevel.sectors;
+      newLevel = AggregationLevel.full;
     }
 
     // Only recalculate clusters if level changed
@@ -241,57 +359,241 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         aggregationLevel: newLevel,
         clusters: clusters,
       );
+      // Trigger animation when LOD changes
+      _recalculateVisibility(withAnimation: true);
     } else {
       state = state.copyWith(currentScale: scale);
+      // Even if level didn't change, viewport culling might change with scale?
+      // Actually usually viewport updates happen separately via updateViewport.
+      // But if we zoomed, the viewport in world coordinates changed, so the screen might call updateViewport separately.
+      // So we don't strictly need to recalculate visibility here unless we want to do strict scale-based filtering.
+      _recalculateVisibility();
     }
+  }
+  
+  void _recalculateVisibility({bool withAnimation = false}) {
+    final visibleNodes = _computeVisibleNodes();
+    final visibleEdges = _computeVisibleEdges(visibleNodes);
+
+    if (withAnimation) {
+      // Start bloom animation for new nodes
+      _startBloomAnimation(visibleNodes);
+    } else {
+      state = state.copyWith(
+        visibleNodes: visibleNodes,
+        visibleEdges: visibleEdges,
+        nodeAnimationProgress: const {}, // Clear animations
+      );
+    }
+  }
+
+  /// Start bloom animation for nodes
+  void _startBloomAnimation(List<GalaxyNodeModel> newVisibleNodes) {
+    // Cancel existing timer
+    _animationTimer?.cancel();
+
+    // Initialize animation progress for all visible nodes
+    final animationProgress = <String, double>{};
+    for (final node in newVisibleNodes) {
+      animationProgress[node.id] = 0.0;
+    }
+
+    // Update state with initial animation progress
+    state = state.copyWith(
+      visibleNodes: newVisibleNodes,
+      visibleEdges: _computeVisibleEdges(newVisibleNodes),
+      nodeAnimationProgress: animationProgress,
+    );
+
+    // Start animation timer
+    final startTime = DateTime.now().millisecondsSinceEpoch;
+    _animationTimer = Timer.periodic(Duration(milliseconds: _animationStep.toInt()), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        _animationTimer = null;
+        return;
+      }
+      
+      final elapsed = DateTime.now().millisecondsSinceEpoch - startTime;
+      final progress = (elapsed / _animationDuration).clamp(0.0, 1.0);
+
+      // EaseOutBack curve
+      final easedProgress = _easeOutBack(progress);
+
+      // Update all node animations
+      final updatedProgress = state.nodeAnimationProgress.map((id, _) => MapEntry(id, easedProgress));
+
+      if (progress >= 1.0) {
+        timer.cancel();
+        _animationTimer = null;
+        // Final state: all at 1.0
+        state = state.copyWith(
+          nodeAnimationProgress: const {},
+        );
+      } else {
+        state = state.copyWith(
+          nodeAnimationProgress: updatedProgress,
+        );
+      }
+    });
+  }
+
+  /// EaseOutBack curve for bloom effect
+  double _easeOutBack(double x) {
+    const double c1 = 1.70158;
+    const double c3 = c1 + 1.0;
+    return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2);
+  }
+
+  /// Calculate visible nodes based on LOD and Viewport
+  List<GalaxyNodeModel> _computeVisibleNodes() {
+    if (state.nodes.isEmpty) return [];
+    
+    final nodes = state.nodes;
+    final posMap = state.nodePositions;
+    final level = state.aggregationLevel;
+    final viewport = state.viewport;
+
+    // 1. LOD Filtering
+    var filteredNodes = <GalaxyNodeModel>[];
+    
+    switch (level) {
+      case AggregationLevel.universe:
+        // Universe level: No individual nodes, handled by clusters/sectors
+        return []; 
+        
+      case AggregationLevel.galaxy:
+        // Galaxy level: Only root nodes (importance=5 or no parent)
+        filteredNodes = nodes.where((n) => n.importance >= 5 || n.parentId == null).toList();
+        
+      case AggregationLevel.cluster:
+        // Cluster level: Importance >= 3
+        filteredNodes = nodes.where((n) => n.importance >= 3).toList();
+        
+      case AggregationLevel.nebula:
+        // Nebula level: Importance >= 2
+        filteredNodes = nodes.where((n) => n.importance >= 2).toList();
+        
+      case AggregationLevel.full:
+        // Full level: All nodes
+        filteredNodes = nodes;
+    }
+
+    // Always include selected node and its neighbors if any
+    if (state.selectedNodeId != null) {
+       final selectedId = state.selectedNodeId!;
+       final extras = nodes.where((n) => n.id == selectedId || state.expandedEdgeNodeIds.contains(n.id));
+       // Merge effectively
+       final existingIds = filteredNodes.map((n) => n.id).toSet();
+       for (final extra in extras) {
+         if (!existingIds.contains(extra.id)) {
+           filteredNodes.add(extra);
+         }
+       }
+    }
+
+    // 2. Viewport Culling
+    if (viewport == null) return filteredNodes;
+    
+    // Expand viewport slightly for smooth entry
+    final cullingRect = viewport.inflate(100); 
+    
+    return filteredNodes.where((node) {
+      final pos = posMap[node.id];
+      if (pos == null) return false;
+      return cullingRect.contains(pos);
+    }).toList();
+  }
+
+  /// Calculate visible edges based on visible nodes and LOD
+  List<GalaxyEdgeModel> _computeVisibleEdges(List<GalaxyNodeModel> visibleNodes) {
+    if (visibleNodes.isEmpty) return [];
+    
+    final visibleNodeIds = visibleNodes.map((n) => n.id).toSet();
+    final edges = state.edges;
+    final level = state.aggregationLevel;
+    final scale = state.currentScale;
+    
+    return edges.where((edge) {
+      // 1. Both ends must be visible
+      if (!visibleNodeIds.contains(edge.sourceId) || !visibleNodeIds.contains(edge.targetId)) {
+        return false;
+      }
+
+      // 2. Connection importance filtering
+      
+      // Always show expanded edges (connected to selected node)
+      if (state.expandedEdgeNodeIds.contains(edge.sourceId) && state.expandedEdgeNodeIds.contains(edge.targetId)) {
+        return true;
+      }
+      
+      // LOD based rules
+      if (level == AggregationLevel.universe) return false;
+      
+      if (level == AggregationLevel.galaxy) {
+        // Only root-root connections
+        return true; 
+      }
+      
+      // For Cluster/Nebula/Full:
+      
+      // Structural edges (parent-child) are prioritized
+      if (edge.relationType == EdgeRelationType.parentChild) {
+        // Show if both nodes are important enough
+        return true; 
+      }
+      
+      // Other relations (similar, related, etc.)
+      // Only show if scale is high enough or explicitly expanded
+      if (scale < 0.8) {
+        return false; // Hide clutter at lower zooms
+      }
+      
+      return true;
+    }).toList();
   }
 
   /// Calculate clusters based on aggregation level
   Map<String, ClusterInfo> _calculateClusters(AggregationLevel level) {
-    if (level == AggregationLevel.full) {
+    // Return empty for levels where we render individual nodes extensively
+    if (level == AggregationLevel.full || level == AggregationLevel.nebula) {
       return {};
     }
 
     final clusters = <String, ClusterInfo>{};
 
-    if (level == AggregationLevel.clustered) {
-      // Group by parent node
+    if (level == AggregationLevel.cluster) {
+      // Group by parent node (Cluster level)
+      // Logic: Aggregate nodes that are NOT shown individually
+      // Actually simpler: Just calculate clusters for ALL parents, 
+      // and Painter decides to draw them if the parent itself is not rendered as a node?
+      // Or just standard clustering for visual aid.
+      // Let's stick to previous logic but mapped to new level.
+      
       final parentGroups = <String, List<GalaxyNodeModel>>{};
 
       for (final node in state.nodes) {
-        final parentId = node.parentId ?? node.id; // Root nodes are their own cluster
+        final parentId = node.parentId ?? node.id; 
         parentGroups.putIfAbsent(parentId, () => []);
         parentGroups[parentId]!.add(node);
       }
 
-      // Create cluster for each group
       for (final entry in parentGroups.entries) {
         final parentId = entry.key;
         final groupNodes = entry.value;
+        final parentNode = state.nodes.firstWhere((n) => n.id == parentId, orElse: () => groupNodes.first);
 
-        // Find the parent node (or first node if it's a root)
-        final parentNode = state.nodes.firstWhere(
-          (n) => n.id == parentId,
-          orElse: () => groupNodes.first,
-        );
-
-        // Calculate center position (average of all node positions)
         var center = Offset.zero;
         double totalMastery = 0;
         final childIds = <String>[];
 
         for (final node in groupNodes) {
           final pos = state.nodePositions[node.id];
-          if (pos != null) {
-            center += pos;
-          }
+          if (pos != null) center += pos;
           totalMastery += node.masteryScore;
           childIds.add(node.id);
         }
-
-        if (groupNodes.isNotEmpty) {
-          center = center / groupNodes.length.toDouble();
-        }
+        if (groupNodes.isNotEmpty) center = center / groupNodes.length.toDouble();
 
         clusters[parentId] = ClusterInfo(
           id: parentId,
@@ -303,7 +605,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           childNodeIds: childIds,
         );
       }
-    } else if (level == AggregationLevel.sectors) {
+    } else if (level == AggregationLevel.universe || level == AggregationLevel.galaxy) {
       // Group by sector
       final sectorGroups = <SectorEnum, List<GalaxyNodeModel>>{};
 
@@ -312,29 +614,22 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         sectorGroups[node.sector]!.add(node);
       }
 
-      // Create cluster for each sector
       for (final entry in sectorGroups.entries) {
         final sector = entry.key;
         final sectorNodes = entry.value;
         final style = SectorConfig.getStyle(sector);
 
-        // Calculate sector centroid
         var center = Offset.zero;
         double totalMastery = 0;
         final childIds = <String>[];
 
         for (final node in sectorNodes) {
           final pos = state.nodePositions[node.id];
-          if (pos != null) {
-            center += pos;
-          }
+          if (pos != null) center += pos;
           totalMastery += node.masteryScore;
           childIds.add(node.id);
         }
-
-        if (sectorNodes.isNotEmpty) {
-          center = center / sectorNodes.length.toDouble();
-        }
+        if (sectorNodes.isNotEmpty) center = center / sectorNodes.length.toDouble();
 
         final clusterId = 'sector_${sector.name}';
         clusters[clusterId] = ClusterInfo(

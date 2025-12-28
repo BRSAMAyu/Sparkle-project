@@ -116,7 +116,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         child: Row(
           children: [
             // Animated Agent Icon
@@ -142,14 +142,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
                   _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                   size: 18,
                   key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                 ),
               ),
             ),
 
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
 
             // Status Text
             Expanded(
@@ -188,7 +188,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
               )
             else if (isCompleted)
-              const Icon(Icons.check_circle, color: DS.success, size: 20)
+              Icon(Icons.check_circle, color: DS.success, size: 20)
             else
               AnimatedRotation(
                 turns: _isExpanded ? 0.5 : 0,
@@ -206,7 +206,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
   Widget _buildStepStream(ThemeData theme) => Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -243,7 +243,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             ],
           ),
 
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
 
           // Steps List
           ...widget.steps.asMap().entries.map((entry) {
@@ -271,7 +271,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               child: _buildStepStatusIcon(step.status),
             ),
 
-            const SizedBox(width: DS.sm),
+            SizedBox(width: DS.sm),
 
             // Step Content
             Expanded(
@@ -291,14 +291,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   if (step.toolOutput != null && step.toolOutput!.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(top: 6),
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary87,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: SelectableText(
                         step.toolOutput!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 11,
                           color: DS.successAccent,
@@ -332,17 +332,17 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.book,
                                     size: 12,
-                                    color: DS.brandPrimary,
+                                    color: DS.brandPrimaryConst,
                                   ),
-                                  const SizedBox(width: DS.xs),
+                                  SizedBox(width: DS.xs),
                                   Text(
                                     '引用: $citation',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: DS.brandPrimary,
+                                      color: DS.brandPrimaryConst,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -384,7 +384,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   Widget _buildStepStatusIcon(StepStatus status) {
     switch (status) {
       case StepStatus.completed:
-        return const Icon(Icons.check_circle, color: DS.success, size: 16);
+        return Icon(Icons.check_circle, color: DS.success, size: 16);
       case StepStatus.inProgress:
         return SizedBox(
           width: 16,
@@ -395,10 +395,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           ),
         );
       case StepStatus.failed:
-        return const Icon(Icons.error, color: DS.error, size: 16);
+        return Icon(Icons.error, color: DS.error, size: 16);
       case StepStatus.pending:
         return Icon(Icons.radio_button_unchecked,
-            color: DS.brandPrimary[400], size: 16,);
+            color: DS.brandPrimary400, size: 16,);
     }
   }
 
@@ -418,6 +418,16 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         return Icons.auto_awesome; // 🌌 Galaxy
       case AgentType.search:
         return Icons.search; // 🔍 Search
+      case AgentType.dataAnalysis:
+        return Icons.analytics; // 📊 Data Analysis
+      case AgentType.translation:
+        return Icons.translate; // 🌐 Translation
+      case AgentType.image:
+        return Icons.image; // 🖼️ Image
+      case AgentType.audio:
+        return Icons.audiotrack; // 🎵 Audio
+      case AgentType.reasoning:
+        return Icons.psychology_outlined; // 🤔 Reasoning
     }
   }
 
@@ -437,6 +447,16 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         return const Color(0xFFEC4899); // Pink
       case AgentType.search:
         return const Color(0xFF3B82F6); // Blue
+      case AgentType.dataAnalysis:
+        return const Color(0xFF06B6D4); // Cyan
+      case AgentType.translation:
+        return const Color(0xFF8B5CF6); // Purple (same as code)
+      case AgentType.image:
+        return const Color(0xFFF97316); // Orange
+      case AgentType.audio:
+        return const Color(0xFF8B5CF6); // Purple (same as code)
+      case AgentType.reasoning:
+        return const Color(0xFF6366F1); // Indigo (same as orchestrator)
     }
   }
 
@@ -460,6 +480,16 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           return '🌌 正在检索...';
         case AgentType.search:
           return '🔍 正在搜索...';
+        case AgentType.dataAnalysis:
+          return '📊 正在分析数据...';
+        case AgentType.translation:
+          return '🌐 正在翻译...';
+        case AgentType.image:
+          return '🖼️ 正在处理图像...';
+        case AgentType.audio:
+          return '🎵 正在处理音频...';
+        case AgentType.reasoning:
+          return '🤔 正在推理...';
       }
     }
     return '准备中...';
@@ -539,7 +569,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(DS.md),
+            padding: EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: Colors.purple.shade100.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
@@ -554,7 +584,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   color: Colors.purple.shade700,
                   size: 24,
                 ),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
                     '多专家协作回答',
@@ -578,7 +608,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 if (isComplete)
                   Container(
                     margin: const EdgeInsets.only(left: 8),
-                    child: const Icon(Icons.check_circle,
+                    child: Icon(Icons.check_circle,
                         color: DS.success, size: 18,),
                   ),
               ],
@@ -591,8 +621,8 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           // Summary (if provided)
           if (summary != null)
             Container(
-              margin: const EdgeInsets.all(DS.md),
-              padding: const EdgeInsets.all(DS.md),
+              margin: EdgeInsets.all(DS.md),
+              padding: EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(12),
@@ -620,7 +650,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: DS.sm),
+                  SizedBox(height: DS.sm),
                   Text(
                     summary!,
                     style: theme.textTheme.bodyMedium,
@@ -635,9 +665,9 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
 
   Widget _buildContributionTile(AgentContribution contribution, ThemeData theme) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _getAgentColor(contribution.agentType).withOpacity(0.3),
@@ -657,11 +687,11 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 ),
                 child: Icon(
                   _getAgentIcon(contribution.agentType),
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                   size: 14,
                 ),
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Text(
                 contribution.agentName,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -680,7 +710,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             contribution.responseText,
             style: theme.textTheme.bodyMedium,
@@ -727,6 +757,16 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         return Icons.auto_awesome;
       case AgentType.search:
         return Icons.search;
+      case AgentType.dataAnalysis:
+        return Icons.analytics;
+      case AgentType.translation:
+        return Icons.translate;
+      case AgentType.image:
+        return Icons.image;
+      case AgentType.audio:
+        return Icons.audiotrack;
+      case AgentType.reasoning:
+        return Icons.psychology_outlined;
     }
   }
 
@@ -746,6 +786,16 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         return const Color(0xFFEC4899);
       case AgentType.search:
         return const Color(0xFF3B82F6);
+      case AgentType.dataAnalysis:
+        return const Color(0xFF06B6D4);
+      case AgentType.translation:
+        return const Color(0xFF8B5CF6);
+      case AgentType.image:
+        return const Color(0xFFF97316);
+      case AgentType.audio:
+        return const Color(0xFF8B5CF6);
+      case AgentType.reasoning:
+        return const Color(0xFF6366F1);
     }
   }
 }

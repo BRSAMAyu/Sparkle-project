@@ -217,7 +217,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   ListTile(
                     title: const Text('Deadline'),
                     subtitle: Text(_deadline == null ? 'Select Date' : _deadline.toString().split(' ')[0]),
-                    trailing: const Icon(Icons.calendar_today),
+                    trailing: Icon(Icons.calendar_today),
                     tileColor: DS.brandPrimary.shade100,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     onTap: () async {

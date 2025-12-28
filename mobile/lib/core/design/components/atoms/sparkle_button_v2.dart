@@ -115,16 +115,16 @@ class SparkleButton extends StatelessWidget {
         curve: Curves.easeOut,
         child: Material(
           color: _getBackgroundColor(theme.colors, info),
-          borderRadius: _getBorderRadius(theme.spacing, info),
+          borderRadius: _getBorderRadius(info),
           elevation: _getElevation(info),
           shadowColor: _getShadowColor(theme.colors, info),
           child: InkWell(
             onTap: disabled || loading ? null : onPressed,
-            borderRadius: _getBorderRadius(theme.spacing, info),
+            borderRadius: _getBorderRadius(info),
             focusNode: focusNode,
             child: Container(
               width: expand ? double.infinity : null,
-              padding: _getPadding(theme.spacing, info),
+              padding: _getPadding(info),
               child: Row(
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
                 mainAxisAlignment: expand ? MainAxisAlignment.center : MainAxisAlignment.start,
@@ -164,7 +164,7 @@ class SparkleButton extends StatelessWidget {
     }
 
     if (icon != null || loading) {
-      children.add(SizedBox(width: theme.spacing.sm));
+      children.add(const SizedBox(width: SpacingSystem.sm));
     }
 
     children.add(
@@ -219,20 +219,20 @@ class SparkleButton extends StatelessWidget {
     return 1;
   }
 
-  BorderRadius _getBorderRadius(SpacingSystem spacing, BreakpointInfo info) {
-    final base = spacing.sm;
+  BorderRadius _getBorderRadius(BreakpointInfo info) {
+    const base = SpacingSystem.sm;
     return BorderRadius.circular(base);
   }
 
-  EdgeInsets _getPadding(SpacingSystem spacing, BreakpointInfo info) {
-    final vertical = spacing.scale(info.context, base: spacing.sm);
-    final horizontal = spacing.scale(info.context, base: spacing.lg);
+  EdgeInsets _getPadding(BreakpointInfo info) {
+    final vertical = SpacingSystem.scale(info.context, base: SpacingSystem.sm);
+    final horizontal = SpacingSystem.scale(info.context, base: SpacingSystem.lg);
 
     switch (size) {
       case ButtonSize.small:
-        return EdgeInsets.symmetric(
-          horizontal: spacing.md,
-          vertical: spacing.xs,
+        return const EdgeInsets.symmetric(
+          horizontal: SpacingSystem.md,
+          vertical: SpacingSystem.xs,
         );
       case ButtonSize.medium:
         return EdgeInsets.symmetric(
@@ -240,9 +240,9 @@ class SparkleButton extends StatelessWidget {
           vertical: vertical,
         );
       case ButtonSize.large:
-        return EdgeInsets.symmetric(
-          horizontal: spacing.xl,
-          vertical: spacing.md,
+        return const EdgeInsets.symmetric(
+          horizontal: SpacingSystem.xl,
+          vertical: SpacingSystem.md,
         );
     }
   }

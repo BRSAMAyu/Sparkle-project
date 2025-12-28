@@ -129,7 +129,7 @@ class _TaskDetailView extends ConsumerWidget {
                           Chip(
                             label: Text(toBeginningOfSentenceCase(task.type.name) ?? task.type.name),
                             backgroundColor: DS.brandPrimary.withValues(alpha: 0.8),
-                            avatar: const Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
+                            avatar: Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
                           ),
                           Chip(
                             label: Text(toBeginningOfSentenceCase(task.status.name) ?? task.status.name),
@@ -193,7 +193,7 @@ class _TaskDetailView extends ConsumerWidget {
   Widget _buildGuideSection(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: AppDesignTokens.borderRadius12,
         border: Border.all(color: AppDesignTokens.neutral200),
         boxShadow: AppDesignTokens.shadowSm,
@@ -220,7 +220,7 @@ class _TaskDetailView extends ConsumerWidget {
           listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppDesignTokens.primaryBase,
           ),
-          code: const TextStyle(
+          code: TextStyle(
             backgroundColor: AppDesignTokens.neutral100,
             color: AppDesignTokens.primaryDark,
             fontFamily: 'monospace',
@@ -308,7 +308,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
         child: Container(
           padding: const EdgeInsets.all(AppDesignTokens.spacing16),
           decoration: BoxDecoration(
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
             borderRadius: AppDesignTokens.borderRadius12,
             boxShadow: [
               BoxShadow(
@@ -341,7 +341,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                     ),
                   ],
                 ),
-                child: Icon(widget.icon, color: DS.brandPrimary, size: 22),
+                child: Icon(widget.icon, color: DS.brandPrimaryConst, size: 22),
               ),
               const SizedBox(width: AppDesignTokens.spacing16),
               Expanded(
@@ -356,7 +356,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: DS.xs),
+                    SizedBox(height: DS.xs),
                     Text(
                       widget.content,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -383,7 +383,7 @@ class _BottomActionBar extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           boxShadow: AppDesignTokens.shadowMd,
           border: const Border(
             top: BorderSide(
@@ -402,7 +402,7 @@ class _BottomActionBar extends ConsumerWidget {
                   // TODO: 需要创建任务编辑页面，暂时导航到创建页面
                   context.push('/tasks/new');
                 },
-                size: ButtonSize.medium,
+                size: CustomButtonSize.medium,
               ),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
@@ -416,7 +416,7 @@ class _BottomActionBar extends ConsumerWidget {
                   ref.read(activeTaskProvider.notifier).state = task;
                   context.push('/tasks/${task.id}/execute');
                 },
-                size: ButtonSize.medium,
+                size: CustomButtonSize.medium,
               ),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
@@ -429,7 +429,7 @@ class _BottomActionBar extends ConsumerWidget {
                 borderRadius: AppDesignTokens.borderRadius12,
               ),
               child: IconButton(
-                icon: const Icon(Icons.delete_outline, color: AppDesignTokens.error),
+                icon: Icon(Icons.delete_outline, color: AppDesignTokens.error),
                 onPressed: () {
                   HapticFeedback.mediumImpact();
                   showDialog(
@@ -460,7 +460,7 @@ class _BottomActionBar extends ConsumerWidget {
                             context.pop();
                           },
                           customGradient: AppDesignTokens.errorGradient,
-                          size: ButtonSize.small,
+                          size: CustomButtonSize.small,
                         ),
                       ],
                     ),

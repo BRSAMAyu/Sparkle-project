@@ -144,7 +144,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                   ),
                                   child: Icon(
                                     _getActionIcon(widget.action.type),
-                                    color: DS.brandPrimary,
+                                    color: DS.brandPrimaryConst,
                                     size: AppDesignTokens.iconSizeSm,
                                   ),
                                 ),
@@ -173,7 +173,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               CustomButton.text(
                                 text: '忽略',
                                 onPressed: widget.onDismiss,
-                                size: ButtonSize.small,
+                                size: CustomButtonSize.small,
                               ),
                             const SizedBox(width: AppDesignTokens.spacing8),
                             if (widget.onConfirm != null)
@@ -181,7 +181,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 text: '确认',
                                 icon: Icons.check_rounded,
                                 onPressed: widget.onConfirm,
-                                size: ButtonSize.small,
+                                size: CustomButtonSize.small,
                                 customGradient: _getActionGradient(widget.action.type),
                               ),
                           ],
@@ -315,14 +315,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     const SizedBox(width: AppDesignTokens.spacing4),
                     Text(
                       '${_formatParamKey(entry.key)}: ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppDesignTokens.neutral600,
                         fontSize: AppDesignTokens.fontSizeSm,
                       ),
                     ),
                     Text(
                       entry.value.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: AppDesignTokens.fontWeightSemibold,
                         fontSize: AppDesignTokens.fontSizeSm,
                         color: AppDesignTokens.neutral900,

@@ -95,7 +95,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(color: DS.brandPrimary, strokeWidth: 2),
+                      child: CircularProgressIndicator(color: DS.brandPrimaryConst, strokeWidth: 2),
                     )
                   : const Text('Post', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -103,14 +103,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           children: [
             TextField(
               controller: _contentController,
               autofocus: true,
               maxLines: 8,
-              style: TextStyle(color: DS.brandPrimary, fontSize: 16),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
               decoration: InputDecoration(
                 hintText: "What's on your mind?",
                 hintStyle: TextStyle(color: DS.brandPrimary.withOpacity(0.3)),

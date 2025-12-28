@@ -93,7 +93,7 @@ class _InteractiveOnboardingScreenState
 
             // Page indicator
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -127,8 +127,8 @@ class _InteractiveOnboardingScreenState
                     ),
                     child: Text(
                       _currentPage == _totalPages - 1 ? '开始使用' : '下一步',
-                      style: const TextStyle(
-                        color: DS.brandPrimary,
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -144,7 +144,7 @@ class _InteractiveOnboardingScreenState
 
   // Page 1: Welcome
   Widget _buildWelcomePage() => Padding(
-      padding: const EdgeInsets.all(DS.xxl),
+      padding: EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -174,26 +174,26 @@ class _InteractiveOnboardingScreenState
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.auto_awesome,
                     size: 60,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                 ),
               ),
           ),
-          const SizedBox(height: DS.xxxl),
+          SizedBox(height: DS.xxxl),
 
           // Title
           const Text(
             '欢迎来到 Sparkle',
             style: TextStyle(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
 
           // Subtitle
           Text(
@@ -204,15 +204,15 @@ class _InteractiveOnboardingScreenState
               fontSize: 18,
             ),
           ),
-          const SizedBox(height: DS.xxxl),
+          SizedBox(height: DS.xxxl),
 
           // Features preview
           _buildFeaturePreview(
               Icons.auto_graph, '知识星图', '可视化学习网络',),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           _buildFeaturePreview(
               Icons.psychology, 'AI 对话', '智能学习伙伴',),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           _buildFeaturePreview(
               Icons.task_alt, '智能任务', '个性化学习计划',),
         ],
@@ -220,7 +220,7 @@ class _InteractiveOnboardingScreenState
     );
 
   Widget _buildFeaturePreview(IconData icon, String title, String description) => Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -229,22 +229,22 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(DS.md),
+            padding: EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: DS.brandPrimary.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: DS.brandPrimary, size: 24),
+            child: Icon(icon, color: DS.brandPrimaryConst, size: 24),
           ),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: DS.brandPrimary,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -265,19 +265,19 @@ class _InteractiveOnboardingScreenState
 
   // Page 2: Architecture Animation
   Widget _buildArchitecturePage() => Padding(
-      padding: const EdgeInsets.all(DS.xxl),
+      padding: EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
             '系统架构',
             style: TextStyle(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Text(
             '了解 Sparkle 如何工作',
             style: TextStyle(
@@ -285,7 +285,7 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Architecture Animation
           const ArchitectureAnimation(),
@@ -340,26 +340,26 @@ class _InteractiveOnboardingScreenState
 
   // Page 6: Personalization
   Widget _buildPersonalizationPage() => Padding(
-      padding: const EdgeInsets.all(DS.xxl),
+      padding: EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.settings_suggest,
             size: 80,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           const Text(
             '个性化设置',
             style: TextStyle(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Text(
             '让 Sparkle 更懂你',
             style: TextStyle(
@@ -367,7 +367,7 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: DS.xxxl),
+          SizedBox(height: DS.xxxl),
 
           // Settings options
           _buildSettingOption(
@@ -376,14 +376,14 @@ class _InteractiveOnboardingScreenState
             description: '在最佳时间推送学习建议',
             value: true,
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           _buildSettingOption(
             icon: Icons.analytics,
             title: '学习分析',
             description: '生成个性化学习报告',
             value: true,
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           _buildSettingOption(
             icon: Icons.auto_awesome,
             title: 'AI 助手',
@@ -402,7 +402,7 @@ class _InteractiveOnboardingScreenState
     required List<String> features,
     required Widget demoWidget,
   }) => SingleChildScrollView(
-      padding: const EdgeInsets.all(DS.xxl),
+      padding: EdgeInsets.all(DS.xxl),
       child: Column(
         children: [
           // Icon
@@ -414,18 +414,18 @@ class _InteractiveOnboardingScreenState
             ),
             child: Icon(icon, size: 48, color: DS.brandPrimary),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Title
           Text(
             title,
-            style: const TextStyle(
-              color: DS.brandPrimary,
+            style: TextStyle(
+              color: DS.brandPrimaryConst,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
 
           // Description
           Text(
@@ -436,11 +436,11 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Demo widget
           demoWidget,
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Features list
           ...features.map((feature) => Padding(
@@ -453,12 +453,12 @@ class _InteractiveOnboardingScreenState
                       color: iconGradient[0],
                       size: 24,
                     ),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Expanded(
                       child: Text(
                         feature,
-                        style: const TextStyle(
-                          color: DS.brandPrimary,
+                        style: TextStyle(
+                          color: DS.brandPrimaryConst,
                           fontSize: 14,
                         ),
                       ),
@@ -476,7 +476,7 @@ class _InteractiveOnboardingScreenState
     required String description,
     required bool value,
   }) => Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -485,15 +485,15 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Icon(icon, color: DS.brandPrimary.shade400, size: 32),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: DS.brandPrimary,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -540,7 +540,7 @@ class _InteractiveOnboardingScreenState
 
   Widget _buildChatDemo() => Container(
       height: 200,
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
@@ -549,9 +549,9 @@ class _InteractiveOnboardingScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildChatMessage('你好！我能帮你什么？', true),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildChatMessage('解释一下微积分的基本原理', false),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildChatMessage('微积分研究函数的变化率...', true),
         ],
       ),
@@ -560,7 +560,7 @@ class _InteractiveOnboardingScreenState
   Widget _buildChatMessage(String text, bool isAI) => Align(
       alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: isAI
               ? Colors.purple.withValues(alpha: 0.2)
@@ -569,14 +569,14 @@ class _InteractiveOnboardingScreenState
         ),
         child: Text(
           text,
-          style: const TextStyle(color: DS.brandPrimary, fontSize: 12),
+          style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
         ),
       ),
     );
 
   Widget _buildTaskDemo() => Container(
       height: 200,
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
@@ -584,16 +584,16 @@ class _InteractiveOnboardingScreenState
       child: Column(
         children: [
           _buildTaskItem('学习任务', '完成微积分第一章', DS.brandPrimary),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildTaskItem('训练任务', '完成10道练习题', DS.success),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildTaskItem('反思任务', '总结本周学习收获', Colors.purple),
         ],
       ),
     );
 
   Widget _buildTaskItem(String type, String title, Color color) => Container(
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
@@ -601,7 +601,7 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Icon(Icons.circle, size: 12, color: color),
-          const SizedBox(width: DS.sm),
+          SizedBox(width: DS.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,7 +616,7 @@ class _InteractiveOnboardingScreenState
                 ),
                 Text(
                   title,
-                  style: const TextStyle(color: DS.brandPrimary, fontSize: 12),
+                  style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
                 ),
               ],
             ),

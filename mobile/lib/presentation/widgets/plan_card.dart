@@ -68,14 +68,14 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
           // Remove InkWell as we handle taps on GestureDetector
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     _buildTypeIcon(planType),
-                    const SizedBox(width: DS.sm),
+                    SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         title,
@@ -89,7 +89,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                 ),
                 
                 if (description != null && description.isNotEmpty) ...[
-                  const SizedBox(height: DS.sm),
+                  SizedBox(height: DS.sm),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -98,7 +98,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                   ),
                 ],
 
-                const SizedBox(height: DS.md),
+                SizedBox(height: DS.md),
                 Row(
                   children: [
                     if (targetDate != null) ...[
@@ -118,7 +118,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                     ],
                     const Spacer(),
                     // Just a visual indicator now - not interactive so smaller is acceptable
-                    const Icon(Icons.arrow_forward_ios,
+                    Icon(Icons.arrow_forward_ios,
                       size: AppDesignTokens.iconSizeXs,
                       color: AppDesignTokens.neutral400,),
                   ],

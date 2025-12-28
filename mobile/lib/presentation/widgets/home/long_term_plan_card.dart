@@ -27,7 +27,7 @@ class LongTermPlanCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
           ),
         ),
@@ -46,7 +46,7 @@ class LongTermPlanCard extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: DS.brandPrimary70,
+                color: DS.brandPrimary70Const,
               ),
             ),
             Icon(Icons.spa_rounded, color: AppDesignTokens.success, size: 16),
@@ -60,13 +60,13 @@ class LongTermPlanCard extends ConsumerWidget {
             children: [
               Text(
                 '${(growth.progress * 100).toInt()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppDesignTokens.success,
                 ),
               ),
-              const SizedBox(height: DS.xs),
+              SizedBox(height: DS.xs),
               SizedBox(
                 height: 4,
                 width: 60,
@@ -85,10 +85,10 @@ class LongTermPlanCard extends ConsumerWidget {
 
         Text(
           growth.name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: DS.brandPrimary,
+            color: DS.brandPrimaryConst,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -104,14 +104,14 @@ class LongTermPlanCard extends ConsumerWidget {
       ],
     );
 
-  Widget _buildEmptyState(BuildContext context) => const Column(
+  Widget _buildEmptyState(BuildContext context) => Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.add_circle_outline, color: DS.brandPrimary30, size: 32),
-        SizedBox(height: DS.sm),
+        Icon(Icons.add_circle_outline, color: DS.brandPrimary30Const, size: 32),
+        SizedBox(height: DS.smConst),
         Text(
           '创建长期计划',
-          style: TextStyle(fontSize: 12, color: DS.brandPrimary54),
+          style: TextStyle(fontSize: 12, color: DS.brandPrimary54Const),
         ),
       ],
     );

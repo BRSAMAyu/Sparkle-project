@@ -183,7 +183,7 @@ class _FlipDigitState extends State<_FlipDigit>
           ),
           child: Center(
             child: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
+              shaderCallback: (bounds) => LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
@@ -193,10 +193,10 @@ class _FlipDigitState extends State<_FlipDigit>
                 ).createShader(bounds),
               child: Text(
                 '$digit',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 56,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                   fontFamily: 'monospace',
                   height: 1.0,
                 ),
@@ -246,7 +246,7 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildDot(_opacityAnimation.value),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
           ),
@@ -302,7 +302,7 @@ class SimpleFlipClock extends StatelessWidget {
     }
 
     return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
+      shaderCallback: (bounds) => LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -315,7 +315,7 @@ class SimpleFlipClock extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
           fontFamily: 'monospace',
           letterSpacing: 4,
         ),

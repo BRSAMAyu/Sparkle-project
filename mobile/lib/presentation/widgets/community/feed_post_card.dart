@@ -13,7 +13,7 @@ class FeedPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: AppDesignTokens.surface,
         borderRadius: BorderRadius.circular(16),
@@ -43,14 +43,14 @@ class FeedPostCard extends StatelessWidget {
                     ? Text(post.user.username[0].toUpperCase())
                     : null,
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     post.user.username,
-                    style: const TextStyle(
-                      color: DS.brandPrimary,
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -58,7 +58,7 @@ class FeedPostCard extends StatelessWidget {
                   Text(
                     timeago.format(post.createdAt),
                     style: TextStyle(
-                      color: DS.brandPrimary[400],
+                      color: DS.brandPrimary400,
                       fontSize: 12,
                     ),
                   ),
@@ -92,18 +92,18 @@ class FeedPostCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
           Text(
             post.content,
-            style: const TextStyle(
-              color: DS.brandPrimary,
+            style: TextStyle(
+              color: DS.brandPrimaryConst,
               fontSize: 15,
               height: 1.4,
             ),
           ),
           if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.top(12),
+              padding: const EdgeInsets.only(top: 12),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
@@ -113,13 +113,13 @@ class FeedPostCard extends StatelessWidget {
                   height: 200,
                   errorBuilder: (ctx, err, stack) => Container(
                     height: 200,
-                    color: DS.brandPrimary[800],
-                    child: const Center(child: Icon(Icons.broken_image)),
+                    color: DS.brandPrimary800,
+                    child: Center(child: Icon(Icons.broken_image)),
                   ),
                 ),
               ),
             ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Row(
             children: [
               _ActionButton(
@@ -127,7 +127,7 @@ class FeedPostCard extends StatelessWidget {
                 label: '${post.likeCount}',
                 onTap: onLike,
               ),
-              const SizedBox(width: DS.xl),
+              SizedBox(width: DS.xl),
               const _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Comment',
@@ -142,7 +142,7 @@ class FeedPostCard extends StatelessWidget {
                   ),
                   child: Text(
                     '#${post.topic}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppDesignTokens.secondaryBase,
                       fontSize: 12,
                     ),
@@ -167,12 +167,12 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, color: DS.brandPrimary[400], size: 20),
+          Icon(icon, color: DS.brandPrimary400, size: 20),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
-              color: DS.brandPrimary[400],
+              color: DS.brandPrimary400,
               fontSize: 14,
             ),
           ),

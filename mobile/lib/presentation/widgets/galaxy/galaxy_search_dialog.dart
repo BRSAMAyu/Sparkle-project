@@ -67,7 +67,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
   @override
   Widget build(BuildContext context) => Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(DS.xl),
+      insetPadding: EdgeInsets.all(DS.xl),
       child: Container(
         width: double.infinity,
         height: 400,
@@ -86,14 +86,14 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: DS.brandPrimary),
+                style: TextStyle(color: DS.brandPrimary),
                 decoration: InputDecoration(
                   hintText: '搜索星系...',
                   hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.5)),
-                  prefixIcon: const Icon(Icons.search, color: DS.brandPrimary70),
+                  prefixIcon: Icon(Icons.search, color: DS.brandPrimary70),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -128,7 +128,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
                     return ListTile(
                       title: Text(
                         item.node.name,
-                        style: const TextStyle(color: DS.brandPrimary),
+                        style: TextStyle(color: DS.brandPrimary),
                       ),
                       subtitle: item.node.description != null
                           ? Text(

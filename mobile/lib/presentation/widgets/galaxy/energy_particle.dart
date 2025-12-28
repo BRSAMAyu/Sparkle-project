@@ -127,6 +127,11 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
 
     // Remove old trail particles
     _trailParticles.removeWhere((p) => _controller.value - p.createdAt > 0.15);
+    
+    // Limit max particles to prevent memory issues
+    if (_trailParticles.length > 50) {
+      _trailParticles.removeAt(0);
+    }
   }
 
   Offset _getCurrentPosition() {

@@ -107,7 +107,7 @@ class _LearningMilestoneCard extends StatelessWidget {
     return Container(
       width: 800,
       height: 1200,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -150,10 +150,10 @@ class _LearningMilestoneCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.auto_awesome,
                     size: 100,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
                 ),
                 const SizedBox(height: 60),
@@ -162,7 +162,7 @@ class _LearningMilestoneCard extends StatelessWidget {
                 const Text(
                   '学习里程碑',
                   style: TextStyle(
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
@@ -186,8 +186,8 @@ class _LearningMilestoneCard extends StatelessWidget {
                   ),
                   child: Text(
                     '$nodeCount 个知识点',
-                    style: const TextStyle(
-                      color: DS.brandPrimary,
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
                       fontSize: 72,
                       fontWeight: FontWeight.bold,
                     ),
@@ -219,8 +219,8 @@ class _LearningMilestoneCard extends StatelessWidget {
                     children: [
                       Text(
                         username,
-                        style: const TextStyle(
-                          color: DS.brandPrimary,
+                        style: TextStyle(
+                          color: DS.brandPrimaryConst,
                           fontSize: 36,
                           fontWeight: FontWeight.w600,
                         ),
@@ -242,12 +242,12 @@ class _LearningMilestoneCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.auto_awesome,
-                      color: DS.brandPrimary,
+                      color: DS.brandPrimaryConst,
                       size: 32,
                     ),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Text(
                       'Sparkle',
                       style: TextStyle(
@@ -328,10 +328,10 @@ class _StreakRecordCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.local_fire_department,
                 size: 120,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: 60),
@@ -339,7 +339,7 @@ class _StreakRecordCard extends StatelessWidget {
             const Text(
               '连续学习记录',
               style: TextStyle(
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
               ),
@@ -348,8 +348,8 @@ class _StreakRecordCard extends StatelessWidget {
 
             Text(
               '$streakDays 天',
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 120,
                 fontWeight: FontWeight.bold,
               ),
@@ -359,8 +359,8 @@ class _StreakRecordCard extends StatelessWidget {
             Text(
               '$username 已连续学习 $streakDays 天\n坚持的力量无可阻挡！',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 28,
                 height: 1.5,
               ),
@@ -417,10 +417,10 @@ class _MasteryAchievementCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.emoji_events,
                 size: 120,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
             ),
             const SizedBox(height: 60),
@@ -428,7 +428,7 @@ class _MasteryAchievementCard extends StatelessWidget {
             const Text(
               '领域精通',
               style: TextStyle(
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
               ),
@@ -437,8 +437,8 @@ class _MasteryAchievementCard extends StatelessWidget {
 
             Text(
               domain,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 72,
                 fontWeight: FontWeight.bold,
               ),
@@ -447,8 +447,8 @@ class _MasteryAchievementCard extends StatelessWidget {
 
             Text(
               '$masteryPercent% 掌握度',
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 48,
               ),
             ),
@@ -457,8 +457,8 @@ class _MasteryAchievementCard extends StatelessWidget {
             Text(
               '$username 在 $domain 领域已达到精通水平\n继续保持！',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 28,
                 height: 1.5,
               ),
@@ -499,17 +499,17 @@ class _TaskCompletionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle,
               size: 200,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
             ),
             const SizedBox(height: 60),
 
             const Text(
               '任务完成',
               style: TextStyle(
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
               ),
@@ -518,8 +518,8 @@ class _TaskCompletionCard extends StatelessWidget {
 
             Text(
               sprintName,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 56,
                 fontWeight: FontWeight.bold,
               ),
@@ -528,8 +528,8 @@ class _TaskCompletionCard extends StatelessWidget {
 
             Text(
               '完成 $taskCount 个任务',
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontSize: 40,
               ),
             ),
@@ -551,10 +551,10 @@ class _GenericAchievementCard extends StatelessWidget {
       width: 800,
       height: 1200,
       color: DS.brandPrimary.shade900,
-      child: const Center(
+      child: Center(
         child: Text(
           'Achievement',
-          style: TextStyle(color: DS.brandPrimary, fontSize: 48),
+          style: TextStyle(color: DS.brandPrimaryConst, fontSize: 48),
         ),
       ),
     );

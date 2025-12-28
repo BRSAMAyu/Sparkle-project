@@ -10,7 +10,7 @@ class StatisticsCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
       ),
@@ -25,7 +25,7 @@ class StatisticsCard extends StatelessWidget {
                   color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.show_chart_rounded,
                   color: AppDesignTokens.primaryBase,
                   size: 16,
@@ -86,7 +86,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         days[value.toInt()],
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppDesignTokens.neutral500,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -111,7 +111,7 @@ class _WeeklyTrendChart extends StatelessWidget {
               dotData: FlDotData(
                 getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                     radius: 4,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     strokeWidth: 2,
                     strokeColor: AppDesignTokens.primaryBase,
                   ),

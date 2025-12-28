@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// 设计系统验证器 - 确保代码符合设计规范

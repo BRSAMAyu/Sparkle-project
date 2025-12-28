@@ -318,7 +318,7 @@ class AgentStatusIndicator extends StatelessWidget {
             size: 24,
             showPulseAnimation: isThinking && agentType == AgentType.orchestrator,
           ),
-          const SizedBox(width: DS.sm),
+          SizedBox(width: DS.sm),
           Flexible(
             child: Text(
               statusText,
@@ -331,7 +331,7 @@ class AgentStatusIndicator extends StatelessWidget {
             ),
           ),
           if (isThinking) ...[
-            const SizedBox(width: DS.sm),
+            SizedBox(width: DS.sm),
             SizedBox(
               width: 12,
               height: 12,

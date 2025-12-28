@@ -172,7 +172,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else if (_controller.text.isEmpty && !_isListening)
                  IconButton(
-                  icon: const Icon(Icons.mic, color: AppDesignTokens.primaryBase),
+                  icon: Icon(Icons.mic, color: AppDesignTokens.primaryBase),
                   onPressed: _toggleListening,
                   tooltip: '语音输入',
                 )

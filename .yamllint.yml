@@ -1,0 +1,26 @@
+# YAML Lint configuration
+extends: default
+
+rules:
+  line-length:
+    max: 150
+    level: warning
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+  comments:
+    min-spaces-from-content: 1
+  document-start: disable
+  indentation:
+    spaces: 2
+    indent-sequences: whatever
+  braces:
+    max-spaces-inside: 1
+  brackets:
+    max-spaces-inside: 1
+
+ignore: |
+  .git/
+  node_modules/
+  mobile/build/
+  backend/venv/
+  *.g.yaml

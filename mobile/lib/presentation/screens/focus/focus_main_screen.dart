@@ -25,14 +25,14 @@ class FocusMainScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(DS.xl),
               child: Text(
                 '准备好开始专注了吗？',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ),
@@ -61,12 +61,12 @@ class FocusMainScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.assignment_turned_in_outlined, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           const Text(
             '没有待办任务',
-            style: TextStyle(color: DS.brandPrimary70, fontSize: 16),
+            style: TextStyle(color: DS.brandPrimary70Const, fontSize: 16),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           SparkleButton.ghost(label: '创建一个新任务', onPressed: () => context.push('/tasks/new')),
         ],
       ),
@@ -80,13 +80,13 @@ class FocusMainScreen extends ConsumerWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Text(
           task.title,
-          style: const TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
+          style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
           '预计 ${task.estimatedMinutes} 分钟',
           style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, color: DS.brandPrimary54, size: 16),
+        trailing: Icon(Icons.arrow_forward_ios, color: DS.brandPrimary54, size: 16),
         onTap: () {
           context.push('/focus/mindfulness', extra: task);
         },

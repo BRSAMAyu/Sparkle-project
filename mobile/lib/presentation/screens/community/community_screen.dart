@@ -22,7 +22,7 @@ class CommunityScreen extends ConsumerWidget {
           );
         },
         backgroundColor: AppDesignTokens.primaryBase,
-        child: const Icon(Icons.edit),
+        child: Icon(Icons.edit),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -50,17 +50,17 @@ class CommunityScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: AppDesignTokens.error),
-                  const SizedBox(height: DS.lg),
+                  Icon(Icons.error_outline, size: 48, color: AppDesignTokens.error),
+                  SizedBox(height: DS.lg),
                   Text(
                     'Failed to load feed',
-                    style: TextStyle(color: DS.brandPrimary[300]),
+                    style: TextStyle(color: DS.brandPrimary300),
                   ),
                   SparkleButton.ghost(label: 'Retry', onPressed: () => ref.read(feedProvider.notifier).refresh()),
                 ],
               ),
             ),
-            loading: () => const Center(
+            loading: () => Center(
               child: CircularProgressIndicator(color: AppDesignTokens.primaryBase),
             ),
           ),
@@ -70,7 +70,7 @@ class CommunityScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -79,19 +79,19 @@ class CommunityScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(
             'Discover what others are learning',
             style: TextStyle(
               fontSize: 14,
-              color: DS.brandPrimary[400],
+              color: DS.brandPrimary400,
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           // Filter Tabs (Placeholder)
           const SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -113,7 +113,7 @@ class CommunityScreen extends ConsumerWidget {
       children: [
         _buildHeader(context),
         const SizedBox(height: 100),
-        const Center(
+        Center(
           child: Column(
             children: [
               Icon(Icons.forum_outlined, size: 64, color: DS.brandPrimary24),

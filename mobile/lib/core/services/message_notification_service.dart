@@ -163,7 +163,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.all(DS.md),
+                padding: EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -186,7 +186,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                           ? Text(widget.notification.senderName[0])
                           : null,
                     ),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,9 +196,9 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                             children: [
                               Text(
                                 widget.notification.senderName,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(width: DS.sm),
+                              SizedBox(width: DS.sm),
                               if (widget.notification.type == NotificationType.groupMessage)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -206,14 +206,14 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                     color: DS.brandPrimary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     '群消息',
-                                    style: TextStyle(fontSize: 10, color: DS.brandPrimary),
+                                    style: TextStyle(fontSize: 10, color: DS.brandPrimaryConst),
                                   ),
                                 ),
                             ],
                           ),
-                          const SizedBox(height: DS.xs),
+                          SizedBox(height: DS.xs),
                           Text(
                             widget.notification.content,
                             maxLines: 2,
@@ -227,7 +227,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 18),
+                      icon: Icon(Icons.close, size: 18),
                       onPressed: widget.onDismiss,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -269,8 +269,8 @@ class MessageBadge extends ConsumerWidget {
               constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               child: Text(
                 unreadCount > 99 ? '99+' : '$unreadCount',
-                style: const TextStyle(
-                  color: DS.brandPrimary,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),

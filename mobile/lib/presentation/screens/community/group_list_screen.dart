@@ -22,7 +22,7 @@ class GroupListScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(Icons.search),
             onPressed: () {
               context.push('/community/groups/search');
             },
@@ -33,7 +33,7 @@ class GroupListScreen extends ConsumerWidget {
         onPressed: () {
           context.push('/community/groups/create');
         },
-        icon: const Icon(Icons.add),
+        icon: Icon(Icons.add),
         label: const Text('Create'),
         backgroundColor: AppDesignTokens.primaryBase,
         elevation: 4,
@@ -148,7 +148,7 @@ class _GroupListTile extends StatelessWidget {
     
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
         border: Border.all(color: AppDesignTokens.neutral100),
@@ -240,7 +240,7 @@ class _GroupListTile extends StatelessWidget {
                             '${group.totalFlamePower}',
                             DS.brandPrimary,
                           ),
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildInfoBadge(
                             context,
                             Icons.people_alt_rounded,
@@ -252,8 +252,8 @@ class _GroupListTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: DS.sm),
-                const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+                SizedBox(width: DS.sm),
+                Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
               ],
             ),
           ),
@@ -265,7 +265,7 @@ class _GroupListTile extends StatelessWidget {
   Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) => Row(
       children: [
         Icon(icon, size: 14, color: color),
-        const SizedBox(width: DS.xs),
+        SizedBox(width: DS.xs),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -291,7 +291,7 @@ class _GroupListLoading extends StatelessWidget {
           child: Container(
             height: 88,
             decoration: BoxDecoration(
-              color: DS.brandPrimary,
+              color: DS.brandPrimaryConst,
               borderRadius: AppDesignTokens.borderRadius16,
             ),
           ),

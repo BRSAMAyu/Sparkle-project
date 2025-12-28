@@ -72,7 +72,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               Navigator.of(context).pop(true);
             },
             customGradient: AppDesignTokens.warningGradient,
-            size: ButtonSize.small,
+            size: CustomButtonSize.small,
           ),
         ],
       ),
@@ -177,7 +177,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       return Scaffold(
         appBar: AppBar(
           flexibleSpace: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: AppDesignTokens.primaryGradient,
             ),
           ),
@@ -186,7 +186,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline_rounded,
                 size: 80,
                 color: AppDesignTokens.neutral400,
@@ -204,7 +204,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 text: '返回',
                 icon: Icons.arrow_back,
                 onPressed: () => context.pop(),
-                size: ButtonSize.medium,
+                size: CustomButtonSize.medium,
               ),
             ],
           ),
@@ -233,7 +233,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               title: Text(
                 activeTask.title, 
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppDesignTokens.neutral900),
+                style: TextStyle(color: AppDesignTokens.neutral900),
               ),
             ),
             body: DecoratedBox(
@@ -282,7 +282,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // 2. Task Guide Area
                             DecoratedBox(
                               decoration: BoxDecoration(
-                                color: DS.brandPrimary,
+                                color: DS.brandPrimaryConst,
                                 borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
                                 border: Border.all(
@@ -310,7 +310,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(Icons.description_outlined, color: DS.brandPrimary, size: 22),
+                                      child: Icon(Icons.description_outlined, color: DS.brandPrimaryConst, size: 22),
                                     ),
                                     const SizedBox(width: AppDesignTokens.spacing12),
                                     Text(
@@ -326,7 +326,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                   Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                                    decoration: const BoxDecoration(
+                                    decoration: BoxDecoration(
                                       color: AppDesignTokens.neutral50,
                                       borderRadius: BorderRadius.only(
                                         bottomLeft: Radius.circular(16),
@@ -346,7 +346,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         h2: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: AppDesignTokens.fontWeightBold,
                                         ),
-                                        code: const TextStyle(
+                                        code: TextStyle(
                                           backgroundColor: AppDesignTokens.neutral100,
                                           color: AppDesignTokens.primaryDark,
                                           fontFamily: 'monospace',
@@ -403,7 +403,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(DS.xl),
+                          padding: EdgeInsets.all(DS.xl),
                           decoration: BoxDecoration(
                             gradient: AppDesignTokens.successGradient,
                             shape: BoxShape.circle,
@@ -415,9 +415,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.check_circle,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                             size: 80,
                           ),
                         ),
@@ -425,7 +425,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                         Text(
                           '任务完成！',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                             fontWeight: AppDesignTokens.fontWeightBold,
                           ),
                         ),
@@ -443,7 +443,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           child: Text(
                             '+${activeTask.difficulty * 10} 经验值',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: DS.brandPrimary,
+                              color: DS.brandPrimaryConst,
                               fontWeight: AppDesignTokens.fontWeightBold,
                             ),
                           ),
@@ -483,16 +483,16 @@ class _TimerControls extends StatelessWidget {
               text: '番茄钟',
               icon: Icons.timer,
               onPressed: onTogglePomodoro,
-              size: ButtonSize.small,
+              size: CustomButtonSize.small,
             ),
             ...[15, 25, 45, 60].map((minutes) => CustomButton.secondary(
               text: '$minutes 分钟',
               onPressed: () => onSetPreset(minutes),
-              size: ButtonSize.small,
+              size: CustomButtonSize.small,
             ),),
           ],
         ),
-        const SizedBox(height: DS.lg),
+        SizedBox(height: DS.lg),
         CustomButton.primary(
           text: '进入正念模式',
           icon: Icons.self_improvement,
@@ -532,12 +532,12 @@ class _BottomControls extends ConsumerWidget {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
                 gradient: AppDesignTokens.successGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_outline, color: DS.brandPrimary, size: 24),
+              child: Icon(Icons.check_circle_outline, color: DS.brandPrimaryConst, size: 24),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
             const Text(
@@ -560,11 +560,11 @@ class _BottomControls extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.timer_outlined, color: AppDesignTokens.primaryBase),
+                  Icon(Icons.timer_outlined, color: AppDesignTokens.primaryBase),
                   const SizedBox(width: AppDesignTokens.spacing8),
                   Text(
                     '用时：$minutes 分钟',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,
                       color: AppDesignTokens.neutral700,
                     ),
@@ -607,7 +607,7 @@ class _BottomControls extends ConsumerWidget {
               onComplete(minutes, noteController.text.trim().isEmpty ? null : noteController.text.trim());
             },
             customGradient: AppDesignTokens.successGradient,
-            size: ButtonSize.small,
+            size: CustomButtonSize.small,
           ),
         ],
       ),
@@ -632,7 +632,7 @@ class _BottomControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         boxShadow: [
           BoxShadow(
             color: DS.brandPrimary.withValues(alpha: 0.05),

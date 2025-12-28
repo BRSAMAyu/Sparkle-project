@@ -63,7 +63,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Stack(
               children: [
                 // Prism refraction effect (animated)
@@ -93,14 +93,14 @@ class _PrismCardState extends ConsumerState<PrismCard>
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.diamond_outlined, color: DS.brandPrimary, size: 18),
-                        const SizedBox(width: DS.sm),
+                        Icon(Icons.diamond_outlined, color: DS.brandPrimaryConst, size: 18),
+                        SizedBox(width: DS.sm),
                         const Text(
                           '认知棱镜',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: DS.brandPrimary,
+                            color: DS.brandPrimaryConst,
                           ),
                         ),
                         const Spacer(),
@@ -108,7 +108,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: AppDesignTokens.prismPurple,
                               shape: BoxShape.circle,
                             ),
@@ -124,7 +124,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           if (dashboardState.weather.type == 'rainy') _buildTag('#焦虑波峰'),
                         ],
                       ),
-                      const SizedBox(height: DS.xs),
+                      SizedBox(height: DS.xs),
                       Text(
                         '行为定式分析已更新',
                         style: TextStyle(
@@ -137,7 +137,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                         '点击同步闪念，发现你的行为定式',
                         style: TextStyle(
                           fontSize: 12,
-                          color: DS.brandPrimary70,
+                          color: DS.brandPrimary70Const,
                         ),
                       ),
                     ],
@@ -160,10 +160,10 @@ class _PrismCardState extends ConsumerState<PrismCard>
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: DS.brandPrimary,
+          color: DS.brandPrimaryConst,
         ),
       ),
     );

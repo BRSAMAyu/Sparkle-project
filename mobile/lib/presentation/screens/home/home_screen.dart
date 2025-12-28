@@ -51,18 +51,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final destinations = [
       NavigationDestination(
-        icon: const Icon(Icons.home_outlined),
-        selectedIcon: const Icon(Icons.home),
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home),
         label: l10n.home,
       ),
       NavigationDestination(
-        icon: const Icon(Icons.auto_awesome_outlined),
-        selectedIcon: const Icon(Icons.auto_awesome),
+        icon: Icon(Icons.auto_awesome_outlined),
+        selectedIcon: Icon(Icons.auto_awesome),
         label: l10n.galaxy,
       ),
       NavigationDestination(
-        icon: const Icon(Icons.forum_outlined),
-        selectedIcon: const Icon(Icons.forum),
+        icon: Icon(Icons.forum_outlined),
+        selectedIcon: Icon(Icons.forum),
         label: l10n.chat,
       ),
       NavigationDestination(
@@ -71,8 +71,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         label: l10n.community,
       ),
       NavigationDestination(
-        icon: const Icon(Icons.person_outlined),
-        selectedIcon: const Icon(Icons.person),
+        icon: Icon(Icons.person_outlined),
+        selectedIcon: Icon(Icons.person),
         label: l10n.profile,
       ),
     ];
@@ -106,7 +106,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               count > 99 ? '99+' : '$count',
-              style: const TextStyle(color: DS.brandPrimary, fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           ),
@@ -194,7 +194,7 @@ class _DashboardScreen extends ConsumerWidget {
             children: [
               Text(
                 'Lv.${user?.flameLevel ?? 1}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: AppDesignTokens.fontSizeXs,
                   fontWeight: AppDesignTokens.fontWeightBold,
                   color: AppDesignTokens.warning,
@@ -202,10 +202,10 @@ class _DashboardScreen extends ConsumerWidget {
               ),
               Text(
                 user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: AppDesignTokens.fontSizeSm,
                   fontWeight: AppDesignTokens.fontWeightBold,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                 ),
               ),
             ],

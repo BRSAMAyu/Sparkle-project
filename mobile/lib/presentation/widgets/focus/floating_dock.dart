@@ -130,8 +130,8 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
   Widget _buildCollapsedIcon() => InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(30),
-      child: const Center(
-        child: Icon(Icons.timer_rounded, color: DS.brandPrimary, size: 30),
+      child: Center(
+        child: Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 30),
       ),
     );
 
@@ -141,7 +141,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         // Collapse Button
         InkWell(
           onTap: _toggleExpand,
-          child: const Icon(Icons.close, color: DS.brandPrimary, size: 24),
+          child: Icon(Icons.close, color: DS.brandPrimaryConst, size: 24),
         ),
         
         // Menu Items
@@ -174,12 +174,12 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            Icon(icon, color: DS.brandPrimary, size: 20),
-            const SizedBox(width: DS.md),
+            Icon(icon, color: DS.brandPrimaryConst, size: 20),
+            SizedBox(width: DS.md),
             Text(
               label,
-              style: const TextStyle(
-                color: DS.brandPrimary,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
                 fontWeight: FontWeight.w500,
               ),
             ),

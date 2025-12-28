@@ -27,12 +27,12 @@ class TaskFeedbackDialog extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: const BoxDecoration(
+                  padding: EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
                     gradient: AppDesignTokens.primaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.auto_awesome, color: DS.brandPrimary, size: 24),
+                  child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 24),
                 ),
                 const SizedBox(width: AppDesignTokens.spacing12),
                 Text(
@@ -57,7 +57,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                         fontSize: AppDesignTokens.fontSizeBase,
                         height: 1.5,
                       ),
-                      strong: const TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
+                      strong: TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
                     ),
                   ),
                 ),
@@ -81,7 +81,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                     if (result.flameUpdate != null)
                       _StatItem(
                         icon: Icons.local_fire_department,
-                        color: DS.brandPrimary,
+                        color: DS.brandPrimaryConst,
                         value: "+${result.flameUpdate!['brightness_change']}%",
                         label: '亮度',
                       ),
@@ -125,9 +125,9 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: color),
-        const SizedBox(height: DS.xs),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+        SizedBox(height: DS.xs),
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
       ],
     );
 }

@@ -32,10 +32,10 @@ class SplashScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Placeholder for Sparkle Logo/Animation
-            const Icon(
+            Icon(
               Icons.whatshot, // Represents the "flame"
               size: 80,
-              color: DS.brandPrimary, // Sparkle primary color
+              color: DS.brandPrimaryConst, // Sparkle primary color
             ),
             const SizedBox(height: 20),
             Text(
@@ -47,7 +47,7 @@ class SplashScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(),
+            CircularProgressIndicator(),
           ],
         ),
       ),

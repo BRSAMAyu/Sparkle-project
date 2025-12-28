@@ -67,7 +67,7 @@ class PatternCard extends StatelessWidget {
                   ),
                 ),
                 if (pattern.isArchived)
-                  const Icon(Icons.archive, color: AppDesignTokens.neutral500, size: 20),
+                  Icon(Icons.archive, color: AppDesignTokens.neutral500, size: 20),
               ],
             ),
             const SizedBox(height: AppDesignTokens.spacing16),

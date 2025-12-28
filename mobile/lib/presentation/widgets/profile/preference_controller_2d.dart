@@ -78,7 +78,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                   borderRadius: AppDesignTokens.borderRadius16,
                   border: Border.all(color: AppDesignTokens.neutral300, width: 2),
                   // Gradient representing the axes
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
@@ -128,9 +128,9 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                               spreadRadius: 2,
                             ),
                           ],
-                          border: Border.all(color: DS.brandPrimary, width: 2),
+                          border: Border.all(color: DS.brandPrimaryConst, width: 2),
                         ),
-                        child: const Icon(Icons.local_fire_department, color: DS.brandPrimary, size: 24),
+                        child: Icon(Icons.local_fire_department, color: DS.brandPrimaryConst, size: 24),
                       ),
                     ),
                   ],

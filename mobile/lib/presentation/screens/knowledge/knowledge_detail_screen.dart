@@ -24,7 +24,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Error: $error'),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               SparkleButton.primary(label: 'Retry', onPressed: () => ref.invalidate(knowledgeDetailProvider(nodeId))),
             ],
           ),
@@ -57,7 +57,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           );
         },
         label: const Text('生成学习路径'),
-        icon: const Icon(Icons.timeline),
+        icon: Icon(Icons.timeline),
         backgroundColor: sectorStyle.primaryColor,
       ),
       body: CustomScrollView(
@@ -68,14 +68,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           pinned: true,
           backgroundColor: sectorStyle.primaryColor,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: DS.brandPrimary),
+            icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
             onPressed: () => context.pop(),
           ),
           actions: [
             IconButton(
               icon: Icon(
                 detail.userStats.isFavorite ? Icons.star : Icons.star_border,
-                color: DS.brandPrimary,
+                color: DS.brandPrimaryConst,
               ),
               onPressed: () {
                 ref.read(toggleFavoriteProvider(nodeId));
@@ -96,7 +96,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(DS.lg),
+                  padding: EdgeInsets.all(DS.lg),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,24 +113,24 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           sectorStyle.name,
-                          style: const TextStyle(
-                            color: DS.brandPrimary,
+                          style: TextStyle(
+                            color: DS.brandPrimaryConst,
                             fontSize: 12,
                           ),
                         ),
                       ),
-                      const SizedBox(height: DS.sm),
+                      SizedBox(height: DS.sm),
                       // Node name
                       Text(
                         detail.node.name,
-                        style: const TextStyle(
-                          color: DS.brandPrimary,
+                        style: TextStyle(
+                          color: DS.brandPrimaryConst,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       if (detail.node.nameEn != null) ...[
-                        const SizedBox(height: DS.xs),
+                        SizedBox(height: DS.xs),
                         Text(
                           detail.node.nameEn!,
                           style: TextStyle(
@@ -205,7 +205,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     ),
                     title: Text(relatedNodeName ?? '未知节点'),
                     subtitle: Text(relation.relationLabel),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Icon(Icons.chevron_right),
                     onTap: () {
                       context.push('/galaxy/node/$relatedNodeId');
                     },
@@ -230,7 +230,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     ),
                     title: Text(task.title),
                     subtitle: Text('预计 ${task.estimatedMinutes} 分钟'),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Icon(Icons.chevron_right),
                     onTap: () {
                       context.push('/tasks/${task.id}');
                     },
@@ -254,7 +254,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     ),
                     title: Text(plan.title),
                     subtitle: Text(plan.planType == 'sprint' ? '冲刺计划' : '成长计划'),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Icon(Icons.chevron_right),
                     onTap: () {
                       if (plan.planType == 'sprint') {
                         context.push('/sprint');
@@ -306,9 +306,9 @@ class _MasteryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.all(DS.lg),
+      margin: EdgeInsets.all(DS.lg),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -339,7 +339,7 @@ class _MasteryCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Progress bar
             ClipRRect(
@@ -351,7 +351,7 @@ class _MasteryCard extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(_getMasteryColor()),
               ),
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               '${stats.masteryScore.toStringAsFixed(0)}%',
               style: TextStyle(
@@ -360,7 +360,7 @@ class _MasteryCard extends StatelessWidget {
                 fontSize: 18,
               ),
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Stats row
             Row(
@@ -387,20 +387,20 @@ class _MasteryCard extends StatelessWidget {
 
             // Decay status
             if (stats.decayPaused) ...[
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withAlpha(30),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.pause_circle, color: DS.brandPrimary, size: 20),
-                    SizedBox(width: DS.sm),
+                    Icon(Icons.pause_circle, color: DS.brandPrimaryConst, size: 20),
+                    SizedBox(width: DS.smConst),
                     Text(
                       '遗忘衰减已暂停',
-                      style: TextStyle(color: DS.brandPrimary),
+                      style: TextStyle(color: DS.brandPrimaryConst),
                     ),
                   ],
                 ),
@@ -444,10 +444,10 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: DS.brandPrimary),
-        const SizedBox(height: DS.xs),
+        SizedBox(height: DS.xs),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
@@ -476,7 +476,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -486,7 +486,7 @@ class _SectionCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: DS.md),
+            SizedBox(height: DS.md),
             child,
           ],
         ),

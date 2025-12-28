@@ -10,7 +10,7 @@ class ParseDegradedNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.brandPrimary.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -19,7 +19,7 @@ class ParseDegradedNotice extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: DS.brandPrimary.shade700),
-          const SizedBox(width: DS.md),
+          SizedBox(width: DS.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +32,7 @@ class ParseDegradedNotice extends StatelessWidget {
                   ),
                 ),
                 if (reason != null) ...[
-                  const SizedBox(height: DS.xs),
+                  SizedBox(height: DS.xs),
                   Text(
                     reason!,
                     style: TextStyle(

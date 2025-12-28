@@ -62,7 +62,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
             children: [
               if (!isMe) ...[
                 _buildAvatar(widget.message.sender),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
               ],
               Flexible(
                 child: Column(
@@ -71,12 +71,12 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
                     _buildContent(context, isMe),
                     const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      const Text('Read', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
+                      Text(brandPrimary),),
                   ],
                 ),
               ),
               if (isMe) ...[
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 _buildAvatar(widget.message.sender),
               ],
             ],
@@ -96,7 +96,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
   }
 
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? AppDesignTokens.primaryBase : DS.brandPrimary,
         borderRadius: BorderRadius.only(

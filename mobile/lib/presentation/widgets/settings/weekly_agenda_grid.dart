@@ -108,7 +108,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
             );
           }).toList(),
         ),
-        const SizedBox(height: DS.lg),
+        const SizedBox(height: 16),
 
         // Content Area with LayoutBuilder
         LayoutBuilder(
@@ -140,7 +140,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     ),
                   ],
                 ),
-                const SizedBox(height: DS.sm),
+                const SizedBox(height: 8),
 
                 // Main Layout: Row [TimeLabels, Grid]
                 Row(

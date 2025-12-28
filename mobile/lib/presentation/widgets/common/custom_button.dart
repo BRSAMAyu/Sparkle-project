@@ -11,7 +11,7 @@ enum ButtonVariant {
 }
 
 /// 按钮尺寸
-enum ButtonSize {
+enum CustomButtonSize {
   small, // 小 - 32px高度
   medium, // 中 - 48px高度
   large, // 大 - 56px高度
@@ -28,7 +28,7 @@ class CustomButton extends StatefulWidget {
     this.icon,
     this.onPressed,
     this.variant = ButtonVariant.primary,
-    this.size = ButtonSize.medium,
+    this.size = CustomButtonSize.medium,
     this.isLoading = false,
     this.isFullWidth = false,
     this.customGradient,
@@ -42,7 +42,7 @@ class CustomButton extends StatefulWidget {
   factory CustomButton.primary({
     required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
-    ButtonSize size = ButtonSize.medium,
+    CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isFullWidth = false,
     LinearGradient? customGradient,
@@ -61,7 +61,7 @@ class CustomButton extends StatefulWidget {
   factory CustomButton.secondary({
     required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
-    ButtonSize size = ButtonSize.medium,
+    CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isFullWidth = false,
   }) => CustomButton(
@@ -79,7 +79,7 @@ class CustomButton extends StatefulWidget {
   factory CustomButton.text({
     required String text, required VoidCallback? onPressed, Key? key,
     IconData? icon,
-    ButtonSize size = ButtonSize.medium,
+    CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
   }) => CustomButton(
       key: key,
@@ -94,7 +94,7 @@ class CustomButton extends StatefulWidget {
   /// 图标按钮工厂构造函数
   factory CustomButton.icon({
     required IconData icon, required VoidCallback? onPressed, Key? key,
-    ButtonSize size = ButtonSize.medium,
+    CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isCircular = true,
   }) => CustomButton(
@@ -119,7 +119,7 @@ class CustomButton extends StatefulWidget {
   final ButtonVariant variant;
 
   /// 按钮尺寸
-  final ButtonSize size;
+  final CustomButtonSize size;
 
   /// 是否加载中
   final bool isLoading;
@@ -198,33 +198,33 @@ class _CustomButtonState extends State<CustomButton>
 
   double _getButtonHeight() {
     switch (widget.size) {
-      case ButtonSize.small:
+      case CustomButtonSize.small:
         return 32.0;
-      case ButtonSize.medium:
+      case CustomButtonSize.medium:
         return 48.0;
-      case ButtonSize.large:
+      case CustomButtonSize.large:
         return 56.0;
     }
   }
 
   double _getIconSize() {
     switch (widget.size) {
-      case ButtonSize.small:
+      case CustomButtonSize.small:
         return AppDesignTokens.iconSizeSm;
-      case ButtonSize.medium:
+      case CustomButtonSize.medium:
         return AppDesignTokens.iconSizeBase;
-      case ButtonSize.large:
+      case CustomButtonSize.large:
         return AppDesignTokens.iconSizeLg;
     }
   }
 
   double _getFontSize() {
     switch (widget.size) {
-      case ButtonSize.small:
+      case CustomButtonSize.small:
         return AppDesignTokens.fontSizeSm;
-      case ButtonSize.medium:
+      case CustomButtonSize.medium:
         return AppDesignTokens.fontSizeBase;
-      case ButtonSize.large:
+      case CustomButtonSize.large:
         return AppDesignTokens.fontSizeLg;
     }
   }
@@ -259,7 +259,7 @@ class _CustomButtonState extends State<CustomButton>
           borderRadius: AppDesignTokens.borderRadius12,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: widget.size == ButtonSize.small
+              horizontal: widget.size == CustomButtonSize.small
                   ? AppDesignTokens.spacing16
                   : AppDesignTokens.spacing24,
             ),
@@ -292,7 +292,7 @@ class _CustomButtonState extends State<CustomButton>
           borderRadius: AppDesignTokens.borderRadius12,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: widget.size == ButtonSize.small
+              horizontal: widget.size == CustomButtonSize.small
                   ? AppDesignTokens.spacing16
                   : AppDesignTokens.spacing24,
             ),
@@ -358,7 +358,7 @@ class _CustomButtonState extends State<CustomButton>
                 ? SizedBox(
                     width: _getIconSize() * 0.8,
                     height: _getIconSize() * 0.8,
-                    child: const CircularProgressIndicator(
+                    child: CircularProgressIndicator(
                       strokeWidth: 2.0,
                       valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
                     ),
@@ -366,7 +366,7 @@ class _CustomButtonState extends State<CustomButton>
                 : Icon(
                     widget.icon,
                     size: _getIconSize(),
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                   ),
           ),
         ),

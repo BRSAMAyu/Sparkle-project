@@ -13,7 +13,7 @@ class PlanCreateScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(planType == 'growth' ? '创建成长计划' : '创建冲刺计划'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
@@ -21,18 +21,18 @@ class PlanCreateScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-            const SizedBox(height: DS.lg),
+            Icon(Icons.construction, size: 80, color: DS.brandPrimary),
+            SizedBox(height: DS.lg),
             Text(
               '计划创建功能开发中',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             const Text(
               '此功能正在开发中，即将推出',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: DS.xl),
+            SizedBox(height: DS.xl),
             SparkleButton.primary(label: '返回', onPressed: () => context.pop()),
           ],
         ),

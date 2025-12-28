@@ -8,8 +8,8 @@ class ThemeManager extends ChangeNotifier {
   ThemeManager._internal();
   static final ThemeManager _instance = ThemeManager._internal();
 
-  ThemeMode _mode = ThemeMode.system;
-  ThemeMode get mode => _mode;
+  AppThemeMode _mode = AppThemeMode.system;
+  AppThemeMode get mode => _mode;
 
   BrandPreset _brandPreset = BrandPreset.sparkle;
   BrandPreset get brandPreset => _brandPreset;
@@ -34,7 +34,7 @@ class ThemeManager extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
 
-    _mode = ThemeMode.values[prefs.getInt('theme_mode') ?? ThemeMode.system.index];
+    _mode = AppThemeMode.values[prefs.getInt('theme_mode') ?? AppThemeMode.system.index];
     _brandPreset = BrandPreset.values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
     _highContrast = prefs.getBool('high_contrast') ?? false;
 
@@ -43,7 +43,7 @@ class ThemeManager extends ChangeNotifier {
   }
 
   /// 切换主题模式
-  Future<void> setThemeMode(ThemeMode mode) async {
+  Future<void> setAppThemeMode(AppThemeMode mode) async {
     _mode = mode;
     await _saveToPrefs();
     notifyListeners();
@@ -65,13 +65,13 @@ class ThemeManager extends ChangeNotifier {
 
   /// 切换深色/浅色模式
   Future<void> toggleDarkMode() async {
-    final newMode = _mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    await setThemeMode(newMode);
+    final newMode = _mode == AppThemeMode.dark ? AppThemeMode.light : AppThemeMode.dark;
+    await setAppThemeMode(newMode);
   }
 
   /// 重置为默认
   Future<void> reset() async {
-    _mode = ThemeMode.system;
+    _mode = AppThemeMode.system;
     _brandPreset = BrandPreset.sparkle;
     _highContrast = false;
     await _saveToPrefs();
@@ -83,11 +83,11 @@ class ThemeManager extends ChangeNotifier {
     Brightness brightness;
 
     switch (_mode) {
-      case ThemeMode.light:
+      case AppThemeMode.light:
         brightness = Brightness.light;
-      case ThemeMode.dark:
+      case AppThemeMode.dark:
         brightness = Brightness.dark;
-      case ThemeMode.system:
+      case AppThemeMode.system:
         brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
     }
 
@@ -129,7 +129,7 @@ class ThemeManager extends ChangeNotifier {
   }
 }
 
-enum ThemeMode { system, light, dark }
+enum AppThemeMode { system, light, dark }
 enum BrandPreset { sparkle, ocean, forest }
 
 /// 主题数据容器
@@ -203,29 +203,29 @@ class SparkleColors {
   factory SparkleColors.light({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: DS.brandPrimary,
-        brandSecondary: DS.brandPrimary,
+        brandPrimary: Color(0xFFFF6B35),
+        brandSecondary: Color(0xFFFF6B35),
         semanticSuccess: Color(0xFF006400),
         semanticWarning: Color(0xFF8B4500),
         semanticError: Color(0xFF8B0000),
         semanticInfo: Color(0xFF00008B),
-        surfacePrimary: DS.brandPrimary,
+        surfacePrimary: Color(0xFFFFFFFF),
         surfaceSecondary: Color(0xFFE0E0E0),
         surfaceTertiary: Color(0xFFC0C0C0),
-        textPrimary: DS.brandPrimary,
-        textSecondary: DS.brandPrimary,
+        textPrimary: Color(0xFF000000),
+        textSecondary: Color(0xFF000000),
         textDisabled: Color(0xFF666666),
         brightness: Brightness.light,
       );
     }
     return const SparkleColors(
-      brandPrimary: DS.brandPrimary,
-      brandSecondary: DS.brandSecondary,
-      semanticSuccess: DS.success,
-      semanticWarning: DS.warning,
-      semanticError: DS.error,
-      semanticInfo: DS.info,
-      surfacePrimary: DS.brandPrimary,
+      brandPrimary: Color(0xFFFF6B35),
+      brandSecondary: Color(0xFF5C6BC0),
+      semanticSuccess: Color(0xFF81C784),
+      semanticWarning: Color(0xFFFFB74D),
+      semanticError: Color(0xFFEF5350),
+      semanticInfo: Color(0xFF64B5F6),
+      surfacePrimary: Color(0xFFFFFFFF),
       surfaceSecondary: Color(0xFFF5F5F5),
       surfaceTertiary: Color(0xFFE0E0E0),
       textPrimary: Color(0xFF212121),
@@ -238,17 +238,17 @@ class SparkleColors {
   factory SparkleColors.dark({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: DS.brandPrimary,
-        brandSecondary: DS.brandPrimary,
+        brandPrimary: Color(0xFFFF8C5A),
+        brandSecondary: Color(0xFFFF8C5A),
         semanticSuccess: Color(0xFF00FF00),
         semanticWarning: Color(0xFFFFFF00),
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
-        surfacePrimary: DS.brandPrimary,
+        surfacePrimary: Color(0xFF000000),
         surfaceSecondary: Color(0xFF1A1A1A),
         surfaceTertiary: Color(0xFF333333),
-        textPrimary: DS.brandPrimary,
-        textSecondary: DS.brandPrimary,
+        textPrimary: Color(0xFFFFFFFF),
+        textSecondary: Color(0xFFFFFFFF),
         textDisabled: Color(0xFF999999),
         brightness: Brightness.dark,
       );
@@ -263,7 +263,7 @@ class SparkleColors {
       surfacePrimary: Color(0xFF121212),
       surfaceSecondary: Color(0xFF1E1E1E),
       surfaceTertiary: Color(0xFF2D2D2D),
-      textPrimary: DS.brandPrimary,
+      textPrimary: Color(0xFFFFFFFF),
       textSecondary: Color(0xFFE0E0E0),
       textDisabled: Color(0xFF757575),
       brightness: Brightness.dark,

@@ -62,7 +62,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: DS.brandPrimary,
+                  color: DS.brandPrimaryConst,
                   boxShadow: [
                     BoxShadow(
                       color: DS.brandPrimaryAccent.withValues(alpha: 0.5),
@@ -94,7 +94,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                  child: const Text(
                    'SPARKLE',
                    style: TextStyle(
-                     color: DS.brandPrimary,
+                     color: DS.brandPrimaryConst,
                      fontSize: 32,
                      fontWeight: FontWeight.bold,
                      letterSpacing: 10,

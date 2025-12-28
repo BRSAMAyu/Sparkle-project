@@ -7,7 +7,7 @@ class SparkleTheme {
   static const Color secondary = Color(0xFFE67E22); // 橙色 (火苗)
   static const Color tertiary = Color(0xFFF1C40F); // 金色 (能量)
   static const Color background = Color(0xFFF8F9FA);
-  static const Color surface = DS.brandPrimary;
+  static final Color surface = DS.brandPrimary;
   static const Color error = Color(0xFFB00020);
   
   // 在线状态颜色

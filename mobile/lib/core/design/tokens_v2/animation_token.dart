@@ -77,74 +77,47 @@ class AnimationConfig {
   final double? opacity;
 
   /// 创建动画Tween序列
-  List<TweenSequence<dynamic>> createTweenSequence() {
-    final sequences = <TweenSequence<dynamic>>[];
+  List<TweenSequenceItem<double>> createTweenSequence() {
+    final items = <TweenSequenceItem<double>>[];
 
     if (scale != null) {
-      sequences.add(TweenSequence<double>(
-        [
-          TweenSequenceItem(
-            tween: Tween(begin: 1.0, end: scale),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: scale, end: 1.0),
-            weight: 1,
-          ),
-        ],
-      ),);
-    }
-
-    if (offset != null) {
-      sequences.add(TweenSequence<Offset>(
-        [
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: offset),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: offset, end: Offset.zero),
-            weight: 1,
-          ),
-        ],
+      items.add(TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.0, end: scale),
+        weight: 1,
       ),);
     }
 
     if (opacity != null) {
-      sequences.add(TweenSequence<double>(
-        [
-          TweenSequenceItem(
-            tween: Tween(begin: 1.0, end: opacity),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: opacity, end: 1.0),
-            weight: 1,
-          ),
-        ],
+      items.add(TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.0, end: opacity),
+        weight: 1,
       ),);
     }
 
-    return sequences;
+    // 如果没有任何动画，返回默认的
+    if (items.isEmpty) {
+      items.add(TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.0, end: 1.0),
+        weight: 1,
+      ),);
+    }
+
+    return items;
   }
 
   /// 应用动画到Widget
   Widget animate({
     required Widget child,
     required AnimationController controller,
-  }) {
-    final animation = controller.drive(
-      TweenSequence(createTweenSequence()),
-    );
-
-    return AnimatedBuilder(
-      animation: animation,
+  }) => AnimatedBuilder(
+      animation: controller,
       builder: (context, child) {
         var result = child!;
 
         if (scale != null) {
+          final scaleTween = Tween<double>(begin: 1.0, end: scale);
           result = Transform.scale(
-            scale: animation.value,
+            scale: scaleTween.evaluate(controller),
             child: result,
           );
         }
@@ -168,8 +141,9 @@ class AnimationConfig {
         }
 
         if (opacity != null) {
+          final opacityTween = Tween<double>(begin: 1.0, end: opacity);
           result = Opacity(
-            opacity: animation.value,
+            opacity: opacityTween.evaluate(controller),
             child: result,
           );
         }
@@ -178,7 +152,6 @@ class AnimationConfig {
       },
       child: child,
     );
-  }
 }
 
 /// 动画令牌 - 语义化命名
@@ -232,7 +205,7 @@ extension AnimationExtensions on Widget {
     );
 
   /// 缩放动画
-  Widget scaleIn({Duration duration = AnimationSystem.normal}) => AnimatedScale(
+  Widget scaleIn({Duration duration = AnimationSystem.normal}) => SparkleAnimatedScale(
       scale: 1.0,
       from: 0.8,
       duration: duration,
@@ -282,10 +255,10 @@ class _AnimatedSlideState extends ImplicitlyAnimatedWidgetState<AnimatedSlide> {
     );
 }
 
-/// 自定义AnimatedScale扩展
-class AnimatedScale extends ImplicitlyAnimatedWidget {
+/// 自定义AnimatedScale扩展 - renamed to avoid conflict with Flutter's AnimatedScale
+class SparkleAnimatedScale extends ImplicitlyAnimatedWidget {
 
-  const AnimatedScale({
+  const SparkleAnimatedScale({
     required this.child, required this.scale, super.key,
     this.from = 1.0,
     super.duration = AnimationSystem.normal,
@@ -296,10 +269,10 @@ class AnimatedScale extends ImplicitlyAnimatedWidget {
   final double from;
 
   @override
-  ImplicitlyAnimatedWidgetState<AnimatedScale> createState() => _AnimatedScaleState();
+  ImplicitlyAnimatedWidgetState<SparkleAnimatedScale> createState() => _SparkleAnimatedScaleState();
 }
 
-class _AnimatedScaleState extends ImplicitlyAnimatedWidgetState<AnimatedScale> {
+class _SparkleAnimatedScaleState extends ImplicitlyAnimatedWidgetState<SparkleAnimatedScale> {
   Tween<double>? _scaleTween;
   Animation<double>? _scaleAnimation;
 

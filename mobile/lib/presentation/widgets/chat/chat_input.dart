@@ -182,7 +182,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary[200],
+        color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary200,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
           left: BorderSide(color: AppDesignTokens.primaryBase, width: 4),
@@ -196,7 +196,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               children: [
                 Text(
                   '引用 ${widget.quotedMessage!.sender.displayName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppDesignTokens.fontSizeXs,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     color: AppDesignTokens.primaryBase,
@@ -219,7 +219,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             width: AppDesignTokens.touchTargetMinSize,
             height: AppDesignTokens.touchTargetMinSize,
             child: IconButton(
-              icon: const Icon(Icons.close_rounded,
+              icon: Icon(Icons.close_rounded,
                 size: AppDesignTokens.iconSizeSm,
                 color: AppDesignTokens.neutral600,),
               onPressed: widget.onCancelQuote,

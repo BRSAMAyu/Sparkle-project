@@ -1,0 +1,178 @@
+# GolangCI-Lint configuration for production-grade Go code
+# P3: Comprehensive linting for industrial standards
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  skip-dirs:
+    - vendor
+    - generated
+    - mocks
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
+
+linters:
+  enable:
+    # Default linters
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Additional security linters
+    - gosec
+
+    # Code quality
+    - gocyclo
+    - gofmt
+    - goimports
+    - goconst
+    - gocritic
+    - godot
+    - misspell
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+
+    # Error handling
+    - errorlint
+    - wrapcheck
+
+    # Performance
+    - bodyclose
+    - noctx
+
+    # Style
+    - dupl
+    - nestif
+    - nlreturn
+    - wsl
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - hugeParam
+      - rangeValCopy
+
+  goimports:
+    local-prefixes: github.com/sparkle/gateway
+
+  gosec:
+    excludes:
+      - G104  # Audit errors not checked (we have errcheck)
+      - G304  # File path provided as taint input (expected in some cases)
+    config:
+      global:
+        audit: true
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+    ignoreSigRegexps:
+      - \.New.*Error\(
+    ignorePackageGlobs:
+      - github.com/sparkle/gateway/*
+
+  nestif:
+    min-complexity: 4
+
+  dupl:
+    threshold: 150
+
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - dupl
+        - goconst
+        - gosec
+        - wrapcheck
+        - nlreturn
+        - wsl
+
+    # Exclude some linters from generated files
+    - path: \.pb\.go
+      linters:
+        - all
+
+    # Allow dot imports in test files
+    - path: _test\.go
+      text: "should not use dot imports"
+
+    # Allow long functions in main
+    - path: cmd/server/main\.go
+      linters:
+        - gocyclo
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+severity:
+  default-severity: warning
+  rules:
+    - linters:
+        - gosec
+      severity: error
+    - linters:
+        - errcheck
+      severity: error

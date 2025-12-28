@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -10,10 +11,12 @@ import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.da
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
 import 'package:sparkle/presentation/widgets/galaxy/parallax_star_background.dart';
+import 'package:sparkle/presentation/widgets/galaxy/node_preview_card.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
+import 'package:sparkle/core/services/device_performance_service.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -22,8 +25,10 @@ class GalaxyScreen extends ConsumerStatefulWidget {
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
 }
 
-class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerProviderStateMixin {
+class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+    with TickerProviderStateMixin, PerformanceAwareStateMixin {
   final TransformationController _transformationController = TransformationController();
+  late final AnimationController _selectionPulseController;
 
   // State
   bool _isEntering = true;
@@ -40,9 +45,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
   // Track last scale to avoid unnecessary updates
   double _lastScale = 1.0;
 
+  // Gesture conflict resolution
+  bool _hasDragged = false;
+  Offset? _dragStartOffset;
+
+  // Boundary feedback tracking
+  bool _isAtMinScale = false;
+  bool _isAtMaxScale = false;
+  bool _isAtPanBoundary = false;
+
   @override
   void initState() {
     super.initState();
+
+    _selectionPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
 
     // Listen to transformation changes for scale updates
     _transformationController.addListener(_onTransformChanged);
@@ -50,11 +69,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = MediaQuery.of(context).size;
-      // Center the 4000x4000 canvas
-      final x = -_canvasCenter + size.width / 2;
-      final y = -_canvasCenter + size.height / 2;
+
+      // Start at 0.15 scale (Universe View) centered
+      final initialScale = 0.15;
+      // To center canvas point (2000, 2000) at screen center (w/2, h/2) with scale S:
+      // Tx = w/2 - 2000*S
+      final tx = size.width / 2 - _canvasCenter * initialScale;
+      final ty = size.height / 2 - _canvasCenter * initialScale;
+
       _transformationController.value = Matrix4.identity()
-        ..setTranslationRaw(x, y, 0);
+        ..translate(tx, ty)
+        ..scale(initialScale);
 
       ref.read(galaxyProvider.notifier).loadGalaxy();
     });
@@ -62,6 +87,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
 
   @override
   void dispose() {
+    _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
     super.dispose();
@@ -74,6 +100,58 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
     if ((scale - _lastScale).abs() > 0.02) {
       _lastScale = scale;
       ref.read(galaxyProvider.notifier).updateScale(scale);
+    }
+
+    // Check for boundary conditions
+    _checkBoundaryConditions();
+  }
+
+  /// Check if current transformation is at any boundary and provide feedback
+  void _checkBoundaryConditions() {
+    final matrix = _transformationController.value;
+    final scale = matrix.getMaxScaleOnAxis();
+
+    // Check scale boundaries
+    final minScale = 0.1;
+    final maxScale = 3.0;
+    final scaleTolerance = 0.01;
+
+    final wasAtMinScale = _isAtMinScale;
+    final wasAtMaxScale = _isAtMaxScale;
+
+    _isAtMinScale = scale <= minScale + scaleTolerance;
+    _isAtMaxScale = scale >= maxScale - scaleTolerance;
+
+    // Provide haptic feedback when hitting scale boundaries
+    if (!wasAtMinScale && _isAtMinScale) {
+      HapticFeedback.lightImpact();
+    }
+    if (!wasAtMaxScale && _isAtMaxScale) {
+      HapticFeedback.lightImpact();
+    }
+
+    // Check pan boundaries (canvas edges)
+    // Since we have a huge boundaryMargin (2000), we need to check if we're near canvas edges
+    final screenSize = MediaQuery.of(context).size;
+    final canvasSize = _canvasSize;
+
+    // Transform screen corners to canvas coordinates
+    final inverseMatrix = matrix.clone()..invert();
+    final topLeftCanvas = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
+    final bottomRightCanvas = MatrixUtils.transformPoint(inverseMatrix, Offset(screenSize.width, screenSize.height));
+
+    // Check if viewport is near canvas edges (with some tolerance)
+    const edgeTolerance = 50.0;
+    final wasAtPanBoundary = _isAtPanBoundary;
+
+    _isAtPanBoundary = topLeftCanvas.dx <= edgeTolerance ||
+                      topLeftCanvas.dy <= edgeTolerance ||
+                      bottomRightCanvas.dx >= canvasSize - edgeTolerance ||
+                      bottomRightCanvas.dy >= canvasSize - edgeTolerance;
+
+    // Provide feedback when hitting pan boundaries
+    if (!wasAtPanBoundary && _isAtPanBoundary) {
+      HapticFeedback.lightImpact();
     }
   }
 
@@ -101,6 +179,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
   void _handleTapUp(TapUpDetails details) {
     if (_isEntering) return;
 
+    // Prevent tap if user has dragged (gesture conflict resolution)
+    if (_hasDragged) return;
+
     final galaxyState = ref.read(galaxyProvider);
     if (galaxyState.nodes.isEmpty) return;
 
@@ -112,7 +193,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
     final hitRadius = 30 / scale; // Larger hit area when zoomed out
 
     // Find the tapped node
-    for (final node in galaxyState.nodes) {
+    // Check visible nodes first for optimization
+    final searchNodes = galaxyState.visibleNodes.isNotEmpty
+        ? galaxyState.visibleNodes
+        : galaxyState.nodes;
+
+    for (final node in searchNodes) {
       final nodePos = galaxyState.nodePositions[node.id];
       if (nodePos == null) continue;
 
@@ -120,9 +206,44 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
       final actualPos = nodePos + const Offset(_canvasCenter, _canvasCenter);
       final distance = (canvasTap - actualPos).distance;
 
+      // Hit test
       if (distance < hitRadius + (node.importance * 2)) {
-        // Node tapped - navigate to detail screen
+        // Node tapped - Select it
+        ref.read(galaxyProvider.notifier).selectNode(node.id);
+        return;
+      }
+    }
+
+    // If no node hit, deselect
+    ref.read(galaxyProvider.notifier).deselectNode();
+  }
+  
+  /// Handle long press to navigate directly
+  void _handleLongPressStart(LongPressStartDetails details) {
+    if (_isEntering) return;
+
+    // Prevent long press if user has dragged (gesture conflict resolution)
+    if (_hasDragged) return;
+
+    final galaxyState = ref.read(galaxyProvider);
+    final canvasTap = _screenToCanvas(details.localPosition);
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    final hitRadius = 30 / scale;
+
+    final searchNodes = galaxyState.visibleNodes.isNotEmpty
+        ? galaxyState.visibleNodes
+        : galaxyState.nodes;
+
+    for (final node in searchNodes) {
+      final nodePos = galaxyState.nodePositions[node.id];
+      if (nodePos == null) continue;
+      final actualPos = nodePos + const Offset(_canvasCenter, _canvasCenter);
+
+      if ((canvasTap - actualPos).distance < hitRadius + (node.importance * 2)) {
+        // Long press - Navigate
         context.push('/galaxy/node/${node.id}');
+        // Also select it to be consistent
+        ref.read(galaxyProvider.notifier).selectNode(node.id);
         return;
       }
     }
@@ -314,13 +435,42 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
 
           // 1. Star Map (Interactive)
           GestureDetector(
+            onPanStart: (details) {
+              _hasDragged = true;
+              _dragStartOffset = details.localPosition;
+            },
+            onPanUpdate: (details) {
+              // Track if user actually dragged significant distance
+              if (_dragStartOffset != null) {
+                final distance = (details.localPosition - _dragStartOffset!).distance;
+                if (distance > 10) {
+                  _hasDragged = true;
+                }
+              }
+            },
+            onPanEnd: (details) {
+              // Reset after a short delay to allow tap detection
+              Future.delayed(const Duration(milliseconds: 100), () {
+                _hasDragged = false;
+                _dragStartOffset = null;
+              });
+            },
             onTapUp: _handleTapUp,
+            onLongPressStart: _handleLongPressStart,
             child: InteractiveViewer(
               transformationController: _transformationController,
               boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
               minScale: 0.1,
               maxScale: 3.0,
               constrained: false, // Infinite canvas
+              onInteractionUpdate: (ScaleUpdateDetails details) {
+                // Check boundaries during interaction for immediate feedback
+                _checkBoundaryConditions();
+              },
+              onInteractionEnd: (ScaleEndDetails details) {
+                // Final boundary check when interaction ends
+                _checkBoundaryConditions();
+              },
               child: SizedBox(
                 width: _canvasSize,
                 height: _canvasSize,
@@ -355,7 +505,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                       child: Opacity(
                         opacity: _isEntering ? 0.0 : 1.0,
                         child: AnimatedBuilder(
-                          animation: _transformationController,
+                          animation: Listenable.merge([
+                            _transformationController,
+                            _selectionPulseController
+                          ]),
                           builder: (context, child) {
                             final scale = _transformationController.value.getMaxScaleOnAxis();
                             // Calculate viewport for culling optimization
@@ -371,14 +524,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
 
                             return CustomPaint(
                               painter: StarMapPainter(
-                                nodes: galaxyState.nodes,
-                                edges: galaxyState.edges,
+                                // Use filtered lists from provider
+                                nodes: galaxyState.visibleNodes,
+                                edges: galaxyState.visibleEdges,
                                 positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
                                 scale: scale,
                                 aggregationLevel: galaxyState.aggregationLevel,
                                 clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
                                 viewport: viewport,
-                                center: const Offset(_canvasCenter, _canvasCenter),
+                                center: Offset(_canvasCenter, _canvasCenter),
+                                selectedNodeId: galaxyState.selectedNodeId,
+                                expandedEdgeNodeIds: galaxyState.expandedEdgeNodeIds,
+                                nodeAnimationProgress: galaxyState.nodeAnimationProgress,
+                                selectionPulse: _selectionPulseController.value,
                               ),
                             );
                           },
@@ -398,6 +556,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                 setState(() {
                   _isEntering = false;
                 });
+                
+                // Entrance Phase 2: Smooth Zoom from 0.15 to 0.25
+                final controller = AnimationController(
+                  vsync: this,
+                  duration: const Duration(seconds: 2),
+                );
+                
+                final startMatrix = _transformationController.value;
+                // Calculate target matrix for 0.25 scale (still centered)
+                final size = MediaQuery.of(context).size;
+                final targetScale = 0.25;
+                final tx = size.width / 2 - _canvasCenter * targetScale;
+                final ty = size.height / 2 - _canvasCenter * targetScale;
+                final targetMatrix = Matrix4.identity()
+                  ..translate(tx, ty)
+                  ..scale(targetScale);
+                  
+                final animation = Matrix4Tween(
+                  begin: startMatrix,
+                  end: targetMatrix,
+                ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOutCubic));
+                
+                animation.addListener(() {
+                  _transformationController.value = animation.value;
+                });
+                
+                controller.forward().whenComplete(() => controller.dispose());
               },
             ),
 
@@ -436,7 +621,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               top: 40,
               left: 20,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DS.brandPrimary),
+                icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -447,7 +632,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               top: 40,
               right: 20,
               child: IconButton(
-                icon: const Icon(Icons.search, color: DS.brandPrimary),
+                icon: Icon(Icons.search, color: DS.brandPrimary),
                 onPressed: _showSearchDialog,
               ),
             ),
@@ -460,6 +645,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               child: GalaxyMiniMap(
                 transformationController: _transformationController,
                 canvasSize: _canvasSize,
+                screenSize: MediaQuery.of(context).size,
               ),
             ),
 
@@ -474,7 +660,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                 foregroundColor: DS.brandPrimary,
                 elevation: 0,
                 shape: CircleBorder(side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.3))),
-                child: const Icon(Icons.explore),
+                child: Icon(Icons.explore),
                 onPressed: () async {
                   final nodeId = await ref.read(galaxyProvider.notifier).predictNextNode();
                   if (!mounted) return;
@@ -507,7 +693,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               child: FloatingActionButton(
                 mini: true,
                 backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
-                child: const Icon(Icons.bolt, color: DS.brandPrimary),
+                child: Icon(Icons.bolt, color: DS.brandPrimary),
                 onPressed: () {
                   // Pick a random node to spark for demo
                   if (galaxyState.nodes.isNotEmpty) {
@@ -519,7 +705,37 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
             ),
 
           if (galaxyState.isLoading && !_isEntering)
-            const Center(child: CircularProgressIndicator()),
+            Center(child: CircularProgressIndicator()),
+            
+          // 8. Node Preview Card (Overlay)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.9, end: 1.0).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              ),
+            ),
+            child: galaxyState.selectedNodeId != null
+                ? Builder(
+                    key: ValueKey(galaxyState.selectedNodeId),
+                    builder: (context) {
+                      final node = galaxyState.nodes.firstWhere(
+                          (n) => n.id == galaxyState.selectedNodeId,
+                          orElse: () => galaxyState.nodes.first);
+                      return NodePreviewCard(
+                        node: node,
+                        onClose: () =>
+                            ref.read(galaxyProvider.notifier).deselectNode(),
+                        onTap: () => context.push('/galaxy/node/${node.id}'),
+                      );
+                    })
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

@@ -92,6 +92,7 @@ func main() {
 	defer agentClient.Close()
 
 	// Initialize Handlers
+	wsFactory := handler.NewWebSocketFactory(cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		queries,
@@ -99,6 +100,7 @@ func main() {
 		quotaService,
 		semanticCacheService,
 		billingService,
+		wsFactory,
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService)

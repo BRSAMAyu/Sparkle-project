@@ -55,7 +55,7 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.lightbulb_outline, color: AppDesignTokens.info, size: 24),
+            Icon(Icons.lightbulb_outline, color: AppDesignTokens.info, size: 24),
             const SizedBox(width: AppDesignTokens.spacing12),
             Expanded(
               child: Text(
@@ -69,7 +69,7 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
               ),
             ),
             const SizedBox(width: AppDesignTokens.spacing8),
-            const Icon(Icons.arrow_forward_ios_rounded, color: AppDesignTokens.neutral400, size: 16),
+            Icon(Icons.arrow_forward_ios_rounded, color: AppDesignTokens.neutral400, size: 16),
           ],
         ),
       ),

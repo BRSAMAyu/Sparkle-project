@@ -50,7 +50,7 @@ class HomeNotificationCard extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(DS.sm),
+                        padding: EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
                           color: _getIconColor(latest.type).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
@@ -61,7 +61,7 @@ class HomeNotificationCard extends ConsumerWidget {
                           size: 16,
                         ),
                       ),
-                      const SizedBox(width: DS.md),
+                      SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,8 +69,8 @@ class HomeNotificationCard extends ConsumerWidget {
                           children: [
                             Text(
                               latest.title,
-                              style: const TextStyle(
-                                color: DS.brandPrimary,
+                              style: TextStyle(
+                                color: DS.brandPrimaryConst,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -99,14 +99,14 @@ class HomeNotificationCard extends ConsumerWidget {
                           ),
                           child: Text(
                             '+${notifications.length - 1}',
-                            style: const TextStyle(
-                              color: DS.brandPrimary,
+                            style: TextStyle(
+                              color: DS.brandPrimaryConst,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      const SizedBox(width: DS.sm),
+                      SizedBox(width: DS.sm),
                       Icon(
                         Icons.chevron_right_rounded,
                         color: DS.brandPrimary.withValues(alpha: 0.3),
@@ -167,18 +167,18 @@ class HomeNotificationCard extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(DS.sm),
+                  padding: EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: Colors.purple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.forum_outlined,
                     color: Colors.purple,
                     size: 16,
                   ),
                 ),
-                const SizedBox(width: DS.md),
+                SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +187,7 @@ class HomeNotificationCard extends ConsumerWidget {
                       const Text(
                         '社交消息',
                         style: TextStyle(
-                          color: DS.brandPrimary,
+                          color: DS.brandPrimaryConst,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -211,14 +211,14 @@ class HomeNotificationCard extends ConsumerWidget {
                   ),
                   child: Text(
                     unreadCount > 99 ? '99+' : '$unreadCount',
-                    style: const TextStyle(
-                      color: DS.brandPrimary,
+                    style: TextStyle(
+                      color: DS.brandPrimaryConst,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 Icon(
                   Icons.chevron_right_rounded,
                   color: DS.brandPrimary.withValues(alpha: 0.3),

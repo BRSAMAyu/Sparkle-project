@@ -97,11 +97,11 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               user.nickname ?? user.username,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: DS.brandPrimary,
+                                color: DS.brandPrimaryConst,
                                 fontWeight: AppDesignTokens.fontWeightBold,
                               ),
                             ),
-                            const SizedBox(height: DS.sm),
+                            SizedBox(height: DS.sm),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
@@ -111,16 +111,16 @@ class ProfileScreen extends ConsumerWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.local_fire_department_rounded, color: DS.brandPrimary, size: 16),
-                                  const SizedBox(width: DS.xs),
+                                  Icon(Icons.local_fire_department_rounded, color: DS.brandPrimaryConst, size: 16),
+                                  SizedBox(width: DS.xs),
                                   Text(
                                     'Lv.${user.flameLevel}',
-                                    style: const TextStyle(
-                                      color: DS.brandPrimary,
+                                    style: TextStyle(
+                                      color: DS.brandPrimaryConst,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(width: DS.sm),
+                                  SizedBox(width: DS.sm),
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                     style: TextStyle(
@@ -146,7 +146,7 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) => DecoratedBox(
       decoration: BoxDecoration(
-        color: DS.brandPrimary,
+        color: DS.brandPrimaryConst,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
       ),
@@ -218,7 +218,7 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             ListTile(
               title: Text(l10n.languageChinese),
-              trailing: currentLocale.languageCode == 'zh' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'zh' ? Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
                 Navigator.pop(context);
@@ -226,7 +226,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ListTile(
               title: Text(l10n.languageEnglish),
-              trailing: currentLocale.languageCode == 'en' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'en' ? Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('en'));
                 Navigator.pop(context);
@@ -255,7 +255,7 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: Text(l10n.confirm, style: const TextStyle(color: AppDesignTokens.error)),
+            child: Text(l10n.confirm, style: TextStyle(color: AppDesignTokens.error)),
           ),
         ],
       ),
@@ -276,12 +276,12 @@ class ProfileScreen extends ConsumerWidget {
         vertical: AppDesignTokens.spacing4,
       ),
       leading: Container(
-        padding: const EdgeInsets.all(DS.sm),
+        padding: EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        child: Icon(icon, color: DS.brandPrimary, size: 20),
+        child: Icon(icon, color: DS.brandPrimaryConst, size: 20),
       ),
       title: Text(
         title,
@@ -290,7 +290,7 @@ class ProfileScreen extends ConsumerWidget {
           fontWeight: AppDesignTokens.fontWeightMedium,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
         color: AppDesignTokens.neutral400,

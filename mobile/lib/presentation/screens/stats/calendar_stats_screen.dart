@@ -54,7 +54,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEventDialog(context),
         backgroundColor: AppDesignTokens.primaryBase,
-        child: const Icon(Icons.add, color: DS.brandPrimary),
+        child: Icon(Icons.add, color: DS.brandPrimary),
       ),
       body: Stack(
         children: [
@@ -64,14 +64,14 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               children: [
                 _buildHeader(context),
                 _buildViewSwitcher(),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Expanded(
                   child: _viewMode == CalendarViewMode.year
                       ? _buildYearView()
                       : Column(
                           children: [
                             _buildTableCalendar(notifier),
-                            const Divider(color: DS.brandPrimary10),
+                            Divider(color: DS.brandPrimary10Const),
                             Expanded(
                               child: _buildEventList(selectedEvents, notifier),
                             ),
@@ -106,7 +106,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           // Year display
           Text(
             DateFormat('yyyy年').format(_focusedDay),
-            style: const TextStyle(color: DS.brandPrimary54, fontSize: 16),
+            style: TextStyle(color: DS.brandPrimary54, fontSize: 16),
           ),
         ],
       ),
@@ -149,7 +149,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         final monthHeight = (constraints.maxHeight - 40) / 4;
         
         return GridView.builder(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: EdgeInsets.all(DS.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             childAspectRatio: monthWidth / monthHeight,
@@ -219,16 +219,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           physics: const NeverScrollableScrollPhysics(),
           children: [
             // Empty slots
-            ...List.generate(startOffset, (_) => const SizedBox()),
+            ...List.generate(startOffset, (_) => SizedBox()),
             // Days
             ...List.generate(daysInMonth, (i) {
               final day = i + 1;
               return Center(
                 child: Text(
                   '$day',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 8,
-                    color: DS.brandPrimary38,
+                    color: DS.brandPrimary38Const,
                   ),
                 ),
               );
@@ -274,10 +274,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         _focusedDay = focusedDay;
       },
       eventLoader: (day) => notifier.getEventsForDay(day),
-      calendarStyle: const CalendarStyle(
+      calendarStyle: CalendarStyle(
         outsideDaysVisible: false,
-        defaultTextStyle: TextStyle(color: DS.brandPrimary),
-        weekendTextStyle: TextStyle(color: DS.brandPrimary70),
+        defaultTextStyle: TextStyle(color: DS.brandPrimaryConst),
+        weekendTextStyle: TextStyle(color: DS.brandPrimary70Const),
         selectedDecoration: BoxDecoration(
           color: AppDesignTokens.primaryBase,
           shape: BoxShape.circle,
@@ -287,12 +287,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           shape: BoxShape.circle,
         ),
       ),
-      headerStyle: const HeaderStyle(
+      headerStyle: HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
-        titleTextStyle: TextStyle(color: DS.brandPrimary, fontSize: 16),
-        leftChevronIcon: Icon(Icons.chevron_left, color: DS.brandPrimary),
-        rightChevronIcon: Icon(Icons.chevron_right, color: DS.brandPrimary),
+        titleTextStyle: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
+        leftChevronIcon: Icon(Icons.chevron_left, color: DS.brandPrimaryConst),
+        rightChevronIcon: Icon(Icons.chevron_right, color: DS.brandPrimaryConst),
       ),
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, date, events) {
@@ -323,11 +323,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final lunarData = _lunarService.getLunarData(day);
     
     return Container(
-      margin: const EdgeInsets.all(DS.xs),
-      decoration: isSelected ? const BoxDecoration(
+      margin: EdgeInsets.all(DS.xs),
+      decoration: isSelected ? BoxDecoration(
         color: AppDesignTokens.primaryBase,
         shape: BoxShape.circle,
-      ) : isToday ? const BoxDecoration(
+      ) : isToday ? BoxDecoration(
         color: DS.brandPrimary24,
         shape: BoxShape.circle,
       ) : null,
@@ -376,7 +376,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
              children: [
                Text(
                  '${DateFormat('MM月dd日').format(_selectedDay ?? _focusedDay)} 日程',
-                 style: const TextStyle(color: DS.brandPrimary70, fontWeight: FontWeight.bold),
+                 style: TextStyle(color: DS.brandPrimary70Const, fontWeight: FontWeight.bold),
                ),
                TextButton.icon(
                  onPressed: () {
@@ -384,8 +384,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                      MaterialPageRoute(builder: (_) => DailyDetailScreen(date: _selectedDay ?? _focusedDay)),
                    );
                  },
-                 icon: const Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
-                 label: const Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                 icon: Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
+                 label: Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
                ),
              ],
            ),
@@ -410,7 +410,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     color: DS.error,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete, color: DS.brandPrimary),
+                    child: Icon(Icons.delete, color: DS.brandPrimary),
                   ),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -426,12 +426,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      title: Text(event.title, style: const TextStyle(color: DS.brandPrimary)),
+                      title: Text(event.title, style: TextStyle(color: DS.brandPrimary)),
                       subtitle: Text(
                         event.isAllDay ? '全天' : DateFormat('HH:mm').format(event.startTime),
-                        style: const TextStyle(color: DS.brandPrimary54),
+                        style: TextStyle(color: DS.brandPrimary54),
                       ),
-                      trailing: event.recurrenceRule != null ? const Icon(Icons.repeat, color: DS.brandPrimary30, size: 16) : null,
+                      trailing: event.recurrenceRule != null ? Icon(Icons.repeat, color: DS.brandPrimary30, size: 16) : null,
                     ),
                   ),
                 );
@@ -525,63 +525,63 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '新建日程',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: DS.brandPrimary),
               ),
               TextButton(
                 onPressed: _saveEvent,
-                child: const Text('保存', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                child: Text('保存', style: TextStyle(color: AppDesignTokens.primaryBase)),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           TextField(
             controller: _titleController,
-            style: const TextStyle(color: DS.brandPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: DS.brandPrimary),
+            decoration: InputDecoration(
               hintText: '标题',
-              hintStyle: TextStyle(color: DS.brandPrimary38),
-              prefixIcon: Icon(Icons.title, color: DS.brandPrimary70),
+              hintStyle: TextStyle(color: DS.brandPrimary38Const),
+              prefixIcon: Icon(Icons.title, color: DS.brandPrimary70Const),
               border: InputBorder.none,
               filled: true,
-              fillColor: DS.brandPrimary10,
+              fillColor: DS.brandPrimary10Const,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildTimeRow(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildOptionsRow(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildColorPicker(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextField(
             controller: _locationController,
-            style: const TextStyle(color: DS.brandPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: DS.brandPrimary),
+            decoration: InputDecoration(
               hintText: '地点',
-              hintStyle: TextStyle(color: DS.brandPrimary38),
-              prefixIcon: Icon(Icons.location_on_outlined, color: DS.brandPrimary70),
+              hintStyle: TextStyle(color: DS.brandPrimary38Const),
+              prefixIcon: Icon(Icons.location_on_outlined, color: DS.brandPrimary70Const),
               border: InputBorder.none,
               filled: true,
-              fillColor: DS.brandPrimary10,
+              fillColor: DS.brandPrimary10Const,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextField(
             controller: _descController,
-            style: const TextStyle(color: DS.brandPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: DS.brandPrimary),
+            decoration: InputDecoration(
               hintText: '描述',
-              hintStyle: TextStyle(color: DS.brandPrimary38),
-              prefixIcon: Icon(Icons.description_outlined, color: DS.brandPrimary70),
+              hintStyle: TextStyle(color: DS.brandPrimary38Const),
+              prefixIcon: Icon(Icons.description_outlined, color: DS.brandPrimary70Const),
               border: InputBorder.none,
               filled: true,
-              fillColor: DS.brandPrimary10,
+              fillColor: DS.brandPrimary10Const,
             ),
             maxLines: 3,
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
         ],
       ),
     );
@@ -592,43 +592,43 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           child: GestureDetector(
             onTap: () => _pickDateTime(true),
             child: Container(
-              padding: const EdgeInsets.all(DS.md),
+              padding: EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: DS.brandPrimary10,
+                color: DS.brandPrimary10Const,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('开始', style: TextStyle(color: DS.brandPrimary54, fontSize: 12)),
+                  Text('brandPrimary54', style: TextStyle(fontSize: 12)),
                   Text(
                     DateFormat('MM-dd HH:mm').format(_startTime),
-                    style: const TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        const Icon(Icons.arrow_forward, color: DS.brandPrimary38, size: 16),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
+        Icon(Icons.arrow_forward, color: DS.brandPrimary38Const, size: 16),
+        SizedBox(width: 10),
         Expanded(
           child: GestureDetector(
             onTap: () => _pickDateTime(false),
             child: Container(
-              padding: const EdgeInsets.all(DS.md),
+              padding: EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: DS.brandPrimary10,
+                color: DS.brandPrimary10Const,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('结束', style: TextStyle(color: DS.brandPrimary54, fontSize: 12)),
+                  Text('brandPrimary54', style: TextStyle(fontSize: 12)),
                   Text(
                     DateFormat('MM-dd HH:mm').format(_endTime),
-                    style: const TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -641,18 +641,18 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   Widget _buildOptionsRow() => Column(
       children: [
         SwitchListTile(
-          title: const Text('全天', style: TextStyle(color: DS.brandPrimary)),
+          title: Text('brandPrimary'),
           value: _isAllDay,
           onChanged: (val) => setState(() => _isAllDay = val),
           activeThumbColor: AppDesignTokens.primaryBase,
           contentPadding: EdgeInsets.zero,
         ),
         ListTile(
-          title: const Text('提醒', style: TextStyle(color: DS.brandPrimary)),
+          title: Text('brandPrimary'),
           trailing: DropdownButton<int>(
             value: _reminderMinutes,
             dropdownColor: const Color(0xFF2C2C2C),
-            style: const TextStyle(color: DS.brandPrimary),
+            style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
               DropdownMenuItem(value: 0, child: Text('日程开始时')),
@@ -667,11 +667,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           contentPadding: EdgeInsets.zero,
         ),
         ListTile(
-          title: const Text('重复', style: TextStyle(color: DS.brandPrimary)),
+          title: Text('brandPrimary'),
           trailing: DropdownButton<String?>(
             value: _recurrenceRule,
             dropdownColor: const Color(0xFF2C2C2C),
-            style: const TextStyle(color: DS.brandPrimary),
+            style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
               DropdownMenuItem(child: Text('不重复')),
@@ -698,9 +698,9 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             decoration: BoxDecoration(
               color: Color(color),
               shape: BoxShape.circle,
-              border: isSelected ? Border.all(color: DS.brandPrimary, width: 2) : null,
+              border: isSelected ? Border.all(color: DS.brandPrimaryConst, width: 2) : null,
             ),
-            child: isSelected ? const Icon(Icons.check, size: 16, color: DS.brandPrimary) : null,
+            child: isSelected ? Icon(Icons.check, size: 16, color: DS.brandPrimary) : null,
           ),
         );
       }).toList(),

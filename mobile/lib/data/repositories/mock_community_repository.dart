@@ -1,6 +1,7 @@
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
+import 'package:sparkle/domain/community/community_models.dart';
 import 'package:uuid/uuid.dart';
 
 class MockCommunityRepository implements CommunityRepository {
@@ -295,4 +296,23 @@ class MockCommunityRepository implements CommunityRepository {
   Future<void> claimTask(String taskId) async {}
   @override
   Future<GroupFlameStatus> getFlameStatus(String groupId) async => GroupFlameStatus(groupId: groupId, totalPower: 0, flames: [], bonfireLevel: 1);
+
+  // === CommunityRepository interface methods ===
+  @override
+  Future<List<Post>> getFeed({int page = 1, int limit = 20}) async {
+    // Return empty list for mock - feed would be handled by community_providers
+    return [];
+  }
+
+  @override
+  Future<String> createPost(CreatePostRequest request) async {
+    // Return a mock post ID
+    return const Uuid().v4();
+  }
+
+  @override
+  Future<void> likePost(String postId, String userId) async {
+    // Mock implementation - do nothing
+    return;
+  }
 }
