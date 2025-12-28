@@ -1,10 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/galaxy_performance_monitor.dart';
-import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 
 /// Galaxy监控集成服务
 /// 将性能监控与Galaxy Provider集成，提供实时性能反馈
@@ -22,7 +20,6 @@ class GalaxyMonitoringIntegration {
   final PerformanceThresholds performanceThresholds;
 
   late final GalaxyPerformanceMonitor _performanceMonitor;
-  StreamSubscription? _metricsSubscription;
   Timer? _qualityAdjustmentTimer;
 
   /// 当前渲染质量级别 (0.0 - 1.0)
@@ -37,15 +34,14 @@ class GalaxyMonitoringIntegration {
   final _warningController = StreamController<PerformanceWarning>.broadcast();
   Stream<PerformanceWarning> get warnings => _warningController.stream;
 
-  /// 性能指标回调
-  final _metricsController = StreamController<GalaxyPerformanceMetrics>.broadcast();
-  Stream<GalaxyPerformanceMetrics> get metrics => _metricsController.stream;
-
   void _initialize() {
-    _performanceMonitor = GalaxyPerformanceMonitor();
+    _performanceMonitor = GalaxyPerformanceMonitor.instance;
 
-    // 监听性能指标
-    _metricsSubscription = _performanceMonitor.metricsStream.listen(_handleMetrics);
+    // 开始监控
+    _performanceMonitor.startMonitoring();
+
+    // 添加事件监听
+    _performanceMonitor.addEventListener(_handlePerformanceEvent);
 
     // 定期调整质量
     if (enableAdaptiveQuality) {
@@ -56,75 +52,92 @@ class GalaxyMonitoringIntegration {
     }
   }
 
-  void _handleMetrics(GalaxyPerformanceMetrics metrics) {
-    _metricsController.add(metrics);
-
-    // 更新性能状态
-    _performanceStatus = _evaluatePerformance(metrics);
-
-    // 检测性能问题
-    _checkForWarnings(metrics);
+  void _handlePerformanceEvent(PerformanceEvent event) {
+    // 基于事件更新性能状态
+    if (event.severity == PerformanceSeverity.error) {
+      _performanceStatus = PerformanceStatus.critical;
+      _warningController.add(PerformanceWarning(
+        type: WarningType.jank,
+        message: event.message,
+        severity: WarningSeverity.critical,
+      ));
+    } else if (event.severity == PerformanceSeverity.warning) {
+      _performanceStatus = PerformanceStatus.degraded;
+      _warningController.add(PerformanceWarning(
+        type: WarningType.slowRender,
+        message: event.message,
+        severity: WarningSeverity.warning,
+      ));
+    }
   }
 
-  PerformanceStatus _evaluatePerformance(GalaxyPerformanceMetrics metrics) {
-    if (metrics.averageFps < performanceThresholds.criticalFps) {
+  PerformanceStatus _evaluatePerformance() {
+    final report = _performanceMonitor.getPerformanceReport();
+    
+    if (report.averageFps < performanceThresholds.criticalFps) {
       return PerformanceStatus.critical;
-    } else if (metrics.averageFps < performanceThresholds.warningFps) {
+    } else if (report.averageFps < performanceThresholds.warningFps) {
       return PerformanceStatus.degraded;
-    } else if (metrics.jankFrameCount > performanceThresholds.maxJankFrames) {
+    } else if (report.jankRate > 0.1) {
       return PerformanceStatus.degraded;
     }
     return PerformanceStatus.optimal;
   }
 
-  void _checkForWarnings(GalaxyPerformanceMetrics metrics) {
+  void _checkForWarnings(PerformanceReport report) {
     // FPS过低警告
-    if (metrics.averageFps < performanceThresholds.criticalFps) {
+    if (report.averageFps < performanceThresholds.criticalFps) {
       _warningController.add(PerformanceWarning(
         type: WarningType.lowFps,
-        message: 'FPS严重不足: ${metrics.averageFps.toStringAsFixed(1)}',
+        message: 'FPS严重不足: ${report.averageFps.toStringAsFixed(1)}',
         severity: WarningSeverity.critical,
-        metrics: metrics,
-      ),);
-    } else if (metrics.averageFps < performanceThresholds.warningFps) {
+        report: report,
+      ));
+    } else if (report.averageFps < performanceThresholds.warningFps) {
       _warningController.add(PerformanceWarning(
         type: WarningType.lowFps,
-        message: 'FPS偏低: ${metrics.averageFps.toStringAsFixed(1)}',
+        message: 'FPS偏低: ${report.averageFps.toStringAsFixed(1)}',
         severity: WarningSeverity.warning,
-        metrics: metrics,
-      ),);
+        report: report,
+      ));
     }
 
     // Jank警告
-    if (metrics.jankFrameCount > performanceThresholds.maxJankFrames) {
+    if (report.jankRate > 0.1) {
       _warningController.add(PerformanceWarning(
         type: WarningType.jank,
-        message: '检测到${metrics.jankFrameCount}次卡顿',
+        message: '卡顿率过高: ${(report.jankRate * 100).toStringAsFixed(1)}%',
         severity: WarningSeverity.warning,
-        metrics: metrics,
-      ),);
+        report: report,
+      ));
     }
 
-    // 内存警告（预留，需要平台特定实现）
     // 渲染时间警告
-    if (metrics.averageFrameTime > 32) {
+    if (report.averageFrameTimeMs > 32) {
       // 超过32ms表示可能严重
       _warningController.add(PerformanceWarning(
         type: WarningType.slowRender,
-        message: '渲染时间过长: ${metrics.averageFrameTime.toStringAsFixed(1)}ms',
-        severity: metrics.averageFrameTime > 50
+        message: '渲染时间过长: ${report.averageFrameTimeMs.toStringAsFixed(1)}ms',
+        severity: report.averageFrameTimeMs > 50
             ? WarningSeverity.critical
             : WarningSeverity.warning,
-        metrics: metrics,
-      ),);
+        report: report,
+      ));
     }
   }
 
   void _adjustQuality() {
     if (!enableAdaptiveQuality) return;
 
-    final metrics = _performanceMonitor.currentMetrics;
-    if (metrics == null) return;
+    // 获取最新性能报告
+    final report = _performanceMonitor.getPerformanceReport();
+    if (report.frameCount == 0) return;
+
+    // 评估当前性能状态
+    _performanceStatus = _evaluatePerformance();
+
+    // 检查警告
+    _checkForWarnings(report);
 
     var targetQuality = _currentQuality;
 
@@ -153,49 +166,30 @@ class GalaxyMonitoringIntegration {
     debugPrint('Galaxy quality adjusted to: ${(_currentQuality * 100).toStringAsFixed(0)}%');
   }
 
-  /// 开始帧追踪
-  void startFrameTracking() {
-    _performanceMonitor.startTracking();
-  }
-
-  /// 停止帧追踪
-  void stopFrameTracking() {
-    _performanceMonitor.stopTracking();
-  }
-
-  /// 记录帧开始
-  void beginFrame() {
-    _performanceMonitor.beginFrame();
-  }
-
-  /// 记录帧结束
-  void endFrame() {
-    _performanceMonitor.endFrame();
-  }
-
   /// 获取当前性能摘要
   PerformanceSummary getSummary() {
-    final metrics = _performanceMonitor.currentMetrics;
+    final report = _performanceMonitor.getPerformanceReport();
+    
+    // 重新评估性能状态
+    _performanceStatus = _evaluatePerformance();
+    
     return PerformanceSummary(
       status: _performanceStatus,
       quality: _currentQuality,
-      metrics: metrics,
-      recommendations: _generateRecommendations(),
+      report: report,
+      recommendations: _generateRecommendations(report),
     );
   }
 
-  List<String> _generateRecommendations() {
+  List<String> _generateRecommendations(PerformanceReport report) {
     final recommendations = <String>[];
-    final metrics = _performanceMonitor.currentMetrics;
 
-    if (metrics == null) return recommendations;
-
-    if (metrics.averageFps < 30) {
+    if (report.averageFps < 30) {
       recommendations.add('建议减少可见节点数量');
       recommendations.add('考虑禁用粒子效果');
     }
 
-    if (metrics.jankFrameCount > 5) {
+    if (report.jankRate > 0.1) {
       recommendations.add('检测到频繁卡顿，建议优化布局计算');
     }
 
@@ -214,11 +208,9 @@ class GalaxyMonitoringIntegration {
   }
 
   void dispose() {
-    _metricsSubscription?.cancel();
     _qualityAdjustmentTimer?.cancel();
-    _performanceMonitor.dispose();
-    _warningController.close();
-    _metricsController.close();
+    _performanceMonitor.stopMonitoring();
+    unawaited(_warningController.close());
   }
 }
 
@@ -268,13 +260,13 @@ class PerformanceWarning {
     required this.type,
     required this.message,
     required this.severity,
-    this.metrics,
+    this.report,
   }) : timestamp = DateTime.now();
 
   final WarningType type;
   final String message;
   final WarningSeverity severity;
-  final GalaxyPerformanceMetrics? metrics;
+  final PerformanceReport? report;
   final DateTime timestamp;
 }
 
@@ -283,13 +275,13 @@ class PerformanceSummary {
   const PerformanceSummary({
     required this.status,
     required this.quality,
-    required this.metrics,
+    required this.report,
     required this.recommendations,
   });
 
   final PerformanceStatus status;
   final double quality;
-  final GalaxyPerformanceMetrics? metrics;
+  final PerformanceReport report;
   final List<String> recommendations;
 
   String get statusText {
@@ -313,6 +305,12 @@ class PerformanceSummary {
         return const Color(0xFFF44336);
     }
   }
+
+  /// Convenience getters for performance metrics
+  double get fps => report.averageFps;
+  double get frameTime => report.averageFrameTimeMs;
+  double get jankRate => report.jankRate;
+  int get frameCount => report.frameCount;
 }
 
 /// Galaxy监控集成Provider
@@ -393,23 +391,21 @@ class _PerformanceIndicator extends ConsumerWidget {
               ),
             ],
           ),
-          if (summary.metrics != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'FPS: ${summary.metrics!.averageFps.toStringAsFixed(1)}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            'FPS: ${summary.report.averageFps.toStringAsFixed(1)}',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
             ),
-            Text(
-              'Quality: ${(summary.quality * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-              ),
+          ),
+          Text(
+            'Quality: ${(summary.quality * 100).toStringAsFixed(0)}%',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -428,7 +424,7 @@ class GalaxyPerformanceDebugPanel extends ConsumerStatefulWidget {
 class _GalaxyPerformanceDebugPanelState
     extends ConsumerState<GalaxyPerformanceDebugPanel> {
   final List<PerformanceWarning> _recentWarnings = [];
-  StreamSubscription? _warningSubscription;
+  StreamSubscription<PerformanceWarning>? _warningSubscription;
 
   @override
   void initState() {
@@ -448,7 +444,7 @@ class _GalaxyPerformanceDebugPanelState
 
   @override
   void dispose() {
-    _warningSubscription?.cancel();
+    unawaited(_warningSubscription?.cancel());
     super.dispose();
   }
 
@@ -502,16 +498,12 @@ class _GalaxyPerformanceDebugPanelState
           const SizedBox(height: 16),
 
           // 指标
-          if (summary.metrics != null) ...[
-            _buildMetricRow('Average FPS', '${summary.metrics!.averageFps.toStringAsFixed(1)}'),
-            _buildMetricRow('Min FPS', '${summary.metrics!.minFps.toStringAsFixed(1)}'),
-            _buildMetricRow('Max FPS', '${summary.metrics!.maxFps.toStringAsFixed(1)}'),
-            _buildMetricRow('Avg Frame Time', '${summary.metrics!.averageFrameTime.toStringAsFixed(2)}ms'),
-            _buildMetricRow('Jank Frames', '${summary.metrics!.jankFrameCount}'),
-            _buildMetricRow('Total Frames', '${summary.metrics!.frameCount}'),
-            const SizedBox(height: 8),
-            _buildMetricRow('Quality Level', '${(summary.quality * 100).toStringAsFixed(0)}%'),
-          ],
+          _buildMetricRow('Average FPS', summary.report.averageFps.toStringAsFixed(1)),
+          _buildMetricRow('Avg Frame Time', '${summary.report.averageFrameTimeMs.toStringAsFixed(2)}ms'),
+          _buildMetricRow('Jank Rate', '${(summary.report.jankRate * 100).toStringAsFixed(1)}%'),
+          _buildMetricRow('Total Frames', summary.report.frameCount.toString()),
+          const SizedBox(height: 8),
+          _buildMetricRow('Quality Level', '${(summary.quality * 100).toStringAsFixed(0)}%'),
 
           // 建议
           if (summary.recommendations.isNotEmpty) ...[

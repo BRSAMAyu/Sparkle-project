@@ -14,8 +14,8 @@ class PredictiveService {
   Future<Map<String, dynamic>> getLearningForecast() async {
     try {
       // 尝试调用真实API
-      final response = await _apiClient.get('/api/v1/predictive/learning-forecast');
-      return response.data;
+      final response = await _apiClient.get<Map<String, dynamic>>('/api/v1/predictive/learning-forecast');
+      return response.data ?? _getMockLearningForecast();
     } catch (e) {
       log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
 
@@ -27,8 +27,8 @@ class PredictiveService {
   /// 获取仪表板数据
   Future<Map<String, dynamic>> getDashboardData() async {
     try {
-      final response = await _apiClient.get('/api/v1/dashboard');
-      return response.data;
+      final response = await _apiClient.get<Map<String, dynamic>>('/api/v1/dashboard');
+      return response.data ?? _getMockDashboardData();
     } catch (e) {
       log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
 
@@ -40,8 +40,8 @@ class PredictiveService {
   /// 获取用户洞察数据
   Future<Map<String, dynamic>> getUserInsights() async {
     try {
-      final response = await _apiClient.get('/api/v1/insights/user');
-      return response.data;
+      final response = await _apiClient.get<Map<String, dynamic>>('/api/v1/insights/user');
+      return response.data ?? _getMockUserInsights();
     } catch (e) {
       log('API调用失败，使用模拟数据: $e', name: 'PredictiveService');
 

@@ -197,6 +197,17 @@ class DS {
   static Color get error => _theme.colors.semanticError;
   static Color get info => _theme.colors.semanticInfo;
 
+  // Surface colors
+  static Color get surfacePrimary => _theme.colors.surfacePrimary;
+  static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
+  static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfaceHigh => _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
+
+  // Text colors
+  static Color get textPrimary => _theme.colors.textPrimary;
+  static Color get textSecondary => _theme.colors.textSecondary;
+  static Color get textTertiary => _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+
   static Color get brandPrimary10 => brandPrimary.withValues(alpha: 0.1);
   static Color get brandPrimary12 => brandPrimary.withValues(alpha: 0.12);
   static Color get brandPrimary24 => brandPrimary.withValues(alpha: 0.24);

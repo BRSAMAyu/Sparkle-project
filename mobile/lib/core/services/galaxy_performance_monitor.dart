@@ -375,3 +375,28 @@ mixin PerformanceMonitorMixin {
     GalaxyPerformanceMonitor.instance.recordRepaint();
   }
 }
+
+/// Galaxy性能指标数据
+class GalaxyPerformanceMetrics {
+  const GalaxyPerformanceMetrics({
+    required this.averageFps,
+    required this.minFps,
+    required this.maxFps,
+    required this.averageFrameTime,
+    required this.jankFrameCount,
+    required this.frameCount,
+  });
+
+  final double averageFps;
+  final double minFps;
+  final double maxFps;
+  final double averageFrameTime;
+  final int jankFrameCount;
+  final int frameCount;
+
+  @override
+  String toString() => 'GalaxyPerformanceMetrics('
+      'avgFps: ${averageFps.toStringAsFixed(1)}, '
+      'frameTime: ${averageFrameTime.toStringAsFixed(2)}ms, '
+      'jank: $jankFrameCount/$frameCount)';
+}

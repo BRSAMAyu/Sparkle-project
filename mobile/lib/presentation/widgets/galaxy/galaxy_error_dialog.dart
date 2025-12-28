@@ -36,7 +36,6 @@ class GalaxyErrorDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: _getErrorColor().withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       title: Row(

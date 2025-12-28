@@ -606,28 +606,27 @@ class StarMapPainter extends CustomPainter {
     );
   }
 
-  /// Draw cluster label
+  /// Draw cluster label using cached text renderer
   void _drawClusterLabel(Canvas canvas, String name, Offset pos, double radius, Color color) {
-    final textSpan = TextSpan(
-      text: name,
-      style: TextStyle(
-        color: DS.brandPrimary.withAlpha(220),
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        shadows: [
-          Shadow(
-            color: color.withAlpha(150),
-            blurRadius: 6,
-          ),
-        ],
-      ),
+    final style = TextStyle(
+      color: DS.brandPrimary.withAlpha(220),
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      shadows: [
+        Shadow(
+          color: color.withAlpha(150),
+          blurRadius: 6,
+        ),
+      ],
     );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
+
+    _textRenderer.drawText(
+      canvas,
+      name,
+      pos + Offset(0, radius + 8),
+      style,
+      align: TextAlign.center,
     );
-    textPainter.layout();
-    textPainter.paint(canvas, pos + Offset(-textPainter.width / 2, radius + 8));
   }
 
   /// Draw sector-level view - only sector centroids
@@ -848,39 +847,39 @@ class StarMapPainter extends CustomPainter {
     }
   }
 
-  /// Draw node label with sector-aware styling
+  /// Draw node label with sector-aware styling using cached text renderer
   void _drawNodeLabel(Canvas canvas, GalaxyNodeModel node, Offset pos, Color color) {
     final sectorStyle = SectorConfig.getStyle(node.sector);
     final textColor = node.isUnlocked
         ? DS.brandPrimary.withValues(alpha: 0.9)
         : DS.brandPrimary.withValues(alpha: 0.5);
 
-    final textSpan = TextSpan(
-      text: node.name,
-      style: TextStyle(
-        color: textColor,
-        fontSize: node.importance >= 4 ? 12 : 10,
-        fontWeight: node.isUnlocked ? FontWeight.w600 : FontWeight.w400,
-        shadows: node.isUnlocked
-            ? [
-                Shadow(
-                  color: sectorStyle.primaryColor.withValues(alpha: 0.6),
-                  blurRadius: 6,
-                ),
-                Shadow(
-                  color: DS.brandPrimary.withValues(alpha: 0.54),
-                  blurRadius: 2,
-                ),
-              ]
-            : null,
-      ),
+    final style = TextStyle(
+      color: textColor,
+      fontSize: node.importance >= 4 ? 12 : 10,
+      fontWeight: node.isUnlocked ? FontWeight.w600 : FontWeight.w400,
+      shadows: node.isUnlocked
+          ? [
+              Shadow(
+                color: sectorStyle.primaryColor.withValues(alpha: 0.6),
+                blurRadius: 6,
+              ),
+              Shadow(
+                color: DS.brandPrimary.withValues(alpha: 0.54),
+                blurRadius: 2,
+              ),
+            ]
+          : null,
     );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
+
+    // Use cached text renderer for better performance
+    _textRenderer.drawText(
+      canvas,
+      node.name,
+      pos + Offset(0, node.radius + 8),
+      style,
+      align: TextAlign.center,
     );
-    textPainter.layout();
-    textPainter.paint(canvas, pos + Offset(-textPainter.width / 2, node.radius + 8));
   }
 
   @override

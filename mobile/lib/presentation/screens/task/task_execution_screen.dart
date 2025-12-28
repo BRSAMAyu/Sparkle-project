@@ -177,7 +177,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       return Scaffold(
         appBar: AppBar(
           flexibleSpace: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: AppDesignTokens.primaryGradient,
             ),
           ),
@@ -186,7 +186,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline_rounded,
                 size: 80,
                 color: AppDesignTokens.neutral400,
@@ -204,7 +204,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 text: '返回',
                 icon: Icons.arrow_back,
                 onPressed: () => context.pop(),
-                size: CustomButtonSize.medium,
               ),
             ],
           ),
@@ -233,7 +232,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               title: Text(
                 activeTask.title, 
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: AppDesignTokens.neutral900),
+                style: const TextStyle(color: AppDesignTokens.neutral900),
               ),
             ),
             body: DecoratedBox(
@@ -282,7 +281,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // 2. Task Guide Area
                             DecoratedBox(
                               decoration: BoxDecoration(
-                                color: DS.brandPrimaryConst,
+                                color: DS.brandPrimary,
                                 borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
                                 border: Border.all(
@@ -310,7 +309,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: Icon(Icons.description_outlined, color: DS.brandPrimaryConst, size: 22),
+                                      child: Icon(Icons.description_outlined, color: DS.brandPrimary, size: 22),
                                     ),
                                     const SizedBox(width: AppDesignTokens.spacing12),
                                     Text(
@@ -326,7 +325,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                   Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(AppDesignTokens.spacing16),
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       color: AppDesignTokens.neutral50,
                                       borderRadius: BorderRadius.only(
                                         bottomLeft: Radius.circular(16),
@@ -346,7 +345,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                         h2: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: AppDesignTokens.fontWeightBold,
                                         ),
-                                        code: TextStyle(
+                                        code: const TextStyle(
                                           backgroundColor: AppDesignTokens.neutral100,
                                           color: AppDesignTokens.primaryDark,
                                           fontFamily: 'monospace',
@@ -403,7 +402,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: EdgeInsets.all(DS.xl),
+                          padding: const EdgeInsets.all(DS.xl),
                           decoration: BoxDecoration(
                             gradient: AppDesignTokens.successGradient,
                             shape: BoxShape.circle,
@@ -415,9 +414,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               ),
                             ],
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.check_circle,
-                            color: DS.brandPrimaryConst,
+                            color: DS.brandPrimary,
                             size: 80,
                           ),
                         ),
@@ -425,7 +424,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                         Text(
                           '任务完成！',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: DS.brandPrimaryConst,
+                            color: DS.brandPrimary,
                             fontWeight: AppDesignTokens.fontWeightBold,
                           ),
                         ),
@@ -443,7 +442,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           child: Text(
                             '+${activeTask.difficulty * 10} 经验值',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: DS.brandPrimaryConst,
+                              color: DS.brandPrimary,
                               fontWeight: AppDesignTokens.fontWeightBold,
                             ),
                           ),
@@ -492,7 +491,7 @@ class _TimerControls extends StatelessWidget {
             ),),
           ],
         ),
-        SizedBox(height: DS.lg),
+        const SizedBox(height: DS.lg),
         CustomButton.primary(
           text: '进入正念模式',
           icon: Icons.self_improvement,
@@ -532,12 +531,12 @@ class _BottomControls extends ConsumerWidget {
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(DS.sm),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(DS.sm),
+              decoration: const BoxDecoration(
                 gradient: AppDesignTokens.successGradient,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.check_circle_outline, color: DS.brandPrimaryConst, size: 24),
+              child: Icon(Icons.check_circle_outline, color: DS.brandPrimary, size: 24),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
             const Text(
@@ -560,11 +559,11 @@ class _BottomControls extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.timer_outlined, color: AppDesignTokens.primaryBase),
+                  const Icon(Icons.timer_outlined, color: AppDesignTokens.primaryBase),
                   const SizedBox(width: AppDesignTokens.spacing8),
                   Text(
                     '用时：$minutes 分钟',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: AppDesignTokens.fontWeightMedium,
                       color: AppDesignTokens.neutral700,
                     ),
@@ -632,7 +631,7 @@ class _BottomControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
+        color: DS.brandPrimary,
         boxShadow: [
           BoxShadow(
             color: DS.brandPrimary.withValues(alpha: 0.05),

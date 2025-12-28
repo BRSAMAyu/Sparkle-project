@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -73,8 +74,11 @@ class NotificationService {
     
     if (details.payload != null) {
       try {
-        final payload = jsonDecode(details.payload!);
-        
+        final decodedPayload = jsonDecode(details.payload!);
+        final payload = decodedPayload is Map<String, dynamic>
+            ? decodedPayload
+            : <String, dynamic>{};
+
         if (details.actionId == 'START_NOW') {
            // Navigate to Task Execution
            // Since we are inside a callback, we might need the context or router
@@ -82,9 +86,9 @@ class NotificationService {
            if (navigatorKey.currentContext != null) {
               final context = navigatorKey.currentContext!;
               // Parse taskId from payload
-              final taskId = payload['taskId'];
+              final taskId = payload['taskId'] as String?;
               if (taskId != null) {
-                GoRouter.of(context).pushNamed('taskExecution', pathParameters: {'id': taskId});
+                unawaited(GoRouter.of(context).pushNamed('taskExecution', pathParameters: {'id': taskId}));
               }
            }
         } else if (details.actionId == 'SNOOZE') {
