@@ -11,6 +11,10 @@ from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
 from app.services.galaxy_service import GalaxyService
 from app.services.user_service import UserService
+from app.services.focus_service import focus_service
+from app.models.task import Task, TaskStatus as ModelTaskStatus
+from app.models.plan import Plan
+from sqlalchemy import select, and_, desc, asc
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.state_manager import SessionStateManager, FSMState
@@ -84,7 +88,7 @@ def get_agent_type_for_tool(tool_name: str) -> int:
         return agent_service_pb2.REASONING
 
     # Task/orchestration tools -> ORCHESTRATOR
-    if any(keyword in tool_lower for keyword in ['task', 'plan', 'create', 'update', 'batch', 'orchestrate']):
+    if any(keyword in tool_lower for keyword in ['task', 'plan', 'create', 'update', 'batch', 'orchestrate', 'focus', 'pomodoro']):
         return agent_service_pb2.ORCHESTRATOR
 
     # Default to ORCHESTRATOR
@@ -229,14 +233,74 @@ class ChatOrchestrator:
             # Get analytics summary (with Redis caching)
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
 
+            user_context_data = None
             if user_context:
+                user_context_data = user_context.model_dump()
+
+            # Next actions (top pending tasks)
+            tasks_stmt = (
+                select(Task)
+                .where(
+                    and_(
+                        Task.user_id == uuid.UUID(user_id),
+                        Task.status == ModelTaskStatus.PENDING
+                    )
+                )
+                .order_by(desc(Task.priority), asc(Task.due_date), desc(Task.created_at))
+                .limit(3)
+            )
+            tasks_result = await db_session.execute(tasks_stmt)
+            tasks = tasks_result.scalars().all()
+            next_actions = [
+                {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "type": task.type.value,
+                    "estimated_minutes": task.estimated_minutes,
+                    "priority": task.priority
+                }
+                for task in tasks
+            ]
+
+            # Active plans (latest 3)
+            plans_stmt = (
+                select(Plan)
+                .where(
+                    and_(
+                        Plan.user_id == uuid.UUID(user_id),
+                        Plan.is_active == True
+                    )
+                )
+                .order_by(desc(Plan.created_at))
+                .limit(3)
+            )
+            plans_result = await db_session.execute(plans_stmt)
+            plans = plans_result.scalars().all()
+            active_plans = [
+                {
+                    "id": str(plan.id),
+                    "title": plan.name,
+                    "type": plan.type.value,
+                    "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                    "progress": plan.progress or 0
+                }
+                for plan in plans
+            ]
+
+            # Focus stats (today)
+            focus_stats = await focus_service.get_today_stats(db_session, uuid.UUID(user_id))
+
+            if user_context_data:
                 return {
-                    "user_context": user_context,
+                    "user_context": user_context_data,
                     "analytics_summary": analytics,
                     "preferences": {
                         "depth_preference": user_context.preferences.get("depth_preference", 0.5),
                         "curiosity_preference": user_context.preferences.get("curiosity_preference", 0.5),
-                    }
+                    },
+                    "next_actions": next_actions,
+                    "active_plans": active_plans,
+                    "focus_stats": focus_stats,
                 }
             else:
                 # Fallback to basic context
@@ -244,7 +308,10 @@ class ChatOrchestrator:
                 return {
                     "user_context": None,
                     "analytics_summary": {"is_active": True, "engagement_level": "medium"},
-                    "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
+                    "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+                    "next_actions": next_actions,
+                    "active_plans": active_plans,
+                    "focus_stats": focus_stats,
                 }
 
         except Exception as e:
@@ -373,6 +440,14 @@ class ChatOrchestrator:
                 tool_result = request.tool_result
                 user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
 
+            # Build user + conversation context
+            user_context_payload = None
+            conversation_context = None
+            if active_db and user_id:
+                user_context_payload = await self._build_user_context(user_id, active_db)
+            if self.context_pruner:
+                conversation_context = await self._build_conversation_context(session_id, user_id)
+
             # Prepare initial state
             state = WorkflowState()
             state.append_message("user", user_message)
@@ -400,7 +475,9 @@ class ChatOrchestrator:
                 "session_id": session_id,
                 "stream_callback": stream_callback,
                 "tools_schema": tools,
-                "redis_client": self.redis
+                "redis_client": self.redis,
+                "user_context": user_context_payload,
+                "conversation_context": conversation_context,
             })
 
             # Launch Graph Execution in Background

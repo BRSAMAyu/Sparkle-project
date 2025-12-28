@@ -37,13 +37,13 @@ class GrowthScreen extends ConsumerWidget {
     }
 
     if (plans.isEmpty) {
-      return Center(
+      return const Center(
         child: Text('No growth plans created yet.'),
       );
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(DS.sm),
+      padding: const EdgeInsets.all(DS.sm),
       itemCount: plans.length,
       itemBuilder: (context, index) => _GrowthPlanCard(plan: plans[index]),
     );
@@ -57,21 +57,21 @@ class _GrowthPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
       elevation: 2,
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         onTap: () {
           // Navigation: Consider creating dedicated plan detail screen
           context.push('/plans/${plan.id}/edit');
         },
         child: Padding(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
-              SizedBox(height: DS.xs),
+              const SizedBox(height: DS.xs),
               if (plan.description != null) Text(plan.description!, style: Theme.of(context).textTheme.bodyMedium),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               _buildStatRow(
                 context,
                 'Mastery',
@@ -79,7 +79,7 @@ class _GrowthPlanCard extends StatelessWidget {
                 plan.masteryLevel,
                 Colors.purple,
               ),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               _buildStatRow(
                 context,
                 'Progress',
@@ -103,7 +103,7 @@ class _GrowthPlanCard extends StatelessWidget {
             Text(valueText, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
           ],
         ),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         LinearProgressIndicator(
           value: progressValue,
           backgroundColor: color.withValues(alpha: 0.2),

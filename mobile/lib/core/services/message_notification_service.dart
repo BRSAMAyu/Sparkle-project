@@ -163,7 +163,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: EdgeInsets.all(DS.md),
+                padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -186,7 +186,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                           ? Text(widget.notification.senderName[0])
                           : null,
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,12 +196,12 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                             children: [
                               Text(
                                 widget.notification.senderName,
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              SizedBox(width: DS.sm),
+                              const SizedBox(width: DS.sm),
                               if (widget.notification.type == NotificationType.groupMessage)
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: DS.brandPrimary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
@@ -213,7 +213,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 ),
                             ],
                           ),
-                          SizedBox(height: DS.xs),
+                          const SizedBox(height: DS.xs),
                           Text(
                             widget.notification.content,
                             maxLines: 2,
@@ -261,12 +261,12 @@ class MessageBadge extends ConsumerWidget {
             right: -6,
             top: -4,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: DS.error,
                 borderRadius: BorderRadius.circular(10),
               ),
-              constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               child: Text(
                 unreadCount > 99 ? '99+' : '$unreadCount',
                 style: TextStyle(

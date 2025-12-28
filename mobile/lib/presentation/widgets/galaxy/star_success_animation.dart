@@ -185,7 +185,7 @@ class _SuccessAnimationPainter extends CustomPainter {
         // Glow
         final glowPaint = Paint()
           ..color = color.withValues(alpha: particleOpacity * 0.4)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
         canvas.drawCircle(pos, particle.size * 1.5, glowPaint);
 
         // Core

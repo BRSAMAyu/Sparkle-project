@@ -195,14 +195,14 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
-        padding: EdgeInsets.all(DS.spacing32),
+        padding: const EdgeInsets.all(DS.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             // 图标
             if (showIcon) _buildIcon(),
-            if (showIcon) SizedBox(height: DS.spacing24),
+            if (showIcon) const SizedBox(height: DS.spacing24),
             // 标题
             Text(
               title ?? _getDefaultTitle(),
@@ -213,7 +213,7 @@ class EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.spacing12),
+            const SizedBox(height: DS.spacing12),
             // 描述
             Text(
               description ?? _getDefaultDescription(),
@@ -226,7 +226,7 @@ class EmptyState extends StatelessWidget {
             ),
             // 操作按钮
             if (customAction != null || (actionText != null && onAction != null)) ...[
-              SizedBox(height: DS.spacing32),
+              const SizedBox(height: DS.spacing32),
               customAction ??
                   CustomButton.primary(
                     text: actionText!,
@@ -249,7 +249,7 @@ class EmptyState extends StatelessWidget {
           BoxShadow(
             color: _getIconColor().withValues(alpha: 0.2),
             blurRadius: 20,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -292,7 +292,7 @@ class CompactEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.spacing24),
+      padding: const EdgeInsets.all(DS.spacing24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -310,7 +310,7 @@ class CompactEmptyState extends StatelessWidget {
                 color: DS.neutral400,
               ),
             ),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
           ],
           Text(
             message,
@@ -321,7 +321,7 @@ class CompactEmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (onAction != null && actionText != null) ...[
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             CustomButton.text(
               text: actionText!,
               onPressed: onAction,

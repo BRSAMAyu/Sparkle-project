@@ -173,8 +173,8 @@ class _FlipDigitState extends State<_FlipDigit>
           decoration: BoxDecoration(
             color: DS.deepSpaceSurface,
             borderRadius: BorderRadius.vertical(
-              top: isTop ? Radius.circular(8) : Radius.zero,
-              bottom: isTop ? Radius.zero : Radius.circular(8),
+              top: isTop ? const Radius.circular(8) : Radius.zero,
+              bottom: isTop ? Radius.zero : const Radius.circular(8),
             ),
             border: Border.all(
               color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -241,12 +241,12 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) => AnimatedBuilder(
       animation: _opacityAnimation,
       builder: (context, _) => Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildDot(_opacityAnimation.value),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
           ),

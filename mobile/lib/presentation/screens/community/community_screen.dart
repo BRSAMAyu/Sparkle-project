@@ -18,11 +18,11 @@ class CommunityScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (ctx) => CreatePostScreen()),
+            MaterialPageRoute(builder: (ctx) => const CreatePostScreen()),
           );
         },
         backgroundColor: DS.primaryBase,
-        child: Icon(Icons.edit),
+        child: const Icon(Icons.edit),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -51,7 +51,7 @@ class CommunityScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.error_outline, size: 48, color: DS.error),
-                  SizedBox(height: DS.lg),
+                  const SizedBox(height: DS.lg),
                   Text(
                     'Failed to load feed',
                     style: TextStyle(color: DS.brandPrimary300),
@@ -70,7 +70,7 @@ class CommunityScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) => Padding(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -83,7 +83,7 @@ class CommunityScreen extends ConsumerWidget {
               letterSpacing: 1.2,
             ),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             'Discover what others are learning',
             style: TextStyle(
@@ -91,9 +91,9 @@ class CommunityScreen extends ConsumerWidget {
               color: DS.brandPrimary400,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           // Filter Tabs (Placeholder)
-          SingleChildScrollView(
+          const SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
@@ -112,17 +112,17 @@ class CommunityScreen extends ConsumerWidget {
   Widget _buildEmptyState(BuildContext context) => ListView(
       children: [
         _buildHeader(context),
-        SizedBox(height: 100),
+        const SizedBox(height: 100),
         Center(
           child: Column(
             children: [
               Icon(Icons.forum_outlined, size: 64, color: DS.brandPrimary24),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               Text(
                 'No posts yet',
                 style: TextStyle(color: DS.brandPrimary54, fontSize: 18),
               ),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               Text(
                 'Be the first to share something!',
                 style: TextStyle(color: DS.brandPrimary24),
@@ -142,7 +142,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isSelected ? DS.primaryBase : DS.brandPrimary10,
         borderRadius: BorderRadius.circular(20),

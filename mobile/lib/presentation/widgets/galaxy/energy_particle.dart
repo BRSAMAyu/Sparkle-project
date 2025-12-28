@@ -220,7 +220,7 @@ class _EnergyParticlePainter extends CustomPainter {
           targetColor,
           progress,
         ).withValues(alpha: 0.4 * fadeOut)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
       canvas.drawCircle(particle.position, particle.size * fadeOut, trailPaint);
     }

@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 
 /// API Constants
 class ApiConstants {
-  static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL', defaultValue: '');
-  static const String _wsBaseUrlOverride = String.fromEnvironment('WS_BASE_URL', defaultValue: '');
+  static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
+  static const String _wsBaseUrlOverride = String.fromEnvironment('WS_BASE_URL');
 
   // Base URL (HTTP)
   static String get baseUrl {

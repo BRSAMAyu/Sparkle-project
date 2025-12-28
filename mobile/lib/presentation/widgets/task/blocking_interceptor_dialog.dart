@@ -71,9 +71,9 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
 
   @override
   Widget build(BuildContext context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       child: Padding(
-        padding: EdgeInsets.all(DS.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -82,14 +82,14 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
               Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(DS.sm),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: DS.warning.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.block, color: DS.warning),
                   ),
-                  SizedBox(width: DS.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: Text(
                       '遇到阻碍了吗？',
@@ -100,14 +100,14 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                   ),
                 ],
               ),
-              SizedBox(height: DS.spacing16),
+              const SizedBox(height: DS.spacing16),
               Text(
                 '记录下原因，AI 会帮你分析行为定式，下次做得更好。',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.neutral600,
                 ),
               ),
-              SizedBox(height: DS.spacing20),
+              const SizedBox(height: DS.spacing20),
               
               // Preset Options
               ..._reasons.map((reason) => RadioListTile<String>(
@@ -121,7 +121,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
 
               // Other/Custom Input
               RadioListTile<String>(
-                title: Text('其他原因...'),
+                title: const Text('其他原因...'),
                 value: 'other',
                 groupValue: _selectedReason == null || !_reasons.contains(_selectedReason) ? 'other' : null,
                 onChanged: (value) => setState(() => _selectedReason = 'other'), // Hacky handling
@@ -132,18 +132,18 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
               if (_selectedReason == 'other')
                 TextField(
                   controller: _controller,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: '请输入具体原因',
                     isDense: true,
                   ),
                 ),
 
-              SizedBox(height: DS.spacing24),
+              const SizedBox(height: DS.spacing24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton.ghost(label: '取消', onPressed: () => Navigator.of(context).pop()),
-                  SizedBox(width: DS.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   CustomButton.primary(
                     text: '确认放弃',
                     icon: Icons.check,

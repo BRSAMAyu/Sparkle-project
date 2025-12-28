@@ -57,8 +57,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Discard Group?'),
-        content: Text('You have unsaved changes. Are you sure you want to discard them?'),
+        title: const Text('Discard Group?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
         actions: [
           SparkleButton.ghost(label: 'Keep Editing', onPressed: () => Navigator.of(context).pop(false)),
           TextButton(
@@ -138,9 +138,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text('Create Group')),
+        appBar: AppBar(title: const Text('Create Group')),
         body: SingleChildScrollView(
-          padding: EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.all(DS.spacing16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -161,7 +161,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 DropdownButtonFormField<GroupType>(
                   initialValue: _type,
@@ -185,18 +185,18 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     });
                   },
                 ),
-                SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 TextFormField(
                   controller: _descController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Description',
                     border: OutlineInputBorder(),
                     alignLabelWithHint: true,
                   ),
                   maxLines: 3,
                 ),
-                SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 TextFormField(
                   controller: _tagsController,
@@ -208,16 +208,16 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 ),
                 
                 if (_type == GroupType.sprint) ...[
-                  SizedBox(height: DS.spacing16),
-                  Divider(),
-                  SizedBox(height: DS.spacing8),
+                  const SizedBox(height: DS.spacing16),
+                  const Divider(),
+                  const SizedBox(height: DS.spacing8),
                   Text('Sprint Settings', style: Theme.of(context).textTheme.titleMedium),
-                  SizedBox(height: DS.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   
                   ListTile(
-                    title: Text('Deadline'),
+                    title: const Text('Deadline'),
                     subtitle: Text(_deadline == null ? 'Select Date' : _deadline.toString().split(' ')[0]),
-                    trailing: Icon(Icons.calendar_today),
+                    trailing: const Icon(Icons.calendar_today),
                     tileColor: DS.brandPrimary.shade100,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     onTap: () async {
@@ -234,7 +234,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       }
                     },
                   ),
-                  SizedBox(height: DS.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   
                   TextFormField(
                     controller: _goalController,
@@ -252,7 +252,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   ),
                 ],
                 
-                SizedBox(height: DS.spacing32),
+                const SizedBox(height: DS.spacing32),
                 
                 CustomButton.primary(
                   text: _isSubmitting ? 'Creating...' : 'Create Group',

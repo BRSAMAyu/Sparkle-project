@@ -2,9 +2,17 @@ from typing import Dict, List, Optional
 from .base import BaseTool, ToolCategory
 
 # 导入所有工具
-from .task_tools import CreateTaskTool, UpdateTaskStatusTool, BatchCreateTasksTool
+from .task_tools import (
+    CreateTaskTool,
+    UpdateTaskStatusTool,
+    BatchCreateTasksTool,
+    SuggestQuickTaskTool,
+    BreakdownTaskTool,
+)
 from .knowledge_tools import CreateKnowledgeNodeTool, QueryKnowledgeTool, LinkNodesTool
 from .ops_tools import CheckSystemStatusTool, QueryErrorLogsTool
+from .plan_tools import CreatePlanTool
+from .focus_tools import SuggestFocusSessionTool
 
 class ToolRegistry:
     """
@@ -27,10 +35,16 @@ class ToolRegistry:
             CreateTaskTool(),
             UpdateTaskStatusTool(),
             BatchCreateTasksTool(),
+            SuggestQuickTaskTool(),
+            BreakdownTaskTool(),
             # 知识图谱工具
             CreateKnowledgeNodeTool(),
             QueryKnowledgeTool(),
             LinkNodesTool(),
+            # 计划工具
+            CreatePlanTool(),
+            # 专注工具
+            SuggestFocusSessionTool(),
             # 运维工具 (AIOps)
             CheckSystemStatusTool(),
             QueryErrorLogsTool(),

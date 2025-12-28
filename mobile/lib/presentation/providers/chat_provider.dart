@@ -297,8 +297,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
             aiStatusDetails: '正在使用 ${event.toolName}...',
           );
         } else if (event is ToolResultEvent) {
-          // 工具结果
-          // 暂时不处理或者添加到 debug log
+          final widgetType = event.result.widgetType;
+          final widgetData = event.result.widgetData;
+          if (widgetType != null && widgetData != null) {
+            accumulatedWidgets.add(
+              WidgetPayload(
+                type: widgetType,
+                data: widgetData,
+              ),
+            );
+          }
         } else if (event is UsageEvent) {
           // Token 使用统计（可选显示）
           // print('Usage: ${event.totalTokens} tokens');
@@ -397,4 +405,3 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) => ChatNotifier(ref.watch(chatRepositoryProvider), ref));
-

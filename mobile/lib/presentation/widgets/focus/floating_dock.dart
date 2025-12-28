@@ -93,15 +93,15 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
           _snapToEdge(screenSize);
         },
         child: AnimatedContainer(
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           width: _isHiding ? 20 : (_isExpanded ? 180 : 60),
           height: _isExpanded ? 160 : 60,
           decoration: BoxDecoration(
             color: DS.primaryBase.withValues(alpha: 0.95),
             borderRadius: _isHiding 
                 ? BorderRadius.horizontal(
-                    left: isRightSide ? Radius.circular(30) : Radius.zero,
-                    right: !isRightSide ? Radius.circular(30) : Radius.zero,
+                    left: isRightSide ? const Radius.circular(30) : Radius.zero,
+                    right: !isRightSide ? const Radius.circular(30) : Radius.zero,
                   )
                 : BorderRadius.circular(30),
             boxShadow: [
@@ -171,11 +171,11 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
   }) => InkWell(
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
             Icon(icon, color: DS.brandPrimaryConst, size: 20),
-            SizedBox(width: DS.md),
+            const SizedBox(width: DS.md),
             Text(
               label,
               style: TextStyle(

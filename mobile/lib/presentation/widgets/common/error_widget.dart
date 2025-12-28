@@ -177,7 +177,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   Widget _buildErrorPage(BuildContext context) => Center(
       child: Padding(
-        padding: EdgeInsets.all(DS.spacing32),
+        padding: const EdgeInsets.all(DS.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -193,7 +193,7 @@ class CustomErrorWidget extends StatelessWidget {
                     BoxShadow(
                       color: _getBackgroundColor().withValues(alpha: 0.3),
                       blurRadius: 24,
-                      offset: Offset(0, 8),
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -203,7 +203,7 @@ class CustomErrorWidget extends StatelessWidget {
                   color: DS.brandPrimaryConst,
                 ),
               ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
             // 错误标题
             Text(
               title ?? _getDefaultTitle(),
@@ -214,7 +214,7 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.spacing12),
+            const SizedBox(height: DS.spacing12),
             // 错误消息
             Text(
               message,
@@ -225,7 +225,7 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
             // 操作按钮
             if (actions != null)
               ...actions!
@@ -250,7 +250,7 @@ class CustomErrorWidget extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing16,
             vertical: DS.spacing12,
           ),
@@ -262,7 +262,7 @@ class CustomErrorWidget extends StatelessWidget {
                 color: DS.brandPrimaryConst,
                 size: DS.iconSizeBase,
               ),
-              SizedBox(width: DS.spacing12),
+              const SizedBox(width: DS.spacing12),
               // 内容
               Expanded(
                 child: Column(
@@ -278,7 +278,7 @@ class CustomErrorWidget extends StatelessWidget {
                           color: DS.brandPrimaryConst,
                         ),
                       ),
-                      SizedBox(height: DS.spacing4),
+                      const SizedBox(height: DS.spacing4),
                     ],
                     Text(
                       message,
@@ -292,9 +292,9 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               // 关闭按钮
               if (onClose != null) ...[
-                SizedBox(width: DS.spacing12),
+                const SizedBox(width: DS.spacing12),
                 IconButton(
-                  icon: Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded),
                   color: DS.brandPrimaryConst,
                   iconSize: DS.iconSizeSm,
                   padding: EdgeInsets.zero,
@@ -309,7 +309,7 @@ class CustomErrorWidget extends StatelessWidget {
     );
 
   Widget _buildInlineError(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.spacing12),
+      padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: _getLightBackgroundColor(),
         border: Border.all(
@@ -326,7 +326,7 @@ class CustomErrorWidget extends StatelessWidget {
               color: _getBackgroundColor(),
               size: DS.iconSizeSm,
             ),
-            SizedBox(width: DS.spacing8),
+            const SizedBox(width: DS.spacing8),
           ],
           Expanded(
             child: Text(

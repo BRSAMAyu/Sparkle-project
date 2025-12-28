@@ -63,19 +63,19 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
         onTapCancel: () => _controller.reverse(),
         onTap: _handleTap,
         child: Card(
-          margin: EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           elevation: 2,
           // Remove InkWell as we handle taps on GestureDetector
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     _buildTypeIcon(planType),
-                    SizedBox(width: DS.sm),
+                    const SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         title,
@@ -89,7 +89,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                 ),
                 
                 if (description != null && description.isNotEmpty) ...[
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -98,25 +98,25 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                   ),
                 ],
 
-                SizedBox(height: DS.md),
+                const SizedBox(height: DS.md),
                 Row(
                   children: [
                     if (targetDate != null) ...[
                       Icon(Icons.calendar_today,
                         size: DS.iconSizeSm,
                         color: Theme.of(context).hintColor,),
-                      SizedBox(width: DS.spacing4),
+                      const SizedBox(width: DS.spacing4),
                       Text('目标日期: $targetDate'),
-                      SizedBox(width: DS.spacing16),
+                      const SizedBox(width: DS.spacing16),
                     ],
                     if (mastery != null) ...[
                       Icon(Icons.grade,
                         size: DS.iconSizeSm,
                         color: Theme.of(context).hintColor,),
-                      SizedBox(width: DS.spacing4),
+                      const SizedBox(width: DS.spacing4),
                       Text('目标掌握度: ${(mastery * 100).toInt()}%'),
                     ],
-                    Spacer(),
+                    const Spacer(),
                     // Just a visual indicator now - not interactive so smaller is acceptable
                     Icon(Icons.arrow_forward_ios,
                       size: DS.iconSizeXs,
@@ -151,7 +151,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
     return Container(
       width: DS.touchTargetMinSize,
       height: DS.touchTargetMinSize,
-      padding: EdgeInsets.all(DS.spacing8),
+      padding: const EdgeInsets.all(DS.spacing8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: DS.borderRadius8,
@@ -165,7 +165,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
     final label = type == 'sprint' ? '冲刺计划' : type == 'growth' ? '成长计划' : type;
 
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
       ),

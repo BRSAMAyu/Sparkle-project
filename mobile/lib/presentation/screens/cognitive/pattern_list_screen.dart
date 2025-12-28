@@ -66,7 +66,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) => Padding(
-      padding: EdgeInsets.fromLTRB(8, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
       child: Row(
         children: [
           IconButton(
@@ -84,7 +84,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
             ),
           ),
           Container(
-            padding: EdgeInsets.all(DS.sm),
+            padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
               color: DS.prismPurple.withAlpha(40),
               borderRadius: BorderRadius.circular(12),
@@ -100,14 +100,14 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
     );
 
   Widget _buildEmptyState() => SingleChildScrollView(
-      physics: AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.all(DS.xxl),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 80),
+          const SizedBox(height: 80),
           Container(
-            padding: EdgeInsets.all(DS.xl),
+            padding: const EdgeInsets.all(DS.xl),
             decoration: BoxDecoration(
               color: DS.prismPurple.withAlpha(30),
               shape: BoxShape.circle,
@@ -118,7 +118,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               color: DS.prismPurple.withAlpha(150),
             ),
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
           Text(
             '暂无行为定式',
             style: TextStyle(
@@ -127,7 +127,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               color: DS.brandPrimary,
             ),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             '继续记录你的想法和情绪\nAI 会为你发现行为模式',
             textAlign: TextAlign.center,
@@ -154,7 +154,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 /// Pattern Card with glassmorphism style
 class _PatternCard extends StatelessWidget {
 
-  _PatternCard({required this.pattern});
+  const _PatternCard({required this.pattern});
   final BehaviorPatternModel pattern;
 
   @override
@@ -187,7 +187,7 @@ class _PatternCard extends StatelessWidget {
                       size: 20,
                     ),
                   ),
-                  SizedBox(width: DS.md),
+                  const SizedBox(width: DS.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +213,7 @@ class _PatternCard extends StatelessWidget {
                   ),
                   if (pattern.isArchived)
                     Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 4,
                       ),
@@ -235,7 +235,7 @@ class _PatternCard extends StatelessWidget {
 
               // Description
               if (pattern.description != null) ...[
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Text(
                   pattern.description!,
                   style: TextStyle(
@@ -248,9 +248,9 @@ class _PatternCard extends StatelessWidget {
 
               // Solution
               if (pattern.solutionText != null) ...[
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Container(
-                  padding: EdgeInsets.all(DS.md),
+                  padding: const EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
                     color: DS.success.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
@@ -266,7 +266,7 @@ class _PatternCard extends StatelessWidget {
                         color: DS.success,
                         size: 18,
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           pattern.solutionText!,
@@ -283,7 +283,7 @@ class _PatternCard extends StatelessWidget {
               ],
 
               // Date
-              SizedBox(height: DS.md),
+              const SizedBox(height: DS.md),
               Text(
                 '发现于 ${_formatDate(pattern.createdAt)}',
                 style: TextStyle(

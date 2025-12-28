@@ -7,13 +7,13 @@ import 'package:sparkle/core/design/design_system.dart';
 
 class GlassCard extends StatefulWidget {
 
-  GlassCard({
+  const GlassCard({
     required this.child,
     super.key,
     this.width,
     this.height,
     this.margin,
-    this.padding = EdgeInsets.all(DS.lg),
+    this.padding = const EdgeInsets.all(DS.lg),
     this.borderRadius,
     this.color,
     this.blurSigma = 10.0,

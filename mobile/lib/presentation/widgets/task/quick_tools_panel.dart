@@ -43,7 +43,7 @@ class QuickToolsPanel extends StatelessWidget { // 当前任务ID，用于关联
           icon: Icons.translate_outlined,
           label: '翻译',
           color: Colors.purple,
-          onTap: () => _showTool(context, TranslatorTool()),
+          onTap: () => _showTool(context, const TranslatorTool()),
         ),
         _ToolButton(
           icon: Icons.note_alt_outlined,
@@ -103,7 +103,7 @@ class _ToolButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.circular(12),
@@ -112,7 +112,7 @@ class _ToolButton extends StatelessWidget {
         child: Column(
           children: [
             Icon(icon, color: color, size: 28),
-            SizedBox(height: DS.xs),
+            const SizedBox(height: DS.xs),
             Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),

@@ -27,7 +27,7 @@ class LongTermPlanCard extends ConsumerWidget {
               borderRadius: DS.borderRadius20,
               border: Border.all(color: DS.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
           ),
         ),
@@ -66,7 +66,7 @@ class LongTermPlanCard extends ConsumerWidget {
                   color: DS.success,
                 ),
               ),
-              SizedBox(height: DS.xs),
+              const SizedBox(height: DS.xs),
               SizedBox(
                 height: 4,
                 width: 60,
@@ -81,7 +81,7 @@ class LongTermPlanCard extends ConsumerWidget {
           ),
         ),
 
-        Spacer(),
+        const Spacer(),
 
         Text(
           growth.name,
@@ -93,7 +93,7 @@ class LongTermPlanCard extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        SizedBox(height: 2),
+        const SizedBox(height: 2),
         Text(
           'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
           style: TextStyle(
@@ -108,7 +108,7 @@ class LongTermPlanCard extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_circle_outline, color: DS.brandPrimary30Const, size: 32),
-        SizedBox(height: DS.smConst),
+        const SizedBox(height: DS.smConst),
         Text(
           '创建长期计划',
           style: TextStyle(fontSize: 12, color: DS.brandPrimary54Const),

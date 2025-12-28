@@ -112,7 +112,7 @@ class ResponsiveScaffold extends StatelessWidget {
               children: [
                 // Logo和标题
                 Padding(
-                  padding: EdgeInsets.all(DS.spacing24),
+                  padding: const EdgeInsets.all(DS.spacing24),
                   child: Row(
                     children: [
                       Icon(
@@ -120,7 +120,7 @@ class ResponsiveScaffold extends StatelessWidget {
                         color: DS.primaryBase,
                         size: 32,
                       ),
-                      SizedBox(width: DS.spacing12),
+                      const SizedBox(width: DS.spacing12),
                       Text(
                         title ?? 'Sparkle',
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -207,7 +207,7 @@ class ContentConstraint extends StatelessWidget {
 /// - 手机：1列
 class ResponsiveGrid extends StatelessWidget {
 
-  ResponsiveGrid({
+  const ResponsiveGrid({
     required this.children, super.key,
     this.spacing = DS.spacing16,
     this.childAspectRatio,
@@ -248,7 +248,7 @@ class ResponsiveGrid extends StatelessWidget {
 /// 响应式列布局（Sliver版本，用于CustomScrollView）
 class ResponsiveSliverGrid extends StatelessWidget {
 
-  ResponsiveSliverGrid({
+  const ResponsiveSliverGrid({
     required this.children, super.key,
     this.spacing = DS.spacing16,
     this.childAspectRatio,
@@ -314,7 +314,7 @@ class ResponsiveTwoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: main),
-        SizedBox(width: DS.spacing16),
+        const SizedBox(width: DS.spacing16),
         SizedBox(
           width: sidebarWidth,
           child: sidebar,

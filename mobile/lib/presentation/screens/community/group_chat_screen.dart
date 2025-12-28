@@ -33,13 +33,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           children: [
             TextField(
               controller: durationController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Duration (minutes)',
                 suffixText: 'min',
               ),
               keyboardType: TextInputType.number,
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             TextField(
               controller: messageController,
               decoration: const InputDecoration(
@@ -91,13 +91,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(group.name, style: TextStyle(fontSize: 16)),
+                Text(group.name, style: const TextStyle(fontSize: 16)),
                 Text('${group.memberCount} members', style: TextStyle(fontSize: 12, color: DS.brandPrimary54)),
               ],
             ),
           ),
-          loading: () => Text('Chat'),
-          error: (_, __) => Text('Chat'),
+          loading: () => const Text('Chat'),
+          error: (_, __) => const Text('Chat'),
         ),
         actions: [
           IconButton(
@@ -121,11 +121,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: chatState.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return Center(child: Text('No messages yet. Say hi!'));
+                  return const Center(child: Text('No messages yet. Say hi!'));
                 }
                 return ListView.builder(
                   reverse: true,
-                  padding: EdgeInsets.all(DS.lg),
+                  padding: const EdgeInsets.all(DS.lg),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];

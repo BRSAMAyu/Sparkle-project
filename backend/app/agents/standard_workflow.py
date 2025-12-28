@@ -10,6 +10,7 @@ from app.services.galaxy_service import GalaxyService
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.gen.agent.v1 import agent_service_pb2
+from google.protobuf import struct_pb2
 
 # ==========================================
 # Nodes
@@ -18,15 +19,10 @@ from app.gen.agent.v1 import agent_service_pb2
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
     logger.info("Building context...")
-    # In a real impl, this would call UserService/ContextPruner
-    # For now, we assume context is passed in state.context_data or we mock it
-    # We can inject services into the state if needed, or use a global service locator
-    
-    # Placeholder: Retrieve context
-    user_id = state.context_data.get("user_id")
-    # ... logic to fetch user profile ...
-    
-    state.context_data["user_context"] = {"name": "User", "preferences": {}}
+    user_context = state.context_data.get("user_context")
+    if not user_context:
+        user_context = {"name": "User", "preferences": {}}
+    state.context_data["user_context"] = user_context
     return state
 
 async def retrieval_node(state: WorkflowState) -> WorkflowState:
@@ -48,9 +44,12 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     if not isinstance(user_context, dict):
         user_context = {}
 
+    conversation_context = state.context_data.get("conversation_context") or {
+        "messages": state.messages[:-1]
+    }
     system_prompt = build_system_prompt(
         user_context,
-        conversation_history={"messages": state.messages[:-1]} # Naive history
+        conversation_history=conversation_context
     )
     
     user_message = state.messages[-1]["content"] or ""
@@ -114,7 +113,8 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             await stream_callback(agent_service_pb2.ChatResponse(
                 status_update=agent_service_pb2.AgentStatus(
                     state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                    details=f"Executing {tc.tool_name}..."
+                    details=f"Executing {tc.tool_name}...",
+                    active_agent=agent_service_pb2.ORCHESTRATOR
                 )
             ))
         
@@ -132,6 +132,27 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             user_id=user_id,
             db_session=db_session
         )
+
+        if stream_callback:
+            data_struct = struct_pb2.Struct()
+            if result.data:
+                data_struct.update(result.data)
+            widget_struct = struct_pb2.Struct()
+            if result.widget_data:
+                widget_struct.update(result.widget_data)
+
+            await stream_callback(agent_service_pb2.ChatResponse(
+                tool_result=agent_service_pb2.ToolResultPayload(
+                    tool_name=result.tool_name,
+                    success=result.success,
+                    data=data_struct,
+                    error_message=result.error_message or "",
+                    suggestion=result.suggestion or "",
+                    widget_type=result.widget_type or "",
+                    widget_data=widget_struct,
+                    tool_call_id=tc.tool_call_id
+                )
+            ))
         
         # ToolResult object to JSON
         result_json = json.dumps({

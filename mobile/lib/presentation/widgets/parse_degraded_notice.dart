@@ -4,13 +4,13 @@ import 'package:sparkle/core/design/design_system.dart';
 /// 对话中的降级提示 (v2.1)
 class ParseDegradedNotice extends StatelessWidget {
   
-  ParseDegradedNotice({super.key, this.reason});
+  const ParseDegradedNotice({super.key, this.reason});
   final String? reason;
   
   @override
   Widget build(BuildContext context) => Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(DS.md),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.brandPrimary.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -19,7 +19,7 @@ class ParseDegradedNotice extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: DS.brandPrimary.shade700),
-          SizedBox(width: DS.md),
+          const SizedBox(width: DS.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,7 +32,7 @@ class ParseDegradedNotice extends StatelessWidget {
                   ),
                 ),
                 if (reason != null) ...[
-                  SizedBox(height: DS.xs),
+                  const SizedBox(height: DS.xs),
                   Text(
                     reason!,
                     style: TextStyle(

@@ -6,14 +6,14 @@ import 'package:timeago/timeago.dart' as timeago;
 
 class FeedPostCard extends StatelessWidget {
 
-  FeedPostCard({required this.post, super.key, this.onLike});
+  const FeedPostCard({required this.post, super.key, this.onLike});
   final Post post;
   final VoidCallback? onLike;
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(DS.lg),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.surface,
         borderRadius: BorderRadius.circular(16),
@@ -43,7 +43,7 @@ class FeedPostCard extends StatelessWidget {
                     ? Text(post.user.username[0].toUpperCase())
                     : null,
               ),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -64,22 +64,22 @@ class FeedPostCard extends StatelessWidget {
                   ),
                 ],
               ),
-              Spacer(),
+              const Spacer(),
               if (post.isOptimistic)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DS.primaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 12,
                         height: 12,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      SizedBox(width: DS.xs),
+                      const SizedBox(width: DS.xs),
                       Text(
                         'Posting...',
                         style: TextStyle(
@@ -92,7 +92,7 @@ class FeedPostCard extends StatelessWidget {
                 ),
             ],
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           Text(
             post.content,
             style: TextStyle(
@@ -114,12 +114,12 @@ class FeedPostCard extends StatelessWidget {
                   errorBuilder: (ctx, err, stack) => Container(
                     height: 200,
                     color: DS.brandPrimary800,
-                    child: Center(child: Icon(Icons.broken_image)),
+                    child: const Center(child: Icon(Icons.broken_image)),
                   ),
                 ),
               ),
             ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Row(
             children: [
               _ActionButton(
@@ -127,15 +127,15 @@ class FeedPostCard extends StatelessWidget {
                 label: '${post.likeCount}',
                 onTap: onLike,
               ),
-              SizedBox(width: DS.xl),
+              const SizedBox(width: DS.xl),
               const _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Comment',
               ),
-              Spacer(),
+              const Spacer(),
               if (post.topic != null)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DS.secondaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -168,7 +168,7 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, color: DS.brandPrimary400, size: 20),
-          SizedBox(width: 6),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(

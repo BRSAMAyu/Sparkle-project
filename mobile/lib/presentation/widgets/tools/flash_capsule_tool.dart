@@ -82,7 +82,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   Future<void> _submit() async {
     if (_selectedSubjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请选择科目'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请选择科目'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -90,7 +90,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请输入知识点'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请输入知识点'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -98,7 +98,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('请输入错误描述'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请输入错误描述'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -119,7 +119,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已记录错题'),
+            content: const Text('已记录错题'),
             backgroundColor: DS.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -140,7 +140,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -163,20 +163,20 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // Header
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(DS.sm),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.lightbulb_outlined, color: Colors.amber, size: 24),
+                child: const Icon(Icons.lightbulb_outlined, color: Colors.amber, size: 24),
               ),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -197,7 +197,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ],
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
 
           // Scrollable Content
           Expanded(
@@ -213,9 +213,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: DS.neutral700,
                     ),
                   ),
-                  SizedBox(height: DS.sm),
-                  if (_isLoading) Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
+                  const SizedBox(height: DS.sm),
+                  if (_isLoading) const Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             color: DS.neutral50,
                             borderRadius: BorderRadius.circular(12),
@@ -236,7 +236,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                             ),
                           ),
                         ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Topic Input
                   Text(
@@ -246,7 +246,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: DS.neutral700,
                     ),
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   TextField(
                     controller: _topicController,
                     decoration: InputDecoration(
@@ -264,7 +264,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Error Type Chips
                   Text(
@@ -274,7 +274,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: DS.neutral700,
                     ),
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -303,7 +303,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       );
                     }).toList(),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
                   // Description
                   Text(
@@ -313,10 +313,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: DS.neutral700,
                     ),
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Container(
                     height: 120,
-                    padding: EdgeInsets.all(DS.xs),
+                    padding: const EdgeInsets.all(DS.xs),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
@@ -326,19 +326,19 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       controller: _descriptionController,
                       maxLines: null,
                       expands: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: '简单描述错误情况和原因分析...',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(DS.md),
                       ),
-                      style: TextStyle(fontSize: 14, height: 1.5),
+                      style: const TextStyle(fontSize: 14, height: 1.5),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
 
           // Submit Button
           CustomButton.primary(
@@ -346,7 +346,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             icon: Icons.flash_on_rounded,
             onPressed: _isSubmitting ? null : _submit,
             customGradient: LinearGradient(
-              colors: [DS.warning, Color(0xFFFFB74D)],
+              colors: [DS.warning, const Color(0xFFFFB74D)],
             ),
           ),
         ],

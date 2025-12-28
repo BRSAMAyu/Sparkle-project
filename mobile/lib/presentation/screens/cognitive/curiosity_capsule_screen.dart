@@ -39,12 +39,12 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.lightbulb_outline, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Text(
             '今天还没有新的好奇心胶囊',
             style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             '继续学习，激发更多灵感吧！',
             style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),

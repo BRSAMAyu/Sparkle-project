@@ -7,7 +7,7 @@ class FocusStatsTool extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.spacing24),
+      padding: const EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -20,14 +20,14 @@ class FocusStatsTool extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(DS.sm),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.deepPurple.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.bar_chart, color: Colors.deepPurple),
+                child: const Icon(Icons.bar_chart, color: Colors.deepPurple),
               ),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               const Text(
                 '专注统计',
                 style: TextStyle(
@@ -35,14 +35,14 @@ class FocusStatsTool extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               IconButton(
-                icon: Icon(Icons.close),
+                icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
 
           // Overview Cards
           Row(
@@ -54,7 +54,7 @@ class FocusStatsTool extends StatelessWidget {
                   Colors.deepPurple,
                 ),
               ),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               Expanded(
                 child: _buildStatCard(
                   '本周累计',
@@ -65,17 +65,17 @@ class FocusStatsTool extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Weekly Trend Chart
-          Text(
+          const Text(
             '本周趋势',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           SizedBox(
             height: 120,
             child: Row(
@@ -93,11 +93,11 @@ class FocusStatsTool extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Detailed Stats
           Container(
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             decoration: BoxDecoration(
               color: DS.neutral50,
               borderRadius: BorderRadius.circular(16),
@@ -116,7 +116,7 @@ class FocusStatsTool extends StatelessWidget {
     );
 
   Widget _buildStatCard(String label, String value, Color color) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -133,7 +133,7 @@ class FocusStatsTool extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Text(
             value,
             style: TextStyle(
@@ -157,7 +157,7 @@ class FocusStatsTool extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        SizedBox(height: DS.sm),
+        const SizedBox(height: DS.sm),
         Text(
           label,
           style: TextStyle(
@@ -171,7 +171,7 @@ class FocusStatsTool extends StatelessWidget {
   Widget _buildDetailStat(IconData icon, String value, String label) => Column(
       children: [
         Icon(icon, color: DS.neutral600, size: 24),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           value,
           style: TextStyle(

@@ -25,7 +25,7 @@ class AgentStatsDashboard extends StatelessWidget {
     final byAgent = statsData['by_agent'] as List<dynamic>? ?? [];
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,18 +36,18 @@ class AgentStatsDashboard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             '过去 ${statsData['period_days'] ?? 30} 天',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
 
           // Overall Stats Cards
           _buildOverallStats(theme, overall),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
 
           // Usage Pie Chart
           if (byAgent.isNotEmpty) ...[
@@ -57,9 +57,9 @@ class AgentStatsDashboard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             _buildUsagePieChart(theme, byAgent),
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
           ],
 
           // Top Agents List
@@ -70,7 +70,7 @@ class AgentStatsDashboard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             ...byAgent.take(5).map((agent) => _buildAgentCard(theme, agent)),
           ],
         ],
@@ -89,7 +89,7 @@ class AgentStatsDashboard extends StatelessWidget {
             color: DS.brandPrimaryConst,
           ),
         ),
-        SizedBox(width: DS.md),
+        const SizedBox(width: DS.md),
         Expanded(
           child: _buildStatCard(
             theme,
@@ -99,7 +99,7 @@ class AgentStatsDashboard extends StatelessWidget {
             color: DS.brandPrimaryConst,
           ),
         ),
-        SizedBox(width: DS.md),
+        const SizedBox(width: DS.md),
         Expanded(
           child: _buildStatCard(
             theme,
@@ -119,7 +119,7 @@ class AgentStatsDashboard extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -131,7 +131,7 @@ class AgentStatsDashboard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 24),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
@@ -139,7 +139,7 @@ class AgentStatsDashboard extends StatelessWidget {
               color: color,
             ),
           ),
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Text(
             title,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -186,8 +186,8 @@ class AgentStatsDashboard extends StatelessWidget {
     final successRate = agentData['success_rate'] as num? ?? 100;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(DS.lg),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -210,7 +210,7 @@ class AgentStatsDashboard extends StatelessWidget {
             agentType: agentType,
             size: 48,
           ),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
 
           // Agent Info
           Expanded(
@@ -224,7 +224,7 @@ class AgentStatsDashboard extends StatelessWidget {
                     color: config.color,
                   ),
                 ),
-                SizedBox(height: DS.xs),
+                const SizedBox(height: DS.xs),
                 Row(
                   children: [
                     Icon(
@@ -232,18 +232,18 @@ class AgentStatsDashboard extends StatelessWidget {
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    SizedBox(width: DS.xs),
+                    const SizedBox(width: DS.xs),
                     Text(
                       '$count 次执行',
                       style: theme.textTheme.bodySmall,
                     ),
-                    SizedBox(width: DS.lg),
+                    const SizedBox(width: DS.lg),
                     Icon(
                       Icons.timer_outlined,
                       size: 14,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    SizedBox(width: DS.xs),
+                    const SizedBox(width: DS.xs),
                     Text(
                       '${avgDuration}ms',
                       style: theme.textTheme.bodySmall,
@@ -323,7 +323,7 @@ class AgentPerformanceChart extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
@@ -337,7 +337,7 @@ class AgentPerformanceChart extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           SizedBox(
             height: 200,
             child: LineChart(

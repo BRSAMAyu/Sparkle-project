@@ -5,7 +5,13 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/presentation/widgets/chat/focus_action_card.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:sparkle/presentation/widgets/knowledge_card.dart';
+import 'package:sparkle/presentation/widgets/plan_card.dart';
+import 'package:sparkle/presentation/widgets/task/task_card.dart';
+import 'package:sparkle/presentation/widgets/task_list_widget.dart';
 
 class ActionCard extends StatefulWidget {
 
@@ -55,6 +61,11 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final directWidget = _buildDirectWidget();
+    if (directWidget != null) {
+      return directWidget;
+    }
+
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
 
     return GestureDetector(
@@ -196,6 +207,51 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Widget? _buildDirectWidget() {
+    switch (widget.action.type) {
+      case 'task_card':
+        try {
+          final task = TaskModel.fromJson(_normalizeTaskData(widget.action.data));
+          return TaskCard(task: task, compact: true);
+        } catch (e) {
+          return _buildFallbackCard('任务数据解析失败');
+        }
+      case 'task_list':
+        return TaskListWidget(tasks: widget.action.data['tasks'] as List? ?? []);
+      case 'knowledge_card':
+        return KnowledgeCard(data: widget.action.data);
+      case 'plan_card':
+        return PlanCard(data: widget.action.data);
+      case 'focus_card':
+        return FocusActionCard(data: widget.action.data);
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildFallbackCard(String message) => Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: EdgeInsets.all(DS.md),
+        child: Text(message),
+      ),
+    );
+
+  Map<String, dynamic> _normalizeTaskData(Map<String, dynamic> data) {
+    final normalized = Map<String, dynamic>.from(data);
+    normalized['user_id'] ??= 'unknown';
+    normalized['tags'] ??= <String>[];
+    normalized['difficulty'] ??= 1;
+    normalized['energy_cost'] ??= 1;
+    normalized['priority'] ??= 1;
+    normalized['estimated_minutes'] ??= 25;
+    normalized['created_at'] ??= DateTime.now().toIso8601String();
+    normalized['updated_at'] ??= DateTime.now().toIso8601String();
+    normalized['status'] ??= 'pending';
+    normalized['type'] ??= 'learning';
+    return normalized;
   }
 
   LinearGradient _getActionGradient(String type) {

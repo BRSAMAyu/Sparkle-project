@@ -78,10 +78,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text('New Post'),
+        title: const Text('New Post'),
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: TextButton(
               onPressed: _isPosting ? null : _submit,
               style: TextButton.styleFrom(
@@ -97,13 +97,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       height: 16,
                       child: CircularProgressIndicator(color: DS.brandPrimaryConst, strokeWidth: 2),
                     )
-                  : Text('Post', style: TextStyle(fontWeight: FontWeight.bold)),
+                  : const Text('Post', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           children: [
             TextField(

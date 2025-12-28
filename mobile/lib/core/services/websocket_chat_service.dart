@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -193,6 +194,23 @@ class WebSocketChatService {
           return ToolStartEvent(
             toolName: toolCall['name'] as String? ?? 'unknown',
           );
+        }
+        return UnknownEvent(data: data);
+
+      case 'tool_result':
+        final toolResult = data['tool_result'] as Map<String, dynamic>?;
+        if (toolResult != null) {
+          return ToolResultEvent(
+            result: ToolResultModel.fromJson(toolResult),
+          );
+        }
+        return UnknownEvent(data: data);
+
+      case 'widget':
+        final widgetType = data['widget_type'] as String?;
+        final widgetData = data['widget_data'] as Map<String, dynamic>?;
+        if (widgetType != null && widgetData != null) {
+          return WidgetEvent(widgetType: widgetType, widgetData: widgetData);
         }
         return UnknownEvent(data: data);
 

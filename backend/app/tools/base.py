@@ -9,6 +9,7 @@ class ToolCategory(str, Enum):
     PLAN = "plan"
     KNOWLEDGE = "knowledge"
     QUERY = "query"
+    FOCUS = "focus"
     
 class ToolResult(BaseModel):
     """工具执行结果的统一格式"""

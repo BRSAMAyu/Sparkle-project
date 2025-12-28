@@ -128,7 +128,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
       builder: (context, child) {
         final color = _getIntentColor();
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(32),
@@ -167,7 +167,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 ),
               ),
               if (_isLoading)
-                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else if (_controller.text.isEmpty && !_isListening)
                  IconButton(
                   icon: Icon(Icons.mic, color: DS.primaryBase),

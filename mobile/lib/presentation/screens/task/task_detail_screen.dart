@@ -53,19 +53,19 @@ class _TaskDetailView extends ConsumerWidget {
               _buildSliverAppBar(context),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(DS.spacing16),
+                  padding: const EdgeInsets.all(DS.spacing16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildInfoSection(context),
-                      SizedBox(height: DS.spacing24),
+                      const SizedBox(height: DS.spacing24),
                       Text(
                         '执行指南',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
-                      SizedBox(height: DS.spacing12),
+                      const SizedBox(height: DS.spacing12),
                       _buildGuideSection(context),
                       const SizedBox(height: 100), // Space for bottom bar
                     ],
@@ -110,7 +110,7 @@ class _TaskDetailView extends ConsumerWidget {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: EdgeInsets.all(DS.spacing16),
+                  padding: const EdgeInsets.all(DS.spacing16),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +122,7 @@ class _TaskDetailView extends ConsumerWidget {
                           color: DS.neutral900,
                         ),
                       ),
-                      SizedBox(height: DS.spacing8),
+                      const SizedBox(height: DS.spacing8),
                       Wrap(
                         spacing: DS.spacing8,
                         children: [
@@ -156,7 +156,7 @@ class _TaskDetailView extends ConsumerWidget {
           content: '${task.estimatedMinutes} 分钟',
           gradient: DS.primaryGradient,
         ),
-        SizedBox(height: DS.spacing12),
+        const SizedBox(height: DS.spacing12),
         Row(
           children: [
             Expanded(
@@ -167,7 +167,7 @@ class _TaskDetailView extends ConsumerWidget {
                 gradient: DS.warningGradient,
               ),
             ),
-            SizedBox(width: DS.spacing12),
+            const SizedBox(width: DS.spacing12),
             Expanded(
               child: _InfoTileCard(
                 icon: Icons.local_fire_department,
@@ -179,7 +179,7 @@ class _TaskDetailView extends ConsumerWidget {
           ],
         ),
         if (task.dueDate != null) ...[
-          SizedBox(height: DS.spacing12),
+          const SizedBox(height: DS.spacing12),
           _InfoTileCard(
             icon: Icons.calendar_today,
             title: '截止日期',
@@ -191,7 +191,7 @@ class _TaskDetailView extends ConsumerWidget {
     );
 
   Widget _buildGuideSection(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         borderRadius: DS.borderRadius12,
@@ -306,7 +306,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
-          padding: EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
             color: DS.brandPrimary,
             borderRadius: DS.borderRadius12,
@@ -314,7 +314,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
               BoxShadow(
                 color: widget.gradient.colors.first.withValues(alpha: 0.15),
                 blurRadius: 10,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
               BoxShadow(
                 color: DS.brandPrimary.withValues(alpha: 0.05),
@@ -329,7 +329,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   gradient: widget.gradient,
                   borderRadius: DS.borderRadius8,
@@ -337,13 +337,13 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                     BoxShadow(
                       color: widget.gradient.colors.first.withValues(alpha: 0.3),
                       blurRadius: 8,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Icon(widget.icon, color: DS.brandPrimary, size: 22),
               ),
-              SizedBox(width: DS.spacing16),
+              const SizedBox(width: DS.spacing16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +356,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                         letterSpacing: 0.5,
                       ),
                     ),
-                    SizedBox(height: DS.xs),
+                    const SizedBox(height: DS.xs),
                     Text(
                       widget.content,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -375,13 +375,13 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
 }
 
 class _BottomActionBar extends ConsumerWidget {
-  _BottomActionBar({required this.task});
+  const _BottomActionBar({required this.task});
   final TaskModel task;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => SafeArea(
       child: Container(
-        padding: EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.brandPrimary,
           boxShadow: DS.shadowMd,
@@ -404,7 +404,7 @@ class _BottomActionBar extends ConsumerWidget {
                 },
               ),
             ),
-            SizedBox(width: DS.spacing12),
+            const SizedBox(width: DS.spacing12),
             Expanded(
               flex: 2,
               child: CustomButton.primary(
@@ -417,7 +417,7 @@ class _BottomActionBar extends ConsumerWidget {
                 },
               ),
             ),
-            SizedBox(width: DS.spacing12),
+            const SizedBox(width: DS.spacing12),
             DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(
@@ -433,10 +433,10 @@ class _BottomActionBar extends ConsumerWidget {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(
+                      shape: const RoundedRectangleBorder(
                         borderRadius: DS.borderRadius20,
                       ),
-                      title: Text(
+                      title: const Text(
                         '删除任务',
                         style: TextStyle(
                           fontWeight: DS.fontWeightBold,

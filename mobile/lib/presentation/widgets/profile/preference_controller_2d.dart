@@ -143,8 +143,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     );
 
   Widget _buildQuadrantLabels() {
-    const double labelPadding = 8.0;
-    final TextStyle textStyle = TextStyle(
+    const labelPadding = 8.0;
+    final textStyle = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.bold,
       color: DS.neutral600,
@@ -156,7 +156,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
         Align(
           alignment: Alignment.topCenter,
           child: Padding(
-            padding: EdgeInsets.only(top: labelPadding),
+            padding: const EdgeInsets.only(top: labelPadding),
             child: Text('深度+', style: textStyle),
           ),
         ),
@@ -164,7 +164,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
         Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: EdgeInsets.only(bottom: labelPadding),
+            padding: const EdgeInsets.only(bottom: labelPadding),
             child: Text('深度-', style: textStyle),
           ),
         ),
@@ -172,7 +172,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
         Align(
           alignment: Alignment.centerLeft,
           child: Padding(
-            padding: EdgeInsets.only(left: labelPadding),
+            padding: const EdgeInsets.only(left: labelPadding),
             child: RotatedBox(
               quarterTurns: 3,
               child: Text('好奇-', style: textStyle),
@@ -183,7 +183,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: EdgeInsets.only(right: labelPadding),
+            padding: const EdgeInsets.only(right: labelPadding),
             child: RotatedBox(
               quarterTurns: 1,
               child: Text('好奇+', style: textStyle),

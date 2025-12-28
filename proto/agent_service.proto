@@ -131,6 +131,9 @@ message ChatResponse {
 
     // Citations from RAG.
     CitationBlock citations = 11;
+
+    // Tool execution result (for UI rendering).
+    ToolResultPayload tool_result = 12;
   }
   
   // Indicates why the generation finished.
@@ -163,6 +166,17 @@ message ToolCall {
     string id = 1;
     string name = 2;
     string arguments = 3;
+}
+
+message ToolResultPayload {
+    string tool_name = 1;
+    bool success = 2;
+    google.protobuf.Struct data = 3;
+    string error_message = 4;
+    string suggestion = 5;
+    string widget_type = 6;
+    google.protobuf.Struct widget_data = 7;
+    string tool_call_id = 8;
 }
 
 // AgentType defines the different types of specialized agents in the system.

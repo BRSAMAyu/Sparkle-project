@@ -133,7 +133,7 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
               child: child,
             ),
           child: CustomPaint(
-            size: Size(220, 220),
+            size: const Size(220, 220),
             painter: _CircularTimerPainter(
               progress: progress,
               gradient: DS.primaryGradient,
@@ -155,7 +155,7 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
             ),
           ),
         ),
-        SizedBox(height: DS.spacing32),
+        const SizedBox(height: DS.spacing32),
         AnimatedSwitcher(
           duration: DS.durationFast,
           transitionBuilder: (child, animation) => ScaleTransition(

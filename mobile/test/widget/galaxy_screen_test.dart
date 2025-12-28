@@ -51,9 +51,8 @@ void main() {
                 nodes: testNodes,
                 nodePositions: testPositions,
                 visibleNodes: testNodes,
-                isLoading: false,
               ),
-            )),
+            ),),
         ],
       );
 

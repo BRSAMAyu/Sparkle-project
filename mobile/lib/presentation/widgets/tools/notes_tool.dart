@@ -16,7 +16,7 @@ class _NotesToolState extends State<NotesTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       height: 600, // Taller for notes
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -38,14 +38,14 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ),
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
-                  SizedBox(width: DS.sm),
+                  const SizedBox(width: DS.sm),
                   Text(
                     '随手记',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -55,16 +55,16 @@ class _NotesToolState extends State<NotesTool> {
               TextButton(
                 onPressed: () {
                   _controller.clear();
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已清空')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已清空')));
                 },
                 child: Text('清空', style: TextStyle(color: DS.error)),
               ),
             ],
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Expanded(
             child: Container(
-              padding: EdgeInsets.all(DS.lg),
+              padding: const EdgeInsets.all(DS.lg),
               decoration: BoxDecoration(
                 color: DS.warning.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
@@ -78,11 +78,11 @@ class _NotesToolState extends State<NotesTool> {
                   hintText: '在这里记录想法...',
                   border: InputBorder.none,
                 ),
-                style: TextStyle(fontSize: 16, height: 1.5),
+                style: const TextStyle(fontSize: 16, height: 1.5),
               ),
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           CustomButton.primary(
             text: '复制到剪贴板',
             onPressed: () {

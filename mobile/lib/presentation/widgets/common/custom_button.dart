@@ -316,7 +316,7 @@ class _CustomButtonState extends State<CustomButton>
         onTap: isDisabled ? null : widget.onPressed,
         borderRadius: DS.borderRadius8,
         child: Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing12,
           ),
           child: _buildButtonRow(
@@ -397,7 +397,7 @@ class _CustomButtonState extends State<CustomButton>
         ),
       );
       if (widget.text != null) {
-        children.add(SizedBox(width: DS.spacing8));
+        children.add(const SizedBox(width: DS.spacing8));
       }
     } else if (widget.icon != null) {
       children.add(
@@ -408,7 +408,7 @@ class _CustomButtonState extends State<CustomButton>
         ),
       );
       if (widget.text != null) {
-        children.add(SizedBox(width: DS.spacing8));
+        children.add(const SizedBox(width: DS.spacing8));
       }
     }
 

@@ -14,14 +14,14 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -58,11 +58,11 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
     final id = taskData['id'] as String;
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
           _buildTaskIcon(type),
-          SizedBox(width: DS.sm),
+          const SizedBox(width: DS.sm),
           Expanded(
             child: Text(
               title,

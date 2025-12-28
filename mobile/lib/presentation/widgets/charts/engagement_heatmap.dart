@@ -24,7 +24,7 @@ class EngagementHeatmap extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,12 +32,12 @@ class EngagementHeatmap extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.calendar_month, color: DS.brandPrimary.shade600, size: 24),
-                SizedBox(width: DS.md),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         '学习活跃度',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -51,12 +51,12 @@ class EngagementHeatmap extends StatelessWidget {
                 _buildLegend(),
               ],
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Heatmap Grid
             _buildHeatmapGrid(),
 
-            SizedBox(height: DS.md),
+            const SizedBox(height: DS.md),
 
             // Stats Summary
             _buildStatsSummary(),
@@ -113,20 +113,20 @@ class EngagementHeatmap extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text('低', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
-        SizedBox(width: DS.xs),
+        const SizedBox(width: DS.xs),
         ...List.generate(5, (index) {
           final intensity = index / 4;
           return Container(
             width: 12,
             height: 12,
-            margin: EdgeInsets.only(left: DS.xs),
+            margin: const EdgeInsets.only(left: DS.xs),
             decoration: BoxDecoration(
               color: _getColorForIntensity(intensity),
               borderRadius: BorderRadius.circular(2),
             ),
           );
         }),
-        SizedBox(width: DS.xs),
+        const SizedBox(width: DS.xs),
         Text('高', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
       ],
     );
@@ -147,10 +147,10 @@ class EngagementHeatmap extends StatelessWidget {
   Widget _buildStatItem(String label, String value, IconData icon) => Column(
       children: [
         Icon(icon, size: 20, color: DS.brandPrimary.shade600),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           value,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,

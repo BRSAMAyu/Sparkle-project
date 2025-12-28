@@ -86,7 +86,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         actions: [
           // Focus mode indicator and toggle
@@ -106,12 +106,12 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
               );
             },
           ),
-          IconButton(icon: Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: Icon(Icons.person_add_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.person_add_outlined), onPressed: () {}),
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: [Tab(text: '好友'), Tab(text: '群组')],
+          tabs: const [Tab(text: '好友'), Tab(text: '群组')],
           indicatorColor: DS.brandPrimary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -144,7 +144,7 @@ class _FriendsListTab extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.people_outline, size: 64, color: DS.neutral300),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Text('还没有好友', style: TextStyle(color: DS.neutral500)),
               ],
             ),
@@ -158,11 +158,11 @@ class _FriendsListTab extends ConsumerWidget {
             return InkWell(
               onTap: () => context.push('/community/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}'),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     StatusAvatar(status: f.friend.status, url: f.friend.avatarUrl),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +184,7 @@ class _FriendsListTab extends ConsumerWidget {
                                       : DS.neutral300,
                                 ),
                               ),
-                              SizedBox(width: DS.xs),
+                              const SizedBox(width: DS.xs),
                               Text(
                                 f.friend.status == UserStatus.online ? '在线' : '离线',
                                 style: TextStyle(
@@ -194,7 +194,7 @@ class _FriendsListTab extends ConsumerWidget {
                                   fontSize: 12,
                                 ),
                               ),
-                              SizedBox(width: DS.sm),
+                              const SizedBox(width: DS.sm),
                               Text(
                                 'Lv.${f.friend.flameLevel}',
                                 style: TextStyle(color: DS.neutral500, fontSize: 12),
@@ -231,24 +231,24 @@ class _GroupsListTab extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.group_outlined, size: 64, color: DS.neutral300),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Text('还没有加入群组', style: TextStyle(color: DS.neutral500)),
               ],
             ),
           );
         }
         return ListView.builder(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           itemCount: groups.length,
           itemBuilder: (context, index) {
             final g = groups[index];
             return Card(
-              margin: EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () => context.push('/community/chat/group/${g.id}'),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: EdgeInsets.all(DS.lg),
+                  padding: const EdgeInsets.all(DS.lg),
                   child: Row(
                     children: [
                       SparkleAvatar(
@@ -256,21 +256,21 @@ class _GroupsListTab extends ConsumerWidget {
                         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                         fallbackText: g.name,
                       ),
-                      SizedBox(width: DS.md),
+                      const SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(g.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            SizedBox(height: DS.xs),
+                            Text(g.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: DS.xs),
                             Row(
                               children: [
                                 Icon(Icons.people, size: 14, color: DS.neutral500),
-                                SizedBox(width: DS.xs),
+                                const SizedBox(width: DS.xs),
                                 Text('${g.memberCount} 成员', style: TextStyle(color: DS.neutral500, fontSize: 12)),
-                                SizedBox(width: DS.md),
+                                const SizedBox(width: DS.md),
                                 Icon(Icons.local_fire_department, size: 14, color: DS.brandPrimary),
-                                SizedBox(width: DS.xs),
+                                const SizedBox(width: DS.xs),
                                 Text('${g.totalFlamePower}', style: TextStyle(color: DS.neutral500, fontSize: 12)),
                               ],
                             ),

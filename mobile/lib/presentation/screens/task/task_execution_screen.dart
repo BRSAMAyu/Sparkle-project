@@ -49,10 +49,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: DS.borderRadius20,
         ),
-        title: Text(
+        title: const Text(
           '离开任务？',
           style: TextStyle(
             fontWeight: DS.fontWeightBold,
@@ -191,7 +191,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 size: 80,
                 color: DS.neutral400,
               ),
-              SizedBox(height: DS.spacing16),
+              const SizedBox(height: DS.spacing16),
               Text(
                 '未选择任务',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -199,7 +199,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                   color: DS.neutral700,
                 ),
               ),
-              SizedBox(height: DS.spacing24),
+              const SizedBox(height: DS.spacing24),
               CustomButton.primary(
                 text: '返回',
                 icon: Icons.arrow_back,
@@ -251,11 +251,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                   children: [
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: EdgeInsets.all(DS.spacing16),
+                        padding: const EdgeInsets.all(DS.spacing16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(height: DS.spacing16),
+                            const SizedBox(height: DS.spacing16),
                             // 1. Timer Area
                             Center(
                               child: TimerWidget(
@@ -268,7 +268,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 onComplete: _onPomodoroComplete, // Call only for Pomodoro
                               ),
                             ),
-                            SizedBox(height: DS.spacing24),
+                            const SizedBox(height: DS.spacing24),
 
                             // Timer Controls
                             _TimerControls(
@@ -276,7 +276,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               onTogglePomodoro: _togglePomodoro,
                               onSetPreset: _setPresetDuration,
                             ),
-                            SizedBox(height: DS.spacing40),
+                            const SizedBox(height: DS.spacing40),
 
                             // 2. Task Guide Area
                             DecoratedBox(
@@ -289,15 +289,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 ),
                               ),
                               child: ExpansionTile(
-                                shape: Border(), // Remove default borders
-                                tilePadding: EdgeInsets.symmetric(
+                                shape: const Border(), // Remove default borders
+                                tilePadding: const EdgeInsets.symmetric(
                                   horizontal: DS.spacing16,
                                   vertical: DS.spacing12,
                                 ),
                                 title: Row(
                                   children: [
                                     Container(
-                                      padding: EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
                                         gradient: DS.infoGradient,
                                         shape: BoxShape.circle,
@@ -305,13 +305,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           BoxShadow(
                                             color: DS.info.withValues(alpha: 0.3),
                                             blurRadius: 8,
-                                            offset: Offset(0, 2),
+                                            offset: const Offset(0, 2),
                                           ),
                                         ],
                                       ),
                                       child: Icon(Icons.description_outlined, color: DS.brandPrimary, size: 22),
                                     ),
-                                    SizedBox(width: DS.spacing12),
+                                    const SizedBox(width: DS.spacing12),
                                     Text(
                                       '执行指南',
                                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -324,10 +324,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 children: [
                                   Container(
                                     width: double.infinity,
-                                    padding: EdgeInsets.all(DS.spacing16),
+                                    padding: const EdgeInsets.all(DS.spacing16),
                                     decoration: BoxDecoration(
                                       color: DS.neutral50,
-                                      borderRadius: BorderRadius.only(
+                                      borderRadius: const BorderRadius.only(
                                         bottomLeft: Radius.circular(16),
                                         bottomRight: Radius.circular(16),
                                       ),
@@ -357,11 +357,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 ],
                               ),
                             ),
-                            SizedBox(height: DS.spacing16),
+                            const SizedBox(height: DS.spacing16),
 
                             // 3. Quick Tools Panel
                             QuickToolsPanel(taskId: activeTask.id),
-                            SizedBox(height: DS.spacing16),
+                            const SizedBox(height: DS.spacing16),
 
                             // 4. Task Chat Panel
                             TaskChatPanel(taskId: activeTask.id),
@@ -402,7 +402,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: EdgeInsets.all(DS.xl),
+                          padding: const EdgeInsets.all(DS.xl),
                           decoration: BoxDecoration(
                             gradient: DS.successGradient,
                             shape: BoxShape.circle,
@@ -420,7 +420,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             size: 80,
                           ),
                         ),
-                        SizedBox(height: DS.spacing24),
+                        const SizedBox(height: DS.spacing24),
                         Text(
                           '任务完成！',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -428,9 +428,9 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             fontWeight: DS.fontWeightBold,
                           ),
                         ),
-                        SizedBox(height: DS.spacing12),
+                        const SizedBox(height: DS.spacing12),
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: DS.spacing20,
                             vertical: DS.spacing8,
                           ),
@@ -491,7 +491,7 @@ class _TimerControls extends StatelessWidget {
             ),),
           ],
         ),
-        SizedBox(height: DS.lg),
+        const SizedBox(height: DS.lg),
         CustomButton.primary(
           text: '进入正念模式',
           icon: Icons.self_improvement,
@@ -525,21 +525,21 @@ class _BottomControls extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: DS.borderRadius20,
         ),
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(DS.sm),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
                 gradient: DS.successGradient,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_circle_outline, color: DS.brandPrimary, size: 24),
             ),
-            SizedBox(width: DS.spacing12),
-            Text(
+            const SizedBox(width: DS.spacing12),
+            const Text(
               '完成任务',
               style: TextStyle(
                 fontWeight: DS.fontWeightBold,
@@ -552,7 +552,7 @@ class _BottomControls extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.all(DS.spacing12),
+              padding: const EdgeInsets.all(DS.spacing12),
               decoration: BoxDecoration(
                 color: DS.neutral50,
                 borderRadius: DS.borderRadius12,
@@ -560,7 +560,7 @@ class _BottomControls extends ConsumerWidget {
               child: Row(
                 children: [
                   Icon(Icons.timer_outlined, color: DS.primaryBase),
-                  SizedBox(width: DS.spacing8),
+                  const SizedBox(width: DS.spacing8),
                   Text(
                     '用时：$minutes 分钟',
                     style: TextStyle(
@@ -571,13 +571,13 @@ class _BottomControls extends ConsumerWidget {
                 ],
               ),
             ),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             TextField(
               controller: noteController,
               decoration: InputDecoration(
                 labelText: '笔记（选填）',
                 hintText: '记录一些学习心得...',
-                border: OutlineInputBorder(
+                border: const OutlineInputBorder(
                   borderRadius: DS.borderRadius12,
                 ),
                 focusedBorder: OutlineInputBorder(
@@ -629,7 +629,7 @@ class _BottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Container(
-      padding: EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         boxShadow: [
@@ -649,7 +649,7 @@ class _BottomControls extends ConsumerWidget {
               // Use error color for text if possible, or leave as primary/custom
             ),
           ),
-          SizedBox(width: DS.spacing16),
+          const SizedBox(width: DS.spacing16),
           Expanded(
             flex: 2,
             child: CustomButton.primary(

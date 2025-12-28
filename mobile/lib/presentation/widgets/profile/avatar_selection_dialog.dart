@@ -62,8 +62,8 @@ class AvatarSelectionDialog extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AlertDialog(
-      title: Text('选择系统头像'),
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
+      title: const Text('选择系统头像'),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
       content: SizedBox(
         width: double.maxFinite,
         child: GridView.builder(
@@ -110,7 +110,7 @@ class AvatarSelectionDialog extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: DS.xs),
+                  const SizedBox(height: DS.xs),
                   Text(
                     option.label,
                     style: TextStyle(

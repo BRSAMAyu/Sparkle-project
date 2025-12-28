@@ -39,24 +39,24 @@ class PatternCard extends StatelessWidget {
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       color: isDark ? DS.neutral800 : DS.brandPrimary,
       child: Padding(
-        padding: EdgeInsets.all(DS.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.spacing8),
+                  padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
                     gradient: gradient,
                     borderRadius: DS.borderRadius12,
                   ),
                   child: Icon(icon, color: DS.brandPrimary),
                 ),
-                SizedBox(width: DS.spacing12),
+                const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: Text(
                     pattern.patternName,
@@ -70,7 +70,7 @@ class PatternCard extends StatelessWidget {
                   Icon(Icons.archive, color: DS.neutral500, size: 20),
               ],
             ),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             if (pattern.description != null)
               MarkdownBody(
                 data: pattern.description!,
@@ -82,9 +82,9 @@ class PatternCard extends StatelessWidget {
                 ),
               ),
             if (pattern.solutionText != null) ...[
-              SizedBox(height: DS.spacing20),
+              const SizedBox(height: DS.spacing20),
               Container(
-                padding: EdgeInsets.all(DS.spacing16),
+                padding: const EdgeInsets.all(DS.spacing16),
                 decoration: BoxDecoration(
                   color: isDark ? DS.neutral700 : DS.neutral100,
                   borderRadius: DS.borderRadius16,
@@ -94,7 +94,7 @@ class PatternCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.lightbulb_outline, color: iconColor),
-                    SizedBox(width: DS.spacing12),
+                    const SizedBox(width: DS.spacing12),
                     Expanded(
                       child: MarkdownBody(
                         data: '**破解咒语**: ${pattern.solutionText!}',
@@ -115,7 +115,7 @@ class PatternCard extends StatelessWidget {
                 ),
               ),
             ],
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             Align(
               alignment: Alignment.bottomRight,
               child: Text(

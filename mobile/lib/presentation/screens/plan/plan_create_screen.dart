@@ -22,17 +22,17 @@ class PlanCreateScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             Text(
               '计划创建功能开发中',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: DS.sm),
-            Text(
+            const SizedBox(height: DS.sm),
+            const Text(
               '此功能正在开发中，即将推出',
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
             SparkleButton.primary(label: '返回', onPressed: () => context.pop()),
           ],
         ),

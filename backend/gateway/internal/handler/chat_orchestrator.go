@@ -331,6 +331,27 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			}
 		}
 		result["citations"] = citations
+	case *agentv1.ChatResponse_ToolResult:
+		result["type"] = "tool_result"
+		tool := content.ToolResult
+		data := map[string]interface{}{}
+		if tool.Data != nil {
+			data = tool.Data.AsMap()
+		}
+		widgetData := map[string]interface{}{}
+		if tool.WidgetData != nil {
+			widgetData = tool.WidgetData.AsMap()
+		}
+		result["tool_result"] = map[string]interface{}{
+			"tool_name":    tool.ToolName,
+			"success":      tool.Success,
+			"data":         data,
+			"error_message": tool.ErrorMessage,
+			"suggestion":    tool.Suggestion,
+			"widget_type":   tool.WidgetType,
+			"widget_data":   widgetData,
+			"tool_call_id":  tool.ToolCallId,
+		}
 	}
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {

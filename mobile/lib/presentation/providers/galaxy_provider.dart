@@ -17,9 +17,7 @@ enum AggregationLevel {
   full,      // >= 0.8: All nodes
 }
 
-class GalaxyState { // ID of the predicted next node to learn
-
-  static const Object _noChange = Object();
+class GalaxyState {
 
   GalaxyState({
     this.nodes = const [],
@@ -40,7 +38,9 @@ class GalaxyState { // ID of the predicted next node to learn
     this.selectedNodeId,
     this.expandedEdgeNodeIds = const {},
     this.nodeAnimationProgress = const {},
-  });
+  }); // ID of the predicted next node to learn
+
+  static const Object _noChange = Object();
   final List<GalaxyNodeModel> nodes;
   final List<GalaxyEdgeModel> edges;  // All edges
   final Map<String, Offset> nodePositions;
@@ -217,7 +217,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       final hasPredicted = predictedNodeId != null &&
           response.nodes.any((node) => node.id == predictedNodeId);
       final expandedEdgeNodeIds = hasSelected
-          ? _collectExpandedEdges(selectedNodeId!, response.edges)
+          ? _collectExpandedEdges(selectedNodeId, response.edges)
           : const <String>{};
 
       // Step 1: 使用新的布局引擎进行快速初始布局

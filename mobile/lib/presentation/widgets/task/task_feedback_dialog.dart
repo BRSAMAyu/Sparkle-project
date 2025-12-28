@@ -15,10 +15,10 @@ class TaskFeedbackDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       backgroundColor: DS.brandPrimary,
       child: Padding(
-        padding: EdgeInsets.all(DS.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -27,14 +27,14 @@ class TaskFeedbackDialog extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.sm),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     gradient: DS.primaryGradient,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 24),
                 ),
-                SizedBox(width: DS.spacing12),
+                const SizedBox(width: DS.spacing12),
                 Text(
                   '学习反馈',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -43,12 +43,12 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: DS.spacing20),
+            const SizedBox(height: DS.spacing20),
             
             // Content
             if (result.feedback != null)
               Container(
-                constraints: BoxConstraints(maxHeight: 300),
+                constraints: const BoxConstraints(maxHeight: 300),
                 child: SingleChildScrollView(
                   child: MarkdownBody(
                     data: result.feedback!,
@@ -63,14 +63,14 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               )
             else
-              Text('任务已完成！继续保持。'),
+              const Text('任务已完成！继续保持。'),
               
-            SizedBox(height: DS.spacing20),
+            const SizedBox(height: DS.spacing20),
             
             // Stats Updates
             if (result.flameUpdate != null || result.statsUpdate != null)
               Container(
-                padding: EdgeInsets.all(DS.spacing12),
+                padding: const EdgeInsets.all(DS.spacing12),
                 decoration: BoxDecoration(
                   color: DS.neutral50,
                   borderRadius: DS.borderRadius12,
@@ -96,7 +96,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               ),
 
-            SizedBox(height: DS.spacing24),
+            const SizedBox(height: DS.spacing24),
             
             CustomButton.primary(
               text: '太棒了',
@@ -125,8 +125,8 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: color),
-        SizedBox(height: DS.xs),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: DS.xs),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         Text(label, style: TextStyle(color: DS.neutral500, fontSize: 12)),
       ],
     );

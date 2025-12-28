@@ -17,7 +17,7 @@ class LearningPathDialog extends ConsumerWidget {
     final pathAsync = ref.watch(learningPathProvider(targetNodeId));
 
     return Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -36,12 +36,12 @@ class LearningPathDialog extends ConsumerWidget {
                     ),
               ),
               IconButton(
-                icon: Icon(Icons.close),
+                icon: const Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Expanded(
             child: pathAsync.when(
               data: (path) {
@@ -94,7 +94,7 @@ class LearningPathDialog extends ConsumerWidget {
                   shape: BoxShape.circle,
                   color: statusColor.withOpacity(0.2),
                 ),
-                padding: EdgeInsets.all(DS.sm),
+                padding: const EdgeInsets.all(DS.sm),
                 child: Icon(statusIcon, color: statusColor, size: 20),
               ),
               if (!isLast)
@@ -102,12 +102,12 @@ class LearningPathDialog extends ConsumerWidget {
                   child: Container(
                     width: 2,
                     color: DS.brandPrimary.withOpacity(0.3),
-                    margin: EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 ),
             ],
           ),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
@@ -121,7 +121,7 @@ class LearningPathDialog extends ConsumerWidget {
                           color: node.isTarget ? Theme.of(context).primaryColor : null,
                         ),
                   ),
-                  SizedBox(height: DS.xs),
+                  const SizedBox(height: DS.xs),
                   Text(
                     node.status.toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(

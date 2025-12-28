@@ -53,22 +53,22 @@ class _NoActiveSprintView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
-        padding: EdgeInsets.all(DS.xl),
+        padding: const EdgeInsets.all(DS.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.flag_outlined, size: 80, color: DS.brandPrimary),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             Text(
               'No Active Sprint',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: DS.sm),
-            Text(
+            const SizedBox(height: DS.sm),
+            const Text(
               'Create a new sprint plan to focus on a short-term goal.',
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
             ElevatedButton.icon(
               onPressed: () {
                 context.push('/plans/new?type=sprint');
@@ -97,7 +97,7 @@ class _ActiveSprintView extends ConsumerWidget {
           SliverToBoxAdapter(child: _SprintHeader(plan: fullPlan)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(DS.lg),
+              padding: const EdgeInsets.all(DS.lg),
               child: Text(
                 'Tasks',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -134,18 +134,18 @@ class _SprintHeader extends StatelessWidget {
     final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays ?? 0;
 
     return Padding(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       child: Card(
         elevation: 4,
         child: Padding(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(plan.name, style: Theme.of(context).textTheme.headlineMedium),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               Text(plan.description ?? '', style: Theme.of(context).textTheme.bodyMedium),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -153,13 +153,13 @@ class _SprintHeader extends StatelessWidget {
                   Text('${(plan.progress * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               LinearProgressIndicator(
                 value: plan.progress,
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(4),
               ),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               Chip(
                 label: Text(daysLeft > 0 ? '$daysLeft days left' : 'Sprint ended'),
                 avatar: const Icon(Icons.timelapse),

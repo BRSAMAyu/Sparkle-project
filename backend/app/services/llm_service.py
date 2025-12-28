@@ -209,6 +209,34 @@ class LLMService:
             response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
             return response
 
+    async def chat_json(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.3,
+        **kwargs
+    ) -> Any:
+        """
+        Request JSON output from the LLM and parse it safely.
+        """
+        raw = await self.chat(messages, model=model, temperature=temperature, **kwargs)
+        cleaned = raw.replace("```json", "").replace("```", "").strip()
+
+        def _extract_json_block(text: str) -> Optional[str]:
+            for start, end in (("{", "}"), ("[", "]")):
+                if start in text and end in text:
+                    return text[text.find(start):text.rfind(end) + 1]
+            return None
+
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            extracted = _extract_json_block(cleaned)
+            if extracted:
+                return json.loads(extracted)
+            logger.warning("Failed to parse JSON from LLM response, returning empty result")
+            return {}
+
     async def stream_chat(
         self,
         messages: List[Dict[str, str]],

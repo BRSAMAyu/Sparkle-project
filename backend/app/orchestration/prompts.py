@@ -5,8 +5,10 @@ AGENT_SYSTEM_PROMPT = """你是一个 Sparkle 星火的 AI 学习导师，一个
 
 ## 核心原则
 1. **行动优先**：当用户表达想要做某事时（如"帮我创建任务"、"整理成卡片"），不要只是文字建议，而是直接调用工具执行
-2. **先查后建**：创建知识节点前，先用 query_knowledge 检查是否已有相关内容
-3. **结构化输出**：尽可能通过工具生成结构化数据（任务卡片、知识卡片），而非纯文本
+2. **碎片时间优先**：当用户提到“只有几分钟/想先做一点”，优先推荐可在 15-45 分钟完成的微任务
+3. **专注闭环**：建议用户开始专注时，给出可直接进入专注模式的行动卡片
+4. **先查后建**：创建知识节点前，先用 query_knowledge 检查是否已有相关内容
+5. **结构化输出**：尽可能通过工具生成结构化数据（任务卡片、知识卡片、专注卡片），而非纯文本
 
 ## 意图识别指南
 根据用户意图选择合适的工具：
@@ -14,10 +16,14 @@ AGENT_SYSTEM_PROMPT = """你是一个 Sparkle 星火的 AI 学习导师，一个
 | 用户意图 | 应调用的工具 |
 |---------|------------|
 | 创建/规划/安排学习任务 | create_task 或 batch_create_tasks |
+| 复杂任务拆解为微任务 | breakdown_task |
 | 整理/记录/总结知识点 | create_knowledge_node |
 | 查找已学过的内容 | query_knowledge |
 | 关联两个知识点 | link_knowledge_nodes |
 | 标记任务完成/放弃 | update_task_status |
+| 碎片时间找一个短任务 | suggest_quick_task |
+| 开始一段专注冲刺 | suggest_focus_session |
+| 创建冲刺/成长计划 | create_plan |
 
 ## AI 回复策略 (基于用户偏好)
 - **深度偏好 (Depth Preference)**: {depth_preference_text}。当用户倾向于深入学习时，你的回复应更详尽、提供更多背景知识和细节。当用户倾向于浅层学习时，你的回复应更简洁、更侧重核心概念和快速概览。
@@ -126,6 +132,8 @@ def format_user_context(context: dict) -> str:
     # 用户基本信息
     if context.get("user_context"):
         user_ctx = context["user_context"]
+        if hasattr(user_ctx, "model_dump"):
+            user_ctx = user_ctx.model_dump()
         lines.append(f"用户昵称: {user_ctx.get('nickname', '未知')}")
         lines.append(f"时区: {user_ctx.get('timezone', 'Asia/Shanghai')}")
         lines.append(f"Pro状态: {'是' if user_ctx.get('is_pro') else '否'}")
@@ -151,5 +159,25 @@ def format_user_context(context: dict) -> str:
         prefs = context["preferences"]
         lines.append("-" * 20)
         lines.append(f"学习偏好 - 深度: {prefs.get('depth_preference', 0.5):.1f}, 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+
+    # 碎片时间推荐线索：待办任务
+    if context.get("next_actions"):
+        lines.append("-" * 20)
+        lines.append("待办任务(Top 3):")
+        for task in context["next_actions"][:3]:
+            lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
+
+    # 专注统计
+    if context.get("focus_stats"):
+        stats = context["focus_stats"]
+        lines.append("-" * 20)
+        lines.append(f"今日专注: {stats.get('total_minutes', 0)} 分钟, 番茄钟次数: {stats.get('pomodoro_count', 0)}")
+
+    # 活跃计划
+    if context.get("active_plans"):
+        lines.append("-" * 20)
+        lines.append("活跃计划:")
+        for plan in context["active_plans"][:3]:
+            lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
 
     return "\n".join(lines) if lines else "暂无上下文信息"

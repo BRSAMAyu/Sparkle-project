@@ -83,8 +83,8 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
             return GestureDetector(
               onTap: () => setState(() => _selectedType = type),
               child: AnimatedContainer(
-                duration: Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: _getColor(type).withValues(alpha: isSelected ? 1.0 : 0.5),
                   borderRadius: BorderRadius.circular(16),
@@ -93,7 +93,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     width: 2,
                   ),
                   boxShadow: isSelected ? [
-                    BoxShadow(color: _getColor(type).withValues(alpha: 0.4), blurRadius: 4, offset: Offset(0, 2)),
+                    BoxShadow(color: _getColor(type).withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
                   ] : null,
                 ),
                 child: Text(
@@ -154,7 +154,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                           Container(
                             height: cellHeight,
                             alignment: Alignment.centerRight,
-                            padding: EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.only(right: 6),
                             child: Text(
                               hour.toString().padLeft(2, '0'),
                               style: TextStyle(

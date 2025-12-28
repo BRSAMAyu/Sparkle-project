@@ -22,7 +22,7 @@ void main() {
       test('connection URL is properly formatted', () {
         const baseUrl = 'ws://localhost:8080';
         const endpoint = '/ws/chat';
-        final fullUrl = baseUrl + endpoint;
+        const fullUrl = baseUrl + endpoint;
 
         expect(fullUrl, startsWith('ws://'));
         expect(fullUrl, contains('/ws/chat'));
@@ -64,7 +64,7 @@ void main() {
           'payload': {
             'message': 'Test message',
             'sessionId': 'session-123',
-          }
+          },
         };
 
         // Simulate JSON serialization
@@ -73,12 +73,12 @@ void main() {
       });
 
       test('empty message is rejected', () {
-        final message = '';
+        const message = '';
         expect(message.isEmpty, true);
       });
 
       test('message with special characters is handled', () {
-        final message = 'Message with 中文 and emoji 😀';
+        const message = 'Message with 中文 and emoji 😀';
         expect(message, isNotEmpty);
         expect(message, contains('中文'));
         expect(message, contains('😀'));
@@ -130,7 +130,7 @@ void main() {
         const maxRetries = 5;
         const baseDelay = 1000; // milliseconds
 
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
+        for (var attempt = 0; attempt < maxRetries; attempt++) {
           final delay = baseDelay * (1 << attempt); // 1000, 2000, 4000, 8000, 16000
           expect(delay, greaterThan(0));
           expect(delay, lessThanOrEqualTo(baseDelay * (1 << (maxRetries - 1))));
@@ -179,8 +179,8 @@ void main() {
         final messageIds = [1, 2, 4, 3, 5];
 
         // Detect out of order
-        bool isOutOfOrder = false;
-        for (int i = 1; i < messageIds.length; i++) {
+        var isOutOfOrder = false;
+        for (var i = 1; i < messageIds.length; i++) {
           if (messageIds[i] < messageIds[i - 1]) {
             isOutOfOrder = true;
             break;
@@ -204,7 +204,7 @@ void main() {
 
     group('Error Handling', () {
       test('connection error is handled', () {
-        final error = 'WebSocket connection failed';
+        const error = 'WebSocket connection failed';
         expect(error, isNotEmpty);
         expect(error, contains('connection'));
       });
@@ -215,7 +215,7 @@ void main() {
       });
 
       test('invalid message error is handled', () {
-        final invalidMessage = null;
+        const invalidMessage = null;
         expect(invalidMessage, isNull);
       });
 
@@ -253,8 +253,8 @@ void main() {
               'edited': false,
               'pinned': false,
               'reactions': [],
-            }
-          }
+            },
+          },
         };
 
         expect(messageWithMetadata['payload'], isNotNull);
@@ -284,7 +284,7 @@ void main() {
       test('multiple messages can be queued', () {
         final messageQueue = <String>[];
 
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
           messageQueue.add('message-$i');
         }
 
@@ -388,7 +388,7 @@ void main() {
       test('rapid consecutive messages', () {
         final messages = <String>[];
 
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
           messages.add('rapid-$i');
         }
 
@@ -426,7 +426,7 @@ void main() {
       test('message throughput calculation', () {
         const messages = 1000;
         const timeMs = 1000;
-        final throughput = messages / timeMs; // messages per ms
+        const throughput = messages / timeMs; // messages per ms
 
         expect(throughput, greaterThan(0));
       });
@@ -434,7 +434,7 @@ void main() {
       test('latency measurement', () {
         const sendTime = 1000; // ms
         const receiveTime = 1050; // ms
-        final latency = receiveTime - sendTime;
+        const latency = receiveTime - sendTime;
 
         expect(latency, 50);
       });

@@ -26,8 +26,8 @@ void main() {
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
                       child: TextField(
                         decoration: InputDecoration(
                           hintText: 'Type a message...',
@@ -59,13 +59,13 @@ void main() {
             child: MaterialApp(
               home: Scaffold(
                 body: ListView(
-                  children: [
+                  children: const [
                     Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: EdgeInsets.all(8.0),
                       child: Text('Message 1'),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: EdgeInsets.all(8.0),
                       child: Text('Message 2'),
                     ),
                   ],
@@ -91,7 +91,7 @@ void main() {
                     ),
                     Row(
                       children: [
-                        Expanded(
+                        const Expanded(
                           child: TextField(
                             decoration: InputDecoration(
                               hintText: 'Type message',
@@ -130,7 +130,7 @@ void main() {
               home: Scaffold(
                 body: TextField(
                   controller: textController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Type message',
                     border: OutlineInputBorder(),
                   ),
@@ -145,7 +145,7 @@ void main() {
       });
 
       testWidgets('Send button can be tapped', (WidgetTester tester) async {
-        bool buttonPressed = false;
+        var buttonPressed = false;
 
         await tester.pumpWidget(
           ProviderScope(
@@ -169,7 +169,7 @@ void main() {
       testWidgets('Input field clears after send',
           (WidgetTester tester) async {
         final textController = TextEditingController();
-        bool sendPressed = false;
+        var sendPressed = false;
 
         await tester.pumpWidget(
           ProviderScope(
@@ -179,7 +179,7 @@ void main() {
                   children: [
                     TextField(
                       controller: textController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Type message',
                         border: OutlineInputBorder(),
                       ),
@@ -221,11 +221,9 @@ void main() {
               home: Scaffold(
                 body: ListView.builder(
                   itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
+                  itemBuilder: (context, index) => ListTile(
                       title: Text(messages[index]),
-                    );
-                  },
+                    ),
                 ),
               ),
             ),
@@ -240,10 +238,10 @@ void main() {
       testWidgets('Empty chat shows appropriate message',
           (WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
-                body: const Center(
+                body: Center(
                   child: Text('No messages yet'),
                 ),
               ),
@@ -257,10 +255,10 @@ void main() {
       testWidgets('Message with special characters displays',
           (WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
-                body: const Text('Message with 中文 and emoji 😀'),
+                body: Text('Message with 中文 and emoji 😀'),
               ),
             ),
           ),
@@ -275,7 +273,7 @@ void main() {
             'This is a very long message that should wrap to multiple lines when displayed in the chat interface';
 
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
                 body: SizedBox(
@@ -308,11 +306,9 @@ void main() {
                 body: ListView.builder(
                   controller: scrollController,
                   itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
+                  itemBuilder: (context, index) => ListTile(
                       title: Text(messages[index]),
-                    );
-                  },
+                    ),
                 ),
               ),
             ),
@@ -333,11 +329,9 @@ void main() {
                 body: ListView.builder(
                   controller: scrollController,
                   itemCount: 100,
-                  itemBuilder: (context, index) {
-                    return ListTile(
+                  itemBuilder: (context, index) => ListTile(
                       title: Text('Message $index'),
-                    );
-                  },
+                    ),
                 ),
               ),
             ),
@@ -367,7 +361,7 @@ void main() {
                 body: Column(
                   children: [
                     Expanded(
-                      child: Container(
+                      child: ColoredBox(
                         color: Colors.blue,
                         child: const Center(
                           child: Text('Messages'),
@@ -377,7 +371,7 @@ void main() {
                     Container(
                       color: Colors.grey,
                       padding: const EdgeInsets.all(8),
-                      child: TextField(
+                      child: const TextField(
                         decoration: InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: 'Message',
@@ -409,7 +403,7 @@ void main() {
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
                         children: [
-                          Expanded(
+                          const Expanded(
                             child: TextField(
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
@@ -443,10 +437,10 @@ void main() {
     group('Loading States', () {
       testWidgets('Loading indicator appears', (WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
-                body: const Center(
+                body: Center(
                   child: CircularProgressIndicator(),
                 ),
               ),
@@ -459,10 +453,10 @@ void main() {
 
       testWidgets('Error message displays', (WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
-                body: const Center(
+                body: Center(
                   child: Text('Error: Connection failed'),
                 ),
               ),
@@ -501,7 +495,7 @@ void main() {
 
       testWidgets('Input field has label', (WidgetTester tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(
               home: Scaffold(
                 body: TextField(
@@ -527,7 +521,7 @@ void main() {
               home: Scaffold(
                 body: TextField(
                   focusNode: focusNode,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -558,11 +552,9 @@ void main() {
               home: Scaffold(
                 body: ListView.builder(
                   itemCount: 1000,
-                  itemBuilder: (context, index) {
-                    return ListTile(
+                  itemBuilder: (context, index) => ListTile(
                       title: Text('Message $index'),
-                    );
-                  },
+                    ),
                 ),
               ),
             ),
@@ -606,7 +598,7 @@ void main() {
     group('Provider Integration', () {
       testWidgets('Widget consumes provider correctly',
           (WidgetTester tester) async {
-        bool providerConsumed = false;
+        var providerConsumed = false;
 
         await tester.pumpWidget(
           ProviderScope(
@@ -637,7 +629,7 @@ void main() {
     group('Gesture Handling', () {
       testWidgets('Long press on message shows options',
           (WidgetTester tester) async {
-        bool longPressed = false;
+        var longPressed = false;
 
         await tester.pumpWidget(
           ProviderScope(
@@ -659,7 +651,7 @@ void main() {
       });
 
       testWidgets('Double tap works', (WidgetTester tester) async {
-        int tapCount = 0;
+        var tapCount = 0;
 
         await tester.pumpWidget(
           ProviderScope(

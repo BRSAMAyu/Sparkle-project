@@ -50,20 +50,20 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
           // Header
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
-              padding: EdgeInsets.all(DS.spacing12),
+              padding: const EdgeInsets.all(DS.spacing12),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(DS.sm),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       gradient: DS.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 18),
                   ),
-                  SizedBox(width: DS.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   Text(
                     'AI 学习助手',
                     style: TextStyle(
@@ -71,7 +71,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       color: DS.neutral900,
                     ),
                   ),
-                  Spacer(),
+                  const Spacer(),
                   Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, color: DS.neutral500),
                 ],
               ),
@@ -80,7 +80,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
           
           if (!_isExpanded && lastMessage != null)
              Padding(
-               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                child: Text(
                  "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
                  maxLines: 1,
@@ -90,7 +90,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
              ),
 
           if (_isExpanded) ...[
-            Divider(height: 1),
+            const Divider(height: 1),
             Container(
               height: 300,
               color: DS.neutral50,
@@ -102,14 +102,14 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       ),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.all(DS.lg),
+                      padding: const EdgeInsets.all(DS.lg),
                       itemCount: messages.length,
                       itemBuilder: (context, index) => ChatBubble(message: messages[index]),
                     ),
             ),
-            Divider(height: 1),
+            const Divider(height: 1),
             Padding(
-              padding: EdgeInsets.all(DS.sm),
+              padding: const EdgeInsets.all(DS.sm),
               child: Row(
                 children: [
                   Expanded(
@@ -124,7 +124,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   if (chatState.isLoading)
-                    Padding(
+                    const Padding(
                       padding: EdgeInsets.all(DS.sm),
                       child: SizedBox(
                         width: 16, 

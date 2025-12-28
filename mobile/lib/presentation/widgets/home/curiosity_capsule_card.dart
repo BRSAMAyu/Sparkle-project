@@ -9,18 +9,18 @@ import 'package:sparkle/presentation/providers/capsule_provider.dart';
 
 class CuriosityCapsuleCard extends ConsumerWidget {
 
-  CuriosityCapsuleCard({required this.capsule, super.key});
+  const CuriosityCapsuleCard({required this.capsule, super.key});
   final CuriosityCapsuleModel capsule;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
       elevation: 2,
       child: ExpansionTile(
-        tilePadding: EdgeInsets.all(DS.lg),
+        tilePadding: const EdgeInsets.all(DS.lg),
         leading: Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             gradient: DS.secondaryGradient,
             shape: BoxShape.circle,
@@ -29,7 +29,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         ),
         title: Text(
           capsule.title,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: capsule.isRead 
             ? null 
@@ -41,12 +41,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         },
         children: [
           Padding(
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MarkdownBody(data: capsule.content),
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 if (capsule.relatedSubject != null)
                   Chip(
                     label: Text(capsule.relatedSubject!),

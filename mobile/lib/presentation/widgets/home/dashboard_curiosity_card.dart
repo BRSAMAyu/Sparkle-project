@@ -27,7 +27,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
               borderRadius: DS.borderRadius20,
               border: Border.all(color: DS.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -47,7 +47,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   ],
                 ),
                 
-                Spacer(),
+                const Spacer(),
                 
                 Text(
                   cognitive.weeklyPattern ?? '探索未知',
@@ -60,7 +60,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                SizedBox(height: DS.xs),
+                const SizedBox(height: DS.xs),
                 
                 Text(
                   '好奇心胶囊',

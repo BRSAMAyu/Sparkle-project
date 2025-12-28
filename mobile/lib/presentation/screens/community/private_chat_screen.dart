@@ -81,7 +81,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.chat_bubble_outline, size: 48, color: DS.neutral300),
-                        SizedBox(height: DS.lg),
+                        const SizedBox(height: DS.lg),
                         Text('开始对话吧!', style: TextStyle(color: DS.neutral500)),
                       ],
                     ),

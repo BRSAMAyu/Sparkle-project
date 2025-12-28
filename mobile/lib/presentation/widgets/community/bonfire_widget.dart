@@ -122,7 +122,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
           Positioned(
             bottom: 0,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
@@ -133,7 +133,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.bolt, size: 14, color: baseColor),
-                  SizedBox(width: DS.xs),
+                  const SizedBox(width: DS.xs),
                   Text(
                     'Lv.${widget.level}',
                     style: TextStyle(

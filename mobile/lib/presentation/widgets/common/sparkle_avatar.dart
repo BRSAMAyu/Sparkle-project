@@ -92,7 +92,7 @@ class SparkleAvatar extends StatelessWidget {
                     ),
                   ),
                   if (radius > 25) ...[
-                    SizedBox(height: DS.xs),
+                    const SizedBox(height: DS.xs),
                     Text(
                       '审核中',
                       style: TextStyle(

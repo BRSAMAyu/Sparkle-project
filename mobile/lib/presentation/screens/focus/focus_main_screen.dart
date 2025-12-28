@@ -17,7 +17,7 @@ class FocusMainScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: DS.deepSpaceStart,
       appBar: AppBar(
-        title: Text('选择专注任务'),
+        title: const Text('选择专注任务'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: DS.brandPrimary,
@@ -26,7 +26,7 @@ class FocusMainScreen extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.all(DS.xl),
+              padding: const EdgeInsets.all(DS.xl),
               child: Text(
                 '准备好开始专注了吗？',
                 style: TextStyle(
@@ -61,23 +61,23 @@ class FocusMainScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.assignment_turned_in_outlined, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Text(
             '没有待办任务',
             style: TextStyle(color: DS.brandPrimary70Const, fontSize: 16),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           SparkleButton.ghost(label: '创建一个新任务', onPressed: () => context.push('/tasks/new')),
         ],
       ),
     );
 
   Widget _buildTaskItem(BuildContext context, TaskModel task) => Card(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       color: DS.brandPrimary.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Text(
           task.title,
           style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),

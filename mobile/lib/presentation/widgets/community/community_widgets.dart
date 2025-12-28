@@ -77,14 +77,14 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
   Widget build(BuildContext context) => Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: EdgeInsets.all(DS.md),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.all(DS.md),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
           color: isMe ? DS.brandPrimary : DS.brandPrimary,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
@@ -106,7 +106,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                 fontSize: 15,
               ),
             ),
-            SizedBox(height: DS.xs),
+            const SizedBox(height: DS.xs),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -118,7 +118,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                   ),
                 ),
                 if (isMe) ...[
-                  SizedBox(width: DS.xs),
+                  const SizedBox(width: DS.xs),
                   Icon(
                     isSent ? Icons.done_all : Icons.access_time,
                     size: 12,
@@ -166,7 +166,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
             return Container(
               width: 6,
               height: 6,
-              margin: EdgeInsets.symmetric(horizontal: 2),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.3 + (value * 0.7)),
                 shape: BoxShape.circle,

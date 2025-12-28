@@ -55,28 +55,28 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
           child: Row(
             mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
                 _buildAvatar(widget.message.sender),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
               ],
               Flexible(
                 child: Column(
                   crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     _buildContent(context, isMe),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      Text(brandPrimary),,,),
+                      Text(brandPrimary),,,,),
                   ],
                 ),
               ),
               if (isMe) ...[
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 _buildAvatar(widget.message.sender),
               ],
             ],
@@ -96,17 +96,17 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
   }
 
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? DS.primaryBase : DS.brandPrimary,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-          bottomLeft: isMe ? Radius.circular(16) : const Radius.circular(4),
-          bottomRight: isMe ? Radius.circular(4) : const Radius.circular(16),
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
+          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
         ),
         boxShadow: isMe 
-            ? [BoxShadow(color: DS.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))] 
+            ? [BoxShadow(color: DS.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] 
             : DS.shadowSm,
         border: isMe ? null : Border.all(color: DS.neutral100),
       ),
