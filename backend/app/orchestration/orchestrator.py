@@ -24,6 +24,9 @@ from app.config import settings
 from app.core.metrics import (
     REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE, TOOL_EXECUTION_COUNT, ACTIVE_SESSIONS
 )
+from app.orchestration.statechart_engine import WorkflowState, StateGraph
+from app.agents.standard_workflow import create_standard_chat_graph
+from app.checkpoint.redis_checkpointer import RedisCheckpointer
 
 # FSM States
 STATE_INIT = "INIT"
@@ -130,6 +133,13 @@ class ChatOrchestrator:
 
         # Ensure tools are registered
         self._ensure_tools_registered()
+
+        # Initialize State Graph
+        self.graph = create_standard_chat_graph()
+        
+        # Connect Checkpointer
+        if redis_client:
+            self.graph.checkpointer = RedisCheckpointer(redis_client)
 
     def _ensure_tools_registered(self):
         """Ensure tools are registered in the registry"""
@@ -268,7 +278,7 @@ class ChatOrchestrator:
         self,
         request: agent_service_pb2.ChatRequest,
         db_session: Optional[AsyncSession] = None,
-        context_data: Dict[str, Any] = None
+        context_data: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         """
         Process the incoming chat request with enhanced features
@@ -283,21 +293,22 @@ class ChatOrchestrator:
         active_db = db_session or self.db_session
         
         # Step 0: Request Validation (with quota check)
-        validation_result = await self.validator.validate_chat_request(request)
-        if not validation_result.is_valid:
-            logger.error(f"Validation failed: {validation_result.error_message}")
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                error=agent_service_pb2.Error(
-                    code="VALIDATION_ERROR",
-                    message=validation_result.error_message,
-                    retryable=False
-                ),
-                finish_reason=agent_service_pb2.ERROR
-            )
-            return
+        if self.validator:
+            validation_result = await self.validator.validate_chat_request(request)
+            if not validation_result.is_valid:
+                logger.error(f"Validation failed: {validation_result.error_message}")
+                yield agent_service_pb2.ChatResponse(
+                    response_id=f"resp_{uuid.uuid4()}",
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    error=agent_service_pb2.Error(
+                        code="VALIDATION_ERROR",
+                        message=validation_result.error_message,
+                        retryable=False
+                    ),
+                    finish_reason=agent_service_pb2.ERROR
+                )
+                return
 
         # Step 1: Check Idempotency
         cached_response = await self._check_idempotency(session_id, request_id)
@@ -329,21 +340,13 @@ class ChatOrchestrator:
             )
             return
 
-        try:
-            # Step 3: Initialize State
-            await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
-            
-            # Update state with request info
-            if self.state_manager:
-                await self.state_manager.update_state(
-                    session_id=session_id,
-                    state=STATE_INIT,
-                    details=f"Processing request {request_id}",
-                    request_id=request_id,
-                    user_id=user_id
-                )
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
 
-            # Step 4: Input Processing
+        try:
+            # Step 3: Initialize Workflow State
+            await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+
             user_message = ""
             if request.HasField("message"):
                 user_message = request.message
@@ -351,201 +354,97 @@ class ChatOrchestrator:
                 tool_result = request.tool_result
                 user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
 
-            # Step 5: Build User Context
-            await self._update_state(session_id, STATE_THINKING, "Building user context...")
-            user_context_data = await self._build_user_context(user_id, active_db)
-
-            # Step 6: Build Conversation Context with ContextPruner (NEW!)
-            await self._update_state(session_id, STATE_THINKING, "Pruning conversation history...")
-            conversation_context = await self._build_conversation_context(session_id, user_id)
-
-            # Step 7: GraphRAG Retrieval (Enhanced with graph database)
-            await self._update_state(session_id, STATE_THINKING, "Retrieving relevant knowledge...")
-            knowledge_context = ""
+            # Prepare initial state
+            state = WorkflowState()
+            state.append_message("user", user_message)
             
-            if active_db and user_id:
-                try:
-                    # Use RAG v2.0 Hybrid Search via GalaxyService
-                    galaxy_svc = GalaxyService(active_db)
-                    search_results = await galaxy_svc.hybrid_search(
-                        user_id=uuid.UUID(user_id),
-                        query=user_message,
-                        limit=5,
-                        use_reranker=True
-                    )
-                    
-                    citation_protos = []
-                    context_parts = []
-                    
-                    for item in search_results:
-                        node = item.node
-                        score = item.similarity
-                        
-                        # Build Context
-                        context_parts.append(f"[{node.name}]: {node.description}")
-                        
-                        # Build Citation Proto
-                        citation_protos.append(agent_service_pb2.Citation(
-                            id=str(node.id),
-                            title=node.name,
-                            content=node.description[:300] if node.description else "",
-                            source_type="hybrid",
-                            score=float(score)
-                        ))
-                    
-                    knowledge_context = "\n\n".join(context_parts)
-                    
-                    # Yield Citations to client
-                    if citation_protos:
-                        yield agent_service_pb2.ChatResponse(
-                            response_id=f"resp_{uuid.uuid4()}",
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            citations=agent_service_pb2.CitationBlock(citations=citation_protos),
-                            status_update=agent_service_pb2.AgentStatus(
-                                state=agent_service_pb2.AgentStatus.SEARCHING,
-                                details=f"Found {len(citation_protos)} relevant knowledge points",
-                                current_agent_name="SearchAgent",
-                                active_agent=agent_service_pb2.KNOWLEDGE
-                            )
-                        )
-
-                except Exception as e:
-                    logger.warning(f"RAG retrieval failed: {e}")
-
-
-            # Step 8: Build Prompt with ContextPruner
-            await self._update_state(session_id, STATE_THINKING, "Building system prompt...")
-
-            # Use real user context + pruned conversation history
-            base_system_prompt = build_system_prompt(
-                user_context_data,
-                conversation_history=conversation_context  # 传递修剪后的历史
-            )
-
-            full_system_prompt = base_system_prompt
-            if knowledge_context:
-                full_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"
-
-            # Yield Thinking Status
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.THINKING,
-                    details="Analyzing your request and preparing response...",
-                    active_agent=agent_service_pb2.ORCHESTRATOR
-                )
-            )
-
-            # Step 8: LLM Generation with Dynamic Tools
-            await self._update_state(session_id, STATE_GENERATING)
-            
-            # Get tools from dynamic registry (NO MORE HARD-CODING!)
+            # Get tools
             tools = await self._get_tools_schema()
             
-            if not tools:
-                logger.warning("No tools available from registry")
+            # Prepare queue for streaming
+            queue = asyncio.Queue()
+            
+            async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                # Augment response with IDs
+                if not resp.response_id:
+                    resp.response_id = f"resp_{uuid.uuid4()}"
+                resp.created_at = int(datetime.now().timestamp())
+                resp.request_id = request_id
+                await queue.put(resp)
 
-            full_response = ""
-            tool_execution_results = []
-            total_prompt_tokens = 0
-            total_completion_tokens = 0
+            # Inject Dependencies
+            if active_db:
+                state.context_data["db_session"] = active_db
+            
+            state.context_data.update({
+                "user_id": user_id,
+                "session_id": session_id,
+                "stream_callback": stream_callback,
+                "tools_schema": tools
+            })
 
-            # Call LLM Service
-            async for chunk in llm_service.chat_stream_with_tools(
-                system_prompt=full_system_prompt,
-                user_message=user_message,
-                tools=tools
-            ):
-                # Map StreamChunk to ChatResponse
-                if chunk.type == "text":
-                    full_response += chunk.content
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=f"resp_{uuid.uuid4()}",
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        delta=chunk.content
-                    )
-
-                elif chunk.type == "tool_call_end":
-                    # Tool call is ready
-                    await self._update_state(session_id, STATE_TOOL_CALLING, f"Calling {chunk.tool_name}...")
-
-                    # Create a progress callback for the tool
-                    async def send_progress(progress: int, message: str, task_id: str = None):
-                        yield agent_service_pb2.ChatResponse(
-                            response_id=f"resp_{uuid.uuid4()}",
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            status_update=agent_service_pb2.AgentStatus(
-                                state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                                details=f"[{chunk.tool_name}] {message} ({progress}%)",
-                                active_agent=get_agent_type_for_tool(chunk.tool_name)
-                            )
-                        )
-
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=f"resp_{uuid.uuid4()}",
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                            details=f"Executing {chunk.tool_name}...",
-                            active_agent=get_agent_type_for_tool(chunk.tool_name)
-                        ),
-                        tool_call=agent_service_pb2.ToolCall(
-                            id=chunk.tool_call_id,
-                            name=chunk.tool_name,
-                            arguments=json.dumps(chunk.full_arguments)
-                        )
-                    )
-
-                # Collect token usage
-                elif chunk.type == "usage" and self.token_tracker:
-                    total_prompt_tokens = chunk.prompt_tokens or 0
-                    total_completion_tokens = chunk.completion_tokens or 0
+            # Launch Graph Execution in Background
+            logger.info("🚀 Launching StateGraph Execution")
+            graph_task = asyncio.create_task(self.graph.invoke(state))
+            
+            # Stream from queue
+            while not graph_task.done() or not queue.empty():
+                try:
+                    # Wait for next item with timeout to check task status
+                    item = await asyncio.wait_for(queue.get(), timeout=0.1)
                     
-                    # Record to Prometheus
-                    TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
-                    TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
+                    # Track token usage if present
+                    if item.HasField("usage"):
+                        total_prompt_tokens = item.usage.prompt_tokens
+                        total_completion_tokens = item.usage.completion_tokens
+                        # Also track to Prometheus immediately
+                        if self.token_tracker:
+                             TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
+                             TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
 
-                    # Send usage info to client
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=f"resp_{uuid.uuid4()}",
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        usage=agent_service_pb2.Usage(
-                            prompt_tokens=total_prompt_tokens,
-                            completion_tokens=total_completion_tokens,
-                            total_tokens=total_prompt_tokens + total_completion_tokens
-                        )
-                    )
-
-            # Step 9: Compose Final Response
-            await self._update_state(session_id, STATE_DONE, "Composing response...")
+                    yield item
+                    queue.task_done()
+                except asyncio.TimeoutError:
+                    if graph_task.done():
+                        break
             
-            # Use ResponseComposer to build unified response
-            final_response_data = self.response_composer.compose_response(
-                llm_text=full_response,
-                tool_results=tool_execution_results,
-                requires_confirmation=False,
-                confirmation_data=None
-            )
+            # Check for exceptions
+            if graph_task.done():
+                exc = graph_task.exception()
+                if exc:
+                    raise exc
+                
+                # Get final state
+                final_state = graph_task.result()
+                
+                # Get full response from state history
+                full_response = ""
+                # Find the last assistant message
+                for msg in reversed(final_state.messages):
+                    if msg["role"] == "assistant":
+                        full_response = msg["content"]
+                        break
+                
+                # Compose Final Response (Idempotency Cache)
+                # Note: Tool results are already in history, but ResponseComposer might need them separate.
+                # For now, we trust full_response is sufficient or we can extract from context.
+                
+                final_response_data = {
+                    "message": full_response,
+                    "tool_results": [] 
+                }
+                await self._cache_response(session_id, request_id, final_response_data)
+                
+                # Yield final full_text if not already streamed complete?
+                # Actually, standard_workflow streams delta. Client might need full_text signal.
+                yield agent_service_pb2.ChatResponse(
+                    response_id=f"resp_{uuid.uuid4()}",
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    full_text=full_response,
+                    finish_reason=agent_service_pb2.STOP
+                )
 
-            # Cache response for idempotency
-            await self._cache_response(session_id, request_id, final_response_data)
-
-            # Yield final response
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                full_text=final_response_data.get("message", full_response),
-                finish_reason=agent_service_pb2.STOP
-            )
-            
             REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
 
         except Exception as e:

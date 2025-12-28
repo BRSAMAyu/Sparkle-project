@@ -1,157 +1,122 @@
-# CLAUDE.md
+# CLAUDE.md - Optimized for DeepSeek V3.2
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🤖 Model Guidelines
+## 🤖 DeepSeek-V3.2 Standard Mode Guidelines
 
-> **CRITICAL INSTRUCTION**: Identify the task complexity and follow the specific requirements below to ensure reliability on all supported backends (DeepSeek/MiMo/Native).
+> **CORE IDENTITY**: You are an expert Full-Stack Engineer working on the Sparkle (星火) project. You are running on **DeepSeek-V3.2 (Non-Thinking Mode)**.
 
-### ⚡ General Principles
-- **Conciseness**: Be extremely brief for simple tasks (ls, cat, environment checks). Do NOT explain your actions unless requested.
-- **Tool Use**: **Strictly** use XML tool tags. Do not output code in Markdown blocks if you intend to write it to a file.
-- **Output**: No conversational filler like "Here is the code". Direct terminal commands or code edits only.
-- **Thinking**: If running on a reasoning model (like DeepSeek-R1), analyze potential side effects before editing complex logic.
+### 🚫 CRITICAL ANTI-PATTERNS (DO NOT DO)
+1.  **NO Markdown Wrapping**: NEVER wrap XML tool tags (like `<edit_file>`) inside markdown code blocks (\`\`\`xml). **Output the raw XML tag directly.**
+2.  **NO Chatty Filler**: Do not say "I will now edit the file..." or "Here is the corrected code". **Just execute the tool.**
+3.  **NO Blind Edits**: Do not assume a file path exists. If you are 80% sure, verify with `ls -R` or `grep` first.
+
+### ⚡ Operational Protocol
+- **Simple Tasks** (Typos, Config, One-file fix):
+  - Action: Execute tool immediately. Zero explanation.
+- **Complex Tasks** (Cross-language, Refactoring, Architecture):
+  - Action: Since you have no "Thinking Block", you MUST output a **"🔍 Plan"** bullet list (max 3 items) before executing tools.
+  - Example: "- Verify proto definition -> - Regen proto -> - Update Python implementation."
 
 ---
 
 ## Project Overview
 
-**Sparkle (星火)** - AI Learning Assistant for university students. A hybrid architecture:
+**Sparkle (星火)** - AI Learning Assistant. Hybrid Architecture:
+- **Go Gateway**: WebSocket/Gin (`backend/gateway`). High-performance gateway for real-time communication.
+- **Python Engine**: Logic/RAG/gRPC (`backend/app`). AI reasoning, tool calls, and vector search.
+- **Flutter**: Mobile UI (`mobile`). Cross-platform app using Riverpod for state management.
+- **DB**: Postgres 16 + pgvector. Core relational data and vector embeddings.
 
-- **Go Gateway**: High-performance WebSocket gateway (Gin + Gorilla WebSocket).
-- **Python Agent Engine**: AI reasoning, tool calls, vector search (gRPC).
-- **Flutter Mobile**: Cross-platform mobile app (Riverpod).
-- **Database**: PostgreSQL 16 + pgvector for vector search.
+## 🛠 Common Development Commands
 
-## Common Development Commands
+### 🔥 Quick Actions (High Frequency)
 
-### Make Commands (Recommended)
-```bash
-make dev-all           # Start full environment (3 terminals)
-make dev-up            # Start Docker (PostgreSQL, Redis)
-make grpc-server       # Start Python gRPC server (port 50051)
-make gateway-run       # Start Go Gateway (port 8080)
-make gateway-dev       # Start Go Gateway with live reload
-make proto-gen         # Generate gRPC code from protobuf
-make sync-db           # Sync DB schema → Go SQLC code
-make integration-test  # Run WebSocket integration test
-make grpc-test        # Test gRPC server connectivity
-```
+Full Dev Environment:
+`make dev-all` (3-terminal start: Docker, Python gRPC, Go Gateway)
 
-### Individual Component Commands
+Generators (RUN AFTER PROTO/DB CHANGES):
+`make proto-gen` (*.proto -> Go/Python code)
+`make sync-db` (SQL Schema -> Go SQLC code)
 
-```bash
-# Database
-docker compose up -d    # Start all services (PostgreSQL, Redis, monitoring)
-docker compose down     # Stop all services
+Specific Components:
+`make gateway-dev` (Go Gateway Live Reload)
+`make grpc-server` (Python Agent)
+`flutter run` (Mobile App)
 
-# Python Agent Engine
-cd backend
-pip install -r requirements.txt  # Install Python dependencies
-alembic upgrade head            # Run database migrations
-python grpc_server.py           # Start gRPC server directly
-
-# Go Gateway
-cd backend/gateway
-go mod tidy                     # Clean up Go dependencies
-go build -o bin/gateway ./cmd/server  # Build gateway binary
-go run cmd/server/main.go       # Run with live reload
-
-# Flutter Mobile
-cd mobile
-flutter pub get                 # Get Dart dependencies
-flutter run                     # Run on connected device/emulator
-flutter analyze                # Static analysis
-flutter build apk --release    # Build Android APK
-```
+### 💻 Individual Component Commands
+- **Backend (Go)**: `cd backend/gateway && go run cmd/server/main.go`
+- **Backend (Python)**: `cd backend && python grpc_server.py`
+- **Database**: `docker compose up -d` (PostgreSQL, Redis, Monitoring)
+- **Migrations**: `cd backend && alembic upgrade head`
 
 ### API Switcher (ccsw)
+`ccsw d` (DeepSeek Official)
+`ccsw m` (MiMo Flash)
+`ccsw n` (Native Claude)
 
-```bash
-ccsw d                 # Switch to DeepSeek Official API
-ccsw m                 # Switch to MiMo API (Flash)
-ccsw n                 # Switch back to Native Claude
-```
+## 🏗 Architecture & Boundary Rules
 
-## High-Level Architecture
+### 🚨 Cross-Boundary Protocol (Strict Adherence)
+*DeepSeek V3.2 Note: You are working across Go and Python. Respect the gRPC boundary.*
 
-### System Flow
+1.  **Source of Truth**: `proto/agent_service.proto`
+    - *Rule*: Never modify Go/Python struct definitions manually if they come from Proto. Modify `.proto` and run `make proto-gen`.
+2.  **Database Truth**: `backend/gateway/internal/db/schema.sql` (Go side) and Alembic migrations (Python side).
+    - *Rule*: Never modify `models.go` manually. Modify SQL/Queries and run `make sync-db`.
 
-`Mobile (Flutter)` → `WebSocket (8080)` → `Go Gateway (Gin)` → `gRPC (50051)` → `Python Agent Engine` → `PostgreSQL/Redis`
+### Data Flow
+`Mobile (Riverpod)` -> `WS (8080)` -> `Go (Gin)` -> `gRPC (50051)` -> `Python (Orchestrator)` -> `PGVector/Redis`
 
-### Cross-Boundary Debugging
+## 🔑 Critical Components Map
 
-- **Protocol Definition**: `proto/agent_service.proto` (Source of truth).
-- **Boundary**: Change `.proto` → `make proto-gen` → Update Python `grpc_service.py` → Update Go `internal/agent/client.go`.
-- **Database Schema**: Change SQL → `make sync-db` → Updates Go SQLC generated code.
+### 1. Go Gateway (`backend/gateway`)
+- **Entry**: `cmd/server/main.go`
+- **WS Handler**: `internal/handler/websocket.go` (Check here for connection issues)
+- **Agent Client**: `internal/agent/client.go` (gRPC client wrapper)
+- **Services**: `internal/service/` (Quota, Chat History, Semantic Cache)
 
-## Key Components
+### 2. Python Engine (`backend/app`)
+- **Brain**: `orchestrator/orchestrator.py` (Main FSM Loop)
+- **gRPC Service**: `grpc_service.py` (Service implementation)
+- **Tools**: `tools/` (Dynamic tool registration)
+- **RAG**: `services/galaxy_service.py` (Knowledge Graph / GraphRAG)
 
-### 1. Go Gateway (`backend/gateway/`)
+### 3. Flutter Mobile (`mobile`)
+- **State**: `lib/providers/` (Riverpod)
+- **UI**: `lib/screens/`
+- **Visuals**: `lib/widgets/galaxy/` (GLSL Shaders - *Handle with care*)
+- **Services**: `lib/core/services/` (Galaxy Layout, Notifications)
 
-- **WebSocket**: Real-time bidirectional communication (ws://localhost:8080/ws/chat).
-- **Services**: Quota management, chat history, semantic cache.
-- **Structure**: `cmd/server/` (entry), `internal/handler/` (HTTP/WS handlers), `internal/agent/` (gRPC client).
+## 🗄 Database Schema Rules
 
-### 2. Python Agent Engine (`backend/app/`)
+Core Knowledge:
+- `knowledge_nodes`: Vector Search. Use `<->` L2 Distance or `<=>` Cosine explicitly.
+- `node_relations`: Graph edges.
+- `user_node_status`: Mastery levels.
 
-- **Orchestrator**: Core FSM processing (`orchestrator.py`).
-- **Services**: Galaxy (Knowledge Graph), Decay (Ebbinghaus), Push (Notifications).
-- **gRPC**: `grpc_server.py` (server), `grpc_service.py` (service implementation).
+User Data:
+- `chat_messages`: History Context Window management.
+- `tasks`: Task card system (6 types).
 
-### 3. Flutter Mobile (`mobile/`)
+## 🔄 Standard Workflows
 
-- **State Management**: Riverpod with code generation.
-- **Networking**: Dio for HTTP, WebSocket for real-time.
-- **Key Features**: Knowledge Galaxy (GLSL shaders), task cards, focus timer.
+### A. Adding a new AI Feature
+1.  Define Request/Response in `proto/agent_service.proto`.
+2.  `make proto-gen`.
+3.  Implement logic in Python `grpc_service.py`.
+4.  Call it from Go `internal/agent/client.go`.
+5.  Expose via WebSocket handler if required.
 
-### 4. Database & Infrastructure
+### B. Modifying DB Schema
+1.  `cd backend && alembic revision -m "description"`
+2.  `alembic upgrade head`
+3.  **IF** Go needs this data: Update `backend/gateway/internal/db/queries/` -> `make sync-db`.
 
-- **PostgreSQL**: Core relational data + pgvector for embeddings.
-- **Redis**: Caching and session management.
-- **Monitoring**: Prometheus, Grafana, Loki, Tempo (in docker-compose).
+### C. Debugging
+- **Logs**: Check `docker compose logs -f` for Gateway/Python errors.
+- **Trace**: System uses Prometheus/Tempo. Check `docker-compose.yaml` ports.
+- **Tests**: `make integration-test` (WS), `make grpc-test` (gRPC).
 
-## Database Schema
-
-```sql
--- Core Knowledge System
-knowledge_nodes          -- Use `<->` operator for cosine distance in vector search.
-user_node_status         -- User mastery progress.
-node_relations           -- Graph connections.
-
--- Key tables for AI features
-tasks                    -- Task card system (6 types)
-chat_messages            -- AI conversation history
-user_progress            -- Learning analytics
-```
-
-## Development Workflows
-
-### Adding New gRPC Methods
-
-1. Edit `proto/agent_service.proto`
-2. Run `make proto-gen`
-3. Implement in Python: `backend/app/grpc_service.py`
-4. Update Go client: `backend/gateway/internal/agent/client.go`
-5. Add WebSocket handler if needed
-
-### Database Changes
-
-1. Create Alembic migration: `cd backend && alembic revision -m "description"`
-2. Apply migration: `alembic upgrade head`
-3. Sync to Go: `make sync-db`
-4. Update Go queries in `backend/gateway/internal/db/queries/`
-
-### Mobile Feature Development
-
-1. Add dependencies to `mobile/pubspec.yaml`
-2. Run `flutter pub get`
-3. Create Riverpod providers in `mobile/lib/providers/`
-4. Implement UI in `mobile/lib/screens/`
-
-## Documentation
-
-- `README.md`: Project overview and quick start.
-- `Claude_Code_API_Alignment_Guide.md`: API switcher documentation.
-- `docs/`: Complete documentation system (8 categories).
-- `docs/深度技术讲解教案_完整版.md`: 200+知识点完整技术教程.
+---
+*Documentation Reference: See `docs/` for full technical specs, especially `docs/深度技术讲解教案_完整版.md` for core concepts.*
