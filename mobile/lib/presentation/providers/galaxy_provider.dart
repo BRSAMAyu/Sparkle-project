@@ -192,8 +192,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     Map<String, Offset> initialPositions,
   ) async {
     try {
-      debugPrint('Starting layout optimization for ${nodes.length} nodes, ${edges.length} edges');
-
       // 使用新的布局引擎进行力导向优化
       final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
         nodes: nodes,
@@ -201,31 +199,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         initialPositions: initialPositions,
       );
 
-      debugPrint('Layout optimization completed successfully');
-
       // Only update if we're still mounted and not loading something new
       if (mounted && !state.isLoading) {
         state = state.copyWith(
           nodePositions: optimizedPositions,
           isOptimizing: false,
         );
-      } else {
-        debugPrint('Skipping layout update: ${!mounted ? "not mounted" : "loading new data"}');
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Error optimizing layout: $e');
-      debugPrint('Stack trace: $stackTrace');
-
-      // 即使优化失败，也保留初始布局并重置状态
-      if (mounted && !state.isLoading) {
-        debugPrint('Falling back to initial layout positions');
-        state = state.copyWith(
-          isOptimizing: false,
-          // 保留现有的nodePositions（即initialPositions）
-        );
-      } else {
-        debugPrint('Cannot update state: ${!mounted ? "not mounted" : "loading new data"}');
-      }
+      state = state.copyWith(isOptimizing: false);
     }
   }
 
@@ -302,7 +285,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       clusters: state.clusters,
       viewport: state.viewport,
       predictedNodeId: state.predictedNodeId,
-      selectedNodeId: null, // CLEAR
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,
     );
@@ -440,8 +422,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   /// EaseOutBack curve for bloom effect
   double _easeOutBack(double x) {
-    const double c1 = 1.70158;
-    const double c3 = c1 + 1.0;
+    const c1 = 1.70158;
+    const c3 = c1 + 1.0;
     return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2);
   }
 

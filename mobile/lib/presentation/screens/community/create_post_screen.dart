@@ -103,7 +103,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           children: [
             TextField(

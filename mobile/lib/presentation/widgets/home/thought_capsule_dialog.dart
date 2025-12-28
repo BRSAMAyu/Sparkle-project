@@ -55,12 +55,12 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.sm),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
+                  child: const Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
                 ),
                 const SizedBox(width: AppDesignTokens.spacing12),
                 Text(

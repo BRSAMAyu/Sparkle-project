@@ -22,7 +22,7 @@ class GroupListScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.search),
+            icon: const Icon(Icons.search),
             onPressed: () {
               context.push('/community/groups/search');
             },
@@ -33,7 +33,7 @@ class GroupListScreen extends ConsumerWidget {
         onPressed: () {
           context.push('/community/groups/create');
         },
-        icon: Icon(Icons.add),
+        icon: const Icon(Icons.add),
         label: const Text('Create'),
         backgroundColor: AppDesignTokens.primaryBase,
         elevation: 4,
@@ -240,7 +240,7 @@ class _GroupListTile extends StatelessWidget {
                             '${group.totalFlamePower}',
                             DS.brandPrimary,
                           ),
-                          SizedBox(width: DS.md),
+                          const SizedBox(width: DS.md),
                           _buildInfoBadge(
                             context,
                             Icons.people_alt_rounded,
@@ -252,8 +252,8 @@ class _GroupListTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                SizedBox(width: DS.sm),
-                Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+                const SizedBox(width: DS.sm),
+                const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
               ],
             ),
           ),
@@ -265,7 +265,7 @@ class _GroupListTile extends StatelessWidget {
   Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) => Row(
       children: [
         Icon(icon, size: 14, color: color),
-        SizedBox(width: DS.xs),
+        const SizedBox(width: DS.xs),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(

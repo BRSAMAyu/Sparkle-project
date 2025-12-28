@@ -27,7 +27,7 @@ class LongTermPlanCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
           ),
         ),
@@ -60,13 +60,13 @@ class LongTermPlanCard extends ConsumerWidget {
             children: [
               Text(
                 '${(growth.progress * 100).toInt()}%',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppDesignTokens.success,
                 ),
               ),
-              SizedBox(height: DS.xs),
+              const SizedBox(height: DS.xs),
               SizedBox(
                 height: 4,
                 width: 60,
@@ -108,7 +108,7 @@ class LongTermPlanCard extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_circle_outline, color: DS.brandPrimary30Const, size: 32),
-        SizedBox(height: DS.smConst),
+        const SizedBox(height: DS.smConst),
         Text(
           '创建长期计划',
           style: TextStyle(fontSize: 12, color: DS.brandPrimary54Const),

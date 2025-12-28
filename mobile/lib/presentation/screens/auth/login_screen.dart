@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(DS.xl),
+          padding: const EdgeInsets.all(DS.xl),
           child: Form(
             key: _formKey,
             child: Column(
@@ -66,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   size: 60,
                   color: DS.brandPrimaryConst,
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Text(
                   'Welcome Back to Sparkle',
                   textAlign: TextAlign.center,
@@ -75,13 +75,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 Text(
                   'Ignite your learning potential.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                SizedBox(height: DS.xxxl),
+                const SizedBox(height: DS.xxxl),
 
                 // Username field
                 TextFormField(
@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your username or email' : null,
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: const OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_isPasswordVisible
                           ? Icons.visibility_off
@@ -115,7 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your password' : null,
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
 
                 // Login Button
                 ElevatedButton(
@@ -134,7 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : const Text('Login'),
                 ),
                 
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
                 Row(
                   children: [
                     const Expanded(child: Divider()),
@@ -145,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Expanded(child: Divider()),
                   ],
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
 
                 // Social Login Buttons
                 Row(
@@ -190,7 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
 
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Register Link
                 TextButton(
@@ -198,7 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: const Text("Don't have an account? Register"),
                 ),
                 
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 
                 // Guest Mode
                 TextButton(
@@ -240,7 +240,7 @@ class _SocialLoginButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),

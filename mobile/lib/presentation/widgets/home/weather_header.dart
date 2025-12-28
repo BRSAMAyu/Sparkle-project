@@ -67,31 +67,31 @@ class WeatherHeader extends ConsumerWidget {
   LinearGradient _getWeatherGradient(String type) {
     switch (type) {
       case 'sunny':
-        return LinearGradient(
+        return const LinearGradient(
           colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceEnd, Color(0xFF415A77)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'cloudy':
-        return LinearGradient(
+        return const LinearGradient(
           colors: [Color(0xFF1A1A1A), Color(0xFF2C3E50), Color(0xFF4B5D67)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'rainy':
-        return LinearGradient(
+        return const LinearGradient(
           colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceSurface, AppDesignTokens.neutral700],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'meteor':
-        return LinearGradient(
+        return const LinearGradient(
           colors: [Color(0xFF1A0B2E), Color(0xFF2D1B4E), Color(0xFF4A148C)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       default:
-        return LinearGradient(
+        return const LinearGradient(
           colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,

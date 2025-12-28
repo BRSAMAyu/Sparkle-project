@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/smart_cache.dart';
+import 'package:sparkle/core/services/text_cache.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
@@ -139,11 +141,22 @@ class StarMapPainter extends CustomPainter {
   final Map<String, double> nodeAnimationProgress; // 0.0 to 1.0
   final double selectionPulse; // 0.0 to 1.0 for selection animation
 
-  // Cache storage
-  static final Map<int, List<ProcessedNode>> _nodeCache = {};
-  static final Map<int, List<ProcessedEdge>> _edgeCache = {};
-  static final Map<int, Map<String, Color>> _colorCacheStorage = {};
-  static final Map<int, Map<String, Offset>> _positionCacheStorage = {};
+  // Cache storage - 使用智能缓存替代简单Map
+  static final SmartCache<int, List<ProcessedNode>> _nodeCache = SmartCache(
+    maxSize: 10,
+  );
+  static final SmartCache<int, List<ProcessedEdge>> _edgeCache = SmartCache(
+    maxSize: 10,
+  );
+  static final SmartCache<int, Map<String, Color>> _colorCacheStorage = SmartCache(
+    maxSize: 10,
+  );
+  static final SmartCache<int, Map<String, Offset>> _positionCacheStorage = SmartCache(
+    maxSize: 10,
+  );
+
+  // 文本渲染器
+  static final BatchTextRenderer _textRenderer = BatchTextRenderer();
 
   // Instance data
   late final List<ProcessedNode> _processedNodes;
@@ -166,11 +179,17 @@ class StarMapPainter extends CustomPainter {
   void _preprocessData() {
     final cacheKey = _generateCacheKey();
 
-    if (_nodeCache.containsKey(cacheKey)) {
-      _processedNodes = _nodeCache[cacheKey]!;
-      _processedEdges = _edgeCache[cacheKey]!;
-      _colorCache = _colorCacheStorage[cacheKey]!;
-      _positionCache = _positionCacheStorage[cacheKey]!;
+    // 使用智能缓存获取
+    final cachedNodes = _nodeCache.get(cacheKey);
+    final cachedEdges = _edgeCache.get(cacheKey);
+    final cachedColors = _colorCacheStorage.get(cacheKey);
+    final cachedPositions = _positionCacheStorage.get(cacheKey);
+
+    if (cachedNodes != null && cachedEdges != null && cachedColors != null && cachedPositions != null) {
+      _processedNodes = cachedNodes;
+      _processedEdges = cachedEdges;
+      _colorCache = cachedColors;
+      _positionCache = cachedPositions;
       return;
     }
 
@@ -271,20 +290,20 @@ class StarMapPainter extends CustomPainter {
       }
     }
 
-    // Store in cache
-    // Limit cache size to prevent memory issues (simple LRU-like: keep last 5)
-    if (_nodeCache.length > 5) {
-      final firstKey = _nodeCache.keys.first;
-      _nodeCache.remove(firstKey);
-      _edgeCache.remove(firstKey);
-      _colorCacheStorage.remove(firstKey);
-      _positionCacheStorage.remove(firstKey);
-    }
+    // Store in cache - 智能缓存会自动管理大小和过期
+    _nodeCache.set(cacheKey, _processedNodes);
+    _edgeCache.set(cacheKey, _processedEdges);
+    _colorCacheStorage.set(cacheKey, _colorCache);
+    _positionCacheStorage.set(cacheKey, _positionCache);
+  }
 
-    _nodeCache[cacheKey] = _processedNodes;
-    _edgeCache[cacheKey] = _processedEdges;
-    _colorCacheStorage[cacheKey] = _colorCache;
-    _positionCacheStorage[cacheKey] = _positionCache;
+  /// 清理静态缓存（供外部调用）
+  static void clearCaches() {
+    _nodeCache.clear();
+    _edgeCache.clear();
+    _colorCacheStorage.clear();
+    _positionCacheStorage.clear();
+    _textRenderer.clear();
   }
 
   @override
@@ -866,16 +885,53 @@ class StarMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant StarMapPainter oldDelegate) {
-    // Only repaint if data actually changed
-    return oldDelegate.nodes != nodes ||
-        oldDelegate.edges != edges ||
-        oldDelegate.positions != positions ||
-        oldDelegate.scale != scale ||
-        oldDelegate.aggregationLevel != aggregationLevel ||
-        oldDelegate.clusters != clusters ||
-        oldDelegate.viewport != viewport ||
-        oldDelegate.selectedNodeId != selectedNodeId ||
-        oldDelegate.nodeAnimationProgress != nodeAnimationProgress ||
-        oldDelegate.selectionPulse != selectionPulse;
+    // 1. 视口变化检查（最频繁的变化）- 使用近似比较
+    final viewportChanged = !_approxEqualRect(oldDelegate.viewport, viewport);
+    if (viewportChanged) return true;
+
+    // 2. 数据变化检查（次频繁）- 使用引用比较
+    final dataChanged = !identical(oldDelegate.nodes, nodes) ||
+        !identical(oldDelegate.edges, edges) ||
+        !identical(oldDelegate.positions, positions);
+    if (dataChanged) return true;
+
+    // 3. 动画变化检查（特定动画）- 使用阈值比较
+    final animationChanged = (selectionPulse - oldDelegate.selectionPulse).abs() > 0.01 ||
+        !_mapsEqual(oldDelegate.nodeAnimationProgress, nodeAnimationProgress);
+    if (animationChanged) return true;
+
+    // 4. 聚合级别变化（较少发生）
+    if (oldDelegate.aggregationLevel != aggregationLevel) return true;
+
+    // 5. 选择状态变化
+    if (oldDelegate.selectedNodeId != selectedNodeId) return true;
+
+    // 6. 缩放变化 - 使用阈值
+    if ((oldDelegate.scale - scale).abs() > 0.01) return true;
+
+    // 7. 集群数据变化
+    if (!identical(oldDelegate.clusters, clusters)) return true;
+
+    return false;
+  }
+
+  /// 近似比较两个Rect
+  static bool _approxEqualRect(Rect? a, Rect? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return (a.center.dx - b.center.dx).abs() < 1.0 &&
+        (a.center.dy - b.center.dy).abs() < 1.0 &&
+        (a.width - b.width).abs() < 1.0 &&
+        (a.height - b.height).abs() < 1.0;
+  }
+
+  /// 比较两个Map是否相等
+  static bool _mapsEqual<K, V>(Map<K, V> a, Map<K, V> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key) || a[key] != b[key]) return false;
+    }
+    return true;
   }
 }

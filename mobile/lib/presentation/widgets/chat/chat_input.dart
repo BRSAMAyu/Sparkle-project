@@ -196,7 +196,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               children: [
                 Text(
                   '引用 ${widget.quotedMessage!.sender.displayName}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeXs,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     color: AppDesignTokens.primaryBase,
@@ -219,7 +219,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             width: AppDesignTokens.touchTargetMinSize,
             height: AppDesignTokens.touchTargetMinSize,
             child: IconButton(
-              icon: Icon(Icons.close_rounded,
+              icon: const Icon(Icons.close_rounded,
                 size: AppDesignTokens.iconSizeSm,
                 color: AppDesignTokens.neutral600,),
               onPressed: widget.onCancelQuote,

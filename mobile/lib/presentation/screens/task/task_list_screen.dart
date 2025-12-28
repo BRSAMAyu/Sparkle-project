@@ -47,7 +47,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     return Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: AppDesignTokens.primaryGradient,
           ),
         ),
@@ -79,7 +79,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: EdgeInsets.all(DS.sm),
+                      padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: AppDesignTokens.borderRadius8,
@@ -90,7 +90,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         size: 20,
                       ),
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Text(
                       '我的任务',
                       style: TextStyle(

@@ -108,14 +108,14 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
               );
             },
           ),
-          IconButton(icon: Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: Icon(Icons.person_add_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.person_add_outlined), onPressed: () {}),
         ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: '好友'), Tab(text: '群组')],
           indicatorColor: SparkleTheme.primary,
-          labelStyle: TextStyle(fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: TabBarView(
@@ -127,7 +127,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -141,7 +141,7 @@ class _FriendsListTab extends ConsumerWidget {
     return friendsAsync.when(
       data: (friends) {
         if (friends.isEmpty) {
-          return Center(
+          return const Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -164,14 +164,14 @@ class _FriendsListTab extends ConsumerWidget {
                 child: Row(
                   children: [
                     StatusAvatar(status: f.friend.status, url: f.friend.avatarUrl),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             f.friend.displayName,
-                            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -186,7 +186,7 @@ class _FriendsListTab extends ConsumerWidget {
                                       : AppDesignTokens.neutral300,
                                 ),
                               ),
-                              SizedBox(width: DS.xs),
+                              const SizedBox(width: DS.xs),
                               Text(
                                 f.friend.status == UserStatus.online ? '在线' : '离线',
                                 style: TextStyle(
@@ -196,17 +196,17 @@ class _FriendsListTab extends ConsumerWidget {
                                   fontSize: 12,
                                 ),
                               ),
-                              SizedBox(width: DS.sm),
+                              const SizedBox(width: DS.sm),
                               Text(
                                 'Lv.${f.friend.flameLevel}',
-                                style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12),
+                                style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12),
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.chevron_right, size: 20, color: AppDesignTokens.neutral400),
+                    const Icon(Icons.chevron_right, size: 20, color: AppDesignTokens.neutral400),
                   ],
                 ),
               ),
@@ -214,7 +214,7 @@ class _FriendsListTab extends ConsumerWidget {
           },
         );
       },
-      loading: () => Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('加载失败: $e')),
     );
   }
@@ -228,7 +228,7 @@ class _GroupsListTab extends ConsumerWidget {
     return groupsAsync.when(
       data: (groups) {
         if (groups.isEmpty) {
-          return Center(
+          return const Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -240,7 +240,7 @@ class _GroupsListTab extends ConsumerWidget {
           );
         }
         return ListView.builder(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           itemCount: groups.length,
           itemBuilder: (context, index) {
             final g = groups[index];
@@ -250,7 +250,7 @@ class _GroupsListTab extends ConsumerWidget {
                 onTap: () => context.push('/community/chat/group/${g.id}'),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: EdgeInsets.all(DS.lg),
+                  padding: const EdgeInsets.all(DS.lg),
                   child: Row(
                     children: [
                       SparkleAvatar(
@@ -258,28 +258,28 @@ class _GroupsListTab extends ConsumerWidget {
                         backgroundColor: SparkleTheme.primary.withValues(alpha: 0.1),
                         fallbackText: g.name,
                       ),
-                      SizedBox(width: DS.md),
+                      const SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(g.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            SizedBox(height: DS.xs),
+                            Text(g.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: DS.xs),
                             Row(
                               children: [
-                                Icon(Icons.people, size: 14, color: AppDesignTokens.neutral500),
-                                SizedBox(width: DS.xs),
-                                Text('${g.memberCount} 成员', style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
-                                SizedBox(width: DS.md),
+                                const Icon(Icons.people, size: 14, color: AppDesignTokens.neutral500),
+                                const SizedBox(width: DS.xs),
+                                Text('${g.memberCount} 成员', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+                                const SizedBox(width: DS.md),
                                 Icon(Icons.local_fire_department, size: 14, color: DS.brandPrimary),
-                                SizedBox(width: DS.xs),
-                                Text('${g.totalFlamePower}', style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+                                const SizedBox(width: DS.xs),
+                                Text('${g.totalFlamePower}', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
                               ],
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+                      const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
                     ],
                   ),
                 ),
@@ -288,7 +288,7 @@ class _GroupsListTab extends ConsumerWidget {
           },
         );
       },
-      loading: () => Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('加载失败: $e')),
     );
   }

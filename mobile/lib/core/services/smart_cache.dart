@@ -176,11 +176,10 @@ class CacheStats {
 /// 带有大小估算的智能缓存
 class SizedSmartCache<K, V> extends SmartCache<K, V> {
   SizedSmartCache({
-    super.maxSize = 50,
+    required this.sizeEstimator, super.maxSize = 50,
     super.maxAge = const Duration(minutes: 5),
     super.onEvicted,
     this.maxMemoryBytes = 100 * 1024 * 1024, // 100MB
-    required this.sizeEstimator,
   });
 
   final int maxMemoryBytes;

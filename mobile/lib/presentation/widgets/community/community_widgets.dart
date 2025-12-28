@@ -79,7 +79,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
           color: isMe ? SparkleTheme.primary : DS.brandPrimary,
@@ -107,7 +107,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                 fontSize: 15,
               ),
             ),
-            SizedBox(height: DS.xs),
+            const SizedBox(height: DS.xs),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -119,7 +119,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
                   ),
                 ),
                 if (isMe) ...[
-                  SizedBox(width: DS.xs),
+                  const SizedBox(width: DS.xs),
                   Icon(
                     isSent ? Icons.done_all : Icons.access_time,
                     size: 12,

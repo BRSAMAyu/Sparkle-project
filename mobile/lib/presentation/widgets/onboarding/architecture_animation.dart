@@ -89,7 +89,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
   Widget build(BuildContext context) => Container(
       height: 500,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -204,7 +204,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(DS.md),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: DS.brandPrimary.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
@@ -215,7 +215,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
               size: 32,
             ),
           ),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +228,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: DS.xs),
+                const SizedBox(height: DS.xs),
                 Text(
                   step['description'] as String,
                   style: TextStyle(

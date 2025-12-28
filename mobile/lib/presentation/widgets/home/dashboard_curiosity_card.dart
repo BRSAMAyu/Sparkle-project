@@ -27,19 +27,19 @@ class DashboardCuriosityCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.lightbulb_outline, color: AppDesignTokens.accent, size: 20),
+                    const Icon(Icons.lightbulb_outline, color: AppDesignTokens.accent, size: 20),
                     if (cognitive.hasNewInsight)
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppDesignTokens.error,
                           shape: BoxShape.circle,
                         ),
@@ -60,7 +60,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                SizedBox(height: DS.xs),
+                const SizedBox(height: DS.xs),
                 
                 Text(
                   '好奇心胶囊',

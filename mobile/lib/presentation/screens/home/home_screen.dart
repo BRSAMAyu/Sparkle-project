@@ -51,18 +51,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final destinations = [
       NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home),
+        icon: const Icon(Icons.home_outlined),
+        selectedIcon: const Icon(Icons.home),
         label: l10n.home,
       ),
       NavigationDestination(
-        icon: Icon(Icons.auto_awesome_outlined),
-        selectedIcon: Icon(Icons.auto_awesome),
+        icon: const Icon(Icons.auto_awesome_outlined),
+        selectedIcon: const Icon(Icons.auto_awesome),
         label: l10n.galaxy,
       ),
       NavigationDestination(
-        icon: Icon(Icons.forum_outlined),
-        selectedIcon: Icon(Icons.forum),
+        icon: const Icon(Icons.forum_outlined),
+        selectedIcon: const Icon(Icons.forum),
         label: l10n.chat,
       ),
       NavigationDestination(
@@ -71,8 +71,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         label: l10n.community,
       ),
       NavigationDestination(
-        icon: Icon(Icons.person_outlined),
-        selectedIcon: Icon(Icons.person),
+        icon: const Icon(Icons.person_outlined),
+        selectedIcon: const Icon(Icons.person),
         label: l10n.profile,
       ),
     ];
@@ -194,7 +194,7 @@ class _DashboardScreen extends ConsumerWidget {
             children: [
               Text(
                 'Lv.${user?.flameLevel ?? 1}',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: AppDesignTokens.fontSizeXs,
                   fontWeight: AppDesignTokens.fontWeightBold,
                   color: AppDesignTokens.warning,

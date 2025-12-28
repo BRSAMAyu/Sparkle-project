@@ -63,7 +63,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Stack(
               children: [
                 // Prism refraction effect (animated)
@@ -94,7 +94,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     Row(
                       children: [
                         Icon(Icons.diamond_outlined, color: DS.brandPrimaryConst, size: 18),
-                        SizedBox(width: DS.sm),
+                        const SizedBox(width: DS.sm),
                         const Text(
                           '认知棱镜',
                           style: TextStyle(
@@ -108,7 +108,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppDesignTokens.prismPurple,
                               shape: BoxShape.circle,
                             ),
@@ -124,7 +124,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           if (dashboardState.weather.type == 'rainy') _buildTag('#焦虑波峰'),
                         ],
                       ),
-                      SizedBox(height: DS.xs),
+                      const SizedBox(height: DS.xs),
                       Text(
                         '行为定式分析已更新',
                         style: TextStyle(

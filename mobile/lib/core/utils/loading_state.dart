@@ -131,7 +131,7 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
     }
   }
 
-  Widget _defaultLoadingWidget() => Center(
+  Widget _defaultLoadingWidget() => const Center(
       child: CircularProgressIndicator(),
     );
 
@@ -140,7 +140,7 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error_outline, size: 48, color: DS.error),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Text('加载失败: $error', textAlign: TextAlign.center),
         ],
       ),
@@ -151,8 +151,8 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.inbox_outlined, size: 48, color: DS.brandPrimary),
-          SizedBox(height: DS.lg),
-          Text('暂无数据'),
+          const SizedBox(height: DS.lg),
+          const Text('暂无数据'),
         ],
       ),
     );

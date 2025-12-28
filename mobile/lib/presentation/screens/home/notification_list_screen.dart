@@ -20,7 +20,7 @@ class NotificationListScreen extends ConsumerWidget {
       body: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
-            return Center(child: Text('No new notifications'));
+            return const Center(child: Text('No new notifications'));
           }
           return ListView.builder(
             itemCount: notifications.length,
@@ -44,7 +44,7 @@ class NotificationItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => ListTile(
-      title: Text(notification.title, style: TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(notification.content),
       trailing: !notification.isRead ? Icon(Icons.circle, size: 12, color: DS.brandPrimary) : null,
       onTap: () {

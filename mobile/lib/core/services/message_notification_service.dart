@@ -163,7 +163,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: EdgeInsets.all(DS.md),
+                padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -186,7 +186,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                           ? Text(widget.notification.senderName[0])
                           : null,
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,9 +196,9 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                             children: [
                               Text(
                                 widget.notification.senderName,
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              SizedBox(width: DS.sm),
+                              const SizedBox(width: DS.sm),
                               if (widget.notification.type == NotificationType.groupMessage)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -213,7 +213,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 ),
                             ],
                           ),
-                          SizedBox(height: DS.xs),
+                          const SizedBox(height: DS.xs),
                           Text(
                             widget.notification.content,
                             maxLines: 2,
@@ -227,7 +227,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, size: 18),
+                      icon: const Icon(Icons.close, size: 18),
                       onPressed: widget.onDismiss,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),

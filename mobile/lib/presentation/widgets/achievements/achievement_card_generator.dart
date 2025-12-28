@@ -107,7 +107,7 @@ class _LearningMilestoneCard extends StatelessWidget {
     return Container(
       width: 800,
       height: 1200,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -247,7 +247,7 @@ class _LearningMilestoneCard extends StatelessWidget {
                       color: DS.brandPrimaryConst,
                       size: 32,
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Text(
                       'Sparkle',
                       style: TextStyle(

@@ -156,10 +156,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget _buildSectionHeader(IconData icon, String title) => Row(
       children: [
         Icon(icon, color: AppDesignTokens.primaryBase),
-        SizedBox(width: DS.sm),
+        const SizedBox(width: DS.sm),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

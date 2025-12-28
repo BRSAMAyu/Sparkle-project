@@ -27,8 +27,8 @@ class TaskFeedbackDialog extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: const BoxDecoration(
                     gradient: AppDesignTokens.primaryGradient,
                     shape: BoxShape.circle,
                   ),
@@ -57,7 +57,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                         fontSize: AppDesignTokens.fontSizeBase,
                         height: 1.5,
                       ),
-                      strong: TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
+                      strong: const TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
                     ),
                   ),
                 ),
@@ -125,9 +125,9 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: color),
-        SizedBox(height: DS.xs),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+        const SizedBox(height: DS.xs),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
       ],
     );
 }

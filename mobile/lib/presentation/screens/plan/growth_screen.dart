@@ -25,7 +25,7 @@ class GrowthScreen extends ConsumerWidget {
         onPressed: () {
           context.push('/plans/new?type=growth');
         },
-        icon: Icon(Icons.add),
+        icon: const Icon(Icons.add),
         label: const Text('New Plan'),
       ),
     );
@@ -33,17 +33,17 @@ class GrowthScreen extends ConsumerWidget {
 
   Widget _buildBody(BuildContext context, PlanListState state, List<PlanModel> plans) {
     if (state.isLoading && plans.isEmpty) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (plans.isEmpty) {
-      return Center(
+      return const Center(
         child: Text('No growth plans created yet.'),
       );
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(DS.sm),
+      padding: const EdgeInsets.all(DS.sm),
       itemCount: plans.length,
       itemBuilder: (context, index) => _GrowthPlanCard(plan: plans[index]),
     );
@@ -64,14 +64,14 @@ class _GrowthPlanCard extends StatelessWidget {
           context.push('/plans/${plan.id}/edit');
         },
         child: Padding(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
-              SizedBox(height: DS.xs),
+              const SizedBox(height: DS.xs),
               if (plan.description != null) Text(plan.description!, style: Theme.of(context).textTheme.bodyMedium),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               _buildStatRow(
                 context,
                 'Mastery',
@@ -79,7 +79,7 @@ class _GrowthPlanCard extends StatelessWidget {
                 plan.masteryLevel,
                 Colors.purple,
               ),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               _buildStatRow(
                 context,
                 'Progress',
@@ -103,7 +103,7 @@ class _GrowthPlanCard extends StatelessWidget {
             Text(valueText, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
           ],
         ),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         LinearProgressIndicator(
           value: progressValue,
           backgroundColor: color.withValues(alpha: 0.2),

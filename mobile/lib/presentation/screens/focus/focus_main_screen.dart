@@ -26,7 +26,7 @@ class FocusMainScreen extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.all(DS.xl),
+              padding: const EdgeInsets.all(DS.xl),
               child: Text(
                 '准备好开始专注了吗？',
                 style: TextStyle(
@@ -61,12 +61,12 @@ class FocusMainScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.assignment_turned_in_outlined, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           const Text(
             '没有待办任务',
             style: TextStyle(color: DS.brandPrimary70Const, fontSize: 16),
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           SparkleButton.ghost(label: '创建一个新任务', onPressed: () => context.push('/tasks/new')),
         ],
       ),

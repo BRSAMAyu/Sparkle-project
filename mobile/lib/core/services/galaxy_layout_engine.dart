@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/services/quad_tree.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
@@ -184,26 +185,62 @@ class GalaxyLayoutEngine {
     }
   }
 
-  /// 解决节点重叠
+  /// 解决节点重叠 - 使用四叉树优化碰撞检测
   static void _resolveOverlaps(
     Map<String, Offset> positions,
     List<GalaxyNodeModel> nodes,
   ) {
     const maxIterations = 50;
-    const pushForce = 0.8; // 增强推力
+    const pushForce = 0.8;
 
+    // 使用四叉树加速碰撞检测
     for (var iter = 0; iter < maxIterations; iter++) {
       var hasOverlap = false;
 
-      for (var i = 0; i < nodes.length; i++) {
-        for (var j = i + 1; j < nodes.length; j++) {
-          final nodeA = nodes[i];
-          final nodeB = nodes[j];
-          final posA = positions[nodeA.id]!;
-          final posB = positions[nodeB.id]!;
+      // 构建四叉树
+      final tree = QuadTree<_LayoutNode>(
+        bounds: const Rect.fromLTWH(
+          -outerRadius * 1.5,
+          -outerRadius * 1.5,
+          outerRadius * 3,
+          outerRadius * 3,
+        ),
+        capacity: 8,
+      );
 
-          // 增加安全边距
-          final minDist = minNodeSpacing + nodeA.radius + nodeB.radius;
+      // 插入所有节点
+      for (final node in nodes) {
+        final pos = positions[node.id];
+        if (pos != null) {
+          tree.insert(_LayoutNode(
+            id: node.id,
+            position: pos,
+            radius: node.radius,
+          ),);
+        }
+      }
+
+      // 使用四叉树查询邻近节点进行碰撞检测
+      for (final node in nodes) {
+        final posA = positions[node.id];
+        if (posA == null) continue;
+
+        // 查询可能碰撞的邻近节点
+        final searchRadius = minNodeSpacing + node.radius * 2;
+        final neighbors = tree.queryCircle(posA, searchRadius);
+
+        for (final neighbor in neighbors) {
+          if (neighbor.id == node.id) continue;
+
+          final posB = positions[neighbor.id];
+          if (posB == null) continue;
+
+          final nodeB = nodes.firstWhere(
+            (n) => n.id == neighbor.id,
+            orElse: () => node,
+          );
+
+          final minDist = minNodeSpacing + node.radius + nodeB.radius;
           final delta = posA - posB;
           final dist = delta.distance;
 
@@ -211,10 +248,10 @@ class GalaxyLayoutEngine {
             hasOverlap = true;
             final overlap = minDist - dist;
             final direction = Offset(delta.dx / dist, delta.dy / dist);
-            final push = direction * overlap * pushForce;
+            final push = direction * overlap * pushForce * 0.5;
 
-            positions[nodeA.id] = posA + push;
-            positions[nodeB.id] = posB - push;
+            positions[node.id] = posA + push;
+            positions[neighbor.id] = posB - push;
           }
         }
       }
@@ -222,7 +259,27 @@ class GalaxyLayoutEngine {
       if (!hasOverlap) break;
     }
   }
+}
 
+/// 布局节点包装器（用于四叉树）
+class _LayoutNode implements QuadTreeItem {
+  _LayoutNode({
+    required this.id,
+    required this.position,
+    required this.radius,
+  });
+
+  @override
+  final String id;
+
+  @override
+  final Offset position;
+
+  final double radius;
+}
+
+/// GalaxyLayoutEngine的扩展方法
+extension GalaxyLayoutEngineAsync on GalaxyLayoutEngine {
   /// 在 Isolate 中进行力导向优化
   static Future<Map<String, Offset>> optimizeLayoutAsync({
     required List<GalaxyNodeModel> nodes,

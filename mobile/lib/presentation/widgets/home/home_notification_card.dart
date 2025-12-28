@@ -50,7 +50,7 @@ class HomeNotificationCard extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(DS.sm),
+                        padding: const EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
                           color: _getIconColor(latest.type).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
@@ -61,7 +61,7 @@ class HomeNotificationCard extends ConsumerWidget {
                           size: 16,
                         ),
                       ),
-                      SizedBox(width: DS.md),
+                      const SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +106,7 @@ class HomeNotificationCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                      SizedBox(width: DS.sm),
+                      const SizedBox(width: DS.sm),
                       Icon(
                         Icons.chevron_right_rounded,
                         color: DS.brandPrimary.withValues(alpha: 0.3),
@@ -167,18 +167,18 @@ class HomeNotificationCard extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.sm),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: Colors.purple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.forum_outlined,
                     color: Colors.purple,
                     size: 16,
                   ),
                 ),
-                SizedBox(width: DS.md),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +218,7 @@ class HomeNotificationCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 Icon(
                   Icons.chevron_right_rounded,
                   color: DS.brandPrimary.withValues(alpha: 0.3),

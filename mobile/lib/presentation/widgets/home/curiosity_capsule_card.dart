@@ -18,10 +18,10 @@ class CuriosityCapsuleCard extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
       elevation: 2,
       child: ExpansionTile(
-        tilePadding: EdgeInsets.all(DS.lg),
+        tilePadding: const EdgeInsets.all(DS.lg),
         leading: Container(
-          padding: EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
+          padding: const EdgeInsets.all(DS.sm),
+          decoration: const BoxDecoration(
             gradient: AppDesignTokens.secondaryGradient,
             shape: BoxShape.circle,
           ),
@@ -29,7 +29,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         ),
         title: Text(
           capsule.title,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: capsule.isRead 
             ? null 
@@ -41,12 +41,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         },
         children: [
           Padding(
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MarkdownBody(data: capsule.content),
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 if (capsule.relatedSubject != null)
                   Chip(
                     label: Text(capsule.relatedSubject!),

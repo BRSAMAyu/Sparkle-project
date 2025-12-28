@@ -157,7 +157,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             _TaskTypeChip(type: widget.task.type),
                                             if (widget.task.status == TaskStatus.completed) ...[
                                               const SizedBox(width: AppDesignTokens.spacing4),
-                                              Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
+                                              const Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
                                                const SizedBox(width: AppDesignTokens.spacing4),
                                               _StatusChip(status: widget.task.status),
@@ -169,19 +169,19 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                       Row(
                                         children: [
                                           if (widget.task.dueDate != null) ...[
-                                            Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
-                                            SizedBox(width: DS.xs),
+                                            const Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
+                                            const SizedBox(width: DS.xs),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
-                                              style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                              style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                             ),
                                             const SizedBox(width: AppDesignTokens.spacing12),
                                           ],
-                                          Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
-                                          SizedBox(width: DS.xs),
+                                          const Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
+                                          const SizedBox(width: DS.xs),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
-                                            style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                            style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                           ),
                                         ],
                                       ),
@@ -233,11 +233,11 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.cloud_off, color: DS.brandPrimaryConst, size: 32),
+                                      Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
                                       const SizedBox(height: AppDesignTokens.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
-                                        style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(height: AppDesignTokens.spacing12),
                                       Row(
@@ -248,9 +248,9 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                                ref.read(taskListProvider.notifier).discardChange(widget.task.id);
                                             },
                                             style: TextButton.styleFrom(foregroundColor: DS.brandPrimary),
-                                            child: Text('Discard'),
+                                            child: const Text('Discard'),
                                           ),
-                                          SizedBox(width: DS.sm),
+                                          const SizedBox(width: DS.sm),
                                           ElevatedButton(
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).retryCompleteTask(
@@ -263,7 +263,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                               backgroundColor: DS.brandPrimary,
                                               foregroundColor: AppDesignTokens.error,
                                             ),
-                                            child: Text('Retry'),
+                                            child: const Text('Retry'),
                                           ),
                                         ],
                                       ),
@@ -329,12 +329,12 @@ class _DifficultyStars extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
       children: List.generate(5, (index) => ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
+          shaderCallback: (bounds) => const LinearGradient(
               colors: [Colors.amber, DS.brandPrimary],
             ).createShader(bounds),
           child: Icon(
             index < difficulty ? Icons.star : Icons.star_border,
-            color: DS.brandPrimaryConst, // Color is ignored by shader but needed for structure
+            color: DS.brandPrimary, // Color is ignored by shader but needed for structure
             size: 16,
           ),
         ),),

@@ -217,7 +217,7 @@ class EmptyState extends StatelessWidget {
             // 描述
             Text(
               description ?? _getDefaultDescription(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeBase,
                 color: AppDesignTokens.neutral600,
                 height: AppDesignTokens.lineHeightNormal,
@@ -300,7 +300,7 @@ class CompactEmptyState extends StatelessWidget {
             Container(
               width: 64.0,
               height: 64.0,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppDesignTokens.neutral100,
                 shape: BoxShape.circle,
               ),
@@ -314,7 +314,7 @@ class CompactEmptyState extends StatelessWidget {
           ],
           Text(
             message,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: AppDesignTokens.fontSizeBase,
               color: AppDesignTokens.neutral600,
             ),

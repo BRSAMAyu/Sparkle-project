@@ -113,7 +113,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         child: Container(
           width: 200,
           height: 150,
-          margin: EdgeInsets.all(DS.lg),
+          margin: const EdgeInsets.all(DS.lg),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(12),
@@ -169,7 +169,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
               // 节点可视化区域
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.all(DS.md),
+                  padding: const EdgeInsets.all(DS.md),
                   child: _buildNodeVisualization(trace),
                 ),
               ),

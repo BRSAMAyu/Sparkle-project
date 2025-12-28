@@ -13,7 +13,7 @@ class PlanEditScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('编辑计划'),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
@@ -22,22 +22,22 @@ class PlanEditScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             Text(
               '计划编辑功能开发中',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             Text(
               '计划ID: $planId',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             const Text(
               '此功能正在开发中，即将推出',
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
             SparkleButton.primary(label: '返回', onPressed: () => context.pop()),
           ],
         ),

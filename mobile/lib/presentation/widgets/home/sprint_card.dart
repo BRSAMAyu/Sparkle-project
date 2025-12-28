@@ -35,7 +35,7 @@ class SprintCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: sprint != null
                 ? _buildSprintContent(sprint)
                 : _buildEmptyState(),
@@ -54,12 +54,12 @@ class SprintCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header
-        const Text(
+        Text(
           '冲刺',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: DS.brandPrimary70Const,
+            color: DS.brandPrimary70,
           ),
         ),
 
@@ -134,7 +134,7 @@ class SprintCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withAlpha(20),
             borderRadius: BorderRadius.circular(10),
@@ -148,15 +148,15 @@ class SprintCard extends ConsumerWidget {
 
         const Spacer(),
 
-        const Text(
+        Text(
           '无冲刺计划',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: DS.brandPrimary70Const,
+            color: DS.brandPrimary70,
           ),
         ),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           '点击创建',
           style: TextStyle(

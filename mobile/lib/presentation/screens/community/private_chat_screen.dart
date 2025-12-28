@@ -76,7 +76,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             child: chatState.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -102,7 +102,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   },
                 );
               },
-              loading: () => Center(child: LoadingIndicator()),
+              loading: () => const Center(child: LoadingIndicator()),
               error: (e, s) => Center(
                 child: CustomErrorWidget.page(
                   message: e.toString(),

@@ -195,7 +195,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
   }
 
   Widget _buildHeader() => Padding(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       child: Row(
         children: [
           IconButton(
@@ -236,7 +236,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
 
   Widget _buildStepContent(_DemoStep step) => SingleChildScrollView(
       key: ValueKey(_currentStep),
-      padding: EdgeInsets.all(DS.xxl),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -244,7 +244,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           FadeTransition(
             opacity: _animationController,
             child: Container(
-              padding: EdgeInsets.all(DS.xl),
+              padding: const EdgeInsets.all(DS.xl),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
@@ -256,7 +256,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               ),
             ),
           ),
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Title
           FadeTransition(
@@ -271,7 +271,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               ),
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
 
           // Subtitle
           FadeTransition(
@@ -285,7 +285,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               ),
             ),
           ),
-          SizedBox(height: DS.xxxl),
+          const SizedBox(height: DS.xxxl),
 
           // Content
           _buildStepDetails(_currentStep),
@@ -331,7 +331,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('实时可视化：右下角显示检索过程'),
         _buildBulletPoint('颜色编码：蓝色=向量，紫色=图谱，绿色=兴趣'),
         _buildBulletPoint('性能提升：相比纯向量检索提升 40%'),
-        SizedBox(height: DS.xxl),
+        const SizedBox(height: DS.xxl),
         _buildDemoBox(
           '演示要点',
           [
@@ -351,7 +351,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('拖动滑块查看未来 0-90 天的知识状态'),
         _buildBulletPoint('"如果现在复习？" - 模拟干预效果'),
         _buildBulletPoint('颜色变化：绿色→橙色→红色（掌握度下降）'),
-        SizedBox(height: DS.xxl),
+        const SizedBox(height: DS.xxl),
         _buildDemoBox(
           '演示要点',
           [
@@ -372,7 +372,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('Orchestrator 根据查询路由到最合适的智能体'),
         _buildBulletPoint('可视化推理过程，提高透明度'),
         _buildBulletPoint('支持多智能体协作（例如：代码+数学）'),
-        SizedBox(height: DS.xxl),
+        const SizedBox(height: DS.xxl),
         _buildDemoBox(
           '演示要点',
           [
@@ -392,7 +392,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('缓存命中率统计，LRU 驱逐策略'),
         _buildBulletPoint('PostgreSQL 连接池优化：pool_size=20, max_overflow=30'),
         _buildBulletPoint('连接健康检查，Prometheus 监控集成'),
-        SizedBox(height: DS.xxl),
+        const SizedBox(height: DS.xxl),
         _buildMetricsBox([
           _Metric('缓存命中率', '85%', Icons.trending_up),
           _Metric('平均响应时间', '< 100ms', Icons.speed),
@@ -408,7 +408,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('难度预测：评估主题难度和前置知识'),
         _buildBulletPoint('最佳时间推荐：分析历史数据找出高效时段'),
         _buildBulletPoint('流失风险检测：早期发现学习倦怠'),
-        SizedBox(height: DS.xxl),
+        const SizedBox(height: DS.xxl),
         _buildDemoBox(
           '演示要点',
           [
@@ -432,12 +432,12 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: DS.xl),
+        const SizedBox(height: DS.xl),
         _buildBulletPoint('技术栈：Go + Python + Flutter 混合架构'),
         _buildBulletPoint('创新点：GraphRAG、时间机器、多智能体'),
         _buildBulletPoint('工程化：性能优化、监控、测试'),
         _buildBulletPoint('用户体验：可视化、交互式、智能化'),
-        SizedBox(height: DS.xxxl),
+        const SizedBox(height: DS.xxxl),
         const Text(
           '未来方向',
           style: TextStyle(
@@ -446,7 +446,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: DS.xl),
+        const SizedBox(height: DS.xl),
         _buildBulletPoint('增强 AI 推理能力（Agent SDK 集成）'),
         _buildBulletPoint('扩展知识领域（6+1 星域全覆盖）'),
         _buildBulletPoint('社交学习功能（组队、PK、排行榜）'),
@@ -468,7 +468,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               shape: BoxShape.circle,
             ),
           ),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Text(
               text,
@@ -484,7 +484,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     );
 
   Widget _buildDemoBox(String title, List<String> points) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -501,13 +501,13 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           ...points.map((point) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Icon(Icons.arrow_right, color: DS.brandPrimaryConst, size: 20),
-                    SizedBox(width: DS.sm),
+                    const SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         point,
@@ -522,7 +522,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     );
 
   Widget _buildMetricsBox(List<_Metric> metrics) => Container(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -533,7 +533,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         children: metrics.map((m) => Column(
               children: [
                 Icon(m.icon, color: DS.brandPrimaryConst, size: 40),
-                SizedBox(height: DS.md),
+                const SizedBox(height: DS.md),
                 Text(
                   m.value,
                   style: TextStyle(
@@ -542,7 +542,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: DS.xs),
+                const SizedBox(height: DS.xs),
                 Text(
                   m.label,
                   style: TextStyle(
@@ -556,14 +556,14 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     );
 
   Widget _buildNavigationControls() => Padding(
-      padding: EdgeInsets.all(DS.xl),
+      padding: const EdgeInsets.all(DS.xl),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Previous button
           ElevatedButton.icon(
             onPressed: _currentStep > 0 ? _previousStep : null,
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             label: const Text('上一步'),
             style: ElevatedButton.styleFrom(
               backgroundColor: DS.brandPrimary.withValues(alpha: 0.2),
@@ -590,7 +590,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           // Next button
           ElevatedButton.icon(
             onPressed: _currentStep < _totalSteps - 1 ? _nextStep : null,
-            icon: Icon(Icons.arrow_forward),
+            icon: const Icon(Icons.arrow_forward),
             label: const Text('下一步'),
             style: ElevatedButton.styleFrom(
               backgroundColor: DS.brandPrimary.withValues(alpha: 0.2),
@@ -615,7 +615,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.timer, color: DS.brandPrimaryConst, size: 16),
-            SizedBox(width: DS.sm),
+            const SizedBox(width: DS.sm),
             Text(
               '${step.duration.inSeconds}s',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),

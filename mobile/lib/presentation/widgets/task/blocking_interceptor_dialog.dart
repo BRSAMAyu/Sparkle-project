@@ -82,12 +82,12 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
               Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(DS.sm),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: AppDesignTokens.warning.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.block, color: AppDesignTokens.warning),
+                    child: const Icon(Icons.block, color: AppDesignTokens.warning),
                   ),
                   const SizedBox(width: AppDesignTokens.spacing12),
                   Expanded(

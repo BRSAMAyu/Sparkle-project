@@ -81,7 +81,7 @@ class _ZoomControlsState extends State<ZoomControls> with TickerProviderStateMix
     final t2 = Matrix4.translationValues(-center.dx, -center.dy, 0);
 
     // Use explicit casting to avoid dynamic type issues
-    final Matrix4 newMatrix = (t1 * s * t2 * currentMatrix) as Matrix4;
+    final newMatrix = (t1 * s * t2 * currentMatrix) as Matrix4;
 
     // Use smooth animation with AnimationController
     final animationController = AnimationController(

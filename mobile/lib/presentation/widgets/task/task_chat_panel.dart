@@ -56,8 +56,8 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(DS.sm),
+                    decoration: const BoxDecoration(
                       gradient: AppDesignTokens.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
@@ -85,7 +85,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                  "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
                  maxLines: 1,
                  overflow: TextOverflow.ellipsis,
-                 style: TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
+                 style: const TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
                ),
              ),
 
@@ -95,21 +95,21 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
               height: 300,
               color: AppDesignTokens.neutral50,
               child: messages.isEmpty 
-                  ? Center(
+                  ? const Center(
                       child: Text(
                         '有问题尽管问我！', 
                         style: TextStyle(color: AppDesignTokens.neutral400),
                       ),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.all(DS.lg),
+                      padding: const EdgeInsets.all(DS.lg),
                       itemCount: messages.length,
                       itemBuilder: (context, index) => ChatBubble(message: messages[index]),
                     ),
             ),
             const Divider(height: 1),
             Padding(
-              padding: EdgeInsets.all(DS.sm),
+              padding: const EdgeInsets.all(DS.sm),
               child: Row(
                 children: [
                   Expanded(
@@ -124,7 +124,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   if (chatState.isLoading)
-                    Padding(
+                    const Padding(
                       padding: EdgeInsets.all(DS.sm),
                       child: SizedBox(
                         width: 16, 
@@ -134,7 +134,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     )
                   else
                     IconButton(
-                      icon: Icon(Icons.send, color: AppDesignTokens.primaryBase),
+                      icon: const Icon(Icons.send, color: AppDesignTokens.primaryBase),
                       onPressed: _sendMessage,
                     ),
                 ],

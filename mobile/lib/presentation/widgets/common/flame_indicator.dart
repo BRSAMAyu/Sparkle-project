@@ -116,7 +116,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
     }
 
     if (widget.brightness >= 80) {
-      return LinearGradient(
+      return const LinearGradient(
         colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -229,7 +229,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
             const SizedBox(width: AppDesignTokens.spacing4),
             Text(
               'Lv.${widget.level}',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeLg,
                 fontWeight: AppDesignTokens.fontWeightBold,
                 color: AppDesignTokens.neutral900,
@@ -241,7 +241,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
         // 亮度
         Text(
           '亮度 ${widget.brightness}%',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: AppDesignTokens.fontSizeSm,
             color: AppDesignTokens.neutral600,
           ),
@@ -377,7 +377,7 @@ class CompactFlameIndicator extends StatelessWidget {
               children: [
                 Text(
                   'Lv.$level',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeSm,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     color: AppDesignTokens.neutral900,
@@ -385,7 +385,7 @@ class CompactFlameIndicator extends StatelessWidget {
                 ),
                 Text(
                   '$brightness%',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeXs,
                     color: AppDesignTokens.neutral600,
                   ),

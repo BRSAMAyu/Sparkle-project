@@ -40,7 +40,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('密码修改成功'), backgroundColor: DS.successConst),
+          SnackBar(content: const Text('密码修改成功'), backgroundColor: DS.successConst),
         );
         Navigator.of(context).pop();
       }
@@ -167,7 +167,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           obscureText: obscureText,
           validator: validator,
           decoration: InputDecoration(
-            prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
             suffixIcon: IconButton(
               icon: Icon(
                 obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,

@@ -34,7 +34,6 @@ library;
 // 便捷导入
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
 export 'tokens_v2/animation_token.dart';
@@ -190,46 +189,6 @@ class DS {
   // 缓存 ThemeManager 实例以提升性能
   static SparkleThemeData get _theme => ThemeManager().current;
 
-  // ==================== 静态常量定义 (定义时严谨) ====================
-
-  // 颜色常量 (使用硬编码值，确保const兼容性)
-  static const Color brandPrimaryConst = Color(0xFFFF6B35);
-  static const Color brandSecondaryConst = Color(0xFF1A237E);
-  static const Color successConst = Color(0xFF4CAF50);
-  static const Color warningConst = Color(0xFFFF9800);
-  static const Color errorConst = Color(0xFFF44336);
-  static const Color infoConst = Color(0xFF2196F3);
-
-  // 透明度变体常量
-  static const Color brandPrimary10Const = Color(0x1AFF6B35);
-  static const Color brandPrimary12Const = Color(0x1FFF6B35);
-  static const Color brandPrimary24Const = Color(0x3DFF6B35);
-  static const Color brandPrimary26Const = Color(0x42FF6B35);
-  static const Color brandPrimary30Const = Color(0x4DFF6B35);
-  static const Color brandPrimary38Const = Color(0x61FF6B35);
-  static const Color brandPrimary45Const = Color(0x73FF6B35);
-  static const Color brandPrimary54Const = Color(0x8AFF6B35);
-  static const Color brandPrimary70Const = Color(0xB3FF6B35);
-  static const Color brandPrimary87Const = Color(0xDEFF6B35);
-
-  // 间距常量
-  static const double xsConst = 4.0;
-  static const double smConst = 8.0;
-  static const double mdConst = 12.0;
-  static const double lgConst = 16.0;
-  static const double xlConst = 20.0;
-  static const double xxlConst = 24.0;
-  static const double xxxlConst = 32.0;
-
-  // 圆角常量
-  static const double radiusSmConst = 4.0;
-  static const double radiusMdConst = 8.0;
-  static const double radiusLgConst = 12.0;
-  static const double radiusXlConst = 16.0;
-  static const double radiusFullConst = 9999.0;
-
-  // ==================== 动态getter (运行时主题切换) ====================
-
   // 颜色
   static Color get brandPrimary => _theme.colors.brandPrimary;
   static Color get brandSecondary => _theme.colors.brandSecondary;
@@ -264,6 +223,14 @@ class DS {
   static Color get brandPrimary700 => brandPrimary.withValues(alpha: 0.8);
   static Color get brandPrimary800 => brandPrimary.withValues(alpha: 0.9);
   static Color get brandPrimary900 => brandPrimary; // Fully opaque
+  
+  // Const variants for backward compatibility (for const constructors)
+  static Color get brandPrimaryConst => brandPrimary;
+  static Color get brandPrimary10Const => brandPrimary10;
+  static Color get brandPrimary30Const => brandPrimary30;
+  static Color get brandPrimary38Const => brandPrimary38;
+  static Color get brandPrimary54Const => brandPrimary54;
+  static Color get brandPrimary70Const => brandPrimary70;
 
   static Color get error50 => error.withValues(alpha: 0.05);
   static Color get error100 => error.withValues(alpha: 0.1);
@@ -286,15 +253,21 @@ class DS {
   static Color get success700 => success.withValues(alpha: 0.8);
   static Color get success800 => success.withValues(alpha: 0.9);
   static Color get success900 => success; // Fully opaque
+  
+  // Const variants for semantic colors
+  static Color get successConst => success;
 
-  // 间距
-  static double get xs => SpacingSystem.xs;
-  static double get sm => SpacingSystem.sm;
-  static double get md => SpacingSystem.md;
-  static double get lg => SpacingSystem.lg;
-  static double get xl => SpacingSystem.xl;
-  static double get xxl => SpacingSystem.xxl;
-  static double get xxxl => SpacingSystem.xxxl;
+  // 间距 (常量版本用于const构造函数)
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+  static const double xxl = 48.0;
+  static const double xxxl = 64.0;
+  
+  // Const aliases for backward compatibility
+  static const double smConst = 8.0;
 
   // 动画
   static Duration get quick => AnimationSystem.quick;

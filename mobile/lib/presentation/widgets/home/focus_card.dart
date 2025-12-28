@@ -68,7 +68,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -132,7 +132,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                           ),
                       ),
-                      SizedBox(height: DS.md),
+                      const SizedBox(height: DS.md),
                       // Nudge Message
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -157,7 +157,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                 ),
                 
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
 
                 // Metrics Row
                 Row(

@@ -47,7 +47,7 @@ class SplashScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 40),
-            CircularProgressIndicator(),
+            const CircularProgressIndicator(),
           ],
         ),
       ),

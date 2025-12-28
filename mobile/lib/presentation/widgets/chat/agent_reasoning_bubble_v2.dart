@@ -116,7 +116,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         child: Row(
           children: [
             // Animated Agent Icon
@@ -149,7 +149,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               ),
             ),
 
-            SizedBox(width: DS.md),
+            const SizedBox(width: DS.md),
 
             // Status Text
             Expanded(
@@ -206,7 +206,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
   Widget _buildStepStream(ThemeData theme) => Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -243,7 +243,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             ],
           ),
 
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
 
           // Steps List
           ...widget.steps.asMap().entries.map((entry) {
@@ -271,7 +271,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               child: _buildStepStatusIcon(step.status),
             ),
 
-            SizedBox(width: DS.sm),
+            const SizedBox(width: DS.sm),
 
             // Step Content
             Expanded(
@@ -291,7 +291,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   if (step.toolOutput != null && step.toolOutput!.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(top: 6),
-                      padding: EdgeInsets.all(DS.sm),
+                      padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary87,
                         borderRadius: BorderRadius.circular(6),
@@ -337,7 +337,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                     size: 12,
                                     color: DS.brandPrimaryConst,
                                   ),
-                                  SizedBox(width: DS.xs),
+                                  const SizedBox(width: DS.xs),
                                   Text(
                                     '引用: $citation',
                                     style: TextStyle(
@@ -569,7 +569,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         children: [
           // Header
           Container(
-            padding: EdgeInsets.all(DS.md),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: Colors.purple.shade100.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
@@ -584,7 +584,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   color: Colors.purple.shade700,
                   size: 24,
                 ),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
                     '多专家协作回答',
@@ -621,8 +621,8 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           // Summary (if provided)
           if (summary != null)
             Container(
-              margin: EdgeInsets.all(DS.md),
-              padding: EdgeInsets.all(DS.md),
+              margin: const EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(12),
@@ -650,7 +650,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Text(
                     summary!,
                     style: theme.textTheme.bodyMedium,
@@ -665,7 +665,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
 
   Widget _buildContributionTile(AgentContribution contribution, ThemeData theme) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(12),
@@ -691,7 +691,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   size: 14,
                 ),
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Text(
                 contribution.agentName,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -710,7 +710,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               ],
             ],
           ),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           Text(
             contribution.responseText,
             style: theme.textTheme.bodyMedium,

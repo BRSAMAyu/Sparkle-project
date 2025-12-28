@@ -135,7 +135,7 @@ class LoadingIndicator extends StatelessWidget {
           const SizedBox(height: AppDesignTokens.spacing12),
           Text(
             loadingText ?? '加载中...',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: AppDesignTokens.fontSizeSm,
               color: AppDesignTokens.neutral600,
             ),
@@ -213,7 +213,7 @@ class LoadingIndicator extends StatelessWidget {
                 const SizedBox(height: AppDesignTokens.spacing20),
                 Text(
                   loadingText!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeBase,
                     fontWeight: AppDesignTokens.fontWeightMedium,
                     color: AppDesignTokens.neutral900,

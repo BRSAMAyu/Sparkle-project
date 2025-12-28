@@ -207,7 +207,7 @@ class CustomErrorWidget extends StatelessWidget {
             // 错误标题
             Text(
               title ?? _getDefaultTitle(),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSize2xl,
                 fontWeight: AppDesignTokens.fontWeightBold,
                 color: AppDesignTokens.neutral900,
@@ -218,7 +218,7 @@ class CustomErrorWidget extends StatelessWidget {
             // 错误消息
             Text(
               message,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppDesignTokens.fontSizeBase,
                 color: AppDesignTokens.neutral600,
                 height: AppDesignTokens.lineHeightNormal,
@@ -294,7 +294,7 @@ class CustomErrorWidget extends StatelessWidget {
               if (onClose != null) ...[
                 const SizedBox(width: AppDesignTokens.spacing12),
                 IconButton(
-                  icon: Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded),
                   color: DS.brandPrimaryConst,
                   iconSize: AppDesignTokens.iconSizeSm,
                   padding: EdgeInsets.zero,

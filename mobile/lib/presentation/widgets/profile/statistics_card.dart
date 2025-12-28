@@ -25,7 +25,7 @@ class StatisticsCard extends StatelessWidget {
                   color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.show_chart_rounded,
                   color: AppDesignTokens.primaryBase,
                   size: 16,
@@ -86,7 +86,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         days[value.toInt()],
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppDesignTokens.neutral500,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
