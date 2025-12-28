@@ -1,12 +1,25 @@
+import 'dart:io';
+
 /// API Constants
 class ApiConstants {
   // Base URL (HTTP)
-  static const String baseUrl = 'http://localhost:8080';
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8080';
+    }
+    return 'http://localhost:8080';
+  }
+  
   static const String apiVersion = 'v1';
   static const String apiBasePath = '/api/$apiVersion';
 
   // WebSocket URL (Go Gateway)
-  static const String wsBaseUrl = 'ws://localhost:8080';
+  static String get wsBaseUrl {
+    if (Platform.isAndroid) {
+      return 'ws://10.0.2.2:8080';
+    }
+    return 'ws://localhost:8080';
+  }
   static const String wsChat = '/ws/chat';
 
   // Endpoints

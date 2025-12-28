@@ -91,7 +91,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
             if (_mainController.value > 0.4 && _mainController.value < 0.8)
               Opacity(
                  opacity: (_mainController.value - 0.4) / 0.2, // Fade in
-                 child: const Text(
+                 child: Text(
                    'SPARKLE',
                    style: TextStyle(
                      color: DS.brandPrimaryConst,

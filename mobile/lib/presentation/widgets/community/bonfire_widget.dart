@@ -133,7 +133,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.bolt, size: 14, color: baseColor),
-                  const SizedBox(width: DS.xs),
+                  SizedBox(width: DS.xs),
                   Text(
                     'Lv.${widget.level}',
                     style: TextStyle(

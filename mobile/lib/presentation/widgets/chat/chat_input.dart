@@ -155,7 +155,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                       child: Center(
                         child: _isSending
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 22,
                                 height: 22,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),

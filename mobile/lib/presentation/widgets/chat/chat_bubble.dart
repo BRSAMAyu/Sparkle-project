@@ -128,7 +128,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
             children: [
               if (widget.onQuote != null && widget.message is PrivateMessageInfo)
                 ListTile(
-                  leading: Icon(Icons.format_quote_rounded),
+                  leading: const Icon(Icons.format_quote_rounded),
                   title: const Text('引用'),
                   onTap: () {
                     Navigator.pop(context);
@@ -136,7 +136,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   },
                 ),
               ListTile(
-                leading: Icon(Icons.copy_rounded),
+                leading: const Icon(Icons.copy_rounded),
                 title: const Text('复制'),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: _content));
@@ -148,14 +148,14 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
               ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
-                  leading: Icon(Icons.undo_rounded, color: AppDesignTokens.error),
+                  leading: const Icon(Icons.undo_rounded, color: AppDesignTokens.error),
                   title: const Text('撤销', style: TextStyle(color: AppDesignTokens.error)),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onRevoke!(widget.message);
                   },
                 ),
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
             ],
           ),
         ),
@@ -308,10 +308,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                   children: [
                     if (isUser) _buildMessageStatus(),
-                    SizedBox(width: DS.xs),
+                    const SizedBox(width: DS.xs),
                     Text(
                       timeStr,
-                      style: TextStyle(fontSize: 10, color: AppDesignTokens.neutral500),
+                      style: const TextStyle(fontSize: 10, color: AppDesignTokens.neutral500),
                     ),
                   ],
                 ),
@@ -360,7 +360,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
           _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
-          style: TextStyle(fontSize: 12, color: AppDesignTokens.neutral400),
+          style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral400),
         ),
       ),
     );
@@ -373,7 +373,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
     }
     if (msg.hasError) {
-      return Icon(Icons.error_outline, color: AppDesignTokens.error, size: 14);
+      return const Icon(Icons.error_outline, color: AppDesignTokens.error, size: 14);
     }
 
     final isRead = msg.isRead || msg.readAt != null;
@@ -386,7 +386,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           color: isRead ? AppDesignTokens.info : AppDesignTokens.neutral400,
         ),
         if (isRead)
-          Padding(
+          const Padding(
             padding: EdgeInsets.only(left: 2),
             child: Text('已读', style: TextStyle(fontSize: 10, color: AppDesignTokens.info)),
           ),
@@ -488,7 +488,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 500),
       curve: Curves.elasticOut,
-      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: AppDesignTokens.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: Offset(0, 4))])),
+      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: AppDesignTokens.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: const Offset(0, 4))])),
     );
 }
 

@@ -55,13 +55,29 @@ Page<dynamic> _buildTransitionPage({
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  // Create a notifier to sync auth state with GoRouter without rebuilding the router itself
+  final authStateNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
+
+  // Update the notifier when auth state changes
+  ref.listen<AuthState>(
+    authProvider,
+    (_, next) {
+      authStateNotifier.value = next;
+    },
+  );
+
+  // Dispose the notifier when the provider is disposed
+  ref.onDispose(() => authStateNotifier.dispose());
 
   return GoRouter(
     navigatorKey: navigatorKey, // Set the global navigator key
     initialLocation: '/',
     debugLogDiagnostics: true,
+    refreshListenable: authStateNotifier,
     redirect: (context, state) {
+      // Access the latest value from the notifier
+      final authState = authStateNotifier.value;
+      
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
       final isOnSplash = state.uri.path == '/';
@@ -69,15 +85,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Still loading authentication state
       if (isLoading) {
+        // If we are already on an auth page, let the page handle the loading UI
+        if (isOnAuth) return null;
+
         return isOnSplash ? null : '/';
       }
 
-      // Not authenticated and not on auth pages
+      // Not authenticated and trying to access protected routes
       if (!isAuthenticated && !isOnAuth) {
         return '/login';
       }
 
-      // Authenticated but on auth pages or splash
+      // Authenticated but trying to access auth pages or splash
       if (isAuthenticated && (isOnAuth || isOnSplash)) {
         return '/home';
       }

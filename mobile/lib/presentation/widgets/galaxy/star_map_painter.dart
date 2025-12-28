@@ -166,12 +166,16 @@ class StarMapPainter extends CustomPainter {
 
   int _generateCacheKey() {
     // Generate a unique key based on the data that affects the processed output
-    // Note: 'nodes' and 'edges' lists usually change reference when filtered
-    // 'positions' map reference also likely changes on layout updates
+    // Optimized: Avoid identityHashCode(positions) as the map instance is recreated often.
+    // Instead, sample actual position values which are stable across recreations.
     return Object.hash(
       identityHashCode(nodes),
       identityHashCode(edges),
-      identityHashCode(positions),
+      nodes.length,
+      edges.length,
+      // Sample positions to detect layout changes without checking the whole map
+      nodes.isNotEmpty ? positions[nodes.first.id] : 0,
+      nodes.length > 10 ? positions[nodes[nodes.length ~/ 2].id] : 0,
     );
   }
 

@@ -50,21 +50,21 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
           // Header
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+              padding: EdgeInsets.all(AppDesignTokens.spacing12),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: const BoxDecoration(
+                    padding: EdgeInsets.all(DS.sm),
+                    decoration: BoxDecoration(
                       gradient: AppDesignTokens.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 18),
                   ),
-                  const SizedBox(width: AppDesignTokens.spacing12),
-                  const Text(
+                  SizedBox(width: AppDesignTokens.spacing12),
+                  Text(
                     'AI 学习助手',
                     style: TextStyle(
                       fontWeight: AppDesignTokens.fontWeightBold,
@@ -80,42 +80,42 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
           
           if (!_isExpanded && lastMessage != null)
              Padding(
-               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                child: Text(
                  "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
                  maxLines: 1,
                  overflow: TextOverflow.ellipsis,
-                 style: const TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
+                 style: TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
                ),
              ),
 
           if (_isExpanded) ...[
-            const Divider(height: 1),
+            Divider(height: 1),
             Container(
               height: 300,
               color: AppDesignTokens.neutral50,
               child: messages.isEmpty 
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         '有问题尽管问我！', 
                         style: TextStyle(color: AppDesignTokens.neutral400),
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(DS.lg),
+                      padding: EdgeInsets.all(DS.lg),
                       itemCount: messages.length,
                       itemBuilder: (context, index) => ChatBubble(message: messages[index]),
                     ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(DS.sm),
+              padding: EdgeInsets.all(DS.sm),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '输入问题...',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 16),
@@ -124,7 +124,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   if (chatState.isLoading)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(DS.sm),
                       child: SizedBox(
                         width: 16, 
@@ -134,7 +134,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     )
                   else
                     IconButton(
-                      icon: const Icon(Icons.send, color: AppDesignTokens.primaryBase),
+                      icon: Icon(Icons.send, color: AppDesignTokens.primaryBase),
                       onPressed: _sendMessage,
                     ),
                 ],

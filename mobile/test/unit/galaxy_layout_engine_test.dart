@@ -142,7 +142,7 @@ void main() {
           edges: testEdges,
         );
 
-        final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
+        final optimizedPositions = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: testNodes,
           edges: testEdges,
           initialPositions: initialPositions,
@@ -158,7 +158,7 @@ void main() {
           edges: testEdges,
         );
 
-        final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
+        final optimizedPositions = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: testNodes,
           edges: testEdges,
           initialPositions: initialPositions,
@@ -172,7 +172,7 @@ void main() {
       });
 
       test('handles empty input', () async {
-        final positions = await GalaxyLayoutEngine.optimizeLayoutAsync(
+        final positions = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: [],
           edges: [],
           initialPositions: {},

@@ -125,19 +125,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         tags: tags,
         dueDate: _dueDate,
         knowledgeNodeId: _selectedKnowledgeNodeId,
-        // TODO: Pass generateGuide flag to API if supported via query param or extended DTO
-        // Currently API takes generate_guide as query param. 
-        // TaskRepository.createTask needs update or we assume default behavior.
-        // For now, we just create the task. 
-        // If we want to support the flag, we might need to update repository method signature.
-        // Leaving as is for MVP, backend defaults to False.
       );
-      
-      // Note: The repository method currently doesn't accept the 'generate_guide' query param.
-      // We will proceed without it for now, or update the repo if critical.
-      // The requirement says "AI Guide Generation Switch", so it is important.
-      // But I didn't update the repository yet. 
-      // I'll call the repository as is.
       
       await ref.read(taskRepositoryProvider).createTask(taskCreate);
       
@@ -188,7 +176,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               },
             ),
             if (_isLoadingSuggestions)
-              Padding(
+              const Padding(
                 padding: EdgeInsets.only(top: 8.0),
                 child: LinearProgressIndicator(minHeight: 2),
               ),
@@ -198,8 +186,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('brandPrimary'),
-                    SizedBox(height: DS.xs),
+                    const Text('建议关联知识点', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 4),
                     Wrap(
                       spacing: 8,
                       children: _suggestions!.suggestedNodes.map((node) => ActionChip(
@@ -207,7 +195,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           label: Text(node.name),
                           onPressed: () => _applySuggestion(node),
                           tooltip: node.reason,
-                          backgroundColor: node.isNew ? DS.success.shade50 : DS.brandPrimary.shade50,
+                          backgroundColor: node.isNew ? Colors.green.shade50 : DS.brandPrimary.withValues(alpha: 0.1),
                         ),).toList(),
                     ),
                   ],
@@ -217,7 +205,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
             // Type Selector
             DropdownButtonFormField<TaskType>(
-              initialValue: _selectedType,
+              value: _selectedType,
               decoration: const InputDecoration(
                 labelText: '任务类型',
                 border: OutlineInputBorder(),
@@ -257,7 +245,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: _estimatedMinutes,
+                    value: _estimatedMinutes,
                     decoration: const InputDecoration(
                       labelText: '预计时长',
                       border: OutlineInputBorder(),
@@ -273,7 +261,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 SizedBox(width: DS.lg),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: _difficulty,
+                    value: _difficulty,
                     decoration: const InputDecoration(
                       labelText: '难度',
                       border: OutlineInputBorder(),
@@ -292,7 +280,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             
             // Energy Cost
             DropdownButtonFormField<int>(
-              initialValue: _energyCost,
+              value: _energyCost,
               decoration: const InputDecoration(
                 labelText: '能量消耗',
                 border: OutlineInputBorder(),
@@ -312,9 +300,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               subtitle: Text(_dueDate == null 
                 ? '未设置' 
                 : DateFormat('yyyy-MM-dd').format(_dueDate!),),
-              leading: Icon(Icons.calendar_today),
+              leading: const Icon(Icons.calendar_today),
               shape: RoundedRectangleBorder(
-                side: BorderSide(color: DS.brandPrimary.shade400),
+                side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
                 borderRadius: BorderRadius.circular(4),
               ),
               onTap: () async {
@@ -330,7 +318,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               },
               trailing: _dueDate != null
                   ? IconButton(
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                       onPressed: () => setState(() => _dueDate = null),
                     )
                   : null,
@@ -343,7 +331,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               subtitle: const Text('根据任务类型和你的偏好生成分步指导'),
               value: _generateGuide,
               onChanged: (v) => setState(() => _generateGuide = v),
-              secondary: Icon(Icons.auto_awesome),
+              secondary: const Icon(Icons.auto_awesome),
             ),
             SizedBox(height: DS.xxl),
 
@@ -351,8 +339,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitTask,
               icon: _isSubmitting 
-                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(Icons.check),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.check),
               label: Text(_isSubmitting ? '创建中...' : '创建任务'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),

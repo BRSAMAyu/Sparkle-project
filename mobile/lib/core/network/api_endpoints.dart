@@ -1,6 +1,8 @@
+import 'package:sparkle/core/constants/api_constants.dart';
+
 class ApiEndpoints {
-  // TODO: Move to environment variables
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  // Use platform-aware base URL from ApiConstants (points to Gateway 8080)
+  static String get baseUrl => '${ApiConstants.baseUrl}${ApiConstants.apiBasePath}';
   
   // Auth
   static const String register = '/auth/register';

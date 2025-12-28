@@ -193,7 +193,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   ) async {
     try {
       // 使用新的布局引擎进行力导向优化
-      final optimizedPositions = await GalaxyLayoutEngine.optimizeLayoutAsync(
+      final optimizedPositions = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
         nodes: nodes,
         edges: edges,
         initialPositions: initialPositions,
@@ -250,6 +250,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   /// Handle node selection
   void selectNode(String nodeId) {
     if (state.selectedNodeId == nodeId) return;
+    if (state.edges.isEmpty) return;
     
     // Find related nodes to expand connections
     final expanded = <String>{nodeId};

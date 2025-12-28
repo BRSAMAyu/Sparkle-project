@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
@@ -336,7 +335,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('推荐学习: ${node.name}'),
-        backgroundColor: AppDesignTokens.primaryBase,
+        backgroundColor: DS.brandPrimary,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: '查看',
@@ -577,6 +576,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
               child: GalaxyMiniMap(
                 transformationController: _transformationController,
                 canvasSize: _canvasSize,
+                screenSize: MediaQuery.of(context).size,
               ),
             ),
 
@@ -623,7 +623,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
               right: 20,
               child: FloatingActionButton(
                 mini: true,
-                backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
+                backgroundColor: DS.brandPrimary.withValues(alpha: 0.9),
                 child: Icon(Icons.bolt, color: DS.brandPrimary),
                 onPressed: () {
                   // Pick a random node to spark for demo

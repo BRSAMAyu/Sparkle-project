@@ -68,7 +68,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,7 +85,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppDesignTokens.flameCore.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -132,10 +132,10 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                           ),
                       ),
-                      const SizedBox(height: DS.md),
+                      SizedBox(height: DS.md),
                       // Nudge Message
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: DS.brandPrimary.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
@@ -157,7 +157,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                 ),
                 
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
 
                 // Metrics Row
                 Row(
@@ -186,7 +186,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
             color: AppColors.textOnDark(context),
           ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(

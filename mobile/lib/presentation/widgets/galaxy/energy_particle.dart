@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
 
 /// Model representing a single energy particle in the transfer animation
 class EnergyParticle { // For trail effect
@@ -217,7 +216,7 @@ class _EnergyParticlePainter extends CustomPainter {
 
       final trailPaint = Paint()
         ..color = _blendColor(
-          AppDesignTokens.primaryBase,
+          DS.brandPrimary,
           targetColor,
           progress,
         ).withValues(alpha: 0.4 * fadeOut)
@@ -228,7 +227,7 @@ class _EnergyParticlePainter extends CustomPainter {
 
     // Main particle color transitions from fire orange to target color
     final particleColor = _blendColor(
-      AppDesignTokens.primaryBase,
+      DS.brandPrimary,
       targetColor,
       progress,
     );

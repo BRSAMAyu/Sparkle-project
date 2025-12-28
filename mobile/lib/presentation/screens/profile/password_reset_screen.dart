@@ -40,7 +40,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('密码修改成功'), backgroundColor: DS.successConst),
+          SnackBar(content: Text('密码修改成功'), backgroundColor: DS.successConst),
         );
         Navigator.of(context).pop();
       }
@@ -62,7 +62,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('重置密码'),
+        title: Text('重置密码'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -79,7 +79,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: AppDesignTokens.spacing24),
+              SizedBox(height: AppDesignTokens.spacing24),
               _buildPasswordField(
                 label: '当前密码',
                 controller: _oldPasswordController,
@@ -90,7 +90,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppDesignTokens.spacing16),
+              SizedBox(height: AppDesignTokens.spacing16),
               _buildPasswordField(
                 label: '新密码',
                 controller: _newPasswordController,
@@ -102,7 +102,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppDesignTokens.spacing16),
+              SizedBox(height: AppDesignTokens.spacing16),
               _buildPasswordField(
                 label: '确认新密码',
                 controller: _confirmPasswordController,
@@ -113,7 +113,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppDesignTokens.spacing32),
+              SizedBox(height: AppDesignTokens.spacing32),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleReset,
                 style: ElevatedButton.styleFrom(
@@ -126,12 +126,12 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   elevation: 0,
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(color: DS.brandPrimaryConst, strokeWidth: 2),
                       )
-                    : const Text('更新密码', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    : Text('更新密码', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -161,13 +161,13 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
           validator: validator,
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+            prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
             suffixIcon: IconButton(
               icon: Icon(
                 obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,

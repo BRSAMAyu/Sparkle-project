@@ -14,14 +14,14 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -31,9 +31,9 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             ...tasks.map((taskData) => _buildTaskItem(context, taskData)),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Align(
               alignment: Alignment.bottomRight,
               child: TextButton.icon(
@@ -41,8 +41,8 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
                   // 导航到任务列表页面
                   context.push('/tasks');
                 },
-                icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                label: const Text('查看所有任务'),
+                icon: Icon(Icons.arrow_forward_ios, size: 16),
+                label: Text('查看所有任务'),
               ),
             ),
           ],
@@ -58,11 +58,11 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
     final id = taskData['id'] as String;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
           _buildTaskIcon(type),
-          const SizedBox(width: DS.sm),
+          SizedBox(width: DS.sm),
           Expanded(
             child: Text(
               title,
@@ -71,7 +71,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
           ),
           _buildStatusChip(context, status),
           IconButton(
-            icon: const Icon(Icons.info_outline, size: 20),
+            icon: Icon(Icons.info_outline, size: 20),
             onPressed: () {
               // 导航到任务详情页面
               context.push('/tasks/$id');
@@ -108,7 +108,7 @@ class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
       default: color = DS.brandPrimary; label = status;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),

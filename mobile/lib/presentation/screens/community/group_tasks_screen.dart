@@ -16,25 +16,25 @@ class GroupTasksScreen extends ConsumerWidget {
     final tasksState = ref.watch(groupTasksProvider(groupId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Group Tasks')),
+      appBar: AppBar(title: Text('Group Tasks')),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Feature: Show task creation dialog
           _showCreateTaskDialog(context, ref);
         },
-        child: const Icon(Icons.add),
+        child: Icon(Icons.add),
       ),
       body: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return const Center(child: CompactEmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
+            return Center(child: CompactEmptyState(message: 'No tasks yet', icon: Icons.assignment_outlined));
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(groupTasksProvider(groupId).notifier).refresh(),
             child: ListView.separated(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               itemCount: tasks.length,
-              separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+              separatorBuilder: (context, index) => SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final task = tasks[index];
                 return Card(
@@ -44,15 +44,15 @@ class GroupTasksScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (task.description != null) Text(task.description!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: DS.xs),
+                        SizedBox(height: DS.xs),
                         Row(
                           children: [
                             Icon(Icons.timer, size: 14, color: DS.brandPrimary),
-                            const SizedBox(width: DS.xs),
+                            SizedBox(width: DS.xs),
                             Text('${task.estimatedMinutes} min'),
-                            const SizedBox(width: DS.md),
+                            SizedBox(width: DS.md),
                             Icon(Icons.people, size: 14, color: DS.brandPrimary),
-                            const SizedBox(width: DS.xs),
+                            SizedBox(width: DS.xs),
                             Text('${task.totalClaims} claimed'),
                           ],
                         ),
@@ -71,7 +71,7 @@ class GroupTasksScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: LoadingIndicator()),
+        loading: () => Center(child: LoadingIndicator()),
         error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(groupTasksProvider(groupId).notifier).refresh())),
       ),
     );

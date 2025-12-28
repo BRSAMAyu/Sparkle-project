@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 修复所有const错误
-策略：移除所有const BoxDecoration, const TextStyle等中的const关键字
+策略：移除所有包含 DS. 调用的 Widget 构造函数前的 const 关键字
 """
 
 import os
@@ -16,41 +16,24 @@ def fix_const_errors(file_path: Path):
 
         original_content = content
 
-        # 修复模式1: const BoxDecoration(color: DS.xxx)
-        pattern1 = r'const\s+BoxDecoration\('
-        content = re.sub(pattern1, 'BoxDecoration(', content)
-
-        # 修复模式2: const TextStyle(color: DS.xxx)
-        pattern2 = r'const\s+TextStyle\('
-        content = re.sub(pattern2, 'TextStyle(', content)
-
-        # 修复模式3: const InputDecoration
-        pattern3 = r'const\s+InputDecoration\('
-        content = re.sub(pattern3, 'InputDecoration(', content)
-
-        # 修复模式4: const LinearGradient
-        pattern4 = r'const\s+LinearGradient\('
-        content = re.sub(pattern4, 'LinearGradient(', content)
-
-        # 修复模式5: const SizedBox
-        pattern5 = r'const\s+SizedBox\('
-        content = re.sub(pattern5, 'SizedBox(', content)
-
-        # 修复模式6: const Center
-        pattern6 = r'const\s+Center\('
-        content = re.sub(pattern6, 'Center(', content)
-
-        # 修复模式7: const Divider
-        pattern7 = r'const\s+Divider\('
-        content = re.sub(pattern7, 'Divider(', content)
-
-        # 修复模式8: const Icon
-        pattern8 = r'const\s+Icon\('
-        content = re.sub(pattern8, 'Icon(', content)
-
-        # 修复模式9: const CircularProgressIndicator
-        pattern9 = r'const\s+CircularProgressIndicator\('
-        content = re.sub(pattern9, 'CircularProgressIndicator(', content)
+        # 匹配 const Widget( 且内部包含 DS.
+        # 这种复杂的正则可能不太稳，我们还是用简单的替换，把常见的 Widget 都过一遍
+        
+        widgets = [
+            'BoxDecoration', 'TextStyle', 'InputDecoration', 'LinearGradient',
+            'SizedBox', 'Center', 'Divider', 'Icon', 'CircularProgressIndicator',
+            'Text', 'Row', 'Column', 'Expanded', 'Padding', 
+            'Container', 'Stack', 'Positioned', 'SingleChildScrollView', 
+            'ListView', 'IconButton', 'Transform', 'Opacity', 
+            'AnimatedOpacity', 'InkWell', 'GestureDetector', 'Align',
+            'EdgeInsets', 'BorderRadius', 'BorderSide', 'Border'
+        ]
+        
+        for widget in widgets:
+            # 替换 const Widget( 为 Widget(
+            content = re.sub(rf'const\s+{widget}\(', f'{widget}(', content)
+            # 替换 const Widget. 为 Widget.
+            content = re.sub(rf'const\s+{widget}\.', f'{widget}.', content)
 
         if content != original_content:
             with open(file_path, 'w', encoding='utf-8') as f:

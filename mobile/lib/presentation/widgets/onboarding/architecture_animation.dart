@@ -89,7 +89,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
   Widget build(BuildContext context) => Container(
       height: 500,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -153,7 +153,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
       children: List.generate(_totalSteps, (index) => Container(
           width: index == _currentStep ? 24 : 8,
           height: 8,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: index <= _currentStep
                 ? DS.brandPrimary
@@ -195,7 +195,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     final step = steps[_currentStep];
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
@@ -204,7 +204,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(DS.md),
+            padding: EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: DS.brandPrimary.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
@@ -215,7 +215,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
               size: 32,
             ),
           ),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +228,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: DS.xs),
+                SizedBox(height: DS.xs),
                 Text(
                   step['description'] as String,
                   style: TextStyle(

@@ -22,14 +22,14 @@ class ConfirmationDialog extends StatelessWidget {
           children: <Widget>[
             Text(content),
             if (previewData != null && previewData!.isNotEmpty) ...[
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               Text(
                 '操作预览:',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),

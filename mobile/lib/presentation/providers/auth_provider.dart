@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/data/models/user_model.dart';
@@ -58,9 +59,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await _authRepository.login(usernameOrEmail, password);
       final user = await _authRepository.getCurrentUser();
-      state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
+      state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
-      state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
+      state = state.copyWith(isAuthenticated: false, error: e.toString());
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -81,9 +84,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatarUrl: avatarUrl,
       );
       final user = await _authRepository.getCurrentUser();
-      state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
+      state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
-      state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
+      state = state.copyWith(isAuthenticated: false, error: e.toString());
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -91,9 +96,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.register(username, email, password);
-      state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
+      state = state.copyWith(isAuthenticated: true, user: user);
     } catch (e) {
-      state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
+      state = state.copyWith(isAuthenticated: false, error: e.toString());
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -129,10 +136,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.updateProfile(data);
-      state = state.copyWith(isLoading: false, user: user);
+      state = state.copyWith(user: user);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(error: e.toString());
       rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -140,10 +149,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.updateAvatar(filePath);
-      state = state.copyWith(isLoading: false, user: user);
+      state = state.copyWith(user: user);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(error: e.toString());
       rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 
@@ -151,10 +162,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     try {
       await _authRepository.changePassword(oldPassword, newPassword);
-      state = state.copyWith(isLoading: false);
+      // No state change needed other than loading
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(error: e.toString());
       rethrow;
+    } finally {
+      state = state.copyWith(isLoading: false);
     }
   }
 

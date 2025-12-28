@@ -127,7 +127,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
+                            child: Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
                           ),
                         ),
                       ],
@@ -138,12 +138,12 @@ class _LearningModeControlState extends State<LearningModeControl> {
             );
           },
         ),
-        const SizedBox(height: DS.md),
+        SizedBox(height: DS.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildInfoChip('深度: ${(_currentDepth * 100).toInt()}%'),
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
             _buildInfoChip('好奇: ${(_currentCuriosity * 100).toInt()}%'),
           ],
         ),

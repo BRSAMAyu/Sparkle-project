@@ -19,7 +19,7 @@ class HomeNotificationCard extends ConsumerWidget {
     // Show community messages notification if there are unread messages
     if (unreadMessageCount > 0) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: _buildCommunityNotificationCard(context, unreadMessageCount),
       );
     }
@@ -27,13 +27,13 @@ class HomeNotificationCard extends ConsumerWidget {
     return notificationsAsync.when(
       data: (notifications) {
         if (notifications.isEmpty) {
-          return const SizedBox.shrink();
+          return SizedBox.shrink();
         }
 
         final latest = notifications.first;
         
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: GestureDetector(
             onTap: () => context.push('/notifications'),
             child: ClipRRect(
@@ -41,7 +41,7 @@ class HomeNotificationCard extends ConsumerWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.glassBackground,
                     borderRadius: BorderRadius.circular(16),
@@ -50,7 +50,7 @@ class HomeNotificationCard extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(DS.sm),
+                        padding: EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
                           color: _getIconColor(latest.type).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
@@ -61,7 +61,7 @@ class HomeNotificationCard extends ConsumerWidget {
                           size: 16,
                         ),
                       ),
-                      const SizedBox(width: DS.md),
+                      SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +77,7 @@ class HomeNotificationCard extends ConsumerWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
+                            SizedBox(height: 2),
                             Text(
                               latest.content,
                               style: TextStyle(
@@ -92,7 +92,7 @@ class HomeNotificationCard extends ConsumerWidget {
                       ),
                       if (notifications.length > 1)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppDesignTokens.error,
                             borderRadius: BorderRadius.circular(10),
@@ -106,7 +106,7 @@ class HomeNotificationCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                      const SizedBox(width: DS.sm),
+                      SizedBox(width: DS.sm),
                       Icon(
                         Icons.chevron_right_rounded,
                         color: DS.brandPrimary.withValues(alpha: 0.3),
@@ -120,8 +120,8 @@ class HomeNotificationCard extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => SizedBox.shrink(),
+      error: (_, __) => SizedBox.shrink(),
     );
   }
 
@@ -158,7 +158,7 @@ class HomeNotificationCard extends ConsumerWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppDesignTokens.glassBackground,
               borderRadius: BorderRadius.circular(16),
@@ -167,24 +167,24 @@ class HomeNotificationCard extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(DS.sm),
+                  padding: EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: Colors.purple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.forum_outlined,
                     color: Colors.purple,
                     size: 16,
                   ),
                 ),
-                const SizedBox(width: DS.md),
+                SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         '社交消息',
                         style: TextStyle(
                           color: DS.brandPrimaryConst,
@@ -192,7 +192,7 @@ class HomeNotificationCard extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         '你有 $unreadCount 条未读消息',
                         style: TextStyle(
@@ -204,7 +204,7 @@ class HomeNotificationCard extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.error,
                     borderRadius: BorderRadius.circular(12),
@@ -218,7 +218,7 @@ class HomeNotificationCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 Icon(
                   Icons.chevron_right_rounded,
                   color: DS.brandPrimary.withValues(alpha: 0.3),

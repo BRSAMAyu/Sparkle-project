@@ -70,7 +70,7 @@ void main() {
 
         final stopwatch = Stopwatch()..start();
 
-        await GalaxyLayoutEngine.optimizeLayoutAsync(
+        await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
           nodes: nodes,
           edges: edges,
           initialPositions: initial,

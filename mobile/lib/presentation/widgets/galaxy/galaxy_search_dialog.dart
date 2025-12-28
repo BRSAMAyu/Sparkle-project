@@ -67,7 +67,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
   @override
   Widget build(BuildContext context) => Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(DS.xl),
+      insetPadding: EdgeInsets.all(DS.xl),
       child: Container(
         width: double.infinity,
         height: 400,
@@ -86,7 +86,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: TextField(
                 controller: _searchController,
                 style: TextStyle(color: DS.brandPrimary),
@@ -100,18 +100,18 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
                   ),
                   filled: true,
                   fillColor: DS.brandPrimary.withValues(alpha: 0.1),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 onChanged: _onSearchChanged,
                 autofocus: true,
               ),
             ),
             if (_isLoading)
-              const Expanded(
+              Expanded(
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (_results.isEmpty && _searchController.text.isNotEmpty)
-              const Expanded(
+              Expanded(
                 child: Center(
                   child: Text(
                     '未找到相关节点',

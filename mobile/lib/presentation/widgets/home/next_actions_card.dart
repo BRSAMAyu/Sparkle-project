@@ -30,14 +30,14 @@ class NextActionsCard extends ConsumerWidget {
             borderRadius: AppDesignTokens.borderRadius20,
             border: Border.all(color: AppDesignTokens.glassBorder),
           ),
-          padding: const EdgeInsets.all(DS.md),
+          padding: EdgeInsets.all(DS.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     '下一步',
                     style: TextStyle(
                       fontSize: 13,
@@ -52,14 +52,14 @@ class NextActionsCard extends ConsumerWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: DS.md),
+              SizedBox(height: DS.md),
               Expanded(
                 child: nextActions.isEmpty
                     ? _buildEmptyState()
                     : ListView.separated(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: nextActions.length.clamp(0, 1),
-                        separatorBuilder: (context, index) => const SizedBox(height: DS.sm),
+                        separatorBuilder: (context, index) => SizedBox(height: DS.sm),
                         itemBuilder: (context, index) => _NextActionItem(task: nextActions[index]),
                       ),
               ),
@@ -75,7 +75,7 @@ class NextActionsCard extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.done_all_rounded, color: DS.brandPrimary.withAlpha(50), size: 24),
-          const SizedBox(height: DS.xs),
+          SizedBox(height: DS.xs),
           Text(
             '清空啦',
             style: TextStyle(fontSize: 10, color: DS.brandPrimary.withAlpha(100)),
@@ -96,7 +96,7 @@ class _NextActionItem extends ConsumerWidget {
         context.push('/focus/mindfulness', extra: taskModel);
       },
       child: Container(
-        padding: const EdgeInsets.all(DS.sm),
+        padding: EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           color: DS.brandPrimary.withAlpha(10),
           borderRadius: BorderRadius.circular(10),
@@ -114,7 +114,7 @@ class _NextActionItem extends ConsumerWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: DS.xs),
+            SizedBox(height: DS.xs),
             Row(
               children: [
                 Container(
@@ -125,7 +125,7 @@ class _NextActionItem extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: DS.xs),
+                SizedBox(width: DS.xs),
                 Expanded(
                   child: Text(
                     '${task.estimatedMinutes}m',

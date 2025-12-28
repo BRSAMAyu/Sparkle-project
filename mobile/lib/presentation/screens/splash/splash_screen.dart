@@ -9,21 +9,8 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Listen to the auth state changes.
-    // This is robust against the initial state being loading.
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      // Wait for the initial loading to be complete
-      if ((previous?.isLoading ?? false) && next.isLoading == false) {
-        if (next.isAuthenticated) {
-          // User is logged in, go to home
-          // Using replace to prevent going back to splash screen
-          context.replace('/home');
-        } else {
-          // User is not logged in, go to login
-          context.replace('/login');
-        }
-      }
-    });
+    // Redirection logic moved to GoRouter's redirect function in routes.dart
+    // This component now only serves as a visual placeholder during initialization.
 
     // The UI to show while the check is in progress.
     return Scaffold(

@@ -18,7 +18,7 @@ class TaskFeedbackDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
       backgroundColor: DS.brandPrimary,
       child: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: EdgeInsets.all(AppDesignTokens.spacing20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -27,14 +27,14 @@ class TaskFeedbackDialog extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: const BoxDecoration(
+                  padding: EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
                     gradient: AppDesignTokens.primaryGradient,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 24),
                 ),
-                const SizedBox(width: AppDesignTokens.spacing12),
+                SizedBox(width: AppDesignTokens.spacing12),
                 Text(
                   '学习反馈',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -43,7 +43,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppDesignTokens.spacing20),
+            SizedBox(height: AppDesignTokens.spacing20),
             
             // Content
             if (result.feedback != null)
@@ -57,20 +57,20 @@ class TaskFeedbackDialog extends StatelessWidget {
                         fontSize: AppDesignTokens.fontSizeBase,
                         height: 1.5,
                       ),
-                      strong: const TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
+                      strong: TextStyle(fontWeight: FontWeight.bold, color: AppDesignTokens.primaryDark),
                     ),
                   ),
                 ),
               )
             else
-              const Text('任务已完成！继续保持。'),
+              Text('任务已完成！继续保持。'),
               
-            const SizedBox(height: AppDesignTokens.spacing20),
+            SizedBox(height: AppDesignTokens.spacing20),
             
             // Stats Updates
             if (result.flameUpdate != null || result.statsUpdate != null)
               Container(
-                padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+                padding: EdgeInsets.all(AppDesignTokens.spacing12),
                 decoration: BoxDecoration(
                   color: AppDesignTokens.neutral50,
                   borderRadius: AppDesignTokens.borderRadius12,
@@ -96,7 +96,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                 ),
               ),
 
-            const SizedBox(height: AppDesignTokens.spacing24),
+            SizedBox(height: AppDesignTokens.spacing24),
             
             CustomButton.primary(
               text: '太棒了',
@@ -125,9 +125,9 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: color),
-        const SizedBox(height: DS.xs),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+        SizedBox(height: DS.xs),
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
       ],
     );
 }

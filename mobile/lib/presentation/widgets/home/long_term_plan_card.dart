@@ -27,7 +27,7 @@ class LongTermPlanCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
           ),
         ),
@@ -38,7 +38,7 @@ class LongTermPlanCard extends ConsumerWidget {
   Widget _buildContent(BuildContext context, GrowthData growth) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
@@ -60,13 +60,13 @@ class LongTermPlanCard extends ConsumerWidget {
             children: [
               Text(
                 '${(growth.progress * 100).toInt()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppDesignTokens.success,
                 ),
               ),
-              const SizedBox(height: DS.xs),
+              SizedBox(height: DS.xs),
               SizedBox(
                 height: 4,
                 width: 60,
@@ -93,7 +93,7 @@ class LongTermPlanCard extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2),
         Text(
           'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
           style: TextStyle(
@@ -108,7 +108,7 @@ class LongTermPlanCard extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_circle_outline, color: DS.brandPrimary30Const, size: 32),
-        const SizedBox(height: DS.smConst),
+        SizedBox(height: DS.smConst),
         Text(
           '创建长期计划',
           style: TextStyle(fontSize: 12, color: DS.brandPrimary54Const),

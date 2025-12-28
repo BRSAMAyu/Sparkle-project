@@ -5,26 +5,15 @@ import 'package:sparkle/core/design/design_system.dart';
 ///
 /// 显示过去一段时间（默认90天）的学习活跃度
 /// 颜色深度表示学习强度
-class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
+class EngagementHeatmap extends StatelessWidget {
+  const EngagementHeatmap({
     required this.data,
     this.daysToShow = 90,
     this.lowColor = const Color(0xFFE0E0E0),
     this.highColor = const Color(0xFF2E7D32),
     super.key,
-  });List.generate(5(index), {super.key}, {
-          final intensity = index / 4;
-          return Container(
-            width: 12,
-            height: 12,
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: BoxDecoration(
-              color: _getColorForIntensity(intensity),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          );
-        })
+  });
 
-  
   final Map<DateTime, double> data; // DateTime -> intensity (0-1)
   final int daysToShow;
   final Color lowColor;
@@ -35,7 +24,7 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -44,7 +33,7 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
               children: [
                 Icon(Icons.calendar_month, color: DS.brandPrimary.shade600, size: 24),
                 SizedBox(width: DS.md),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -93,7 +82,7 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
               children: List.generate(7, (dayIndex) {
                 final dayOffset = weekIndex * 7 + dayIndex;
                 if (dayOffset >= totalDays) {
-                  return const SizedBox(width: 16, height: 16);
+                  return SizedBox(width: 16, height: 16);
                 }
 
                 final date = startDate.add(Duration(days: dayOffset));
@@ -112,7 +101,7 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
       child: Container(
         width: 14,
         height: 14,
-        margin: const EdgeInsets.all(1),
+        margin: EdgeInsets.all(1),
         decoration: BoxDecoration(
           color: _getColorForIntensity(intensity),
           borderRadius: BorderRadius.circular(2),
@@ -120,16 +109,29 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
       ),
     );
 
-  Widget _buildLegend() => Row(
+  Widget _buildLegend() {
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(brandPrimary),,),
-        void SizedBox(width = DS.xs),
-        ...,
-        void SizedBox(width = DS.xs),
-        void Text(brandPrimary)),
+        Text('低', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
+        SizedBox(width: DS.xs),
+        ...List.generate(5, (index) {
+          final intensity = index / 4;
+          return Container(
+            width: 12,
+            height: 12,
+            margin: EdgeInsets.only(left: DS.xs),
+            decoration: BoxDecoration(
+              color: _getColorForIntensity(intensity),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+        SizedBox(width: DS.xs),
+        Text('高', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
       ],
     );
+  }
 
   Widget _buildStatsSummary() {
     final stats = _calculateStats();
@@ -150,7 +152,7 @@ class EngagementHeatmap extends StatelessWidget {const EngagementHeatmap({
         SizedBox(height: DS.xs),
         Text(
           value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,

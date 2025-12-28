@@ -112,8 +112,8 @@ class _ToolButton extends StatelessWidget {
         child: Column(
           children: [
             Icon(icon, color: color, size: 28),
-            const SizedBox(height: DS.xs),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            SizedBox(height: DS.xs),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),
       ),

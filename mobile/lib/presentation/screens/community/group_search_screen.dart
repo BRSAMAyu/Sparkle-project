@@ -38,7 +38,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
         title: TextField(
           controller: _searchController,
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Search groups...',
             border: InputBorder.none,
             hintStyle: TextStyle(color: DS.brandPrimary70),
@@ -49,7 +49,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(Icons.search),
             onPressed: _handleSearch,
           ),
         ],
@@ -57,7 +57,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
       body: searchState.when(
         data: (groups) {
           if (groups.isEmpty) {
-            return const Center(
+            return Center(
               child: CompactEmptyState(
                 message: 'Search for squads or sprint groups',
                 icon: Icons.search,
@@ -65,9 +65,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             itemCount: groups.length,
-            separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+            separatorBuilder: (context, index) => SizedBox(height: DS.md),
             itemBuilder: (context, index) {
               final group = groups[index];
               return Card(
@@ -79,7 +79,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                   ),
                   title: Text(group.name),
                   subtitle: Text('${group.memberCount} members • ${group.totalFlamePower} flame'),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Icon(Icons.chevron_right),
                   onTap: () {
                     context.push('/community/groups/${group.id}');
                   },
@@ -88,7 +88,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             },
           );
         },
-        loading: () => const Center(child: LoadingIndicator()),
+        loading: () => Center(child: LoadingIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );

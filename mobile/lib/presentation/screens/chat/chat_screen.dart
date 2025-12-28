@@ -82,14 +82,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
                 gradient: AppDesignTokens.secondaryGradient,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 20),
             ),
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -152,7 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         reverse: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
                         // 🆕 显示状态指示器、推理气泡、流式内容或消息
                         itemCount: messages.length +
                             (chatState.isSending ? 1 : 0) +
@@ -162,7 +162,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           // 1. 如果有 AI 状态更新，在最底部显示（reversed 模式下 index 为 0）
                           if (chatState.aiStatus != null && index == 0) {
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
+                              padding: EdgeInsets.only(bottom: 12.0),
                               child: AiStatusIndicator(
                                 status: chatState.aiStatus,
                                 details: chatState.aiStatusDetails,
@@ -180,7 +180,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 : null;
 
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
+                              padding: EdgeInsets.only(bottom: 12.0),
                               child: AgentReasoningBubble(
                                 steps: chatState.reasoningSteps,
                                 isThinking: true,
@@ -196,20 +196,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             // 如果有流式内容，显示它
                             if (chatState.streamingContent.isNotEmpty) {
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 12.0),
+                                padding: EdgeInsets.only(bottom: 12.0),
                                 child: _StreamingBubble(content: chatState.streamingContent),
                               );
                             }
 
                             // 如果没有流式内容且也没有显示状态指示器，则显示通用打字指示器
                             if (!isStatusShowing && !chatState.isReasoningActive) {
-                              return const Padding(
+                              return Padding(
                                 padding: EdgeInsets.only(bottom: 12.0),
                                 child: _TypingIndicator(),
                               );
                             }
 
-                            return const SizedBox.shrink();
+                            return SizedBox.shrink();
                           }
 
                           // 4. 计算正式消息的索引
@@ -218,7 +218,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (chatState.isReasoningActive) msgIndex--;
                           if (chatState.isSending) msgIndex--;
 
-                          if (msgIndex < 0) return const SizedBox.shrink();
+                          if (msgIndex < 0) return SizedBox.shrink();
 
                           final message = messages[messages.length - 1 - msgIndex];
                           return ChatBubble(message: message);
@@ -228,11 +228,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (chatState.error != null)
                  Container(
                    width: double.infinity,
-                   padding: const EdgeInsets.all(DS.sm),
+                   padding: EdgeInsets.all(DS.sm),
                    color: AppDesignTokens.error.withValues(alpha: 0.1),
                    child: Text(
                      'Error: ${chatState.error}', 
-                     style: const TextStyle(color: AppDesignTokens.error),
+                     style: TextStyle(color: AppDesignTokens.error),
                      textAlign: TextAlign.center,
                    ),
                  ),
@@ -265,25 +265,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
           color: isDark ? AppDesignTokens.neutral900 : DS.brandPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
             Container(
               width: 40,
               height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              margin: EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: Row(
                 children: [
-                  const Icon(Icons.history_rounded, color: AppDesignTokens.primaryBase),
-                  const SizedBox(width: DS.md),
+                  Icon(Icons.history_rounded, color: AppDesignTokens.primaryBase),
+                  SizedBox(width: DS.md),
                   Text(
                     '历史对话',
                     style: TextStyle(
@@ -300,7 +300,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 future: ref.read(chatProvider.notifier).getRecentConversations(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(child: CircularProgressIndicator());
                   }
                   
                   if (snapshot.hasError) {
@@ -309,7 +309,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   
                   final sessions = snapshot.data ?? [];
                   if (sessions.isEmpty) {
-                    return const Center(child: Text('暂无历史记录'));
+                    return Center(child: Text('暂无历史记录'));
                   }
                   
                   return ListView.builder(
@@ -320,7 +320,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       
                       return ListTile(
                         leading: Container(
-                          padding: const EdgeInsets.all(DS.sm),
+                          padding: EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: isCurrent ? AppDesignTokens.primaryBase.withValues(alpha: 0.1) : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral100),
                             shape: BoxShape.circle,
@@ -340,9 +340,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         subtitle: Text(
                           session['updated_at']?.split('T')[0] ?? '',
-                          style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral500),
+                          style: TextStyle(fontSize: 12, color: AppDesignTokens.neutral500),
                         ),
-                        trailing: isCurrent ? const Icon(Icons.check_circle, color: AppDesignTokens.primaryBase, size: 18) : null,
+                        trailing: isCurrent ? Icon(Icons.check_circle, color: AppDesignTokens.primaryBase, size: 18) : null,
                         onTap: () {
                           Navigator.pop(context);
                           ref.read(chatProvider.notifier).loadConversationHistory(session['id']);
@@ -363,19 +363,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(DS.xxl),
+        padding: EdgeInsets.all(DS.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, size: 48, color: AppDesignTokens.primaryBase),
+              child: Icon(Icons.auto_awesome, size: 48, color: AppDesignTokens.primaryBase),
             ),
-            const SizedBox(height: DS.xl),
+            SizedBox(height: DS.xl),
             Text(
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -383,14 +383,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
               ),
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral600,
               ),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -460,7 +460,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
         child: Container(
           // Ensure minimum 48px touch target
           height: AppDesignTokens.touchTargetMinSize,
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: AppDesignTokens.spacing16,
             vertical: AppDesignTokens.spacing8,
           ),
@@ -487,7 +487,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
                 size: AppDesignTokens.iconSizeSm,
                 color: widget.color,
               ),
-              const SizedBox(width: AppDesignTokens.spacing8),
+              SizedBox(width: AppDesignTokens.spacing8),
               Text(
                 widget.label,
                 style: TextStyle(
@@ -525,10 +525,10 @@ class _StreamingBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
-          borderRadius: const BorderRadius.only(
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
             bottomRight: Radius.circular(20),
@@ -550,7 +550,7 @@ class _StreamingBubble extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: DS.xs),
+            SizedBox(width: DS.xs),
             // 闪烁的光标
             const _BlinkingCursor(),
           ],
@@ -622,10 +622,10 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -646,7 +646,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
               return Transform.translate(
                 offset: Offset(0, -offset),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  margin: EdgeInsets.symmetric(horizontal: 2),
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(

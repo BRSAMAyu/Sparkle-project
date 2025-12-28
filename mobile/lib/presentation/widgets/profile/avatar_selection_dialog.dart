@@ -110,7 +110,7 @@ class AvatarSelectionDialog extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: DS.xs),
+                  SizedBox(height: DS.xs),
                   Text(
                     option.label,
                     style: TextStyle(
