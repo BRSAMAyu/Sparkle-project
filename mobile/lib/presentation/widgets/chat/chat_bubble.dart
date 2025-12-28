@@ -311,7 +311,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     SizedBox(width: DS.xs),
                     Text(
                       timeStr,
-                      style: TextStyle(fontSize: 10, color: DS.neutral500),
+                      style: TextStyle(fontSize: 10, color: DS.textTertiary),  // 使用设计系统三级文本色
                     ),
                   ],
                 ),
@@ -360,7 +360,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         padding: EdgeInsets.symmetric(vertical: 12),
         child: Text(
           _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
-          style: TextStyle(fontSize: 12, color: DS.neutral400),
+          style: TextStyle(fontSize: 12, color: DS.textTertiary),  // 使用设计系统三级文本色
         ),
       ),
     );
@@ -436,7 +436,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null
             ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => Center(child: Text(initial)))
-            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))),
+            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: DS.textPrimary))),  // 使用设计系统主要文本色
         ),
       ),
     );

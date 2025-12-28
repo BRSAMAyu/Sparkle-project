@@ -370,8 +370,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
       width: 240,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isMe 
-              ? [DS.brandPrimary.shade600, Colors.deepOrange.shade600]
+          colors: isMe
+              ? [DS.brandPrimary.shade600, DS.warning.shade600]  // 使用设计系统警告色
               : [DS.brandPrimary.shade50, DS.brandPrimary.shade100],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -419,7 +419,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: isMe ? DS.brandPrimary : Colors.deepOrange.shade800,
+                        color: isMe ? DS.brandPrimary : DS.warning.shade800,  // 使用设计系统警告色
                       ),
                     ),
                   ],
@@ -444,7 +444,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                      child: Text(
                        widget.message.content!,
                        style: TextStyle(
-                         color: isMe ? DS.brandPrimary.withValues(alpha: 0.9) : Colors.brown.shade800,
+                         color: isMe ? DS.brandPrimary.withValues(alpha: 0.9) : DS.textPrimary,  // 使用设计系统主要文本色
                          fontStyle: FontStyle.italic,
                          fontSize: 13,
                        ),
@@ -466,14 +466,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: isMe ? DS.brandPrimary : Colors.deepOrange.shade900,
+            color: isMe ? DS.brandPrimary : DS.warning.shade900,  // 使用设计系统警告色
           ),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: 10,
-            color: isMe ? DS.brandPrimary70 : Colors.deepOrange.shade700,
+            color: isMe ? DS.brandPrimary70 : DS.warning.shade700,  // 使用设计系统警告色
           ),
         ),
       ],

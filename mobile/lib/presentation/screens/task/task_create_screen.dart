@@ -195,7 +195,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           label: Text(node.name),
                           onPressed: () => _applySuggestion(node),
                           tooltip: node.reason,
-                          backgroundColor: node.isNew ? Colors.green.shade50 : DS.brandPrimary.withValues(alpha: 0.1),
+                          backgroundColor: node.isNew ? DS.success.withValues(alpha: 0.1) : DS.brandPrimary.withValues(alpha: 0.1),  // 使用设计系统成功色
                         ),).toList(),
                     ),
                   ],
@@ -338,8 +338,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
             // Submit Button
             FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitTask,
-              icon: _isSubmitting 
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              icon: _isSubmitting
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))  // FilledButton中白色加载指示器
                 : const Icon(Icons.check),
               label: Text(_isSubmitting ? '创建中...' : '创建任务'),
               style: FilledButton.styleFrom(

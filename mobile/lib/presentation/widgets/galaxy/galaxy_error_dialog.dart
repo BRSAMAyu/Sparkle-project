@@ -125,11 +125,11 @@ class GalaxyErrorDialog extends StatelessWidget {
   Color _getErrorColor() {
     switch (error.type) {
       case GalaxyErrorType.network:
-        return Colors.orange;
+        return DS.warning;  // 网络错误用警告色(橙色)
       case GalaxyErrorType.circuitBreakerOpen:
-        return Colors.red;
+        return DS.error;    // 服务错误用错误色(红色)
       case GalaxyErrorType.unknown:
-        return Colors.grey;
+        return DS.textSecondary;  // 未知错误用次要文本色
     }
   }
 
@@ -158,7 +158,7 @@ class GalaxyErrorSnackBar {
         children: [
           Icon(
             _getErrorIcon(error.type),
-            color: Colors.white,
+            color: Colors.white,  // SnackBar上使用白色文字
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -175,7 +175,7 @@ class GalaxyErrorSnackBar {
       action: onRetry != null && error.isRetryable
           ? SnackBarAction(
               label: '重试',
-              textColor: Colors.white,
+              textColor: Colors.white,  // SnackBar上白色按钮
               onPressed: onRetry,
             )
           : null,
@@ -205,11 +205,11 @@ class GalaxyErrorSnackBar {
   static Color _getErrorColor(GalaxyErrorType type) {
     switch (type) {
       case GalaxyErrorType.network:
-        return Colors.orange.shade700;
+        return DS.warning;  // 网络错误用警告色
       case GalaxyErrorType.circuitBreakerOpen:
-        return Colors.red.shade700;
+        return DS.error;    // 服务错误用错误色
       case GalaxyErrorType.unknown:
-        return Colors.grey.shade700;
+        return DS.textSecondary;  // 未知错误用次要文本色
     }
   }
 }
@@ -236,13 +236,11 @@ class OfflineIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isOffline
-            ? Colors.red.withValues(alpha: 0.9)
-            : Colors.orange.withValues(alpha: 0.9),
+        color: isOffline ? DS.error.withValues(alpha: 0.9) : DS.warning.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: DS.shadowColor.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -253,14 +251,14 @@ class OfflineIndicator extends StatelessWidget {
         children: [
           Icon(
             isOffline ? Icons.wifi_off_rounded : Icons.cloud_queue_rounded,
-            color: Colors.white,
+            color: DS.textPrimary,  // 使用主要文本色(浅色主题白/深色主题黑)
             size: 16,
           ),
           const SizedBox(width: 8),
           Text(
             isOffline ? '离线模式' : '使用缓存数据',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: DS.textPrimary,  // 使用主要文本色
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -272,12 +270,12 @@ class OfflineIndicator extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: DS.textPrimary.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.refresh_rounded,
-                  color: Colors.white,
+                  color: DS.textPrimary,
                   size: 14,
                 ),
               ),
@@ -378,11 +376,11 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
   Color _getErrorColor() {
     switch (error.type) {
       case GalaxyErrorType.network:
-        return Colors.orange;
+        return DS.warning;  // 网络错误用警告色
       case GalaxyErrorType.circuitBreakerOpen:
-        return Colors.red;
+        return DS.error;    // 服务错误用错误色
       case GalaxyErrorType.unknown:
-        return Colors.grey;
+        return DS.textSecondary;  // 未知错误用次要文本色
     }
   }
 

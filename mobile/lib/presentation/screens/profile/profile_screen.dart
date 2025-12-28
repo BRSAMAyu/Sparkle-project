@@ -281,7 +281,7 @@ class ProfileScreen extends ConsumerWidget {
           gradient: gradient,
           borderRadius: DS.borderRadius8,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: Colors.white, size: 20),  // 渐变背景上的白色图标
       ),
       title: Text(
         title,
@@ -293,7 +293,7 @@ class ProfileScreen extends ConsumerWidget {
       trailing: Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
-        color: DS.neutral400,
+        color: DS.textTertiary,  // 使用设计系统三级文本色
       ),
     );
 }

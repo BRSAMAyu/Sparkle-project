@@ -39,7 +39,7 @@ class NodePreviewCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: DS.shadowColor.withValues(alpha: 0.5),  // 使用设计系统阴影色
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -136,7 +136,7 @@ class NodePreviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: node.masteryScore / 100,
-                      backgroundColor: Colors.black.withValues(alpha: 0.3),
+                      backgroundColor: DS.neutral200.withValues(alpha: 0.5),  // 使用设计系统背景色
                       valueColor: AlwaysStoppedAnimation<Color>(sectorStyle.primaryColor),
                       minHeight: 6,
                     ),

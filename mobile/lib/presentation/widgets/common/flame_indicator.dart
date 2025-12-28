@@ -100,7 +100,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
 
   Color _getFlameColor() {
     if (widget.brightness >= 80) {
-      return Color(0xFFFFD700); // 金色
+      return DS.accent; // 高亮用设计系统的强调色
     } else if (widget.brightness >= 60) {
       return DS.accent; // 黄色
     } else if (widget.brightness >= 40) {
@@ -116,11 +116,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
     }
 
     if (widget.brightness >= 80) {
-      return LinearGradient(
-        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+      return DS.accentGradient; // 高亮用设计系统的强调色渐变
     } else if (widget.brightness >= 60) {
       return DS.accentGradient;
     } else {
@@ -232,7 +228,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
               style: TextStyle(
                 fontSize: DS.fontSizeLg,
                 fontWeight: DS.fontWeightBold,
-                color: DS.neutral900,
+                color: DS.textPrimary,  // 使用设计系统主要文本色
               ),
             ),
           ],
@@ -243,7 +239,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
           '亮度 ${widget.brightness}%',
           style: TextStyle(
             fontSize: DS.fontSizeSm,
-            color: DS.neutral600,
+            color: DS.textSecondary,  // 使用设计系统次要文本色
           ),
         ),
       ],
@@ -337,7 +333,7 @@ class CompactFlameIndicator extends StatelessWidget {
 
   Color _getFlameColor() {
     if (brightness >= 80) {
-      return Color(0xFFFFD700);
+      return DS.accent;  // 高亮用设计系统的强调色
     } else if (brightness >= 60) {
       return DS.accent;
     } else if (brightness >= 40) {
@@ -380,14 +376,14 @@ class CompactFlameIndicator extends StatelessWidget {
                   style: TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightBold,
-                    color: DS.neutral900,
+                    color: DS.textPrimary,  // 使用设计系统主要文本色
                   ),
                 ),
                 Text(
                   '$brightness%',
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
-                    color: DS.neutral600,
+                    color: DS.textSecondary,  // 使用设计系统次要文本色
                   ),
                 ),
               ],

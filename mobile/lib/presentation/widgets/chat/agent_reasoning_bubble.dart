@@ -367,13 +367,13 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            DS.brandPrimary.shade50,
-            Colors.purple.shade50,
+            DS.brandSecondary.shade50,  // 使用设计系统次要色
+            DS.brandSecondary.shade100,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.purple.shade200,
+          color: DS.brandSecondary.shade200,  // 使用设计系统次要色
           width: 1.5,
         ),
       ),
@@ -384,7 +384,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100.withOpacity(0.5),
+              color: DS.brandSecondary.shade100.withOpacity(0.5),  // 使用设计系统次要色
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -394,7 +394,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               children: [
                 Icon(
                   Icons.groups,
-                  color: Colors.purple.shade700,
+                  color: DS.brandSecondary.shade700,  // 使用设计系统次要色
                   size: 24,
                 ),
                 SizedBox(width: DS.sm),
@@ -402,16 +402,16 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   child: Text(
                     '多专家协作回答',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.purple.shade700,
+                      color: DS.brandSecondary.shade700,  // 使用设计系统次要色
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Chip(
                   label: Text('${contributions.length} 位专家'),
-                  backgroundColor: Colors.purple.shade100,
+                  backgroundColor: DS.brandSecondary.shade100,  // 使用设计系统次要色
                   labelStyle: TextStyle(
-                    color: Colors.purple.shade700,
+                    color: DS.brandSecondary.shade700,  // 使用设计系统次要色
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -441,7 +441,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 color: DS.brandPrimary.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.purple.shade200,
+                  color: DS.brandSecondary.shade200,  // 使用设计系统次要色
                 ),
               ),
               child: Column(
@@ -451,14 +451,14 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.summarize,
-                        color: Colors.purple.shade700,
+                        color: DS.brandSecondary.shade700,  // 使用设计系统次要色
                         size: 18,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         '综合建议',
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: Colors.purple.shade700,
+                          color: DS.brandSecondary.shade700,  // 使用设计系统次要色
                           fontWeight: FontWeight.bold,
                         ),
                       ),
