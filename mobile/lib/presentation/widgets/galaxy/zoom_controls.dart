@@ -109,7 +109,7 @@ class _ZoomControlsState extends State<ZoomControls> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(24),

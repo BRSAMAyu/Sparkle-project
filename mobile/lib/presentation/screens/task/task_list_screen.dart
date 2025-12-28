@@ -47,7 +47,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     return Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: DS.primaryGradient,
           ),
         ),
@@ -55,7 +55,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           duration: DS.durationNormal,
           child: _isSearching
               ? TextField(
-                  key: const ValueKey('search'),
+                  key: ValueKey('search'),
                   controller: _searchController,
                   autofocus: true,
                   style: TextStyle(
@@ -76,10 +76,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   onChanged: (value) => setState(() {}),
                 )
               : Row(
-                  key: const ValueKey('title'),
+                  key: ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: DS.borderRadius8,
@@ -90,7 +90,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         size: 20,
                       ),
                     ),
-                    const SizedBox(width: DS.md),
+                    SizedBox(width: DS.md),
                     Text(
                       '我的任务',
                       style: TextStyle(
@@ -234,7 +234,7 @@ class _FilterChips extends ConsumerWidget {
     final currentFilter = ref.watch(taskFilterProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: DS.shadowSm,
@@ -246,7 +246,7 @@ class _FilterChips extends ConsumerWidget {
           children: TaskFilterOptions.values.map((filter) {
             final isSelected = currentFilter == filter;
             return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
+              padding: EdgeInsets.only(right: 8.0),
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -254,7 +254,7 @@ class _FilterChips extends ConsumerWidget {
                 },
                 child: AnimatedContainer(
                   duration: DS.durationFast,
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: DS.spacing16,
                     vertical: DS.spacing8,
                   ),

@@ -132,10 +132,10 @@ class LoadingIndicator extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           indicator,
-          const SizedBox(height: DS.spacing12),
+          SizedBox(height: DS.spacing12),
           Text(
             loadingText ?? '加载中...',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: DS.fontSizeSm,
               color: DS.neutral600,
             ),
@@ -152,10 +152,10 @@ class LoadingIndicator extends StatelessWidget {
 
     return ListView.separated(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: NeverScrollableScrollPhysics(),
       itemCount: skeletonCount,
       separatorBuilder: (context, index) =>
-          const SizedBox(height: DS.spacing12),
+          SizedBox(height: DS.spacing12),
       itemBuilder: (context, index) {
         switch (variant) {
           case SkeletonVariant.taskCard:
@@ -182,7 +182,7 @@ class LoadingIndicator extends StatelessWidget {
       color: DS.overlay30,
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(DS.spacing32),
+          padding: EdgeInsets.all(DS.spacing32),
           decoration: BoxDecoration(
             gradient: DS.cardGradientNeutral,
             borderRadius: DS.borderRadius20,
@@ -210,10 +210,10 @@ class LoadingIndicator extends StatelessWidget {
                 ),
               ),
               if (loadingText != null) ...[
-                const SizedBox(height: DS.spacing20),
+                SizedBox(height: DS.spacing20),
                 Text(
                   loadingText!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightMedium,
                     color: DS.neutral900,
@@ -232,7 +232,7 @@ class LoadingIndicator extends StatelessWidget {
 /// Shimmer包装器
 class _ShimmerWrapper extends StatelessWidget {
 
-  const _ShimmerWrapper({required this.child});
+  _ShimmerWrapper({required this.child});
   final Widget child;
 
   @override
@@ -273,7 +273,7 @@ class TaskCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing16),
+        padding: EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: DS.borderRadius16,
@@ -290,7 +290,7 @@ class TaskCardSkeleton extends StatelessWidget {
                   height: 40.0,
                   borderRadius: DS.borderRadius4,
                 ),
-                const SizedBox(width: DS.spacing12),
+                SizedBox(width: DS.spacing12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +309,7 @@ class TaskCardSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: DS.spacing16),
+            SizedBox(height: DS.spacing16),
             // 标签行
             Row(
               children: [
@@ -318,7 +318,7 @@ class TaskCardSkeleton extends StatelessWidget {
                   height: 24.0,
                   borderRadius: DS.borderRadius12,
                 ),
-                const SizedBox(width: DS.spacing8),
+                SizedBox(width: DS.spacing8),
                 _SkeletonBox(
                   width: 80.0,
                   height: 24.0,
@@ -344,7 +344,7 @@ class ChatBubbleSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing8,
         ),
@@ -359,16 +359,16 @@ class ChatBubbleSkeleton extends StatelessWidget {
                 height: 40.0,
                 borderRadius: DS.borderRadiusFull,
               ),
-              const SizedBox(width: DS.spacing12),
+              SizedBox(width: DS.spacing12),
             ],
             Flexible(
               child: Container(
-                padding: const EdgeInsets.all(DS.spacing12),
+                padding: EdgeInsets.all(DS.spacing12),
                 decoration: BoxDecoration(
                   color: DS.neutral200,
                   borderRadius: DS.borderRadius16,
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _SkeletonBox(
@@ -390,7 +390,7 @@ class ChatBubbleSkeleton extends StatelessWidget {
               ),
             ),
             if (isUser) ...[
-              const SizedBox(width: DS.spacing12),
+              SizedBox(width: DS.spacing12),
               _SkeletonBox(
                 width: 40.0,
                 height: 40.0,
@@ -410,7 +410,7 @@ class ProfileCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
-        padding: const EdgeInsets.all(DS.spacing20),
+        padding: EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: DS.borderRadius20,
@@ -424,19 +424,19 @@ class ProfileCardSkeleton extends StatelessWidget {
               height: 80.0,
               borderRadius: DS.borderRadiusFull,
             ),
-            const SizedBox(height: DS.spacing16),
+            SizedBox(height: DS.spacing16),
             // 用户名
-            const _SkeletonBox(
+            _SkeletonBox(
               width: 120.0,
               height: 20.0,
             ),
-            const SizedBox(height: DS.spacing8),
+            SizedBox(height: DS.spacing8),
             // 邮箱
-            const _SkeletonBox(
+            _SkeletonBox(
               width: 180.0,
               height: 14.0,
             ),
-            const SizedBox(height: DS.spacing24),
+            SizedBox(height: DS.spacing24),
             // 统计数据行
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -451,7 +451,7 @@ class ProfileCardSkeleton extends StatelessWidget {
       ),
     );
 
-  Widget _buildStatSkeleton() => const Column(
+  Widget _buildStatSkeleton() => Column(
       children: [
         _SkeletonBox(
           width: 40.0,
@@ -473,7 +473,7 @@ class ListItemSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing12,
         ),
@@ -484,7 +484,7 @@ class ListItemSkeleton extends StatelessWidget {
               height: 48.0,
               borderRadius: DS.borderRadius12,
             ),
-            const SizedBox(width: DS.spacing12),
+            SizedBox(width: DS.spacing12),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

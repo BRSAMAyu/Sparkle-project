@@ -6,14 +6,14 @@ import 'package:timeago/timeago.dart' as timeago;
 
 class FeedPostCard extends StatelessWidget {
 
-  const FeedPostCard({required this.post, super.key, this.onLike});
+  FeedPostCard({required this.post, super.key, this.onLike});
   final Post post;
   final VoidCallback? onLike;
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(DS.lg),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.surface,
         borderRadius: BorderRadius.circular(16),
@@ -43,7 +43,7 @@ class FeedPostCard extends StatelessWidget {
                     ? Text(post.user.username[0].toUpperCase())
                     : null,
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -64,15 +64,15 @@ class FeedPostCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(),
+              Spacer(),
               if (post.isOptimistic)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DS.primaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       SizedBox(
                         width: 12,
@@ -92,7 +92,7 @@ class FeedPostCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
           Text(
             post.content,
             style: TextStyle(
@@ -114,12 +114,12 @@ class FeedPostCard extends StatelessWidget {
                   errorBuilder: (ctx, err, stack) => Container(
                     height: 200,
                     color: DS.brandPrimary800,
-                    child: const Center(child: Icon(Icons.broken_image)),
+                    child: Center(child: Icon(Icons.broken_image)),
                   ),
                 ),
               ),
             ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
           Row(
             children: [
               _ActionButton(
@@ -127,22 +127,22 @@ class FeedPostCard extends StatelessWidget {
                 label: '${post.likeCount}',
                 onTap: onLike,
               ),
-              const SizedBox(width: DS.xl),
+              SizedBox(width: DS.xl),
               const _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Comment',
               ),
-              const Spacer(),
+              Spacer(),
               if (post.topic != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DS.secondaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '#${post.topic}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: DS.secondaryBase,
                       fontSize: 12,
                     ),
@@ -168,7 +168,7 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, color: DS.brandPrimary400, size: 20),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(

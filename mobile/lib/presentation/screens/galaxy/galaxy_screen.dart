@@ -73,7 +73,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                     child: Icon(Icons.psychology, size: 40, color: DS.brandPrimary87),
                   ),
                 ),
-                const SizedBox(height: DS.xl),
+                SizedBox(height: DS.xl),
                 // Text is now drawn by painter to avoid rotation issues, 
                 // but main title can stay here
               ],
@@ -327,7 +327,7 @@ class _SectorModelPainter extends CustomPainter {
     // Halo Paint
     final paint = Paint()
       ..color = DS.brandPrimary.withValues(alpha: 0.1)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 20);
     
     canvas.drawCircle(center, radius, paint);
     

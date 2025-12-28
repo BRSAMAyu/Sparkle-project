@@ -27,19 +27,19 @@ class DashboardCuriosityCard extends ConsumerWidget {
               borderRadius: DS.borderRadius20,
               border: Border.all(color: DS.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.lightbulb_outline, color: DS.accent, size: 20),
+                    Icon(Icons.lightbulb_outline, color: DS.accent, size: 20),
                     if (cognitive.hasNewInsight)
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: DS.error,
                           shape: BoxShape.circle,
                         ),
@@ -47,7 +47,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   ],
                 ),
                 
-                const Spacer(),
+                Spacer(),
                 
                 Text(
                   cognitive.weeklyPattern ?? '探索未知',
@@ -60,7 +60,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                const SizedBox(height: DS.xs),
+                SizedBox(height: DS.xs),
                 
                 Text(
                   '好奇心胶囊',

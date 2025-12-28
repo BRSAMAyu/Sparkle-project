@@ -40,7 +40,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('密码修改成功'), backgroundColor: DS.successConst),
+          SnackBar(content: Text('密码修改成功'), backgroundColor: DS.successConst),
         );
         Navigator.of(context).pop();
       }
@@ -62,11 +62,11 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('重置密码'),
+        title: Text('重置密码'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.spacing24),
+        padding: EdgeInsets.all(DS.spacing24),
         child: Form(
           key: _formKey,
           child: Column(
@@ -79,7 +79,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: DS.spacing24),
+              SizedBox(height: DS.spacing24),
               _buildPasswordField(
                 label: '当前密码',
                 controller: _oldPasswordController,
@@ -90,7 +90,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: DS.spacing16),
+              SizedBox(height: DS.spacing16),
               _buildPasswordField(
                 label: '新密码',
                 controller: _newPasswordController,
@@ -102,7 +102,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: DS.spacing16),
+              SizedBox(height: DS.spacing16),
               _buildPasswordField(
                 label: '确认新密码',
                 controller: _confirmPasswordController,
@@ -113,13 +113,13 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: DS.spacing32),
+              SizedBox(height: DS.spacing32),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleReset,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DS.primaryBase,
                   foregroundColor: DS.brandPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: DS.borderRadius12,
                   ),
@@ -187,7 +187,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: DS.borderRadius12,
-              borderSide: const BorderSide(color: DS.primaryBase, width: 2),
+              borderSide: BorderSide(color: DS.primaryBase, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),

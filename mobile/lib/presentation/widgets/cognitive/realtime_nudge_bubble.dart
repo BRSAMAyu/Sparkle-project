@@ -45,8 +45,8 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         context.go('/cognitive/patterns');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        padding: const EdgeInsets.all(DS.spacing12),
+        margin: EdgeInsets.symmetric(horizontal: DS.spacing16),
+        padding: EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: isDark ? DS.neutral800 : DS.info.withValues(alpha: 0.1),
           borderRadius: DS.borderRadius16,
@@ -55,8 +55,8 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.lightbulb_outline, color: DS.info, size: 24),
-            const SizedBox(width: DS.spacing12),
+            Icon(Icons.lightbulb_outline, color: DS.info, size: 24),
+            SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
                 '💡 ${latestPatternWithSolution.patternName}: ${latestPatternWithSolution.solutionText}',
@@ -68,8 +68,8 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: DS.spacing8),
-            const Icon(Icons.arrow_forward_ios_rounded, color: DS.neutral400, size: 16),
+            SizedBox(width: DS.spacing8),
+            Icon(Icons.arrow_forward_ios_rounded, color: DS.neutral400, size: 16),
           ],
         ),
       ),

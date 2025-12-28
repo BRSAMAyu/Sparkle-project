@@ -122,31 +122,31 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             ),)
           else
             IconButton(
-              icon: const Icon(Icons.save),
+              icon: Icon(Icons.save),
               onPressed: _savePreferences,
             ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         children: [
           _buildSectionTitle('角色设定 (Persona)'),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildPersonaSelector(),
           
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           _buildSectionTitle('频控设置 (每日上限)'),
           _buildFrequencySlider(),
           
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
           _buildSectionTitle('活跃时间段 (Active Slots)'),
           Text(
             '仅在这些时间段内发送推送，避开休息时间。',
             style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
           ),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           _buildActiveSlotsList(),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           ElevatedButton.icon(
             onPressed: _addSlot,
             icon: const Icon(Icons.add),
@@ -164,7 +164,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
                   payload: {'taskId': 'debug_123'},
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
+                   SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
                 );
               },
               icon: Icon(Icons.bug_report, color: DS.brandPrimary),
@@ -191,7 +191,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             description: '督促、强调纪律',
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: _buildPersonaChip(
             value: 'anime',
@@ -216,7 +216,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       onTap: () => setState(() => _persona = value),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
@@ -225,9 +225,9 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
         child: Column(
           children: [
             Icon(icon, color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant),
-            const SizedBox(height: DS.sm),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: DS.xs),
+            SizedBox(height: DS.sm),
+            Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: DS.xs),
             Text(
               description,
               style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
@@ -272,13 +272,13 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       children: List.generate(_activeSlots.length, (index) {
         final slot = _activeSlots[index];
         return Card(
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: EdgeInsets.only(bottom: 8),
           child: Padding(
-            padding: const EdgeInsets.all(DS.sm),
+            padding: EdgeInsets.all(DS.sm),
             child: Row(
               children: [
-                const Icon(Icons.access_time, size: 20),
-                const SizedBox(width: DS.md),
+                Icon(Icons.access_time, size: 20),
+                SizedBox(width: DS.md),
                 Expanded(
                   child: Row(
                     children: [
@@ -307,7 +307,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       onTap: () => _selectTime(index, isStart),
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           border: Border.all(color: DS.brandPrimary.shade400),
           borderRadius: BorderRadius.circular(4),

@@ -143,14 +143,14 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     );
 
   Widget _buildQuadrantLabels() {
-    const labelPadding = 8.0;
-    const textStyle = TextStyle(
+    const double labelPadding = 8.0;
+    final TextStyle textStyle = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.bold,
       color: DS.neutral600,
     );
 
-    return const Stack(
+    return Stack(
       children: [
         // Depth+ at top center
         Align(

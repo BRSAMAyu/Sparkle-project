@@ -67,12 +67,12 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
   @override
   Widget build(BuildContext context) => Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(DS.xl),
+      insetPadding: EdgeInsets.all(DS.xl),
       child: Container(
         width: double.infinity,
         height: 400,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E).withValues(alpha: 0.95),
+          color: Color(0xFF1E1E1E).withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: DS.brandPrimary24),
           boxShadow: [
@@ -86,7 +86,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: TextField(
                 controller: _searchController,
                 style: TextStyle(color: DS.brandPrimary),

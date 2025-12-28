@@ -1,10 +1,19 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 /// API Constants
 class ApiConstants {
+  static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  static const String _wsBaseUrlOverride = String.fromEnvironment('WS_BASE_URL', defaultValue: '');
+
   // Base URL (HTTP)
   static String get baseUrl {
-    if (Platform.isAndroid) {
+    if (_baseUrlOverride.isNotEmpty) {
+      return _baseUrlOverride;
+    }
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8080';
     }
     return 'http://localhost:8080';
@@ -15,7 +24,16 @@ class ApiConstants {
 
   // WebSocket URL (Go Gateway)
   static String get wsBaseUrl {
-    if (Platform.isAndroid) {
+    if (_wsBaseUrlOverride.isNotEmpty) {
+      return _wsBaseUrlOverride;
+    }
+    if (_baseUrlOverride.isNotEmpty) {
+      return _toWsUrl(_baseUrlOverride);
+    }
+    if (kIsWeb) {
+      return 'ws://localhost:8080';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'ws://10.0.2.2:8080';
     }
     return 'ws://localhost:8080';
@@ -39,4 +57,10 @@ class ApiConstants {
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration sendTimeout = Duration(seconds: 30);
+
+  static String _toWsUrl(String httpBase) {
+    final uri = Uri.parse(httpBase);
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    return uri.replace(scheme: wsScheme, path: '').toString();
+  }
 }

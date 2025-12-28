@@ -100,7 +100,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
 
   Color _getFlameColor() {
     if (widget.brightness >= 80) {
-      return const Color(0xFFFFD700); // 金色
+      return Color(0xFFFFD700); // 金色
     } else if (widget.brightness >= 60) {
       return DS.accent; // 黄色
     } else if (widget.brightness >= 40) {
@@ -116,7 +116,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
     }
 
     if (widget.brightness >= 80) {
-      return const LinearGradient(
+      return LinearGradient(
         colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -179,7 +179,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
           ),
           // 标签
           if (widget.showLabel) ...[
-            const SizedBox(height: DS.spacing12),
+            SizedBox(height: DS.spacing12),
             _buildLabel(),
           ],
         ],
@@ -202,7 +202,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
                 BoxShadow(
                   color: _getFlameColor().withValues(alpha: 0.4),
                   blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
@@ -226,10 +226,10 @@ class _FlameIndicatorState extends State<FlameIndicator>
               size: DS.iconSizeSm,
               color: _getFlameColor(),
             ),
-            const SizedBox(width: DS.spacing4),
+            SizedBox(width: DS.spacing4),
             Text(
               'Lv.${widget.level}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: DS.fontSizeLg,
                 fontWeight: DS.fontWeightBold,
                 color: DS.neutral900,
@@ -237,11 +237,11 @@ class _FlameIndicatorState extends State<FlameIndicator>
             ),
           ],
         ),
-        const SizedBox(height: DS.spacing4),
+        SizedBox(height: DS.spacing4),
         // 亮度
         Text(
           '亮度 ${widget.brightness}%',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: DS.fontSizeSm,
             color: DS.neutral600,
           ),
@@ -337,7 +337,7 @@ class CompactFlameIndicator extends StatelessWidget {
 
   Color _getFlameColor() {
     if (brightness >= 80) {
-      return const Color(0xFFFFD700);
+      return Color(0xFFFFD700);
     } else if (brightness >= 60) {
       return DS.accent;
     } else if (brightness >= 40) {
@@ -351,7 +351,7 @@ class CompactFlameIndicator extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: DS.spacing12,
           vertical: DS.spacing8,
         ),
@@ -370,14 +370,14 @@ class CompactFlameIndicator extends StatelessWidget {
               size: DS.iconSizeSm,
               color: _getFlameColor(),
             ),
-            const SizedBox(width: DS.spacing8),
+            SizedBox(width: DS.spacing8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Lv.$level',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightBold,
                     color: DS.neutral900,
@@ -385,7 +385,7 @@ class CompactFlameIndicator extends StatelessWidget {
                 ),
                 Text(
                   '$brightness%',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     color: DS.neutral600,
                   ),

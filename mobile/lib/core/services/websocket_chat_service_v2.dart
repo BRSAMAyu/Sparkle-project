@@ -19,9 +19,8 @@ enum WsConnectionState {
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 {
 
-  WebSocketChatServiceV2({
-    this.baseUrl = ApiConstants.wsBaseUrl,
-  });
+  WebSocketChatServiceV2({String? baseUrl})
+      : baseUrl = baseUrl ?? ApiConstants.wsBaseUrl;
   // WebSocket 连接
   WebSocketChannel? _channel;
 

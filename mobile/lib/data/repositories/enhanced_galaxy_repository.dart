@@ -86,7 +86,7 @@ class EnhancedGalaxyRepository {
         debugPrint('EnhancedGalaxyRepository: Circuit breaker open, returning stale cache');
         return NetworkResult.success(cached, isFromCache: true);
       }
-      return NetworkResult.failure(GalaxyError.circuitBreakerOpen(e.message));
+      return NetworkResult.failure(GalaxyError.circuitBreakerOpen());
     } on DioException catch (e) {
       // 网络错误，尝试返回缓存
       final cached = _graphCache.get(cacheKey);

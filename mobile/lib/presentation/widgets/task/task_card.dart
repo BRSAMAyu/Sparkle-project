@@ -92,7 +92,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                     child: child,
                   ),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  margin: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: _getBackgroundGradient(context, widget.task.type),
                     borderRadius: DS.borderRadius12,
@@ -105,7 +105,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                         DS.brandPrimary.withValues(alpha: 0.1), // Subtle shimmer/highlight
                         DS.brandPrimary.withValues(alpha: 0),
                       ],
-                      stops: const [0.0, 0.5, 1.0],
+                      stops: [0.0, 0.5, 1.0],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -129,7 +129,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               // Content
                               Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(DS.spacing12),
+                                  padding: EdgeInsets.all(DS.spacing12),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -153,44 +153,44 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             ),
                                           ),
                                           if (!widget.compact) ...[
-                                            const SizedBox(width: DS.spacing8),
+                                            SizedBox(width: DS.spacing8),
                                             _TaskTypeChip(type: widget.task.type),
                                             if (widget.task.status == TaskStatus.completed) ...[
-                                              const SizedBox(width: DS.spacing4),
-                                              const Icon(Icons.check_circle, color: DS.success, size: 16),
+                                              SizedBox(width: DS.spacing4),
+                                              Icon(Icons.check_circle, color: DS.success, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
-                                               const SizedBox(width: DS.spacing4),
+                                               SizedBox(width: DS.spacing4),
                                               _StatusChip(status: widget.task.status),
                                             ],
                                           ],
                                         ],
                                       ),
-                                      const SizedBox(height: DS.spacing8),
+                                      SizedBox(height: DS.spacing8),
                                       Row(
                                         children: [
                                           if (widget.task.dueDate != null) ...[
-                                            const Icon(Icons.calendar_today, size: 14, color: DS.neutral600),
-                                            const SizedBox(width: DS.xs),
+                                            Icon(Icons.calendar_today, size: 14, color: DS.neutral600),
+                                            SizedBox(width: DS.xs),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
-                                              style: const TextStyle(color: DS.neutral700, fontSize: 12),
+                                              style: TextStyle(color: DS.neutral700, fontSize: 12),
                                             ),
-                                            const SizedBox(width: DS.spacing12),
+                                            SizedBox(width: DS.spacing12),
                                           ],
-                                          const Icon(Icons.timer_outlined, size: 14, color: DS.neutral600),
-                                          const SizedBox(width: DS.xs),
+                                          Icon(Icons.timer_outlined, size: 14, color: DS.neutral600),
+                                          SizedBox(width: DS.xs),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
-                                            style: const TextStyle(color: DS.neutral700, fontSize: 12),
+                                            style: TextStyle(color: DS.neutral700, fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       if (!widget.compact) ...[
-                                        const SizedBox(height: DS.spacing8),
+                                        SizedBox(height: DS.spacing8),
                                         Row(
                                           children: [
                                             _DifficultyStars(difficulty: widget.task.difficulty),
-                                            const Spacer(),
+                                            Spacer(),
                                             if (widget.onStart != null && widget.task.status != TaskStatus.completed)
                                               _ActionButton(
                                                 icon: Icons.play_arrow_rounded,
@@ -201,7 +201,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                                 },
                                               ),
                                             if (widget.onComplete != null && widget.task.status != TaskStatus.completed) ...[
-                                              const SizedBox(width: DS.spacing8),
+                                              SizedBox(width: DS.spacing8),
                                               _ActionButton(
                                                 icon: Icons.check_rounded,
                                                 color: DS.success,
@@ -234,12 +234,12 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
-                                      const SizedBox(height: DS.spacing8),
+                                      SizedBox(height: DS.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
                                         style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(height: DS.spacing12),
+                                      SizedBox(height: DS.spacing12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -248,9 +248,9 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                                ref.read(taskListProvider.notifier).discardChange(widget.task.id);
                                             },
                                             style: TextButton.styleFrom(foregroundColor: DS.brandPrimary),
-                                            child: const Text('Discard'),
+                                            child: Text('Discard'),
                                           ),
-                                          const SizedBox(width: DS.sm),
+                                          SizedBox(width: DS.sm),
                                           ElevatedButton(
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).retryCompleteTask(
@@ -276,7 +276,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                           
                         // Syncing Indicator
                         if (widget.task.syncStatus == TaskSyncStatus.pending)
-                          const Positioned(
+                          Positioned(
                             top: 8,
                             right: 8,
                             child: SizedBox(
@@ -323,7 +323,7 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _DifficultyStars extends StatelessWidget {
-  const _DifficultyStars({required this.difficulty});
+  _DifficultyStars({required this.difficulty});
   final int difficulty;
 
   @override
@@ -371,7 +371,7 @@ class _TaskTypeChip extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: DS.borderRadius12,
@@ -408,7 +408,7 @@ class _StatusChip extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: DS.borderRadius12,

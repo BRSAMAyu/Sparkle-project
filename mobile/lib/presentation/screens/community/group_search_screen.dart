@@ -65,9 +65,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             itemCount: groups.length,
-            separatorBuilder: (context, index) => const SizedBox(height: DS.md),
+            separatorBuilder: (context, index) => SizedBox(height: DS.md),
             itemBuilder: (context, index) {
               final group = groups[index];
               return Card(

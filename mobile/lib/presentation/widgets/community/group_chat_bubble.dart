@@ -84,20 +84,20 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                   Clipboard.setData(ClipboardData(text: widget.message.content ?? ''));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
+                    SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
                   );
                 },
               ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
-                  leading: const Icon(Icons.undo_rounded, color: DS.error),
-                  title: const Text('撤回', style: TextStyle(color: DS.error)),
+                  leading: Icon(Icons.undo_rounded, color: DS.error),
+                  title: Text('撤回', style: TextStyle(color: DS.error)),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onRevoke!(widget.message);
                   },
                 ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
             ],
           ),
         ),
@@ -117,10 +117,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         opacity: _fadeAnimation,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: 12),
             child: Text(
               isMe ? '你撤回了一条消息' : '${widget.message.sender?.displayName ?? "成员"}撤回了一条消息',
-              style: const TextStyle(fontSize: 12, color: DS.neutral400),
+              style: TextStyle(fontSize: 12, color: DS.neutral400),
             ),
           ),
         ),
@@ -132,8 +132,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         opacity: _fadeAnimation,
         child: Center(
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            margin: EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: DS.neutral100,
               borderRadius: BorderRadius.circular(12),
@@ -141,7 +141,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
             ),
             child: Text(
               widget.message.content ?? '',
-              style: const TextStyle(fontSize: 12, color: DS.neutral600),
+              style: TextStyle(fontSize: 12, color: DS.neutral600),
             ),
           ),
         ),
@@ -157,14 +157,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         child: GestureDetector(
           onLongPress: () => _showContextMenu(context, isMe),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
             child: Row(
               mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (!isMe) ...[
                   _buildAvatar(widget.message.sender),
-                  const SizedBox(width: DS.sm),
+                  SizedBox(width: DS.sm),
                 ],
                 Flexible(
                   child: Column(
@@ -172,29 +172,29 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                     children: [
                       if (!isMe && widget.message.sender != null)
                         Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 4),
+                          padding: EdgeInsets.only(left: 4, bottom: 4),
                           child: Text(
                             widget.message.sender!.displayName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: DS.neutral500,
                             ),
                           ),
                         ),
                       _buildContent(context, isMe),
-                      const SizedBox(height: DS.xs),
+                      SizedBox(height: DS.xs),
                       // Timestamp and read status
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 4),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               timeStr,
-                              style: const TextStyle(fontSize: 10, color: DS.neutral500),
+                              style: TextStyle(fontSize: 10, color: DS.neutral500),
                             ),
                             if (isMe && widget.message.readCount > 0) ...[
-                              const SizedBox(width: DS.sm),
+                              SizedBox(width: DS.sm),
                               _buildReadByIndicator(),
                             ],
                           ],
@@ -204,7 +204,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                   ),
                 ),
                 if (isMe) ...[
-                  const SizedBox(width: DS.sm),
+                  SizedBox(width: DS.sm),
                   _buildAvatar(widget.message.sender),
                 ],
               ],
@@ -246,7 +246,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                       child: Image.network(
                         'https://api.dicebear.com/9.x/avataaars/png?seed=${readBy[i]}',
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
+                        errorBuilder: (_, __, ___) => Center(
                           child: Text(
                             '?',
                             style: TextStyle(fontSize: 8, color: DS.neutral500),
@@ -263,12 +263,12 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         if (remaining > 0) ...[
           Text(
             '+${readBy.length}',
-            style: const TextStyle(fontSize: 10, color: DS.info),
+            style: TextStyle(fontSize: 10, color: DS.info),
           ),
         ] else ...[
           Text(
             '${readBy.length}人已读',
-            style: const TextStyle(fontSize: 10, color: DS.info),
+            style: TextStyle(fontSize: 10, color: DS.info),
           ),
         ],
       ],
@@ -288,17 +288,17 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
   }
 
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? DS.primaryBase : DS.brandPrimary,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: isMe ? Radius.circular(16) : const Radius.circular(4),
+          bottomRight: isMe ? Radius.circular(4) : const Radius.circular(16),
         ),
         boxShadow: isMe
-            ? [BoxShadow(color: DS.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))]
+            ? [BoxShadow(color: DS.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))]
             : DS.shadowSm,
         border: isMe ? null : Border.all(color: DS.neutral100),
       ),
@@ -325,8 +325,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     final quotedSender = quoted?.sender?.displayName ?? '成员';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: isMe ? DS.brandPrimary.withValues(alpha: 0.15) : DS.neutral100,
         borderRadius: BorderRadius.circular(8),
@@ -344,7 +344,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                 color: isMe ? DS.brandPrimary.withValues(alpha: 0.9) : DS.neutral700,
               ),
             ),
-          if (quoted != null) const SizedBox(height: 2),
+          if (quoted != null) SizedBox(height: 2),
           Text(
             quotedContent,
             maxLines: 2,
@@ -381,7 +381,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
           BoxShadow(
             color: DS.brandPrimary.withValues(alpha: 0.3),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
         border: isMe ? null : Border.all(color: DS.brandPrimary.shade200),
@@ -399,21 +399,21 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: isMe ? DS.brandPrimary.withValues(alpha: 0.2) : DS.brandPrimary,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.bolt, color: DS.warning, size: 18),
                     ),
-                    const SizedBox(width: DS.sm),
+                    SizedBox(width: DS.sm),
                     Text(
                       'Daily Check-in',
                       style: TextStyle(
@@ -424,7 +424,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                     ),
                   ],
                 ),
-                const SizedBox(height: DS.md),
+                SizedBox(height: DS.md),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -434,9 +434,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                   ],
                 ),
                 if (widget.message.content != null && widget.message.content!.isNotEmpty) ...[
-                   const SizedBox(height: DS.md),
+                   SizedBox(height: DS.md),
                    Container(
-                     padding: const EdgeInsets.all(DS.sm),
+                     padding: EdgeInsets.all(DS.sm),
                      decoration: BoxDecoration(
                        color: isMe ? DS.brandPrimary.withValues(alpha: 0.1) : DS.brandPrimary.withValues(alpha: 0.6),
                        borderRadius: BorderRadius.circular(8),
@@ -480,7 +480,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     );
 
   Widget _buildTaskShareBubble(BuildContext context, bool isMe) => Container(
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? DS.brandPrimary.shade600 : DS.brandPrimary.shade50,
         borderRadius: BorderRadius.circular(16),
@@ -490,7 +490,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.task_alt, color: isMe ? DS.brandPrimary : DS.brandPrimary),
-          const SizedBox(width: DS.sm),
+          SizedBox(width: DS.sm),
           Flexible(
             child: Text(
               widget.message.content ?? 'Shared a task',

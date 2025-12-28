@@ -76,7 +76,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
             child: chatState.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

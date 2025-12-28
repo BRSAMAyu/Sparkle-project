@@ -17,14 +17,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(knowledgeDetailProvider(nodeId));
 
     return detailAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, stack) => Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Error: $error'),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               SparkleButton.primary(label: 'Retry', onPressed: () => ref.invalidate(knowledgeDetailProvider(nodeId))),
             ],
           ),
@@ -96,14 +96,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(DS.lg),
+                  padding: EdgeInsets.all(DS.lg),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Sector tag
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 4,
                         ),
@@ -119,7 +119,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: DS.sm),
+                      SizedBox(height: DS.sm),
                       // Node name
                       Text(
                         detail.node.name,
@@ -130,7 +130,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       if (detail.node.nameEn != null) ...[
-                        const SizedBox(height: DS.xs),
+                        SizedBox(height: DS.xs),
                         Text(
                           detail.node.nameEn!,
                           style: TextStyle(
@@ -306,9 +306,9 @@ class _MasteryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.all(DS.lg),
+      margin: EdgeInsets.all(DS.lg),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -339,7 +339,7 @@ class _MasteryCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Progress bar
             ClipRRect(
@@ -351,7 +351,7 @@ class _MasteryCard extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(_getMasteryColor()),
               ),
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               '${stats.masteryScore.toStringAsFixed(0)}%',
               style: TextStyle(
@@ -360,7 +360,7 @@ class _MasteryCard extends StatelessWidget {
                 fontSize: 18,
               ),
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Stats row
             Row(
@@ -387,9 +387,9 @@ class _MasteryCard extends StatelessWidget {
 
             // Decay status
             if (stats.decayPaused) ...[
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withAlpha(30),
                   borderRadius: BorderRadius.circular(8),
@@ -397,7 +397,7 @@ class _MasteryCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(Icons.pause_circle, color: DS.brandPrimaryConst, size: 20),
-                    const SizedBox(width: DS.smConst),
+                    SizedBox(width: DS.smConst),
                     Text(
                       '遗忘衰减已暂停',
                       style: TextStyle(color: DS.brandPrimaryConst),
@@ -444,7 +444,7 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: DS.brandPrimary),
-        const SizedBox(height: DS.xs),
+        SizedBox(height: DS.xs),
         Text(
           value,
           style: const TextStyle(
@@ -474,9 +474,9 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -486,7 +486,7 @@ class _SectionCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: DS.md),
+            SizedBox(height: DS.md),
             child,
           ],
         ),

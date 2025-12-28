@@ -173,8 +173,8 @@ class _FlipDigitState extends State<_FlipDigit>
           decoration: BoxDecoration(
             color: DS.deepSpaceSurface,
             borderRadius: BorderRadius.vertical(
-              top: isTop ? const Radius.circular(8) : Radius.zero,
-              bottom: isTop ? Radius.zero : const Radius.circular(8),
+              top: isTop ? Radius.circular(8) : Radius.zero,
+              bottom: isTop ? Radius.zero : Radius.circular(8),
             ),
             border: Border.all(
               color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -183,7 +183,7 @@ class _FlipDigitState extends State<_FlipDigit>
           ),
           child: Center(
             child: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
+              shaderCallback: (bounds) => LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
@@ -241,12 +241,12 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) => AnimatedBuilder(
       animation: _opacityAnimation,
       builder: (context, _) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildDot(_opacityAnimation.value),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
           ),
@@ -302,7 +302,7 @@ class SimpleFlipClock extends StatelessWidget {
     }
 
     return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
+      shaderCallback: (bounds) => LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [

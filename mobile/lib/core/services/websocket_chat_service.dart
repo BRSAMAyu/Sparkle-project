@@ -11,9 +11,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// 连接到 Go Gateway 的 WebSocket 端点进行流式对话
 class WebSocketChatService {
 
-  WebSocketChatService({
-    this.baseUrl = ApiConstants.wsBaseUrl,
-  });
+  WebSocketChatService({String? baseUrl})
+      : baseUrl = baseUrl ?? ApiConstants.wsBaseUrl;
   WebSocketChannel? _channel;
   StreamController<ChatStreamEvent>? _streamController;
   final String baseUrl;
@@ -253,4 +252,3 @@ class WebSocketChatService {
     _streamController = null;
   }
 }
-

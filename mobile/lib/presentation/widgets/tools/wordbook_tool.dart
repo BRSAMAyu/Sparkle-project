@@ -63,7 +63,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('太棒了！今日复习完成'),
             backgroundColor: DS.success,
           ),
@@ -85,7 +85,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     }
 
     return Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -108,31 +108,31 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Header
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: DS.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.menu_book_rounded, color: DS.success, size: 24),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Text(
                 '生词本',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               // Review count badge
               if (state.reviewList.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: DS.warning,
                     borderRadius: BorderRadius.circular(20),
@@ -148,7 +148,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ),
             ],
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
 
           // Tab Bar
           DecoratedBox(
@@ -167,13 +167,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               labelColor: DS.success,
               unselectedLabelColor: DS.neutral500,
               dividerColor: Colors.transparent,
-              tabs: const [
+              tabs: [
                 Tab(text: '待复习'),
                 Tab(text: '全部'),
               ],
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
 
           // Content
           Expanded(
@@ -191,13 +191,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           // Start Review Button
           if (state.reviewList.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: 16),
               child: CustomButton.primary(
                 text: '开始复习',
                 icon: Icons.play_arrow_rounded,
                 onPressed: _startReview,
                 customGradient: LinearGradient(
-                  colors: [DS.successConst, const Color(0xFF66BB6A)],
+                  colors: [DS.successConst, Color(0xFF66BB6A)],
                 ),
               ),
             ),
@@ -217,8 +217,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               size: 64,
               color: DS.success.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: DS.lg),
-            const Text(
+            SizedBox(height: DS.lg),
+            Text(
               '太棒了！暂无待复习单词',
               style: TextStyle(
                 color: DS.neutral500,
@@ -247,7 +247,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
   Widget _buildAllWords(List<dynamic> wordbook) {
     if (wordbook.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -323,13 +323,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   Widget _buildReviewMode(VocabularyState state) {
     final reviewList = state.reviewList;
     if (_currentReviewIndex >= reviewList.length) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
 
     final word = reviewList[_currentReviewIndex];
 
     return Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -345,20 +345,20 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => setState(() => _isReviewMode = false),
               ),
               Text(
                 '${_currentReviewIndex + 1} / ${reviewList.length}',
-                style: const TextStyle(
+                style: TextStyle(
                   color: DS.neutral500,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: DS.xxxl), // Balance
+              SizedBox(width: DS.xxxl), // Balance
             ],
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Flashcard
           Expanded(
@@ -366,7 +366,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               onTap: () => setState(() => _showAnswer = true),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(DS.xl),
+                padding: EdgeInsets.all(DS.xl),
                 decoration: BoxDecoration(
                   gradient: _showAnswer
                       ? const LinearGradient(
@@ -374,7 +374,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
-                      : const LinearGradient(
+                      : LinearGradient(
                           colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -392,24 +392,24 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       ),
                     ),
                     if (word['phonetic'] != null) ...[
-                      const SizedBox(height: DS.sm),
+                      SizedBox(height: DS.sm),
                       Text(
                         word['phonetic'] as String,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: DS.neutral500,
                           fontSize: 18,
                           fontStyle: FontStyle.italic,
                         ),
                       ),
                     ],
-                    const SizedBox(height: DS.xl),
+                    SizedBox(height: DS.xl),
                     if (_showAnswer) ...[
                       Container(
                         width: 60,
                         height: 2,
                         color: DS.neutral300,
                       ),
-                      const SizedBox(height: DS.xl),
+                      SizedBox(height: DS.xl),
                       Text(
                         (word['definition'] as String?) ?? '',
                         style: const TextStyle(
@@ -419,7 +419,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         textAlign: TextAlign.center,
                       ),
                     ] else ...[
-                      const Text(
+                      Text(
                         '点击显示释义',
                         style: TextStyle(
                           color: DS.neutral400,
@@ -432,7 +432,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ),
             ),
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Review buttons
           if (_showAnswer)
@@ -446,7 +446,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     size: CustomButtonSize.large,
                   ),
                 ),
-                const SizedBox(width: DS.lg),
+                SizedBox(width: DS.lg),
                 Expanded(
                   child: CustomButton.primary(
                     text: '认识',
@@ -490,17 +490,17 @@ class _WordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: DS.neutral200),
+        side: BorderSide(color: DS.neutral200),
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: EdgeInsets.all(DS.lg),
           child: Row(
             children: [
               Expanded(
@@ -511,16 +511,16 @@ class _WordCard extends StatelessWidget {
                       children: [
                         Text(
                           word,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (phonetic != null) ...[
-                          const SizedBox(width: DS.sm),
+                          SizedBox(width: DS.sm),
                           Text(
                             phonetic!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: DS.neutral500,
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
@@ -529,12 +529,12 @@ class _WordCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: DS.xs),
+                    SizedBox(height: DS.xs),
                     Text(
                       definition,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: DS.neutral600,
                         fontSize: 14,
                       ),
@@ -544,7 +544,7 @@ class _WordCard extends StatelessWidget {
               ),
               if (dueText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: dueText == '已到期'
                         ? DS.error.withValues(alpha: 0.1)
@@ -583,7 +583,7 @@ class _MasteryIndicator extends StatelessWidget {
       children: List.generate(7, (index) => Container(
           width: 4,
           height: 16,
-          margin: const EdgeInsets.only(left: 2),
+          margin: EdgeInsets.only(left: 2),
           decoration: BoxDecoration(
             color: index < level
                 ? DS.success

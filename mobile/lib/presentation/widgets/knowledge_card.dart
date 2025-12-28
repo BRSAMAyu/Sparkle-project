@@ -33,14 +33,14 @@ class KnowledgeCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: DS.sm),
+                  SizedBox(width: DS.sm),
                   Expanded(
                     child: Text(
                       title,
@@ -54,7 +54,7 @@ class KnowledgeCard extends StatelessWidget {
               ),
               
               if (summary != null && summary.isNotEmpty) ...[
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
                 Text(
                   summary,
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -64,7 +64,7 @@ class KnowledgeCard extends StatelessWidget {
               ],
 
               if (tags.isNotEmpty) ...[
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 4.0,
@@ -75,7 +75,7 @@ class KnowledgeCard extends StatelessWidget {
                   ),).toList(),
                 ),
               ],
-              const SizedBox(height: DS.md),
+              SizedBox(height: DS.md),
               Align(
                 alignment: Alignment.bottomRight,
                 child: TextButton.icon(

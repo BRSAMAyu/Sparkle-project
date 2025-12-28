@@ -142,20 +142,20 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   Clipboard.setData(ClipboardData(text: _content));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
+                    SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
                   );
                 },
               ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
-                  leading: const Icon(Icons.undo_rounded, color: DS.error),
-                  title: const Text('撤销', style: TextStyle(color: DS.error)),
+                  leading: Icon(Icons.undo_rounded, color: DS.error),
+                  title: Text('撤销', style: TextStyle(color: DS.error)),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onRevoke!(widget.message);
                   },
                 ),
-              const SizedBox(height: DS.sm),
+              SizedBox(height: DS.sm),
             ],
           ),
         ),
@@ -203,7 +203,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                               crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                                  margin: EdgeInsets.symmetric(horizontal: 8.0),
                                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                                   decoration: isUser
                                     ? BoxDecoration(
@@ -308,10 +308,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                   children: [
                     if (isUser) _buildMessageStatus(),
-                    const SizedBox(width: DS.xs),
+                    SizedBox(width: DS.xs),
                     Text(
                       timeStr,
-                      style: const TextStyle(fontSize: 10, color: DS.neutral500),
+                      style: TextStyle(fontSize: 10, color: DS.neutral500),
                     ),
                   ],
                 ),
@@ -324,8 +324,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   Widget _buildQuoteArea(BuildContext context, bool isUser, PrivateMessageInfo msg) => Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: isUser ? DS.brandPrimary.withValues(alpha: 0.15) : context.colors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
@@ -341,7 +341,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
               color: isUser ? DS.brandPrimary : DS.primaryBase,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             msg.content ?? '',
             maxLines: 2,
@@ -357,23 +357,23 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   Widget _buildRevokedPlaceholder() => Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12),
         child: Text(
           _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
-          style: const TextStyle(fontSize: 12, color: DS.neutral400),
+          style: TextStyle(fontSize: 12, color: DS.neutral400),
         ),
       ),
     );
 
   Widget _buildMessageStatus() {
-    if (widget.message is! PrivateMessageInfo) return const SizedBox.shrink();
+    if (widget.message is! PrivateMessageInfo) return SizedBox.shrink();
     final msg = widget.message as PrivateMessageInfo;
     
     if (msg.isSending) {
-      return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
+      return SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
     }
     if (msg.hasError) {
-      return const Icon(Icons.error_outline, color: DS.error, size: 14);
+      return Icon(Icons.error_outline, color: DS.error, size: 14);
     }
 
     final isRead = msg.isRead || msg.readAt != null;
@@ -386,7 +386,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           color: isRead ? DS.info : DS.neutral400,
         ),
         if (isRead)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(left: 2),
             child: Text('已读', style: TextStyle(fontSize: 10, color: DS.info)),
           ),
@@ -486,9 +486,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 500),
+      duration: Duration(milliseconds: 500),
       curve: Curves.elasticOut,
-      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: const Offset(0, 4))])),
+      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: Offset(0, 4))])),
     );
 }
 

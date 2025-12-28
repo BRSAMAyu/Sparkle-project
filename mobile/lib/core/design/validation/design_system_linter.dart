@@ -111,7 +111,7 @@ class DesignSystemLinter {
     final patterns = [
       RegExp(r'Color\(0x[0-9A-F]{8}\)'), // Color(0xFF6B35)
       RegExp(r'Colors\.\w+'),           // DS.brandPrimary, DS.brandPrimary
-      RegExp(r'const Color\.\w+'),      // const Color.white
+      RegExp(r'Color\.\w+'),      // const Color.white
     ];
 
     for (final pattern in patterns) {

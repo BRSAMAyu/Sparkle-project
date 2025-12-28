@@ -90,7 +90,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
           
           Padding(
-            padding: const EdgeInsets.all(DS.spacing8),
+            padding: EdgeInsets.all(DS.spacing8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -114,7 +114,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         hintStyle: TextStyle(
                           color: isDark ? DS.neutral400 : DS.neutral500,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
+                        contentPadding: EdgeInsets.symmetric(
                           horizontal: DS.spacing16,
                           vertical: DS.spacing10,
                         ),
@@ -125,7 +125,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ),
                 ),
-                const SizedBox(width: DS.spacing12),
+                SizedBox(width: DS.spacing12),
                 GestureDetector(
                   onTapDown: (_) => setState(() => _isButtonPressed = true),
                   onTapUp: (_) => setState(() => _isButtonPressed = false),
@@ -133,10 +133,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   onTap: canSend ? _handleSend : null,
                   child: AnimatedScale(
                     scale: _isButtonPressed ? 0.9 : 1.0,
-                    duration: const Duration(milliseconds: 100),
+                    duration: Duration(milliseconds: 100),
                     curve: Curves.easeInOut,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: Duration(milliseconds: 200),
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
@@ -179,12 +179,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Widget _buildQuotePreview(bool isDark) => Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? DS.neutral800 : DS.brandPrimary200,
         borderRadius: BorderRadius.circular(12),
-        border: const Border(
+        border: Border(
           left: BorderSide(color: DS.brandPrimary, width: 4),
         ),
       ),
@@ -196,13 +196,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               children: [
                 Text(
                   '引用 ${widget.quotedMessage!.sender.displayName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightBold,
                     color: DS.brandPrimary,
                   ),
                 ),
-                const SizedBox(height: DS.spacing4),
+                SizedBox(height: DS.spacing4),
                 Text(
                   widget.quotedMessage!.content ?? '',
                   maxLines: 1,
@@ -219,7 +219,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             width: DS.touchTargetMinSize,
             height: DS.touchTargetMinSize,
             child: IconButton(
-              icon: const Icon(Icons.close_rounded,
+              icon: Icon(Icons.close_rounded,
                 size: DS.iconSizeSm,
                 color: DS.neutral600,),
               onPressed: widget.onCancelQuote,

@@ -57,13 +57,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: Text('Create Account'),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.xl),
+          padding: EdgeInsets.all(DS.xl),
           child: Form(
             key: _formKey,
             child: Column(
@@ -78,7 +78,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                const SizedBox(height: DS.xxl),
+                SizedBox(height: DS.xxl),
 
                 // Username field
                 TextFormField(
@@ -98,7 +98,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
                 
                 // Email field
                 TextFormField(
@@ -116,7 +116,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -141,7 +141,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
 
                 // Confirm Password field
                 TextFormField(
@@ -159,12 +159,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: DS.xl),
+                SizedBox(height: DS.xl),
 
                 // Register Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: DS.brandPrimary,
                     foregroundColor: DS.brandPrimary,
                   ),
@@ -175,9 +175,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                         )
-                      : const Text('Register'),
+                      : Text('Register'),
                 ),
-                const SizedBox(height: DS.lg),
+                SizedBox(height: DS.lg),
 
                 // Login Link
                 SparkleButton.ghost(label: 'Already have an account? Login', onPressed: () => context.go('/login')),

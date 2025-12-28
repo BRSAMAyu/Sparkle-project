@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -130,7 +131,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
       builder: (context, child) {
         final color = _getIntentColor();
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(32),
@@ -169,10 +170,10 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 ),
               ),
               if (_isLoading)
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else if (_controller.text.isEmpty && !_isListening)
                  IconButton(
-                  icon: const Icon(Icons.mic, color: DS.primaryBase),
+                  icon: Icon(Icons.mic, color: DS.primaryBase),
                   onPressed: _toggleListening,
                   tooltip: '语音输入',
                 )

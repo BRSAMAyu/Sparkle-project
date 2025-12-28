@@ -103,7 +103,7 @@ class _RelationStyle {
           baseWidth: 1.0,
         );
       case EdgeRelationType.parentChild:
-        return const _RelationStyle(
+        return _RelationStyle(
           color: Color(0xFFFF6B35), // DS.brandPrimary
           baseWidth: 1.8,
         );
@@ -575,7 +575,7 @@ class StarMapPainter extends CustomPainter {
   /// Draw node count badge on cluster
   void _drawClusterBadge(Canvas canvas, Offset pos, double radius, int count, Color color) {
     final badgePos = pos + Offset(radius * 0.7, -radius * 0.7);
-    const badgeRadius = 10.0;
+    final double badgeRadius = 10.0;
 
     // Badge background
     final badgePaint = Paint()
@@ -654,7 +654,7 @@ class StarMapPainter extends CustomPainter {
       glowPaint.color = color.withAlpha((masteryFactor * 100).toInt());
       glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 12.0);
       canvas.drawCircle(pos, baseRadius * 2.0, glowPaint);
-      glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 20.0);
+      glowPaint.maskFilter = MaskFilter.blur(BlurStyle.normal, 20.0);
 
       // Core with radial gradient
       final gradient = ui.Gradient.radial(
@@ -757,7 +757,7 @@ class StarMapPainter extends CustomPainter {
         glowPaint.color = color.withValues(alpha: glowIntensity * 0.7 * animatedOpacity);
         glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
         canvas.drawCircle(pos, animatedRadius * 1.8, glowPaint);
-        glowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
+        glowPaint.maskFilter = MaskFilter.blur(BlurStyle.normal, 8.0);
 
         // Core fill with gradient
         final nodeGradient = ui.Gradient.radial(
@@ -784,7 +784,7 @@ class StarMapPainter extends CustomPainter {
              ringPaint
               ..color = color.withValues(alpha: 0.8 * animatedOpacity)
               ..strokeWidth = 2.0
-              ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
+              ..maskFilter = MaskFilter.blur(BlurStyle.solid, 2.0);
 
              canvas.drawCircle(pos, ringRadius, ringPaint);
 

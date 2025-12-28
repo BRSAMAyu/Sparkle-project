@@ -63,7 +63,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
               borderRadius: DS.borderRadius20,
               border: Border.all(color: DS.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Stack(
               children: [
                 // Prism refraction effect (animated)
@@ -94,7 +94,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     Row(
                       children: [
                         Icon(Icons.diamond_outlined, color: DS.brandPrimaryConst, size: 18),
-                        const SizedBox(width: DS.sm),
+                        SizedBox(width: DS.sm),
                         Text(
                           '认知棱镜',
                           style: TextStyle(
@@ -103,12 +103,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
                             color: DS.brandPrimaryConst,
                           ),
                         ),
-                        const Spacer(),
+                        Spacer(),
                         if (cognitive.hasNewInsight)
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: DS.prismPurple,
                               shape: BoxShape.circle,
                             ),
@@ -124,7 +124,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           if (dashboardState.weather.type == 'rainy') _buildTag('#焦虑波峰'),
                         ],
                       ),
-                      const SizedBox(height: DS.xs),
+                      SizedBox(height: DS.xs),
                       Text(
                         '行为定式分析已更新',
                         style: TextStyle(
@@ -152,7 +152,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
   }
 
   Widget _buildTag(String text) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(20),
         borderRadius: BorderRadius.circular(8),

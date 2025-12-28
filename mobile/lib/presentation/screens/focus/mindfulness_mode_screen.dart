@@ -104,7 +104,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         content: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: DS.brandPrimary),
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
             Expanded(
               child: Text(
                 '检测到分心行为 (第 ${state.interruptionCount} 次)',
@@ -185,7 +185,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                             ),
                           ),
 
-                          const SizedBox(height: DS.xxxl),
+                          SizedBox(height: DS.xxxl),
 
                           // 翻页时钟
                           FadeTransition(
@@ -196,7 +196,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                             ),
                           ),
 
-                          const SizedBox(height: DS.xxl),
+                          SizedBox(height: DS.xxl),
 
                           // 火焰动画
                           FadeTransition(
@@ -227,22 +227,22 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           // 分心计数
           if (state.interruptionCount > 0)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: DS.warning.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.visibility_off_rounded,
                     color: DS.warning,
                     size: 16,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(
                     '分心 ${state.interruptionCount} 次',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: DS.warning,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -252,7 +252,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
               ),
             )
           else
-            const SizedBox(width: 80),
+            SizedBox(width: 80),
 
           // 正念模式标题
           Row(
@@ -262,7 +262,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                 color: DS.brandPrimary.withValues(alpha: 0.7),
                 size: 20,
               ),
-              const SizedBox(width: DS.sm),
+              SizedBox(width: DS.sm),
               Text(
                 '正念模式',
                 style: TextStyle(
@@ -293,8 +293,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     );
 
   Widget _buildTaskCard() => Container(
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      padding: const EdgeInsets.all(DS.xl),
+      margin: EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
@@ -325,9 +325,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             overflow: TextOverflow.ellipsis,
           ),
 
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               gradient: DS.primaryGradient,
               borderRadius: BorderRadius.circular(12),
@@ -382,14 +382,14 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     );
 
   Widget _buildExitButton() => Padding(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       child: TextButton(
         onPressed: _handleExit,
         style: TextButton.styleFrom(
           foregroundColor: DS.brandPrimary.withValues(alpha: 0.5),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.exit_to_app_rounded, size: 18),

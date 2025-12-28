@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -64,7 +65,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               children: [
                 _buildHeader(context),
                 _buildViewSwitcher(),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Expanded(
                   child: _viewMode == CalendarViewMode.year
                       ? _buildYearView()
@@ -102,7 +103,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               color: AppColors.textOnDark(context),
             ),
           ),
-          const Spacer(),
+          Spacer(),
           // Year display
           Text(
             DateFormat('yyyy年').format(_focusedDay),
@@ -149,7 +150,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         final monthHeight = (constraints.maxHeight - 40) / 4;
         
         return GridView.builder(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: EdgeInsets.all(DS.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             childAspectRatio: monthWidth / monthHeight,
@@ -178,7 +179,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   children: [
                     // Month Name
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      padding: EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
                         '${index + 1}月',
                         style: TextStyle(
@@ -278,7 +279,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         outsideDaysVisible: false,
         defaultTextStyle: TextStyle(color: DS.brandPrimary),
         weekendTextStyle: TextStyle(color: DS.brandPrimary70),
-        selectedDecoration: const BoxDecoration(
+        selectedDecoration: BoxDecoration(
           color: DS.primaryBase,
           shape: BoxShape.circle,
         ),
@@ -323,8 +324,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final lunarData = _lunarService.getLunarData(day);
     
     return Container(
-      margin: const EdgeInsets.all(DS.xs),
-      decoration: isSelected ? const BoxDecoration(
+      margin: EdgeInsets.all(DS.xs),
+      decoration: isSelected ? BoxDecoration(
         color: DS.primaryBase,
         shape: BoxShape.circle,
       ) : isToday ? BoxDecoration(
@@ -370,7 +371,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
      return Column(
        children: [
          Padding(
-           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
            child: Row(
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
@@ -384,8 +385,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                      MaterialPageRoute(builder: (_) => DailyDetailScreen(date: _selectedDay ?? _focusedDay)),
                    );
                  },
-                 icon: const Icon(Icons.info_outline, size: 16, color: DS.primaryBase),
-                 label: const Text('查看详情', style: TextStyle(color: DS.primaryBase)),
+                 icon: Icon(Icons.info_outline, size: 16, color: DS.primaryBase),
+                 label: Text('查看详情', style: TextStyle(color: DS.primaryBase)),
                ),
              ],
            ),
@@ -409,13 +410,13 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   background: Container(
                     color: DS.error,
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
+                    padding: EdgeInsets.only(right: 20),
                     child: Icon(Icons.delete, color: DS.brandPrimary),
                   ),
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       tileColor: DS.brandPrimary10,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: Container(
@@ -531,11 +532,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               ),
               TextButton(
                 onPressed: _saveEvent,
-                child: const Text('保存', style: TextStyle(color: DS.primaryBase)),
+                child: Text('保存', style: TextStyle(color: DS.primaryBase)),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           TextField(
             controller: _titleController,
             style: TextStyle(color: DS.brandPrimary),
@@ -550,11 +551,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           ),
           const SizedBox(height: 10),
           _buildTimeRow(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildOptionsRow(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildColorPicker(),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextField(
             controller: _locationController,
             style: TextStyle(color: DS.brandPrimary),
@@ -567,7 +568,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               fillColor: DS.brandPrimary10,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextField(
             controller: _descController,
             style: TextStyle(color: DS.brandPrimary),
@@ -592,7 +593,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           child: GestureDetector(
             onTap: () => _pickDateTime(true),
             child: Container(
-              padding: const EdgeInsets.all(DS.md),
+              padding: EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -610,14 +611,14 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Icon(Icons.arrow_forward, color: DS.brandPrimary38, size: 16),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
           child: GestureDetector(
             onTap: () => _pickDateTime(false),
             child: Container(
-              padding: const EdgeInsets.all(DS.md),
+              padding: EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -651,7 +652,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: Text('提醒', style: TextStyle(color: DS.brandPrimary)),
           trailing: DropdownButton<int>(
             value: _reminderMinutes,
-            dropdownColor: const Color(0xFF2C2C2C),
+            dropdownColor: Color(0xFF2C2C2C),
             style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
@@ -670,7 +671,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: Text('重复', style: TextStyle(color: DS.brandPrimary)),
           trailing: DropdownButton<String?>(
             value: _recurrenceRule,
-            dropdownColor: const Color(0xFF2C2C2C),
+            dropdownColor: Color(0xFF2C2C2C),
             style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
@@ -692,7 +693,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         return GestureDetector(
           onTap: () => setState(() => _colorValue = color),
           child: Container(
-            margin: const EdgeInsets.only(right: 12),
+            margin: EdgeInsets.only(right: 12),
             width: 32,
             height: 32,
             decoration: BoxDecoration(

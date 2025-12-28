@@ -24,7 +24,7 @@ class EngagementHeatmap extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,12 +32,12 @@ class EngagementHeatmap extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.calendar_month, color: DS.brandPrimary.shade600, size: 24),
-                const SizedBox(width: DS.md),
+                SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '学习活跃度',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -51,12 +51,12 @@ class EngagementHeatmap extends StatelessWidget {
                 _buildLegend(),
               ],
             ),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
 
             // Heatmap Grid
             _buildHeatmapGrid(),
 
-            const SizedBox(height: DS.md),
+            SizedBox(height: DS.md),
 
             // Stats Summary
             _buildStatsSummary(),
@@ -147,10 +147,10 @@ class EngagementHeatmap extends StatelessWidget {
   Widget _buildStatItem(String label, String value, IconData icon) => Column(
       children: [
         Icon(icon, size: 20, color: DS.brandPrimary.shade600),
-        const SizedBox(height: DS.xs),
+        SizedBox(height: DS.xs),
         Text(
           value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,

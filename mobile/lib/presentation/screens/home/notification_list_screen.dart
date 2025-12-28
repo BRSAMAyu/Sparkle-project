@@ -39,12 +39,12 @@ class NotificationListScreen extends ConsumerWidget {
 
 class NotificationItem extends ConsumerWidget {
 
-  const NotificationItem({required this.notification, super.key});
+  NotificationItem({required this.notification, super.key});
   final NotificationModel notification;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => ListTile(
-      title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(notification.title, style: TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(notification.content),
       trailing: !notification.isRead ? Icon(Icons.circle, size: 12, color: DS.brandPrimary) : null,
       onTap: () {

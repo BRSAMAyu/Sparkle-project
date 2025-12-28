@@ -127,7 +127,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.touch_app, size: 16, color: DS.primaryBase),
+                            child: Icon(Icons.touch_app, size: 16, color: DS.primaryBase),
                           ),
                         ),
                       ],
@@ -138,12 +138,12 @@ class _LearningModeControlState extends State<LearningModeControl> {
             );
           },
         ),
-        const SizedBox(height: DS.md),
+        SizedBox(height: DS.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildInfoChip('深度: ${(_currentDepth * 100).toInt()}%'),
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
             _buildInfoChip('好奇: ${(_currentCuriosity * 100).toInt()}%'),
           ],
         ),
@@ -160,7 +160,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
         color: isDark ? DS.brandPrimary10 : DS.primaryBase.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),

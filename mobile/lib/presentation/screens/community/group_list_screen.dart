@@ -33,8 +33,8 @@ class GroupListScreen extends ConsumerWidget {
         onPressed: () {
           context.push('/community/groups/create');
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Create'),
+        icon: Icon(Icons.add),
+        label: Text('Create'),
         backgroundColor: DS.primaryBase,
         elevation: 4,
       ),
@@ -55,10 +55,10 @@ class GroupListScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.read(myGroupsProvider.notifier).refresh(),
             child: ListView.separated(
-              padding: const EdgeInsets.all(DS.spacing16),
+              padding: EdgeInsets.all(DS.spacing16),
               itemCount: groups.length,
               separatorBuilder: (context, index) =>
-                  const SizedBox(height: DS.spacing12),
+                  SizedBox(height: DS.spacing12),
               itemBuilder: (context, index) {
                 final group = groups[index];
                 return _AnimatedGroupTile(
@@ -164,7 +164,7 @@ class _GroupListTile extends StatelessWidget {
           splashColor: DS.primaryBase.withValues(alpha: 0.1),
           highlightColor: DS.primaryBase.withValues(alpha: 0.05),
           child: Padding(
-            padding: const EdgeInsets.all(DS.spacing16),
+            padding: EdgeInsets.all(DS.spacing16),
             child: Row(
               children: [
                 // Avatar with Hero
@@ -182,7 +182,7 @@ class _GroupListTile extends StatelessWidget {
                          BoxShadow(
                            color: (isSprint ? DS.brandPrimary : DS.brandPrimary).withValues(alpha: 0.2),
                            blurRadius: 8,
-                           offset: const Offset(0, 4),
+                           offset: Offset(0, 4),
                          ),
                       ],
                     ),
@@ -193,7 +193,7 @@ class _GroupListTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: DS.spacing16),
+                SizedBox(width: DS.spacing16),
                 
                 // Content
                 Expanded(
@@ -215,7 +215,7 @@ class _GroupListTile extends StatelessWidget {
                           ),
                           if (isSprint && group.daysRemaining != null)
                              Container(
-                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                decoration: BoxDecoration(
                                  color: DS.error.shade50,
                                  borderRadius: BorderRadius.circular(8),
@@ -231,7 +231,7 @@ class _GroupListTile extends StatelessWidget {
                              ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Row(
                         children: [
                           _buildInfoBadge(
@@ -240,7 +240,7 @@ class _GroupListTile extends StatelessWidget {
                             '${group.totalFlamePower}',
                             DS.brandPrimary,
                           ),
-                          const SizedBox(width: DS.md),
+                          SizedBox(width: DS.md),
                           _buildInfoBadge(
                             context,
                             Icons.people_alt_rounded,
@@ -252,8 +252,8 @@ class _GroupListTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: DS.sm),
-                const Icon(Icons.chevron_right, color: DS.neutral400),
+                SizedBox(width: DS.sm),
+                Icon(Icons.chevron_right, color: DS.neutral400),
               ],
             ),
           ),
@@ -265,7 +265,7 @@ class _GroupListTile extends StatelessWidget {
   Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) => Row(
       children: [
         Icon(icon, size: 14, color: color),
-        const SizedBox(width: DS.xs),
+        SizedBox(width: DS.xs),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -282,9 +282,9 @@ class _GroupListLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: EdgeInsets.all(DS.spacing16),
       itemCount: 6,
-      separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
+      separatorBuilder: (context, index) => SizedBox(height: DS.spacing12),
       itemBuilder: (context, index) => Shimmer.fromColors(
           baseColor: DS.neutral200,
           highlightColor: DS.neutral100,

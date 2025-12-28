@@ -382,7 +382,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       SnackBar(
         content: Text('推荐学习: ${node.name}'),
         backgroundColor: DS.brandPrimary,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
         action: SnackBarAction(
           label: '查看',
           textColor: DS.brandPrimary,

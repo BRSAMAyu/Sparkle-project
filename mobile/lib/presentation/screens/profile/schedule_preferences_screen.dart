@@ -103,12 +103,12 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
         actions: [
           IconButton(
             onPressed: _save,
-            icon: const Icon(Icons.save),
+            icon: Icon(Icons.save),
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -140,8 +140,8 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
   ) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: DS.sm),
+        Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: DS.sm),
         Row(
           children: [
             Expanded(
@@ -156,7 +156,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
                 onTap: () => _selectTime(context, startController),
               ),
             ),
-            const SizedBox(width: DS.lg),
+            SizedBox(width: DS.lg),
             Expanded(
               child: TextFormField(
                 controller: endController,

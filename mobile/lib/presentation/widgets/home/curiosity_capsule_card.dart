@@ -9,19 +9,19 @@ import 'package:sparkle/presentation/providers/capsule_provider.dart';
 
 class CuriosityCapsuleCard extends ConsumerWidget {
 
-  const CuriosityCapsuleCard({required this.capsule, super.key});
+  CuriosityCapsuleCard({required this.capsule, super.key});
   final CuriosityCapsuleModel capsule;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
       elevation: 2,
       child: ExpansionTile(
-        tilePadding: const EdgeInsets.all(DS.lg),
+        tilePadding: EdgeInsets.all(DS.lg),
         leading: Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.all(DS.sm),
+          decoration: BoxDecoration(
             gradient: DS.secondaryGradient,
             shape: BoxShape.circle,
           ),
@@ -29,11 +29,11 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         ),
         title: Text(
           capsule.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: capsule.isRead 
             ? null 
-            : const Text('New!', style: TextStyle(color: DS.primaryBase, fontWeight: FontWeight.bold)),
+            : Text('New!', style: TextStyle(color: DS.primaryBase, fontWeight: FontWeight.bold)),
         onExpansionChanged: (expanded) {
           if (expanded && !capsule.isRead) {
             ref.read(capsuleProvider.notifier).markAsRead(capsule.id);
@@ -41,12 +41,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         },
         children: [
           Padding(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MarkdownBody(data: capsule.content),
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
                 if (capsule.relatedSubject != null)
                   Chip(
                     label: Text(capsule.relatedSubject!),

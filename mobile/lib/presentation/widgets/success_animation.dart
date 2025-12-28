@@ -65,7 +65,7 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
           child: ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive, // All directions
-            colors: const [
+            colors: [
               DS.primaryBase,
               DS.accent,
               DS.success,

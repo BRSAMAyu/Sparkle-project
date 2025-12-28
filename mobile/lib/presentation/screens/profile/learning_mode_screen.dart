@@ -75,10 +75,10 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
-        title: const Text('学习模式设置'),
+        title: Text('学习模式设置'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(DS.spacing16),
+        padding: EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -88,7 +88,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                     fontWeight: DS.fontWeightMedium,
                   ),
             ),
-            const SizedBox(height: DS.spacing24),
+            SizedBox(height: DS.spacing24),
             Center(
               child: PreferenceController2D(
                 initialDepth: _currentDepthPreference,
@@ -101,7 +101,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                 },
               ),
             ),
-            const SizedBox(height: DS.spacing24),
+            SizedBox(height: DS.spacing24),
             Text(
               '深度偏好 (Y轴): ${(_currentDepthPreference * 100).toStringAsFixed(0)}%',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.neutral600),
@@ -110,12 +110,12 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
               '好奇心偏好 (X轴): ${(_currentCuriosityPreference * 100).toStringAsFixed(0)}%',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.neutral600),
             ),
-            const Spacer(),
+            Spacer(),
             Center(
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _savePreferences,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: DS.borderRadius12,
                   ),

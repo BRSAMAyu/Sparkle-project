@@ -110,7 +110,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing24),
+      padding: EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -123,14 +123,14 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.indigo.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.air, color: Colors.indigo),
+                child: Icon(Icons.air, color: Colors.indigo),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               const Text(
                 '呼吸练习',
                 style: TextStyle(
@@ -138,14 +138,14 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          const SizedBox(height: DS.xxl),
+          SizedBox(height: DS.xxl),
 
           // Breathing Circle Animation
           Center(
@@ -205,7 +205,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                       ),
                       if (_isPlaying)
                         Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: EdgeInsets.only(top: 8),
                           child: Text(
                             '$_completedRounds / $_totalRounds',
                             style: TextStyle(
@@ -221,7 +221,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             ),
           ),
           
-          const SizedBox(height: DS.xxxl),
+          SizedBox(height: DS.xxxl),
 
           // Duration Selector
           if (!_isPlaying)
@@ -240,7 +240,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                     },
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected ? Colors.indigo : DS.brandPrimary.shade100,
                         borderRadius: BorderRadius.circular(20),
@@ -258,7 +258,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
               }),
             ),
 
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Control Button
           CustomButton.primary(

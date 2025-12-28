@@ -22,22 +22,22 @@ class PlanEditScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.construction, size: 80, color: DS.brandPrimary),
-            const SizedBox(height: DS.lg),
+            SizedBox(height: DS.lg),
             Text(
               '计划编辑功能开发中',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               '计划ID: $planId',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: DS.sm),
-            const Text(
+            SizedBox(height: DS.sm),
+            Text(
               '此功能正在开发中，即将推出',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: DS.xl),
+            SizedBox(height: DS.xl),
             SparkleButton.primary(label: '返回', onPressed: () => context.pop()),
           ],
         ),

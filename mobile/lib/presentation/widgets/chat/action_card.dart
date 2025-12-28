@@ -119,7 +119,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
 
                 Padding(
-                  padding: const EdgeInsets.all(DS.spacing16),
+                  padding: EdgeInsets.all(DS.spacing16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -130,7 +130,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             builder: (context, child) => Transform.scale(
                                 scale: hasAction ? _iconScaleAnimation.value : 1.0,
                                 child: Container(
-                                  padding: const EdgeInsets.all(DS.spacing8),
+                                  padding: EdgeInsets.all(DS.spacing8),
                                   decoration: BoxDecoration(
                                     gradient: _getActionGradient(widget.action.type),
                                     shape: BoxShape.circle,
@@ -138,7 +138,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                       BoxShadow(
                                         color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
                                         blurRadius: 8,
-                                        offset: const Offset(0, 2),
+                                        offset: Offset(0, 2),
                                       ),
                                     ],
                                   ),
@@ -150,7 +150,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 ),
                               ),
                           ),
-                          const SizedBox(width: DS.spacing12),
+                          SizedBox(width: DS.spacing12),
                           Expanded(
                             child: Text(
                               _getTitleForAction(widget.action.type),
@@ -162,10 +162,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      const SizedBox(height: DS.spacing16),
+                      SizedBox(height: DS.spacing16),
                       _buildContentForAction(context, widget.action),
                       if (hasAction) ...[
-                        const SizedBox(height: DS.spacing16),
+                        SizedBox(height: DS.spacing16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -175,7 +175,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 onPressed: widget.onDismiss,
                                 size: CustomButtonSize.small,
                               ),
-                            const SizedBox(width: DS.spacing8),
+                            SizedBox(width: DS.spacing8),
                             if (widget.onConfirm != null)
                               CustomButton.primary(
                                 text: '确认',
@@ -263,7 +263,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       children: [
         if (action.data['title'] != null) ...[
           Container(
-            padding: const EdgeInsets.all(DS.spacing12),
+            padding: EdgeInsets.all(DS.spacing12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -286,7 +286,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ),
             ),
           ),
-          const SizedBox(height: DS.spacing12),
+          SizedBox(height: DS.spacing12),
         ],
         if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
           Wrap(
@@ -295,7 +295,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             children: action.data.entries
                 .where((e) => e.key != 'title')
                 .map((entry) => Container(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: DS.spacing12,
                   vertical: DS.spacing8,
                 ),
@@ -312,17 +312,17 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       size: DS.iconSizeXs,
                       color: DS.neutral600,
                     ),
-                    const SizedBox(width: DS.spacing4),
+                    SizedBox(width: DS.spacing4),
                     Text(
                       '${_formatParamKey(entry.key)}: ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: DS.neutral600,
                         fontSize: DS.fontSizeSm,
                       ),
                     ),
                     Text(
                       entry.value.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: DS.fontWeightSemibold,
                         fontSize: DS.fontSizeSm,
                         color: DS.neutral900,

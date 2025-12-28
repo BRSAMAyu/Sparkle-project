@@ -25,11 +25,11 @@ class NodePreviewCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 100, left: 20, right: 20),
         width: double.infinity,
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: BoxConstraints(maxWidth: 400),
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: DS.brandSecondary.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(16),
@@ -73,7 +73,7 @@ class NodePreviewCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     IconButton(
                       icon: Icon(Icons.close, size: 20, color: DS.brandPrimary),
                       onPressed: onClose,
@@ -82,7 +82,7 @@ class NodePreviewCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 
                 // Title
                 Text(

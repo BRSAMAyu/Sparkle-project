@@ -82,7 +82,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   Future<void> _submit() async {
     if (_selectedSubjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择科目'), backgroundColor: DS.warning),
+        SnackBar(content: Text('请选择科目'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -90,7 +90,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入知识点'), backgroundColor: DS.warning),
+        SnackBar(content: Text('请输入知识点'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -98,7 +98,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入错误描述'), backgroundColor: DS.warning),
+        SnackBar(content: Text('请输入错误描述'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -118,7 +118,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('已记录错题'),
             backgroundColor: DS.success,
             behavior: SnackBarBehavior.floating,
@@ -140,7 +140,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
+      padding: EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -163,20 +163,20 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Header
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(DS.sm),
+                padding: EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.lightbulb_outlined, color: Colors.amber, size: 24),
+                child: Icon(Icons.lightbulb_outlined, color: Colors.amber, size: 24),
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -186,7 +186,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
-                  const Text(
+                  Text(
                     '快速记录学习中遇到的问题',
                     style: TextStyle(
                       color: DS.neutral500,
@@ -197,7 +197,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ],
           ),
-          const SizedBox(height: DS.xl),
+          SizedBox(height: DS.xl),
 
           // Scrollable Content
           Expanded(
@@ -206,16 +206,16 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Subject Dropdown
-                  const Text(
+                  Text(
                     '科目',
                     style: TextStyle(
                       fontWeight: DS.fontWeightMedium,
                       color: DS.neutral700,
                     ),
                   ),
-                  const SizedBox(height: DS.sm),
-                  if (_isLoading) const Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                  SizedBox(height: DS.sm),
+                  if (_isLoading) Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             color: DS.neutral50,
                             borderRadius: BorderRadius.circular(12),
@@ -236,17 +236,17 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                             ),
                           ),
                         ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Topic Input
-                  const Text(
+                  Text(
                     '知识点',
                     style: TextStyle(
                       fontWeight: DS.fontWeightMedium,
                       color: DS.neutral700,
                     ),
                   ),
-                  const SizedBox(height: DS.sm),
+                  SizedBox(height: DS.sm),
                   TextField(
                     controller: _topicController,
                     decoration: InputDecoration(
@@ -264,17 +264,17 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Error Type Chips
-                  const Text(
+                  Text(
                     '错误类型',
                     style: TextStyle(
                       fontWeight: DS.fontWeightMedium,
                       color: DS.neutral700,
                     ),
                   ),
-                  const SizedBox(height: DS.sm),
+                  SizedBox(height: DS.sm),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -303,20 +303,20 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Description
-                  const Text(
+                  Text(
                     '描述',
                     style: TextStyle(
                       fontWeight: DS.fontWeightMedium,
                       color: DS.neutral700,
                     ),
                   ),
-                  const SizedBox(height: DS.sm),
+                  SizedBox(height: DS.sm),
                   Container(
                     height: 120,
-                    padding: const EdgeInsets.all(DS.xs),
+                    padding: EdgeInsets.all(DS.xs),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
@@ -326,19 +326,19 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       controller: _descriptionController,
                       maxLines: null,
                       expands: true,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '简单描述错误情况和原因分析...',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(DS.md),
                       ),
-                      style: const TextStyle(fontSize: 14, height: 1.5),
+                      style: TextStyle(fontSize: 14, height: 1.5),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: DS.lg),
+          SizedBox(height: DS.lg),
 
           // Submit Button
           CustomButton.primary(
@@ -346,7 +346,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             icon: Icons.flash_on_rounded,
             onPressed: _isSubmitting ? null : _submit,
             customGradient: LinearGradient(
-              colors: [DS.warning, const Color(0xFFFFB74D)],
+              colors: [DS.warning, Color(0xFFFFB74D)],
             ),
           ),
         ],

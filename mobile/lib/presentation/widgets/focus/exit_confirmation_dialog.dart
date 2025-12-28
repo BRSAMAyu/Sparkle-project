@@ -71,9 +71,9 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
       position: _slideAnimation,
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(DS.xl),
+        insetPadding: EdgeInsets.all(DS.xl),
         child: Container(
-          padding: const EdgeInsets.all(DS.xl),
+          padding: EdgeInsets.all(DS.xl),
           decoration: BoxDecoration(
             color: DS.deepSpaceSurface,
             borderRadius: BorderRadius.circular(20),
@@ -93,11 +93,11 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
             children: [
               // Progress Indicator
               _buildProgressIndicator(),
-              const SizedBox(height: DS.xl),
+              SizedBox(height: DS.xl),
 
               // Icon
               _buildIcon(),
-              const SizedBox(height: DS.lg),
+              SizedBox(height: DS.lg),
 
               // Title
               Text(
@@ -109,7 +109,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: DS.md),
+              SizedBox(height: DS.md),
 
               // Message
               Text(
@@ -121,7 +121,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: DS.xl),
+              SizedBox(height: DS.xl),
 
               // Buttons
               Row(
@@ -132,7 +132,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                       onPressed: _cancel,
                     ),
                   ),
-                  const SizedBox(width: DS.lg),
+                  SizedBox(width: DS.lg),
                   Expanded(
                     child: CustomButton.primary(
                       text: _getConfirmText(),
@@ -157,7 +157,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         return Container(
           width: 24,
           height: 4,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: isActive
                 ? DS.primaryBase
@@ -185,7 +185,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
     }
 
     return Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,

@@ -439,7 +439,7 @@ class _ColorBox extends StatelessWidget {
               BoxShadow(
                 color: color.withValues(alpha: 0.3),
                 blurRadius: DS.md,
-                offset: const Offset(0, 2),
+                offset: Offset(0, 2),
               ),
             ],
           ),

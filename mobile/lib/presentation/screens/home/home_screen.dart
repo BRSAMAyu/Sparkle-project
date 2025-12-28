@@ -98,12 +98,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           right: -8,
           top: -4,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
               color: DS.error,
               borderRadius: BorderRadius.circular(8),
             ),
-            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+            constraints: BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               count > 99 ? '99+' : '$count',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10, fontWeight: FontWeight.bold),
@@ -179,7 +179,7 @@ class _DashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildTopOverlay(BuildContext context, dynamic user, AppLocalizations l10n) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
         children: [
           CircleAvatar(
@@ -188,13 +188,13 @@ class _DashboardScreen extends ConsumerWidget {
             backgroundColor: DS.primaryBase,
             child: user?.avatarUrl == null ? Text((user?.nickname ?? 'U')[0].toUpperCase()) : null,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Lv.${user?.flameLevel ?? 1}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   fontWeight: DS.fontWeightBold,
                   color: DS.warning,

@@ -82,14 +82,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(DS.sm),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
                 gradient: DS.secondaryGradient,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 20),
             ),
-            const SizedBox(width: DS.md),
+            SizedBox(width: DS.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -141,7 +141,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Column(
                 children: [
                   if (chatState.isLoading)
-                    const LinearProgressIndicator(
+                    LinearProgressIndicator(
                       backgroundColor: Colors.transparent,
                       valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
                       minHeight: 2,
@@ -228,11 +228,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (chatState.error != null)
                  Container(
                    width: double.infinity,
-                   padding: const EdgeInsets.all(DS.sm),
+                   padding: EdgeInsets.all(DS.sm),
                    color: DS.error.withValues(alpha: 0.1),
                    child: Text(
                      'Error: ${chatState.error}', 
-                     style: const TextStyle(color: DS.error),
+                     style: TextStyle(color: DS.error),
                      textAlign: TextAlign.center,
                    ),
                  ),
@@ -272,18 +272,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Container(
               width: 40,
               height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              margin: EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: isDark ? DS.neutral700 : DS.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(DS.lg),
+              padding: EdgeInsets.all(DS.lg),
               child: Row(
                 children: [
-                  const Icon(Icons.history_rounded, color: DS.primaryBase),
-                  const SizedBox(width: DS.md),
+                  Icon(Icons.history_rounded, color: DS.primaryBase),
+                  SizedBox(width: DS.md),
                   Text(
                     '历史对话',
                     style: TextStyle(
@@ -320,7 +320,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       
                       return ListTile(
                         leading: Container(
-                          padding: const EdgeInsets.all(DS.sm),
+                          padding: EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: isCurrent ? DS.primaryBase.withValues(alpha: 0.1) : (isDark ? DS.neutral800 : DS.neutral100),
                             shape: BoxShape.circle,
@@ -340,9 +340,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         subtitle: Text(
                           session['updated_at']?.split('T')[0] ?? '',
-                          style: const TextStyle(fontSize: 12, color: DS.neutral500),
+                          style: TextStyle(fontSize: 12, color: DS.neutral500),
                         ),
-                        trailing: isCurrent ? const Icon(Icons.check_circle, color: DS.primaryBase, size: 18) : null,
+                        trailing: isCurrent ? Icon(Icons.check_circle, color: DS.primaryBase, size: 18) : null,
                         onTap: () {
                           Navigator.pop(context);
                           ref.read(chatProvider.notifier).loadConversationHistory(session['id']);
@@ -363,19 +363,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(DS.xxl),
+        padding: EdgeInsets.all(DS.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: DS.primaryBase.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
+              child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
             ),
-            const SizedBox(height: DS.xl),
+            SizedBox(height: DS.xl),
             Text(
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -383,7 +383,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 color: isDark ? DS.brandPrimary : DS.neutral900,
               ),
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -460,7 +460,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
         child: Container(
           // Ensure minimum 48px touch target
           height: DS.touchTargetMinSize,
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: DS.spacing16,
             vertical: DS.spacing8,
           ),
@@ -487,7 +487,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
                 size: DS.iconSizeSm,
                 color: widget.color,
               ),
-              const SizedBox(width: DS.spacing8),
+              SizedBox(width: DS.spacing8),
               Text(
                 widget.label,
                 style: TextStyle(
@@ -525,10 +525,10 @@ class _StreamingBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? DS.neutral800 : DS.brandPrimary,
-          borderRadius: const BorderRadius.only(
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
             bottomRight: Radius.circular(20),
@@ -550,7 +550,7 @@ class _StreamingBubble extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: DS.xs),
+            SizedBox(width: DS.xs),
             // 闪烁的光标
             const _BlinkingCursor(),
           ],
@@ -622,10 +622,10 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? DS.neutral800 : DS.brandPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -646,7 +646,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
               return Transform.translate(
                 offset: Offset(0, -offset),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  margin: EdgeInsets.symmetric(horizontal: 2),
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(

@@ -4,11 +4,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class StatisticsCard extends StatelessWidget {
-  const StatisticsCard({super.key});
+  StatisticsCard({super.key});
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
+      padding: EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: DS.borderRadius16,
@@ -20,19 +20,19 @@ class StatisticsCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: DS.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.show_chart_rounded,
                   color: DS.primaryBase,
                   size: 16,
                 ),
               ),
-              const SizedBox(width: DS.spacing8),
-              const Text(
+              SizedBox(width: DS.spacing8),
+              Text(
                 '本周成长趋势',
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
@@ -42,7 +42,7 @@ class StatisticsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: DS.spacing16),
+          SizedBox(height: DS.spacing16),
           const SizedBox(
             height: 120,
             child: _WeeklyTrendChart(),
@@ -83,10 +83,10 @@ class _WeeklyTrendChart extends StatelessWidget {
                   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                   if (value.toInt() >= 0 && value.toInt() < days.length) {
                     return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: EdgeInsets.only(top: 8.0),
                       child: Text(
                         days[value.toInt()],
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: DS.neutral500,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,

@@ -45,7 +45,7 @@ class GalaxyErrorDialog extends StatelessWidget {
             color: _getErrorColor(),
             size: 24,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               _getTitle(),
@@ -70,7 +70,7 @@ class GalaxyErrorDialog extends StatelessWidget {
             ),
           ),
           if (error.isRetryable) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               '点击"重试"按钮重新加载',
               style: TextStyle(
@@ -320,7 +320,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 size: 40,
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // 标题
             Text(
@@ -331,7 +331,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
 
             // 描述
             Text(
@@ -348,8 +348,8 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
             if (onRetry != null && error.isRetryable)
               ElevatedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('重试'),
+                icon: Icon(Icons.refresh_rounded, size: 18),
+                label: Text('重试'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DS.brandPrimary,
                   foregroundColor: DS.textPrimary,

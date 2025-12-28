@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -67,31 +68,31 @@ class WeatherHeader extends ConsumerWidget {
   LinearGradient _getWeatherGradient(String type) {
     switch (type) {
       case 'sunny':
-        return const LinearGradient(
+        return LinearGradient(
           colors: [DS.deepSpaceStart, DS.deepSpaceEnd, Color(0xFF415A77)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'cloudy':
-        return const LinearGradient(
+        return LinearGradient(
           colors: [Color(0xFF1A1A1A), Color(0xFF2C3E50), Color(0xFF4B5D67)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'rainy':
-        return const LinearGradient(
+        return LinearGradient(
           colors: [DS.deepSpaceStart, DS.deepSpaceSurface, DS.neutral700],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'meteor':
-        return const LinearGradient(
+        return LinearGradient(
           colors: [Color(0xFF1A0B2E), Color(0xFF2D1B4E), Color(0xFF4A148C)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       default:
-        return const LinearGradient(
+        return LinearGradient(
           colors: [DS.deepSpaceStart, DS.deepSpaceEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -68,7 +69,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               borderRadius: DS.borderRadius20,
               border: Border.all(color: DS.glassBorder),
             ),
-            padding: const EdgeInsets.all(DS.lg),
+            padding: EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,7 +86,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: DS.flameCore.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -132,10 +133,10 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                           ),
                       ),
-                      const SizedBox(height: DS.md),
+                      SizedBox(height: DS.md),
                       // Nudge Message
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: DS.brandPrimary.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
@@ -157,7 +158,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                 ),
                 
-                const SizedBox(height: DS.sm),
+                SizedBox(height: DS.sm),
 
                 // Metrics Row
                 Row(

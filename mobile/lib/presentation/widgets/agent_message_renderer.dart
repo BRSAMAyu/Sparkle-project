@@ -44,8 +44,8 @@ class AgentMessageRenderer extends StatelessWidget {
     );
 
   Widget _buildTextBubble(BuildContext context, String text) => Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(DS.md),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -80,7 +80,7 @@ class AgentMessageRenderer extends StatelessWidget {
           return Card(
             color: Theme.of(context).colorScheme.errorContainer,
             child: Padding(
-              padding: const EdgeInsets.all(DS.sm),
+              padding: EdgeInsets.all(DS.sm),
               child: Text('Invalid task data: $e'),
             ),
           );
@@ -103,9 +103,9 @@ class AgentMessageRenderer extends StatelessWidget {
 
   Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) => Card(
       color: Theme.of(context).colorScheme.errorContainer,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -113,11 +113,11 @@ class AgentMessageRenderer extends StatelessWidget {
               children: [
                 Icon(Icons.warning_amber, 
                      color: Theme.of(context).colorScheme.error,),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 Text('操作遇到问题', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             ...errors.map((e) => Text('• ${e.message}', style: TextStyle(color: Theme.of(context).colorScheme.error))),
             if (errors.any((e) => e.suggestion != null))
               Padding(
@@ -137,9 +137,9 @@ class AgentMessageRenderer extends StatelessWidget {
     ConfirmationData data,
   ) => Card(
       color: Theme.of(context).colorScheme.tertiaryContainer,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(DS.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -147,17 +147,17 @@ class AgentMessageRenderer extends StatelessWidget {
               '需要确认',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(data.description),
-            const SizedBox(height: DS.md),
+            SizedBox(height: DS.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: () => onConfirmation?.call(data.actionId, false),
-                  child: const Text('取消'),
+                  child: Text('取消'),
                 ),
-                const SizedBox(width: DS.sm),
+                SizedBox(width: DS.sm),
                 ElevatedButton(
                   onPressed: () => onConfirmation?.call(data.actionId, true),
                   child: const Text('确认执行'),
@@ -170,9 +170,9 @@ class AgentMessageRenderer extends StatelessWidget {
     );
 
   Widget _buildUnknownWidget(WidgetPayload widget) => Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(DS.sm),
+        padding: EdgeInsets.all(DS.sm),
         child: Text('Unknown widget type: ${widget.type}'),
       ),
     );

@@ -40,7 +40,7 @@ class DailyDetailScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.lg),
+        padding: EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -73,7 +73,7 @@ class DailyDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildDateHeader(BuildContext context, DateTime date, LunarData lunar) => Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [DS.primaryBase.withAlpha(150), DS.primaryBase.withAlpha(50)],
@@ -88,7 +88,7 @@ class DailyDetailScreen extends ConsumerWidget {
             '${date.day}',
             style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: DS.brandPrimary),
           ),
-          const SizedBox(width: DS.lg),
+          SizedBox(width: DS.lg),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -116,7 +116,7 @@ class DailyDetailScreen extends ConsumerWidget {
             color: DS.warningAccent,
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: _buildMetricCard(
             label: '专注时长',
@@ -125,7 +125,7 @@ class DailyDetailScreen extends ConsumerWidget {
             color: DS.brandPrimaryAccent,
           ),
         ),
-        const SizedBox(width: DS.md),
+        SizedBox(width: DS.md),
         Expanded(
           child: _buildMetricCard(
             label: '完成任务',
@@ -138,7 +138,7 @@ class DailyDetailScreen extends ConsumerWidget {
     );
 
   Widget _buildMetricCard({required String label, required String value, required IconData icon, required Color color}) => Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(15),
         borderRadius: BorderRadius.circular(16),
@@ -147,19 +147,19 @@ class DailyDetailScreen extends ConsumerWidget {
       child: Column(
         children: [
           Icon(icon, color: color, size: 24),
-          const SizedBox(height: DS.sm),
+          SizedBox(height: DS.sm),
           Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: DS.brandPrimary)),
-          const SizedBox(height: DS.xs),
+          SizedBox(height: DS.xs),
           Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary54)),
         ],
       ),
     );
 
   Widget _buildPrismSnapshot(BuildContext context, DashboardState state) {
-    if (state.cognitive.status == 'empty') return const SizedBox();
+    if (state.cognitive.status == 'empty') return SizedBox();
 
     return Container(
-      padding: const EdgeInsets.all(DS.lg),
+      padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.prismPurple.withAlpha(30),
         borderRadius: BorderRadius.circular(20),
@@ -170,18 +170,18 @@ class DailyDetailScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.diamond_outlined, color: DS.prismPurple, size: 20),
-              const SizedBox(width: DS.smConst),
+              Icon(Icons.diamond_outlined, color: DS.prismPurple, size: 20),
+              SizedBox(width: DS.smConst),
               Text('当日认知棱镜', style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: DS.md),
+          SizedBox(height: DS.md),
           Text(
             state.cognitive.weeklyPattern ?? '今日思维清晰，状态良好',
             style: TextStyle(color: DS.brandPrimaryConst, fontSize: 15),
           ),
           if (state.cognitive.description != null) ...[
-            const SizedBox(height: DS.sm),
+            SizedBox(height: DS.sm),
             Text(
               state.cognitive.description!,
               style: TextStyle(color: DS.brandPrimary70Const, fontSize: 13),
@@ -195,7 +195,7 @@ class DailyDetailScreen extends ConsumerWidget {
   Widget _buildSectionTitle(BuildContext context, String title, IconData icon) => Row(
       children: [
         Icon(icon, size: 18, color: DS.primaryBase),
-        const SizedBox(width: DS.sm),
+        SizedBox(width: DS.sm),
         Text(title, style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
@@ -206,13 +206,13 @@ class DailyDetailScreen extends ConsumerWidget {
     }
     return ListView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: NeverScrollableScrollPhysics(),
       itemCount: events.length,
       itemBuilder: (context, index) {
         final event = events[index];
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(DS.md),
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
             color: DS.brandPrimary10Const,
             borderRadius: BorderRadius.circular(12),
@@ -225,7 +225,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(event.title, style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: DS.xs),
+                    SizedBox(height: DS.xs),
                     Text(
                       event.isAllDay ? '全天' : '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
                       style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
@@ -248,13 +248,13 @@ class DailyDetailScreen extends ConsumerWidget {
     }
     return ListView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: NeverScrollableScrollPhysics(),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(DS.md),
+          margin: EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
             color: DS.brandPrimary10Const,
             borderRadius: BorderRadius.circular(12),
@@ -266,7 +266,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 color: task.status.toString().contains('completed') ? DS.success : DS.brandPrimary38,
                 size: 20,
               ),
-              const SizedBox(width: DS.md),
+              SizedBox(width: DS.md),
               Expanded(
                 child: Text(
                   task.title,
@@ -287,7 +287,7 @@ class DailyDetailScreen extends ConsumerWidget {
 
   Widget _buildEmptyState(String text) => Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(5),
         borderRadius: BorderRadius.circular(12),
