@@ -1,7 +1,7 @@
 """add cqrs infrastructure tables
 
 Revision ID: cqrs_001
-Revises: add_agent_stats_table
+Revises: add_agent_stats
 Create Date: 2025-12-28 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'cqrs_001'
-down_revision = 'add_agent_stats_table'
+down_revision = 'add_agent_stats'
 branch_labels = None
 depends_on = None
 

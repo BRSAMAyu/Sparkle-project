@@ -73,7 +73,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                     child: Icon(Icons.psychology, size: 40, color: DS.brandPrimary87),
                   ),
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
                 // Text is now drawn by painter to avoid rotation issues, 
                 // but main title can stay here
               ],

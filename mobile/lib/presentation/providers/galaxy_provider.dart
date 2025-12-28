@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
-import 'package:sparkle/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 /// Aggregation level based on zoom scale (5 levels)
@@ -18,6 +18,8 @@ enum AggregationLevel {
 }
 
 class GalaxyState { // ID of the predicted next node to learn
+
+  static const Object _noChange = Object();
 
   GalaxyState({
     this.nodes = const [],
@@ -33,6 +35,8 @@ class GalaxyState { // ID of the predicted next node to learn
     this.clusters = const {},
     this.viewport,
     this.predictedNodeId,
+    this.lastError,
+    this.isUsingCache = false,
     this.selectedNodeId,
     this.expandedEdgeNodeIds = const {},
     this.nodeAnimationProgress = const {},
@@ -53,6 +57,8 @@ class GalaxyState { // ID of the predicted next node to learn
   final Map<String, ClusterInfo> clusters;  // Cluster information for aggregated view
   final Rect? viewport;  // Current visible viewport for culling
   final String? predictedNodeId;
+  final GalaxyError? lastError;
+  final bool isUsingCache;
   
   // Interaction state
   final String? selectedNodeId;
@@ -73,6 +79,8 @@ class GalaxyState { // ID of the predicted next node to learn
     Map<String, ClusterInfo>? clusters,
     Rect? viewport,
     String? predictedNodeId,
+    Object? lastError = _noChange,
+    bool? isUsingCache,
     String? selectedNodeId,
     Set<String>? expandedEdgeNodeIds,
     Map<String, double>? nodeAnimationProgress,
@@ -90,6 +98,8 @@ class GalaxyState { // ID of the predicted next node to learn
       clusters: clusters ?? this.clusters,
       viewport: viewport ?? this.viewport,
       predictedNodeId: predictedNodeId ?? this.predictedNodeId,
+      lastError: identical(lastError, _noChange) ? this.lastError : lastError as GalaxyError?,
+      isUsingCache: isUsingCache ?? this.isUsingCache,
       selectedNodeId: selectedNodeId ?? this.selectedNodeId,
       expandedEdgeNodeIds: expandedEdgeNodeIds ?? this.expandedEdgeNodeIds,
       nodeAnimationProgress: nodeAnimationProgress ?? this.nodeAnimationProgress,
@@ -118,7 +128,7 @@ class ClusterInfo {  // IDs of nodes in this cluster
 }
 
 final galaxyProvider = StateNotifierProvider<GalaxyNotifier, GalaxyState>((ref) {
-  final repository = ref.watch(galaxyRepositoryProvider);
+  final repository = ref.watch(enhancedGalaxyRepositoryProvider);
   return GalaxyNotifier(repository);
 });
 
@@ -127,8 +137,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   GalaxyNotifier(this._repository) : super(GalaxyState()) {
     _initEventsListener();
   }
-  final GalaxyRepository _repository;
+  final EnhancedGalaxyRepository _repository;
   StreamSubscription? _eventsSubscription;
+  Timer? _eventsReconnectTimer;
+  int _layoutRequestId = 0;
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;
@@ -139,28 +151,74 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   @override
   void dispose() {
     _eventsSubscription?.cancel();
+    _eventsReconnectTimer?.cancel();
     _animationTimer?.cancel();
     _viewportThrottleTimer?.cancel();
     super.dispose();
   }
 
   void _initEventsListener() {
-    _eventsSubscription = _repository.getGalaxyEventsStream().listen((event) {
-      if (event.event == 'nodes_expanded') {
-        _handleNodesExpanded(event.jsonData);
-      }
+    _eventsSubscription?.cancel();
+    _eventsSubscription = _repository.getGalaxyEventsStream().listen(
+      (event) {
+        if (event.event == 'nodes_expanded') {
+          _handleNodesExpanded(event.jsonData);
+        }
+      },
+      onError: (error, stack) {
+        debugPrint('Galaxy events stream error: $error');
+        _scheduleEventsReconnect();
+      },
+      onDone: _scheduleEventsReconnect,
+    );
+  }
+
+  void _scheduleEventsReconnect() {
+    if (!mounted) return;
+    _eventsSubscription?.cancel();
+    _eventsReconnectTimer?.cancel();
+    _eventsReconnectTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) _initEventsListener();
     });
   }
 
   void _handleNodesExpanded(Map<String, dynamic>? data) {
     if (data == null || data['nodes'] == null) return;
-    loadGalaxy();
+    loadGalaxy(forceRefresh: true);
   }
 
-  Future<void> loadGalaxy() async {
-    state = state.copyWith(isLoading: true);
+  Future<void> loadGalaxy({bool forceRefresh = false}) async {
+    state = state.copyWith(isLoading: true, lastError: null);
+    final requestId = ++_layoutRequestId;
     try {
-      final response = await _repository.getGraph();
+      final result = await _repository.getGraph(forceRefresh: forceRefresh);
+      if (!mounted || requestId != _layoutRequestId) return;
+
+      if (result.isFailure || result.data == null) {
+        final error = result.error ?? 'Unknown error';
+        final galaxyError = error is GalaxyError
+            ? error
+            : GalaxyError.unknown(error.toString());
+        state = state.copyWith(
+          isLoading: false,
+          isOptimizing: false,
+          lastError: galaxyError,
+          isUsingCache: false,
+        );
+        return;
+      }
+
+      final response = result.data!;
+      final aggregationLevel = _levelForScale(state.currentScale);
+      final selectedNodeId = state.selectedNodeId;
+      final predictedNodeId = state.predictedNodeId;
+      final hasSelected = selectedNodeId != null &&
+          response.nodes.any((node) => node.id == selectedNodeId);
+      final hasPredicted = predictedNodeId != null &&
+          response.nodes.any((node) => node.id == predictedNodeId);
+      final expandedEdgeNodeIds = hasSelected
+          ? _collectExpandedEdges(selectedNodeId!, response.edges)
+          : const <String>{};
 
       // Step 1: 使用新的布局引擎进行快速初始布局
       final quickPositions = GalaxyLayoutEngine.calculateInitialLayout(
@@ -174,14 +232,38 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         edges: response.edges,
         nodePositions: quickPositions,
         userFlameIntensity: response.userFlameIntensity,
+        aggregationLevel: aggregationLevel,
+        clusters: _calculateClusters(
+          aggregationLevel,
+          nodes: response.nodes,
+          positions: quickPositions,
+        ),
+        selectedNodeId: hasSelected ? selectedNodeId : null,
+        expandedEdgeNodeIds: expandedEdgeNodeIds,
+        predictedNodeId: hasPredicted ? predictedNodeId : null,
         isLoading: false,
-        isOptimizing: true,
+        isOptimizing: response.nodes.isNotEmpty,
+        isUsingCache: result.isFromCache,
+        lastError: null,
       );
+      _recalculateVisibility(withAnimation: true);
 
       // Step 2: 在后台进行力导向优化
-      _optimizeLayoutAsync(response.nodes, response.edges, quickPositions);
+      if (response.nodes.isNotEmpty) {
+        _optimizeLayoutAsync(
+          response.nodes,
+          response.edges,
+          quickPositions,
+          requestId,
+        );
+      }
     } catch (e) {
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        isOptimizing: false,
+        lastError: GalaxyError.unknown(e.toString()),
+        isUsingCache: false,
+      );
       debugPrint('Error loading galaxy: $e');
     }
   }
@@ -190,6 +272,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     List<GalaxyNodeModel> nodes,
     List<GalaxyEdgeModel> edges,
     Map<String, Offset> initialPositions,
+    int requestId,
   ) async {
     try {
       // 使用新的布局引擎进行力导向优化
@@ -200,11 +283,17 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       );
 
       // Only update if we're still mounted and not loading something new
-      if (mounted && !state.isLoading) {
+      if (mounted && !state.isLoading && requestId == _layoutRequestId) {
         state = state.copyWith(
           nodePositions: optimizedPositions,
           isOptimizing: false,
+          clusters: _calculateClusters(
+            state.aggregationLevel,
+            nodes: state.nodes,
+            positions: optimizedPositions,
+          ),
         );
+        _recalculateVisibility();
       }
     } catch (e) {
       debugPrint('Error optimizing layout: $e');
@@ -250,15 +339,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   /// Handle node selection
   void selectNode(String nodeId) {
     if (state.selectedNodeId == nodeId) return;
-    if (state.edges.isEmpty) return;
+    if (state.nodes.isEmpty) return;
     
     // Find related nodes to expand connections
-    final expanded = <String>{nodeId};
-    // Also add neighbors if needed
-    for (final edge in state.edges) {
-      if (edge.sourceId == nodeId) expanded.add(edge.targetId);
-      if (edge.targetId == nodeId) expanded.add(edge.sourceId);
-    }
+    final expanded = _collectExpandedEdges(nodeId, state.edges);
 
     state = state.copyWith(
       selectedNodeId: nodeId,
@@ -286,26 +370,32 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       clusters: state.clusters,
       viewport: state.viewport,
       predictedNodeId: state.predictedNodeId,
+      lastError: state.lastError,
+      isUsingCache: state.isUsingCache,
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,
     );
     _recalculateVisibility();
   }
 
-  Future<void> sparkNode(String id) async {
-    try {
-      await _repository.sparkNode(id);
-      await loadGalaxy();
-    } catch (e) {
-      debugPrint('Error sparking node: $e');
+  Future<GalaxyError?> sparkNode(String id) async {
+    final result = await _repository.sparkNode(id);
+    if (result.error != null) {
+      final error = result.error!;
+      final galaxyError = error is GalaxyError ? error : GalaxyError.unknown(error.toString());
+      state = state.copyWith(lastError: galaxyError);
+      return galaxyError;
     }
+    await loadGalaxy(forceRefresh: true);
+    return null;
   }
 
   Future<String?> predictNextNode() async {
     try {
-      final detail = await _repository.predictNextNode();
-      if (detail != null) {
-        state = state.copyWith(predictedNodeId: detail.node.id);
+      final result = await _repository.predictNextNode();
+      final detail = result.data;
+      if (detail?.node != null) {
+        state = state.copyWith(predictedNodeId: detail!.node.id);
         return detail.node.id;
       }
     } catch (e) {
@@ -314,25 +404,17 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return null;
   }
 
-  Future<List<GalaxySearchResult>> searchNodes(String query) async => _repository.searchNodes(query);
+  Future<List<GalaxySearchResult>> searchNodes(String query) async {
+    final result = await _repository.searchNodes(query);
+    return result.data ?? [];
+  }
 
   /// Update current scale and recalculate aggregation level
   void updateScale(double scale) {
     if ((scale - state.currentScale).abs() < 0.01) return;
 
     // Determine aggregation level based on 5-level LOD
-    AggregationLevel newLevel;
-    if (scale < 0.2) {
-      newLevel = AggregationLevel.universe;
-    } else if (scale < 0.4) {
-      newLevel = AggregationLevel.galaxy;
-    } else if (scale < 0.6) {
-      newLevel = AggregationLevel.cluster;
-    } else if (scale < 0.8) {
-      newLevel = AggregationLevel.nebula;
-    } else {
-      newLevel = AggregationLevel.full;
-    }
+    final newLevel = _levelForScale(scale);
 
     // Only recalculate clusters if level changed
     if (newLevel != state.aggregationLevel) {
@@ -426,6 +508,31 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     const c1 = 1.70158;
     const c3 = c1 + 1.0;
     return 1 + c3 * pow(x - 1, 3) + c1 * pow(x - 1, 2);
+  }
+
+  AggregationLevel _levelForScale(double scale) {
+    if (scale < 0.2) {
+      return AggregationLevel.universe;
+    }
+    if (scale < 0.4) {
+      return AggregationLevel.galaxy;
+    }
+    if (scale < 0.6) {
+      return AggregationLevel.cluster;
+    }
+    if (scale < 0.8) {
+      return AggregationLevel.nebula;
+    }
+    return AggregationLevel.full;
+  }
+
+  Set<String> _collectExpandedEdges(String nodeId, List<GalaxyEdgeModel> edges) {
+    final expanded = <String>{nodeId};
+    for (final edge in edges) {
+      if (edge.sourceId == nodeId) expanded.add(edge.targetId);
+      if (edge.targetId == nodeId) expanded.add(edge.sourceId);
+    }
+    return expanded;
   }
 
   /// Calculate visible nodes based on LOD and Viewport
@@ -537,7 +644,13 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   /// Calculate clusters based on aggregation level
-  Map<String, ClusterInfo> _calculateClusters(AggregationLevel level) {
+  Map<String, ClusterInfo> _calculateClusters(
+    AggregationLevel level, {
+    List<GalaxyNodeModel>? nodes,
+    Map<String, Offset>? positions,
+  }) {
+    final sourceNodes = nodes ?? state.nodes;
+    final posMap = positions ?? state.nodePositions;
     // Return empty for levels where we render individual nodes extensively
     if (level == AggregationLevel.full || level == AggregationLevel.nebula) {
       return {};
@@ -555,7 +668,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       
       final parentGroups = <String, List<GalaxyNodeModel>>{};
 
-      for (final node in state.nodes) {
+      for (final node in sourceNodes) {
         final parentId = node.parentId ?? node.id; 
         parentGroups.putIfAbsent(parentId, () => []);
         parentGroups[parentId]!.add(node);
@@ -564,14 +677,17 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       for (final entry in parentGroups.entries) {
         final parentId = entry.key;
         final groupNodes = entry.value;
-        final parentNode = state.nodes.firstWhere((n) => n.id == parentId, orElse: () => groupNodes.first);
+        final parentNode = sourceNodes.firstWhere(
+          (n) => n.id == parentId,
+          orElse: () => groupNodes.first,
+        );
 
         var center = Offset.zero;
         double totalMastery = 0;
         final childIds = <String>[];
 
         for (final node in groupNodes) {
-          final pos = state.nodePositions[node.id];
+          final pos = posMap[node.id];
           if (pos != null) center += pos;
           totalMastery += node.masteryScore;
           childIds.add(node.id);
@@ -592,7 +708,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       // Group by sector
       final sectorGroups = <SectorEnum, List<GalaxyNodeModel>>{};
 
-      for (final node in state.nodes) {
+      for (final node in sourceNodes) {
         sectorGroups.putIfAbsent(node.sector, () => []);
         sectorGroups[node.sector]!.add(node);
       }
@@ -607,7 +723,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         final childIds = <String>[];
 
         for (final node in sectorNodes) {
-          final pos = state.nodePositions[node.id];
+          final pos = posMap[node.id];
           if (pos != null) center += pos;
           totalMastery += node.masteryScore;
           childIds.add(node.id);

@@ -28,7 +28,7 @@ class EnhancedGalaxyRepository {
   );
 
   final SmartCache<String, KnowledgeDetailResponse> _detailCache = SmartCache(
-    maxAge: const Duration(minutes: 5),
+    
   );
 
   // 断路器
@@ -38,7 +38,7 @@ class EnhancedGalaxyRepository {
 
   // 重试配置
   static const RetryConfig _defaultRetryConfig = RetryConfig(
-    initialDelay: Duration(milliseconds: 500),
+    
   );
 
   /// 获取星图数据（带重试和缓存）

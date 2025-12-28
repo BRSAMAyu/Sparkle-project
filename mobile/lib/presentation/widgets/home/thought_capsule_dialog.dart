@@ -47,7 +47,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
   Widget build(BuildContext context) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
       child: Padding(
-        padding: EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,14 +55,14 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.sm),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
+                  child: const Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
                 ),
-                SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: AppDesignTokens.spacing12),
                 Text(
                   '闪念胶囊',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -71,14 +71,14 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                 ),
               ],
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             Text(
               '此刻是什么拦住了你？或者有什么想吐槽的？',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppDesignTokens.neutral600,
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             TextField(
               controller: _controller,
               maxLines: 4,
@@ -89,16 +89,16 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: AppDesignTokens.borderRadius12,
-                  borderSide: BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+                  borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
                 ),
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: AppDesignTokens.spacing24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 SparkleButton.ghost(label: '取消', onPressed: () => Navigator.of(context).pop()),
-                SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: AppDesignTokens.spacing12),
                 CustomButton.primary(
                   text: '发送',
                   icon: Icons.send_rounded,

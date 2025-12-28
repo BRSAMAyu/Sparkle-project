@@ -395,7 +395,7 @@ extension WasmLayoutAcceleratorX on WasmLayoutAccelerator {
       id: e.key,
       x: e.value.dx,
       y: e.value.dy,
-    )).toList();
+    ),).toList();
 
   /// 计算布局并返回统计
   Future<(Map<String, Offset>, LayoutStats)> calculateWithStats({

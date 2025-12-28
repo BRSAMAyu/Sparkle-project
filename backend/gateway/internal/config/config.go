@@ -11,6 +11,10 @@ type Config struct {
 	Port          string `mapstructure:"PORT"`
 	DatabaseURL   string `mapstructure:"DATABASE_URL"`
 	AgentAddress  string `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled bool   `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath string `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSServerName string `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure bool `mapstructure:"AGENT_TLS_INSECURE"`
 	JWTSecret     string `mapstructure:"JWT_SECRET"`
 	RedisURL      string `mapstructure:"REDIS_URL"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
@@ -58,6 +62,10 @@ func Load() *Config {
 	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("DATABASE_URL", "postgres://postgres:password@localhost:5432/sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
+	viper.SetDefault("AGENT_TLS_ENABLED", false)
+	viper.SetDefault("AGENT_TLS_CA_CERT", "")
+	viper.SetDefault("AGENT_TLS_SERVER_NAME", "")
+	viper.SetDefault("AGENT_TLS_INSECURE", false)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")

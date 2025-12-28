@@ -244,8 +244,8 @@ class NetworkResult<T> {
   final Object? error;
   final bool isFromCache;
 
-  bool get isSuccess => error == null && data != null;
-  bool get isFailure => !isSuccess;
+  bool get isSuccess => error == null;
+  bool get isFailure => error != null;
 
   T? get valueOrNull => data;
   T get value {
@@ -257,9 +257,9 @@ class NetworkResult<T> {
     required R Function(T data, bool isFromCache) onSuccess,
     required R Function(Object error) onFailure,
   }) {
-    if (isSuccess) {
-      return onSuccess(data as T, isFromCache);
+    if (isFailure) {
+      return onFailure(error!);
     }
-    return onFailure(error!);
+    return onSuccess(data as T, isFromCache);
   }
 }

@@ -20,7 +20,7 @@ class KnowledgeCard extends StatelessWidget {
     final masteryLevel = data['mastery_level'] as int? ?? 0;
 
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: InkWell(
         onTap: () {
@@ -33,14 +33,14 @@ class KnowledgeCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary),
-                  SizedBox(width: DS.sm),
+                  const SizedBox(width: DS.sm),
                   Expanded(
                     child: Text(
                       title,
@@ -54,7 +54,7 @@ class KnowledgeCard extends StatelessWidget {
               ),
               
               if (summary != null && summary.isNotEmpty) ...[
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 Text(
                   summary,
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -64,7 +64,7 @@ class KnowledgeCard extends StatelessWidget {
               ],
 
               if (tags.isNotEmpty) ...[
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 4.0,
@@ -75,7 +75,7 @@ class KnowledgeCard extends StatelessWidget {
                   ),).toList(),
                 ),
               ],
-              SizedBox(height: DS.md),
+              const SizedBox(height: DS.md),
               Align(
                 alignment: Alignment.bottomRight,
                 child: TextButton.icon(
@@ -83,8 +83,8 @@ class KnowledgeCard extends StatelessWidget {
                     // 导航到知识星图页面
                     context.push('/galaxy');
                   },
-                  icon: Icon(Icons.arrow_forward_ios, size: 16),
-                  label: Text('查看详情'),
+                  icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                  label: const Text('查看详情'),
                 ),
               ),
             ],
@@ -113,7 +113,7 @@ class KnowledgeCard extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),

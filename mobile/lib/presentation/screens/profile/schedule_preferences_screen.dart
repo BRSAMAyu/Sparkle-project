@@ -99,16 +99,16 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
-        title: Text('Schedule Preferences'),
+        title: const Text('Schedule Preferences'),
         actions: [
           IconButton(
             onPressed: _save,
-            icon: Icon(Icons.save),
+            icon: const Icon(Icons.save),
           ),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -116,13 +116,13 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
               'Set your fragmented time slots to receive proactive task suggestions.',
               style: TextStyle(color: DS.brandPrimary),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTimeSlot(
               'Commute Time',
               _commuteStartController,
               _commuteEndController,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildTimeSlot(
               'Lunch Break',
               _lunchStartController,
@@ -140,14 +140,14 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
   ) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-        SizedBox(height: DS.sm),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: DS.sm),
         Row(
           children: [
             Expanded(
               child: TextFormField(
                 controller: startController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Start Time',
                   border: OutlineInputBorder(),
                   suffixIcon: Icon(Icons.access_time),
@@ -156,11 +156,11 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
                 onTap: () => _selectTime(context, startController),
               ),
             ),
-            SizedBox(width: DS.lg),
+            const SizedBox(width: DS.lg),
             Expanded(
               child: TextFormField(
                 controller: endController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'End Time',
                   border: OutlineInputBorder(),
                   suffixIcon: Icon(Icons.access_time),

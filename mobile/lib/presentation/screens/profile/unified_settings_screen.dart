@@ -47,12 +47,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionHeader(Icons.psychology, l10n.learningMode),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             Text(
               '拖动控制点，调整你的AI辅导风格',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             LearningModeControl(
               depth: _depth,
               curiosity: _curiosity,
@@ -63,24 +63,24 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 });
               },
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
 
             _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             Text(
               '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             WeeklyAgendaGrid(
               onChanged: (data) {
                 // Handle updates
               },
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
 
             _buildSectionHeader(Icons.brightness_6, l10n.theme),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.theme),
@@ -100,10 +100,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ],
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
 
             _buildSectionHeader(Icons.touch_app, l10n.interactionSettings),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.enterToSend),
@@ -112,10 +112,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               onChanged: (v) => ref.read(enterToSendProvider.notifier).setEnabled(v),
               activeThumbColor: AppDesignTokens.primaryBase,
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
 
             _buildSectionHeader(Icons.notifications, l10n.notificationSettings),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             SwitchListTile(
               title: const Text('启用通知'),
               value: _notificationsEnabled,
@@ -130,7 +130,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               activeThumbColor: AppDesignTokens.primaryBase,
             ),
 
-            SizedBox(height: AppDesignTokens.spacing64),
+            const SizedBox(height: AppDesignTokens.spacing64),
             Center(
               child: GestureDetector(
                 onLongPress: () {
@@ -146,7 +146,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: AppDesignTokens.spacing32),
           ],
         ),
       ),
@@ -156,10 +156,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget _buildSectionHeader(IconData icon, String title) => Row(
       children: [
         Icon(icon, color: AppDesignTokens.primaryBase),
-        SizedBox(width: DS.sm),
+        const SizedBox(width: DS.sm),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

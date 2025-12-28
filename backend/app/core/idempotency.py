@@ -3,12 +3,12 @@
 Idempotency Store - 用于管理幂等性键
 """
 import json
-import asyncio
 from typing import Optional, Any, Dict
 from datetime import datetime, timedelta
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import uuid4
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+import redis.asyncio as redis
 
 from app.models.idempotency_key import IdempotencyKey
 from app.db.session import AsyncSessionLocal
@@ -68,6 +68,81 @@ class MemoryIdempotencyStore(IdempotencyStore):
             del self._locks[key]
 
 
+class RedisIdempotencyStore(IdempotencyStore):
+    """
+    Redis-based idempotency store (recommended for production)
+    """
+
+    def __init__(self, redis_url: Optional[str] = None, prefix: str = "idempotency"):
+        self._redis = redis.from_url(redis_url or settings.REDIS_URL, decode_responses=True)
+        self._prefix = prefix
+        self._lock_tokens: Dict[str, str] = {}
+        self._lock_ttl = 30  # seconds
+
+    def _key(self, key: str) -> str:
+        return f"{self._prefix}:{key}"
+
+    def _lock_key(self, key: str) -> str:
+        return f"{self._prefix}:lock:{key}"
+
+    async def get(self, key: str) -> Optional[Dict[str, Any]]:
+        try:
+            raw = await self._redis.get(self._key(key))
+        except Exception as exc:
+            logger.warning(f"Redis idempotency get failed: {exc}")
+            return None
+
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except Exception as exc:
+            logger.warning(f"Redis idempotency decode failed: {exc}")
+            return None
+
+    async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
+        try:
+            payload = json.dumps(value, ensure_ascii=False)
+            await self._redis.set(self._key(key), payload, ex=ttl)
+        except Exception as exc:
+            logger.warning(f"Redis idempotency set failed: {exc}")
+
+    async def lock(self, key: str) -> bool:
+        token = uuid4().hex
+        try:
+            acquired = await self._redis.set(
+                self._lock_key(key),
+                token,
+                ex=self._lock_ttl,
+                nx=True,
+            )
+        except Exception as exc:
+            logger.warning(f"Redis idempotency lock failed: {exc}")
+            return True  # Fail open to avoid blocking requests
+
+        if acquired:
+            self._lock_tokens[key] = token
+            return True
+        return False
+
+    async def unlock(self, key: str) -> None:
+        token = self._lock_tokens.pop(key, None)
+        if not token:
+            return
+
+        # Lua script: delete only if token matches
+        script = """
+        if redis.call('get', KEYS[1]) == ARGV[1] then
+            return redis.call('del', KEYS[1])
+        end
+        return 0
+        """
+        try:
+            await self._redis.eval(script, 1, self._lock_key(key), token)
+        except Exception as exc:
+            logger.warning(f"Redis idempotency unlock failed: {exc}")
+
+
 class DBIdempotencyStore(IdempotencyStore):
     """
     数据库幂等性存储 (基于 PostgreSQL)
@@ -96,40 +171,46 @@ class DBIdempotencyStore(IdempotencyStore):
             return record.response
 
     async def set(self, key: str, value: Dict[str, Any], ttl: int) -> None:
-        # 这里需要 user_id，但在中间件中可能还没获取到 user (取决于 middleware 顺序)
-        # 如果 user_id 是必填的，我们需要在 set 时传入。
-        # 现在的接口定义 set(key, value, ttl) 没有 user_id。
-        # 考虑到 IdempotencyKey 模型有 user_id 字段 (nullable=False)。
-        # 我们可能需要修改接口或在这里做一些妥协。
-        # 
-        # 方案: 在 value 中包含 user_id，或者修改 set 签名。
-        # 为了符合 middleware 的调用，我们假设 value 中可能有元数据，或者我们先放宽 user_id 限制?
-        # 不，模型 user_id 是 NOT NULL。
-        # 
-        # Middleware 应该在 Auth 之后? 
-        # 通常 Idempotency 可以在 Auth 之后。
-        # 让我们看看 Middleware 代码。
-        pass
-        # 暂时只实现 MemoryStore 供 MVP 使用，或者修改 Middleware 逻辑
-        # 鉴于文档中 Middleware 没有传入 user_id，且 config 中 DEFAULT 为 memory (dev) / redis (prod).
-        # DBStore 实现比较复杂，因为需要 user_id。
-        # 如果用 Redis，就不需要 user_id。
-        # 让我们先提供 MemoryStore 和 RedisStore (stub)。
-        # 如果必须用 DB，我们需要从 request scope 获取 user? 
-        
-        # 为了 MVP，我们主要使用 MemoryStore (开发环境) 或简单的 RedisStore。
-        # 如果要用 DB Store，我们需要调整。
-        # 既然文档提到了 idempotency_keys 表，那应该是有用的。
-        # 也许 middleware 在 Auth 之后运行，可以从 request.state.user 获取 user_id?
-        # 但 middleware `dispatch` 方法只接收 request。
-        # Starlette middleware 中，request.user 可能还未填充（取决于 AuthenticationMiddleware）。
-        
-        # 让我们先实现 MemoryStore。
-        pass
+        user_id = value.get("user_id")
+        if not user_id:
+            logger.warning("DB idempotency store skipped: missing user_id")
+            return
+
+        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        async with AsyncSessionLocal() as db:
+            record = IdempotencyKey(
+                key=key,
+                user_id=user_id,
+                response=value,
+                expires_at=expires_at,
+            )
+            try:
+                db.add(record)
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                existing = await db.get(IdempotencyKey, key)
+                if existing:
+                    existing.response = value
+                    existing.expires_at = expires_at
+                    await db.commit()
+
+    async def lock(self, key: str) -> bool:
+        now = datetime.utcnow()
+        expires_at = self._local_locks.get(key)
+        if expires_at and expires_at > now:
+            return False
+        self._local_locks[key] = now + timedelta(seconds=30)
+        return True
+
+    async def unlock(self, key: str) -> None:
+        if key in self._local_locks:
+            del self._local_locks[key]
 
 # 简单的工厂
 def get_idempotency_store(store_type: str = "memory") -> IdempotencyStore:
     if store_type == "redis":
-        # Return Redis implementation
-        return MemoryIdempotencyStore() # Fallback for now
+        return RedisIdempotencyStore()
+    if store_type == "database":
+        return DBIdempotencyStore()
     return MemoryIdempotencyStore()

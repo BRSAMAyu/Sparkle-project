@@ -5,7 +5,7 @@ Application Configuration Management
 import os
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from dotenv import load_dotenv
 
 # 获取当前文件的绝对路径
@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "development"
+    DEBUG: bool | None = None
     SECRET_KEY: str = ""
 
     # Database
@@ -90,6 +91,10 @@ class Settings(BaseSettings):
 
     # gRPC Server
     GRPC_PORT: int = 50051
+    GRPC_ENABLE_REFLECTION: bool = False
+    GRPC_REQUIRE_TLS: bool | None = None
+    GRPC_TLS_CERT_PATH: str = ""
+    GRPC_TLS_KEY_PATH: str = ""
 
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
@@ -132,6 +137,29 @@ class Settings(BaseSettings):
         if not v:
             return "https://api.deepseek.com"
         return v
+
+    @model_validator(mode="after")
+    def validate_security(self):
+        env = (self.ENVIRONMENT or "").lower()
+        if self.DEBUG is None:
+            self.DEBUG = env not in ("prod", "production")
+
+        if self.GRPC_REQUIRE_TLS is None:
+            self.GRPC_REQUIRE_TLS = env in ("prod", "production")
+
+        if env in ("prod", "production") and self.DEBUG:
+            raise ValueError("DEBUG must be disabled in production")
+
+        if env in ("prod", "production") and not self.GRPC_REQUIRE_TLS:
+            raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
+
+        if not self.DEBUG and not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY must be set when DEBUG is false")
+
+        if self.GRPC_REQUIRE_TLS and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH):
+            raise ValueError("GRPC TLS is required but cert/key are not configured")
+
+        return self
 
 
 # Create global settings instance

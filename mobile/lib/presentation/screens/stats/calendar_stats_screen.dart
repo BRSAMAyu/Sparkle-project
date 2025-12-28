@@ -58,13 +58,13 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
       body: Stack(
         children: [
-          Positioned.fill(child: WeatherHeader()),
+          const Positioned.fill(child: WeatherHeader()),
           SafeArea(
             child: Column(
               children: [
                 _buildHeader(context),
                 _buildViewSwitcher(),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Expanded(
                   child: _viewMode == CalendarViewMode.year
                       ? _buildYearView()
@@ -87,7 +87,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   }
 
   Widget _buildHeader(BuildContext context) => Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           IconButton(
@@ -113,7 +113,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
 
   Widget _buildViewSwitcher() => Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       width: double.infinity,
       child: SegmentedButton<CalendarViewMode>(
         segments: const [
@@ -149,7 +149,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         final monthHeight = (constraints.maxHeight - 40) / 4;
         
         return GridView.builder(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             childAspectRatio: monthWidth / monthHeight,
@@ -178,7 +178,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   children: [
                     // Month Name
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
                         '${index + 1}月',
                         style: TextStyle(
@@ -215,11 +215,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         // Calculate simple grid
         return GridView.count(
           crossAxisCount: 7,
-          padding: EdgeInsets.all(2),
+          padding: const EdgeInsets.all(2),
           physics: const NeverScrollableScrollPhysics(),
           children: [
             // Empty slots
-            ...List.generate(startOffset, (_) => SizedBox()),
+            ...List.generate(startOffset, (_) => const SizedBox()),
             // Days
             ...List.generate(daysInMonth, (i) {
               final day = i + 1;
@@ -278,7 +278,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         outsideDaysVisible: false,
         defaultTextStyle: TextStyle(color: DS.brandPrimary),
         weekendTextStyle: TextStyle(color: DS.brandPrimary70),
-        selectedDecoration: BoxDecoration(
+        selectedDecoration: const BoxDecoration(
           color: AppDesignTokens.primaryBase,
           shape: BoxShape.circle,
         ),
@@ -302,7 +302,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: events.take(3).map((event) => Container(
-                  margin: EdgeInsets.symmetric(horizontal: 1.0),
+                  margin: const EdgeInsets.symmetric(horizontal: 1.0),
                   width: 5.0,
                   height: 5.0,
                   decoration: BoxDecoration(
@@ -323,8 +323,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final lunarData = _lunarService.getLunarData(day);
     
     return Container(
-      margin: EdgeInsets.all(DS.xs),
-      decoration: isSelected ? BoxDecoration(
+      margin: const EdgeInsets.all(DS.xs),
+      decoration: isSelected ? const BoxDecoration(
         color: AppDesignTokens.primaryBase,
         shape: BoxShape.circle,
       ) : isToday ? BoxDecoration(
@@ -370,7 +370,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
      return Column(
        children: [
          Padding(
-           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
            child: Row(
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
@@ -384,8 +384,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                      MaterialPageRoute(builder: (_) => DailyDetailScreen(date: _selectedDay ?? _focusedDay)),
                    );
                  },
-                 icon: Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
-                 label: Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                 icon: const Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
+                 label: const Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
                ),
              ],
            ),
@@ -396,7 +396,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                child: Text('暂无日程', style: TextStyle(color: DS.brandPrimary.withAlpha(100))),
              )
            : ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: events.length,
               itemBuilder: (context, index) {
                 final event = events[index];
@@ -409,13 +409,13 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   background: Container(
                     color: DS.error,
                     alignment: Alignment.centerRight,
-                    padding: EdgeInsets.only(right: 20),
+                    padding: const EdgeInsets.only(right: 20),
                     child: Icon(Icons.delete, color: DS.brandPrimary),
                   ),
                   child: Container(
-                    margin: EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       tileColor: DS.brandPrimary10,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: Container(
@@ -531,11 +531,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               ),
               TextButton(
                 onPressed: _saveEvent,
-                child: Text('保存', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                child: const Text('保存', style: TextStyle(color: AppDesignTokens.primaryBase)),
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           TextField(
             controller: _titleController,
             style: TextStyle(color: DS.brandPrimary),
@@ -548,13 +548,13 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               fillColor: DS.brandPrimary10,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildTimeRow(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildOptionsRow(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildColorPicker(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           TextField(
             controller: _locationController,
             style: TextStyle(color: DS.brandPrimary),
@@ -567,7 +567,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               fillColor: DS.brandPrimary10,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           TextField(
             controller: _descController,
             style: TextStyle(color: DS.brandPrimary),
@@ -581,7 +581,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
             maxLines: 3,
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -592,7 +592,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           child: GestureDetector(
             onTap: () => _pickDateTime(true),
             child: Container(
-              padding: EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -610,14 +610,14 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Icon(Icons.arrow_forward, color: DS.brandPrimary38, size: 16),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: GestureDetector(
             onTap: () => _pickDateTime(false),
             child: Container(
-              padding: EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -674,7 +674,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
-              DropdownMenuItem(value: null, child: Text('不重复')),
+              DropdownMenuItem(child: Text('不重复')),
               DropdownMenuItem(value: 'daily', child: Text('每天')),
               DropdownMenuItem(value: 'weekly', child: Text('每周')),
               DropdownMenuItem(value: 'monthly', child: Text('每月')),
@@ -692,7 +692,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         return GestureDetector(
           onTap: () => setState(() => _colorValue = color),
           child: Container(
-            margin: EdgeInsets.only(right: 12),
+            margin: const EdgeInsets.only(right: 12),
             width: 32,
             height: 32,
             decoration: BoxDecoration(

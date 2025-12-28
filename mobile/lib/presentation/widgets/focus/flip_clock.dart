@@ -183,7 +183,7 @@ class _FlipDigitState extends State<_FlipDigit>
           ),
           child: Center(
             child: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
+              shaderCallback: (bounds) => const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
@@ -246,7 +246,7 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildDot(_opacityAnimation.value),
-              SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
           ),
@@ -302,7 +302,7 @@ class SimpleFlipClock extends StatelessWidget {
     }
 
     return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
+      shaderCallback: (bounds) => const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [

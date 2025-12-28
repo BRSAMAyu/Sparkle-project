@@ -101,7 +101,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
   @override
   Widget build(BuildContext context) {
     if (!widget.isVisible || widget.trace == null) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     final trace = widget.trace!;
@@ -113,7 +113,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         child: Container(
           width: 200,
           height: 150,
-          margin: EdgeInsets.all(DS.lg),
+          margin: const EdgeInsets.all(DS.lg),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(12),
@@ -133,13 +133,13 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
             children: [
               // 标题栏
               Container(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: DS.brandPrimary.withOpacity(0.1),
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
                   ),
@@ -151,7 +151,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                       size: 16,
                       color: DS.brandPrimary.withOpacity(0.8),
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'AI 检索中...',
@@ -169,14 +169,14 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
               // 节点可视化区域
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.all(DS.md),
+                  padding: const EdgeInsets.all(DS.md),
                   child: _buildNodeVisualization(trace),
                 ),
               ),
 
               // 统计信息
               Padding(
-                padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                 child: _buildStats(trace),
               ),
             ],
@@ -197,7 +197,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         pulseAnimation: _pulseController,
         getColor: _getNodeColor,
       ),
-      child: SizedBox.expand(),
+      child: const SizedBox.expand(),
     );
   }
 

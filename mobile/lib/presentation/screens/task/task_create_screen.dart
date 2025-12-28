@@ -158,7 +158,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           children: [
             // Title
             TextFormField(
@@ -201,11 +201,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   ],
                 ),
               ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Type Selector
             DropdownButtonFormField<TaskType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               decoration: const InputDecoration(
                 labelText: '任务类型',
                 border: OutlineInputBorder(),
@@ -215,7 +215,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   child: Row(
                     children: [
                       Icon(_getTypeIcon(type), size: 18),
-                      SizedBox(width: DS.sm),
+                      const SizedBox(width: DS.sm),
                       Text(_getTypeLabel(type)),
                     ],
                   ),
@@ -226,7 +226,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 }
               },
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Tags
             TextFormField(
@@ -238,14 +238,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 prefixIcon: Icon(Icons.label_outline),
               ),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Estimated Time & Difficulty Row
             Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _estimatedMinutes,
+                    initialValue: _estimatedMinutes,
                     decoration: const InputDecoration(
                       labelText: '预计时长',
                       border: OutlineInputBorder(),
@@ -258,10 +258,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     onChanged: (v) => setState(() => _estimatedMinutes = v!),
                   ),
                 ),
-                SizedBox(width: DS.lg),
+                const SizedBox(width: DS.lg),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _difficulty,
+                    initialValue: _difficulty,
                     decoration: const InputDecoration(
                       labelText: '难度',
                       border: OutlineInputBorder(),
@@ -276,11 +276,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 ),
               ],
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             
             // Energy Cost
             DropdownButtonFormField<int>(
-              value: _energyCost,
+              initialValue: _energyCost,
               decoration: const InputDecoration(
                 labelText: '能量消耗',
                 border: OutlineInputBorder(),
@@ -292,7 +292,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 ),).toList(),
               onChanged: (v) => setState(() => _energyCost = v!),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Due Date
             ListTile(
@@ -323,7 +323,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     )
                   : null,
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // AI Guide Switch
             SwitchListTile(
@@ -333,7 +333,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               onChanged: (v) => setState(() => _generateGuide = v),
               secondary: const Icon(Icons.auto_awesome),
             ),
-            SizedBox(height: DS.xxl),
+            const SizedBox(height: DS.xxl),
 
             // Submit Button
             FilledButton.icon(

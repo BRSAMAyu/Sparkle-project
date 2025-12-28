@@ -25,7 +25,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     super.initState();
     // 自动聚焦输入框
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      if (mounted) _focusNode.requestFocus();
     });
   }
 

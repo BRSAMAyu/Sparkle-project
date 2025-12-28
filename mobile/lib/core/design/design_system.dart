@@ -33,7 +33,6 @@ library;
 
 // 便捷导入
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
 export 'tokens_v2/animation_token.dart';

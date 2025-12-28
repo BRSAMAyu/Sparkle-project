@@ -175,7 +175,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         child: Row(
           children: [
             Icon(icon, color: DS.brandPrimaryConst, size: 20),
-            SizedBox(width: DS.md),
+            const SizedBox(width: DS.md),
             Text(
               label,
               style: TextStyle(

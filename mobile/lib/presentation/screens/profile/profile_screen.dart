@@ -19,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    if (user == null) return SizedBox.shrink();
+    if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
       backgroundColor: AppDesignTokens.neutral50,
@@ -29,14 +29,14 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             _buildHeader(context, user),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16),
+              padding: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16),
               child: Column(
                 children: [
-                  SizedBox(height: AppDesignTokens.spacing24),
+                  const SizedBox(height: AppDesignTokens.spacing24),
                   const StatisticsCard(),
-                  SizedBox(height: AppDesignTokens.spacing24),
+                  const SizedBox(height: AppDesignTokens.spacing24),
                   _buildSettingsSection(context, ref, l10n),
-                  SizedBox(height: 100), // Bottom padding
+                  const SizedBox(height: 100), // Bottom padding
                 ],
               ),
             ),
@@ -59,10 +59,10 @@ class ProfileScreen extends ConsumerWidget {
           // Content
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(AppDesignTokens.spacing24),
+              padding: const EdgeInsets.all(AppDesignTokens.spacing24),
               child: Column(
                 children: [
-                  SizedBox(height: AppDesignTokens.spacing16),
+                  const SizedBox(height: AppDesignTokens.spacing16),
                   Row(
                     children: [
                       // Avatar Area
@@ -88,7 +88,7 @@ class ProfileScreen extends ConsumerWidget {
                           status: user.avatarStatus,
                         ),
                       ),
-                      SizedBox(width: AppDesignTokens.spacing20),
+                      const SizedBox(width: AppDesignTokens.spacing20),
                       // Info Area
                       Expanded(
                         child: Column(
@@ -101,9 +101,9 @@ class ProfileScreen extends ConsumerWidget {
                                 fontWeight: AppDesignTokens.fontWeightBold,
                               ),
                             ),
-                            SizedBox(height: DS.sm),
+                            const SizedBox(height: DS.sm),
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: DS.brandPrimary.withValues(alpha: 0.2),
                                 borderRadius: AppDesignTokens.borderRadius20,
@@ -112,7 +112,7 @@ class ProfileScreen extends ConsumerWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.local_fire_department_rounded, color: DS.brandPrimaryConst, size: 16),
-                                  SizedBox(width: DS.xs),
+                                  const SizedBox(width: DS.xs),
                                   Text(
                                     'Lv.${user.flameLevel}',
                                     style: TextStyle(
@@ -120,7 +120,7 @@ class ProfileScreen extends ConsumerWidget {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(width: DS.sm),
+                                  const SizedBox(width: DS.sm),
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                     style: TextStyle(
@@ -165,7 +165,7 @@ class ProfileScreen extends ConsumerWidget {
               );
             },
           ),
-          Divider(height: 1, indent: 60),
+          const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
             icon: Icons.tune_rounded,
@@ -179,7 +179,7 @@ class ProfileScreen extends ConsumerWidget {
               );
             },
           ),
-          Divider(height: 1, indent: 60),
+          const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
             icon: Icons.language_rounded,
@@ -189,7 +189,7 @@ class ProfileScreen extends ConsumerWidget {
               _showLanguageDialog(context, ref);
             },
           ),
-          Divider(height: 1, indent: 60),
+          const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             context,
             icon: Icons.logout_rounded,
@@ -218,7 +218,7 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             ListTile(
               title: Text(l10n.languageChinese),
-              trailing: currentLocale.languageCode == 'zh' ? Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'zh' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
                 Navigator.pop(context);
@@ -226,7 +226,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ListTile(
               title: Text(l10n.languageEnglish),
-              trailing: currentLocale.languageCode == 'en' ? Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'en' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('en'));
                 Navigator.pop(context);
@@ -255,7 +255,7 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: Text(l10n.confirm, style: TextStyle(color: AppDesignTokens.error)),
+            child: Text(l10n.confirm, style: const TextStyle(color: AppDesignTokens.error)),
           ),
         ],
       ),
@@ -271,12 +271,12 @@ class ProfileScreen extends ConsumerWidget {
     bool isDestructive = false,
   }) => ListTile(
       onTap: onTap,
-      contentPadding: EdgeInsets.symmetric(
+      contentPadding: const EdgeInsets.symmetric(
         horizontal: AppDesignTokens.spacing16,
         vertical: AppDesignTokens.spacing4,
       ),
       leading: Container(
-        padding: EdgeInsets.all(DS.sm),
+        padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: AppDesignTokens.borderRadius8,
@@ -290,7 +290,7 @@ class ProfileScreen extends ConsumerWidget {
           fontWeight: AppDesignTokens.fontWeightMedium,
         ),
       ),
-      trailing: Icon(
+      trailing: const Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
         color: AppDesignTokens.neutral400,

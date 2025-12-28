@@ -67,7 +67,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 
   // Dispose the notifier when the provider is disposed
-  ref.onDispose(() => authStateNotifier.dispose());
+  ref.onDispose(authStateNotifier.dispose);
 
   return GoRouter(
     navigatorKey: navigatorKey, // Set the global navigator key

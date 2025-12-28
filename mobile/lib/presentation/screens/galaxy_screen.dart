@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.dart';
+import 'package:sparkle/presentation/widgets/galaxy/galaxy_error_dialog.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
 import 'package:sparkle/presentation/widgets/galaxy/node_preview_card.dart';
@@ -25,6 +29,8 @@ class GalaxyScreen extends ConsumerStatefulWidget {
 class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProviderStateMixin {
   final TransformationController _transformationController = TransformationController();
   late final AnimationController _selectionPulseController;
+  final List<AnimationController> _transientControllers = [];
+  bool _isDisposing = false;
 
   // State
   bool _isEntering = true;
@@ -72,12 +78,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
         ..translate(tx, ty)
         ..scale(initialScale);
 
-      ref.read(galaxyProvider.notifier).loadGalaxy();
+      unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
     });
   }
 
   @override
   void dispose() {
+    _isDisposing = true;
+    for (final controller in _transientControllers) {
+      controller.dispose();
+    }
+    _transientControllers.clear();
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
@@ -92,6 +103,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       _lastScale = scale;
       ref.read(galaxyProvider.notifier).updateScale(scale);
     }
+
+    if (!mounted) return;
+    final size = MediaQuery.of(context).size;
+    if (size.width <= 0 || size.height <= 0) return;
+
+    final matrix = _transformationController.value;
+    final inverseMatrix = matrix.clone()..invert();
+    final topLeft = MatrixUtils.transformPoint(inverseMatrix, Offset.zero);
+    final bottomRight = MatrixUtils.transformPoint(
+      inverseMatrix,
+      Offset(size.width, size.height),
+    );
+    final viewport = Rect.fromPoints(topLeft, bottomRight);
+    ref.read(galaxyProvider.notifier).updateViewport(viewport);
   }
 
   /// Convert a canvas position (in the 4000x4000 space) to screen coordinates
@@ -149,6 +174,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       if (distance < hitRadius + (node.importance * 2)) {
         // Node tapped - Select it
         ref.read(galaxyProvider.notifier).selectNode(node.id);
+        HapticFeedback.selectionClick();
         return;
       }
     }
@@ -183,6 +209,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
         context.push('/galaxy/node/${node.id}');
         // Also select it to be consistent
         ref.read(galaxyProvider.notifier).selectNode(node.id);
+        HapticFeedback.mediumImpact();
         return;
       }
     }
@@ -201,10 +228,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
   /// Start the energy transfer animation to a specific node
   void _sparkNodeWithAnimation(String nodeId) {
     final galaxyState = ref.read(galaxyProvider);
-    final node = galaxyState.nodes.firstWhere(
-      (n) => n.id == nodeId,
-      orElse: () => throw Exception('Node not found'),
-    );
+    final nodeIndex = galaxyState.nodes.indexWhere((n) => n.id == nodeId);
+    if (nodeIndex == -1) return;
+    final node = galaxyState.nodes[nodeIndex];
 
     // Get the node's canvas position (already centered to 4000x4000)
     final nodeCanvasPosition = galaxyState.nodePositions[nodeId];
@@ -234,9 +260,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
   }
 
   /// Called when energy particle hits the target star
-  void _onEnergyTransferComplete(_ActiveEnergyTransfer transfer) {
+  Future<void> _onEnergyTransferComplete(_ActiveEnergyTransfer transfer) async {
     // Trigger the actual data update
-    ref.read(galaxyProvider.notifier).sparkNode(transfer.nodeId);
+    final error = await ref.read(galaxyProvider.notifier).sparkNode(transfer.nodeId);
 
     // Remove transfer animation
     setState(() {
@@ -263,11 +289,18 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       );
     });
 
+    if (!mounted) return;
+
+    if (error != null) {
+      GalaxyErrorSnackBar.show(context, error: error);
+      return;
+    }
+
     // Show feedback
-    final node = galaxyState.nodes.firstWhere(
-      (n) => n.id == transfer.nodeId,
-      orElse: () => throw Exception('Node not found'),
-    );
+    final nodeIndex = galaxyState.nodes.indexWhere((n) => n.id == transfer.nodeId);
+    if (nodeIndex == -1) return;
+    final node = galaxyState.nodes[nodeIndex];
+    HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${node.name} 点亮成功!'),
@@ -315,23 +348,36 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     targetMatrix[10] = 1.0;
 
     // Animate
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _transientControllers.add(controller);
+
     final animation = Matrix4Tween(
       begin: _transformationController.value,
       end: targetMatrix,
     ).animate(CurvedAnimation(
-      parent: AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1500),
-      )..forward(),
+      parent: controller,
       curve: Curves.easeInOutCubic,
     ),);
 
     animation.addListener(() {
       _transformationController.value = animation.value;
     });
+
+    controller.forward().whenComplete(() {
+      if (_isDisposing) return;
+      if (_transientControllers.remove(controller)) {
+        controller.dispose();
+      }
+    });
     
     // Show a hint
-    final node = galaxyState.nodes.firstWhere((n) => n.id == nodeId);
+    if (!mounted) return;
+    final nodeIndex = galaxyState.nodes.indexWhere((n) => n.id == nodeId);
+    if (nodeIndex == -1) return;
+    final node = galaxyState.nodes[nodeIndex];
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('推荐学习: ${node.name}'),
@@ -452,7 +498,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                               Offset(screenSize.width, screenSize.height),
                             );
                             final viewport = Rect.fromPoints(topLeft, bottomRight);
-
                             return CustomPaint(
                               painter: StarMapPainter(
                                 // Use filtered lists from provider
@@ -526,7 +571,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                   sourcePosition: transfer.sourcePosition,
                   targetPosition: transfer.targetPosition,
                   targetColor: transfer.targetColor,
-                  onComplete: () => _onEnergyTransferComplete(transfer),
+                  onComplete: () => unawaited(_onEnergyTransferComplete(transfer)),
                 ),
               ),
             ),
@@ -562,9 +607,39 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
             Positioned(
               top: 40,
               right: 20,
-              child: IconButton(
-                icon: Icon(Icons.search, color: DS.brandPrimary),
-                onPressed: _showSearchDialog,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.search, color: DS.brandPrimary),
+                    onPressed: _showSearchDialog,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.refresh, color: DS.brandPrimary),
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      unawaited(ref.read(galaxyProvider.notifier).loadGalaxy(forceRefresh: true));
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+          if (!_isEntering)
+            Positioned(
+              top: 90,
+              left: 20,
+              right: 20,
+              child: Center(
+                child: OfflineIndicator(
+                  isOffline: false,
+                  isUsingCache: galaxyState.isUsingCache,
+                  onRetry: galaxyState.isUsingCache
+                      ? () => unawaited(
+                            ref.read(galaxyProvider.notifier).loadGalaxy(forceRefresh: true),
+                          )
+                      : null,
+                ),
               ),
             ),
 
@@ -635,8 +710,18 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
               ),
             ),
 
-          if (galaxyState.isLoading && !_isEntering)
+          if (galaxyState.isLoading && galaxyState.nodes.isEmpty && !_isEntering)
             const Center(child: CircularProgressIndicator()),
+
+          if (!_isEntering && galaxyState.lastError != null && galaxyState.nodes.isEmpty)
+            Positioned.fill(
+              child: GalaxyErrorPlaceholder(
+                error: galaxyState.lastError!,
+                onRetry: () => unawaited(
+                      ref.read(galaxyProvider.notifier).loadGalaxy(forceRefresh: true),
+                    ),
+              ),
+            ),
             
           // 8. Node Preview Card (Overlay)
           AnimatedSwitcher(
@@ -651,7 +736,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                 child: child,
               ),
             ),
-            child: galaxyState.selectedNodeId != null
+            child: galaxyState.selectedNodeId != null && galaxyState.nodes.isNotEmpty
                 ? Builder(
                     key: ValueKey(galaxyState.selectedNodeId),
                     builder: (context) {

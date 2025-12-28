@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 import 'package:sparkle/core/services/quad_tree.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
-import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 void main() {
   group('Galaxy Performance Benchmarks', () {

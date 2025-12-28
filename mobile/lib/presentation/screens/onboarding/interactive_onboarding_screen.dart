@@ -93,7 +93,7 @@ class _InteractiveOnboardingScreenState
 
             // Page indicator
             Padding(
-              padding: EdgeInsets.all(DS.lg),
+              padding: const EdgeInsets.all(DS.lg),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -102,7 +102,7 @@ class _InteractiveOnboardingScreenState
                     children: List.generate(_totalPages, (index) => Container(
                         width: index == _currentPage ? 24 : 8,
                         height: 8,
-                        margin: EdgeInsets.symmetric(horizontal: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           color: index == _currentPage
                               ? DS.brandPrimary
@@ -117,7 +117,7 @@ class _InteractiveOnboardingScreenState
                     onPressed: _nextPage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: DS.brandPrimary.shade600,
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 32,
                         vertical: 16,
                       ),
@@ -144,7 +144,7 @@ class _InteractiveOnboardingScreenState
 
   // Page 1: Welcome
   Widget _buildWelcomePage() => Padding(
-      padding: EdgeInsets.all(DS.xxl),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -182,7 +182,7 @@ class _InteractiveOnboardingScreenState
                 ),
               ),
           ),
-          SizedBox(height: DS.xxxl),
+          const SizedBox(height: DS.xxxl),
 
           // Title
           Text(
@@ -193,7 +193,7 @@ class _InteractiveOnboardingScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
 
           // Subtitle
           Text(
@@ -204,15 +204,15 @@ class _InteractiveOnboardingScreenState
               fontSize: 18,
             ),
           ),
-          SizedBox(height: DS.xxxl),
+          const SizedBox(height: DS.xxxl),
 
           // Features preview
           _buildFeaturePreview(
               Icons.auto_graph, '知识星图', '可视化学习网络',),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildFeaturePreview(
               Icons.psychology, 'AI 对话', '智能学习伙伴',),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildFeaturePreview(
               Icons.task_alt, '智能任务', '个性化学习计划',),
         ],
@@ -220,7 +220,7 @@ class _InteractiveOnboardingScreenState
     );
 
   Widget _buildFeaturePreview(IconData icon, String title, String description) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -229,14 +229,14 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(DS.md),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: DS.brandPrimary.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: DS.brandPrimaryConst, size: 24),
           ),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +265,7 @@ class _InteractiveOnboardingScreenState
 
   // Page 2: Architecture Animation
   Widget _buildArchitecturePage() => Padding(
-      padding: EdgeInsets.all(DS.xxl),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -277,7 +277,7 @@ class _InteractiveOnboardingScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Text(
             '了解 Sparkle 如何工作',
             style: TextStyle(
@@ -285,7 +285,7 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Architecture Animation
           const ArchitectureAnimation(),
@@ -340,7 +340,7 @@ class _InteractiveOnboardingScreenState
 
   // Page 6: Personalization
   Widget _buildPersonalizationPage() => Padding(
-      padding: EdgeInsets.all(DS.xxl),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -349,7 +349,7 @@ class _InteractiveOnboardingScreenState
             size: 80,
             color: DS.brandPrimaryConst,
           ),
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           Text(
             '个性化设置',
@@ -359,7 +359,7 @@ class _InteractiveOnboardingScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Text(
             '让 Sparkle 更懂你',
             style: TextStyle(
@@ -367,7 +367,7 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          SizedBox(height: DS.xxxl),
+          const SizedBox(height: DS.xxxl),
 
           // Settings options
           _buildSettingOption(
@@ -376,14 +376,14 @@ class _InteractiveOnboardingScreenState
             description: '在最佳时间推送学习建议',
             value: true,
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildSettingOption(
             icon: Icons.analytics,
             title: '学习分析',
             description: '生成个性化学习报告',
             value: true,
           ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           _buildSettingOption(
             icon: Icons.auto_awesome,
             title: 'AI 助手',
@@ -402,19 +402,19 @@ class _InteractiveOnboardingScreenState
     required List<String> features,
     required Widget demoWidget,
   }) => SingleChildScrollView(
-      padding: EdgeInsets.all(DS.xxl),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         children: [
           // Icon
           Container(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: iconGradient),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, size: 48, color: DS.brandPrimary),
           ),
-          SizedBox(height: DS.xl),
+          const SizedBox(height: DS.xl),
 
           // Title
           Text(
@@ -425,7 +425,7 @@ class _InteractiveOnboardingScreenState
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
 
           // Description
           Text(
@@ -436,15 +436,15 @@ class _InteractiveOnboardingScreenState
               fontSize: 16,
             ),
           ),
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Demo widget
           demoWidget,
-          SizedBox(height: DS.xxl),
+          const SizedBox(height: DS.xxl),
 
           // Features list
           ...features.map((feature) => Padding(
-                padding: EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -453,7 +453,7 @@ class _InteractiveOnboardingScreenState
                       color: iconGradient[0],
                       size: 24,
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Text(
                         feature,
@@ -476,7 +476,7 @@ class _InteractiveOnboardingScreenState
     required String description,
     required bool value,
   }) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -485,7 +485,7 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Icon(icon, color: DS.brandPrimary.shade400, size: 32),
-          SizedBox(width: DS.lg),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,7 +540,7 @@ class _InteractiveOnboardingScreenState
 
   Widget _buildChatDemo() => Container(
       height: 200,
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
@@ -549,9 +549,9 @@ class _InteractiveOnboardingScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildChatMessage('你好！我能帮你什么？', true),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           _buildChatMessage('解释一下微积分的基本原理', false),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           _buildChatMessage('微积分研究函数的变化率...', true),
         ],
       ),
@@ -560,7 +560,7 @@ class _InteractiveOnboardingScreenState
   Widget _buildChatMessage(String text, bool isAI) => Align(
       alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: isAI
               ? Colors.purple.withValues(alpha: 0.2)
@@ -576,7 +576,7 @@ class _InteractiveOnboardingScreenState
 
   Widget _buildTaskDemo() => Container(
       height: 200,
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
@@ -584,16 +584,16 @@ class _InteractiveOnboardingScreenState
       child: Column(
         children: [
           _buildTaskItem('学习任务', '完成微积分第一章', DS.brandPrimary),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           _buildTaskItem('训练任务', '完成10道练习题', DS.success),
-          SizedBox(height: DS.sm),
+          const SizedBox(height: DS.sm),
           _buildTaskItem('反思任务', '总结本周学习收获', Colors.purple),
         ],
       ),
     );
 
   Widget _buildTaskItem(String type, String title, Color color) => Container(
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
@@ -601,7 +601,7 @@ class _InteractiveOnboardingScreenState
       child: Row(
         children: [
           Icon(Icons.circle, size: 12, color: color),
-          SizedBox(width: DS.sm),
+          const SizedBox(width: DS.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

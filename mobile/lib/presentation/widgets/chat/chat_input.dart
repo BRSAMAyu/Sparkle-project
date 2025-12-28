@@ -146,7 +146,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         boxShadow: canSend 
                           ? [
                               BoxShadow(
-                                color: AppDesignTokens.primaryBase.withValues(alpha: 0.3),
+                                color: DS.brandPrimary.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -185,7 +185,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary200,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
-          left: BorderSide(color: AppDesignTokens.primaryBase, width: 4),
+          left: BorderSide(color: DS.brandPrimary, width: 4),
         ),
       ),
       child: Row(
@@ -199,7 +199,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   style: const TextStyle(
                     fontSize: AppDesignTokens.fontSizeXs,
                     fontWeight: AppDesignTokens.fontWeightBold,
-                    color: AppDesignTokens.primaryBase,
+                    color: DS.brandPrimary,
                   ),
                 ),
                 const SizedBox(height: AppDesignTokens.spacing4),

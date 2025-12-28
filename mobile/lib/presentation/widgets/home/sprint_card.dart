@@ -35,7 +35,7 @@ class SprintCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             child: sprint != null
                 ? _buildSprintContent(sprint)
                 : _buildEmptyState(),
@@ -118,7 +118,7 @@ class SprintCard extends ConsumerWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        SizedBox(height: 2),
+        const SizedBox(height: 2),
         Text(
           '${(progress * 100).toInt()}% 完成',
           style: TextStyle(
@@ -134,7 +134,7 @@ class SprintCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: EdgeInsets.all(DS.sm),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: DS.brandPrimary.withAlpha(20),
             borderRadius: BorderRadius.circular(10),
@@ -156,7 +156,7 @@ class SprintCard extends ConsumerWidget {
             color: DS.brandPrimary70,
           ),
         ),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           '点击创建',
           style: TextStyle(

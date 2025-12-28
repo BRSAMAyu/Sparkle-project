@@ -60,14 +60,14 @@ class GalaxyMonitoringIntegration {
         type: WarningType.jank,
         message: event.message,
         severity: WarningSeverity.critical,
-      ));
+      ),);
     } else if (event.severity == PerformanceSeverity.warning) {
       _performanceStatus = PerformanceStatus.degraded;
       _warningController.add(PerformanceWarning(
         type: WarningType.slowRender,
         message: event.message,
         severity: WarningSeverity.warning,
-      ));
+      ),);
     }
   }
 
@@ -92,14 +92,14 @@ class GalaxyMonitoringIntegration {
         message: 'FPS严重不足: ${report.averageFps.toStringAsFixed(1)}',
         severity: WarningSeverity.critical,
         report: report,
-      ));
+      ),);
     } else if (report.averageFps < performanceThresholds.warningFps) {
       _warningController.add(PerformanceWarning(
         type: WarningType.lowFps,
         message: 'FPS偏低: ${report.averageFps.toStringAsFixed(1)}',
         severity: WarningSeverity.warning,
         report: report,
-      ));
+      ),);
     }
 
     // Jank警告
@@ -109,7 +109,7 @@ class GalaxyMonitoringIntegration {
         message: '卡顿率过高: ${(report.jankRate * 100).toStringAsFixed(1)}%',
         severity: WarningSeverity.warning,
         report: report,
-      ));
+      ),);
     }
 
     // 渲染时间警告
@@ -122,7 +122,7 @@ class GalaxyMonitoringIntegration {
             ? WarningSeverity.critical
             : WarningSeverity.warning,
         report: report,
-      ));
+      ),);
     }
   }
 

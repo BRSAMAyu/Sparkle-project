@@ -34,7 +34,7 @@ class AiStatusIndicator extends StatelessWidget {
         children: [
           // 动画指示器
           _buildIndicator(),
-          SizedBox(width: DS.md),
+          const SizedBox(width: DS.md),
           // 状态文本
           Flexible(
             child: Column(
@@ -50,7 +50,7 @@ class AiStatusIndicator extends StatelessWidget {
                   ),
                 ),
                 if (details != null && details!.isNotEmpty) ...[
-                  SizedBox(height: DS.xs),
+                  const SizedBox(height: DS.xs),
                   Text(
                     details!,
                     style: TextStyle(
@@ -136,7 +136,7 @@ class AiStatusBubble extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(status)),
             ),
           ),
-          SizedBox(width: DS.sm),
+          const SizedBox(width: DS.sm),
           Text(
             _getStatusText(status),
             style: TextStyle(

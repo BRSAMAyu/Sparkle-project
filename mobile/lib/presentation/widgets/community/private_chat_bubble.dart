@@ -55,28 +55,28 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
           child: Row(
             mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
                 _buildAvatar(widget.message.sender),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
               ],
               Flexible(
                 child: Column(
                   crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     _buildContent(context, isMe),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      Text(brandPrimary),,),
+                      Text(brandPrimary),,,),
                   ],
                 ),
               ),
               if (isMe) ...[
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 _buildAvatar(widget.message.sender),
               ],
             ],
@@ -96,7 +96,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
   }
 
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? AppDesignTokens.primaryBase : DS.brandPrimary,
         borderRadius: BorderRadius.only(
@@ -133,7 +133,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
         child: user.avatarUrl == null
             ? Text(
                 user.displayName.substring(0, 1).toUpperCase(),
-                style: TextStyle(fontSize: 12, color: AppDesignTokens.neutral600),
+                style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral600),
               )
             : null,
       ),

@@ -147,7 +147,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
                 color: theme.colorScheme.primary,
                 size: 24,
               ),
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               Text(
                 '知识时光机',
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -159,17 +159,17 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
             ],
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // 时间轴滑块
           _buildTimelineSlider(theme),
 
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
 
           // 状态指示器
           _buildStatusIndicators(theme),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // 干预按钮
           _buildInterventionButton(theme),
@@ -289,7 +289,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
   }) => Column(
       children: [
         Icon(icon, color: color, size: 28),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
@@ -326,12 +326,12 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
                         color: theme.colorScheme.onPrimary,
                       ),
                     )
-                  : Icon(Icons.auto_fix_high),
+                  : const Icon(Icons.auto_fix_high),
               label: Text(
                 _isSimulating
                     ? '模拟中...'
                     : '如果现在复习？ (${widget.selectedNodeIds.length} 个节点)',
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                 ),
               ),

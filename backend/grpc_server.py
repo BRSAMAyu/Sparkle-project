@@ -70,20 +70,32 @@ async def serve():
         AgentServiceImpl(), server
     )
 
-    # 启用 gRPC 反射（用于调试，生产环境可关闭）
-    SERVICE_NAMES = (
-        agent_service_pb2.DESCRIPTOR.services_by_name['AgentService'].full_name,
-        reflection.SERVICE_NAME,
-    )
-    reflection.enable_server_reflection(SERVICE_NAMES, server)
+    if settings.DEBUG or settings.GRPC_ENABLE_REFLECTION:
+        # 启用 gRPC 反射（用于调试，生产环境可关闭）
+        SERVICE_NAMES = (
+            agent_service_pb2.DESCRIPTOR.services_by_name['AgentService'].full_name,
+            reflection.SERVICE_NAME,
+        )
+        reflection.enable_server_reflection(SERVICE_NAMES, server)
 
     # 监听端口
     listen_addr = f'[::]:{getattr(settings, "GRPC_PORT", 50051)}'
-    server.add_insecure_port(listen_addr)
+    use_tls = settings.GRPC_REQUIRE_TLS or (
+        settings.GRPC_TLS_CERT_PATH and settings.GRPC_TLS_KEY_PATH
+    )
+    if use_tls:
+        with open(settings.GRPC_TLS_CERT_PATH, "rb") as cert_file:
+            cert_chain = cert_file.read()
+        with open(settings.GRPC_TLS_KEY_PATH, "rb") as key_file:
+            private_key = key_file.read()
+        credentials = grpc.ssl_server_credentials(((private_key, cert_chain),))
+        server.add_secure_port(listen_addr, credentials)
+    else:
+        server.add_insecure_port(listen_addr)
 
     logger.info("=" * 60)
     logger.info("🚀 Sparkle AI Agent gRPC Server Starting...")
-    logger.info(f"📡 Listening on: {listen_addr}")
+    logger.info(f"📡 Listening on: {listen_addr} ({'TLS' if use_tls else 'PLAINTEXT'})")
     logger.info(f"🔧 Environment: {'DEMO' if getattr(settings, 'DEMO_MODE', False) else 'PRODUCTION'}")
     logger.info(f"🤖 LLM Model: {settings.LLM_MODEL_NAME}")
     logger.info(f"🔗 LLM Provider: {settings.LLM_API_BASE_URL}")

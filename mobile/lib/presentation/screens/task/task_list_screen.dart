@@ -47,7 +47,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     return Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: AppDesignTokens.primaryGradient,
           ),
         ),
@@ -79,7 +79,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: EdgeInsets.all(DS.sm),
+                      padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: AppDesignTokens.borderRadius8,
@@ -90,7 +90,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         size: 20,
                       ),
                     ),
-                    SizedBox(width: DS.md),
+                    const SizedBox(width: DS.md),
                     Text(
                       '我的任务',
                       style: TextStyle(
@@ -234,7 +234,7 @@ class _FilterChips extends ConsumerWidget {
     final currentFilter = ref.watch(taskFilterProvider);
 
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         boxShadow: AppDesignTokens.shadowSm,
@@ -246,7 +246,7 @@ class _FilterChips extends ConsumerWidget {
           children: TaskFilterOptions.values.map((filter) {
             final isSelected = currentFilter == filter;
             return Padding(
-              padding: EdgeInsets.only(right: 8.0),
+              padding: const EdgeInsets.only(right: 8.0),
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -254,7 +254,7 @@ class _FilterChips extends ConsumerWidget {
                 },
                 child: AnimatedContainer(
                   duration: AppDesignTokens.durationFast,
-                  padding: EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: AppDesignTokens.spacing16,
                     vertical: AppDesignTokens.spacing8,
                   ),

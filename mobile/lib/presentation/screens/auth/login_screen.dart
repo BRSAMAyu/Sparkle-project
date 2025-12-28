@@ -25,7 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() ?? false) {
       ref.read(authProvider.notifier).login(
             _usernameController.text.trim(),
             _passwordController.text.trim(),

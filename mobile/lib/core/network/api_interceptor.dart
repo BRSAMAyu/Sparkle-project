@@ -62,6 +62,13 @@ class AuthInterceptor extends Interceptor {
 
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+    final path = err.requestOptions.path;
+    // Prevent infinite loop: Don't attempt to refresh token if the failed request
+    // is itself an auth request (login, register, refresh, etc.)
+    if (path.contains('/auth') || path.contains('login') || path.contains('refresh')) {
+      return super.onError(err, handler);
+    }
+
     if (err.response?.statusCode == 401) {
       try {
         final authRepo = _ref.read(authRepositoryProvider);

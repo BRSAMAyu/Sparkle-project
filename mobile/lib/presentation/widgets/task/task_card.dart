@@ -153,40 +153,40 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             ),
                                           ),
                                           if (!widget.compact) ...[
-                                            SizedBox(width: AppDesignTokens.spacing8),
+                                            const SizedBox(width: AppDesignTokens.spacing8),
                                             _TaskTypeChip(type: widget.task.type),
                                             if (widget.task.status == TaskStatus.completed) ...[
-                                              SizedBox(width: AppDesignTokens.spacing4),
-                                              Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
+                                              const SizedBox(width: AppDesignTokens.spacing4),
+                                              const Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
-                                               SizedBox(width: AppDesignTokens.spacing4),
+                                               const SizedBox(width: AppDesignTokens.spacing4),
                                               _StatusChip(status: widget.task.status),
                                             ],
                                           ],
                                         ],
                                       ),
-                                      SizedBox(height: AppDesignTokens.spacing8),
+                                      const SizedBox(height: AppDesignTokens.spacing8),
                                       Row(
                                         children: [
                                           if (widget.task.dueDate != null) ...[
-                                            Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
-                                            SizedBox(width: DS.xs),
+                                            const Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
+                                            const SizedBox(width: DS.xs),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
-                                              style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                              style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                             ),
-                                            SizedBox(width: AppDesignTokens.spacing12),
+                                            const SizedBox(width: AppDesignTokens.spacing12),
                                           ],
-                                          Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
-                                          SizedBox(width: DS.xs),
+                                          const Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
+                                          const SizedBox(width: DS.xs),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
-                                            style: TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                            style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       if (!widget.compact) ...[
-                                        SizedBox(height: AppDesignTokens.spacing8),
+                                        const SizedBox(height: AppDesignTokens.spacing8),
                                         Row(
                                           children: [
                                             _DifficultyStars(difficulty: widget.task.difficulty),
@@ -201,7 +201,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                                 },
                                               ),
                                             if (widget.onComplete != null && widget.task.status != TaskStatus.completed) ...[
-                                              SizedBox(width: AppDesignTokens.spacing8),
+                                              const SizedBox(width: AppDesignTokens.spacing8),
                                               _ActionButton(
                                                 icon: Icons.check_rounded,
                                                 color: AppDesignTokens.success,
@@ -234,12 +234,12 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
-                                      SizedBox(height: AppDesignTokens.spacing8),
+                                      const SizedBox(height: AppDesignTokens.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
                                         style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
-                                      SizedBox(height: AppDesignTokens.spacing12),
+                                      const SizedBox(height: AppDesignTokens.spacing12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -250,7 +250,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             style: TextButton.styleFrom(foregroundColor: DS.brandPrimary),
                                             child: const Text('Discard'),
                                           ),
-                                          SizedBox(width: DS.sm),
+                                          const SizedBox(width: DS.sm),
                                           ElevatedButton(
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).retryCompleteTask(

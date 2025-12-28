@@ -85,7 +85,7 @@ func main() {
 	billingService := service.NewCostCalculator()
 
 	// Connect to Agent Service
-	agentClient, err := agent.NewClient(cfg.AgentAddress)
+	agentClient, err := agent.NewClient(cfg)
 	if err != nil {
 		log.Fatalf("Unable to connect to agent service: %v", err)
 	}

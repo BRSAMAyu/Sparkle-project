@@ -24,7 +24,7 @@ class EngagementHeatmap extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,12 +32,12 @@ class EngagementHeatmap extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.calendar_month, color: DS.brandPrimary.shade600, size: 24),
-                SizedBox(width: DS.md),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         '学习活跃度',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -51,12 +51,12 @@ class EngagementHeatmap extends StatelessWidget {
                 _buildLegend(),
               ],
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Heatmap Grid
             _buildHeatmapGrid(),
 
-            SizedBox(height: DS.md),
+            const SizedBox(height: DS.md),
 
             // Stats Summary
             _buildStatsSummary(),
@@ -82,7 +82,7 @@ class EngagementHeatmap extends StatelessWidget {
               children: List.generate(7, (dayIndex) {
                 final dayOffset = weekIndex * 7 + dayIndex;
                 if (dayOffset >= totalDays) {
-                  return SizedBox(width: 16, height: 16);
+                  return const SizedBox(width: 16, height: 16);
                 }
 
                 final date = startDate.add(Duration(days: dayOffset));
@@ -101,7 +101,7 @@ class EngagementHeatmap extends StatelessWidget {
       child: Container(
         width: 14,
         height: 14,
-        margin: EdgeInsets.all(1),
+        margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           color: _getColorForIntensity(intensity),
           borderRadius: BorderRadius.circular(2),
@@ -109,8 +109,7 @@ class EngagementHeatmap extends StatelessWidget {
       ),
     );
 
-  Widget _buildLegend() {
-    return Row(
+  Widget _buildLegend() => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text('低', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
@@ -131,7 +130,6 @@ class EngagementHeatmap extends StatelessWidget {
         Text('高', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
       ],
     );
-  }
 
   Widget _buildStatsSummary() {
     final stats = _calculateStats();
@@ -149,10 +147,10 @@ class EngagementHeatmap extends StatelessWidget {
   Widget _buildStatItem(String label, String value, IconData icon) => Column(
       children: [
         Icon(icon, size: 20, color: DS.brandPrimary.shade600),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           value,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,

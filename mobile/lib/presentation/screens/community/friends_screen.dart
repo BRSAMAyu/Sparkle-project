@@ -49,13 +49,13 @@ class _MyFriendsTab extends ConsumerWidget {
     return friendsState.when(
       data: (friends) {
         if (friends.isEmpty) {
-          return Center(child: CompactEmptyState(message: 'No friends yet', icon: Icons.people_outline));
+          return const Center(child: CompactEmptyState(message: 'No friends yet', icon: Icons.people_outline));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
           child: ListView.builder(
             itemCount: friends.length,
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             itemBuilder: (context, index) {
               final friendInfo = friends[index];
               final friend = friendInfo.friend;
@@ -64,7 +64,7 @@ class _MyFriendsTab extends ConsumerWidget {
                   context.push('/community/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}');
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       DecoratedBox(
@@ -80,12 +80,12 @@ class _MyFriendsTab extends ConsumerWidget {
                           child: friend.avatarUrl == null ? Text(friend.displayName[0]) : null,
                         ),
                       ),
-                      SizedBox(width: DS.md),
+                      const SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(friend.displayName, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                            Text(friend.displayName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
                             Text('Lv.${friend.flameLevel}', style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12)),
                           ],
                         ),
@@ -99,7 +99,7 @@ class _MyFriendsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => Center(child: LoadingIndicator()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendsProvider.notifier).refresh())),
     );
   }
@@ -115,13 +115,13 @@ class _PendingRequestsTab extends ConsumerWidget {
     return requestsState.when(
       data: (requests) {
         if (requests.isEmpty) {
-          return Center(child: Text('No pending requests'));
+          return const Center(child: Text('No pending requests'));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(pendingRequestsProvider.notifier).refresh(),
           child: ListView.builder(
             itemCount: requests.length,
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             itemBuilder: (context, index) {
               final request = requests[index];
               final user = request.friend;
@@ -132,7 +132,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                     child: user.avatarUrl == null ? Text(user.displayName[0]) : null,
                   ),
                   title: Text(user.displayName),
-                  subtitle: Text('Wants to be your friend'),
+                  subtitle: const Text('Wants to be your friend'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -157,7 +157,7 @@ class _PendingRequestsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => Center(child: LoadingIndicator()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh())),
     );
   }
@@ -173,13 +173,13 @@ class _RecommendationsTab extends ConsumerWidget {
     return recommendationsState.when(
       data: (recommendations) {
         if (recommendations.isEmpty) {
-          return Center(child: Text('No recommendations available'));
+          return const Center(child: Text('No recommendations available'));
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendRecommendationsProvider.notifier).refresh(),
           child: ListView.builder(
             itemCount: recommendations.length,
-            padding: EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.all(DS.lg),
             itemBuilder: (context, index) {
               final rec = recommendations[index];
               return Card(
@@ -191,7 +191,7 @@ class _RecommendationsTab extends ConsumerWidget {
                   title: Text(rec.user.displayName),
                   subtitle: Text('Match: ${(rec.matchScore * 100).toInt()}%'),
                   trailing: IconButton(
-                    icon: Icon(Icons.person_add),
+                    icon: const Icon(Icons.person_add),
                     onPressed: () {
                        ref.read(friendRecommendationsProvider.notifier).sendRequest(rec.user.id);
                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent')));
@@ -203,7 +203,7 @@ class _RecommendationsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => Center(child: LoadingIndicator()),
+      loading: () => const Center(child: LoadingIndicator()),
       error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendRecommendationsProvider.notifier).refresh())),
     );
   }

@@ -122,7 +122,7 @@ class NodePreviewCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        '${node.masteryScore.toInt()}%',
+                        '${node.masteryScore}%',
                         style: TextStyle(
                           color: sectorStyle.primaryColor,
                           fontWeight: FontWeight.bold,

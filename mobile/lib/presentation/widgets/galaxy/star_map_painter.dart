@@ -455,7 +455,7 @@ class StarMapPainter extends CustomPainter {
   /// Draw a dashed edge
   void _drawDashedEdge(Canvas canvas, ProcessedEdge edge, _RelationStyle style) {
     final paint = Paint()
-      ..color = Color.lerp(edge.startColor, style.color, 0.5)!.withValues(alpha: 0.5 * edge.edge.strength)
+      ..color = (Color.lerp(edge.startColor, style.color, 0.5) ?? edge.startColor).withValues(alpha: 0.5 * edge.edge.strength)
       ..strokeWidth = edge.strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

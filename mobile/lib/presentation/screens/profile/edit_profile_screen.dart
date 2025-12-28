@@ -46,18 +46,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.face_retouching_natural_rounded),
-              title: Text('从系统推荐中选择'),
+              leading: const Icon(Icons.face_retouching_natural_rounded),
+              title: const Text('从系统推荐中选择'),
               onTap: () => Navigator.pop(context, 'preset'),
             ),
             ListTile(
-              leading: Icon(Icons.camera_alt_rounded),
-              title: Text('拍照'),
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('拍照'),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_rounded),
-              title: Text('从相册选择'),
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('从相册选择'),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
           ],
@@ -79,7 +79,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               await ref.read(authProvider.notifier).updateAvatar(url);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('头像更新成功'), backgroundColor: DS.successConst),
+                  SnackBar(content: const Text('头像更新成功'), backgroundColor: DS.successConst),
                 );
               }
             } catch (e) {
@@ -112,7 +112,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await ref.read(authProvider.notifier).updateAvatar(pickedFile.path);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('头像更新成功'), backgroundColor: DS.successConst),
+          SnackBar(content: const Text('头像更新成功'), backgroundColor: DS.successConst),
         );
       }
     } catch (e) {
@@ -154,7 +154,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('资料更新成功'), backgroundColor: DS.successConst),
+          SnackBar(content: const Text('资料更新成功'), backgroundColor: DS.successConst),
         );
         Navigator.of(context).pop();
       }
@@ -179,18 +179,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('编辑资料'),
+        title: const Text('编辑资料'),
         centerTitle: true,
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveProfile,
             child: _isLoading
-                ? SizedBox(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(
+                : const Text(
                     '保存',
                     style: TextStyle(
                       color: AppDesignTokens.primaryBase,
@@ -244,7 +244,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             if (user?.avatarStatus == AvatarStatus.pending) ...[
-              SizedBox(height: DS.md),
+              const SizedBox(height: DS.md),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -252,7 +252,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.hourglass_empty_rounded, size: 14, color: Colors.amber),
@@ -265,10 +265,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
             ],
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             TextButton(
               onPressed: _isLoading ? null : _pickAndUploadAvatar,
-              child: Text(
+              child: const Text(
                 '更换头像',
                 style: TextStyle(
                   color: AppDesignTokens.primaryBase,
@@ -276,7 +276,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
             ),
-            SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: AppDesignTokens.spacing24),
 
             // Form Fields
             _buildInputField(
@@ -285,7 +285,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               hint: '请输入昵称',
               icon: Icons.person_outline_rounded,
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             _buildInputField(
               label: '邮箱',
               controller: _emailController,
@@ -293,18 +293,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
             ),
-            SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: AppDesignTokens.spacing16),
             _buildReadOnlyField(
               label: '用户名',
               value: user?.username ?? '',
               icon: Icons.badge_outlined,
               helperText: '用户名不可修改',
             ),
-            SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: AppDesignTokens.spacing24),
 
             // Security Section
             _buildSectionHeader(isDark, '账户安全'),
-            SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: AppDesignTokens.spacing12),
             DecoratedBox(
               decoration: BoxDecoration(
                 color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary,
@@ -314,9 +314,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
               child: ListTile(
-                leading: Icon(Icons.lock_reset_rounded, color: AppDesignTokens.primaryBase),
-                title: Text('重置密码', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                trailing: Icon(Icons.chevron_right_rounded),
+                leading: const Icon(Icons.lock_reset_rounded, color: AppDesignTokens.primaryBase),
+                title: const Text('重置密码', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PasswordResetScreen()),
@@ -325,11 +325,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             
-            SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: AppDesignTokens.spacing24),
 
             // Account Info Section
             _buildSectionHeader(isDark, '账户信息'),
-            SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: AppDesignTokens.spacing12),
             Container(
               padding: const EdgeInsets.all(AppDesignTokens.spacing16),
               decoration: BoxDecoration(
@@ -389,7 +389,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
-        SizedBox(height: 6),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           enabled: enabled,
@@ -421,7 +421,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ),
         if (helperText != null) ...[
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Text(
             helperText,
             style: TextStyle(
@@ -454,7 +454,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
-        SizedBox(height: 6),
+        const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -465,7 +465,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Row(
             children: [
               Icon(icon, size: 20, color: isDark ? DS.brandPrimary38 : DS.brandPrimary.shade500),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               Text(
                 value,
                 style: TextStyle(
@@ -477,7 +477,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ),
         if (helperText != null) ...[
-          SizedBox(height: DS.xs),
+          const SizedBox(height: DS.xs),
           Text(
             helperText,
             style: TextStyle(

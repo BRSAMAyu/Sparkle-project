@@ -1,7 +1,7 @@
 """Add agent execution stats table
 
 Revision ID: add_agent_stats
-Revises: (previous_revision_id)
+Revises: a1b2c3d4e5f6
 Create Date: 2025-12-27
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_agent_stats'
-down_revision = None  # Update this to the latest revision
+down_revision = 'a1b2c3d4e5f6'
 branch_labels = None
 depends_on = None
 

@@ -19,8 +19,9 @@ void main() async {
   // Initialize SharedPrefs
   await SharedPreferences.getInstance();
 
-  // Enable Demo Mode
-  DemoDataService.isDemoMode = true;
+  // Enable Demo Mode via --dart-define=DEMO_MODE=true
+  const isDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);
+  DemoDataService.isDemoMode = isDemoMode;
 
   // TODO: Open Hive boxes
   await Hive.openBox('settings');

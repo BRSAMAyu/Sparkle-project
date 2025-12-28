@@ -35,11 +35,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.isGroup ? '学习小组' : '好友对话', style: TextStyle(fontSize: 16)),
+            Text(widget.isGroup ? '学习小组' : '好友对话', style: const TextStyle(fontSize: 16)),
             Row(
               children: [
                 const TypingIndicator(),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 Text('有人正在输入...', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
               ],
             ),
@@ -53,7 +53,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               data: (messages) => ListView.builder(
                 controller: _scrollController,
                 reverse: true,
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: messages.length,
                 itemBuilder: (context, index) {
                   final m = messages[index];
@@ -73,7 +73,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     createdAt = m.createdAt;
                     msgId = m.id;
                   } else {
-                    return SizedBox.shrink();
+                    return const SizedBox.shrink();
                   }
                   
                   return ChatBubble(
@@ -84,7 +84,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 },
               ),
-              loading: () => Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('加载失败: $e')),
             ),
           ),
@@ -95,7 +95,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildInputArea() => Container(
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         boxShadow: [BoxShadow(color: DS.brandPrimary12, blurRadius: 4)],
@@ -109,20 +109,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   color: DS.brandPrimary[100],
                   borderRadius: BorderRadius.circular(24),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _controller,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: '发送消息...',
                     border: InputBorder.none,
                   ),
                 ),
               ),
             ),
-            SizedBox(width: DS.sm),
+            const SizedBox(width: DS.sm),
             IconButton.filled(
               onPressed: _sendMessage,
-              icon: Icon(Icons.send),
+              icon: const Icon(Icons.send),
               style: IconButton.styleFrom(backgroundColor: SparkleTheme.primary),
             ),
           ],

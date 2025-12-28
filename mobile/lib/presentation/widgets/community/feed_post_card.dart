@@ -12,8 +12,8 @@ class FeedPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(DS.lg),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: AppDesignTokens.surface,
         borderRadius: BorderRadius.circular(16),
@@ -43,7 +43,7 @@ class FeedPostCard extends StatelessWidget {
                     ? Text(post.user.username[0].toUpperCase())
                     : null,
               ),
-              SizedBox(width: DS.md),
+              const SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -67,12 +67,12 @@ class FeedPostCard extends StatelessWidget {
               const Spacer(),
               if (post.isOptimistic)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.primaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       SizedBox(
                         width: 12,
@@ -92,7 +92,7 @@ class FeedPostCard extends StatelessWidget {
                 ),
             ],
           ),
-          SizedBox(height: DS.md),
+          const SizedBox(height: DS.md),
           Text(
             post.content,
             style: TextStyle(
@@ -103,7 +103,7 @@ class FeedPostCard extends StatelessWidget {
           ),
           if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: 12),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
@@ -114,12 +114,12 @@ class FeedPostCard extends StatelessWidget {
                   errorBuilder: (ctx, err, stack) => Container(
                     height: 200,
                     color: DS.brandPrimary800,
-                    child: Center(child: Icon(Icons.broken_image)),
+                    child: const Center(child: Icon(Icons.broken_image)),
                   ),
                 ),
               ),
             ),
-          SizedBox(height: DS.lg),
+          const SizedBox(height: DS.lg),
           Row(
             children: [
               _ActionButton(
@@ -127,7 +127,7 @@ class FeedPostCard extends StatelessWidget {
                 label: '${post.likeCount}',
                 onTap: onLike,
               ),
-              SizedBox(width: DS.xl),
+              const SizedBox(width: DS.xl),
               const _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Comment',
@@ -135,14 +135,14 @@ class FeedPostCard extends StatelessWidget {
               const Spacer(),
               if (post.topic != null)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.secondaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '#${post.topic}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppDesignTokens.secondaryBase,
                       fontSize: 12,
                     ),
@@ -168,7 +168,7 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, color: DS.brandPrimary400, size: 20),
-          SizedBox(width: 6),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(

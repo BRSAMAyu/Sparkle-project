@@ -1,0 +1,3 @@
+./community_sync.go
+./galaxy_sync.go
+./task_sync.go

@@ -16,9 +16,7 @@ void main() {
       // Create a provider override with loading state
       final container = ProviderContainer(
         overrides: [
-          galaxyProvider.overrideWith((ref) {
-            return _MockGalaxyNotifier(GalaxyState(isLoading: true));
-          }),
+          galaxyProvider.overrideWith((ref) => _MockGalaxyNotifier(GalaxyState(isLoading: true))),
         ],
       );
 
@@ -48,16 +46,14 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          galaxyProvider.overrideWith((ref) {
-            return _MockGalaxyNotifier(
+          galaxyProvider.overrideWith((ref) => _MockGalaxyNotifier(
               GalaxyState(
                 nodes: testNodes,
                 nodePositions: testPositions,
                 visibleNodes: testNodes,
                 isLoading: false,
               ),
-            );
-          }),
+            )),
         ],
       );
 
@@ -91,7 +87,6 @@ void main() {
           nodes: testNodes,
           nodePositions: testPositions,
           visibleNodes: testNodes,
-          isLoading: false,
         ),
       );
 
@@ -128,7 +123,6 @@ void main() {
       final notifier = _MockGalaxyNotifier(
         GalaxyState(
           nodes: _generateMockNodes(10),
-          isLoading: false,
         ),
       );
 
@@ -291,8 +285,7 @@ class _TestScaleWidget extends StatelessWidget {
   final _MockGalaxyNotifier notifier;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         TextButton(
           onPressed: () => notifier.updateScale(0.1),
@@ -316,7 +309,6 @@ class _TestScaleWidget extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 // Mock notifier for testing

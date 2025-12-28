@@ -6,7 +6,7 @@ This migration addresses critical performance issues identified in the 2025 Tech
 - chat_messages: Composite index for session history pagination
 
 Revision ID: p0_vector_indexes
-Revises: cqrs_001_infrastructure
+Revises: cqrs_001
 Create Date: 2025-12-28
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'p0_vector_indexes'
-down_revision = 'cqrs_001_infrastructure'
+down_revision = 'cqrs_001'
 branch_labels = None
 depends_on = None
 

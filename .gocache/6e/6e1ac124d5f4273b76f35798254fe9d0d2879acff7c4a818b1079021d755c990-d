@@ -1,0 +1,6 @@
+./file.go
+./if.go
+./lock.go
+./prop.go
+./webdav.go
+./xml.go

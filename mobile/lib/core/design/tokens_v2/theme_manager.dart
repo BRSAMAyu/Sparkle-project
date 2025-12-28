@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
 class ThemeManager extends ChangeNotifier {
@@ -100,24 +99,31 @@ class ThemeManager extends ChangeNotifier {
 
   /// 应用品牌预设
   SparkleThemeData _applyBrandPreset(SparkleThemeData base) {
+    SparkleColors colors = base.colors;
     switch (_brandPreset) {
       case BrandPreset.sparkle:
         return base;
       case BrandPreset.ocean:
-        return base.copyWith(
-          colors: base.colors.copyWith(
-            brandPrimary: const Color(0xFF0077BE),
-            brandSecondary: const Color(0xFF00A8E8),
-          ),
+        colors = base.colors.copyWith(
+          brandPrimary: const Color(0xFF0077BE),
+          brandSecondary: const Color(0xFF00A8E8),
         );
       case BrandPreset.forest:
-        return base.copyWith(
-          colors: base.colors.copyWith(
-            brandPrimary: const Color(0xFF2D6A4F),
-            brandSecondary: const Color(0xFF52B788),
-          ),
+        colors = base.colors.copyWith(
+          brandPrimary: const Color(0xFF2D6A4F),
+          brandSecondary: const Color(0xFF52B788),
         );
     }
+
+    if (identical(colors, base.colors)) {
+      return base;
+    }
+
+    final shadows = colors.brightness == Brightness.light
+        ? SparkleShadows.light(brandPrimary: colors.brandPrimary)
+        : SparkleShadows.dark(brandPrimary: colors.brandPrimary);
+
+    return base.copyWith(colors: colors, shadows: shadows);
   }
 
   /// 保存到持久化存储
@@ -144,21 +150,27 @@ class SparkleThemeData {
     required this.shadows,
   });
 
-  factory SparkleThemeData.light({bool highContrast = false}) => SparkleThemeData(
-      colors: SparkleColors.light(highContrast: highContrast),
+  factory SparkleThemeData.light({bool highContrast = false}) {
+    final colors = SparkleColors.light(highContrast: highContrast);
+    return SparkleThemeData(
+      colors: colors,
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
-      shadows: SparkleShadows.light(),
+      shadows: SparkleShadows.light(brandPrimary: colors.brandPrimary),
     );
+  }
 
-  factory SparkleThemeData.dark({bool highContrast = false}) => SparkleThemeData(
-      colors: SparkleColors.dark(highContrast: highContrast),
+  factory SparkleThemeData.dark({bool highContrast = false}) {
+    final colors = SparkleColors.dark(highContrast: highContrast);
+    return SparkleThemeData(
+      colors: colors,
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
-      shadows: SparkleShadows.dark(),
+      shadows: SparkleShadows.dark(brandPrimary: colors.brandPrimary),
     );
+  }
   final SparkleColors colors;
   final SparkleTypography typography;
   final SparkleSpacing spacing;
@@ -398,48 +410,48 @@ class SparkleShadows {
     required this.large,
   });
 
-  factory SparkleShadows.light() => SparkleShadows(
+  factory SparkleShadows.light({Color? brandPrimary}) => SparkleShadows(
       small: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.05),
+          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.05),
           blurRadius: 4,
           offset: const Offset(0, 2),
         ),
       ],
       medium: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.08),
+          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.08),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
       ],
       large: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.10),
+          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.10),
           blurRadius: 16,
           offset: const Offset(0, 8),
         ),
       ],
     );
 
-  factory SparkleShadows.dark() => SparkleShadows(
+  factory SparkleShadows.dark({Color? brandPrimary}) => SparkleShadows(
       small: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.2),
+          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.2),
           blurRadius: 4,
           offset: const Offset(0, 2),
         ),
       ],
       medium: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.3),
+          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.3),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
       ],
       large: [
         BoxShadow(
-          color: DS.brandPrimary.withOpacity(0.4),
+          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.4),
           blurRadius: 16,
           offset: const Offset(0, 8),
         ),

@@ -62,6 +62,14 @@ env/
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+postgres_data/
+redis_data/
 
 # Alembic
 alembic/versions/*.pyc
