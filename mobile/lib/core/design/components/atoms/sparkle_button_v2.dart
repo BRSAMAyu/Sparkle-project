@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
@@ -214,7 +216,7 @@ class SparkleButton extends StatelessWidget {
       case ButtonVariant.primary:
       case ButtonVariant.secondary:
       case ButtonVariant.destructive:
-        return Colors.white;
+        return DS.brandPrimary;
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
         return colors.brandPrimary;
@@ -410,7 +412,7 @@ class SparkleIconButton extends StatelessWidget {
       case ButtonVariant.primary:
       case ButtonVariant.secondary:
       case ButtonVariant.destructive:
-        return Colors.white;
+        return DS.brandPrimary;
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
         return colors.brandPrimary;

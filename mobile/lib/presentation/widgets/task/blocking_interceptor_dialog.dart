@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
@@ -82,7 +83,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: AppDesignTokens.warning.withValues(alpha: 0.1),
                       shape: BoxShape.circle,

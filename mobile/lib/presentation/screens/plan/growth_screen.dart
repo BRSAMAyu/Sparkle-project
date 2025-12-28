@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/presentation/providers/plan_provider.dart';
 
@@ -20,7 +23,9 @@ class GrowthScreen extends ConsumerWidget {
         child: _buildBody(context, planState, growthPlans),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () { /* TODO: Navigate to create plan screen */ },
+        onPressed: () {
+          context.push('/plans/new?type=growth');
+        },
         icon: const Icon(Icons.add),
         label: const Text('New Plan'),
       ),
@@ -39,7 +44,7 @@ class GrowthScreen extends ConsumerWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(DS.sm),
       itemCount: plans.length,
       itemBuilder: (context, index) {
         return _GrowthPlanCard(plan: plans[index]);
@@ -59,7 +64,8 @@ class _GrowthPlanCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to plan detail screen
+          // TODO: 需要创建计划详情页面，暂时导航到编辑页面
+          context.push('/plans/${plan.id}/edit');
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -67,9 +73,9 @@ class _GrowthPlanCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 4),
+              const SizedBox(height: DS.xs),
               if (plan.description != null) Text(plan.description!, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               _buildStatRow(
                 context,
                 'Mastery',
@@ -77,13 +83,13 @@ class _GrowthPlanCard extends StatelessWidget {
                 plan.masteryLevel,
                 Colors.purple,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.sm),
               _buildStatRow(
                 context,
                 'Progress',
                 '${(plan.progress * 100).toStringAsFixed(0)}%',
                 plan.progress,
-                Colors.blue,
+                DS.brandPrimary,
               ),
             ],
           ),
@@ -103,7 +109,7 @@ class _GrowthPlanCard extends StatelessWidget {
             Text(valueText, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: DS.xs),
         LinearProgressIndicator(
           value: progressValue,
           backgroundColor: color.withValues(alpha: 0.2),

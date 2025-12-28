@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/community_providers.dart';
@@ -50,10 +52,10 @@ class CommunityScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline, size: 48, color: AppDesignTokens.error),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: DS.lg),
                   Text(
                     'Failed to load feed',
-                    style: TextStyle(color: Colors.grey[300]),
+                    style: TextStyle(color: DS.brandPrimary[300]),
                   ),
                   TextButton(
                     onPressed: () => ref.read(feedProvider.notifier).refresh(),
@@ -82,28 +84,28 @@ class CommunityScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: DS.brandPrimary,
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           Text(
             'Discover what others are learning',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[400],
+              color: DS.brandPrimary[400],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           // Filter Tabs (Placeholder)
           const SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 _FilterChip(label: 'Global Feed', isSelected: true),
-                SizedBox(width: 8),
+                SizedBox(width: DS.sm),
                 _FilterChip(label: 'My Squad', isSelected: false),
-                SizedBox(width: 8),
+                SizedBox(width: DS.sm),
                 _FilterChip(label: 'Following', isSelected: false),
               ],
             ),
@@ -121,16 +123,16 @@ class CommunityScreen extends ConsumerWidget {
         const Center(
           child: Column(
             children: [
-              Icon(Icons.forum_outlined, size: 64, color: Colors.white24),
-              SizedBox(height: 16),
+              Icon(Icons.forum_outlined, size: 64, color: DS.brandPrimary24),
+              SizedBox(height: DS.lg),
               Text(
                 'No posts yet',
-                style: TextStyle(color: Colors.white54, fontSize: 18),
+                style: TextStyle(color: DS.brandPrimary54, fontSize: 18),
               ),
-              SizedBox(height: 8),
+              SizedBox(height: DS.sm),
               Text(
                 'Be the first to share something!',
-                style: TextStyle(color: Colors.white24),
+                style: TextStyle(color: DS.brandPrimary24),
               ),
             ],
           ),
@@ -151,16 +153,16 @@ class _FilterChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? AppDesignTokens.primaryBase : Colors.white10,
+        color: isSelected ? AppDesignTokens.primaryBase : DS.brandPrimary10,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? AppDesignTokens.primaryBase : Colors.white24,
+          color: isSelected ? AppDesignTokens.primaryBase : DS.brandPrimary24,
         ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white70,
+          color: isSelected ? DS.brandPrimary : DS.brandPrimary70,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),

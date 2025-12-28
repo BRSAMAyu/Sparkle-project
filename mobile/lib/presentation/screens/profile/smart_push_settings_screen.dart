@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/data/repositories/user_repository.dart';
@@ -132,22 +134,22 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
         padding: const EdgeInsets.all(16.0),
         children: [
           _buildSectionTitle('角色设定 (Persona)'),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           _buildPersonaSelector(),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           _buildSectionTitle('频控设置 (每日上限)'),
           _buildFrequencySlider(),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           _buildSectionTitle('活跃时间段 (Active Slots)'),
           const Text(
             '仅在这些时间段内发送推送，避开休息时间。',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(color: DS.brandPrimary, fontSize: 12),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           _buildActiveSlotsList(),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           ElevatedButton.icon(
             onPressed: _addSlot,
             icon: const Icon(Icons.add),
@@ -168,8 +170,8 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
                    const SnackBar(content: Text('测试通知已发送 (需退回桌面查看)')),
                 );
               },
-              icon: const Icon(Icons.bug_report, color: Colors.grey),
-              label: const Text('发送测试通知 (Dev)', style: TextStyle(color: Colors.grey)),
+              icon: const Icon(Icons.bug_report, color: DS.brandPrimary),
+              label: const Text('发送测试通知 (Dev)', style: TextStyle(color: DS.brandPrimary)),
             ),
           ),
           const SizedBox(height: 20),
@@ -196,7 +198,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             description: '督促、强调纪律',
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: DS.md),
         Expanded(
           child: _buildPersonaChip(
             value: 'anime',
@@ -222,7 +224,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       onTap: () => setState(() => _persona = value),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
@@ -231,9 +233,9 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
         child: Column(
           children: [
             Icon(icon, color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
+            const SizedBox(height: DS.xs),
             Text(
               description,
               style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
@@ -286,7 +288,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
             child: Row(
               children: [
                 const Icon(Icons.access_time, size: 20),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Row(
                     children: [
@@ -300,7 +302,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.redAccent),
+                  icon: const Icon(Icons.delete, color: DS.errorAccent),
                   onPressed: () => _removeSlot(index),
                 ),
               ],
@@ -318,7 +320,7 @@ class _SmartPushSettingsScreenState extends ConsumerState<SmartPushSettingsScree
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade400),
+          border: Border.all(color: DS.brandPrimary.shade400),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(

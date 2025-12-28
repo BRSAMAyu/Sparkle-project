@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 确认操作对话框 (用于高风险操作)
 class ConfirmationDialog extends StatelessWidget {
@@ -22,14 +23,14 @@ class ConfirmationDialog extends StatelessWidget {
           children: <Widget>[
             Text(content),
             if (previewData != null && previewData!.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               Text(
                 '操作预览:',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.sm),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),

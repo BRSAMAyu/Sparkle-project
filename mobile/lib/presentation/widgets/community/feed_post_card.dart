@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/domain/community/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -13,7 +15,7 @@ class FeedPostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: AppDesignTokens.surface,
         borderRadius: BorderRadius.circular(16),
@@ -22,7 +24,7 @@ class FeedPostCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: DS.brandPrimary.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -43,14 +45,14 @@ class FeedPostCard extends StatelessWidget {
                     ? Text(post.user.username[0].toUpperCase())
                     : null,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     post.user.username,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: DS.brandPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -58,7 +60,7 @@ class FeedPostCard extends StatelessWidget {
                   Text(
                     timeago.format(post.createdAt),
                     style: TextStyle(
-                      color: Colors.grey[400],
+                      color: DS.brandPrimary[400],
                       fontSize: 12,
                     ),
                   ),
@@ -79,7 +81,7 @@ class FeedPostCard extends StatelessWidget {
                         height: 12,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      SizedBox(width: 4),
+                      SizedBox(width: DS.xs),
                       Text(
                         'Posting...',
                         style: TextStyle(
@@ -92,11 +94,11 @@ class FeedPostCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.md),
           Text(
             post.content,
             style: const TextStyle(
-              color: Colors.white,
+              color: DS.brandPrimary,
               fontSize: 15,
               height: 1.4,
             ),
@@ -113,13 +115,13 @@ class FeedPostCard extends StatelessWidget {
                   height: 200,
                   errorBuilder: (ctx, err, stack) => Container(
                     height: 200,
-                    color: Colors.grey[800],
+                    color: DS.brandPrimary[800],
                     child: const Center(child: Icon(Icons.broken_image)),
                   ),
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           Row(
             children: [
               _ActionButton(
@@ -127,7 +129,7 @@ class FeedPostCard extends StatelessWidget {
                 label: '${post.likeCount}',
                 onTap: onLike,
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: DS.xl),
               const _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: 'Comment',
@@ -169,12 +171,12 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, color: Colors.grey[400], size: 20),
+          Icon(icon, color: DS.brandPrimary[400], size: 20),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey[400],
+              color: DS.brandPrimary[400],
               fontSize: 14,
             ),
           ),

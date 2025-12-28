@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,8 +57,8 @@ class GroupDetailScreen extends ConsumerWidget {
             title: Text(
               group.name,
               style: const TextStyle(
-                color: Colors.white,
-                shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
+                color: DS.brandPrimary,
+                shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
               ),
             ),
             background: Container(
@@ -81,14 +83,14 @@ class GroupDetailScreen extends ConsumerWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: DS.brandPrimary.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                      border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.5), width: 2),
                     ),
                     child: Icon(
                       isSprint ? Icons.timer_outlined : Icons.school_outlined,
                       size: 40,
-                      color: Colors.white,
+                      color: DS.brandPrimary,
                     ),
                   ),
                 ),
@@ -98,7 +100,7 @@ class GroupDetailScreen extends ConsumerWidget {
           actions: [
             if (isMember)
               IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
+                icon: const Icon(Icons.more_vert, color: DS.brandPrimary),
                 onPressed: () => _showGroupOptions(context, ref, group),
               ),
           ],
@@ -115,21 +117,21 @@ class GroupDetailScreen extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color: DS.error.shade50,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.red.shade100),
+                        border: Border.all(color: DS.error.shade100),
                       ),
                       child: Text(
                         'Sprint ends in ${group.daysRemaining} days',
                         style: TextStyle(
-                          color: Colors.red.shade700,
+                          color: DS.error.shade700,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
                 
                 // Bonfire with fade-in animation
                 TweenAnimationBuilder<double>(
@@ -150,30 +152,30 @@ class GroupDetailScreen extends ConsumerWidget {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: DS.xxl),
 
                 // Stats Cards
                 Row(
                   children: [
                     Expanded(child: _buildStatCard(context, 'Members', '${group.memberCount}/${group.maxMembers}', Icons.people)),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DS.md),
                     Expanded(child: _buildStatCard(context, 'Total Flame', '${group.totalFlamePower}', Icons.local_fire_department)),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DS.md),
                     Expanded(child: _buildStatCard(context, 'Check-ins', '${group.todayCheckinCount}', Icons.check_circle)),
                   ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: DS.xxl),
 
                 // Description
                 Text('About', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 Text(
                   group.description ?? 'No description provided.',
                   style: theme.textTheme.bodyMedium?.copyWith(color: AppDesignTokens.neutral700, height: 1.5),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Tags
                 if (group.focusTags.isNotEmpty) ...[
@@ -186,7 +188,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       labelStyle: const TextStyle(color: AppDesignTokens.neutral800),
                     ),).toList(),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: DS.xxl),
                 ],
 
                 // Actions
@@ -199,7 +201,7 @@ class GroupDetailScreen extends ConsumerWidget {
                       context.push('/community/groups/$groupId/chat');
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: DS.lg),
                   Row(
                     children: [
                       Expanded(
@@ -211,7 +213,7 @@ class GroupDetailScreen extends ConsumerWidget {
                           },
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: DS.lg),
                       Expanded(
                         child: CustomButton.secondary(
                           text: 'Members',
@@ -259,7 +261,7 @@ class GroupDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppDesignTokens.shadowSm,
         border: Border.all(color: AppDesignTokens.neutral100),
@@ -267,7 +269,7 @@ class GroupDetailScreen extends ConsumerWidget {
       child: Column(
         children: [
           Icon(icon, color: AppDesignTokens.primaryBase, size: 24),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           Text(
             value,
             style: const TextStyle(
@@ -276,7 +278,7 @@ class GroupDetailScreen extends ConsumerWidget {
               color: AppDesignTokens.neutral900,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: DS.xs),
           Text(
             label,
             style: const TextStyle(
@@ -296,7 +298,7 @@ class GroupDetailScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: DS.brandPrimary,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
@@ -314,11 +316,11 @@ class GroupDetailScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.exit_to_app, color: Colors.red.shade700, size: 20),
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(color: DS.error.shade50, shape: BoxShape.circle),
+                  child: Icon(Icons.exit_to_app, color: DS.error.shade700, size: 20),
                 ),
-                title: Text('Leave Group', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                title: Text('Leave Group', style: TextStyle(color: DS.error.shade700, fontWeight: FontWeight.bold)),
                 onTap: () async {
                   Navigator.pop(context);
                   final confirm = await showDialog<bool>(
@@ -330,7 +332,7 @@ class GroupDetailScreen extends ConsumerWidget {
                         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
                         TextButton(
                           onPressed: () => Navigator.pop(context, true), 
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          style: TextButton.styleFrom(foregroundColor: DS.error),
                           child: const Text('Leave'),
                         ),
                       ],
@@ -347,7 +349,7 @@ class GroupDetailScreen extends ConsumerWidget {
                   }
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
             ],
           ),
         ),
@@ -366,20 +368,20 @@ class _DetailLoading extends StatelessWidget {
       highlightColor: AppDesignTokens.neutral100,
       child: Column(
         children: [
-          Container(height: 200, color: Colors.white),
+          Container(height: 200, color: DS.brandPrimary),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               children: [
-                Container(height: 20, width: 200, color: Colors.white),
+                Container(height: 20, width: 200, color: DS.brandPrimary),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: Container(height: 80, color: Colors.white)),
+                    Expanded(child: Container(height: 80, color: DS.brandPrimary)),
                     const SizedBox(width: 10),
-                    Expanded(child: Container(height: 80, color: Colors.white)),
+                    Expanded(child: Container(height: 80, color: DS.brandPrimary)),
                     const SizedBox(width: 10),
-                    Expanded(child: Container(height: 80, color: Colors.white)),
+                    Expanded(child: Container(height: 80, color: DS.brandPrimary)),
                   ],
                 ),
               ],

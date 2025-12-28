@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -15,10 +17,10 @@ class _NotesToolState extends State<NotesTool> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(DS.xl),
       height: 600, // Taller for notes
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -37,14 +39,14 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   const Icon(Icons.note_alt_outlined, color: Colors.orange),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: DS.sm),
                   Text(
                     '随手记',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -60,12 +62,12 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DS.lg),
               decoration: BoxDecoration(
-                color: Colors.yellow[50],
+                color: DS.warning[50],
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
               ),
@@ -81,7 +83,7 @@ class _NotesToolState extends State<NotesTool> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           CustomButton.primary(
             text: '复制到剪贴板',
             onPressed: () {

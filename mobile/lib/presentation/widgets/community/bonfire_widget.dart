@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class BonfireWidget extends StatefulWidget {
@@ -34,7 +36,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
 
   Color _getFireColor() {
     if (widget.level >= 5) return Colors.purpleAccent;
-    if (widget.level >= 4) return Colors.redAccent;
+    if (widget.level >= 4) return DS.errorAccent;
     if (widget.level >= 3) return Colors.deepOrangeAccent;
     if (widget.level >= 2) return Colors.orangeAccent;
     return Colors.amber;
@@ -129,7 +131,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: DS.brandPrimary.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppDesignTokens.shadowSm,
                 border: Border.all(color: baseColor.withValues(alpha: 0.3)),
@@ -138,7 +140,7 @@ class _BonfireWidgetState extends State<BonfireWidget> with SingleTickerProvider
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.bolt, size: 14, color: baseColor),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: DS.xs),
                   Text(
                     'Lv.${widget.level}',
                     style: TextStyle(

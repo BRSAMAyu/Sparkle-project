@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:go_router/go_router.dart';
 
 /// 任务列表组件
@@ -20,7 +22,7 @@ class TaskListWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -61,7 +63,7 @@ class TaskListWidget extends StatelessWidget {
       child: Row(
         children: [
           _buildTaskIcon(type),
-          const SizedBox(width: 8),
+          const SizedBox(width: DS.sm),
           Expanded(
             child: Text(
               title,
@@ -85,13 +87,13 @@ class TaskListWidget extends StatelessWidget {
     IconData icon;
     Color color;
     switch (type) {
-      case 'learning': icon = Icons.menu_book; color = Colors.blue; break;
+      case 'learning': icon = Icons.menu_book; color = DS.brandPrimary; break;
       case 'training': icon = Icons.fitness_center; color = Colors.orange; break;
-      case 'error_fix': icon = Icons.bug_report; color = Colors.red; break;
+      case 'error_fix': icon = Icons.bug_report; color = DS.error; break;
       case 'reflection': icon = Icons.psychology; color = Colors.purple; break;
       case 'social': icon = Icons.people; color = Colors.teal; break;
-      case 'planning': icon = Icons.event_note; color = Colors.green; break;
-      default: icon = Icons.task_alt; color = Colors.grey; break;
+      case 'planning': icon = Icons.event_note; color = DS.success; break;
+      default: icon = Icons.task_alt; color = DS.brandPrimary; break;
     }
     return Icon(icon, size: 24, color: color);
   }
@@ -100,11 +102,11 @@ class TaskListWidget extends StatelessWidget {
     Color color;
     String label;
     switch (status) {
-      case 'pending': color = Colors.grey; label = '待办'; break;
-      case 'in_progress': color = Colors.blue; label = '进行中'; break;
-      case 'completed': color = Colors.green; label = '已完成'; break;
-      case 'abandoned': color = Colors.red; label = '已放弃'; break;
-      default: color = Colors.grey; label = status; break;
+      case 'pending': color = DS.brandPrimary; label = '待办'; break;
+      case 'in_progress': color = DS.brandPrimary; label = '进行中'; break;
+      case 'completed': color = DS.success; label = '已完成'; break;
+      case 'abandoned': color = DS.error; label = '已放弃'; break;
+      default: color = DS.brandPrimary; label = status; break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

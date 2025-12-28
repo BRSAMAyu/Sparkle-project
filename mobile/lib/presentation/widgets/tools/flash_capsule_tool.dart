@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -140,10 +142,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(DS.xl),
       height: 600,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -169,14 +171,14 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.amber.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.lightbulb_outlined, color: Colors.amber, size: 24),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -197,7 +199,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
 
           // Scrollable Content
           Expanded(
@@ -213,7 +215,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: AppDesignTokens.neutral700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   _isLoading
                       ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                       : Container(
@@ -250,7 +252,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: AppDesignTokens.neutral700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   TextField(
                     controller: _topicController,
                     decoration: InputDecoration(
@@ -278,7 +280,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: AppDesignTokens.neutral700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -317,10 +319,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       color: AppDesignTokens.neutral700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   Container(
                     height: 120,
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(DS.xs),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
@@ -333,7 +335,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                       decoration: const InputDecoration(
                         hintText: '简单描述错误情况和原因分析...',
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(12),
+                        contentPadding: EdgeInsets.all(DS.md),
                       ),
                       style: const TextStyle(fontSize: 14, height: 1.5),
                     ),
@@ -342,7 +344,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
 
           // Submit Button
           CustomButton.primary(
@@ -350,7 +352,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             icon: Icons.flash_on_rounded,
             onPressed: _isSubmitting ? null : _submit,
             customGradient: const LinearGradient(
-              colors: [Color(0xFFFFA726), Color(0xFFFFB74D)],
+              colors: [DS.warning, Color(0xFFFFB74D)],
             ),
           ),
         ],

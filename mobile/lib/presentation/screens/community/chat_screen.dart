@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -38,8 +40,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             const Row(
               children: [
                 TypingIndicator(),
-                SizedBox(width: 8),
-                Text('有人正在输入...', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                SizedBox(width: DS.sm),
+                Text('有人正在输入...', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
               ],
             ),
           ],
@@ -95,10 +97,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(DS.md),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        color: DS.brandPrimary,
+        boxShadow: [BoxShadow(color: DS.brandPrimary12, blurRadius: 4)],
       ),
       child: SafeArea(
         child: Row(
@@ -106,7 +108,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: DS.brandPrimary[100],
                   borderRadius: BorderRadius.circular(24),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -119,7 +121,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: DS.sm),
             IconButton.filled(
               onPressed: _sendMessage,
               icon: const Icon(Icons.send),

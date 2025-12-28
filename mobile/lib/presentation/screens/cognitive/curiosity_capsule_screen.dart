@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
@@ -40,16 +42,16 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.lightbulb_outline, size: 64, color: Colors.grey.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
+          Icon(Icons.lightbulb_outline, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
+          const SizedBox(height: DS.lg),
           const Text(
             '今天还没有新的好奇心胶囊',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
+            style: TextStyle(color: DS.brandPrimary, fontSize: 16),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           const Text(
             '继续学习，激发更多灵感吧！',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            style: TextStyle(color: DS.brandPrimary, fontSize: 14),
           ),
         ],
       ),

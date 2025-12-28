@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math' as math;
 
 /// 多智能体头像堆叠组件
@@ -120,7 +122,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
         shape: BoxShape.circle,
         color: agent.color,
         border: Border.all(
-          color: Colors.white,
+          color: DS.brandPrimary,
           width: 2,
         ),
         boxShadow: [
@@ -134,7 +136,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
       child: Center(
         child: Icon(
           agent.icon,
-          color: Colors.white,
+          color: DS.brandPrimary,
           size: widget.size * 0.5,
         ),
       ),
@@ -163,14 +165,14 @@ class AgentInfo {
           type: 'math',
           name: 'Math Expert',
           icon: Icons.functions,
-          color: Colors.blue.shade600,
+          color: DS.brandPrimary.shade600,
         );
       case 'code':
         return AgentInfo(
           type: 'code',
           name: 'Code Expert',
           icon: Icons.code,
-          color: Colors.green.shade600,
+          color: DS.success.shade600,
         );
       case 'writing':
         return AgentInfo(
@@ -192,7 +194,7 @@ class AgentInfo {
           type: 'orchestrator',
           name: 'Orchestrator',
           icon: Icons.hub,
-          color: Colors.grey.shade700,
+          color: DS.brandPrimary.shade700,
         );
     }
   }

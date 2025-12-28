@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/domain/models/learning_path_node.dart';
 import 'package:sparkle/presentation/providers/learning_path_provider.dart';
@@ -40,7 +42,7 @@ class LearningPathDialog extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           Expanded(
             child: pathAsync.when(
               data: (path) {
@@ -71,7 +73,7 @@ class LearningPathDialog extends ConsumerWidget {
 
     switch (node.status) {
       case 'mastered':
-        statusColor = Colors.green;
+        statusColor = DS.success;
         statusIcon = Icons.check_circle;
         break;
       case 'unlocked':
@@ -80,7 +82,7 @@ class LearningPathDialog extends ConsumerWidget {
         break;
       case 'locked':
       default:
-        statusColor = Colors.grey;
+        statusColor = DS.brandPrimary;
         statusIcon = Icons.lock;
         break;
     }
@@ -96,20 +98,20 @@ class LearningPathDialog extends ConsumerWidget {
                   shape: BoxShape.circle,
                   color: statusColor.withOpacity(0.2),
                 ),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 child: Icon(statusIcon, color: statusColor, size: 20),
               ),
               if (!isLast)
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: Colors.grey.withOpacity(0.3),
+                    color: DS.brandPrimary.withOpacity(0.3),
                     margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 ),
             ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
@@ -123,7 +125,7 @@ class LearningPathDialog extends ConsumerWidget {
                           color: node.isTarget ? Theme.of(context).primaryColor : null,
                         ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DS.xs),
                   Text(
                     node.status.toUpperCase(),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(

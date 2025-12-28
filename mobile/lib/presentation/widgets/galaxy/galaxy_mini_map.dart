@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 class GalaxyMiniMap extends StatelessWidget {
@@ -17,9 +19,9 @@ class GalaxyMiniMap extends StatelessWidget {
       width: minimapSize,
       height: minimapSize,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
+        color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white24, width: 1),
+        border: Border.all(color: DS.brandPrimary24, width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -109,7 +111,7 @@ class _MiniMapPainter extends CustomPainter {
     );
     
     final paint = Paint()
-      ..color = Colors.white
+      ..color = DS.brandPrimary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
       
@@ -117,7 +119,7 @@ class _MiniMapPainter extends CustomPainter {
     
     // Fill with very light white
     paint
-      ..color = Colors.white.withValues(alpha: 0.1)
+      ..color = DS.brandPrimary.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
     canvas.drawRect(miniRect, paint);
   }

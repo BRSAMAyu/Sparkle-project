@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -41,9 +43,9 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           decoration: const InputDecoration(
             hintText: 'Search groups...',
             border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.white70),
+            hintStyle: TextStyle(color: DS.brandPrimary70),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: DS.brandPrimary),
           onSubmitted: (_) => _handleSearch(),
           textInputAction: TextInputAction.search,
         ),
@@ -65,16 +67,16 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             itemCount: groups.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: DS.md),
             itemBuilder: (context, index) {
               final group = groups[index];
               return Card(
                 elevation: 2,
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: DS.brandPrimary.shade200,
                     child: Icon(group.type.name == 'sprint' ? Icons.timer : Icons.group),
                   ),
                   title: Text(group.name),

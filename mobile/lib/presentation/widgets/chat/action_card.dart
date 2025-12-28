@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -102,7 +104,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               end: Alignment.bottomRight,
                               colors: [
                                 Colors.transparent,
-                                Colors.white.withValues(alpha: 0.1),
+                                DS.brandPrimary.withValues(alpha: 0.1),
                                 Colors.transparent,
                               ],
                               stops: [
@@ -148,7 +150,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                   ),
                                   child: Icon(
                                     _getActionIcon(widget.action.type),
-                                    color: Colors.white,
+                                    color: DS.brandPrimary,
                                     size: AppDesignTokens.iconSizeSm,
                                   ),
                                 ),

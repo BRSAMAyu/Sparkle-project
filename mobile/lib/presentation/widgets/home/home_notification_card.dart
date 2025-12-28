@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -48,7 +50,7 @@ class HomeNotificationCard extends ConsumerWidget {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
                           color: _getIconColor(latest.type).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
@@ -59,7 +61,7 @@ class HomeNotificationCard extends ConsumerWidget {
                           size: 16,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: DS.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +70,7 @@ class HomeNotificationCard extends ConsumerWidget {
                             Text(
                               latest.title,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: DS.brandPrimary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -79,7 +81,7 @@ class HomeNotificationCard extends ConsumerWidget {
                             Text(
                               latest.content,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: DS.brandPrimary.withValues(alpha: 0.7),
                                 fontSize: 11,
                               ),
                               maxLines: 1,
@@ -98,16 +100,16 @@ class HomeNotificationCard extends ConsumerWidget {
                           child: Text(
                             '+${notifications.length - 1}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: DS.brandPrimary,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: DS.sm),
                       Icon(
                         Icons.chevron_right_rounded,
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: DS.brandPrimary.withValues(alpha: 0.3),
                         size: 18,
                       ),
                     ],
@@ -141,9 +143,9 @@ class HomeNotificationCard extends ConsumerWidget {
       case 'fragmented_time':
         return Colors.orangeAccent;
       case 'system':
-        return Colors.blueAccent;
+        return DS.brandPrimaryAccent;
       case 'reminder':
-        return Colors.greenAccent;
+        return DS.successAccent;
       default:
         return Colors.purpleAccent;
     }
@@ -166,7 +168,7 @@ class HomeNotificationCard extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: Colors.purple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
@@ -177,7 +179,7 @@ class HomeNotificationCard extends ConsumerWidget {
                     size: 16,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +188,7 @@ class HomeNotificationCard extends ConsumerWidget {
                       const Text(
                         '社交消息',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: DS.brandPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -195,7 +197,7 @@ class HomeNotificationCard extends ConsumerWidget {
                       Text(
                         '你有 $unreadCount 条未读消息',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: DS.brandPrimary.withValues(alpha: 0.7),
                           fontSize: 11,
                         ),
                       ),
@@ -211,16 +213,16 @@ class HomeNotificationCard extends ConsumerWidget {
                   child: Text(
                     unreadCount > 99 ? '99+' : '$unreadCount',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: DS.brandPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: DS.brandPrimary.withValues(alpha: 0.3),
                   size: 18,
                 ),
               ],

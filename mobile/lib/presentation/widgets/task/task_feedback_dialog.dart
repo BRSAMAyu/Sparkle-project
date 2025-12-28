@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_completion_result.dart';
@@ -16,7 +18,7 @@ class TaskFeedbackDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
-      backgroundColor: Colors.white,
+      backgroundColor: DS.brandPrimary,
       child: Padding(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         child: Column(
@@ -27,12 +29,12 @@ class TaskFeedbackDialog extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: const BoxDecoration(
                     gradient: AppDesignTokens.primaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+                  child: const Icon(Icons.auto_awesome, color: DS.brandPrimary, size: 24),
                 ),
                 const SizedBox(width: AppDesignTokens.spacing12),
                 Text(
@@ -127,7 +129,7 @@ class _StatItem extends StatelessWidget {
     return Column(
       children: [
         Icon(icon, color: color),
-        const SizedBox(height: 4),
+        const SizedBox(height: DS.xs),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         Text(label, style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
       ],

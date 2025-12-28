@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class ParallaxStarBackground extends StatelessWidget {
   final TransformationController transformationController;
@@ -120,7 +122,7 @@ class _ParallaxLayersPainter extends CustomPainter {
       // Scale star size slightly with zoom to give depth feeling (optional)
       // r = r * (0.5 + scale * 0.5); 
       
-      paint.color = Colors.white.withValues(alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
+      paint.color = DS.brandPrimary.withValues(alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
       canvas.drawCircle(Offset(x, y), r, paint);
     }
   }

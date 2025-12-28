@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math' as math;
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/decay/interactive_decay_timeline.dart';
@@ -56,25 +58,25 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.9), // Wisdom (White)
+                    color: DS.brandPrimary.withValues(alpha: 0.9), // Wisdom (White)
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: DS.brandPrimary.withValues(alpha: 0.6),
                         blurRadius: 40,
                         spreadRadius: 10,
                       ),
                       BoxShadow(
-                        color: Colors.blue.withValues(alpha: 0.3),
+                        color: DS.brandPrimary.withValues(alpha: 0.3),
                         blurRadius: 80,
                         spreadRadius: 20,
                       ),
                     ],
                   ),
                   child: const Center(
-                    child: Icon(Icons.psychology, size: 40, color: Colors.black87),
+                    child: Icon(Icons.psychology, size: 40, color: DS.brandPrimary87),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
                 // Text is now drawn by painter to avoid rotation issues, 
                 // but main title can stay here
               ],
@@ -90,7 +92,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
               child: Text(
                 'Sparkle 6+1 知识星域',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: DS.brandPrimary.withValues(alpha: 0.5),
                   fontSize: 14,
                   letterSpacing: 2,
                 ),
@@ -209,7 +211,7 @@ class _SectorModelPainter extends CustomPainter {
       final starSize = random.nextDouble() * 2;
       final opacity = random.nextDouble() * 0.5 + 0.1;
 
-      paint.color = Colors.white.withValues(alpha: opacity);
+      paint.color = DS.brandPrimary.withValues(alpha: opacity);
       canvas.drawCircle(Offset(x, y), starSize, paint);
     }
   }
@@ -330,7 +332,7 @@ class _SectorModelPainter extends CustomPainter {
   void _drawWisdomHalo(Canvas canvas, Offset center, double radius) {
     // Halo Paint
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
+      ..color = DS.brandPrimary.withValues(alpha: 0.1)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     
     canvas.drawCircle(center, radius, paint);
@@ -338,7 +340,7 @@ class _SectorModelPainter extends CustomPainter {
     // Inner Ring
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = DS.brandPrimary.withValues(alpha: 0.2)
       ..strokeWidth = 1;
       
     canvas.drawCircle(center, radius * 0.8, ringPaint);

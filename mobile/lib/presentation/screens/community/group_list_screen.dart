@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
@@ -151,7 +153,7 @@ class _GroupListTile extends StatelessWidget {
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
         border: Border.all(color: AppDesignTokens.neutral100),
@@ -180,10 +182,10 @@ class _GroupListTile extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: isSprint 
                           ? LinearGradient(colors: [Colors.orange.shade100, Colors.orange.shade50])
-                          : LinearGradient(colors: [Colors.blue.shade100, Colors.blue.shade50]),
+                          : LinearGradient(colors: [DS.brandPrimary.shade100, DS.brandPrimary.shade50]),
                       boxShadow: [
                          BoxShadow(
-                           color: (isSprint ? Colors.orange : Colors.blue).withValues(alpha: 0.2),
+                           color: (isSprint ? Colors.orange : DS.brandPrimary).withValues(alpha: 0.2),
                            blurRadius: 8,
                            offset: const Offset(0, 4),
                          ),
@@ -191,7 +193,7 @@ class _GroupListTile extends StatelessWidget {
                     ),
                     child: Icon(
                        isSprint ? Icons.timer_outlined : Icons.school_outlined,
-                       color: isSprint ? Colors.deepOrange : Colors.blue.shade700,
+                       color: isSprint ? Colors.deepOrange : DS.brandPrimary.shade700,
                        size: 28,
                     ),
                   ),
@@ -220,13 +222,13 @@ class _GroupListTile extends StatelessWidget {
                              Container(
                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                decoration: BoxDecoration(
-                                 color: Colors.red.shade50,
+                                 color: DS.error.shade50,
                                  borderRadius: BorderRadius.circular(8),
                                ),
                                child: Text(
                                  '${group.daysRemaining}d left',
                                  style: TextStyle(
-                                   color: Colors.red.shade700,
+                                   color: DS.error.shade700,
                                    fontSize: 10,
                                    fontWeight: FontWeight.bold,
                                  ),
@@ -243,19 +245,19 @@ class _GroupListTile extends StatelessWidget {
                             '${group.totalFlamePower}',
                             Colors.orange,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: DS.md),
                           _buildInfoBadge(
                             context,
                             Icons.people_alt_rounded,
                             '${group.memberCount}',
-                            Colors.grey,
+                            DS.brandPrimary,
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
               ],
             ),
@@ -269,7 +271,7 @@ class _GroupListTile extends StatelessWidget {
     return Row(
       children: [
         Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
+        const SizedBox(width: DS.xs),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -298,7 +300,7 @@ class _GroupListLoading extends StatelessWidget {
           child: Container(
             height: 88,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DS.brandPrimary,
               borderRadius: AppDesignTokens.borderRadius16,
             ),
           ),

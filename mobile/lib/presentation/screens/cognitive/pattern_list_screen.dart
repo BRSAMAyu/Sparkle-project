@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -48,7 +50,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                   child: cognitiveState.isLoading && cognitiveState.patterns.isEmpty
                       ? const Center(
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                            valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
                           ),
                         )
                       : cognitiveState.patterns.isEmpty
@@ -70,7 +72,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: DS.brandPrimary),
           ),
           const Expanded(
             child: Text(
@@ -78,19 +80,19 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: DS.brandPrimary,
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
               color: AppDesignTokens.prismPurple.withAlpha(40),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.diamond_outlined,
-              color: Colors.white,
+              color: DS.brandPrimary,
               size: 20,
             ),
           ),
@@ -102,13 +104,13 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
   Widget _buildEmptyState() {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 80),
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(DS.xl),
             decoration: BoxDecoration(
               color: AppDesignTokens.prismPurple.withAlpha(30),
               shape: BoxShape.circle,
@@ -119,22 +121,22 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               color: AppDesignTokens.prismPurple.withAlpha(150),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           const Text(
             '暂无行为定式',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: DS.brandPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           Text(
             '继续记录你的想法和情绪\nAI 会为你发现行为模式',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withAlpha(150),
+              color: DS.brandPrimary.withAlpha(150),
               height: 1.5,
             ),
           ),
@@ -194,7 +196,7 @@ class _PatternCard extends StatelessWidget {
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: DS.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,7 +206,7 @@ class _PatternCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: DS.brandPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -242,12 +244,12 @@ class _PatternCard extends StatelessWidget {
 
               // Description
               if (pattern.description != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
                 Text(
                   pattern.description!,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withAlpha(200),
+                    color: DS.brandPrimary.withAlpha(200),
                     height: 1.5,
                   ),
                 ),
@@ -255,9 +257,9 @@ class _PatternCard extends StatelessWidget {
 
               // Solution
               if (pattern.solutionText != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
                     color: AppDesignTokens.success.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
@@ -290,12 +292,12 @@ class _PatternCard extends StatelessWidget {
               ],
 
               // Date
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.md),
               Text(
                 '发现于 ${_formatDate(pattern.createdAt)}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.white.withAlpha(100),
+                  color: DS.brandPrimary.withAlpha(100),
                 ),
               ),
             ],

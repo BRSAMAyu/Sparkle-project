@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,9 +106,9 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                   foregroundDecoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withValues(alpha: 0),
-                        Colors.white.withValues(alpha: 0.1), // Subtle shimmer/highlight
-                        Colors.white.withValues(alpha: 0),
+                        DS.brandPrimary.withValues(alpha: 0),
+                        DS.brandPrimary.withValues(alpha: 0.1), // Subtle shimmer/highlight
+                        DS.brandPrimary.withValues(alpha: 0),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                       begin: Alignment.topLeft,
@@ -173,7 +175,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                         children: [
                                           if (widget.task.dueDate != null) ...[
                                             const Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
-                                            const SizedBox(width: 4),
+                                            const SizedBox(width: DS.xs),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
                                               style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
@@ -181,7 +183,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             const SizedBox(width: AppDesignTokens.spacing12),
                                           ],
                                           const Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: DS.xs),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
                                             style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
@@ -236,11 +238,11 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.cloud_off, color: Colors.white, size: 32),
+                                      const Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
                                       const SizedBox(height: AppDesignTokens.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(height: AppDesignTokens.spacing12),
                                       Row(
@@ -250,10 +252,10 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).discardChange(widget.task.id);
                                             },
-                                            style: TextButton.styleFrom(foregroundColor: Colors.white),
+                                            style: TextButton.styleFrom(foregroundColor: DS.brandPrimary),
                                             child: const Text('Discard'),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: DS.sm),
                                           ElevatedButton(
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).retryCompleteTask(
@@ -263,7 +265,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                               );
                                             },
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.white,
+                                              backgroundColor: DS.brandPrimary,
                                               foregroundColor: AppDesignTokens.error,
                                             ),
                                             child: const Text('Retry'),
@@ -344,7 +346,7 @@ class _DifficultyStars extends StatelessWidget {
           },
           child: Icon(
             index < difficulty ? Icons.star : Icons.star_border,
-            color: Colors.white, // Color is ignored by shader but needed for structure
+            color: DS.brandPrimary, // Color is ignored by shader but needed for structure
             size: 16,
           ),
         );
@@ -363,7 +365,7 @@ class _TaskTypeChip extends StatelessWidget {
     String label;
     switch (type) {
       case TaskType.learning:
-        color = Colors.blue;
+        color = DS.brandPrimary;
         label = 'Learning';
         break;
       case TaskType.training:
@@ -371,7 +373,7 @@ class _TaskTypeChip extends StatelessWidget {
         label = 'Training';
         break;
       case TaskType.errorFix:
-        color = Colors.red;
+        color = DS.error;
         label = 'Fix';
         break;
       case TaskType.reflection:
@@ -379,7 +381,7 @@ class _TaskTypeChip extends StatelessWidget {
         label = 'Reflection';
         break;
       case TaskType.social:
-        color = Colors.green;
+        color = DS.success;
         label = 'Social';
         break;
       case TaskType.planning:
@@ -419,13 +421,13 @@ class _StatusChip extends StatelessWidget {
         color = Colors.orange;
         break;
       case TaskStatus.inProgress:
-        color = Colors.blue;
+        color = DS.brandPrimary;
         break;
       case TaskStatus.completed:
-        color = Colors.green;
+        color = DS.success;
         break;
       case TaskStatus.abandoned:
-        color = Colors.grey;
+        color = DS.brandPrimary;
         break;
     }
 

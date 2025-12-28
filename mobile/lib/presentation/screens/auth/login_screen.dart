@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -63,9 +65,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const Icon(
                   Icons.whatshot_outlined,
                   size: 60,
-                  color: Color(0xFFFF6B35),
+                  color: DS.brandPrimary,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
                 Text(
                   'Welcome Back to Sparkle',
                   textAlign: TextAlign.center,
@@ -74,13 +76,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 Text(
                   'Ignite your learning potential.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: DS.xxxl),
 
                 // Username field
                 TextFormField(
@@ -93,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your username or email' : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -114,37 +116,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your password' : null,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Login Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const DS.brandPrimary,
+                    foregroundColor: DS.brandPrimary,
                   ),
                   onPressed: authState.isLoading ? null : _submit,
                   child: authState.isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                         )
                       : const Text('Login'),
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
                 const Row(
                   children: [
                     Expanded(child: Divider()),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('OR', style: TextStyle(color: Colors.grey)),
+                      child: Text('OR', style: TextStyle(color: DS.brandPrimary)),
                     ),
                     Expanded(child: Divider()),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Social Login Buttons
                 Row(
@@ -189,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
 
                 // Register Link
                 TextButton(
@@ -197,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: const Text("Don't have an account? Register"),
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 
                 // Guest Mode
                 TextButton(
@@ -239,14 +241,14 @@ class _SocialLoginButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: DS.brandPrimary.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

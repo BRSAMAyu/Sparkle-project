@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class SparkleTheme {
   // 核心调色板 - 融合星空与火焰
@@ -6,7 +8,7 @@ class SparkleTheme {
   static const Color secondary = Color(0xFFE67E22); // 橙色 (火苗)
   static const Color tertiary = Color(0xFFF1C40F); // 金色 (能量)
   static const Color background = Color(0xFFF8F9FA);
-  static const Color surface = Colors.white;
+  static const Color surface = DS.brandPrimary;
   static const Color error = Color(0xFFB00020);
   
   // 在线状态颜色

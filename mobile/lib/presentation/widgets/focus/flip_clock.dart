@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -182,7 +184,7 @@ class _FlipDigitState extends State<_FlipDigit>
               bottom: isTop ? Radius.zero : const Radius.circular(8),
             ),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: DS.brandPrimary.withValues(alpha: 0.1),
               width: 0.5,
             ),
           ),
@@ -203,7 +205,7 @@ class _FlipDigitState extends State<_FlipDigit>
                 style: const TextStyle(
                   fontSize: 56,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   fontFamily: 'monospace',
                   height: 1.0,
                 ),
@@ -256,7 +258,7 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildDot(_opacityAnimation.value),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               _buildDot(_opacityAnimation.value),
             ],
           ),
@@ -331,7 +333,7 @@ class SimpleFlipClock extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: DS.brandPrimary,
           fontFamily: 'monospace',
           letterSpacing: 4,
         ),

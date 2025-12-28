@@ -1,4 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -10,7 +12,7 @@ class StatisticsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
       ),
@@ -114,7 +116,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                 getDotPainter: (spot, percent, barData, index) {
                   return FlDotCirclePainter(
                     radius: 4,
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     strokeWidth: 2,
                     strokeColor: AppDesignTokens.primaryBase,
                   );

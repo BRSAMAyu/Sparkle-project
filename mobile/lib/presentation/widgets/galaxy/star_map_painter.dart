@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
@@ -102,7 +104,7 @@ class _RelationStyle {
         );
       case EdgeRelationType.parentChild:
         return const _RelationStyle(
-          color: Colors.white,
+          color: DS.brandPrimary,
           baseWidth: 1.8,
         );
     }
@@ -172,7 +174,7 @@ class StarMapPainter extends CustomPainter {
         }
       }
 
-      final color = _colorCache[node.id] ?? Colors.white;
+      final color = _colorCache[node.id] ?? DS.brandPrimary;
       final radius = node.radius;
       _processedNodes.add(ProcessedNode(
         node: node,
@@ -200,8 +202,8 @@ class StarMapPainter extends CustomPainter {
         }
       }
 
-      final sourceColor = _colorCache[edge.sourceId] ?? Colors.white;
-      final targetColor = _colorCache[edge.targetId] ?? Colors.white;
+      final sourceColor = _colorCache[edge.sourceId] ?? DS.brandPrimary;
+      final targetColor = _colorCache[edge.targetId] ?? DS.brandPrimary;
       final distance = (end - start).distance;
       final style = _RelationStyle.forType(edge.relationType);
       final strokeWidth = style.baseWidth * (0.5 + edge.strength * 0.5);
@@ -237,8 +239,8 @@ class StarMapPainter extends CustomPainter {
           }
         }
 
-        final parentColor = _colorCache[node.parentId] ?? Colors.white;
-        final childColor = _colorCache[node.id] ?? Colors.white;
+        final parentColor = _colorCache[node.parentId] ?? DS.brandPrimary;
+        final childColor = _colorCache[node.id] ?? DS.brandPrimary;
         final distance = (end - start).distance;
 
         _processedEdges.add(ProcessedEdge(
@@ -496,7 +498,7 @@ class StarMapPainter extends CustomPainter {
 
     // Badge background
     final badgePaint = Paint()
-      ..color = Colors.white
+      ..color = DS.brandPrimary
       ..style = PaintingStyle.fill;
     canvas.drawCircle(badgePos, badgeRadius, badgePaint);
 
@@ -532,7 +534,7 @@ class StarMapPainter extends CustomPainter {
     final textSpan = TextSpan(
       text: name,
       style: TextStyle(
-        color: Colors.white.withAlpha(220),
+        color: DS.brandPrimary.withAlpha(220),
         fontSize: 12,
         fontWeight: FontWeight.w600,
         shadows: [
@@ -580,7 +582,7 @@ class StarMapPainter extends CustomPainter {
         pos,
         baseRadius,
         [
-          Colors.white.withAlpha(200),
+          DS.brandPrimary.withAlpha(200),
           color.withAlpha(200),
           color.withAlpha(100),
         ],
@@ -594,7 +596,7 @@ class StarMapPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: style.name,
         style: TextStyle(
-          color: Colors.white,
+          color: DS.brandPrimary,
           fontSize: 16,
           fontWeight: FontWeight.bold,
           shadows: [
@@ -603,7 +605,7 @@ class StarMapPainter extends CustomPainter {
               blurRadius: 8,
             ),
             Shadow(
-              color: Colors.black.withAlpha(150),
+              color: DS.brandPrimary.withAlpha(150),
               blurRadius: 4,
             ),
           ],
@@ -620,7 +622,7 @@ class StarMapPainter extends CustomPainter {
       final countSpan = TextSpan(
         text: '${cluster.nodeCount} 个知识点',
         style: TextStyle(
-          color: Colors.white.withAlpha(180),
+          color: DS.brandPrimary.withAlpha(180),
           fontSize: 11,
         ),
       );
@@ -676,7 +678,7 @@ class StarMapPainter extends CustomPainter {
           pos,
           radius,
           [
-            Colors.white.withValues(alpha: 0.9),
+            DS.brandPrimary.withValues(alpha: 0.9),
             color,
             color.withValues(alpha: 0.8),
           ],
@@ -705,7 +707,7 @@ class StarMapPainter extends CustomPainter {
              
              // Extra "Pulse" ring for expansion ready
              ringPaint
-              ..color = Colors.white.withValues(alpha: 0.5)
+              ..color = DS.brandPrimary.withValues(alpha: 0.5)
               ..strokeWidth = 1.0
               ..maskFilter = null;
              canvas.drawCircle(pos, ringRadius * 1.1, ringPaint);
@@ -731,18 +733,18 @@ class StarMapPainter extends CustomPainter {
         // Bright center highlight (mastery indicator)
         if (masteryFactor > 0.5) {
           final highlightRadius = radius * 0.4 * masteryFactor;
-          nodePaint.color = Colors.white.withValues(alpha: 0.6 + masteryFactor * 0.3);
+          nodePaint.color = DS.brandPrimary.withValues(alpha: 0.6 + masteryFactor * 0.3);
           canvas.drawCircle(pos, highlightRadius, nodePaint);
         }
 
       } else {
         // Locked: Grey dim with subtle indication
-        nodePaint.color = Colors.grey.withValues(alpha: 0.25);
+        nodePaint.color = DS.brandPrimary.withValues(alpha: 0.25);
         canvas.drawCircle(pos, radius * 0.8, nodePaint);
 
         // Very subtle glow for locked nodes
         if (scale > 0.6) {
-          glowPaint.color = Colors.grey.withValues(alpha: 0.1);
+          glowPaint.color = DS.brandPrimary.withValues(alpha: 0.1);
           canvas.drawCircle(pos, radius * 1.5, glowPaint);
         }
       }
@@ -770,8 +772,8 @@ class StarMapPainter extends CustomPainter {
   void _drawNodeLabel(Canvas canvas, GalaxyNodeModel node, Offset pos, Color color) {
     final sectorStyle = SectorConfig.getStyle(node.sector);
     final textColor = node.isUnlocked
-        ? Colors.white.withValues(alpha: 0.9)
-        : Colors.grey.withValues(alpha: 0.5);
+        ? DS.brandPrimary.withValues(alpha: 0.9)
+        : DS.brandPrimary.withValues(alpha: 0.5);
 
     final textSpan = TextSpan(
       text: node.name,
@@ -786,7 +788,7 @@ class StarMapPainter extends CustomPainter {
                   blurRadius: 6,
                 ),
                 const Shadow(
-                  color: Colors.black54,
+                  color: DS.brandPrimary54,
                   blurRadius: 2,
                 ),
               ]

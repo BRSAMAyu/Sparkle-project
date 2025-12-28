@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
@@ -45,7 +47,7 @@ class StatusAvatar extends StatelessWidget {
             decoration: BoxDecoration(
               color: statusColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: DS.brandPrimary, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: statusColor.withValues(alpha: 0.4),
@@ -79,10 +81,10 @@ class ChatBubble extends StatelessWidget {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMe ? SparkleTheme.primary : Colors.white,
+          color: isMe ? SparkleTheme.primary : DS.brandPrimary,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -91,7 +93,7 @@ class ChatBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: DS.brandPrimary.withValues(alpha: 0.05),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
@@ -103,27 +105,27 @@ class ChatBubble extends StatelessWidget {
             Text(
               content,
               style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
+                color: isMe ? DS.brandPrimary : DS.brandPrimary87,
                 fontSize: 15,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: DS.xs),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   "${time.hour}:${time.minute.toString().padLeft(2, '0')}",
                   style: TextStyle(
-                    color: isMe ? Colors.white70 : Colors.black45,
+                    color: isMe ? DS.brandPrimary70 : DS.brandPrimary45,
                     fontSize: 10,
                   ),
                 ),
                 if (isMe) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: DS.xs),
                   Icon(
                     isSent ? Icons.done_all : Icons.access_time,
                     size: 12,
-                    color: isSent ? Colors.white70 : Colors.white38,
+                    color: isSent ? DS.brandPrimary70 : DS.brandPrimary38,
                   ),
                 ],
               ],

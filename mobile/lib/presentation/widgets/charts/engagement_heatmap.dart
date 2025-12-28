@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 学习活跃度热力图 - GitHub 风格
 ///
@@ -24,15 +26,15 @@ class EngagementHeatmap extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Row(
               children: [
-                Icon(Icons.calendar_month, color: Colors.blue.shade600, size: 24),
-                const SizedBox(width: 12),
+                Icon(Icons.calendar_month, color: DS.brandPrimary.shade600, size: 24),
+                const SizedBox(width: DS.md),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,7 +45,7 @@ class EngagementHeatmap extends StatelessWidget {
                       ),
                       Text(
                         '过去 90 天的学习记录',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: DS.brandPrimary),
                       ),
                     ],
                   ),
@@ -51,12 +53,12 @@ class EngagementHeatmap extends StatelessWidget {
                 _buildLegend(),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
 
             // Heatmap Grid
             _buildHeatmapGrid(),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.md),
 
             // Stats Summary
             _buildStatsSummary(),
@@ -118,8 +120,8 @@ class EngagementHeatmap extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('少', style: TextStyle(fontSize: 10, color: Colors.grey)),
-        const SizedBox(width: 4),
+        const Text('少', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
+        const SizedBox(width: DS.xs),
         ...List.generate(5, (index) {
           final intensity = index / 4;
           return Container(
@@ -132,8 +134,8 @@ class EngagementHeatmap extends StatelessWidget {
             ),
           );
         }),
-        const SizedBox(width: 4),
-        const Text('多', style: TextStyle(fontSize: 10, color: Colors.grey)),
+        const SizedBox(width: DS.xs),
+        const Text('多', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
       ],
     );
   }
@@ -154,15 +156,15 @@ class EngagementHeatmap extends StatelessWidget {
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, size: 20, color: Colors.blue.shade600),
-        const SizedBox(height: 4),
+        Icon(icon, size: 20, color: DS.brandPrimary.shade600),
+        const SizedBox(height: DS.xs),
         Text(
           value,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Colors.grey),
+          style: const TextStyle(fontSize: 10, color: DS.brandPrimary),
         ),
       ],
     );

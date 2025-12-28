@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/app/theme.dart';
@@ -18,14 +20,14 @@ class CuriosityCapsuleCard extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
       elevation: 2,
       child: ExpansionTile(
-        tilePadding: const EdgeInsets.all(16),
+        tilePadding: const EdgeInsets.all(DS.lg),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: const BoxDecoration(
             gradient: AppDesignTokens.secondaryGradient,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.lightbulb_outline, color: Colors.white),
+          child: const Icon(Icons.lightbulb_outline, color: DS.brandPrimary),
         ),
         title: Text(
           capsule.title,
@@ -46,7 +48,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MarkdownBody(data: capsule.content),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 if (capsule.relatedSubject != null)
                   Chip(
                     label: Text(capsule.relatedSubject!),

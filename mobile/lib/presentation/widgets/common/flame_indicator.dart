@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 火焰等级指示器组件
@@ -214,7 +216,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
             child: Icon(
               Icons.local_fire_department_rounded,
               size: widget.size * 0.3,
-              color: Colors.white,
+              color: DS.brandPrimary,
             ),
           ),
         );
@@ -316,7 +318,7 @@ class _CircularProgressPainter extends CustomPainter {
         final endPoint = Offset(endX, endY);
 
         final glowPaint = Paint()
-          ..color = Colors.white.withValues(alpha: 0.8)
+          ..color = DS.brandPrimary.withValues(alpha: 0.8)
           ..style = PaintingStyle.fill;
 
         canvas.drawCircle(endPoint, strokeWidth / 2, glowPaint);

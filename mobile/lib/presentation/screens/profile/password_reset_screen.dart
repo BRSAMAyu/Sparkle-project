@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -39,14 +41,14 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('密码修改成功'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('密码修改成功'), backgroundColor: DS.success),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('修改失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('修改失败: $e'), backgroundColor: DS.error),
         );
       }
     } finally {
@@ -74,7 +76,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               Text(
                 '请确保您的新密码包含至少 8 个字符。',
                 style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.grey.shade600,
+                  color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade600,
                   fontSize: 14,
                 ),
               ),
@@ -117,7 +119,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                 onPressed: _isLoading ? null : _handleReset,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppDesignTokens.primaryBase,
-                  foregroundColor: Colors.white,
+                  foregroundColor: DS.brandPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: AppDesignTokens.borderRadius12,
@@ -128,7 +130,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                     ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(color: DS.brandPrimary, strokeWidth: 2),
                       )
                     : const Text('更新密码', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
@@ -157,7 +159,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isDark ? Colors.white70 : Colors.grey.shade700,
+            color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),
         const SizedBox(height: 6),
@@ -175,14 +177,14 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
               onPressed: onToggle,
             ),
             filled: true,
-            fillColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+            fillColor: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade50,
             border: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+              borderSide: BorderSide(color: isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade300),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+              borderSide: BorderSide(color: isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade300),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppDesignTokens.borderRadius12,

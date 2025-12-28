@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -134,12 +136,12 @@ class _StarPainter extends CustomPainter {
       }
 
       final starPaint = Paint()
-        ..color = Colors.white.withValues(alpha: opacity);
+        ..color = DS.brandPrimary.withValues(alpha: opacity);
 
       // 绘制星星光晕
       if (star.size > 1.5) {
         final glowPaint = Paint()
-          ..color = Colors.white.withValues(alpha: opacity * 0.3)
+          ..color = DS.brandPrimary.withValues(alpha: opacity * 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
         canvas.drawCircle(

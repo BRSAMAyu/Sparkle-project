@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -29,7 +31,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(DS.lg),
           child: _buildContent(context),
         ),
       ),
@@ -64,14 +66,14 @@ class PredictiveInsightsCard extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: DS.brandPrimary.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.trending_up, color: Colors.blue.shade600, size: 24),
+              child: Icon(Icons.trending_up, color: DS.brandPrimary.shade600, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DS.md),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,20 +98,20 @@ class PredictiveInsightsCard extends StatelessWidget {
             _buildConfidenceBadge(confidence),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
 
         // Next Active Time
         if (nextActiveTime != null) ...[
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: DS.brandPrimary.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.access_time, color: Colors.blue.shade700, size: 20),
-                const SizedBox(width: 8),
+                Icon(Icons.access_time, color: DS.brandPrimary.shade700, size: 20),
+                const SizedBox(width: DS.sm),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -119,7 +121,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: DS.brandPrimary.shade700,
                       ),
                     ),
                   ],
@@ -127,7 +129,7 @@ class PredictiveInsightsCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: DS.md),
         ],
 
         // Dropout Risk
@@ -150,7 +152,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
                 color: _getDifficultyColor(difficultyScore).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -161,7 +163,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DS.md),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +188,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             _buildDifficultyBadge(difficultyScore),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
 
         // Difficulty Bar
         Column(
@@ -209,19 +211,19 @@ class PredictiveInsightsCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: difficultyScore,
                 minHeight: 8,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: DS.brandPrimary.shade200,
                 valueColor: AlwaysStoppedAnimation(_getDifficultyColor(difficultyScore)),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
 
         // Estimated Time
         Row(
@@ -236,7 +238,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.sm),
 
         // Prerequisites Status
         if (!prerequisitesReady)
@@ -279,7 +281,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
                 color: _getRiskColor(riskLevel).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -290,7 +292,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DS.md),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +317,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             _buildRiskLevelBadge(riskLevel),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
 
         // Risk Score
         Text(
@@ -326,17 +328,17 @@ class PredictiveInsightsCard extends StatelessWidget {
             fontWeight: AppDesignTokens.fontWeightBold,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.sm),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: riskScore / 100,
             minHeight: 8,
-            backgroundColor: Colors.grey.shade200,
+            backgroundColor: DS.brandPrimary.shade200,
             valueColor: AlwaysStoppedAnimation(_getRiskColor(riskLevel)),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
 
         // Suggestions
         if (suggestions.isNotEmpty) ...[
@@ -378,7 +380,7 @@ class PredictiveInsightsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: confidence > 0.7 ? Colors.green.shade50 : Colors.orange.shade50,
+        color: confidence > 0.7 ? DS.success.shade50 : Colors.orange.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -387,15 +389,15 @@ class PredictiveInsightsCard extends StatelessWidget {
           Icon(
             confidence > 0.7 ? Icons.verified : Icons.info_outline,
             size: 12,
-            color: confidence > 0.7 ? Colors.green.shade700 : Colors.orange.shade700,
+            color: confidence > 0.7 ? DS.success.shade700 : Colors.orange.shade700,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DS.xs),
           Text(
             '${(confidence * 100).toInt()}%',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: confidence > 0.7 ? Colors.green.shade700 : Colors.orange.shade700,
+              color: confidence > 0.7 ? DS.success.shade700 : Colors.orange.shade700,
             ),
           ),
         ],
@@ -441,7 +443,7 @@ class PredictiveInsightsCard extends StatelessWidget {
 
   Widget _buildRiskIndicator(String risk) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(DS.sm),
       decoration: BoxDecoration(
         color: _getRiskColor(risk).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
@@ -449,7 +451,7 @@ class PredictiveInsightsCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
-          const SizedBox(width: 8),
+          const SizedBox(width: DS.sm),
           Text(
             '流失风险: ${_getRiskLevelText(risk)}',
             style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
@@ -476,9 +478,9 @@ class PredictiveInsightsCard extends StatelessWidget {
   }
 
   Color _getDifficultyColor(double score) {
-    if (score < 0.3) return Colors.green.shade600;
+    if (score < 0.3) return DS.success.shade600;
     if (score < 0.6) return Colors.orange.shade600;
-    return Colors.red.shade600;
+    return DS.error.shade600;
   }
 
   String _getDifficultyLabel(double score) {
@@ -490,13 +492,13 @@ class PredictiveInsightsCard extends StatelessWidget {
   Color _getRiskColor(String level) {
     switch (level) {
       case 'low':
-        return Colors.green.shade600;
+        return DS.success.shade600;
       case 'medium':
         return Colors.orange.shade600;
       case 'high':
-        return Colors.red.shade600;
+        return DS.error.shade600;
       default:
-        return Colors.grey.shade600;
+        return DS.brandPrimary.shade600;
     }
   }
 

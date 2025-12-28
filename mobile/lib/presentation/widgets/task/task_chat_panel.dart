@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
@@ -39,7 +41,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowMd,
         border: Border.all(color: AppDesignTokens.neutral200),
@@ -55,12 +57,12 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(DS.sm),
                     decoration: const BoxDecoration(
                       gradient: AppDesignTokens.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                    child: const Icon(Icons.auto_awesome, color: DS.brandPrimary, size: 18),
                   ),
                   const SizedBox(width: AppDesignTokens.spacing12),
                   const Text(
@@ -101,7 +103,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(DS.lg),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         return ChatBubble(message: messages[index]);

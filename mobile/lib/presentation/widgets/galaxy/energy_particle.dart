@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -246,7 +248,7 @@ class _EnergyParticlePainter extends CustomPainter {
 
     // Inner glow (bright core)
     final innerGlowPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
+      ..color = DS.brandPrimary.withValues(alpha: 0.8)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawCircle(currentPosition, 5 * glowScale, innerGlowPaint);
 
@@ -258,7 +260,7 @@ class _EnergyParticlePainter extends CustomPainter {
 
     // White hot center
     final whitePaint = Paint()
-      ..color = Colors.white
+      ..color = DS.brandPrimary
       ..style = PaintingStyle.fill;
     canvas.drawCircle(currentPosition, 2, whitePaint);
 

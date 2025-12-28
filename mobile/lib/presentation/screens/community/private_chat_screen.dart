@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -80,7 +81,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.chat_bubble_outline, size: 48, color: AppDesignTokens.neutral300),
-                        SizedBox(height: 16),
+                        SizedBox(height: DS.lg),
                         Text('开始对话吧!', style: TextStyle(color: AppDesignTokens.neutral500)),
                       ],
                     ),

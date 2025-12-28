@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/insights/predictive_insights_card.dart';
@@ -78,8 +80,8 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('学习预测洞察', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('学习预测洞察', style: TextStyle(color: DS.brandPrimary)),
+        iconTheme: const IconThemeData(color: DS.brandPrimary),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -93,43 +95,43 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
               onRefresh: _loadDashboard,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(DS.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
                     _buildHeader(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: DS.xl),
 
                     // Engagement Heatmap
                     _buildSectionTitle('学习活跃度分析'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: DS.md),
                     const EngagementHeatmap(
                       data: {}, // TODO: 传入实际数据
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: DS.xl),
 
                     // Insights Cards
                     _buildSectionTitle('AI 洞察'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: DS.md),
 
                     // Engagement Forecast
                     PredictiveInsightsCard(
                       type: 'engagement',
                       data: _dashboardData?['engagement_forecast'] ?? {},
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: DS.lg),
 
                     // Risk Assessment
                     PredictiveInsightsCard(
                       type: 'risk',
                       data: _dashboardData?['dropout_risk'] ?? {},
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: DS.xl),
 
                     // Optimal Time Recommendation
                     _buildOptimalTimeSection(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: DS.xl),
 
                     // Learning Tips
                     _buildLearningTips(),
@@ -146,7 +148,7 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.blue.shade600,
+            DS.brandPrimary.shade600,
             Colors.purple.shade600,
           ],
         ),
@@ -155,14 +157,14 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: DS.brandPrimary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.auto_graph, color: Colors.white, size: 32),
+            child: const Icon(Icons.auto_graph, color: DS.brandPrimary, size: 32),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: DS.lg),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,15 +172,15 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
                 Text(
                   'AI 预测系统',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: DS.xs),
                 Text(
                   '基于学习数据的智能分析',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: DS.brandPrimary70, fontSize: 14),
                 ),
               ],
             ),
@@ -192,7 +194,7 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
     return Text(
       title,
       style: const TextStyle(
-        color: Colors.white,
+        color: DS.brandPrimary,
         fontSize: 18,
         fontWeight: FontWeight.bold,
       ),
@@ -210,25 +212,25 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.wb_sunny_outlined, color: Colors.amber.shade700, size: 24),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.md),
                 const Text(
                   '最佳学习时间',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
 
             // Best Hours
             const Text('推荐学习时段', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -238,16 +240,16 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
                     '$hour:00-${hour + 1}:00',
                     style: const TextStyle(fontSize: 12),
                   ),
-                  backgroundColor: Colors.blue.shade50,
+                  backgroundColor: DS.brandPrimary.shade50,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
 
             // Best Weekdays
             const Text('推荐学习日', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -257,7 +259,7 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
                     _getWeekdayName(day as int),
                     style: const TextStyle(fontSize: 12),
                   ),
-                  backgroundColor: Colors.green.shade50,
+                  backgroundColor: DS.success.shade50,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 );
               }).toList(),
@@ -273,21 +275,21 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.tips_and_updates, color: Colors.purple.shade600, size: 24),
-                const SizedBox(width: 12),
+                const SizedBox(width: DS.md),
                 const Text(
                   '学习建议',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.md),
             _buildTip('根据历史数据，您在早上9点学习效果最佳'),
             _buildTip('周一到周四是您的高产学习日'),
             _buildTip('建议每次学习 30-45 分钟，然后休息 5-10 分钟'),
@@ -304,7 +306,7 @@ class _LearningForecastScreenState extends ConsumerState<LearningForecastScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.arrow_right, color: Colors.purple.shade600, size: 20),
-          const SizedBox(width: 8),
+          const SizedBox(width: DS.sm),
           Expanded(
             child: Text(text, style: const TextStyle(fontSize: 14)),
           ),

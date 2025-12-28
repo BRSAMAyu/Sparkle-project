@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -50,7 +52,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
       child: InkWell(
         onTap: () => _onPressed(text),
         child: Container(
-          margin: const EdgeInsets.all(4),
+          margin: const EdgeInsets.all(DS.xs),
           decoration: BoxDecoration(
             color: color ?? AppDesignTokens.neutral100,
             borderRadius: BorderRadius.circular(12),
@@ -73,10 +75,10 @@ class _CalculatorToolState extends State<CalculatorTool> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.lg),
       height: 500,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -93,11 +95,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           // Display
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             alignment: Alignment.bottomRight,
             decoration: BoxDecoration(
               color: AppDesignTokens.neutral50,
@@ -111,7 +113,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                   _expression,
                   style: const TextStyle(fontSize: 24, color: AppDesignTokens.neutral500),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 Text(
                   _result.isEmpty ? '0' : _result,
                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
@@ -119,7 +121,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           // Buttons
           Expanded(
             child: Column(
@@ -169,7 +171,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
                     children: [
                       _buildButton('0'),
                       _buildButton('.'),
-                      _buildButton('=', color: AppDesignTokens.primaryBase, textColor: Colors.white),
+                      _buildButton('=', color: AppDesignTokens.primaryBase, textColor: DS.brandPrimary),
                       _buildButton('+', color: AppDesignTokens.primaryBase.withValues(alpha: 0.1), textColor: AppDesignTokens.primaryBase),
                     ],
                   ),

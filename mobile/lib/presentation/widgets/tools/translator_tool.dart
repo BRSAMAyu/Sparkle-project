@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class TranslatorTool extends StatefulWidget {
@@ -35,10 +37,10 @@ class _TranslatorToolState extends State<TranslatorTool> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(DS.xl),
       height: 500,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -57,18 +59,18 @@ class _TranslatorToolState extends State<TranslatorTool> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           Row(
             children: [
               const Icon(Icons.translate, color: Colors.purple),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.sm),
               Text(
                 '快速翻译',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
           TextField(
             controller: _inputController,
             maxLines: 4,
@@ -79,7 +81,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
               fillColor: AppDesignTokens.neutral50,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           Center(
             child: IconButton(
               onPressed: _translate,
@@ -87,9 +89,9 @@ class _TranslatorToolState extends State<TranslatorTool> {
               style: IconButton.styleFrom(backgroundColor: Colors.purple.withValues(alpha: 0.1)),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             height: 120,
             decoration: BoxDecoration(
               color: Colors.purple.withValues(alpha: 0.05),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -83,17 +85,17 @@ class _TaskDetailView extends ConsumerWidget {
   LinearGradient _getBackgroundGradient(TaskType type) {
     switch (type) {
       case TaskType.learning:
-        return LinearGradient(colors: [Colors.blue.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [DS.brandPrimary.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.training:
-        return LinearGradient(colors: [Colors.orange.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [Colors.orange.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.errorFix:
-        return LinearGradient(colors: [Colors.red.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [DS.error.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.reflection:
-        return LinearGradient(colors: [Colors.purple.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [Colors.purple.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.social:
-        return LinearGradient(colors: [Colors.green.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [DS.success.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.planning:
-        return LinearGradient(colors: [Colors.teal.shade50, Colors.white], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [Colors.teal.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
     }
   }
 
@@ -130,7 +132,7 @@ class _TaskDetailView extends ConsumerWidget {
                         children: [
                           Chip(
                             label: Text(toBeginningOfSentenceCase(task.type.name) ?? task.type.name),
-                            backgroundColor: Colors.white.withValues(alpha: 0.8),
+                            backgroundColor: DS.brandPrimary.withValues(alpha: 0.8),
                             avatar: const Icon(Icons.category, size: 16, color: AppDesignTokens.primaryBase),
                           ),
                           Chip(
@@ -199,7 +201,7 @@ class _TaskDetailView extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius12,
         border: Border.all(color: AppDesignTokens.neutral200),
         boxShadow: AppDesignTokens.shadowSm,
@@ -316,7 +318,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
         child: Container(
           padding: const EdgeInsets.all(AppDesignTokens.spacing16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: DS.brandPrimary,
             borderRadius: AppDesignTokens.borderRadius12,
             boxShadow: [
               BoxShadow(
@@ -325,7 +327,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                 offset: const Offset(0, 4),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: DS.brandPrimary.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -350,7 +352,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                     ),
                   ],
                 ),
-                child: Icon(widget.icon, color: Colors.white, size: 22),
+                child: Icon(widget.icon, color: DS.brandPrimary, size: 22),
               ),
               const SizedBox(width: AppDesignTokens.spacing16),
               Expanded(
@@ -365,7 +367,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: DS.xs),
                     Text(
                       widget.content,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -394,7 +396,7 @@ class _BottomActionBar extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: DS.brandPrimary,
           boxShadow: AppDesignTokens.shadowMd,
           border: const Border(
             top: BorderSide(
@@ -411,7 +413,8 @@ class _BottomActionBar extends ConsumerWidget {
                 icon: Icons.edit_outlined,
                 onPressed: () {
                   HapticFeedback.mediumImpact();
-                  // TODO: Navigate to Edit Screen
+                  // TODO: 需要创建任务编辑页面，暂时导航到创建页面
+                  context.push('/tasks/new');
                 },
                 size: ButtonSize.medium,
               ),

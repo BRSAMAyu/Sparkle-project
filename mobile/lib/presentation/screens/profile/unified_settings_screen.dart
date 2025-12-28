@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -49,7 +51,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: AppDesignTokens.spacing16),
             const Text(
               '拖动控制点，调整你的AI辅导风格',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimary, fontSize: 12),
             ),
             const SizedBox(height: AppDesignTokens.spacing16),
             LearningModeControl(
@@ -68,7 +70,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             const SizedBox(height: AppDesignTokens.spacing16),
             const Text(
               '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: DS.brandPrimary, fontSize: 12),
             ),
             const SizedBox(height: AppDesignTokens.spacing16),
             WeeklyAgendaGrid(
@@ -141,7 +143,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: const Text(
                   'Sparkle v2.1.0-stable\n© 2025 Sparkle Team',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey, fontSize: 10),
+                  style: TextStyle(color: DS.brandPrimary, fontSize: 10),
                 ),
               ),
             ),
@@ -156,7 +158,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return Row(
       children: [
         Icon(icon, color: AppDesignTokens.primaryBase),
-        const SizedBox(width: 8),
+        const SizedBox(width: DS.sm),
         Text(
           title,
           style: const TextStyle(

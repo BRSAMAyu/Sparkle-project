@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 /// 多智能体协作时间线组件
@@ -42,20 +44,20 @@ class _AgentCollaborationTimelineState
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.blue.shade50,
+            DS.brandPrimary.shade50,
             Colors.purple.shade50,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DS.brandPrimary.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -65,7 +67,7 @@ class _AgentCollaborationTimelineState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           _buildTimeline(),
         ],
       ),
@@ -76,7 +78,7 @@ class _AgentCollaborationTimelineState
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
             color: Colors.purple.shade100,
             borderRadius: BorderRadius.circular(8),
@@ -87,7 +89,7 @@ class _AgentCollaborationTimelineState
             size: 20,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: DS.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,9 +115,9 @@ class _AgentCollaborationTimelineState
         ),
         Chip(
           label: Text('${widget.executionTime.toStringAsFixed(1)}s'),
-          backgroundColor: Colors.green.shade100,
+          backgroundColor: DS.success.shade100,
           labelStyle: TextStyle(
-            color: Colors.green.shade700,
+            color: DS.success.shade700,
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -159,7 +161,7 @@ class _AgentCollaborationTimelineState
         children: [
           // 时间轴节点
           _buildTimelineNode(step),
-          const SizedBox(width: 12),
+          const SizedBox(width: DS.md),
           // 内容卡片
           Expanded(child: _buildStepCard(step)),
         ],
@@ -176,7 +178,7 @@ class _AgentCollaborationTimelineState
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: step.agentColor,
-            border: Border.all(color: Colors.white, width: 3),
+            border: Border.all(color: DS.brandPrimary, width: 3),
             boxShadow: [
               BoxShadow(
                 color: step.agentColor.withOpacity(0.4),
@@ -187,14 +189,14 @@ class _AgentCollaborationTimelineState
           ),
           child: Icon(
             step.agentIcon,
-            color: Colors.white,
+            color: DS.brandPrimary,
             size: 20,
           ),
         )
             .animate(onPlay: (controller) => controller.repeat())
             .shimmer(
               duration: 2.seconds,
-              color: Colors.white.withOpacity(0.3),
+              color: DS.brandPrimary.withOpacity(0.3),
             ),
         if (!isLast)
           Container(
@@ -219,7 +221,7 @@ class _AgentCollaborationTimelineState
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: step.agentColor.withOpacity(0.2),
@@ -227,7 +229,7 @@ class _AgentCollaborationTimelineState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DS.brandPrimary.withOpacity(0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -246,7 +248,7 @@ class _AgentCollaborationTimelineState
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.sm),
               if (step.timestamp != null)
                 Container(
                   padding:
@@ -266,17 +268,17 @@ class _AgentCollaborationTimelineState
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           Text(
             step.action,
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey.shade700,
+              color: DS.brandPrimary.shade700,
               height: 1.4,
             ),
           ),
           if (step.outputSummary != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             _buildExpandableDetails(step),
           ],
         ],
@@ -295,7 +297,7 @@ class _AgentCollaborationTimelineState
             size: 14,
             color: step.agentColor,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DS.xs),
           Text(
             '查看详情',
             style: TextStyle(
@@ -320,7 +322,7 @@ class _AgentCollaborationTimelineState
             step.outputSummary!,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade700,
+              color: DS.brandPrimary.shade700,
               fontStyle: FontStyle.italic,
               height: 1.4,
             ),
@@ -395,17 +397,17 @@ class AgentTimelineStep {
 
   static Color _getAgentColor(String agentName) {
     if (agentName.contains('StudyPlanner')) {
-      return Colors.green;
+      return DS.success;
     } else if (agentName.contains('ProblemSolver')) {
       return Colors.orange;
     } else if (agentName.contains('Math')) {
-      return Colors.blue;
+      return DS.brandPrimary;
     } else if (agentName.contains('Code')) {
       return Colors.purple;
     } else if (agentName.contains('Writing')) {
       return Colors.teal;
     } else if (agentName.contains('Science')) {
-      return Colors.red;
+      return DS.error;
     } else {
       return Colors.indigo;
     }

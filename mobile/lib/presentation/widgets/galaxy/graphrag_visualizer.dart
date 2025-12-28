@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -86,13 +88,13 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
   Color _getNodeColor(String source) {
     switch (source) {
       case 'vector':
-        return Colors.blue.shade400;
+        return DS.brandPrimary.shade400;
       case 'graph':
         return Colors.purple.shade400;
       case 'user_interest':
-        return Colors.green.shade400;
+        return DS.success.shade400;
       default:
-        return Colors.grey.shade400;
+        return DS.brandPrimary.shade400;
     }
   }
 
@@ -111,17 +113,17 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         child: Container(
           width: 200,
           height: 150,
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(DS.lg),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.8),
+            color: DS.brandPrimary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.white.withOpacity(0.3),
+              color: DS.brandPrimary.withOpacity(0.3),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: DS.brandPrimary.withOpacity(0.5),
                 blurRadius: 10,
                 spreadRadius: 2,
               ),
@@ -137,7 +139,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: DS.brandPrimary.withOpacity(0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
@@ -148,14 +150,14 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                     Icon(
                       Icons.psychology,
                       size: 16,
-                      color: Colors.white.withOpacity(0.8),
+                      color: DS.brandPrimary.withOpacity(0.8),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'AI 检索中...',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: DS.brandPrimary.withOpacity(0.8),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -168,7 +170,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
               // 节点可视化区域
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(DS.md),
                   child: _buildNodeVisualization(trace),
                 ),
               ),
@@ -207,7 +209,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         _buildStatItem(
           '向量',
           trace.vectorSearchCount.toString(),
-          Colors.blue.shade400,
+          DS.brandPrimary.shade400,
         ),
         _buildStatItem(
           '图谱',
@@ -217,7 +219,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         _buildStatItem(
           '时间',
           '${(trace.timing['total'] ?? 0).toStringAsFixed(2)}s',
-          Colors.white70,
+          DS.brandPrimary70,
         ),
       ],
     );
@@ -238,7 +240,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: DS.brandPrimary.withOpacity(0.6),
             fontSize: 10,
           ),
         ),
@@ -320,7 +322,7 @@ class _NodeGraphPainter extends CustomPainter {
         text: TextSpan(
           text: _truncateName(node.name),
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: DS.brandPrimary.withOpacity(0.7),
             fontSize: 8,
           ),
         ),

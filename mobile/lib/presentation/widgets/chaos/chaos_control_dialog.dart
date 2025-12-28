@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:sparkle/core/constants/api_constants.dart';
@@ -80,7 +82,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
       title: const Row(
         children: [
           Icon(Icons.flash_on, color: Colors.orange),
-          SizedBox(width: 8),
+          SizedBox(width: DS.sm),
           Text('Sparkle 混沌控制台'),
         ],
       ),
@@ -90,15 +92,15 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         children: [
           Text('队列水位: $_queueLength / $_currentThreshold',
               style: const TextStyle(fontWeight: FontWeight.bold),),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.sm),
           LinearProgressIndicator(
             value: _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,
-            color: isTripped ? Colors.red : Colors.green,
-            backgroundColor: Colors.grey[200],
+            color: isTripped ? DS.error : DS.success,
+            backgroundColor: DS.brandPrimary[200],
           ),
-          const SizedBox(height: 16),
-          const Text('选择运行模式:', style: TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.lg),
+          const Text('选择运行模式:', style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
+          const SizedBox(height: DS.sm),
           Row(
             children: [
               Expanded(
@@ -107,20 +109,20 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
                   icon: const Icon(Icons.check_circle_outline),
                   label: const Text('正常模式'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(alpha: 0.1),
-                    foregroundColor: Colors.green,
+                    backgroundColor: DS.success.withValues(alpha: 0.1),
+                    foregroundColor: DS.success,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.sm),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : () => _setThreshold(5),
                   icon: const Icon(Icons.error_outline),
                   label: const Text('施压模式'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.1),
-                    foregroundColor: Colors.red,
+                    backgroundColor: DS.error.withValues(alpha: 0.1),
+                    foregroundColor: DS.error,
                   ),
                 ),
               ),

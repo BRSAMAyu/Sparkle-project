@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -268,7 +270,7 @@ class EmptyState extends StatelessWidget {
       child: Icon(
         icon ?? _getDefaultIcon(),
         size: AppDesignTokens.iconSize3xl,
-        color: Colors.white,
+        color: DS.brandPrimary,
       ),
     );
   }

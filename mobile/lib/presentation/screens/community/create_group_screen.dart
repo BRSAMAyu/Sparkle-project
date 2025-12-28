@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -67,7 +69,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: DS.error),
             child: const Text('Discard'),
           ),
         ],
@@ -226,7 +228,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     title: const Text('Deadline'),
                     subtitle: Text(_deadline == null ? 'Select Date' : _deadline.toString().split(' ')[0]),
                     trailing: const Icon(Icons.calendar_today),
-                    tileColor: Colors.grey.shade100,
+                    tileColor: DS.brandPrimary.shade100,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     onTap: () async {
                       final date = await showDatePicker(

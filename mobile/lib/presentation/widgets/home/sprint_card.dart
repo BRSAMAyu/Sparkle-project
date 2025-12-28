@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +35,7 @@ class SprintCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: sprint != null
                 ? _buildSprintContent(sprint)
                 : _buildEmptyState(),
@@ -57,7 +59,7 @@ class SprintCard extends ConsumerWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Colors.white70,
+            color: DS.brandPrimary70,
           ),
         ),
 
@@ -86,14 +88,14 @@ class SprintCard extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isUrgent ? Colors.red : Colors.white,
+                        color: isUrgent ? DS.error : DS.brandPrimary,
                       ),
                     ),
                     Text(
                       '天',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.white.withAlpha(180),
+                        color: DS.brandPrimary.withAlpha(180),
                       ),
                     ),
                   ],
@@ -111,7 +113,7 @@ class SprintCard extends ConsumerWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: DS.brandPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -121,7 +123,7 @@ class SprintCard extends ConsumerWidget {
           '${(progress * 100).toInt()}% 完成',
           style: TextStyle(
             fontSize: 10,
-            color: Colors.white.withAlpha(150),
+            color: DS.brandPrimary.withAlpha(150),
           ),
         ),
       ],
@@ -133,14 +135,14 @@ class SprintCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(20),
+            color: DS.brandPrimary.withAlpha(20),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(
             Icons.flash_on_rounded,
-            color: Colors.white54,
+            color: DS.brandPrimary54,
             size: 20,
           ),
         ),
@@ -152,15 +154,15 @@ class SprintCard extends ConsumerWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.white70,
+            color: DS.brandPrimary70,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: DS.xs),
         Text(
           '点击创建',
           style: TextStyle(
             fontSize: 11,
-            color: Colors.white.withAlpha(120),
+            color: DS.brandPrimary.withAlpha(120),
           ),
         ),
       ],
@@ -184,14 +186,14 @@ class _CircularProgressPainter extends CustomPainter {
 
     // Background circle
     final bgPaint = Paint()
-      ..color = Colors.white.withAlpha(30)
+      ..color = DS.brandPrimary.withAlpha(30)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6;
     canvas.drawCircle(center, radius, bgPaint);
 
     // Progress arc
     final progressPaint = Paint()
-      ..color = isUrgent ? Colors.red : AppDesignTokens.primaryBase
+      ..color = isUrgent ? DS.error : AppDesignTokens.primaryBase
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;

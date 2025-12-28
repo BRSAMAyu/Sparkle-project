@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
@@ -106,7 +108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               count > 99 ? '99+' : '$count',
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: DS.brandPrimary, fontSize: 10, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           ),
@@ -206,7 +208,7 @@ class _DashboardScreen extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: AppDesignTokens.fontSizeSm,
                   fontWeight: AppDesignTokens.fontWeightBold,
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                 ),
               ),
             ],

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class ZoomControls extends StatefulWidget {
   final TransformationController transformationController;
@@ -74,15 +76,15 @@ class _ZoomControlsState extends State<ZoomControls> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
+        color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: DS.brandPrimary24),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
+            icon: const Icon(Icons.add, color: DS.brandPrimary),
             onPressed: () => _updateZoom(_currentScale * 1.2),
             tooltip: 'Zoom In',
           ),
@@ -93,9 +95,9 @@ class _ZoomControlsState extends State<ZoomControls> {
               child: SliderTheme(
                 data: const SliderThemeData(
                   trackHeight: 2,
-                  activeTrackColor: Colors.white,
-                  inactiveTrackColor: Colors.white24,
-                  thumbColor: Colors.white,
+                  activeTrackColor: DS.brandPrimary,
+                  inactiveTrackColor: DS.brandPrimary24,
+                  thumbColor: DS.brandPrimary,
                   thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
                 ),
@@ -109,7 +111,7 @@ class _ZoomControlsState extends State<ZoomControls> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.remove, color: Colors.white),
+            icon: const Icon(Icons.remove, color: DS.brandPrimary),
             onPressed: () => _updateZoom(_currentScale / 1.2),
             tooltip: 'Zoom Out',
           ),

@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
@@ -131,7 +133,7 @@ class SectorBackgroundPainter extends CustomPainter {
           letterSpacing: 1.5,
           shadows: [
             Shadow(
-              color: Colors.black.withValues(alpha: 0.8),
+              color: DS.brandPrimary.withValues(alpha: 0.8),
               blurRadius: 4,
             ),
             Shadow(

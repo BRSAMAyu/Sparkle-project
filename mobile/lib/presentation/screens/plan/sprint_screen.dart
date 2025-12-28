@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/presentation/providers/plan_provider.dart';
 // import 'package:sparkle/presentation/widgets/task/task_card.dart'; // Assuming TaskCard is available
@@ -19,7 +22,9 @@ class SprintScreen extends ConsumerWidget {
           if (activeSprint != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () { /* TODO: Navigate to edit plan screen */ },
+              onPressed: () {
+                context.push('/plans/${activeSprint.id}/edit');
+              },
             ),
         ],
       ),
@@ -54,20 +59,22 @@ class _NoActiveSprintView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.flag_outlined, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
+            const Icon(Icons.flag_outlined, size: 80, color: DS.brandPrimary),
+            const SizedBox(height: DS.lg),
             Text(
               'No Active Sprint',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             const Text(
               'Create a new sprint plan to focus on a short-term goal.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.xl),
             ElevatedButton.icon(
-              onPressed: () { /* TODO: Navigate to create plan screen */ },
+              onPressed: () {
+                context.push('/plans/new?type=sprint');
+              },
               icon: const Icon(Icons.add),
               label: const Text('Create Sprint Plan'),
             ),
@@ -139,9 +146,9 @@ class _SprintHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(plan.name, style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.sm),
               Text(plan.description ?? '', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -149,13 +156,13 @@ class _SprintHeader extends StatelessWidget {
                   Text('${(plan.progress * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: DS.sm),
               LinearProgressIndicator(
                 value: plan.progress,
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(4),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               Chip(
                 label: Text(daysLeft > 0 ? '$daysLeft days left' : 'Sprint ended'),
                 avatar: const Icon(Icons.timelapse),

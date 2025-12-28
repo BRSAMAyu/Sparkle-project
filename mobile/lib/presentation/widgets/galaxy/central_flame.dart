@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class CentralFlame extends StatefulWidget {
   final double intensity; // 0.0 to 1.0 (or higher for super states)
@@ -73,8 +75,8 @@ class _SmallFlamePainter extends CustomPainter {
     final corePaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          Colors.white,
-          Color.lerp(Colors.orangeAccent, Colors.yellowAccent, safeIntensity)!,
+          DS.brandPrimary,
+          Color.lerp(Colors.orangeAccent, DS.warningAccent, safeIntensity)!,
           Colors.transparent,
         ],
         stops: const [0.2, 0.6, 1.0],
@@ -82,7 +84,7 @@ class _SmallFlamePainter extends CustomPainter {
 
     // Outer Glow (Orange -> Red)
     final glowPaint = Paint()
-      ..color = Color.lerp(Colors.orange.withValues(alpha: 0.3), Colors.redAccent.withValues(alpha: 0.5), safeIntensity)!
+      ..color = Color.lerp(Colors.orange.withValues(alpha: 0.3), DS.errorAccent.withValues(alpha: 0.5), safeIntensity)!
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.5);
 
     // Draw Glow
@@ -97,7 +99,7 @@ class _SmallFlamePainter extends CustomPainter {
       final ringPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = Colors.white.withValues(alpha: 0.3 * (1.0 - progress))
+        ..color = DS.brandPrimary.withValues(alpha: 0.3 * (1.0 - progress))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
         
       canvas.drawCircle(center, radius * (0.8 + 0.4 * progress), ringPaint);

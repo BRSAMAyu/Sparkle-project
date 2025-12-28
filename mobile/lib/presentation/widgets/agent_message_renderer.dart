@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/widgets/task/task_card.dart';
@@ -47,7 +48,7 @@ class AgentMessageRenderer extends StatelessWidget {
   Widget _buildTextBubble(BuildContext context, String text) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -109,7 +110,7 @@ class AgentMessageRenderer extends StatelessWidget {
       color: Theme.of(context).colorScheme.errorContainer,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -117,11 +118,11 @@ class AgentMessageRenderer extends StatelessWidget {
               children: [
                 Icon(Icons.warning_amber, 
                      color: Theme.of(context).colorScheme.error,),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 Text('操作遇到问题', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             ...errors.map((e) => Text('• ${e.message}', style: TextStyle(color: Theme.of(context).colorScheme.error))),
             if (errors.any((e) => e.suggestion != null))
               Padding(
@@ -145,7 +146,7 @@ class AgentMessageRenderer extends StatelessWidget {
       color: Theme.of(context).colorScheme.tertiaryContainer,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -153,9 +154,9 @@ class AgentMessageRenderer extends StatelessWidget {
               '需要确认',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Text(data.description),
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -163,7 +164,7 @@ class AgentMessageRenderer extends StatelessWidget {
                   onPressed: () => onConfirmation?.call(data.actionId, false),
                   child: const Text('取消'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 ElevatedButton(
                   onPressed: () => onConfirmation?.call(data.actionId, true),
                   child: const Text('确认执行'),
@@ -180,7 +181,7 @@ class AgentMessageRenderer extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(DS.sm),
         child: Text('Unknown widget type: ${widget.type}'),
       ),
     );

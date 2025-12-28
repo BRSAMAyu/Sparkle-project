@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -19,7 +21,7 @@ class PatternCard extends StatelessWidget {
 
     switch (pattern.patternType) {
       case 'cognitive':
-        iconColor = Colors.blue.shade700;
+        iconColor = DS.brandPrimary.shade700;
         icon = Icons.psychology;
         gradient = AppDesignTokens.infoGradient;
         break;
@@ -29,7 +31,7 @@ class PatternCard extends StatelessWidget {
         gradient = AppDesignTokens.warningGradient;
         break;
       case 'execution':
-        iconColor = Colors.green.shade700;
+        iconColor = DS.success.shade700;
         icon = Icons.run_circle;
         gradient = AppDesignTokens.successGradient;
         break;
@@ -42,7 +44,7 @@ class PatternCard extends StatelessWidget {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
-      color: isDark ? AppDesignTokens.neutral800 : Colors.white,
+      color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
       child: Padding(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         child: Column(
@@ -56,7 +58,7 @@ class PatternCard extends StatelessWidget {
                     gradient: gradient,
                     borderRadius: AppDesignTokens.borderRadius12,
                   ),
-                  child: Icon(icon, color: Colors.white),
+                  child: Icon(icon, color: DS.brandPrimary),
                 ),
                 const SizedBox(width: AppDesignTokens.spacing12),
                 Expanded(
@@ -64,7 +66,7 @@ class PatternCard extends StatelessWidget {
                     pattern.patternName,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: AppDesignTokens.fontWeightBold,
-                      color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                      color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                     ),
                   ),
                 ),
@@ -109,7 +111,7 @@ class PatternCard extends StatelessWidget {
                           ),
                           strong: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                            color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                           ),
                         ),
                         shrinkWrap: true,

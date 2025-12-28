@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 智能体推理气泡组件
 ///
@@ -114,7 +116,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           child: Row(
             children: [
               Icon(Icons.library_books, size: 14, color: widget.agentColor),
-              const SizedBox(width: 4),
+              const SizedBox(width: DS.xs),
               Text(
                 '引用来源 (${widget.citations!.length})',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -138,14 +140,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 child: Container(
                   width: 160,
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: widget.agentColor.withOpacity(0.2)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: DS.brandPrimary.withOpacity(0.03),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -164,13 +166,13 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           color: widget.agentColor,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: DS.xs),
                       Expanded(
                         child: Text(
                           cite['content'] ?? '',
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+                          style: TextStyle(fontSize: 10, color: DS.brandPrimary.shade700),
                         ),
                       ),
                     ],
@@ -180,7 +182,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DS.md),
       ],
     );
   }
@@ -207,7 +209,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             onTap: _toggleExpand,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(DS.md),
               child: Row(
                 children: [
                   // 智能体头像
@@ -220,12 +222,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     ),
                     child: Icon(
                       _getAgentIcon(),
-                      color: Colors.white,
+                      color: DS.brandPrimary,
                       size: 18,
                     ),
                   ),
 
-                  const SizedBox(width: 12),
+                  const SizedBox(width: DS.md),
 
                   // 智能体名称和类型
                   Expanded(
@@ -281,7 +283,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             sizeFactor: _expandAnimation,
             child: Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: widget.agentColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
@@ -310,7 +312,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   Text(
                     widget.reasoning,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -367,7 +369,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.blue.shade50,
+            DS.brandPrimary.shade50,
             Colors.purple.shade50,
           ],
         ),
@@ -382,7 +384,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         children: [
           // 协作标题
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
               color: Colors.purple.shade100.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
@@ -397,7 +399,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   color: Colors.purple.shade700,
                   size: 24,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
                     '多专家协作回答',
@@ -437,10 +439,10 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           // 综合总结（如果有）
           if (summary != null)
             Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: DS.brandPrimary.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Colors.purple.shade200,
@@ -467,7 +469,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   Text(
                     summary!,
                     style: theme.textTheme.bodyMedium,

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
@@ -168,13 +170,13 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(DS.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: DS.brandPrimary.withValues(alpha: 0.15),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -191,7 +193,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                           ? Text(widget.notification.senderName[0])
                           : null,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,22 +205,22 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 widget.notification.senderName,
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: DS.sm),
                               if (widget.notification.type == NotificationType.groupMessage)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.1),
+                                    color: DS.brandPrimary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
                                     '群消息',
-                                    style: TextStyle(fontSize: 10, color: Colors.blue),
+                                    style: TextStyle(fontSize: 10, color: DS.brandPrimary),
                                   ),
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: DS.xs),
                           Text(
                             widget.notification.content,
                             maxLines: 2,
@@ -269,14 +271,14 @@ class MessageBadge extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: DS.error,
                 borderRadius: BorderRadius.circular(10),
               ),
               constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               child: Text(
                 unreadCount > 99 ? '99+' : '$unreadCount',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -32,9 +34,9 @@ class GroupTasksScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () => ref.read(groupTasksProvider(groupId).notifier).refresh(),
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DS.lg),
               itemCount: tasks.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: DS.md),
               itemBuilder: (context, index) {
                 final task = tasks[index];
                 return Card(
@@ -44,15 +46,15 @@ class GroupTasksScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (task.description != null) Text(task.description!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: DS.xs),
                         Row(
                           children: [
-                            const Icon(Icons.timer, size: 14, color: Colors.grey),
-                            const SizedBox(width: 4),
+                            const Icon(Icons.timer, size: 14, color: DS.brandPrimary),
+                            const SizedBox(width: DS.xs),
                             Text('${task.estimatedMinutes} min'),
-                            const SizedBox(width: 12),
-                            const Icon(Icons.people, size: 14, color: Colors.grey),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: DS.md),
+                            const Icon(Icons.people, size: 14, color: DS.brandPrimary),
+                            const SizedBox(width: DS.xs),
                             Text('${task.totalClaims} claimed'),
                           ],
                         ),
@@ -60,7 +62,7 @@ class GroupTasksScreen extends ConsumerWidget {
                     ),
                     trailing: task.isClaimedByMe
                         ? (task.myCompletionStatus == true
-                            ? const Icon(Icons.check_circle, color: Colors.green)
+                            ? const Icon(Icons.check_circle, color: DS.success)
                             : const Icon(Icons.hourglass_bottom, color: Colors.orange))
                         : ElevatedButton(
                             onPressed: () {

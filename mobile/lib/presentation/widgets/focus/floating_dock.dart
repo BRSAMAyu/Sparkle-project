@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
@@ -105,7 +107,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
                 : BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: DS.brandPrimary.withValues(alpha: 0.3),
                 blurRadius: 10,
                 spreadRadius: 2,
               ),
@@ -131,7 +133,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(30),
       child: const Center(
-        child: Icon(Icons.timer_rounded, color: Colors.white, size: 30),
+        child: Icon(Icons.timer_rounded, color: DS.brandPrimary, size: 30),
       ),
     );
   }
@@ -143,7 +145,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         // Collapse Button
         InkWell(
           onTap: _toggleExpand,
-          child: const Icon(Icons.close, color: Colors.white, size: 24),
+          child: const Icon(Icons.close, color: DS.brandPrimary, size: 24),
         ),
         
         // Menu Items
@@ -178,12 +180,12 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
+            Icon(icon, color: DS.brandPrimary, size: 20),
+            const SizedBox(width: DS.md),
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: DS.brandPrimary,
                 fontWeight: FontWeight.w500,
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）
@@ -34,7 +35,7 @@ class AiStatusIndicator extends StatelessWidget {
         children: [
           // 动画指示器
           _buildIndicator(),
-          const SizedBox(width: 12),
+          const SizedBox(width: DS.md),
           // 状态文本
           Flexible(
             child: Column(
@@ -50,7 +51,7 @@ class AiStatusIndicator extends StatelessWidget {
                   ),
                 ),
                 if (details != null && details!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DS.xs),
                   Text(
                     details!,
                     style: TextStyle(
@@ -139,7 +140,7 @@ class AiStatusBubble extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(status)),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: DS.sm),
           Text(
             _getStatusText(status),
             style: TextStyle(

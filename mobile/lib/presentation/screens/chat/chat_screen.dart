@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,13 +66,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    (isDark ? AppDesignTokens.deepSpaceStart : Colors.white).withValues(alpha: 0.8),
-                    (isDark ? AppDesignTokens.deepSpaceEnd : Colors.white).withValues(alpha: 0.9),
+                    (isDark ? AppDesignTokens.deepSpaceStart : DS.brandPrimary).withValues(alpha: 0.8),
+                    (isDark ? AppDesignTokens.deepSpaceEnd : DS.brandPrimary).withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
-                border: Border(bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05), width: 0.5)),
+                border: Border(bottom: BorderSide(color: isDark ? DS.brandPrimary.withValues(alpha: 0.1) : DS.brandPrimary.withValues(alpha: 0.05), width: 0.5)),
               ),
             ),
           ),
@@ -80,14 +82,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: const BoxDecoration(
                 gradient: AppDesignTokens.secondaryGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              child: const Icon(Icons.auto_awesome, color: DS.brandPrimary, size: 20),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DS.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -95,7 +97,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   'AI学习助手',
                   style: TextStyle(
-                    color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                    color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                     fontWeight: AppDesignTokens.fontWeightBold,
                     fontSize: AppDesignTokens.fontSizeBase,
                   ),
@@ -113,11 +115,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.history, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
+            icon: Icon(Icons.history, color: isDark ? DS.brandPrimary70 : AppDesignTokens.neutral700),
             onPressed: () => _showHistoryBottomSheet(context),
           ),
           IconButton(
-            icon: Icon(Icons.add_comment_outlined, color: isDark ? Colors.white70 : AppDesignTokens.neutral700),
+            icon: Icon(Icons.add_comment_outlined, color: isDark ? DS.brandPrimary70 : AppDesignTokens.neutral700),
             tooltip: 'New Chat',
             onPressed: () => ref.read(chatProvider.notifier).startNewSession(),
           ),
@@ -128,7 +130,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: isDark
             ? AppDesignTokens.deepSpaceGradient
             : const LinearGradient(
-                colors: [AppDesignTokens.neutral50, Colors.white],
+                colors: [AppDesignTokens.neutral50, DS.brandPrimary],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -263,7 +265,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: isDark ? AppDesignTokens.neutral900 : Colors.white,
+          color: isDark ? AppDesignTokens.neutral900 : DS.brandPrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -282,13 +284,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Row(
                 children: [
                   const Icon(Icons.history_rounded, color: AppDesignTokens.primaryBase),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: DS.md),
                   Text(
                     '历史对话',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                      color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                     ),
                   ),
                 ],
@@ -319,7 +321,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       
                       return ListTile(
                         leading: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: isCurrent ? AppDesignTokens.primaryBase.withValues(alpha: 0.1) : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral100),
                             shape: BoxShape.circle,
@@ -333,7 +335,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         title: Text(
                           session['title'] ?? '未命名会话',
                           style: TextStyle(
-                            color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                            color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                             fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
@@ -374,15 +376,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
               child: const Icon(Icons.auto_awesome, size: 48, color: AppDesignTokens.primaryBase),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.xl),
             Text(
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -398,7 +400,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _QuickActionChip(
                   icon: Icons.add_task_rounded,
                   label: '新建微任务',
-                  color: Colors.blue,
+                  color: DS.brandPrimary,
                   onTap: () => ref.read(chatProvider.notifier).sendMessage('帮我创建一个新的微任务'),
                 ),
                 _QuickActionChip(
@@ -464,7 +466,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
             vertical: AppDesignTokens.spacing8,
           ),
           decoration: BoxDecoration(
-            color: isDark ? AppDesignTokens.neutral800 : Colors.white,
+            color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
             borderRadius: AppDesignTokens.borderRadius20,
             border: Border.all(
               color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
@@ -490,7 +492,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
               Text(
                 widget.label,
                 style: TextStyle(
-                  color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                  color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                   fontWeight: AppDesignTokens.fontWeightMedium,
                 ),
               ),
@@ -526,7 +528,7 @@ class _StreamingBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? AppDesignTokens.neutral800 : Colors.white,
+          color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
@@ -544,12 +546,12 @@ class _StreamingBubble extends StatelessWidget {
               child: Text(
                 content,
                 style: TextStyle(
-                  color: isDark ? Colors.white : AppDesignTokens.neutral900,
+                  color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                   fontSize: AppDesignTokens.fontSizeBase,
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: DS.xs),
             // 闪烁的光标
             const _BlinkingCursor(),
           ],
@@ -625,7 +627,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : Colors.white,
+        color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),

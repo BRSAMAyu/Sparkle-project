@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -77,7 +79,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: DS.xxl),
 
                 // Username field
                 TextFormField(
@@ -97,7 +99,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
                 
                 // Email field
                 TextFormField(
@@ -115,7 +117,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -140,7 +142,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
 
                 // Confirm Password field
                 TextFormField(
@@ -158,25 +160,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: DS.xl),
 
                 // Register Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFFFF6B35),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const DS.brandPrimary,
+                    foregroundColor: DS.brandPrimary,
                   ),
                   onPressed: authState.isLoading ? null : _submit,
                   child: authState.isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                         )
                       : const Text('Register'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: DS.lg),
 
                 // Login Link
                 TextButton(

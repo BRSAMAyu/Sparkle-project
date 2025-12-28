@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
@@ -114,7 +116,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
           children: [
             const Text(
               'Set your fragmented time slots to receive proactive task suggestions.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: DS.brandPrimary),
             ),
             const SizedBox(height: 20),
             _buildTimeSlot(
@@ -143,7 +145,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.sm),
         Row(
           children: [
             Expanded(
@@ -158,7 +160,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
                 onTap: () => _selectTime(context, startController),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: DS.lg),
             Expanded(
               child: TextFormField(
                 controller: endController,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 /// 从protobuf的int值映射到前端AgentType枚举
@@ -58,7 +60,7 @@ class AgentConfig {
       case AgentType.knowledge:
         return const AgentConfig(
           icon: Icons.auto_awesome, // 星光图标
-          color: Color(0xFF2196F3), // 蓝色 (Science Blue)
+          color: DS.info, // 蓝色 (Science Blue)
           displayName: 'KnowledgeAgent',
           animation: '旋转扫描', // 检索中
         );
@@ -74,7 +76,7 @@ class AgentConfig {
       case AgentType.code:
         return const AgentConfig(
           icon: Icons.terminal, // 终端图标
-          color: Color(0xFF4CAF50), // 绿色 (Matrix Green)
+          color: DS.success, // 绿色 (Matrix Green)
           displayName: 'CodeAgent',
           animation: '光标闪烁', // 编码中
         );
@@ -321,7 +323,7 @@ class AgentStatusIndicator extends StatelessWidget {
             size: 24,
             showPulseAnimation: isThinking && agentType == AgentType.orchestrator,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: DS.sm),
           Flexible(
             child: Text(
               statusText,
@@ -334,7 +336,7 @@ class AgentStatusIndicator extends StatelessWidget {
             ),
           ),
           if (isThinking) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: DS.sm),
             SizedBox(
               width: 12,
               height: 12,

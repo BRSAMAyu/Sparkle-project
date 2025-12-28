@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -112,26 +114,26 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DS.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Title
             const Row(
               children: [
-                Icon(Icons.share, color: Colors.white, size: 28),
-                SizedBox(width: 12),
+                Icon(Icons.share, color: DS.brandPrimary, size: 28),
+                SizedBox(width: DS.md),
                 Text(
                   '分享成就',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.xl),
 
             // Preview
             if (_isGenerating)
@@ -142,10 +144,10 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(),
-                      SizedBox(height: 16),
+                      SizedBox(height: DS.lg),
                       Text(
                         '正在生成分享卡片...',
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: DS.brandPrimary70),
                       ),
                     ],
                   ),
@@ -166,39 +168,39 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                 child: Center(
                   child: Icon(
                     Icons.error_outline,
-                    color: Colors.red,
+                    color: DS.error,
                     size: 64,
                   ),
                 ),
               ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: DS.xl),
 
             // Share options
             if (_imagePath != null) ...[
               _buildShareButton(
                 icon: Icons.share,
                 label: '分享到社交媒体',
-                color: Colors.blue,
+                color: DS.brandPrimary,
                 onTap: _shareToSocial,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.md),
               _buildShareButton(
                 icon: Icons.save_alt,
                 label: '保存到相册',
-                color: Colors.green,
+                color: DS.success,
                 onTap: _saveToGallery,
               ),
             ],
 
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.md),
 
             // Close button
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
                 '关闭',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: DS.brandPrimary70),
               ),
             ),
           ],
@@ -217,7 +219,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
@@ -226,12 +228,12 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
         child: Row(
           children: [
             Icon(icon, color: color, size: 24),
-            const SizedBox(width: 16),
+            const SizedBox(width: DS.lg),
             Expanded(
               child: Text(
                 label,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),

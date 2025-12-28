@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,7 +30,7 @@ class NextActionsCard extends ConsumerWidget {
             borderRadius: AppDesignTokens.borderRadius20,
             border: Border.all(color: AppDesignTokens.glassBorder),
           ),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(DS.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -40,24 +42,24 @@ class NextActionsCard extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: DS.brandPrimary,
                     ),
                   ),
                   if (onViewAll != null)
                     GestureDetector(
                       onTap: onViewAll,
-                      child: const Icon(Icons.more_horiz_rounded, color: Colors.white70, size: 16),
+                      child: const Icon(Icons.more_horiz_rounded, color: DS.brandPrimary70, size: 16),
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.md),
               Expanded(
                 child: nextActions.isEmpty
                     ? _buildEmptyState()
                     : ListView.separated(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: nextActions.length.clamp(0, 1),
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) => const SizedBox(height: DS.sm),
                         itemBuilder: (context, index) {
                           return _NextActionItem(task: nextActions[index]);
                         },
@@ -75,11 +77,11 @@ class NextActionsCard extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.done_all_rounded, color: Colors.white.withAlpha(50), size: 24),
-          const SizedBox(height: 4),
+          Icon(Icons.done_all_rounded, color: DS.brandPrimary.withAlpha(50), size: 24),
+          const SizedBox(height: DS.xs),
           Text(
             '清空啦',
-            style: TextStyle(fontSize: 10, color: Colors.white.withAlpha(100)),
+            style: TextStyle(fontSize: 10, color: DS.brandPrimary.withAlpha(100)),
           ),
         ],
       ),
@@ -99,9 +101,9 @@ class _NextActionItem extends ConsumerWidget {
         context.push('/focus/mindfulness', extra: taskModel);
       },
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(10),
+          color: DS.brandPrimary.withAlpha(10),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -112,12 +114,12 @@ class _NextActionItem extends ConsumerWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: DS.brandPrimary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: DS.xs),
             Row(
               children: [
                 Container(
@@ -128,11 +130,11 @@ class _NextActionItem extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: DS.xs),
                 Expanded(
                   child: Text(
                     '${task.estimatedMinutes}m',
-                    style: TextStyle(fontSize: 9, color: Colors.white.withAlpha(120)),
+                    style: TextStyle(fontSize: 9, color: DS.brandPrimary.withAlpha(120)),
                   ),
                 ),
                 GestureDetector(
@@ -140,7 +142,7 @@ class _NextActionItem extends ConsumerWidget {
                     await ref.read(taskListProvider.notifier).completeTask(task.id, task.estimatedMinutes, null);
                     ref.read(dashboardProvider.notifier).refresh();
                   },
-                  child: Icon(Icons.check_circle_outline_rounded, color: Colors.white.withAlpha(150), size: 14),
+                  child: Icon(Icons.check_circle_outline_rounded, color: DS.brandPrimary.withAlpha(150), size: 14),
                 ),
               ],
             ),
@@ -152,11 +154,11 @@ class _NextActionItem extends ConsumerWidget {
 
   Color _getTypeColor(String type) {
     switch (type) {
-      case 'learning': return Colors.blue;
-      case 'training': return Colors.green;
-      case 'error_fix': return Colors.red;
+      case 'learning': return DS.brandPrimary;
+      case 'training': return DS.success;
+      case 'error_fix': return DS.error;
       case 'reflection': return AppDesignTokens.prismPurple;
-      default: return Colors.grey;
+      default: return DS.brandPrimary;
     }
   }
 

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class GalaxyEntranceAnimation extends StatefulWidget {
   final VoidCallback onComplete;
@@ -63,10 +65,10 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blueAccent.withValues(alpha: 0.5),
+                      color: DS.brandPrimaryAccent.withValues(alpha: 0.5),
                       blurRadius: 20,
                       spreadRadius: 10,
                     ),
@@ -84,7 +86,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
             Opacity(
               opacity: _flashAnim.value,
               child: Container(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: DS.brandPrimary.withValues(alpha: 0.3),
               ),
             ),
 
@@ -95,7 +97,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                  child: const Text(
                    'SPARKLE',
                    style: TextStyle(
-                     color: Colors.white,
+                     color: DS.brandPrimary,
                      fontSize: 32,
                      fontWeight: FontWeight.bold,
                      letterSpacing: 10,

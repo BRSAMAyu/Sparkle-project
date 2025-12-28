@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -111,7 +113,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -122,14 +124,14 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.indigo.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.air, color: Colors.indigo),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.md),
               const Text(
                 '呼吸练习',
                 style: TextStyle(
@@ -144,7 +146,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
               ),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: DS.xxl),
 
           // Breathing Circle Animation
           Center(
@@ -209,7 +211,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                             '$_completedRounds / $_totalRounds',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: DS.brandPrimary.shade600,
                             ),
                           ),
                         ),
@@ -220,7 +222,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             ),
           ),
           
-          const SizedBox(height: 48),
+          const SizedBox(height: DS.xxxl),
 
           // Duration Selector
           if (!_isPlaying)
@@ -241,13 +243,13 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.indigo : Colors.grey.shade100,
+                        color: isSelected ? Colors.indigo : DS.brandPrimary.shade100,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '${_durations[index]}分钟',
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey.shade600,
+                          color: isSelected ? DS.brandPrimary : DS.brandPrimary.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -257,7 +259,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
               }),
             ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
 
           // Control Button
           CustomButton.primary(
@@ -266,7 +268,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             onPressed: _isPlaying ? _stopBreathing : _startBreathing,
             customGradient: _isPlaying 
               ? AppDesignTokens.warningGradient 
-              : const LinearGradient(colors: [Colors.indigo, Colors.blue]),
+              : const LinearGradient(colors: [Colors.indigo, DS.brandPrimary]),
           ),
         ],
       ),

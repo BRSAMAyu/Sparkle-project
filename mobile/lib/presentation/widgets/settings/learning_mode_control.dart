@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class LearningModeControl extends StatefulWidget {
@@ -64,8 +66,8 @@ class _LearningModeControlState extends State<LearningModeControl> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
-                    border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                    color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade100,
+                    border: Border.all(color: isDark ? DS.brandPrimary24 : DS.brandPrimary.shade300),
                     boxShadow: [
                        BoxShadow(
                           color: AppDesignTokens.primaryBase.withValues(alpha: 0.15 * _currentCuriosity),
@@ -90,22 +92,22 @@ class _LearningModeControlState extends State<LearningModeControl> {
                         Positioned(
                           left: 8,
                           top: 8,
-                          child: Text('深度+', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                          child: Text('深度+', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
                         ),
                         Positioned(
                           left: 8,
                           bottom: 8,
-                          child: Text('深度-', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                          child: Text('深度-', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
                         ),
                         Positioned(
                           right: 8,
                           bottom: 8,
-                          child: Text('好奇+', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                          child: Text('好奇+', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
                         ),
                         Positioned(
                           right: 8,
                           top: 8,
-                          child: Text('好奇-', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade600, fontSize: 11)),
+                          child: Text('好奇-', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
                         ),
 
                         // The Handle
@@ -116,7 +118,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: DS.brandPrimary,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -137,12 +139,12 @@ class _LearningModeControlState extends State<LearningModeControl> {
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DS.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildInfoChip('深度: ${(_currentDepth * 100).toInt()}%'),
-            const SizedBox(width: 12),
+            const SizedBox(width: DS.md),
             _buildInfoChip('好奇: ${(_currentCuriosity * 100).toInt()}%'),
           ],
         ),
@@ -163,13 +165,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : AppDesignTokens.primaryBase.withValues(alpha: 0.1),
+        color: isDark ? DS.brandPrimary10 : AppDesignTokens.primaryBase.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isDark ? Colors.white : AppDesignTokens.primaryBase,
+          color: isDark ? DS.brandPrimary : AppDesignTokens.primaryBase,
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),
@@ -182,7 +184,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white10
+      ..color = DS.brandPrimary10
       ..strokeWidth = 1;
 
     // Vertical lines

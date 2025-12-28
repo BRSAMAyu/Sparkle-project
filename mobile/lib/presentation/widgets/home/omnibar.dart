@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -115,9 +117,9 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
 
   Color _getIntentColor() {
     switch (_intentType) {
-      case 'TASK': return Colors.greenAccent;
+      case 'TASK': return DS.successAccent;
       case 'CAPSULE': return Colors.purpleAccent;
-      case 'CHAT': return Colors.blueAccent;
+      case 'CHAT': return DS.brandPrimaryAccent;
       default: return AppColors.textOnDark(context).withValues(alpha: 0.15);
     }
   }
@@ -133,7 +135,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.8),
+            color: DS.brandPrimary.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
               color: color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
@@ -184,7 +186,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                         ? Icons.stop_circle_outlined 
                         : (_intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded),
                     color: _isListening 
-                        ? Colors.redAccent 
+                        ? DS.errorAccent 
                         : (_intentType != null ? color : AppColors.textOnDark(context).withValues(alpha: 0.7)),
                     size: 20,
                   ),

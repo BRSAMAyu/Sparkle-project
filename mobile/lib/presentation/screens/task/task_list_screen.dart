@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,18 +60,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   controller: _searchController,
                   autofocus: true,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     fontSize: AppDesignTokens.fontSizeBase,
                   ),
                   decoration: InputDecoration(
                     hintText: '搜索任务...',
                     border: InputBorder.none,
                     hintStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: DS.brandPrimary.withValues(alpha: 0.7),
                     ),
                     prefixIcon: const Icon(
                       Icons.search,
-                      color: Colors.white70,
+                      color: DS.brandPrimary70,
                     ),
                   ),
                   onChanged: (value) => setState(() {}),
@@ -78,22 +80,22 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   key: const ValueKey('title'),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: DS.brandPrimary.withValues(alpha: 0.2),
                         borderRadius: AppDesignTokens.borderRadius8,
                       ),
                       child: const Icon(
                         Icons.task_alt_rounded,
-                        color: Colors.white,
+                        color: DS.brandPrimary,
                         size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DS.md),
                     const Text(
                       '我的任务',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: DS.brandPrimary,
                         fontWeight: AppDesignTokens.fontWeightBold,
                       ),
                     ),
@@ -103,7 +105,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            color: Colors.white,
+            color: DS.brandPrimary,
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -127,8 +129,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           HapticFeedback.mediumImpact();
-          // TODO: Navigate to create task screen
-          // context.push('/tasks/new');
+          context.push('/tasks/new');
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -142,7 +143,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           ),
           child: const Icon(
             Icons.add_rounded,
-            color: Colors.white,
+            color: DS.brandPrimary,
             size: 32,
           ),
         ),
@@ -175,7 +176,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       } else {
         return EmptyState.noTasks(
           onCreateTask: () {
-            // context.push('/tasks/new');
+            context.push('/tasks/new');
           },
         );
       }
@@ -236,7 +237,7 @@ class _FilterChips extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         boxShadow: AppDesignTokens.shadowSm,
       ),
       child: SizedBox(
@@ -275,7 +276,7 @@ class _FilterChips extends ConsumerWidget {
                       _getFilterLabel(filter),
                       style: TextStyle(
                         color: isSelected
-                            ? Colors.white
+                            ? DS.brandPrimary
                             : AppDesignTokens.neutral700,
                         fontWeight: isSelected
                             ? AppDesignTokens.fontWeightBold

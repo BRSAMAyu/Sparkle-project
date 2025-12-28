@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class FocusStatsTool extends StatelessWidget {
@@ -9,7 +11,7 @@ class FocusStatsTool extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -20,14 +22,14 @@ class FocusStatsTool extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.deepPurple.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.bar_chart, color: Colors.deepPurple),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.md),
               const Text(
                 '专注统计',
                 style: TextStyle(
@@ -42,7 +44,7 @@ class FocusStatsTool extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: DS.xl),
 
           // Overview Cards
           Row(
@@ -54,18 +56,18 @@ class FocusStatsTool extends StatelessWidget {
                   Colors.deepPurple,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: DS.md),
               Expanded(
                 child: _buildStatCard(
                   '本周累计',
                   '12h 40m',
-                  Colors.blue,
+                  DS.brandPrimary,
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: DS.xxl),
 
           // Weekly Trend Chart
           const Text(
@@ -75,7 +77,7 @@ class FocusStatsTool extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
           SizedBox(
             height: 120,
             child: Row(
@@ -93,11 +95,11 @@ class FocusStatsTool extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: DS.xxl),
 
           // Detailed Stats
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             decoration: BoxDecoration(
               color: AppDesignTokens.neutral50,
               borderRadius: BorderRadius.circular(16),
@@ -118,7 +120,7 @@ class FocusStatsTool extends StatelessWidget {
 
   Widget _buildStatCard(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -135,7 +137,7 @@ class FocusStatsTool extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: DS.xs),
           Text(
             value,
             style: TextStyle(
@@ -161,7 +163,7 @@ class FocusStatsTool extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DS.sm),
         Text(
           label,
           style: const TextStyle(
@@ -177,7 +179,7 @@ class FocusStatsTool extends StatelessWidget {
     return Column(
       children: [
         Icon(icon, color: AppDesignTokens.neutral600, size: 24),
-        const SizedBox(height: 4),
+        const SizedBox(height: DS.xs),
         Text(
           value,
           style: const TextStyle(

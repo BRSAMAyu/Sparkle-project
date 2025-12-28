@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,7 +27,7 @@ class LongTermPlanCard extends ConsumerWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
           ),
         ),
@@ -45,7 +47,7 @@ class LongTermPlanCard extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.white70,
+                color: DS.brandPrimary70,
               ),
             ),
             Icon(Icons.spa_rounded, color: AppDesignTokens.success, size: 16),
@@ -65,13 +67,13 @@ class LongTermPlanCard extends ConsumerWidget {
                   color: AppDesignTokens.success,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: DS.xs),
               SizedBox(
                 height: 4,
                 width: 60,
                 child: LinearProgressIndicator(
                   value: growth.progress,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: DS.brandPrimary10,
                   valueColor: const AlwaysStoppedAnimation<Color>(AppDesignTokens.success),
                   borderRadius: BorderRadius.circular(2),
                 ),
@@ -87,7 +89,7 @@ class LongTermPlanCard extends ConsumerWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: DS.brandPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -97,7 +99,7 @@ class LongTermPlanCard extends ConsumerWidget {
           'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
           style: TextStyle(
             fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: DS.brandPrimary.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -108,11 +110,11 @@ class LongTermPlanCard extends ConsumerWidget {
     return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.add_circle_outline, color: Colors.white30, size: 32),
-        SizedBox(height: 8),
+        Icon(Icons.add_circle_outline, color: DS.brandPrimary30, size: 32),
+        SizedBox(height: DS.sm),
         Text(
           '创建长期计划',
-          style: TextStyle(fontSize: 12, color: Colors.white54),
+          style: TextStyle(fontSize: 12, color: DS.brandPrimary54),
         ),
       ],
     );

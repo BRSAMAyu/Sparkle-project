@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/app/theme.dart';
@@ -160,7 +162,7 @@ class _StarField extends StatelessWidget {
 class _StarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white;
+    final paint = Paint()..color = DS.brandPrimary;
     final stars = [
       Offset(size.width * 0.1, size.height * 0.15),
       Offset(size.width * 0.3, size.height * 0.08),
@@ -181,7 +183,7 @@ class _StarPainter extends CustomPainter {
     for (var i = 0; i < stars.length; i++) {
       final opacity = 0.2 + (i % 3) * 0.1;
       final radius = 0.5 + (i % 2) * 0.5;
-      paint.color = Colors.white.withAlpha((opacity * 255).toInt());
+      paint.color = DS.brandPrimary.withAlpha((opacity * 255).toInt());
       canvas.drawCircle(stars[i], radius, paint);
     }
   }
@@ -196,7 +198,7 @@ class _WeatherParticlePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
+    final paint = Paint()..color = DS.brandPrimary.withValues(alpha: 0.05);
 
     switch (type) {
       case 'sunny':
@@ -217,7 +219,7 @@ class _WeatherParticlePainter extends CustomPainter {
         break;
       case 'rainy':
         paint.style = PaintingStyle.fill;
-        paint.color = Colors.white.withValues(alpha: 0.1);
+        paint.color = DS.brandPrimary.withValues(alpha: 0.1);
         for (int i = 0; i < 30; i++) {
           final x = (size.width * 0.1) + (i % 6) * 60;
           final y = (size.height * 0.1) + (i ~/ 6) * 80;
@@ -227,7 +229,7 @@ class _WeatherParticlePainter extends CustomPainter {
       case 'meteor':
         paint.style = PaintingStyle.stroke;
         paint.strokeWidth = 1.5;
-        paint.color = Colors.white.withValues(alpha: 0.2);
+        paint.color = DS.brandPrimary.withValues(alpha: 0.2);
         for (int i = 0; i < 3; i++) {
           final start = Offset(size.width * (0.3 + i * 0.2), size.height * (0.1 + i * 0.1));
           canvas.drawLine(start, Offset(start.dx + 40, start.dy + 30), paint);

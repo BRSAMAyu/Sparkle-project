@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
@@ -23,7 +25,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Error: $error'),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               ElevatedButton(
                 onPressed: () => ref.invalidate(knowledgeDetailProvider(nodeId)),
                 child: const Text('Retry'),
@@ -70,14 +72,14 @@ class KnowledgeDetailScreen extends ConsumerWidget {
           pinned: true,
           backgroundColor: sectorStyle.primaryColor,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: DS.brandPrimary),
             onPressed: () => context.pop(),
           ),
           actions: [
             IconButton(
               icon: Icon(
                 detail.userStats.isFavorite ? Icons.star : Icons.star_border,
-                color: Colors.white,
+                color: DS.brandPrimary,
               ),
               onPressed: () {
                 ref.read(toggleFavoriteProvider(nodeId));
@@ -98,7 +100,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(DS.lg),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,33 +112,33 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: DS.brandPrimary24,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           sectorStyle.name,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: DS.brandPrimary,
                             fontSize: 12,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: DS.sm),
                       // Node name
                       Text(
                         detail.node.name,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: DS.brandPrimary,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       if (detail.node.nameEn != null) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: DS.xs),
                         Text(
                           detail.node.nameEn!,
                           style: TextStyle(
-                            color: Colors.white.withAlpha(200),
+                            color: DS.brandPrimary.withAlpha(200),
                             fontSize: 14,
                           ),
                         ),
@@ -230,7 +232,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                     leading: Icon(
                       Icons.task_alt,
                       color: task.status.name == 'completed'
-                          ? Colors.green
+                          ? DS.success
                           : Colors.orange,
                     ),
                     title: Text(task.title),
@@ -315,9 +317,9 @@ class _MasteryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(DS.lg),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -348,7 +350,7 @@ class _MasteryCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
 
             // Progress bar
             ClipRRect(
@@ -356,11 +358,11 @@ class _MasteryCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: stats.masteryProgress,
                 minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: DS.brandPrimary.shade200,
                 valueColor: AlwaysStoppedAnimation<Color>(_getMasteryColor()),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DS.sm),
             Text(
               '${stats.masteryScore.toStringAsFixed(0)}%',
               style: TextStyle(
@@ -369,7 +371,7 @@ class _MasteryCard extends StatelessWidget {
                 fontSize: 18,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
 
             // Stats row
             Row(
@@ -396,9 +398,9 @@ class _MasteryCard extends StatelessWidget {
 
             // Decay status
             if (stats.decayPaused) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(DS.sm),
                 decoration: BoxDecoration(
                   color: Colors.orange.withAlpha(30),
                   borderRadius: BorderRadius.circular(8),
@@ -406,7 +408,7 @@ class _MasteryCard extends StatelessWidget {
                 child: const Row(
                   children: [
                     Icon(Icons.pause_circle, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
+                    SizedBox(width: DS.sm),
                     Text(
                       '遗忘衰减已暂停',
                       style: TextStyle(color: Colors.orange),
@@ -423,10 +425,10 @@ class _MasteryCard extends StatelessWidget {
 
   Color _getMasteryColor() {
     if (stats.masteryScore >= 95) return Colors.purple;
-    if (stats.masteryScore >= 80) return Colors.green;
-    if (stats.masteryScore >= 30) return Colors.blue;
+    if (stats.masteryScore >= 80) return DS.success;
+    if (stats.masteryScore >= 30) return DS.brandPrimary;
     if (stats.masteryScore > 0) return Colors.orange;
-    return Colors.grey;
+    return DS.brandPrimary;
   }
 
   String _formatReviewDate(DateTime date) {
@@ -454,8 +456,8 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: Colors.grey),
-        const SizedBox(height: 4),
+        Icon(icon, color: DS.brandPrimary),
+        const SizedBox(height: DS.xs),
         Text(
           value,
           style: const TextStyle(
@@ -466,7 +468,7 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: DS.brandPrimary.shade600,
             fontSize: 12,
           ),
         ),
@@ -489,7 +491,7 @@ class _SectionCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -499,7 +501,7 @@ class _SectionCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DS.md),
             child,
           ],
         ),

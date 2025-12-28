@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
@@ -104,12 +106,12 @@ class AvatarSelectionDialog extends StatelessWidget {
                       ),
                       child: SparkleAvatar(
                         radius: 30,
-                        backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                        backgroundColor: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade100,
                         url: option.url,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DS.xs),
                   Text(
                     option.label,
                     style: TextStyle(

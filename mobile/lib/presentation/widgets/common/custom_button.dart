@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 按钮变体类型
@@ -273,8 +275,8 @@ class _CustomButtonState extends State<CustomButton>
                   : AppDesignTokens.spacing24,
             ),
             child: _buildButtonRow(
-              iconColor: Colors.white,
-              textColor: Colors.white,
+              iconColor: DS.brandPrimary,
+              textColor: DS.brandPrimary,
               isDisabled: isDisabled,
             ),
           ),
@@ -373,13 +375,13 @@ class _CustomButtonState extends State<CustomButton>
                     height: _getIconSize() * 0.8,
                     child: const CircularProgressIndicator(
                       strokeWidth: 2.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
                     ),
                   )
                 : Icon(
                     widget.icon,
                     size: _getIconSize(),
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                   ),
           ),
         ),
@@ -403,7 +405,7 @@ class _CustomButtonState extends State<CustomButton>
             strokeWidth: 2.0,
             valueColor: AlwaysStoppedAnimation<Color>(
               widget.variant == ButtonVariant.primary
-                  ? Colors.white
+                  ? DS.brandPrimary
                   : AppDesignTokens.primaryBase,
             ),
           ),

@@ -44,6 +44,8 @@ export 'validation/design_validator.dart';
 
 // 便捷导入
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme_manager.dart';
 
 /// MaterialApp 主题配置

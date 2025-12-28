@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
@@ -225,29 +227,29 @@ class SparkleColors {
   factory SparkleColors.light({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: Color(0xFF000000),
-        brandSecondary: Color(0xFF000000),
+        brandPrimary: DS.brandPrimary,
+        brandSecondary: DS.brandPrimary,
         semanticSuccess: Color(0xFF006400),
         semanticWarning: Color(0xFF8B4500),
         semanticError: Color(0xFF8B0000),
         semanticInfo: Color(0xFF00008B),
-        surfacePrimary: Color(0xFFFFFFFF),
+        surfacePrimary: DS.brandPrimary,
         surfaceSecondary: Color(0xFFE0E0E0),
         surfaceTertiary: Color(0xFFC0C0C0),
-        textPrimary: Color(0xFF000000),
-        textSecondary: Color(0xFF000000),
+        textPrimary: DS.brandPrimary,
+        textSecondary: DS.brandPrimary,
         textDisabled: Color(0xFF666666),
         brightness: Brightness.light,
       );
     }
     return const SparkleColors(
-      brandPrimary: Color(0xFFFF6B35),
-      brandSecondary: Color(0xFF1A237E),
-      semanticSuccess: Color(0xFF4CAF50),
-      semanticWarning: Color(0xFFFFA726),
-      semanticError: Color(0xFFF44336),
-      semanticInfo: Color(0xFF2196F3),
-      surfacePrimary: Color(0xFFFFFFFF),
+      brandPrimary: DS.brandPrimary,
+      brandSecondary: DS.brandSecondary,
+      semanticSuccess: DS.success,
+      semanticWarning: DS.warning,
+      semanticError: DS.error,
+      semanticInfo: DS.info,
+      surfacePrimary: DS.brandPrimary,
       surfaceSecondary: Color(0xFFF5F5F5),
       surfaceTertiary: Color(0xFFE0E0E0),
       textPrimary: Color(0xFF212121),
@@ -260,17 +262,17 @@ class SparkleColors {
   factory SparkleColors.dark({bool highContrast = false}) {
     if (highContrast) {
       return const SparkleColors(
-        brandPrimary: Color(0xFFFFFFFF),
-        brandSecondary: Color(0xFFFFFFFF),
+        brandPrimary: DS.brandPrimary,
+        brandSecondary: DS.brandPrimary,
         semanticSuccess: Color(0xFF00FF00),
         semanticWarning: Color(0xFFFFFF00),
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
-        surfacePrimary: Color(0xFF000000),
+        surfacePrimary: DS.brandPrimary,
         surfaceSecondary: Color(0xFF1A1A1A),
         surfaceTertiary: Color(0xFF333333),
-        textPrimary: Color(0xFFFFFFFF),
-        textSecondary: Color(0xFFFFFFFF),
+        textPrimary: DS.brandPrimary,
+        textSecondary: DS.brandPrimary,
         textDisabled: Color(0xFF999999),
         brightness: Brightness.dark,
       );
@@ -285,7 +287,7 @@ class SparkleColors {
       surfacePrimary: Color(0xFF121212),
       surfaceSecondary: Color(0xFF1E1E1E),
       surfaceTertiary: Color(0xFF2D2D2D),
-      textPrimary: Color(0xFFFFFFFF),
+      textPrimary: DS.brandPrimary,
       textSecondary: Color(0xFFE0E0E0),
       textDisabled: Color(0xFF757575),
       brightness: Brightness.dark,
@@ -416,21 +418,21 @@ class SparkleShadows {
     return SparkleShadows(
       small: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: DS.brandPrimary.withOpacity(0.05),
           blurRadius: 4,
           offset: const Offset(0, 2),
         ),
       ],
       medium: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: DS.brandPrimary.withOpacity(0.08),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
       ],
       large: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.10),
+          color: DS.brandPrimary.withOpacity(0.10),
           blurRadius: 16,
           offset: const Offset(0, 8),
         ),
@@ -442,21 +444,21 @@ class SparkleShadows {
     return SparkleShadows(
       small: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
+          color: DS.brandPrimary.withOpacity(0.2),
           blurRadius: 4,
           offset: const Offset(0, 2),
         ),
       ],
       medium: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.3),
+          color: DS.brandPrimary.withOpacity(0.3),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
       ],
       large: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.4),
+          color: DS.brandPrimary.withOpacity(0.4),
           blurRadius: 16,
           offset: const Offset(0, 8),
         ),

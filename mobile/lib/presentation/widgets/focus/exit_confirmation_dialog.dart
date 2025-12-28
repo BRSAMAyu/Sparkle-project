@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -71,18 +73,18 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
       position: _slideAnimation,
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
+        insetPadding: const EdgeInsets.all(DS.xl),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(DS.xl),
           decoration: BoxDecoration(
             color: AppDesignTokens.deepSpaceSurface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: DS.brandPrimary.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: DS.brandPrimary.withValues(alpha: 0.5),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -93,35 +95,35 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
             children: [
               // Progress Indicator
               _buildProgressIndicator(),
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.xl),
 
               // Icon
               _buildIcon(),
-              const SizedBox(height: 16),
+              const SizedBox(height: DS.lg),
 
               // Title
               Text(
                 _getTitle(),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DS.md),
 
               // Message
               Text(
                 _getMessage(),
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: DS.brandPrimary.withValues(alpha: 0.7),
                   fontSize: 14,
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: DS.xl),
 
               // Buttons
               Row(
@@ -133,7 +135,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                       size: ButtonSize.medium,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: DS.lg),
                   Expanded(
                     child: CustomButton.primary(
                       text: _getConfirmText(),
@@ -165,7 +167,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
           decoration: BoxDecoration(
             color: isActive
                 ? AppDesignTokens.primaryBase
-                : Colors.white.withValues(alpha: 0.2),
+                : DS.brandPrimary.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(2),
           ),
         );
@@ -190,7 +192,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
@@ -252,7 +254,7 @@ Future<bool> showExitConfirmation(
   final result = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    barrierColor: Colors.black.withValues(alpha: 0.7),
+    barrierColor: DS.brandPrimary.withValues(alpha: 0.7),
     builder: (context) => ExitConfirmationDialog(
       elapsedMinutes: elapsedMinutes,
       onConfirmExit: () => Navigator.of(context).pop(true),

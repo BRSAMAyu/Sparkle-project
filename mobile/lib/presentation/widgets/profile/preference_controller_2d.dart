@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class PreferenceController2D extends StatefulWidget {
@@ -97,7 +99,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                           colors: [
-                            Colors.grey.withValues(alpha: 0.1), // Low Curiosity (Focus) - Left
+                            DS.brandPrimary.withValues(alpha: 0.1), // Low Curiosity (Focus) - Left
                             Colors.amber.withValues(alpha: 0.3), // High Curiosity - Right
                           ],
                         ),
@@ -130,9 +132,9 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                               spreadRadius: 2,
                             ),
                           ],
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: DS.brandPrimary, width: 2),
                         ),
-                        child: const Icon(Icons.local_fire_department, color: Colors.white, size: 24),
+                        child: const Icon(Icons.local_fire_department, color: DS.brandPrimary, size: 24),
                       ),
                     ),
                   ],

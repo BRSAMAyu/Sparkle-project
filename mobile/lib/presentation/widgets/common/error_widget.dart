@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -207,7 +209,7 @@ class CustomErrorWidget extends StatelessWidget {
                 child: Icon(
                   icon ?? _getDefaultIcon(),
                   size: AppDesignTokens.iconSize3xl,
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                 ),
               ),
             const SizedBox(height: AppDesignTokens.spacing32),
@@ -268,7 +270,7 @@ class CustomErrorWidget extends StatelessWidget {
               // 图标
               Icon(
                 icon ?? _getDefaultIcon(),
-                color: Colors.white,
+                color: DS.brandPrimary,
                 size: AppDesignTokens.iconSizeBase,
               ),
               const SizedBox(width: AppDesignTokens.spacing12),
@@ -284,7 +286,7 @@ class CustomErrorWidget extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: AppDesignTokens.fontSizeSm,
                           fontWeight: AppDesignTokens.fontWeightSemibold,
-                          color: Colors.white,
+                          color: DS.brandPrimary,
                         ),
                       ),
                       const SizedBox(height: AppDesignTokens.spacing4),
@@ -293,7 +295,7 @@ class CustomErrorWidget extends StatelessWidget {
                       message,
                       style: const TextStyle(
                         fontSize: AppDesignTokens.fontSizeSm,
-                        color: Colors.white,
+                        color: DS.brandPrimary,
                       ),
                     ),
                   ],
@@ -304,7 +306,7 @@ class CustomErrorWidget extends StatelessWidget {
                 const SizedBox(width: AppDesignTokens.spacing12),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
-                  color: Colors.white,
+                  color: DS.brandPrimary,
                   iconSize: AppDesignTokens.iconSizeSm,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),

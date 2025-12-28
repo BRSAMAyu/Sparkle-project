@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:sparkle/data/models/community_model.dart';
@@ -39,7 +41,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DS.lg),
             TextField(
               controller: messageController,
               decoration: const InputDecoration(
@@ -95,7 +97,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(group.name, style: const TextStyle(fontSize: 16)),
-                Text('${group.memberCount} members', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text('${group.memberCount} members', style: const TextStyle(fontSize: 12, color: DS.brandPrimary54)),
               ],
             ),
           ),
@@ -128,7 +130,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 }
                 return ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(DS.lg),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math' as math;
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -160,8 +162,8 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: index <= _currentStep
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.3),
+                ? DS.brandPrimary
+                : DS.brandPrimary.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -203,25 +205,25 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
+        color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.3),
+              color: DS.brandPrimary.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               step['icon'] as IconData,
-              color: Colors.white,
+              color: DS.brandPrimary,
               size: 32,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: DS.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,16 +231,16 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
                 Text(
                   step['title'] as String,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: DS.brandPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: DS.xs),
                 Text(
                   step['description'] as String,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: DS.brandPrimary.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),
@@ -293,11 +295,11 @@ class _ArchitecturePainter extends CustomPainter {
     // Draw layers
     if (currentStep >= 0) {
       _drawLayer(canvas, mobilePos, 'Flutter\nMobile', Icons.phone_android.codePoint,
-          currentStep >= 0 ? fadeValue : 0, Colors.blue.shade400,);
+          currentStep >= 0 ? fadeValue : 0, DS.brandPrimary.shade400,);
     }
     if (currentStep >= 1) {
       _drawLayer(canvas, gatewayPos, 'Go\nGateway', Icons.swap_horiz.codePoint,
-          currentStep >= 1 ? fadeValue : 0, Colors.green.shade400,);
+          currentStep >= 1 ? fadeValue : 0, DS.success.shade400,);
     }
     if (currentStep >= 2) {
       _drawLayer(canvas, agentPos, 'Python\nAgent', Icons.psychology.codePoint,
@@ -332,7 +334,7 @@ class _ArchitecturePainter extends CustomPainter {
       text: TextSpan(
         text: label,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: opacity),
+          color: DS.brandPrimary.withValues(alpha: opacity),
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
@@ -353,7 +355,7 @@ class _ArchitecturePainter extends CustomPainter {
 
   void _drawConnection(Canvas canvas, Offset start, Offset end, double opacity) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: opacity * 0.5)
+      ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -362,7 +364,7 @@ class _ArchitecturePainter extends CustomPainter {
 
     // Draw arrowhead
     final arrowPaint = Paint()
-      ..color = Colors.white.withValues(alpha: opacity * 0.5)
+      ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
       ..style = PaintingStyle.fill;
 
     final angle = math.atan2(end.dy - start.dy, end.dx - start.dx);
@@ -410,7 +412,7 @@ class _ArchitecturePainter extends CustomPainter {
 class _StarFieldPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.3);
+    final paint = Paint()..color = DS.brandPrimary.withValues(alpha: 0.3);
 
     final random = math.Random(42); // Fixed seed for consistent stars
 

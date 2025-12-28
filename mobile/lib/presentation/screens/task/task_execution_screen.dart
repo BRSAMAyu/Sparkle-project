@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -282,7 +284,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // 2. Task Guide Area
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: DS.brandPrimary,
                                 borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
                                 border: Border.all(
@@ -311,7 +313,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(Icons.description_outlined, color: Colors.white, size: 22),
+                                      child: const Icon(Icons.description_outlined, color: DS.brandPrimary, size: 22),
                                     ),
                                     const SizedBox(width: AppDesignTokens.spacing12),
                                     Text(
@@ -389,7 +391,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withValues(alpha: 0.7),
+                      DS.brandPrimary.withValues(alpha: 0.7),
                       AppDesignTokens.primaryBase.withValues(alpha: 0.3),
                     ],
                     begin: Alignment.topCenter,
@@ -404,7 +406,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(DS.xl),
                           decoration: BoxDecoration(
                             gradient: AppDesignTokens.successGradient,
                             shape: BoxShape.circle,
@@ -418,7 +420,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           ),
                           child: const Icon(
                             Icons.check_circle,
-                            color: Colors.white,
+                            color: DS.brandPrimary,
                             size: 80,
                           ),
                         ),
@@ -426,7 +428,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                         Text(
                           '任务完成！',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
+                            color: DS.brandPrimary,
                             fontWeight: AppDesignTokens.fontWeightBold,
                           ),
                         ),
@@ -444,7 +446,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           child: Text(
                             '+${activeTask.difficulty * 10} 经验值',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
+                              color: DS.brandPrimary,
                               fontWeight: AppDesignTokens.fontWeightBold,
                             ),
                           ),
@@ -494,7 +496,7 @@ class _TimerControls extends StatelessWidget {
             ),),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.lg),
         CustomButton.primary(
           text: '进入正念模式',
           icon: Icons.self_improvement,
@@ -535,12 +537,12 @@ class _BottomControls extends ConsumerWidget {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: const BoxDecoration(
                 gradient: AppDesignTokens.successGradient,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_outline, color: Colors.white, size: 24),
+              child: const Icon(Icons.check_circle_outline, color: DS.brandPrimary, size: 24),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
             const Text(
@@ -636,10 +638,10 @@ class _BottomControls extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: DS.brandPrimary.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

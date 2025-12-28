@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/app/theme.dart';
@@ -67,14 +68,14 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
           // Remove InkWell as we handle taps on GestureDetector
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     _buildTypeIcon(planType),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: DS.sm),
                     Expanded(
                       child: Text(
                         title,
@@ -88,7 +89,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                 ),
                 
                 if (description != null && description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DS.sm),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -97,7 +98,7 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                   ),
                 ],
 
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.md),
                 Row(
                   children: [
                     if (targetDate != null) ...[

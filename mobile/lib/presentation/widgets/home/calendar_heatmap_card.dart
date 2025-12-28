@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -29,7 +31,7 @@ class CalendarHeatmapCard extends StatelessWidget {
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -51,7 +53,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DS.md),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -59,15 +61,15 @@ class CalendarHeatmapCard extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
                       'Less',
-                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 10, color: DS.brandPrimary[500]),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DS.xs),
                     _buildLegendItem(0),
                     const SizedBox(width: 2),
                     _buildLegendItem(1),
@@ -77,10 +79,10 @@ class CalendarHeatmapCard extends StatelessWidget {
                     _buildLegendItem(3),
                     const SizedBox(width: 2),
                     _buildLegendItem(4),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DS.xs),
                     Text(
                       'More',
-                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 10, color: DS.brandPrimary[500]),
                     ),
                   ],
                 ),
@@ -129,10 +131,10 @@ class CalendarHeatmapCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: _getColorForLevel(intensity),
             borderRadius: BorderRadius.circular(4),
-            border: i == now.day ? Border.all(color: Colors.white, width: 1.5) : null,
+            border: i == now.day ? Border.all(color: DS.brandPrimary, width: 1.5) : null,
           ),
           alignment: Alignment.center,
-          // child: Text('$i', style: TextStyle(fontSize: 8, color: Colors.white70)), // Optional: show date
+          // child: Text('$i', style: TextStyle(fontSize: 8, color: DS.brandPrimary70)), // Optional: show date
         ),
       );
     }
@@ -151,12 +153,12 @@ class CalendarHeatmapCard extends StatelessWidget {
     // Theme color is orange.
     const baseColor = Colors.orange;
     switch (level) {
-      case 0: return Colors.white.withValues(alpha: 0.1);
+      case 0: return DS.brandPrimary.withValues(alpha: 0.1);
       case 1: return baseColor.withValues(alpha: 0.3);
       case 2: return baseColor.withValues(alpha: 0.5);
       case 3: return baseColor.withValues(alpha: 0.7);
       case 4: return baseColor.withValues(alpha: 1.0);
-      default: return Colors.white.withValues(alpha: 0.1);
+      default: return DS.brandPrimary.withValues(alpha: 0.1);
     }
   }
 }

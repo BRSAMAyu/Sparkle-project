@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
@@ -157,11 +159,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                               )
                             : Icon(
                                 Icons.arrow_upward_rounded,
-                                color: canSend ? Colors.white : (isDark ? Colors.white30 : Colors.black38),
+                                color: canSend ? DS.brandPrimary : (isDark ? DS.brandPrimary30 : DS.brandPrimary38),
                                 size: 24,
                               ),
                       ),
@@ -182,7 +184,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : Colors.grey[200],
+        color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary[200],
         borderRadius: BorderRadius.circular(12),
         border: const Border(
           left: BorderSide(color: AppDesignTokens.primaryBase, width: 4),

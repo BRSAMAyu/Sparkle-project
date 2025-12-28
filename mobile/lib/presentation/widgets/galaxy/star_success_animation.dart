@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Animation that plays when a star is successfully "sparked"
@@ -171,7 +173,7 @@ class _SuccessAnimationPainter extends CustomPainter {
         final ring2Opacity = (1 - ring2Progress) * 0.5;
 
         final ring2Paint = Paint()
-          ..color = Colors.white.withValues(alpha: ring2Opacity)
+          ..color = DS.brandPrimary.withValues(alpha: ring2Opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2 * (1 - ring2Progress);
         canvas.drawCircle(center, ring2Radius, ring2Paint);
@@ -192,7 +194,7 @@ class _SuccessAnimationPainter extends CustomPainter {
 
         // Core
         final corePaint = Paint()
-          ..color = Color.lerp(Colors.white, color, progress)!
+          ..color = Color.lerp(DS.brandPrimary, color, progress)!
               .withValues(alpha: particleOpacity);
         canvas.drawCircle(pos, particle.size, corePaint);
       }
@@ -205,7 +207,7 @@ class _SuccessAnimationPainter extends CustomPainter {
       final flashOpacity = (1 - flashProgress) * 0.9;
 
       final flashPaint = Paint()
-        ..color = Colors.white.withValues(alpha: flashOpacity)
+        ..color = DS.brandPrimary.withValues(alpha: flashOpacity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * (1 - flashProgress));
       canvas.drawCircle(center, flashRadius, flashPaint);
     }

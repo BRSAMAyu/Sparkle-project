@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 
@@ -129,7 +131,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: DS.brandPrimary.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -147,7 +149,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
                 color: theme.colorScheme.primary,
                 size: 24,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.sm),
               Text(
                 '知识时光机',
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -164,7 +166,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
           // 时间轴滑块
           _buildTimelineSlider(theme),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: DS.lg),
 
           // 状态指示器
           _buildStatusIndicators(theme),
@@ -243,11 +245,11 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
 
   Color _getTrackColor(double days) {
     if (days <= 15) {
-      return Colors.green;
+      return DS.success;
     } else if (days <= 45) {
       return Colors.orange;
     } else {
-      return Colors.red;
+      return DS.error;
     }
   }
 
@@ -267,7 +269,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
         _buildStatusItem(
           icon: Icons.wb_sunny,
           label: '健康',
-          color: Colors.green,
+          color: DS.success,
           description: '>60%',
           theme: theme,
         ),
@@ -281,7 +283,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
         _buildStatusItem(
           icon: Icons.warning_amber,
           label: '危险',
-          color: Colors.red,
+          color: DS.error,
           description: '<20%',
           theme: theme,
         ),
@@ -299,7 +301,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
     return Column(
       children: [
         Icon(icon, color: color, size: 28),
-        const SizedBox(height: 4),
+        const SizedBox(height: DS.xs),
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
@@ -379,7 +381,7 @@ class DecayTimelinePainter extends CustomPainter {
     if (decayCurve.isEmpty) return;
 
     final paint = Paint()
-      ..color = Colors.blue.withOpacity(0.5)
+      ..color = DS.brandPrimary.withOpacity(0.5)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -405,7 +407,7 @@ class DecayTimelinePainter extends CustomPainter {
     // 绘制当前时间点标记
     final currentX = (currentDays / maxDay) * size.width;
     final circlePaint = Paint()
-      ..color = Colors.red
+      ..color = DS.error
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(

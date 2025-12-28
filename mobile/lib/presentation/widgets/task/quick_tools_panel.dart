@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
@@ -36,7 +38,7 @@ class QuickToolsPanel extends StatelessWidget {
         _ToolButton(
           icon: Icons.calculate_outlined,
           label: '计算器',
-          color: Colors.blue,
+          color: DS.brandPrimary,
           onTap: () => _showTool(context, const CalculatorTool()),
         ),
         _ToolButton(
@@ -66,7 +68,7 @@ class QuickToolsPanel extends StatelessWidget {
         _ToolButton(
           icon: Icons.menu_book_rounded,
           label: '生词本',
-          color: Colors.green,
+          color: DS.success,
           onTap: () => _showTool(context, const WordbookTool()),
         ),
         _ToolButton(
@@ -107,14 +109,14 @@ class _ToolButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: DS.brandPrimary,
           borderRadius: BorderRadius.circular(12),
           boxShadow: AppDesignTokens.shadowSm,
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 28),
-            const SizedBox(height: 4),
+            const SizedBox(height: DS.xs),
             Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),

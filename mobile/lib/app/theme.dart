@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// App Colors - now using Design Tokens
@@ -9,7 +11,7 @@ class AppColors {
 
   // Light Theme
   static const lightBackground = AppDesignTokens.neutral100;
-  static const lightCard = Colors.white;
+  static const lightCard = DS.brandPrimary;
   static const lightText = AppDesignTokens.neutral900;
   static const lightTextSecondary = AppDesignTokens.neutral700;
   static const lightIcon = AppDesignTokens.neutral800;
@@ -28,19 +30,19 @@ class AppColors {
   // Semantic colors for both themes
   static Color surfaceBright(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
-        ? Colors.white
+        ? DS.brandPrimary
         : AppDesignTokens.neutral800;
   }
 
   static Color textOnBright(BuildContext context) {
     return Theme.of(context).brightness == Brightness.light
         ? AppDesignTokens.neutral900
-        : Colors.white;
+        : DS.brandPrimary;
   }
 
   static Color textOnDark(BuildContext context) {
     // For dark backgrounds, always use light text for maximum contrast
-    return Colors.white;
+    return DS.brandPrimary;
   }
 
   static Color iconOnBright(BuildContext context) {
@@ -51,7 +53,7 @@ class AppColors {
 
   static Color iconOnDark(BuildContext context) {
     // For dark backgrounds, always use light icons for maximum contrast
-    return Colors.white;
+    return DS.brandPrimary;
   }
 }
 
@@ -116,11 +118,11 @@ class AppThemes {
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: AppColors.lightCard,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
+      onPrimary: DS.brandPrimary,
+      onSecondary: DS.brandPrimary,
       onSurface: AppColors.lightText,
       error: AppDesignTokens.error,
-      onError: Colors.white,
+      onError: DS.brandPrimary,
     ),
 
     // Extensions
@@ -142,14 +144,14 @@ class AppThemes {
         borderRadius: AppDesignTokens.borderRadius12,
       ),
       color: AppColors.lightCard,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shadowColor: DS.brandPrimary.withValues(alpha: 0.1),
     ),
 
     // Elevated button theme with gradient support
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: DS.brandPrimary,
         elevation: 0, // Flat by default, add shadow manually if needed
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
@@ -338,11 +340,11 @@ class AppThemes {
       primary: AppColors.primary,
       secondary: AppDesignTokens.secondaryBaseDark,
       surface: AppColors.darkCard,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
+      onPrimary: DS.brandPrimary,
+      onSecondary: DS.brandPrimary,
       onSurface: AppColors.darkText,
       error: AppDesignTokens.error,
-      onError: Colors.white,
+      onError: DS.brandPrimary,
     ),
 
     // Extensions - use brighter secondary gradient for dark mode
@@ -368,14 +370,14 @@ class AppThemes {
         borderRadius: AppDesignTokens.borderRadius12,
       ),
       color: AppColors.darkCard,
-      shadowColor: Colors.black.withValues(alpha: 0.3),
+      shadowColor: DS.brandPrimary.withValues(alpha: 0.3),
     ),
 
     // Elevated button theme
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: DS.brandPrimary,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: AppDesignTokens.borderRadius8,
@@ -611,24 +613,24 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   /// 浅色主题配色
   static const light = SparkleColors(
     // 任务类型 - 使用饱和度适中的颜色
-    taskLearning: Color(0xFF2196F3),
+    taskLearning: DS.info,
     taskTraining: Color(0xFFFF9800),
-    taskErrorFix: Color(0xFFF44336),
+    taskErrorFix: DS.error,
     taskReflection: Color(0xFF9C27B0),
-    taskSocial: Color(0xFF4CAF50),
+    taskSocial: DS.success,
     taskPlanning: Color(0xFF009688),
     // 计划类型
     planSprint: Color(0xFFE53935),
     planGrowth: Color(0xFF43A047),
     // 表面颜色
-    surfaceCard: Colors.white,
+    surfaceCard: DS.brandPrimary,
     surfaceElevated: Color(0xFFFAFAFA),
     surfaceGlass: Color(0xF0FFFFFF),
     // 文本颜色
     textPrimary: AppDesignTokens.neutral900,
     textSecondary: AppDesignTokens.neutral700,
     textTertiary: AppDesignTokens.neutral500,
-    textOnPrimary: Colors.white,
+    textOnPrimary: DS.brandPrimary,
     // 边框和分割线
     border: AppDesignTokens.neutral300,
     divider: AppDesignTokens.neutral200,
@@ -654,7 +656,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     textPrimary: AppDesignTokens.neutral50,
     textSecondary: AppDesignTokens.neutral300,
     textTertiary: AppDesignTokens.neutral500,
-    textOnPrimary: Colors.white,
+    textOnPrimary: DS.brandPrimary,
     // 边框和分割线
     border: AppDesignTokens.neutral700,
     divider: AppDesignTokens.neutral600,

@@ -15,6 +15,9 @@ import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
+import 'package:sparkle/presentation/screens/plan/plan_create_screen.dart';
+import 'package:sparkle/presentation/screens/plan/plan_edit_screen.dart';
+import 'package:sparkle/presentation/screens/insights/learning_forecast_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
 import 'package:sparkle/presentation/screens/galaxy_screen.dart';
@@ -167,6 +170,43 @@ final routerProvider = Provider<GoRouter>((ref) {
             type: SharedAxisTransitionType.scaled, // Special mode
           );
         },
+      ),
+
+      // Plan Routes
+      GoRoute(
+        path: '/plans/new',
+        name: 'createPlan',
+        pageBuilder: (context, state) {
+          final planType = state.uri.queryParameters['type'];
+          return _buildTransitionPage(
+            state: state,
+            child: PlanCreateScreen(planType: planType),
+            type: SharedAxisTransitionType.scaled,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/plans/:id/edit',
+        name: 'editPlan',
+        pageBuilder: (context, state) {
+          final planId = state.pathParameters['id']!;
+          return _buildTransitionPage(
+            state: state,
+            child: PlanEditScreen(planId: planId),
+            type: SharedAxisTransitionType.scaled,
+          );
+        },
+      ),
+
+      // Insights Routes
+      GoRoute(
+        path: '/learning/forecast',
+        name: 'learningForecast',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const LearningForecastScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
 
       // Focus Routes

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -69,10 +71,10 @@ class ProfileScreen extends ConsumerWidget {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 4),
+                          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.3), width: 4),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: DS.brandPrimary.withValues(alpha: 0.2),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -80,7 +82,7 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         child: SparkleAvatar(
                           radius: 40,
-                          backgroundColor: Colors.white,
+                          backgroundColor: DS.brandPrimary,
                           url: user.avatarStatus == AvatarStatus.pending 
                               ? (user.pendingAvatarUrl ?? user.avatarUrl) 
                               : user.avatarUrl,
@@ -97,34 +99,34 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               user.nickname ?? user.username,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
+                                color: DS.brandPrimary,
                                 fontWeight: AppDesignTokens.fontWeightBold,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: DS.sm),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: DS.brandPrimary.withValues(alpha: 0.2),
                                 borderRadius: AppDesignTokens.borderRadius20,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 16),
-                                  const SizedBox(width: 4),
+                                  const Icon(Icons.local_fire_department_rounded, color: DS.brandPrimary, size: 16),
+                                  const SizedBox(width: DS.xs),
                                   Text(
                                     'Lv.${user.flameLevel}',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: DS.brandPrimary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: DS.sm),
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: DS.brandPrimary.withValues(alpha: 0.9),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -148,7 +150,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
         boxShadow: AppDesignTokens.shadowSm,
       ),
@@ -280,12 +282,12 @@ class ProfileScreen extends ConsumerWidget {
         vertical: AppDesignTokens.spacing4,
       ),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: AppDesignTokens.borderRadius8,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: DS.brandPrimary, size: 20),
       ),
       title: Text(
         title,

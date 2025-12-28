@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -66,7 +68,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               borderRadius: AppDesignTokens.borderRadius20,
               border: Border.all(color: AppDesignTokens.glassBorder),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -132,12 +134,12 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           );
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: DS.md),
                       // Nudge Message
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: DS.brandPrimary.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -157,14 +159,14 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: DS.sm),
 
                 // Metrics Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildMetric(context, _formatFocusTime(todayMinutes), '今日专注'),
-                    Container(height: 20, width: 1, color: Colors.white12),
+                    Container(height: 20, width: 1, color: DS.brandPrimary12),
                     _buildMetric(context, '$tasksCompleted', '今日完成'),
                   ],
                 ),

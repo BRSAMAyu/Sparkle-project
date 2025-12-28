@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
@@ -61,7 +63,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
             children: [
               if (!isMe) ...[
                 _buildAvatar(widget.message.sender),
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
               ],
               Flexible(
                 child: Column(
@@ -70,12 +72,12 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
                     _buildContent(context, isMe),
                     const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      const Text('Read', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      const Text('Read', style: TextStyle(fontSize: 10, color: DS.brandPrimary)),
                   ],
                 ),
               ),
               if (isMe) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: DS.sm),
                 _buildAvatar(widget.message.sender),
               ],
             ],
@@ -96,9 +98,9 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
 
   Widget _buildTextBubble(BuildContext context, bool isMe) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: isMe ? AppDesignTokens.primaryBase : Colors.white,
+        color: isMe ? AppDesignTokens.primaryBase : DS.brandPrimary,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
@@ -113,7 +115,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
       child: Text(
         widget.message.content ?? '',
         style: TextStyle(
-          color: isMe ? Colors.white : AppDesignTokens.neutral900,
+          color: isMe ? DS.brandPrimary : AppDesignTokens.neutral900,
           fontSize: 16,
           height: 1.4,
         ),
@@ -125,7 +127,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: DS.brandPrimary, width: 2),
         boxShadow: AppDesignTokens.shadowSm,
       ),
       child: CircleAvatar(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
@@ -129,11 +131,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
 
   /// Parse a hex color string to Color
   Color _parseColor(String? hex) {
-    if (hex == null || hex.isEmpty) return Colors.white;
+    if (hex == null || hex.isEmpty) return DS.brandPrimary;
     try {
       return Color(int.parse(hex.replaceFirst('#', '0xFF')));
     } catch (e) {
-      return Colors.white;
+      return DS.brandPrimary;
     }
   }
 
@@ -278,7 +280,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: '查看',
-          textColor: Colors.white,
+          textColor: DS.brandPrimary,
           onPressed: () => context.push('/galaxy/node/$nodeId'),
         ),
       ),
@@ -301,7 +303,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
     final galaxyState = ref.watch(galaxyProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black, // Deep space
+      backgroundColor: DS.brandPrimary, // Deep space
       body: Stack(
         children: [
           // 0. Parallax Background (Deepest Layer)
@@ -436,7 +438,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               top: 40,
               left: 20,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: DS.brandPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -447,7 +449,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               top: 40,
               right: 20,
               child: IconButton(
-                icon: const Icon(Icons.search, color: Colors.white),
+                icon: const Icon(Icons.search, color: DS.brandPrimary),
                 onPressed: _showSearchDialog,
               ),
             ),
@@ -470,10 +472,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               left: 30,    // Slightly indented
               child: FloatingActionButton.small(
                 heroTag: 'guide_btn',
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
+                backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                foregroundColor: DS.brandPrimary,
                 elevation: 0,
-                shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.3))),
+                shape: CircleBorder(side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.3))),
                 child: const Icon(Icons.explore),
                 onPressed: () async {
                   final nodeId = await ref.read(galaxyProvider.notifier).predictNextNode();
@@ -507,7 +509,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
               child: FloatingActionButton(
                 mini: true,
                 backgroundColor: AppDesignTokens.primaryBase.withValues(alpha: 0.9),
-                child: const Icon(Icons.bolt, color: Colors.white),
+                child: const Icon(Icons.bolt, color: DS.brandPrimary),
                 onPressed: () {
                   // Pick a random node to spark for demo
                   if (galaxyState.nodes.isNotEmpty) {

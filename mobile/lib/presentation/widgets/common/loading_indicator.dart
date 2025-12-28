@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
@@ -215,7 +217,7 @@ class LoadingIndicator extends StatelessWidget {
                     height: 40.0,
                     child: CircularProgressIndicator(
                       strokeWidth: 3.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
                     ),
                   ),
                 ),
@@ -293,7 +295,7 @@ class TaskCardSkeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: DS.brandPrimary,
           borderRadius: AppDesignTokens.borderRadius16,
           boxShadow: AppDesignTokens.shadowSm,
         ),
@@ -434,7 +436,7 @@ class ProfileCardSkeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: DS.brandPrimary,
           borderRadius: AppDesignTokens.borderRadius20,
           boxShadow: AppDesignTokens.shadowMd,
         ),
