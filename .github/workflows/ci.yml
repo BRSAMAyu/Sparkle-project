@@ -288,8 +288,8 @@ jobs:
           version: latest
 
       - name: Buf Lint
-        run: buf lint || true
+        run: buf lint
 
       - name: Buf Breaking Change Detection
         if: github.event_name == 'pull_request'
-        run: buf breaking --against '.git#branch=main' || true
+        run: buf breaking --against '.git#branch=main'

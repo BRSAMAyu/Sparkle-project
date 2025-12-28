@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
@@ -92,7 +89,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textOnDark(context)),
+            icon: Icon(Icons.arrow_back_ios_new, color: DS.brandPrimary),
             onPressed: () => context.pop(),
           ),
           Text(
@@ -100,7 +97,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColors.textOnDark(context),
+              color: DS.brandPrimary,
             ),
           ),
           Spacer(),

@@ -4,8 +4,16 @@ DB_CONTAINER=sparkle_db
 DB_USER=postgres
 DB_NAME=sparkle
 
+# macOS-specific check: Unset CC/CXX if they interfere with Flutter
+_check_macos_env:
+	@if [[ "$$OSTYPE" == "darwin"* ]] && [[ -n "$$CC" ]] || [[ -n "$$CXX" ]]; then \
+		echo "⚠️  macOS detected with CC/CXX set. Unsetting for Flutter compatibility..."; \
+		unset CC CXX; \
+	fi
+
 # 启动基础设施
 dev-up:
+	@make _check_macos_env
 	docker compose up -d
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
@@ -101,6 +109,7 @@ integration-test:
 
 # 启动完整开发环境
 dev-all:
+	@make _check_macos_env
 	@echo "🚀 Starting Full Development Environment..."
 	@echo "1️⃣  Starting Database..."
 	make dev-up
