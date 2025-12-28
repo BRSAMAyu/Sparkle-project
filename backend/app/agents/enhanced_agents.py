@@ -8,6 +8,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from uuid import UUID
+from enum import Enum
 from loguru import logger
 from dataclasses import dataclass
 
@@ -21,7 +22,7 @@ from app.services.decay_service import DecayService
 # ==========================================
 # 扩展 AgentRole
 # ==========================================
-class EnhancedAgentRole(AgentRole):
+class EnhancedAgentRole(Enum):
     """增强版智能体角色"""
     STUDY_PLANNER = "study_planner"  # 学习规划师
     PROBLEM_SOLVER = "problem_solver"  # 问题解决导师
