@@ -5,6 +5,8 @@ import random
 from app.orchestration.statechart_engine import WorkflowState
 from app.routing.graph_router import GraphBasedRouter
 from app.learning.bayesian_learner import BayesianLearner
+from app.core.business_metrics import track_routing_decision, metrics_collector
+from app.routing.exploration_router import HybridExplorationRouter
 
 class RouterNode:
     """
@@ -13,58 +15,93 @@ class RouterNode:
     
     Integrates Graph-based routing (Phase 2) and Bayesian Learning (Phase 4).
     """
-    def __init__(self, routes: List[str]):
+    def __init__(self, routes: List[str], redis_client=None, user_id: Optional[str] = None):
         self.routes = routes
         self.graph_router = GraphBasedRouter()
-        self.learner = BayesianLearner()
+        
+        # Initialize semantic and hybrid routers
+        from app.services.embedding_service import embedding_service
+        from app.routing.semantic_router import SemanticRouter, HybridRouter
+        
+        self.semantic_router = SemanticRouter(
+            embedding_service=embedding_service,
+            knowledge_graph=None # KG requires db_session, skipping for now
+        )
+        
+        self.hybrid_router = HybridRouter(
+            graph_router=self.graph_router,
+            semantic_router=self.semantic_router
+        )
+        
+        if redis_client and user_id:
+            from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
+            self.learner = PersistentBayesianLearner(redis_client, user_id)
+        else:
+            self.learner = BayesianLearner()
+            
+        # Initialize Exploration Router
+        self.exploration_router = HybridExplorationRouter(self.learner, user_id)
 
     async def __call__(self, state: WorkflowState) -> WorkflowState:
         """
         Execute routing logic.
         Updates state.context_data['next_step']
         """
-        # 1. Analyze intent (Placeholder for semantic analysis)
         last_msg = state.messages[-1]['content'] if state.messages else ""
         current_node = state.context_data.get("current_node", "orchestrator")
         
-        # 2. Graph-based Routing (Phase 2)
+        # 1. Get Candidate Routes (Hybrid + Neighbors)
         target_capability = self._extract_capability(last_msg)
-        next_route = self.graph_router.find_route(current_node, target_capability)
+        candidates = await self._get_candidate_routes(current_node, last_msg, state.context_data)
         
-        # 3. Adaptive Adjustment (Phase 4)
-        if next_route:
-            # Check success probability
-            prob = self.learner.get_probability(current_node, next_route)
-            if prob < 0.3:
-                logger.warning(f"Low probability route {current_node}->{next_route} ({prob:.2f}), considering fallback")
-                # Fallback logic here if needed
+        # 2. Exploration Selection
+        if candidates:
+            # Use exploration router to pick one
+            next_route = await self.exploration_router.select_route(
+                source=current_node,
+                targets=candidates,
+                context=state.context_data
+            )
         else:
-            # Fallback to simple routing if graph doesn't find path
+            # Fallback to simple logic if no candidates found via graph/exploration
             next_route = self._simple_route(last_msg)
 
-        # 4. Learning Update (Mock - in real flow, this happens after execution)
-        # self.learner.update(current_node, next_route, success=True)
+        # 3. Metrics Update
+        prob = 0.5
+        if next_route:
+            prob = await self.learner.get_probability(current_node, next_route)
+            metrics_collector.update_route_probability(current_node, next_route, prob)
+            
+            if prob < 0.3:
+                logger.warning(f"Low probability route {current_node}->{next_route} ({prob:.2f})")
         
-        logger.info(f"🧭 Router selected: {next_route} (Target: {target_capability})")
+        logger.info(f"🧭 Router selected: {next_route} (Confidence: {prob:.2f})")
+        
         state.context_data['router_decision'] = next_route
+        state.context_data['router_confidence'] = prob if next_route else 0.0
         
         return state
 
-    def _extract_capability(self, text: str) -> str:
-        """Extract required capability from text."""
-        # This could use an LLM or vector search
-        return text
+    @track_routing_decision(method="hybrid")
+    async def find_route_with_metrics(self, current: str, query: str, context: Dict) -> Optional[str]:
+        """Route with metrics tracking"""
+        return await self.hybrid_router.find_route(current, query, context)
 
-    def _simple_route(self, text: str) -> str:
-        # Simple heuristic for now
-        text = text.lower()
-        if "math" in text or "calculate" in text:
-            return "math_agent" if "math_agent" in self.routes else self.routes[0]
-        if "code" in text or "python" in text:
-            return "code_agent" if "code_agent" in self.routes else self.routes[0]
+    async def _get_candidate_routes(self, current: str, query: str, context: Dict) -> List[str]:
+        """Get list of candidate routes."""
+        candidates = set()
         
-        # Default: Pick mostly used or random
-        return self.routes[0]
+        # 1. Hybrid Router suggestion
+        hybrid_route = await self.find_route_with_metrics(current, query, context)
+        if hybrid_route:
+            candidates.add(hybrid_route)
+            
+        # 2. Graph Neighbors (valid transitions)
+        if current in self.graph_router.graph.nodes():
+            neighbors = list(self.graph_router.graph.neighbors(current))
+            candidates.update(neighbors)
+            
+        return list(candidates)
 
     def condition(self, state: WorkflowState) -> str:
         """

@@ -7,9 +7,18 @@ class GraphBasedRouter:
     Intelligent Router using NetworkX.
     Calculates optimal paths based on cost, latency, and success rate.
     """
-    def __init__(self):
+    def __init__(self, redis_client=None):
         self.graph = nx.DiGraph()
         self._initialize_graph()
+        
+        # Performance Optimization (Route Cache)
+        self.cache = None
+        self.precomputed_router = None
+        
+        if redis_client:
+            from app.routing.route_cache import RouteCache, PrecomputedRouter
+            self.cache = RouteCache(redis_client)
+            self.precomputed_router = PrecomputedRouter(self, self.cache)
 
     def _initialize_graph(self):
         """
@@ -39,7 +48,7 @@ class GraphBasedRouter:
         self.graph.add_edge("planner", "code_agent", weight=0.8)
         self.graph.add_edge("planner", "math_agent", weight=0.8)
 
-    def find_route(self, current_node: str, target_capability: str) -> Optional[str]:
+    async def find_route(self, current_node: str, target_capability: str) -> Optional[str]:
         """
         Find the next hop to satisfy the target capability.
         """
@@ -50,6 +59,10 @@ class GraphBasedRouter:
             
         if target_node == current_node:
             return None
+        
+        # Use precomputed/cached router if available
+        if self.precomputed_router:
+            return await self.precomputed_router.find_route(current_node, target_node)
             
         try:
             path = nx.shortest_path(self.graph, source=current_node, target=target_node, weight="weight")
@@ -86,3 +99,7 @@ class GraphBasedRouter:
                 new_weight = current_weight * 1.2
             
             self.graph[u][v]['weight'] = max(0.1, min(new_weight, 10.0))
+            
+            # Invalidate cache if weight changed significantly
+            if self.cache:
+                self.cache.invalidate(u, v)

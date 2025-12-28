@@ -24,6 +24,7 @@ from app.config import settings
 from app.core.metrics import (
     REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE, TOOL_EXECUTION_COUNT, ACTIVE_SESSIONS
 )
+from app.core.business_metrics import COLLABORATION_SUCCESS, COLLABORATION_LATENCY
 from app.orchestration.statechart_engine import WorkflowState, StateGraph
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
@@ -140,6 +141,24 @@ class ChatOrchestrator:
         # Connect Checkpointer
         if redis_client:
             self.graph.checkpointer = RedisCheckpointer(redis_client)
+            
+            # Connect Visualizer and Tracer
+            from app.visualization.realtime_visualizer import visualizer
+            from app.visualization.execution_tracer import ExecutionTracer
+            
+            self.tracer = ExecutionTracer(redis_client)
+            
+            self.graph.on_event = self._chain_event_handlers(
+                visualizer.on_graph_event,
+                self.tracer.record_event
+            )
+
+    def _chain_event_handlers(self, *handlers):
+        """Chain multiple event handlers"""
+        async def chained(event):
+            for handler in handlers:
+                await handler(event)
+        return chained
 
     def _ensure_tools_registered(self):
         """Ensure tools are registered in the registry"""
@@ -380,7 +399,8 @@ class ChatOrchestrator:
                 "user_id": user_id,
                 "session_id": session_id,
                 "stream_callback": stream_callback,
-                "tools_schema": tools
+                "tools_schema": tools,
+                "redis_client": self.redis
             })
 
             # Launch Graph Execution in Background
@@ -446,9 +466,21 @@ class ChatOrchestrator:
                 )
 
             REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+            
+            COLLABORATION_SUCCESS.labels(
+                workflow_type="standard_chat",
+                agents_used="orchestrator",
+                outcome="success"
+            ).inc()
 
         except Exception as e:
             REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
+            
+            COLLABORATION_SUCCESS.labels(
+                workflow_type="standard_chat",
+                agents_used="orchestrator",
+                outcome="error"
+            ).inc()
             logger.error(f"Orchestration Error: {e}", exc_info=True)
             await self._update_state(session_id, STATE_FAILED, str(e))
             yield agent_service_pb2.ChatResponse(
@@ -467,6 +499,7 @@ class ChatOrchestrator:
             ACTIVE_SESSIONS.dec()
             latency = time.time() - start_time
             REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
+            COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
             
             # Always release lock
             await self._release_session_lock(session_id, request_id)

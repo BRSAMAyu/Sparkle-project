@@ -163,10 +163,31 @@ def create_standard_chat_graph() -> StateGraph:
     
     graph.set_entry_point("context_builder")
     
-    graph.add_edge("context_builder", "retrieval")
-    graph.add_edge("retrieval", "generation")
+    graph.add_node("router", router_node)
     
-    # Conditional edge from generation
+    graph.add_edge("context_builder", "retrieval")
+    graph.add_edge("retrieval", "router")
+    
+    # Router decides next step
+    def router_condition(state: WorkflowState) -> str:
+        decision = state.context_data.get('router_decision')
+        # If router logic failed or returned None, fallback
+        if not decision:
+            return "generation"
+            
+        # Map specialized agents to generation node for now
+        # In Phase 4, these will be separate nodes
+        if decision in ["math_agent", "code_agent", "knowledge_agent"]:
+            return "generation"
+            
+        if decision in ["generation", "tool_execution"]:
+            return decision
+            
+        return "generation"
+
+    graph.add_conditional_edge("router", router_condition)
+    
+    # Generation node decides if tools or end
     def generation_router(state: WorkflowState) -> str:
         return state.next_step or "__end__"
         
@@ -176,3 +197,15 @@ def create_standard_chat_graph() -> StateGraph:
     graph.add_edge("tool_execution", "generation")
     
     return graph
+
+async def router_node(state: WorkflowState) -> WorkflowState:
+    """Intelligent Routing Node."""
+    from app.routing.router_node import RouterNode
+    redis_client = state.context_data.get("redis_client")
+    user_id = str(state.context_data.get("user_id", ""))
+    
+    # Define available routes (even if mapped to generation later)
+    routes = ["generation", "math_agent", "code_agent", "tool_execution"]
+    
+    router = RouterNode(routes=routes, redis_client=redis_client, user_id=user_id)
+    return await router(state)

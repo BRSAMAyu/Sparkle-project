@@ -29,7 +29,7 @@ class BayesianLearner:
     def _get_key(self, source: str, target: str) -> str:
         return f"{source}->{target}"
 
-    def update(self, source: str, target: str, success: bool):
+    async def update(self, source: str, target: str, success: bool):
         """Update posterior distribution based on outcome."""
         key = self._get_key(source, target)
         if key not in self.stats:
@@ -41,7 +41,7 @@ class BayesianLearner:
         else:
             stats.beta += 1
 
-    def get_probability(self, source: str, target: str) -> float:
+    async def get_probability(self, source: str, target: str) -> float:
         """Get mean probability of success."""
         key = self._get_key(source, target)
         if key not in self.stats:
@@ -49,8 +49,8 @@ class BayesianLearner:
         
         return self.stats[key].mean
 
-    def sample(self, source: str, target: str) -> float:
+    async def sample(self, source: str, target: str) -> float:
         """Sample from the distribution (Thompson Sampling)."""
         # For simple Multi-Armed Bandit implementation
         # Not implementing full random.betavariate for simplicity unless needed
-        return self.get_probability(source, target)
+        return await self.get_probability(source, target)
