@@ -26,7 +26,7 @@ async def get_current_user_id(
     """
     try:
         token = credentials.credentials
-        payload = decode_token(token)
+        payload = decode_token(token, expected_type="access")
         user_id: str = payload.get("sub")
         if user_id is None:
             raise AuthenticationError("无效的认证令牌")

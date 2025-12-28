@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
@@ -40,8 +41,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
   final List<_ActiveSuccessAnimation> _activeSuccessAnimations = [];
 
   // Canvas constants
-  static const double _canvasSize = 4000.0;
-  static const double _canvasCenter = 2000.0;
+  static const double _canvasPadding = 400.0;
+  static const double _canvasSize = GalaxyLayoutEngine.outerRadius * 2 + _canvasPadding * 2;
+  static const double _canvasCenter = _canvasSize / 2;
   static const double _centralFlameSize = 60.0;
 
   // Track last scale to avoid unnecessary updates
@@ -69,8 +71,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
 
       // Start at 0.15 scale (Universe View) centered
       const initialScale = 0.15;
-      // To center canvas point (2000, 2000) at screen center (w/2, h/2) with scale S:
-      // Tx = w/2 - 2000*S
+      // To center canvas point (_canvasCenter, _canvasCenter) at screen center (w/2, h/2) with scale S:
+      // Tx = w/2 - _canvasCenter * S
       final tx = size.width / 2 - _canvasCenter * initialScale;
       final ty = size.height / 2 - _canvasCenter * initialScale;
 
@@ -115,11 +117,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       inverseMatrix,
       Offset(size.width, size.height),
     );
-    final viewport = Rect.fromPoints(topLeft, bottomRight);
+    final viewport = Rect.fromPoints(topLeft, bottomRight)
+        .shift(const Offset(-_canvasCenter, -_canvasCenter));
     ref.read(galaxyProvider.notifier).updateViewport(viewport);
   }
 
-  /// Convert a canvas position (in the 4000x4000 space) to screen coordinates
+  /// Convert a canvas position (in the star map space) to screen coordinates
   Offset _canvasToScreen(Offset canvasPosition) {
     final matrix = _transformationController.value;
     // Apply the transformation matrix to get screen position
@@ -232,7 +235,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     if (nodeIndex == -1) return;
     final node = galaxyState.nodes[nodeIndex];
 
-    // Get the node's canvas position (already centered to 4000x4000)
+    // Get the node's canvas position (already centered to the star map canvas)
     final nodeCanvasPosition = galaxyState.nodePositions[nodeId];
     if (nodeCanvasPosition == null) return;
 
@@ -329,7 +332,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     final currentScale = _transformationController.value.getMaxScaleOnAxis();
     final targetScale = currentScale < 0.8 ? 1.0 : currentScale;
 
-    // Node position in canvas coordinates (0,0 is top-left of 4000x4000 canvas)
+    // Node position in canvas coordinates (0,0 is top-left of the star map canvas)
     // Provider positions are relative to center (0,0), so add offset
     final canvasX = nodePos.dx + _canvasCenter;
     final canvasY = nodePos.dy + _canvasCenter;
@@ -406,9 +409,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
   @override
   Widget build(BuildContext context) {
     final galaxyState = ref.watch(galaxyProvider);
+    final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: DS.brandPrimary, // Deep space
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // 0. Parallax Background (Deepest Layer)
@@ -497,7 +501,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                               inverseMatrix,
                               Offset(screenSize.width, screenSize.height),
                             );
-                            final viewport = Rect.fromPoints(topLeft, bottomRight);
+                            final viewport = Rect.fromPoints(topLeft, bottomRight)
+                                .shift(const Offset(-_canvasCenter, -_canvasCenter));
                             return CustomPaint(
                               painter: StarMapPainter(
                                 // Use filtered lists from provider
@@ -594,8 +599,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 5. UI Overlays (Back button)
           if (!_isEntering && Navigator.canPop(context))
             Positioned(
-              top: 40,
-              left: 20,
+              top: safePadding.top + 8,
+              left: 16,
               child: IconButton(
                 icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
                 onPressed: () => Navigator.of(context).pop(),
@@ -605,8 +610,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 5.1 Search Button (Top Right)
           if (!_isEntering)
             Positioned(
-              top: 40,
-              right: 20,
+              top: safePadding.top + 8,
+              right: 16,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -627,7 +632,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
 
           if (!_isEntering)
             Positioned(
-              top: 90,
+              top: safePadding.top + 56,
               left: 20,
               right: 20,
               child: Center(
@@ -646,7 +651,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 6. Mini Map (Bottom Left)
           if (!_isEntering)
             Positioned(
-              bottom: 40,
+              bottom: safePadding.bottom + 40,
               left: 20,
               child: GalaxyMiniMap(
                 transformationController: _transformationController,
@@ -658,7 +663,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 6.1 Guide Button (Above Mini Map)
           if (!_isEntering)
             Positioned(
-              bottom: 180, // Above mini map
+              bottom: safePadding.bottom + 180, // Above mini map
               left: 30,    // Slightly indented
               child: FloatingActionButton.small(
                 heroTag: 'guide_btn',
@@ -684,7 +689,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 6.2 Zoom Controls (Right side, above Spark button)
           if (!_isEntering)
             Positioned(
-              bottom: 120,
+              bottom: safePadding.bottom + 120,
               right: 20,
               child: ZoomControls(
                 transformationController: _transformationController,
@@ -694,7 +699,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
           // 7. Spark Button (Bottom Right)
           if (!_isEntering)
             Positioned(
-              bottom: 40,
+              bottom: safePadding.bottom + 40,
               right: 20,
               child: FloatingActionButton(
                 mini: true,
@@ -743,11 +748,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                       final node = galaxyState.nodes.firstWhere(
                           (n) => n.id == galaxyState.selectedNodeId,
                           orElse: () => galaxyState.nodes.first,);
-                      return NodePreviewCard(
-                        node: node,
-                        onClose: () =>
-                            ref.read(galaxyProvider.notifier).deselectNode(),
-                        onTap: () => context.push('/galaxy/node/${node.id}'),
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: safePadding.bottom),
+                        child: NodePreviewCard(
+                          node: node,
+                          onClose: () =>
+                              ref.read(galaxyProvider.notifier).deselectNode(),
+                          onTap: () => context.push('/galaxy/node/${node.id}'),
+                        ),
                       );
                     },)
                 : const SizedBox.shrink(),
@@ -757,10 +765,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     );
   }
 
-  // Helper to shift logical (0,0) to center of the 4000x4000 canvas
+  // Helper to shift logical (0,0) to center of the star map canvas
   Map<String, Offset> _centerPositions(Map<String, Offset> raw, double cx, double cy) => raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
 
-  // Helper to shift cluster positions to center of the 4000x4000 canvas
+  // Helper to shift cluster positions to center of the star map canvas
   Map<String, ClusterInfo> _centerClusters(Map<String, ClusterInfo> raw, double cx, double cy) => raw.map((key, cluster) => MapEntry(
       key,
       ClusterInfo(

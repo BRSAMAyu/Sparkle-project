@@ -324,9 +324,11 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         final old = state.viewport!;
         final dx = (old.center.dx - viewport.center.dx).abs();
         final dy = (old.center.dy - viewport.center.dy).abs();
+        final dw = (old.width - viewport.width).abs();
+        final dh = (old.height - viewport.height).abs();
 
         // If moved less than 50px, skip update
-        if (dx < 50 && dy < 50) {
+        if (dx < 50 && dy < 50 && dw < 50 && dh < 50) {
           return;
         }
       }

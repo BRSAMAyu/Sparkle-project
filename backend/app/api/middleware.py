@@ -32,7 +32,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return None
         try:
             from app.core.security import decode_token
-            payload = decode_token(token)
+            payload = decode_token(token, expected_type="access")
             return payload.get("sub")
         except Exception:
             return None

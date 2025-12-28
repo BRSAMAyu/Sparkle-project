@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await ThemeManager().reset();
+  });
+
   group('Theme Provider Tests', () {
     // ============================================================
     // Theme Mode Conversion Tests
@@ -108,7 +116,7 @@ void main() {
     // Theme Mode Provider Tests
     // ============================================================
 
-    group('Theme Mode State Provider', () {
+    group('Theme Mode Provider', () {
       testWidgets('themeModeProvider has initial value',
           (WidgetTester tester) async {
         AppThemeMode? capturedMode;
@@ -127,47 +135,30 @@ void main() {
         expect(capturedMode, isNotNull);
       });
 
-      testWidgets('themeModeProvider can notify listeners',
+      testWidgets('themeModeProvider reflects ThemeManager changes',
           (WidgetTester tester) async {
-        int updateCount = 0;
+        AppThemeMode? capturedMode;
+        final manager = ThemeManager();
+
+        await manager.setAppThemeMode(AppThemeMode.light);
 
         await tester.pumpWidget(
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
-                final mode = ref.watch(themeModeProvider);
-                updateCount++;
-                return Scaffold(
-                  body: Center(
-                    child: Text(mode.toString()),
-                  ),
-                );
+                capturedMode = ref.watch(themeModeProvider);
+                return const Scaffold();
               },
             ),
           ),
         );
 
-        final initialCount = updateCount;
+        expect(capturedMode, AppThemeMode.light);
 
-        // Update provider
-        // Note: StateProvider should trigger rebuild
-        await tester.pumpWidget(
-          ProviderScope(
-            child: Consumer(
-              builder: (context, ref, child) {
-                final mode = ref.watch(themeModeProvider);
-                updateCount++;
-                return Scaffold(
-                  body: Center(
-                    child: Text(mode.toString()),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
+        await manager.setAppThemeMode(AppThemeMode.dark);
+        await tester.pump();
 
-        expect(updateCount, greaterThanOrEqualTo(initialCount));
+        expect(capturedMode, AppThemeMode.dark);
       });
     });
 
@@ -291,7 +282,7 @@ void main() {
         expect(highContrast, isNotNull);
       });
 
-      testWidgets('Theme manager and state providers independent',
+      testWidgets('Theme manager and derived providers accessible',
           (WidgetTester tester) async {
         await tester.pumpWidget(
           ProviderScope(

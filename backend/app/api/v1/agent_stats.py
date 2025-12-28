@@ -7,7 +7,8 @@ from typing import Optional
 from loguru import logger
 
 from app.services.agent_stats_service import AgentStatsService
-from app.core.deps import get_db, get_current_user
+from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 
 router = APIRouter(prefix="/agent-stats", tags=["agent-stats"])

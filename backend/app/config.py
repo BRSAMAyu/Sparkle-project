@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
     APPLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_ID: str = ""
 
     # LLM Service
     LLM_API_BASE_URL: str = ""
@@ -155,6 +156,16 @@ class Settings(BaseSettings):
 
         if not self.DEBUG and not self.SECRET_KEY:
             raise ValueError("SECRET_KEY must be set when DEBUG is false")
+
+        if env in ("prod", "production") and not self.DATABASE_URL:
+            raise ValueError("DATABASE_URL must be set in production")
+
+        if env in ("prod", "production"):
+            if not self.REDIS_PASSWORD or self.REDIS_PASSWORD == "devpassword":
+                raise ValueError("REDIS_PASSWORD must be set to a non-default value in production")
+
+        if env in ("prod", "production") and "*" in self.BACKEND_CORS_ORIGINS:
+            raise ValueError("BACKEND_CORS_ORIGINS cannot include '*' in production")
 
         if self.GRPC_REQUIRE_TLS and (not self.GRPC_TLS_CERT_PATH or not self.GRPC_TLS_KEY_PATH):
             raise ValueError("GRPC TLS is required but cert/key are not configured")

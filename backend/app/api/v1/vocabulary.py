@@ -12,6 +12,8 @@ from app.db.session import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.vocabulary_service import vocabulary_service
+from app.config import settings
+from app.utils.helpers import read_upload_file
 
 router = APIRouter()
 
@@ -82,9 +84,28 @@ async def import_dictionary(
     db: AsyncSession = Depends(get_db)
 ):
     # Only admins should probably do this, but for this app we allow the user for their private setup
-    content = await file.read()
+    if format not in {"json", "csv"}:
+        raise HTTPException(status_code=400, detail="Unsupported dictionary format")
+
+    if format == "json":
+        allowed_extensions = {".json"}
+        allowed_types = {"application/json", "text/json"}
+    else:
+        allowed_extensions = {".csv"}
+        allowed_types = {"text/csv", "application/csv", "application/vnd.ms-excel"}
+
+    content = await read_upload_file(
+        file,
+        max_size=settings.MAX_UPLOAD_SIZE,
+        allowed_extensions=allowed_extensions,
+        allowed_content_types=allowed_types,
+    )
+    try:
+        text_content = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid file encoding")
     count = await vocabulary_service.import_dictionary(
-        db, content.decode('utf-8'), format=format, source=source
+        db, text_content, format=format, source=source
     )
     return {"imported": count}
 

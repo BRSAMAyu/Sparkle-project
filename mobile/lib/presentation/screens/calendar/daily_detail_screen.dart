@@ -32,7 +32,7 @@ class DailyDetailScreen extends ConsumerWidget {
     final lunarData = LunarService().getLunarData(date);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Deep dark
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

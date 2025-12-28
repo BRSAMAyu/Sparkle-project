@@ -2,15 +2,17 @@
 Redis Caching Module
 负责缓存管理，提供装饰器和工具函数
 """
-import json
 import asyncio
-from typing import Any, Optional, Callable, Union
-from functools import wraps
 import hashlib
-import pickle
-from datetime import timedelta
+import json
+from dataclasses import asdict, is_dataclass
+from datetime import date, datetime
+from functools import wraps
+from typing import Any, Optional, Callable, Union
+from uuid import UUID
 
 import redis.asyncio as redis
+from pydantic import BaseModel
 from app.config import settings
 
 from contextlib import asynccontextmanager
@@ -24,8 +26,8 @@ class CacheService:
         """Initialize Redis connection pool"""
         self.redis = redis.from_url(
             settings.REDIS_URL, 
-            encoding="utf-8", 
-            decode_responses=False # We use pickle for complex objects
+            encoding="utf-8",
+            decode_responses=True,
         )
 
     @asynccontextmanager
@@ -66,14 +68,27 @@ class CacheService:
     async def get(self, key: str) -> Any:
         if not self.redis: return None
         data = await self.redis.get(key)
-        if data:
-            return pickle.loads(data)
-        return None
+        if data is None:
+            return None
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return data
 
     async def set(self, key: str, value: Any, ttl: int = None):
         if not self.redis: return
-        dumped = pickle.dumps(value)
+        dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
         await self.redis.set(key, dumped, ex=ttl or self.default_ttl)
+
+    async def incr(self, key: str, amount: int = 1) -> int:
+        if not self.redis:
+            return 0
+        return await self.redis.incrby(key, amount)
+
+    async def expire(self, key: str, ttl: int) -> bool:
+        if not self.redis:
+            return False
+        return await self.redis.expire(key, ttl)
 
     async def delete(self, key: str):
         if not self.redis: return
@@ -87,6 +102,19 @@ class CacheService:
             await self.redis.delete(key)
 
 cache_service = CacheService()
+
+def _json_default(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return value.model_dump()
+    if is_dataclass(value):
+        return asdict(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
 
 def cached(
     ttl: int = 300, 

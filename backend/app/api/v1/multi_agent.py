@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from loguru import logger
 
-from app.core.deps import get_current_user
+from app.api.deps import get_current_user
 from app.models.user import User
 from app.agents.orchestrator_agent import create_multi_agent_workflow
 

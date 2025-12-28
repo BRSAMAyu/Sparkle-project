@@ -3,19 +3,22 @@ STT (Speech to Text) API
 语音转文字服务
 """
 from typing import Any
-from fastapi import APIRouter, UploadFile, File, WebSocket, Form, Depends
+from fastapi import APIRouter, UploadFile, File, WebSocket, Form, Depends, HTTPException, status
 from app.services.stt_service import stt_service
-import shutil
 import os
 import uuid
 from app.config import settings
+from app.api.deps import get_current_user
+from app.core.security import decode_token
+from app.utils.helpers import save_upload_file
 
 router = APIRouter()
 
 @router.post("/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
-    language: str = Form(None)
+    language: str = Form(None),
+    current_user: object = Depends(get_current_user)
 ):
     """
     Upload audio file for transcription.
@@ -26,8 +29,21 @@ async def transcribe_audio(
     temp_path = os.path.join(settings.UPLOAD_DIR, f"{file_id}{ext}")
     
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        await save_upload_file(
+            file,
+            temp_path,
+            max_size=settings.MAX_UPLOAD_SIZE,
+            allowed_extensions={".wav", ".mp3", ".m4a", ".mp4", ".webm", ".ogg"},
+            allowed_content_types={
+                "audio/wav",
+                "audio/x-wav",
+                "audio/mpeg",
+                "audio/mp4",
+                "audio/webm",
+                "audio/ogg",
+                "audio/x-m4a",
+            },
+        )
             
         # Transcribe
         result = await stt_service.transcribe_file(temp_path, language=language)
@@ -51,4 +67,13 @@ async def websocket_endpoint(websocket: WebSocket):
     Client sends binary audio chunks.
     Server returns JSON: {"type": "transcription", "text": "...", "is_final": bool}
     """
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    try:
+        decode_token(token, expected_type="access")
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await stt_service.handle_websocket_stream(websocket)

@@ -288,6 +288,8 @@ func TestCheckOrigin_WildcardDomain(t *testing.T) {
 		{"https://app.example.com", true},   // Matches *.example.com wildcard
 		{"https://mobile.example.com", true}, // Matches *.example.com wildcard
 		{"https://example.com", true},        // Direct match
+		{"https://evil-example.com", false},  // Not a subdomain
+		{"https://example.com.evil.com", false}, // Suffix injection attempt
 		{"https://example.org", false},       // Different domain
 	}
 

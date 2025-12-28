@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from loguru import logger
 
-from app.core.deps import get_current_user
+from app.api.deps import get_current_user
 from app.models.user import User
 from orchestration.graph_rag import GraphRAGRetriever, RetrievalTrace
 from app.services.knowledge_service import KnowledgeService

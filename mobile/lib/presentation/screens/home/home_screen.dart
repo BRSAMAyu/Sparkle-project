@@ -205,7 +205,7 @@ class _DashboardScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
-                  color: DS.brandPrimaryConst,
+                  color: DS.brandPrimary,
                 ),
               ),
             ],

@@ -50,12 +50,12 @@ export 'validation/design_validator.dart';
 /// MaterialApp 主题配置
 class AppThemes {
   static ThemeData get lightTheme {
-    final theme = ThemeManager().current;
+    final theme = ThemeManager().themeForBrightness(Brightness.light);
     return _buildThemeData(theme, Brightness.light);
   }
 
   static ThemeData get darkTheme {
-    final theme = ThemeManager().current;
+    final theme = ThemeManager().themeForBrightness(Brightness.dark);
     return _buildThemeData(theme, Brightness.dark);
   }
 

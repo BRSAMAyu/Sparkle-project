@@ -22,7 +22,7 @@ class ProfileScreen extends ConsumerWidget {
     if (user == null) return SizedBox.shrink();
 
     return Scaffold(
-      backgroundColor: DS.neutral50,
+      backgroundColor: context.sparkleColors.surfacePrimary,
       body: SingleChildScrollView(
         padding: EdgeInsets.zero,
         child: Column(
@@ -97,7 +97,7 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               user.nickname ?? user.username,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: DS.brandPrimaryConst,
+                                color: DS.textPrimary,
                                 fontWeight: DS.fontWeightBold,
                               ),
                             ),
@@ -111,12 +111,12 @@ class ProfileScreen extends ConsumerWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.local_fire_department_rounded, color: DS.brandPrimaryConst, size: 16),
+                                  Icon(Icons.local_fire_department_rounded, color: DS.brandPrimary, size: 16),
                                   SizedBox(width: DS.xs),
                                   Text(
                                     'Lv.${user.flameLevel}',
                                     style: TextStyle(
-                                      color: DS.brandPrimaryConst,
+                                      color: DS.brandPrimary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -124,7 +124,7 @@ class ProfileScreen extends ConsumerWidget {
                                   Text(
                                     'Brightness ${(user.flameBrightness * 100).toInt()}%',
                                     style: TextStyle(
-                                      color: DS.brandPrimary.withValues(alpha: 0.9),
+                                      color: DS.textSecondary,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -146,7 +146,7 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) => DecoratedBox(
       decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
+        color: DS.surfaceSecondary,
         borderRadius: DS.borderRadius16,
         boxShadow: DS.shadowSm,
       ),
@@ -281,12 +281,12 @@ class ProfileScreen extends ConsumerWidget {
           gradient: gradient,
           borderRadius: DS.borderRadius8,
         ),
-        child: Icon(icon, color: DS.brandPrimaryConst, size: 20),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? DS.error : DS.neutral900,
+          color: isDestructive ? DS.error : DS.textPrimary,
           fontWeight: DS.fontWeightMedium,
         ),
       ),

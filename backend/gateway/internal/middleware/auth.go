@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,14 +13,14 @@ import (
 
 func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from Authorization header or Query param (for WebSocket)
+		// Get token from Authorization header or Query param (WebSocket upgrade only)
 		tokenString := ""
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 			}
-		} else {
+		} else if isWebSocketRequest(c) {
 			tokenString = c.Query("token")
 		}
 
@@ -80,7 +81,7 @@ func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		// In production, require X-Admin-Secret header
 		secretFromHeader := c.GetHeader("X-Admin-Secret")
-		if secretFromHeader == "" || secretFromHeader != cfg.AdminSecret {
+		if secretFromHeader == "" || subtle.ConstantTimeCompare([]byte(secretFromHeader), []byte(cfg.AdminSecret)) != 1 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing admin secret"})
 			return
 		}
@@ -97,4 +98,10 @@ func RequireAdmin(c *gin.Context) {
 		return
 	}
 	c.Next()
+}
+
+func isWebSocketRequest(c *gin.Context) bool {
+	upgrade := strings.ToLower(c.GetHeader("Upgrade"))
+	connection := strings.ToLower(c.GetHeader("Connection"))
+	return upgrade == "websocket" && strings.Contains(connection, "upgrade")
 }

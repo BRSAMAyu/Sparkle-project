@@ -3,9 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class CalendarHeatmapCard extends StatelessWidget {
@@ -43,13 +40,13 @@ class CalendarHeatmapCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textOnDark(context).withValues(alpha: 0.8),
+                        color: DS.textSecondary.withValues(alpha: 0.8),
                       ),
                     ),
                     Icon(
                       Icons.calendar_month_rounded,
                       size: 16,
-                      color: AppColors.textOnDark(context).withValues(alpha: 0.6),
+                      color: DS.textSecondary.withValues(alpha: 0.6),
                     ),
                   ],
                 ),
@@ -126,7 +123,7 @@ class CalendarHeatmapCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: _getColorForLevel(intensity),
             borderRadius: BorderRadius.circular(4),
-            border: i == now.day ? Border.all(color: DS.brandPrimaryConst, width: 1.5) : null,
+            border: i == now.day ? Border.all(color: DS.brandPrimary, width: 1.5) : null,
           ),
           alignment: Alignment.center,
           // child: Text('$i', style: TextStyle(fontSize: 8, color: DS.brandPrimary70)), // Optional: show date
@@ -145,7 +142,7 @@ class CalendarHeatmapCard extends StatelessWidget {
 
   Color _getColorForLevel(int level) {
     // Theme color is orange.
-    final baseColor = DS.brandPrimaryConst;
+    final baseColor = DS.brandPrimary;
     switch (level) {
       case 0: return baseColor.withValues(alpha: 0.1);
       case 1: return baseColor.withValues(alpha: 0.3);

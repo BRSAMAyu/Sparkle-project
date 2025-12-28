@@ -1,5 +1,4 @@
 import os
-import shutil
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +9,7 @@ from app.models.user import User
 from app.schemas.user import UserPreferences, UserProfile, UserUpdate, PasswordChange
 from app.core.security import verify_password, get_password_hash
 from app.config import settings
+from app.utils.helpers import save_upload_file
 
 router = APIRouter()
 
@@ -59,21 +59,29 @@ async def update_avatar(
     Update current user's avatar
     """
     # Create upload directory if not exists
-    upload_dir = os.path.join("uploads", "avatars")
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir, exist_ok=True)
+    upload_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
+    os.makedirs(upload_dir, exist_ok=True)
     
     # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    if file_extension.lower() not in [".jpg", ".jpeg", ".png", ".gif"]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing filename")
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    if file_extension not in allowed_extensions:
         raise HTTPException(status_code=400, detail="Invalid image format")
         
     filename = f"{current_user.id}_{uuid4().hex}{file_extension}"
     file_path = os.path.join(upload_dir, filename)
     
     # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    await save_upload_file(
+        file,
+        file_path,
+        max_size=settings.MAX_UPLOAD_SIZE,
+        allowed_extensions=allowed_extensions,
+        allowed_content_types=allowed_types,
+    )
     
     # Update user avatar_url
     # In a real app, this should be a full URL

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -40,7 +42,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               _ThemeModeSection(
                 currentMode: currentMode,
                 onModeChanged: (mode) {
-                  themeManager.setAppThemeMode(mode);
+                  unawaited(themeManager.setAppThemeMode(mode));
                 },
               ),
               SizedBox(height: DS.xl),
@@ -49,7 +51,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               _BrandPresetSection(
                 currentPreset: currentPreset,
                 onPresetChanged: (preset) {
-                  themeManager.setBrandPreset(preset);
+                  unawaited(themeManager.setBrandPreset(preset));
                 },
               ),
               SizedBox(height: DS.xl),
@@ -58,7 +60,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               _HighContrastSection(
                 highContrast: highContrast,
                 onToggled: (enabled) {
-                  themeManager.toggleHighContrast(enabled);
+                  unawaited(themeManager.toggleHighContrast(enabled));
                 },
               ),
               SizedBox(height: DS.xl),
@@ -66,7 +68,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               // Reset to Defaults Button
               _ResetButton(
                 onPressed: () {
-                  themeManager.reset();
+                  unawaited(themeManager.reset());
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

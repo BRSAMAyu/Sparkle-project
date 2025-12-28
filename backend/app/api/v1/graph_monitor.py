@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.db.session import get_db
+from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
 from app.config import settings
 from app.services.graph_knowledge_service import GraphKnowledgeService
@@ -25,7 +26,11 @@ try:
 except ImportError:
     PROMETHEUS_AVAILABLE = False
 
-router = APIRouter(prefix="/monitor/graph", tags=["GraphRAG Monitoring"])
+router = APIRouter(
+    prefix="/monitor/graph",
+    tags=["GraphRAG Monitoring"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 
 # GraphRAG specific metrics
 if PROMETHEUS_AVAILABLE:

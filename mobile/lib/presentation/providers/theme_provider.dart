@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 
-/// Provider for theme manager singleton
-final themeManagerProvider = Provider((ref) {
+/// Provider for theme manager singleton (listens to updates).
+final themeManagerProvider = ChangeNotifierProvider<ThemeManager>((ref) {
   return ThemeManager();
 });
 
-/// Provider to manage the application's ThemeMode (Light, Dark, System)
-final themeModeProvider = StateProvider<AppThemeMode>((ref) {
-  return ThemeManager().mode;
+/// Provider to expose the application's theme mode.
+final themeModeProvider = Provider<AppThemeMode>((ref) {
+  return ref.watch(themeManagerProvider).mode;
 });
 
-/// Provider to manage brand preset
-final brandPresetProvider = StateProvider<BrandPreset>((ref) {
-  return ThemeManager().brandPreset;
+/// Provider to expose brand preset.
+final brandPresetProvider = Provider<BrandPreset>((ref) {
+  return ref.watch(themeManagerProvider).brandPreset;
 });
 
-/// Provider to manage high contrast mode
-final highContrastProvider = StateProvider<bool>((ref) {
-  return ThemeManager().highContrast;
+/// Provider to expose high contrast mode.
+final highContrastProvider = Provider<bool>((ref) {
+  return ref.watch(themeManagerProvider).highContrast;
 });
 
 /// Helper to convert AppThemeMode to ThemeMode

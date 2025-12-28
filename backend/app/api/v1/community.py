@@ -4,6 +4,7 @@ Community API - 好友、群组、消息、打卡、任务相关接口
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional
 from uuid import UUID
 
@@ -13,7 +14,7 @@ from app.api.deps import get_current_user
 from app.core.websocket import manager
 from app.core.rate_limiting import limiter
 from app.models.user import User, UserStatus
-from app.models.community import GroupType
+from app.models.community import GroupType, GroupMember
 from app.schemas.community import (
     # 好友
     FriendRequest, FriendResponse, FriendshipInfo, FriendRecommendation,
@@ -269,7 +270,8 @@ async def search_users(
 async def websocket_endpoint(
     websocket: WebSocket,
     group_id: UUID,
-    token: str = Query(...)
+    token: str = Query(...),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     群组实时通讯 WebSocket 接口
@@ -277,9 +279,20 @@ async def websocket_endpoint(
     """
     try:
         # 验证 Token
-        payload = decode_token(token)
+        payload = decode_token(token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
+            await websocket.close(code=4003)
+            return
+
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == UUID(user_id),
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if not membership_result.scalar_one_or_none():
             await websocket.close(code=4003)
             return
             
@@ -612,7 +625,7 @@ async def user_websocket_endpoint(
     """
     user_id = None
     try:
-        payload = decode_token(token)
+        payload = decode_token(token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)

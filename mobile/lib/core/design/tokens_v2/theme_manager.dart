@@ -22,7 +22,7 @@ class ThemeManager extends ChangeNotifier {
   /// 当前主题数据
   SparkleThemeData get current {
     if (!_initialized) {
-      return SparkleThemeData.light();
+      return themeForBrightness(Brightness.light);
     }
     return _resolveCurrentTheme();
   }
@@ -78,22 +78,24 @@ class ThemeManager extends ChangeNotifier {
   }
 
   /// 解析当前主题
-  SparkleThemeData _resolveCurrentTheme() {
-    Brightness brightness;
+  SparkleThemeData _resolveCurrentTheme() => themeForBrightness(_resolveBrightness());
 
+  Brightness _resolveBrightness() {
     switch (_mode) {
       case AppThemeMode.light:
-        brightness = Brightness.light;
+        return Brightness.light;
       case AppThemeMode.dark:
-        brightness = Brightness.dark;
+        return Brightness.dark;
       case AppThemeMode.system:
-        brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        return WidgetsBinding.instance.platformDispatcher.platformBrightness;
     }
+  }
 
+  /// 根据亮度生成主题（忽略当前模式，便于构建 light/dark theme）
+  SparkleThemeData themeForBrightness(Brightness brightness) {
     final baseTheme = brightness == Brightness.light
         ? SparkleThemeData.light(highContrast: _highContrast)
         : SparkleThemeData.dark(highContrast: _highContrast);
-
     return _applyBrandPreset(baseTheme);
   }
 

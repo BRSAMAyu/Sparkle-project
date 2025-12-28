@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/app/theme.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
@@ -43,7 +40,7 @@ class WeatherHeader extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textOnDark(context),
+                        color: DS.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -54,7 +51,7 @@ class WeatherHeader extends ConsumerWidget {
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: AppColors.textOnDark(context).withValues(alpha: 0.6),
+                    color: DS.textSecondary.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -69,13 +66,13 @@ class WeatherHeader extends ConsumerWidget {
     switch (type) {
       case 'sunny':
         return LinearGradient(
-          colors: [DS.deepSpaceStart, DS.deepSpaceEnd, Color(0xFF415A77)],
+          colors: [DS.deepSpaceStart, DS.deepSpaceEnd, DS.neutral700],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'cloudy':
         return LinearGradient(
-          colors: [Color(0xFF1A1A1A), Color(0xFF2C3E50), Color(0xFF4B5D67)],
+          colors: [DS.neutral900, DS.neutral800, DS.neutral700],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
@@ -87,7 +84,7 @@ class WeatherHeader extends ConsumerWidget {
         );
       case 'meteor':
         return LinearGradient(
-          colors: [Color(0xFF1A0B2E), Color(0xFF2D1B4E), Color(0xFF4A148C)],
+          colors: [DS.neutral900, DS.neutral800, DS.secondaryBaseDark],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
@@ -114,7 +111,7 @@ class WeatherHeader extends ConsumerWidget {
       default:
         icon = Icons.wb_sunny_rounded;
     }
-    return Icon(icon, color: AppColors.textOnDark(context), size: 18);
+    return Icon(icon, color: DS.brandPrimary, size: 18);
   }
 
   String _getWeatherTitle(String type) {

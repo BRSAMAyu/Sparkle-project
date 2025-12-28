@@ -52,15 +52,20 @@ class _ParallaxLayersPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Fill with deep space void - Radial Gradient
+    // Fill with deep space void - use theme-aware colors
     final center = Offset(size.width / 2, size.height / 2);
+
+    // Use gradient that adapts to light/dark theme
+    final startColor = DS.deepSpaceStart;
+    final endColor = DS.deepSpaceEnd;
+
     final gradient = ui.Gradient.radial(
       center,
       math.max(size.width, size.height) * 0.8,
       [
-        const Color(0xFF0D1B2A), // Dark blue-gray at center
-        const Color(0xFF0A1628), // Darker at edges
-        const Color(0xFF050A10), // Almost black at far edges
+        startColor,
+        Color.lerp(startColor, endColor, 0.5) ?? endColor,
+        endColor,
       ],
       [0.0, 0.5, 1.0],
     );
@@ -117,9 +122,11 @@ class _ParallaxLayersPainter extends CustomPainter {
       // Draw star
       final r = baseSize * (0.8 + random.nextDouble() * 0.4);
       // Scale star size slightly with zoom to give depth feeling (optional)
-      // r = r * (0.5 + scale * 0.5); 
-      
-      paint.color = DS.brandPrimary.withValues(alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
+      // r = r * (0.5 + scale * 0.5);
+
+      // Use white/light color for stars that stands out from background
+      // Opacity varies by layer and randomness for twinkling effect
+      paint.color = Colors.white.withValues(alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
       canvas.drawCircle(Offset(x, y), r, paint);
     }
   }

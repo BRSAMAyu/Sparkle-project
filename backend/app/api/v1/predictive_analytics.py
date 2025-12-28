@@ -14,7 +14,8 @@ from typing import Optional
 from uuid import UUID
 from loguru import logger
 
-from app.core.deps import get_db, get_current_user
+from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from app.services.predictive_service import PredictiveService
 

@@ -2,9 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/app/theme.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
@@ -82,7 +79,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textOnDark(context).withValues(alpha: 0.7),
+                        color: DS.textSecondary.withValues(alpha: 0.7),
                       ),
                     ),
                     Container(
@@ -96,7 +93,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textOnDark(context),
+                          color: DS.textSecondary,
                         ),
                       ),
                     ),
@@ -127,7 +124,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                               ),
                               child: Icon(
                                 Icons.local_fire_department_rounded,
-                                color: AppColors.iconOnDark(context),
+                                color: DS.warning,
                                 size: 32,
                               ),
                             ),
@@ -147,7 +144,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           style: TextStyle(
                             fontSize: 11,
                             height: 1.3,
-                            color: AppColors.textOnDark(context).withValues(alpha: 0.9),
+                            color: DS.textSecondary.withValues(alpha: 0.9),
                             fontStyle: FontStyle.italic,
                           ),
                           maxLines: 3,
@@ -184,7 +181,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.textOnDark(context),
+            color: DS.textSecondary,
           ),
         ),
         const SizedBox(height: 2),
@@ -192,7 +189,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
           label,
           style: TextStyle(
             fontSize: 10,
-            color: AppColors.textOnDark(context).withValues(alpha: 0.6),
+            color: DS.textSecondary.withValues(alpha: 0.6),
           ),
         ),
       ],

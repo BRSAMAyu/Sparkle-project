@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sparkle/app/app.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/chat_cache_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 
@@ -18,6 +19,9 @@ void main() async {
 
   // Initialize SharedPrefs
   await SharedPreferences.getInstance();
+
+  // Initialize design system (theme, tokens)
+  await DesignSystemInitializer.initialize();
 
   // Enable Demo Mode via --dart-define=DEMO_MODE=true
   const isDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);

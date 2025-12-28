@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
@@ -27,6 +28,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final enterToSend = ref.watch(enterToSendProvider);
+    final themeManager = ref.read(themeManagerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,7 +92,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 underline: const SizedBox.shrink(),
                 onChanged: (AppThemeMode? newValue) {
                   if (newValue != null) {
-                    ref.read(themeModeProvider.notifier).state = newValue;
+                    unawaited(themeManager.setAppThemeMode(newValue));
                   }
                 },
                 items: [

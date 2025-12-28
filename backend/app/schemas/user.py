@@ -57,6 +57,7 @@ class SocialLoginRequest(BaseModel):
     """Social login request"""
     provider: str = Field(description="Provider (google, apple, wechat)")
     token: str = Field(description="ID Token or Auth Code")
+    openid: Optional[str] = Field(default=None, description="WeChat OpenID")
     email: Optional[EmailStr] = Field(default=None, description="Email (if available)")
     nickname: Optional[str] = Field(default=None, description="Nickname (if available)")
     avatar_url: Optional[str] = Field(default=None, description="Avatar URL (if available)")

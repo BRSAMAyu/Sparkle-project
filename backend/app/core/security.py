@@ -4,8 +4,9 @@ JWT token generation, password hashing, etc.
 """
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import uuid4
 
-from jose import jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.config import settings
@@ -37,13 +38,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     创建 JWT access token
     """
     to_encode = data.copy()
+    now = datetime.utcnow()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode.update({"exp": expire, "type": "access"})
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update(
+        {"exp": expire, "iat": now, "jti": str(uuid4()), "type": "access"}
+    )
     encoded_jwt = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
@@ -55,19 +57,33 @@ def create_refresh_token(data: dict) -> str:
     创建 JWT refresh token
     """
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    now = datetime.utcnow()
+    expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update(
+        {"exp": expire, "iat": now, "jti": str(uuid4()), "type": "refresh"}
+    )
     encoded_jwt = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
     return encoded_jwt
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
     """
     解码 JWT token
     """
-    payload = jwt.decode(
-        token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-    )
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+    except JWTError as exc:
+        raise exc
+
+    if "exp" not in payload or "sub" not in payload:
+        raise JWTError("Token missing required claims")
+
+    token_type = payload.get("type")
+    if expected_type and token_type != expected_type:
+        raise JWTError("Invalid token type")
+
     return payload

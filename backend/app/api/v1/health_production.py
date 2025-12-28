@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.db.session import get_db
+from app.api.deps import get_current_active_superuser
+from app.models.user import User
 from app.core.cache import cache_service
 from app.config import settings
 
@@ -39,7 +41,8 @@ START_TIME = time.time()
 @router.get("/", response_model=Dict[str, Any])
 async def health_check(
     db: AsyncSession = Depends(get_db),
-    detailed: bool = False
+    detailed: bool = False,
+    current_user: User = Depends(get_current_active_superuser)
 ) -> Dict[str, Any]:
     """
     基础健康检查
@@ -113,7 +116,8 @@ async def health_check(
 @router.get("/detailed", response_model=Dict[str, Any])
 async def health_detailed(
     db: AsyncSession = Depends(get_db),
-    orchestrator: Optional[Any] = None
+    orchestrator: Optional[Any] = None,
+    current_user: User = Depends(get_current_active_superuser)
 ) -> Dict[str, Any]:
     """
     详细健康检查（包含业务指标）
@@ -188,7 +192,9 @@ async def liveness_check() -> Dict[str, Any]:
 
 
 @router.get("/metrics")
-async def prometheus_metrics():
+async def prometheus_metrics(
+    current_user: User = Depends(get_current_active_superuser)
+):
     """
     Prometheus 指标端点
 
@@ -208,7 +214,9 @@ async def prometheus_metrics():
 
 
 @router.get("/queue/status")
-async def queue_status() -> Dict[str, Any]:
+async def queue_status(
+    current_user: User = Depends(get_current_active_superuser)
+) -> Dict[str, Any]:
     """
     队列状态检查
 
@@ -254,7 +262,9 @@ async def queue_status() -> Dict[str, Any]:
 
 
 @router.get("/prometheus/alerts")
-async def prometheus_alerts() -> Dict[str, Any]:
+async def prometheus_alerts(
+    current_user: User = Depends(get_current_active_superuser)
+) -> Dict[str, Any]:
     """
     简单的告警规则（用于 Prometheus AlertManager）
 

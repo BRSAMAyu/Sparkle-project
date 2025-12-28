@@ -211,7 +211,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                         borderRadius: _getBorderRadius(true),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: DS.primaryBase.withValues(alpha: 0.25),
+                                            color: DS.brandPrimary.withValues(alpha: 0.25),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
@@ -327,9 +327,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: isUser ? DS.brandPrimary.withValues(alpha: 0.15) : context.colors.surfaceElevated.withValues(alpha: 0.5),
+        color: context.colors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
-        border: Border(left: BorderSide(color: isUser ? DS.brandPrimary70 : DS.primaryBase, width: 3)),
+        border: Border(left: BorderSide(color: DS.brandPrimary, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +338,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
             msg.sender.displayName,
             style: TextStyle(
               fontSize: 11, fontWeight: FontWeight.bold,
-              color: isUser ? DS.brandPrimary : DS.primaryBase,
+              color: DS.brandPrimary,
             ),
           ),
           SizedBox(height: 2),
@@ -419,7 +419,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isUser ? DS.primaryBase : DS.secondaryBase).withValues(alpha: 0.2),
+            color: (isUser ? DS.brandPrimary : DS.brandSecondary).withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -430,25 +430,28 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: isUser ? DS.brandPrimary : (isDark ? DS.neutral800 : DS.brandPrimary),
+            color: isUser ? DS.brandPrimary : DS.brandSecondary,
             shape: BoxShape.circle,
           ),
           clipBehavior: Clip.antiAlias,
-          child: avatarUrl != null 
+          child: avatarUrl != null
             ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => Center(child: Text(initial)))
-            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isUser ? DS.primaryBase : DS.secondaryBase))),
+            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))),
         ),
       ),
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
-      p: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: DS.fontSizeBase, height: DS.lineHeightNormal),
-      h1: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: DS.fontSizeXl, fontWeight: DS.fontWeightBold),
-      code: TextStyle(backgroundColor: isUser ? DS.brandPrimary.withValues(alpha: 0.2) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: DS.fontSizeSm, color: isUser ? DS.brandPrimary : DS.secondaryBase),
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
+    final textColor = isUser ? Colors.white : context.colors.textPrimary;
+    return MarkdownStyleSheet(
+      p: TextStyle(color: textColor, fontSize: DS.fontSizeBase, height: DS.lineHeightNormal),
+      h1: TextStyle(color: textColor, fontSize: DS.fontSizeXl, fontWeight: DS.fontWeightBold),
+      code: TextStyle(backgroundColor: isUser ? DS.brandPrimary.withValues(alpha: 0.3) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: DS.fontSizeSm, color: textColor),
       codeblockDecoration: BoxDecoration(color: isUser ? DS.brandPrimary.withValues(alpha: 0.1) : context.colors.surfaceElevated, borderRadius: DS.borderRadius12),
-      a: TextStyle(color: isUser ? DS.brandPrimary : DS.primaryBase, decoration: TextDecoration.underline),
+      a: TextStyle(color: isUser ? DS.brandSecondary : DS.brandPrimary, decoration: TextDecoration.underline),
     );
+  }
 
   BorderRadius _getBorderRadius(bool isUser) => BorderRadius.only(
       topLeft: const Radius.circular(16),

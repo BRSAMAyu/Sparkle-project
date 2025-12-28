@@ -16,8 +16,8 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.user import (
-    UserRegister, UserLogin, RefreshTokenRequest, 
-    SocialLoginRequest
+    UserRegister, UserLogin, RefreshTokenRequest,
+    SocialLoginRequest, UserBase
 )
 from app.config import settings
 from app.core.rate_limiting import limiter
@@ -70,7 +70,7 @@ async def register(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     return {
-        "user": user,
+        "user": UserBase.model_validate(user),
         "token": {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -174,10 +174,12 @@ async def social_login(
         if data.provider == 'google':
             # Google token verification
             import httpx
-            async with httpx.AsyncClient() as client:
+            timeout = httpx.Timeout(5.0, connect=5.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 # Verify Google ID token
                 response = await client.get(
-                    f"https://oauth2.googleapis.com/tokeninfo?id_token={data.token}"
+                    "https://oauth2.googleapis.com/tokeninfo",
+                    params={"id_token": data.token}
                 )
                 if response.status_code != 200:
                     raise HTTPException(status_code=401, detail="Invalid Google token")
@@ -185,6 +187,10 @@ async def social_login(
                 token_info = response.json()
                 if token_info.get('iss') not in ['https://accounts.google.com', 'accounts.google.com']:
                     raise HTTPException(status_code=401, detail="Invalid token issuer")
+                if settings.GOOGLE_CLIENT_ID and token_info.get("aud") != settings.GOOGLE_CLIENT_ID:
+                    raise HTTPException(status_code=401, detail="Invalid token audience")
+                if token_info.get("email_verified") not in (True, "true", "True", "1"):
+                    raise HTTPException(status_code=401, detail="Email not verified")
                 
                 social_id = token_info.get('sub')
                 user_info = {
@@ -194,12 +200,16 @@ async def social_login(
                 }
         
         elif data.provider == 'wechat':
+            if not data.openid:
+                raise HTTPException(status_code=400, detail="Missing openid for WeChat login")
             # WeChat token verification
             import httpx
-            async with httpx.AsyncClient() as client:
+            timeout = httpx.Timeout(5.0, connect=5.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 # WeChat uses different flow - verify access token
                 response = await client.get(
-                    f"https://api.weixin.qq.com/sns/auth?access_token={data.token}&openid={data.openid}"
+                    "https://api.weixin.qq.com/sns/auth",
+                    params={"access_token": data.token, "openid": data.openid}
                 )
                 if response.status_code != 200:
                     raise HTTPException(status_code=401, detail="Invalid WeChat token")
@@ -291,11 +301,13 @@ async def refresh_token(
     Refresh access token
     """
     try:
-        payload = decode_token(data.refresh_token)
-        if payload.get("type") != "refresh":
-             raise HTTPException(status_code=401, detail="Invalid token type")
+        payload = decode_token(data.refresh_token, expected_type="refresh")
         user_id = payload.get("sub")
         if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        user = await db.get(User, user_id)
+        if not user or not user.is_active:
             raise HTTPException(status_code=401, detail="Invalid token")
             
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

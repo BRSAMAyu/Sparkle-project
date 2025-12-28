@@ -60,10 +60,17 @@ class SectorStyle {
     // 掌握度越高，颜色越亮，但不能变成纯白
     // 限制最大亮度在 0.85，保证仍有色彩倾向
     final masteryFactor = masteryScore / 100.0;
-    final targetLightness = (hsl.lightness + 0.2).clamp(0.0, 0.85); 
-    final newLightness = hsl.lightness + (targetLightness - hsl.lightness) * masteryFactor;
 
-    return hsl.withLightness(newLightness.clamp(0.0, 0.85)).toColor();
+    // 如果颜色过暗（如在深色背景），提升基础亮度
+    var baseLightness = hsl.lightness;
+    if (baseLightness < 0.3) {
+      baseLightness += 0.2; // 提升深色节点的亮度使其在深背景上可见
+    }
+
+    final targetLightness = (baseLightness + 0.2).clamp(0.0, 0.85);
+    final newLightness = baseLightness + (targetLightness - baseLightness) * masteryFactor;
+
+    return hsl.withLightness(newLightness.clamp(0.2, 0.85)).toColor();
   }
 }
 

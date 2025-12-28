@@ -62,49 +62,49 @@ class _RelationStyle {
   static _RelationStyle forType(EdgeRelationType type) {
     switch (type) {
       case EdgeRelationType.prerequisite:
-        return const _RelationStyle(
-          color: Color(0xFF4FC3F7),  // 浅蓝色 - 前置知识
+        return _RelationStyle(
+          color: DS.info,  // 浅蓝色 - 前置知识
           baseWidth: 2.0,
         );
       case EdgeRelationType.derived:
-        return const _RelationStyle(
-          color: Color(0xFF81C784),  // 浅绿色 - 衍生知识
+        return _RelationStyle(
+          color: DS.success,  // 浅绿色 - 衍生知识
           baseWidth: 1.8,
         );
       case EdgeRelationType.related:
-        return const _RelationStyle(
-          color: Color(0xFFFFB74D),  // 橙色 - 相关知识
+        return _RelationStyle(
+          color: DS.warning,  // 橙色 - 相关知识
           isDashed: true,
           dashLength: 8,
           baseWidth: 1.2,
         );
       case EdgeRelationType.similar:
-        return const _RelationStyle(
-          color: Color(0xFFBA68C8),  // 紫色 - 相似概念
+        return _RelationStyle(
+          color: DS.taskReflection,  // 紫色 - 相似概念
           isDashed: true,
           dashLength: 4,
           baseWidth: 1.0,
         );
       case EdgeRelationType.contrast:
-        return const _RelationStyle(
-          color: Color(0xFFE57373),  // 红色 - 对比概念
+        return _RelationStyle(
+          color: DS.error,  // 红色 - 对比概念
           isDashed: true,
           dashLength: 12,
         );
       case EdgeRelationType.application:
-        return const _RelationStyle(
-          color: Color(0xFF4DB6AC),  // 青色 - 应用场景
+        return _RelationStyle(
+          color: DS.taskPlanning,  // 青色 - 应用场景
         );
       case EdgeRelationType.example:
-        return const _RelationStyle(
-          color: Color(0xFF90A4AE),  // 灰色 - 具体示例
+        return _RelationStyle(
+          color: DS.textSecondary,  // 灰色 - 具体示例
           isDashed: true,
           dashLength: 6,
           baseWidth: 1.0,
         );
       case EdgeRelationType.parentChild:
         return _RelationStyle(
-          color: Color(0xFFFF6B35), // DS.brandPrimary
+          color: DS.brandPrimary,
           baseWidth: 1.8,
         );
     }
