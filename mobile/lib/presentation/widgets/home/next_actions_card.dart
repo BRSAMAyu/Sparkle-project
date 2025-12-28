@@ -1,19 +1,19 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/data/models/task_model.dart';
 
 /// NextActionsCard - Next Actions Card (1x2 tall)
 class NextActionsCard extends ConsumerWidget {
-  final VoidCallback? onViewAll;
 
   const NextActionsCard({super.key, this.onViewAll});
+  final VoidCallback? onViewAll;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,9 +60,7 @@ class NextActionsCard extends ConsumerWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: nextActions.length.clamp(0, 1),
                         separatorBuilder: (context, index) => const SizedBox(height: DS.sm),
-                        itemBuilder: (context, index) {
-                          return _NextActionItem(task: nextActions[index]);
-                        },
+                        itemBuilder: (context, index) => _NextActionItem(task: nextActions[index]),
                       ),
               ),
             ],
@@ -72,8 +70,7 @@ class NextActionsCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -86,16 +83,14 @@ class NextActionsCard extends ConsumerWidget {
         ],
       ),
     );
-  }
 }
 
 class _NextActionItem extends ConsumerWidget {
-  final TaskData task;
   const _NextActionItem({required this.task});
+  final TaskData task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
+  Widget build(BuildContext context, WidgetRef ref) => GestureDetector(
       onTap: () {
         final taskModel = _toTaskModel(task);
         context.push('/focus/mindfulness', extra: taskModel);
@@ -150,7 +145,6 @@ class _NextActionItem extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Color _getTypeColor(String type) {
     switch (type) {
@@ -162,8 +156,7 @@ class _NextActionItem extends ConsumerWidget {
     }
   }
 
-  TaskModel _toTaskModel(TaskData data) {
-    return TaskModel(
+  TaskModel _toTaskModel(TaskData data) => TaskModel(
       id: data.id,
       userId: '',
       title: data.title,
@@ -177,7 +170,6 @@ class _NextActionItem extends ConsumerWidget {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-  }
 
   TaskType _parseTaskType(String type) {
     switch (type) {

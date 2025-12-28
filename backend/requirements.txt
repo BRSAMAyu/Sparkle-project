@@ -58,4 +58,10 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-grpc
 opentelemetry-instrumentation-sqlalchemy
 opentelemetry-instrumentation-requests
-opentelemetry-instrumentation-redisnetworkx>=3.2.1
+opentelemetry-instrumentation-redis
+networkx>=3.2.1
+
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0

@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 火焰等级指示器组件
@@ -9,6 +8,15 @@ import 'package:sparkle/core/design/design_tokens.dart';
 /// 用于可视化用户的火焰等级和亮度
 /// 包含圆环进度条、火焰图标和脉冲动画
 class FlameIndicator extends StatefulWidget {
+
+  const FlameIndicator({
+    required this.level, required this.brightness, super.key,
+    this.size = 120.0,
+    this.showLabel = true,
+    this.animate = true,
+    this.customGradient,
+    this.onTap,
+  });
   /// 火焰等级 (0-100)
   final int level;
 
@@ -29,15 +37,6 @@ class FlameIndicator extends StatefulWidget {
 
   /// 点击回调
   final VoidCallback? onTap;
-
-  const FlameIndicator({
-    required this.level, required this.brightness, super.key,
-    this.size = 120.0,
-    this.showLabel = true,
-    this.animate = true,
-    this.customGradient,
-    this.onTap,
-  });
 
   @override
   State<FlameIndicator> createState() => _FlameIndicatorState();
@@ -130,8 +129,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: widget.onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -139,8 +137,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
           // 火焰指示器主体
           AnimatedBuilder(
             animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
+            builder: (context, child) => Transform.scale(
                 scale: widget.animate ? _pulseAnimation.value : 1.0,
                 child: SizedBox(
                   width: widget.size,
@@ -178,8 +175,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
                     ],
                   ),
                 ),
-              );
-            },
+              ),
           ),
           // 标签
           if (widget.showLabel) ...[
@@ -189,13 +185,10 @@ class _FlameIndicatorState extends State<FlameIndicator>
         ],
       ),
     );
-  }
 
-  Widget _buildFlameIcon() {
-    return AnimatedBuilder(
+  Widget _buildFlameIcon() => AnimatedBuilder(
       animation: _rotationController,
-      builder: (context, child) {
-        return Transform.rotate(
+      builder: (context, child) => Transform.rotate(
           angle: widget.animate
               ? _rotationController.value * 2 * math.pi * 0.1
               : 0.0,
@@ -219,13 +212,10 @@ class _FlameIndicatorState extends State<FlameIndicator>
               color: DS.brandPrimary,
             ),
           ),
-        );
-      },
+        ),
     );
-  }
 
-  Widget _buildLabel() {
-    return Column(
+  Widget _buildLabel() => Column(
       children: [
         // 等级
         Row(
@@ -258,15 +248,10 @@ class _FlameIndicatorState extends State<FlameIndicator>
         ),
       ],
     );
-  }
 }
 
 /// 圆环进度条绘制器
 class _CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final LinearGradient gradient;
-  final Color backgroundColor;
-  final double strokeWidth;
 
   _CircularProgressPainter({
     required this.progress,
@@ -274,6 +259,10 @@ class _CircularProgressPainter extends CustomPainter {
     required this.backgroundColor,
     required this.strokeWidth,
   });
+  final double progress;
+  final LinearGradient gradient;
+  final Color backgroundColor;
+  final double strokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -327,26 +316,24 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CircularProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
+  bool shouldRepaint(_CircularProgressPainter oldDelegate) => oldDelegate.progress != progress ||
         oldDelegate.gradient != gradient ||
         oldDelegate.backgroundColor != backgroundColor ||
         oldDelegate.strokeWidth != strokeWidth;
-  }
 }
 
 /// 紧凑型火焰指示器
 ///
 /// 用于在小空间中显示火焰状态
 class CompactFlameIndicator extends StatelessWidget {
-  final int level;
-  final int brightness;
-  final VoidCallback? onTap;
 
   const CompactFlameIndicator({
     required this.level, required this.brightness, super.key,
     this.onTap,
   });
+  final int level;
+  final int brightness;
+  final VoidCallback? onTap;
 
   Color _getFlameColor() {
     if (brightness >= 80) {
@@ -361,8 +348,7 @@ class CompactFlameIndicator extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -374,7 +360,6 @@ class CompactFlameIndicator extends StatelessWidget {
           borderRadius: AppDesignTokens.borderRadius12,
           border: Border.all(
             color: _getFlameColor().withValues(alpha: 0.3),
-            width: 1.0,
           ),
         ),
         child: Row(
@@ -411,5 +396,4 @@ class CompactFlameIndicator extends StatelessWidget {
         ),
       ),
     );
-  }
 }

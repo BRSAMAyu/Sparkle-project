@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 任务列表组件
 /// 用于在聊天中批量显示 AI 生成的任务
-class TaskListWidget extends StatelessWidget {
-  final List<dynamic> tasks; // List of Map<String, dynamic>
+class TaskListWidget extends StatelessWidget { // List of Map<String, dynamic>
 
   const TaskListWidget({
     required this.tasks, super.key,
   });
+  final List<dynamic> tasks;
 
   @override
   Widget build(BuildContext context) {
@@ -87,13 +86,13 @@ class TaskListWidget extends StatelessWidget {
     IconData icon;
     Color color;
     switch (type) {
-      case 'learning': icon = Icons.menu_book; color = DS.brandPrimary; break;
-      case 'training': icon = Icons.fitness_center; color = Colors.orange; break;
-      case 'error_fix': icon = Icons.bug_report; color = DS.error; break;
-      case 'reflection': icon = Icons.psychology; color = Colors.purple; break;
-      case 'social': icon = Icons.people; color = Colors.teal; break;
-      case 'planning': icon = Icons.event_note; color = DS.success; break;
-      default: icon = Icons.task_alt; color = DS.brandPrimary; break;
+      case 'learning': icon = Icons.menu_book; color = DS.brandPrimary;
+      case 'training': icon = Icons.fitness_center; color = DS.brandPrimary;
+      case 'error_fix': icon = Icons.bug_report; color = DS.error;
+      case 'reflection': icon = Icons.psychology; color = Colors.purple;
+      case 'social': icon = Icons.people; color = Colors.teal;
+      case 'planning': icon = Icons.event_note; color = DS.success;
+      default: icon = Icons.task_alt; color = DS.brandPrimary;
     }
     return Icon(icon, size: 24, color: color);
   }
@@ -102,11 +101,11 @@ class TaskListWidget extends StatelessWidget {
     Color color;
     String label;
     switch (status) {
-      case 'pending': color = DS.brandPrimary; label = '待办'; break;
-      case 'in_progress': color = DS.brandPrimary; label = '进行中'; break;
-      case 'completed': color = DS.success; label = '已完成'; break;
-      case 'abandoned': color = DS.error; label = '已放弃'; break;
-      default: color = DS.brandPrimary; label = status; break;
+      case 'pending': color = DS.brandPrimary; label = '待办';
+      case 'in_progress': color = DS.brandPrimary; label = '进行中';
+      case 'completed': color = DS.success; label = '已完成';
+      case 'abandoned': color = DS.error; label = '已放弃';
+      default: color = DS.brandPrimary; label = status;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

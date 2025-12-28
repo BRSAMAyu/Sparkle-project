@@ -1,9 +1,9 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
@@ -72,8 +72,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                   bottom: -20,
                   child: AnimatedBuilder(
                     animation: _breathingAnimation,
-                    builder: (context, child) {
-                      return Container(
+                    builder: (context, child) => Container(
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
@@ -85,8 +84,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                             ],
                           ),
                         ),
-                      );
-                    },
+                      ),
                   ),
                 ),
                 
@@ -153,8 +151,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
     );
   }
 
-  Widget _buildTag(String text) {
-    return Container(
+  Widget _buildTag(String text) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(20),
@@ -170,5 +167,4 @@ class _PrismCardState extends ConsumerState<PrismCard>
         ),
       ),
     );
-  }
 }

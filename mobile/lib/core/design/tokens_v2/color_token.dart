@@ -3,30 +3,26 @@ import 'package:flutter/material.dart';
 /// 颜色令牌 - 支持语义化和动态变体
 @immutable
 class ColorToken {
-  final String name;
-  final int value;
 
   const ColorToken(this.name, this.value);
+  final String name;
+  final int value;
 
   /// 获取Color对象
   Color get color => Color(value);
 
   /// 创建透明度变体
-  ColorToken withOpacity(double opacity) {
-    return ColorToken('$name.opacity$opacity', (value & 0x00FFFFFF) | ((opacity * 255).toInt() << 24));
-  }
+  ColorToken withOpacity(double opacity) => ColorToken('$name.opacity$opacity', (value & 0x00FFFFFF) | ((opacity * 255).toInt() << 24));
 
   /// 深色模式变体
   ColorTokenVariant variant({
     required Color dark,
     required Color highContrast,
-  }) {
-    return ColorTokenVariant(
+  }) => ColorTokenVariant(
       light: color,
       dark: dark,
       highContrast: highContrast,
     );
-  }
 
   @override
   bool operator ==(Object other) =>
@@ -43,15 +39,15 @@ class ColorToken {
 /// 颜色变体 - 支持多模式
 @immutable
 class ColorTokenVariant {
-  final Color light;
-  final Color dark;
-  final Color highContrast;
 
   const ColorTokenVariant({
     required this.light,
     required this.dark,
     required this.highContrast,
   });
+  final Color light;
+  final Color dark;
+  final Color highContrast;
 
   Color resolve(Brightness brightness, {bool highContrast = false}) {
     if (highContrast) return this.highContrast;
@@ -62,22 +58,16 @@ class ColorTokenVariant {
     Color? light,
     Color? dark,
     Color? highContrast,
-  }) {
-    return ColorTokenVariant(
+  }) => ColorTokenVariant(
       light: light ?? this.light,
       dark: dark ?? this.dark,
       highContrast: highContrast ?? this.highContrast,
     );
-  }
 }
 
 /// 颜色组 - 用于品牌系统
 @immutable
 class ColorGroup {
-  final ColorToken primary;
-  final ColorToken? light;
-  final ColorToken? dark;
-  final ColorToken? contrast;
 
   const ColorGroup({
     required this.primary,
@@ -85,6 +75,10 @@ class ColorGroup {
     this.dark,
     this.contrast,
   });
+  final ColorToken primary;
+  final ColorToken? light;
+  final ColorToken? dark;
+  final ColorToken? contrast;
 
   ColorToken get base => primary;
   ColorToken get lighter => light ?? primary;

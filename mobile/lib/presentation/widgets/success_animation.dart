@@ -1,11 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class SuccessAnimation extends StatefulWidget {
-  final Widget? child;
-  final bool playAnimation;
-  final VoidCallback? onAnimationComplete;
 
   const SuccessAnimation({
     super.key,
@@ -13,6 +10,9 @@ class SuccessAnimation extends StatefulWidget {
     this.playAnimation = false,
     this.onAnimationComplete,
   });
+  final Widget? child;
+  final bool playAnimation;
+  final VoidCallback? onAnimationComplete;
 
   @override
   State<SuccessAnimation> createState() => _SuccessAnimationState();
@@ -57,8 +57,7 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
+  Widget build(BuildContext context) => Stack(
       children: [
         if (widget.child != null) widget.child!,
         Align(
@@ -66,7 +65,6 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
           child: ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive, // All directions
-            shouldLoop: false, // Don't loop by default
             colors: const [
               AppDesignTokens.primaryBase,
               AppDesignTokens.accent,
@@ -82,5 +80,4 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
         ),
       ],
     );
-  }
 }

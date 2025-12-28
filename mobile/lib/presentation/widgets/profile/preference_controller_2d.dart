@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class PreferenceController2D extends StatefulWidget {
-  final double initialDepth; // 0.0 to 1.0 (Top is 1.0)
-  final double initialCuriosity; // 0.0 to 1.0 (Right is 1.0)
-  final ValueChanged<Offset> onPreferenceChanged;
 
   const PreferenceController2D({
     required this.onPreferenceChanged, super.key,
     this.initialDepth = 0.5,
     this.initialCuriosity = 0.5,
   });
+  final double initialDepth; // 0.0 to 1.0 (Top is 1.0)
+  final double initialCuriosity; // 0.0 to 1.0 (Right is 1.0)
+  final ValueChanged<Offset> onPreferenceChanged;
 
   @override
   State<PreferenceController2D> createState() => _PreferenceController2DState();
@@ -31,17 +30,16 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final double size = constraints.biggest.shortestSide;
+            final size = constraints.biggest.shortestSide;
             const double handleSize = 40; // Size of the draggable flame icon
 
             // Convert normalized position to local pixel coordinates
-            double x = _currentPosition.dx * size;
-            double y = _currentPosition.dy * size;
+            var x = _currentPosition.dx * size;
+            var y = _currentPosition.dy * size;
 
             // Clamp to ensure the center of the handle stays within bounds
             x = x.clamp(handleSize / 2, size - handleSize / 2);
@@ -49,12 +47,12 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
 
             return GestureDetector(
               onPanUpdate: (details) {
-                final RenderBox renderBox = context.findRenderObject() as RenderBox;
-                final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+                final renderBox = context.findRenderObject() as RenderBox;
+                final localPosition = renderBox.globalToLocal(details.globalPosition);
 
                 // Normalize to 0.0 - 1.0 range
-                final double newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
-                final double newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0); // Y-axis inverted
+                final newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
+                final newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0); // Y-axis inverted
 
                 setState(() {
                   _currentPosition = Offset(newCuriosity, 1.0 - newDepth);
@@ -62,11 +60,11 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                 widget.onPreferenceChanged(Offset(newCuriosity, newDepth));
               },
               onTapDown: (details) {
-                 final RenderBox renderBox = context.findRenderObject() as RenderBox;
-                 final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+                 final renderBox = context.findRenderObject() as RenderBox;
+                 final localPosition = renderBox.globalToLocal(details.globalPosition);
 
-                 final double newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
-                 final double newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0);
+                 final newCuriosity = (localPosition.dx / size).clamp(0.0, 1.0);
+                 final newDepth = 1.0 - (localPosition.dy / size).clamp(0.0, 1.0);
 
                  setState(() {
                    _currentPosition = Offset(newCuriosity, 1.0 - newDepth);
@@ -96,8 +94,6 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                       decoration: BoxDecoration(
                         borderRadius: AppDesignTokens.borderRadius16,
                         gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
                           colors: [
                             DS.brandPrimary.withValues(alpha: 0.1), // Low Curiosity (Focus) - Left
                             Colors.amber.withValues(alpha: 0.3), // High Curiosity - Right
@@ -145,7 +141,6 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
         ),
       ],
     );
-  }
 
   Widget _buildQuadrantLabels() {
     const labelPadding = 8.0;

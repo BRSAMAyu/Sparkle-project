@@ -1,29 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class AvatarOption {
-  final String id;
-  final String url;
-  final String label;
 
   const AvatarOption({
     required this.id,
     required this.url,
     required this.label,
   });
+  final String id;
+  final String url;
+  final String label;
 }
 
 class AvatarSelectionDialog extends StatelessWidget {
-  final String? currentAvatarUrl;
-  final Function(String) onAvatarSelected;
 
   const AvatarSelectionDialog({
     required this.onAvatarSelected, super.key,
     this.currentAvatarUrl,
   });
+  final String? currentAvatarUrl;
+  final Function(String) onAvatarSelected;
 
   static const List<AvatarOption> presets = [
     AvatarOption(
@@ -88,7 +87,7 @@ class AvatarSelectionDialog extends StatelessWidget {
               child: Column(
                 children: [
                   Expanded(
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -127,10 +126,7 @@ class AvatarSelectionDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
+        SparkleButton.ghost(label: '取消', onPressed: () => Navigator.pop(context)),
       ],
     );
   }

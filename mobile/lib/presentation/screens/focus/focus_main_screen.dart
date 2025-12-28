@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/presentation/providers/task_provider.dart';
 
 class FocusMainScreen extends ConsumerWidget {
   const FocusMainScreen({super.key});
@@ -27,7 +26,7 @@ class FocusMainScreen extends ConsumerWidget {
         child: Column(
           children: [
             const Padding(
-              padding: EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(DS.xl),
               child: Text(
                 '准备好开始专注了吗？',
                 style: TextStyle(
@@ -57,8 +56,7 @@ class FocusMainScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
+  Widget _buildEmptyState(BuildContext context) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -69,17 +67,12 @@ class FocusMainScreen extends ConsumerWidget {
             style: TextStyle(color: DS.brandPrimary70, fontSize: 16),
           ),
           const SizedBox(height: DS.sm),
-          TextButton(
-            onPressed: () => context.push('/tasks/new'),
-            child: const Text('创建一个新任务'),
-          ),
+          SparkleButton.ghost(label: '创建一个新任务', onPressed: () => context.push('/tasks/new')),
         ],
       ),
     );
-  }
 
-  Widget _buildTaskItem(BuildContext context, TaskModel task) {
-    return Card(
+  Widget _buildTaskItem(BuildContext context, TaskModel task) => Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: DS.brandPrimary.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -99,10 +92,8 @@ class FocusMainScreen extends ConsumerWidget {
         },
       ),
     );
-  }
 
-  Widget _buildQuickFocusButton(BuildContext context) {
-    return Padding(
+  Widget _buildQuickFocusButton(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: ElevatedButton(
         onPressed: () {
@@ -132,5 +123,4 @@ class FocusMainScreen extends ConsumerWidget {
         child: const Text('快速开启专注 (25min)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
-  }
 }

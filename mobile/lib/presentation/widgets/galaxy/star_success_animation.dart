@@ -1,11 +1,16 @@
 import 'dart:math';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// Animation that plays when a star is successfully "sparked"
 /// Shows a burst of particles emanating from the star position
 class StarSuccessAnimation extends StatefulWidget {
+
+  const StarSuccessAnimation({
+    required this.position, required this.color, required this.onComplete, super.key,
+    this.duration = const Duration(milliseconds: 600),
+  });
   /// Screen position of the star
   final Offset position;
 
@@ -17,11 +22,6 @@ class StarSuccessAnimation extends StatefulWidget {
 
   /// Duration of the animation
   final Duration duration;
-
-  const StarSuccessAnimation({
-    required this.position, required this.color, required this.onComplete, super.key,
-    this.duration = const Duration(milliseconds: 600),
-  });
 
   @override
   State<StarSuccessAnimation> createState() => _StarSuccessAnimationState();
@@ -60,7 +60,7 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
     );
 
     // Generate burst particles
-    for (int i = 0; i < 12; i++) {
+    for (var i = 0; i < 12; i++) {
       final angle = (i / 12) * 2 * pi + _random.nextDouble() * 0.3;
       final velocity = 80 + _random.nextDouble() * 60;
       _particles.add(
@@ -85,11 +85,9 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _SuccessAnimationPainter(
             center: widget.position,
@@ -99,17 +97,11 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
             opacity: _opacityAnimation.value,
             particles: _particles,
           ),
-        );
-      },
+        ),
     );
-  }
 }
 
 class _BurstParticle {
-  final double angle;
-  final double velocity;
-  final double size;
-  final double delay;
 
   _BurstParticle({
     required this.angle,
@@ -117,6 +109,10 @@ class _BurstParticle {
     required this.size,
     required this.delay,
   });
+  final double angle;
+  final double velocity;
+  final double size;
+  final double delay;
 
   Offset getPosition(double progress, Offset center) {
     final adjustedProgress = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
@@ -136,12 +132,6 @@ class _BurstParticle {
 }
 
 class _SuccessAnimationPainter extends CustomPainter {
-  final Offset center;
-  final Color color;
-  final double progress;
-  final double scale;
-  final double opacity;
-  final List<_BurstParticle> particles;
 
   _SuccessAnimationPainter({
     required this.center,
@@ -151,6 +141,12 @@ class _SuccessAnimationPainter extends CustomPainter {
     required this.opacity,
     required this.particles,
   });
+  final Offset center;
+  final Color color;
+  final double progress;
+  final double scale;
+  final double opacity;
+  final List<_BurstParticle> particles;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -214,7 +210,5 @@ class _SuccessAnimationPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SuccessAnimationPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
+  bool shouldRepaint(covariant _SuccessAnimationPainter oldDelegate) => oldDelegate.progress != progress;
 }

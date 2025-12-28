@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class ActionCard extends StatefulWidget {
-  final WidgetPayload action;
-  final VoidCallback? onConfirm;
-  final VoidCallback? onDismiss;
 
   const ActionCard({
     required this.action, 
@@ -19,6 +15,9 @@ class ActionCard extends StatefulWidget {
     this.onConfirm,
     this.onDismiss,
   });
+  final WidgetPayload action;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onDismiss;
 
   @override
   State<ActionCard> createState() => _ActionCardState();
@@ -62,12 +61,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       onTapDown: hasAction ? (_) => _pressController.forward() : null,
       onTapUp: hasAction ? (_) => _pressController.reverse() : null,
       onTapCancel: hasAction ? () => _pressController.reverse() : null,
-      onTap: hasAction ? () {
-        HapticFeedback.selectionClick();
-      } : null,
+      onTap: hasAction ? HapticFeedback.selectionClick : null,
       child: SparkleMotion.pressScale(
         animation: _pressController,
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.colors.surfaceCard,
             borderRadius: AppDesignTokens.borderRadius16,
@@ -96,8 +93,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: -2.0, end: 2.0),
                       duration: const Duration(seconds: 3),
-                      builder: (context, value, child) {
-                        return Container(
+                      builder: (context, value, child) => Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
@@ -114,8 +110,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                               ],
                             ),
                           ),
-                        );
-                      },
+                        ),
                       onEnd: () {
                         // Restart animation
                         if (mounted) setState(() {});
@@ -132,8 +127,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                         children: [
                           AnimatedBuilder(
                             animation: _iconScaleAnimation,
-                            builder: (context, child) {
-                              return Transform.scale(
+                            builder: (context, child) => Transform.scale(
                                 scale: hasAction ? _iconScaleAnimation.value : 1.0,
                                 child: Container(
                                   padding: const EdgeInsets.all(AppDesignTokens.spacing8),
@@ -154,8 +148,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     size: AppDesignTokens.iconSizeSm,
                                   ),
                                 ),
-                              );
-                            },
+                              ),
                           ),
                           const SizedBox(width: AppDesignTokens.spacing12),
                           Expanded(
@@ -265,8 +258,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
-    return Column(
+  Widget _buildContentForAction(BuildContext context, WidgetPayload action) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (action.data['title'] != null) ...[
@@ -302,8 +294,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             runSpacing: AppDesignTokens.spacing8,
             children: action.data.entries
                 .where((e) => e.key != 'title')
-                .map((entry) {
-              return Container(
+                .map((entry) => Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDesignTokens.spacing12,
                   vertical: AppDesignTokens.spacing8,
@@ -339,12 +330,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-              );
-            }).toList(),
+              ),).toList(),
           ),
       ],
     );
-  }
 
   IconData _getParamIcon(String key) {
     switch (key.toLowerCase()) {

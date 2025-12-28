@@ -1,21 +1,16 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:intl/intl.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
-  final TaskModel task;
-  final VoidCallback? onTap;
-  final VoidCallback? onStart;
-  final VoidCallback? onComplete;
-  final bool compact;
 
   const TaskCard({
     required this.task,
@@ -25,6 +20,11 @@ class TaskCard extends ConsumerStatefulWidget {
     this.onComplete,
     this.compact = false,
   });
+  final TaskModel task;
+  final VoidCallback? onTap;
+  final VoidCallback? onStart;
+  final VoidCallback? onComplete;
+  final bool compact;
 
   @override
   ConsumerState<TaskCard> createState() => _TaskCardState();
@@ -52,9 +52,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     super.dispose();
   }
 
-  LinearGradient _getTypeGradient(BuildContext context, TaskType type) {
-    return context.colors.getTaskGradient(type.name);
-  }
+  LinearGradient _getTypeGradient(BuildContext context, TaskType type) => context.colors.getTaskGradient(type.name);
 
   LinearGradient _getBackgroundGradient(BuildContext context, TaskType type) {
     final taskColor = context.colors.getTaskColor(type.name);
@@ -69,8 +67,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       label: 'Task card for ${widget.task.title}',
       hint: 'Double tap to view details',
       button: true,
@@ -90,12 +87,10 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
             child: RepaintBoundary(
               child: AnimatedBuilder(
                 animation: _scaleAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
+                builder: (context, child) => Transform.scale(
                     scale: _scaleAnimation.value,
                     child: child,
-                  );
-                },
+                  ),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
@@ -232,7 +227,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                           Positioned.fill(
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                              child: Container(
+                              child: ColoredBox(
                                 color: AppDesignTokens.error.withValues(alpha: 0.8),
                                 child: Center(
                                   child: Column(
@@ -303,19 +298,17 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
         ),
       ),
     );
-  }
 }
 
 class _ActionButton extends StatelessWidget {
+
+  const _ActionButton({required this.icon, required this.color, required this.onPressed});
   final IconData icon;
   final Color color;
   final VoidCallback onPressed;
 
-  const _ActionButton({required this.icon, required this.color, required this.onPressed});
-
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onPressed,
       borderRadius: AppDesignTokens.borderRadius20,
       child: Container(
@@ -327,37 +320,30 @@ class _ActionButton extends StatelessWidget {
         child: Icon(icon, size: 20, color: color),
       ),
     );
-  }
 }
 
 class _DifficultyStars extends StatelessWidget {
-  final int difficulty;
   const _DifficultyStars({required this.difficulty});
+  final int difficulty;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(5, (index) {
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return const LinearGradient(
-              colors: [Colors.amber, Colors.orange],
-            ).createShader(bounds);
-          },
+  Widget build(BuildContext context) => Row(
+      children: List.generate(5, (index) => ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+              colors: [Colors.amber, DS.brandPrimary],
+            ).createShader(bounds),
           child: Icon(
             index < difficulty ? Icons.star : Icons.star_border,
             color: DS.brandPrimary, // Color is ignored by shader but needed for structure
             size: 16,
           ),
-        );
-      }),
+        ),),
     );
-  }
 }
 
 class _TaskTypeChip extends StatelessWidget {
-  final TaskType type;
   const _TaskTypeChip({required this.type});
+  final TaskType type;
 
   @override
   Widget build(BuildContext context) {
@@ -367,27 +353,21 @@ class _TaskTypeChip extends StatelessWidget {
       case TaskType.learning:
         color = DS.brandPrimary;
         label = 'Learning';
-        break;
       case TaskType.training:
-        color = Colors.orange;
+        color = DS.brandPrimary;
         label = 'Training';
-        break;
       case TaskType.errorFix:
         color = DS.error;
         label = 'Fix';
-        break;
       case TaskType.reflection:
         color = Colors.purple;
         label = 'Reflection';
-        break;
       case TaskType.social:
         color = DS.success;
         label = 'Social';
-        break;
       case TaskType.planning:
         color = Colors.teal;
         label = 'Plan';
-        break;
     }
 
     return Container(
@@ -410,25 +390,21 @@ class _TaskTypeChip extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  final TaskStatus status;
   const _StatusChip({required this.status});
+  final TaskStatus status;
 
   @override
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
       case TaskStatus.pending:
-        color = Colors.orange;
-        break;
+        color = DS.brandPrimary;
       case TaskStatus.inProgress:
         color = DS.brandPrimary;
-        break;
       case TaskStatus.completed:
         color = DS.success;
-        break;
       case TaskStatus.abandoned:
         color = DS.brandPrimary;
-        break;
     }
 
     return Container(

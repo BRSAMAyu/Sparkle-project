@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 
 class VocabularyRepository {
-  final ApiClient _apiClient;
 
   VocabularyRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<Map<String, dynamic>> lookup(String word) async {
     final response = await _apiClient.get(
@@ -51,6 +51,4 @@ class VocabularyRepository {
   }
 }
 
-final vocabularyRepositoryProvider = Provider<VocabularyRepository>((ref) {
-  return VocabularyRepository(ref.watch(apiClientProvider));
-});
+final vocabularyRepositoryProvider = Provider<VocabularyRepository>((ref) => VocabularyRepository(ref.watch(apiClientProvider)));

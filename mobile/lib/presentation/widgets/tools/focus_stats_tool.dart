@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class FocusStatsTool extends StatelessWidget {
   const FocusStatsTool({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       decoration: const BoxDecoration(
         color: DS.brandPrimary,
@@ -116,10 +114,8 @@ class FocusStatsTool extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildStatCard(String label, String value, Color color) {
-    return Container(
+  Widget _buildStatCard(String label, String value, Color color) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -149,10 +145,8 @@ class FocusStatsTool extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildBar(String label, double percentage) {
-    return Column(
+  Widget _buildBar(String label, double percentage) => Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
@@ -173,10 +167,8 @@ class FocusStatsTool extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildDetailStat(IconData icon, String value, String label) {
-    return Column(
+  Widget _buildDetailStat(IconData icon, String value, String label) => Column(
       children: [
         Icon(icon, color: AppDesignTokens.neutral600, size: 24),
         const SizedBox(height: DS.xs),
@@ -197,5 +189,4 @@ class FocusStatsTool extends StatelessWidget {
         ),
       ],
     );
-  }
 }

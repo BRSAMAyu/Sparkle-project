@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 加载指示器类型
@@ -24,6 +23,63 @@ enum SkeletonVariant {
 ///
 /// 支持多种加载样式：圆形进度、骨架屏、线性进度条、全屏加载
 class LoadingIndicator extends StatelessWidget {
+
+  const LoadingIndicator({
+    super.key,
+    this.type = LoadingType.circular,
+    this.skeletonVariant,
+    this.size,
+    this.color,
+    this.showText = false,
+    this.loadingText,
+    this.skeletonCount = 3,
+  });
+
+  /// 圆形加载指示器工厂构造函数
+  factory LoadingIndicator.circular({
+    Key? key,
+    double? size,
+    Color? color,
+    bool showText = false,
+    String? loadingText,
+  }) => LoadingIndicator(
+      key: key,
+      size: size,
+      color: color,
+      showText: showText,
+      loadingText: loadingText,
+    );
+
+  /// 骨架屏加载指示器工厂构造函数
+  factory LoadingIndicator.skeleton({
+    required SkeletonVariant variant, Key? key,
+    int count = 3,
+  }) => LoadingIndicator(
+      key: key,
+      type: LoadingType.skeleton,
+      skeletonVariant: variant,
+      skeletonCount: count,
+    );
+
+  /// 线性加载指示器工厂构造函数
+  factory LoadingIndicator.linear({
+    Key? key,
+    Color? color,
+  }) => LoadingIndicator(
+      key: key,
+      type: LoadingType.linear,
+      color: color,
+    );
+
+  /// 全屏加载指示器工厂构造函数
+  factory LoadingIndicator.fullScreen({
+    Key? key,
+    String? loadingText,
+  }) => LoadingIndicator(
+      key: key,
+      type: LoadingType.fullScreen,
+      loadingText: loadingText,
+    );
   /// 加载类型
   final LoadingType type;
 
@@ -44,72 +100,6 @@ class LoadingIndicator extends StatelessWidget {
 
   /// 骨架屏数量（适用于skeleton类型）
   final int skeletonCount;
-
-  const LoadingIndicator({
-    super.key,
-    this.type = LoadingType.circular,
-    this.skeletonVariant,
-    this.size,
-    this.color,
-    this.showText = false,
-    this.loadingText,
-    this.skeletonCount = 3,
-  });
-
-  /// 圆形加载指示器工厂构造函数
-  factory LoadingIndicator.circular({
-    Key? key,
-    double? size,
-    Color? color,
-    bool showText = false,
-    String? loadingText,
-  }) {
-    return LoadingIndicator(
-      key: key,
-      type: LoadingType.circular,
-      size: size,
-      color: color,
-      showText: showText,
-      loadingText: loadingText,
-    );
-  }
-
-  /// 骨架屏加载指示器工厂构造函数
-  factory LoadingIndicator.skeleton({
-    required SkeletonVariant variant, Key? key,
-    int count = 3,
-  }) {
-    return LoadingIndicator(
-      key: key,
-      type: LoadingType.skeleton,
-      skeletonVariant: variant,
-      skeletonCount: count,
-    );
-  }
-
-  /// 线性加载指示器工厂构造函数
-  factory LoadingIndicator.linear({
-    Key? key,
-    Color? color,
-  }) {
-    return LoadingIndicator(
-      key: key,
-      type: LoadingType.linear,
-      color: color,
-    );
-  }
-
-  /// 全屏加载指示器工厂构造函数
-  factory LoadingIndicator.fullScreen({
-    Key? key,
-    String? loadingText,
-  }) {
-    return LoadingIndicator(
-      key: key,
-      type: LoadingType.fullScreen,
-      loadingText: loadingText,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,17 +171,14 @@ class LoadingIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildLinearLoading() {
-    return LinearProgressIndicator(
+  Widget _buildLinearLoading() => LinearProgressIndicator(
       valueColor: AlwaysStoppedAnimation<Color>(
         color ?? AppDesignTokens.primaryBase,
       ),
       backgroundColor: AppDesignTokens.neutral200,
     );
-  }
 
-  Widget _buildFullScreenLoading() {
-    return Container(
+  Widget _buildFullScreenLoading() => ColoredBox(
       color: AppDesignTokens.overlay30,
       child: Center(
         child: Container(
@@ -238,43 +225,38 @@ class LoadingIndicator extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 // ==================== 骨架屏组件 ====================
 
 /// Shimmer包装器
 class _ShimmerWrapper extends StatelessWidget {
-  final Widget child;
 
   const _ShimmerWrapper({required this.child});
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
+  Widget build(BuildContext context) => Shimmer.fromColors(
       baseColor: AppDesignTokens.neutral200,
       highlightColor: AppDesignTokens.neutral100,
-      period: const Duration(milliseconds: 1500),
       child: child,
     );
-  }
 }
 
 /// 骨架屏占位容器
 class _SkeletonBox extends StatelessWidget {
-  final double? width;
-  final double? height;
-  final BorderRadius? borderRadius;
 
   const _SkeletonBox({
     this.width,
     this.height,
     this.borderRadius,
   });
+  final double? width;
+  final double? height;
+  final BorderRadius? borderRadius;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
@@ -282,7 +264,6 @@ class _SkeletonBox extends StatelessWidget {
         borderRadius: borderRadius ?? AppDesignTokens.borderRadius8,
       ),
     );
-  }
 }
 
 /// 任务卡片骨架屏
@@ -290,8 +271,7 @@ class TaskCardSkeleton extends StatelessWidget {
   const TaskCardSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return _ShimmerWrapper(
+  Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
@@ -350,21 +330,19 @@ class TaskCardSkeleton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 聊天气泡骨架屏
 class ChatBubbleSkeleton extends StatelessWidget {
-  final bool isUser;
 
   const ChatBubbleSkeleton({
     super.key,
     this.isUser = false,
   });
+  final bool isUser;
 
   @override
-  Widget build(BuildContext context) {
-    return _ShimmerWrapper(
+  Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
@@ -423,7 +401,6 @@ class ChatBubbleSkeleton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 个人资料卡片骨架屏
@@ -431,8 +408,7 @@ class ProfileCardSkeleton extends StatelessWidget {
   const ProfileCardSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return _ShimmerWrapper(
+  Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
         decoration: BoxDecoration(
@@ -474,10 +450,8 @@ class ProfileCardSkeleton extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildStatSkeleton() {
-    return const Column(
+  Widget _buildStatSkeleton() => const Column(
       children: [
         _SkeletonBox(
           width: 40.0,
@@ -490,7 +464,6 @@ class ProfileCardSkeleton extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 /// 列表项骨架屏
@@ -498,8 +471,7 @@ class ListItemSkeleton extends StatelessWidget {
   const ListItemSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return _ShimmerWrapper(
+  Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDesignTokens.spacing16,
@@ -533,5 +505,4 @@ class ListItemSkeleton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

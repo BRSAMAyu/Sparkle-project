@@ -1,17 +1,17 @@
 import 'dart:async';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 
 class GalaxySearchDialog extends ConsumerStatefulWidget {
-  final Function(String nodeId) onNodeSelected;
 
   const GalaxySearchDialog({
     required this.onNodeSelected, super.key,
   });
+  final Function(String nodeId) onNodeSelected;
 
   @override
   ConsumerState<GalaxySearchDialog> createState() => _GalaxySearchDialogState();
@@ -65,8 +65,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
+  Widget build(BuildContext context) => Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(DS.xl),
       child: Container(
@@ -87,7 +86,7 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(DS.lg),
               child: TextField(
                 controller: _searchController,
                 style: const TextStyle(color: DS.brandPrimary),
@@ -152,7 +151,6 @@ class _GalaxySearchDialogState extends ConsumerState<GalaxySearchDialog> {
         ),
       ),
     );
-  }
 
   Widget _buildMatchScore(double similarity) {
     // Visual indicator of match quality

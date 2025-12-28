@@ -1,15 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class StatisticsCard extends StatelessWidget {
   const StatisticsCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
@@ -52,7 +50,6 @@ class StatisticsCard extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _WeeklyTrendChart extends StatelessWidget {
@@ -76,9 +73,9 @@ class _WeeklyTrendChart extends StatelessWidget {
         LineChartData(
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(),
+            rightTitles: const AxisTitles(),
+            topTitles: const AxisTitles(),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -112,15 +109,12 @@ class _WeeklyTrendChart extends StatelessWidget {
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
+                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                     radius: 4,
                     color: DS.brandPrimary,
                     strokeWidth: 2,
                     strokeColor: AppDesignTokens.primaryBase,
-                  );
-                },
+                  ),
               ),
               belowBarData: BarAreaData(
                 show: true,

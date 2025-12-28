@@ -26,6 +26,24 @@ enum TaskSyncStatus {
 
 @JsonSerializable()
 class TaskModel {
+
+  TaskModel({
+    required this.id,
+    required this.userId,
+    required this.title, required this.type, required this.tags, required this.estimatedMinutes, required this.difficulty, required this.energyCost, required this.status, required this.priority, required this.createdAt, required this.updatedAt, this.planId,
+    this.guideContent,
+    this.startedAt,
+    this.completedAt,
+    this.actualMinutes,
+    this.userNote,
+    this.dueDate,
+    this.knowledgeNodeId,
+    this.syncStatus = TaskSyncStatus.synced,
+    this.syncError,
+    this.retryToken,
+  });
+
+  factory TaskModel.fromJson(Map<String, dynamic> json) => _$TaskModelFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String userId;
@@ -67,24 +85,6 @@ class TaskModel {
   final String? syncError;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? retryToken;
-
-  TaskModel({
-    required this.id,
-    required this.userId,
-    required this.title, required this.type, required this.tags, required this.estimatedMinutes, required this.difficulty, required this.energyCost, required this.status, required this.priority, required this.createdAt, required this.updatedAt, this.planId,
-    this.guideContent,
-    this.startedAt,
-    this.completedAt,
-    this.actualMinutes,
-    this.userNote,
-    this.dueDate,
-    this.knowledgeNodeId,
-    this.syncStatus = TaskSyncStatus.synced,
-    this.syncError,
-    this.retryToken,
-  });
-
-  factory TaskModel.fromJson(Map<String, dynamic> json) => _$TaskModelFromJson(json);
   Map<String, dynamic> toJson() => _$TaskModelToJson(this);
 
   TaskModel copyWith({
@@ -111,8 +111,7 @@ class TaskModel {
     TaskSyncStatus? syncStatus,
     String? syncError,
     String? retryToken,
-  }) {
-    return TaskModel(
+  }) => TaskModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       planId: planId ?? this.planId,
@@ -137,26 +136,10 @@ class TaskModel {
       syncError: syncError ?? this.syncError,
       retryToken: retryToken ?? this.retryToken,
     );
-  }
 }
 
 @JsonSerializable()
 class TaskCreate {
-  final String title;
-  final TaskType type;
-  final int estimatedMinutes;
-  final int difficulty;
-  @JsonKey(name: 'energy_cost')
-  final int energyCost;
-  @JsonKey(name: 'plan_id')
-  final String? planId;
-  final List<String>? tags;
-  @JsonKey(name: 'due_date')
-  final DateTime? dueDate;
-  @JsonKey(name: 'knowledge_node_id')
-  final String? knowledgeNodeId;
-  @JsonKey(name: 'guide_content')
-  final String? guideContent;
 
   TaskCreate({
     required this.title,
@@ -172,19 +155,26 @@ class TaskCreate {
   });
 
   factory TaskCreate.fromJson(Map<String, dynamic> json) => _$TaskCreateFromJson(json);
+  final String title;
+  final TaskType type;
+  final int estimatedMinutes;
+  final int difficulty;
+  @JsonKey(name: 'energy_cost')
+  final int energyCost;
+  @JsonKey(name: 'plan_id')
+  final String? planId;
+  final List<String>? tags;
+  @JsonKey(name: 'due_date')
+  final DateTime? dueDate;
+  @JsonKey(name: 'knowledge_node_id')
+  final String? knowledgeNodeId;
+  @JsonKey(name: 'guide_content')
+  final String? guideContent;
   Map<String, dynamic> toJson() => _$TaskCreateToJson(this);
 }
 
 @JsonSerializable()
 class TaskUpdate {
-  final String? title;
-  final TaskType? type;
-  final int? estimatedMinutes;
-  final int? difficulty;
-  final List<String>? tags;
-  final TaskStatus? status;
-  @JsonKey(name: 'due_date')
-  final DateTime? dueDate;
 
   TaskUpdate({
     this.title,
@@ -197,15 +187,19 @@ class TaskUpdate {
   });
 
   factory TaskUpdate.fromJson(Map<String, dynamic> json) => _$TaskUpdateFromJson(json);
+  final String? title;
+  final TaskType? type;
+  final int? estimatedMinutes;
+  final int? difficulty;
+  final List<String>? tags;
+  final TaskStatus? status;
+  @JsonKey(name: 'due_date')
+  final DateTime? dueDate;
   Map<String, dynamic> toJson() => _$TaskUpdateToJson(this);
 }
 
 @JsonSerializable()
 class TaskComplete {
-  @JsonKey(name: 'actual_minutes')
-  final int actualMinutes;
-  @JsonKey(name: 'user_note')
-  final String? userNote;
 
   TaskComplete({
     required this.actualMinutes,
@@ -213,6 +207,10 @@ class TaskComplete {
   });
 
     factory TaskComplete.fromJson(Map<String, dynamic> json) => _$TaskCompleteFromJson(json);
+  @JsonKey(name: 'actual_minutes')
+  final int actualMinutes;
+  @JsonKey(name: 'user_note')
+  final String? userNote;
 
     Map<String, dynamic> toJson() => _$TaskCompleteToJson(this);
 
@@ -223,16 +221,6 @@ class TaskComplete {
   @JsonSerializable()
 
   class SuggestedNode {
-
-    final String? id;
-
-    final String name;
-
-    final String reason;
-
-    @JsonKey(name: 'is_new')
-
-    final bool isNew;
 
   
 
@@ -246,6 +234,16 @@ class TaskComplete {
 
     factory SuggestedNode.fromJson(Map<String, dynamic> json) => _$SuggestedNodeFromJson(json);
 
+    final String? id;
+
+    final String name;
+
+    final String reason;
+
+    @JsonKey(name: 'is_new')
+
+    final bool isNew;
+
     Map<String, dynamic> toJson() => _$SuggestedNodeToJson(this);
 
   }
@@ -255,22 +253,6 @@ class TaskComplete {
   @JsonSerializable()
 
   class TaskSuggestionResponse {
-
-    final String intent;
-
-    @JsonKey(name: 'suggested_nodes')
-
-    final List<SuggestedNode> suggestedNodes;
-
-    @JsonKey(name: 'suggested_tags')
-
-    final List<String> suggestedTags;
-
-    @JsonKey(name: 'estimated_minutes')
-
-    final int? estimatedMinutes;
-
-    final int? difficulty;
 
   
 
@@ -291,6 +273,22 @@ class TaskComplete {
   
 
     factory TaskSuggestionResponse.fromJson(Map<String, dynamic> json) => _$TaskSuggestionResponseFromJson(json);
+
+    final String intent;
+
+    @JsonKey(name: 'suggested_nodes')
+
+    final List<SuggestedNode> suggestedNodes;
+
+    @JsonKey(name: 'suggested_tags')
+
+    final List<String> suggestedTags;
+
+    @JsonKey(name: 'estimated_minutes')
+
+    final int? estimatedMinutes;
+
+    final int? difficulty;
 
     Map<String, dynamic> toJson() => _$TaskSuggestionResponseToJson(this);
 

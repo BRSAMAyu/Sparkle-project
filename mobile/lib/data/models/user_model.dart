@@ -15,6 +15,28 @@ enum AvatarStatus {
 /// 用户数据模型
 @JsonSerializable()
 class UserModel {
+
+  UserModel({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.flameLevel,
+    required this.flameBrightness,
+    required this.depthPreference,
+    required this.curiosityPreference,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+    this.nickname,
+    this.avatarUrl,
+    this.avatarStatus = AvatarStatus.approved,
+    this.pendingAvatarUrl,
+    this.status = UserStatus.offline,
+    this.schedulePreferences,
+    this.pushPreferences,
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
   final String id;
   final String username;
   final String email;
@@ -47,44 +69,12 @@ class UserModel {
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
-
-  UserModel({
-    required this.id,
-    required this.username,
-    required this.email,
-    required this.flameLevel,
-    required this.flameBrightness,
-    required this.depthPreference,
-    required this.curiosityPreference,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-    this.nickname,
-    this.avatarUrl,
-    this.avatarStatus = AvatarStatus.approved,
-    this.pendingAvatarUrl,
-    this.status = UserStatus.offline,
-    this.schedulePreferences,
-    this.pushPreferences,
-  });
-
-  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 }
 
 /// 推送偏好
 @JsonSerializable()
 class PushPreferences {
-  @JsonKey(name: 'active_slots')
-  final List<Map<String, String>>? activeSlots;
-  @JsonKey(name: 'timezone')
-  final String timezone;
-  @JsonKey(name: 'enable_curiosity')
-  final bool enableCuriosity;
-  @JsonKey(name: 'persona_type')
-  final String personaType;
-  @JsonKey(name: 'daily_cap')
-  final int dailyCap;
 
   PushPreferences({
     this.activeSlots,
@@ -95,16 +85,22 @@ class PushPreferences {
   });
 
   factory PushPreferences.fromJson(Map<String, dynamic> json) => _$PushPreferencesFromJson(json);
+  @JsonKey(name: 'active_slots')
+  final List<Map<String, String>>? activeSlots;
+  @JsonKey(name: 'timezone')
+  final String timezone;
+  @JsonKey(name: 'enable_curiosity')
+  final bool enableCuriosity;
+  @JsonKey(name: 'persona_type')
+  final String personaType;
+  @JsonKey(name: 'daily_cap')
+  final int dailyCap;
   Map<String, dynamic> toJson() => _$PushPreferencesToJson(this);
 }
 
 /// 用户偏好
 @JsonSerializable()
 class UserPreferences {
-  @JsonKey(name: 'depth_preference')
-  final double depthPreference;
-  @JsonKey(name: 'curiosity_preference')
-  final double curiosityPreference;
 
   UserPreferences({
     required this.depthPreference,
@@ -112,16 +108,16 @@ class UserPreferences {
   });
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) => _$UserPreferencesFromJson(json);
+  @JsonKey(name: 'depth_preference')
+  final double depthPreference;
+  @JsonKey(name: 'curiosity_preference')
+  final double curiosityPreference;
   Map<String, dynamic> toJson() => _$UserPreferencesToJson(this);
 }
 
 /// 火苗状态
 @JsonSerializable()
 class FlameStatus {
-  @JsonKey(name: 'level')
-  final int level;
-  @JsonKey(name: 'brightness')
-  final double brightness;
 
   FlameStatus({
     required this.level,
@@ -129,5 +125,9 @@ class FlameStatus {
   });
 
   factory FlameStatus.fromJson(Map<String, dynamic> json) => _$FlameStatusFromJson(json);
+  @JsonKey(name: 'level')
+  final int level;
+  @JsonKey(name: 'brightness')
+  final double brightness;
   Map<String, dynamic> toJson() => _$FlameStatusToJson(this);
 }

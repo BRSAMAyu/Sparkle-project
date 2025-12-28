@@ -1,14 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
 
 // 1. AuthState Class
 class AuthState {
-  final bool isLoading;
-  final bool isAuthenticated;
-  final UserModel? user;
-  final String? error;
 
   AuthState({
     this.isLoading = false,
@@ -16,29 +12,31 @@ class AuthState {
     this.user,
     this.error,
   });
+  final bool isLoading;
+  final bool isAuthenticated;
+  final UserModel? user;
+  final String? error;
 
   AuthState copyWith({
     bool? isLoading,
     bool? isAuthenticated,
     UserModel? user,
     String? error,
-  }) {
-    return AuthState(
+  }) => AuthState(
       isLoading: isLoading ?? this.isLoading,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       user: user ?? this.user,
       error: error, // Don't carry over old errors
     );
-  }
 }
 
 // 2. AuthNotifier Class
 class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepository _authRepository;
 
   AuthNotifier(this._authRepository) : super(AuthState()) {
     checkAuthStatus();
   }
+  final AuthRepository _authRepository;
 
   Future<void> checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
@@ -48,15 +46,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final user = await _authRepository.getCurrentUser();
         state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
       } else {
-        state = state.copyWith(isLoading: false, isAuthenticated: false, user: null);
+        state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, isAuthenticated: false, user: null, error: e.toString());
+      state = state.copyWith(isLoading: false, isAuthenticated: false, error: e.toString());
     }
   }
 
   Future<void> login(String usernameOrEmail, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       await _authRepository.login(usernameOrEmail, password);
       final user = await _authRepository.getCurrentUser();
@@ -73,7 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? nickname,
     String? avatarUrl,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       await _authRepository.socialLogin(
         provider: provider,
@@ -90,7 +88,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> register(String username, String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.register(username, email, password);
       state = state.copyWith(isLoading: false, isAuthenticated: true, user: user);
@@ -100,7 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void loginAsGuest() {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     DemoDataService.isDemoMode = true;
     
     // Simulate a short delay
@@ -128,7 +126,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.updateProfile(data);
       state = state.copyWith(isLoading: false, user: user);
@@ -139,7 +137,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> updateAvatar(String filePath) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       final user = await _authRepository.updateAvatar(filePath);
       state = state.copyWith(isLoading: false, user: user);
@@ -150,7 +148,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> changePassword(String oldPassword, String newPassword) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
     try {
       await _authRepository.changePassword(oldPassword, newPassword);
       state = state.copyWith(isLoading: false);
@@ -167,14 +165,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 // 3. Providers
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
-});
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) => AuthNotifier(ref.watch(authRepositoryProvider)));
 
-final currentUserProvider = Provider<UserModel?>((ref) {
-  return ref.watch(authProvider).user;
-});
+final currentUserProvider = Provider<UserModel?>((ref) => ref.watch(authProvider).user);
 
-final isAuthenticatedProvider = Provider<bool>((ref) {
-  return ref.watch(authProvider).isAuthenticated;
-});
+final isAuthenticatedProvider = Provider<bool>((ref) => ref.watch(authProvider).isAuthenticated);

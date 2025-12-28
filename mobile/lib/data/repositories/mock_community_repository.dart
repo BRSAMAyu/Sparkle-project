@@ -1,34 +1,11 @@
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:uuid/uuid.dart';
 
 class MockCommunityRepository implements CommunityRepository {
-  final ApiClient? _apiClient;
-
-  // Demo user ID - matches DemoDataService.demoUser.id
-  static const String currentUserId = 'CS_Sophomore_12345';
 
   MockCommunityRepository([this._apiClient]);
-
-  UserBrief _createUser(String name, int level, UserStatus status, {String? avatarSeed, String? id}) {
-    return UserBrief(
-      id: id ?? const Uuid().v4(),
-      username: name.toLowerCase(),
-      nickname: name,
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed ?? name}',
-      flameLevel: level,
-      flameBrightness: 0.5 + (level / 20.0),
-      status: status,
-    );
-  }
-
-  late final List<UserBrief> _mockUsers;
-  late final List<FriendshipInfo> _mockFriends;
-  late final List<GroupInfo> _mockGroups;
-  late final Map<String, List<MessageInfo>> _mockGroupMessages;
-  late final Map<String, List<PrivateMessageInfo>> _mockPrivateMessages;
-  late final Map<String, List<GroupTaskInfo>> _mockGroupTasks;
 
   MockCommunityRepository._init() : _apiClient = null {
     // Create current user matching DemoDataService
@@ -163,9 +140,30 @@ class MockCommunityRepository implements CommunityRepository {
     };
     _mockGroupTasks = {};
   }
+  factory MockCommunityRepository.instance() => _instance;
+  final ApiClient? _apiClient;
+
+  // Demo user ID - matches DemoDataService.demoUser.id
+  static const String currentUserId = 'CS_Sophomore_12345';
+
+  UserBrief _createUser(String name, int level, UserStatus status, {String? avatarSeed, String? id}) => UserBrief(
+      id: id ?? const Uuid().v4(),
+      username: name.toLowerCase(),
+      nickname: name,
+      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=${avatarSeed ?? name}',
+      flameLevel: level,
+      flameBrightness: 0.5 + (level / 20.0),
+      status: status,
+    );
+
+  late final List<UserBrief> _mockUsers;
+  late final List<FriendshipInfo> _mockFriends;
+  late final List<GroupInfo> _mockGroups;
+  late final Map<String, List<MessageInfo>> _mockGroupMessages;
+  late final Map<String, List<PrivateMessageInfo>> _mockPrivateMessages;
+  late final Map<String, List<GroupTaskInfo>> _mockGroupTasks;
 
   static final MockCommunityRepository _instance = MockCommunityRepository._init();
-  factory MockCommunityRepository.instance() => _instance;
 
   @override
   Future<List<FriendshipInfo>> getFriends() async => _mockFriends;
@@ -218,7 +216,7 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<void> revokePrivateMessage(String messageId) async {
-    for (var list in _mockPrivateMessages.values) {
+    for (final list in _mockPrivateMessages.values) {
       final index = list.indexWhere((m) => m.id == messageId);
       if (index != -1) {
         list[index] = list[index].copyWith(isRevoked: true);
@@ -228,12 +226,10 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<List<GroupListItem>> getMyGroups() async {
-    return _mockGroups.map((g) => GroupListItem(
+  Future<List<GroupListItem>> getMyGroups() async => _mockGroups.map((g) => GroupListItem(
       id: g.id, name: g.name, type: g.type, memberCount: g.memberCount, 
       totalFlamePower: g.totalFlamePower, focusTags: g.focusTags, myRole: g.myRole,
     ),).toList();
-  }
 
   @override
   Future<GroupInfo> getGroup(String groupId) async => _mockGroups.firstWhere((g) => g.id == groupId);

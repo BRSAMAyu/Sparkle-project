@@ -3,11 +3,11 @@ import 'package:sparkle/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/data/repositories/capsule_repository.dart';
 
 class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleModel>>> {
-  final CapsuleRepository _repository;
 
   CapsuleNotifier(this._repository) : super(const AsyncValue.loading()) {
     fetchTodayCapsules();
   }
+  final CapsuleRepository _repository;
 
   Future<void> fetchTodayCapsules() async {
     try {
@@ -41,6 +41,4 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
   }
 }
 
-final capsuleProvider = StateNotifierProvider<CapsuleNotifier, AsyncValue<List<CuriosityCapsuleModel>>>((ref) {
-  return CapsuleNotifier(ref.watch(capsuleRepositoryProvider));
-});
+final capsuleProvider = StateNotifierProvider<CapsuleNotifier, AsyncValue<List<CuriosityCapsuleModel>>>((ref) => CapsuleNotifier(ref.watch(capsuleRepositoryProvider)));

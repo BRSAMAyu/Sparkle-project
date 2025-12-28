@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/vocabulary_lookup_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/wordbook_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/breathing_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/focus_stats_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/vocabulary_lookup_tool.dart';
+import 'package:sparkle/presentation/widgets/tools/wordbook_tool.dart';
 
-class QuickToolsPanel extends StatelessWidget {
-  final String? taskId; // 当前任务ID，用于关联
+class QuickToolsPanel extends StatelessWidget { // 当前任务ID，用于关联
 
   const QuickToolsPanel({super.key, this.taskId});
+  final String? taskId;
 
   void _showTool(BuildContext context, Widget tool) {
     showModalBottomSheet(
@@ -29,8 +28,7 @@ class QuickToolsPanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Wrap(
+  Widget build(BuildContext context) => Wrap(
       spacing: 12,
       runSpacing: 12,
       alignment: WrapAlignment.center,
@@ -50,7 +48,7 @@ class QuickToolsPanel extends StatelessWidget {
         _ToolButton(
           icon: Icons.note_alt_outlined,
           label: '笔记',
-          color: Colors.orange,
+          color: DS.brandPrimary,
           onTap: () => _showTool(context, const NotesTool()),
         ),
         _ToolButton(
@@ -85,14 +83,9 @@ class QuickToolsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
 
   const _ToolButton({
     required this.icon,
@@ -100,10 +93,13 @@ class _ToolButton extends StatelessWidget {
     required this.color,
     required this.onTap,
   });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -122,5 +118,4 @@ class _ToolButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }

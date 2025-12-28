@@ -73,8 +73,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('学习模式设置'),
       ),
@@ -128,5 +127,4 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
         ),
       ),
     );
-  }
 }

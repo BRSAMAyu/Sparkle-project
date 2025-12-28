@@ -1,7 +1,7 @@
-import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
@@ -9,10 +9,6 @@ import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 /// Pre-processed node data for efficient painting
 class ProcessedNode {
-  final GalaxyNodeModel node;
-  final Color color;
-  final double radius;
-  final Offset position;
 
   ProcessedNode({
     required this.node,
@@ -20,17 +16,14 @@ class ProcessedNode {
     required this.radius,
     required this.position,
   });
+  final GalaxyNodeModel node;
+  final Color color;
+  final double radius;
+  final Offset position;
 }
 
 /// Pre-processed edge data for efficient painting
 class ProcessedEdge {
-  final GalaxyEdgeModel edge;
-  final Offset start;
-  final Offset end;
-  final Color startColor;
-  final Color endColor;
-  final double distance;
-  final double strokeWidth;
 
   ProcessedEdge({
     required this.edge,
@@ -41,14 +34,17 @@ class ProcessedEdge {
     required this.distance,
     required this.strokeWidth,
   });
+  final GalaxyEdgeModel edge;
+  final Offset start;
+  final Offset end;
+  final Color startColor;
+  final Color endColor;
+  final double distance;
+  final double strokeWidth;
 }
 
 /// 关系类型颜色配置
 class _RelationStyle {
-  final Color color;
-  final double dashLength;
-  final bool isDashed;
-  final double baseWidth;
 
   const _RelationStyle({
     required this.color,
@@ -56,6 +52,10 @@ class _RelationStyle {
     this.isDashed = false,
     this.baseWidth = 1.5,
   });
+  final Color color;
+  final double dashLength;
+  final bool isDashed;
+  final double baseWidth;
 
   static _RelationStyle forType(EdgeRelationType type) {
     switch (type) {
@@ -88,12 +88,10 @@ class _RelationStyle {
           color: Color(0xFFE57373),  // 红色 - 对比概念
           isDashed: true,
           dashLength: 12,
-          baseWidth: 1.5,
         );
       case EdgeRelationType.application:
         return const _RelationStyle(
           color: Color(0xFF4DB6AC),  // 青色 - 应用场景
-          baseWidth: 1.5,
         );
       case EdgeRelationType.example:
         return const _RelationStyle(
@@ -112,6 +110,18 @@ class _RelationStyle {
 }
 
 class StarMapPainter extends CustomPainter {
+
+  StarMapPainter({
+    required this.nodes,
+    required this.positions, this.edges = const [],
+    this.scale = 1.0,
+    this.aggregationLevel = AggregationLevel.full,
+    this.clusters = const {},
+    this.viewport,
+    this.center = Offset.zero,
+  }) {
+    _preprocessData();
+  }
   final List<GalaxyNodeModel> nodes;
   final List<GalaxyEdgeModel> edges;
   final Map<String, Offset> positions;
@@ -127,25 +137,13 @@ class StarMapPainter extends CustomPainter {
   late final Map<String, Color> _colorCache;
   late final Map<String, Offset> _positionCache;
 
-  StarMapPainter({
-    required this.nodes,
-    required this.positions, this.edges = const [],
-    this.scale = 1.0,
-    this.aggregationLevel = AggregationLevel.full,
-    this.clusters = const {},
-    this.viewport,
-    this.center = Offset.zero,
-  }) {
-    _preprocessData();
-  }
-
   /// Pre-process all data in the constructor to avoid repeated work in paint()
   void _preprocessData() {
     // Build caches
     _colorCache = {};
     _positionCache = {};
 
-    for (var node in nodes) {
+    for (final node in nodes) {
       // 使用星域色系：基于节点的星域、重要程度和掌握度生成颜色
       _colorCache[node.id] = SectorConfig.getNodeColor(
         sector: node.sector,
@@ -160,7 +158,7 @@ class StarMapPainter extends CustomPainter {
 
     // Build processed nodes with viewport culling
     _processedNodes = [];
-    for (var node in nodes) {
+    for (final node in nodes) {
       final pos = _positionCache[node.id];
       if (pos == null) continue;
 
@@ -188,7 +186,7 @@ class StarMapPainter extends CustomPainter {
     _processedEdges = [];
 
     // First, add edges from the edges list
-    for (var edge in edges) {
+    for (final edge in edges) {
       final start = _positionCache[edge.sourceId];
       final end = _positionCache[edge.targetId];
 
@@ -221,7 +219,7 @@ class StarMapPainter extends CustomPainter {
 
     // Also add parent-child connections if not already in edges
     final edgeKeys = edges.map((e) => '${e.sourceId}-${e.targetId}').toSet();
-    for (var node in nodes) {
+    for (final node in nodes) {
       if (node.parentId != null) {
         final key = '${node.parentId}-${node.id}';
         if (edgeKeys.contains(key)) continue;
@@ -269,14 +267,11 @@ class StarMapPainter extends CustomPainter {
         _drawRootConnections(canvas);
         _drawEdges(canvas);
         _drawNodes(canvas);
-        break;
       case AggregationLevel.clustered:
         _drawRootConnections(canvas); // Also draw roots in clustered view? Maybe not.
         _drawClusteredView(canvas);
-        break;
       case AggregationLevel.sectors:
         _drawSectorView(canvas);
-        break;
     }
   }
 
@@ -286,7 +281,7 @@ class StarMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    for (var node in nodes) {
+    for (final node in nodes) {
       if (node.parentId == null) {
         final pos = _positionCache[node.id];
         if (pos == null) continue;
@@ -311,7 +306,7 @@ class StarMapPainter extends CustomPainter {
 
   /// Draw all edges with relationship-specific styling
   void _drawEdges(Canvas canvas) {
-    for (var processedEdge in _processedEdges) {
+    for (final processedEdge in _processedEdges) {
       _drawEdge(canvas, processedEdge);
     }
   }
@@ -385,7 +380,7 @@ class StarMapPainter extends CustomPainter {
     final unitDir = Offset(direction.dx / length, direction.dy / length);
 
     double currentLength = 0;
-    bool drawing = true;
+    var drawing = true;
     final dashLength = style.dashLength;
     final gapLength = style.dashLength * 0.6;
 
@@ -643,7 +638,7 @@ class StarMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    for (var processedNode in _processedNodes) {
+    for (final processedNode in _processedNodes) {
       final node = processedNode.node;
       final pos = processedNode.position;
       final color = processedNode.color;
@@ -753,7 +748,7 @@ class StarMapPainter extends CustomPainter {
       // Zoom > 0.8: Show all labels
       // Zoom > 0.5: Show importance >= 3
       // Zoom <= 0.5: Show importance >= 4 only
-      bool shouldDrawLabel = false;
+      var shouldDrawLabel = false;
       if (scale > 0.8) {
         shouldDrawLabel = true;
       } else if (scale > 0.5) {

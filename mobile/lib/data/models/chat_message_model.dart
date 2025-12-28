@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:uuid/uuid.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
+import 'package:uuid/uuid.dart';
 
 part 'chat_message_model.g.dart';
 
@@ -11,7 +11,28 @@ enum MessageRole {
 }
 
 @JsonSerializable()
-class ChatMessageModel {
+class ChatMessageModel { // Metadata for FinOps and Chaos
+
+  ChatMessageModel({
+    required this.conversationId, required this.role, required this.content, String? id,
+    this.userId,
+    this.taskId,
+    DateTime? createdAt,
+    this.widgets,
+    this.toolResults,
+    this.hasErrors,
+    this.errors,
+    this.requiresConfirmation,
+    this.confirmationData,
+    this.aiStatus,
+    this.reasoningSteps,
+    this.reasoningSummary,
+    this.isReasoningComplete,
+    this.meta,
+  }) : id = id ?? const Uuid().v4(),
+       createdAt = createdAt ?? DateTime.now();
+
+  factory ChatMessageModel.fromJson(Map<String, dynamic> json) => _$ChatMessageModelFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String? userId; // Optional for client-generated messages
@@ -48,28 +69,7 @@ class ChatMessageModel {
   @JsonKey(name: 'is_reasoning_complete')
   final bool? isReasoningComplete; // For real-time updates
 
-  final MessageMeta? meta; // Metadata for FinOps and Chaos
-
-  ChatMessageModel({
-    required this.conversationId, required this.role, required this.content, String? id,
-    this.userId,
-    this.taskId,
-    DateTime? createdAt,
-    this.widgets,
-    this.toolResults,
-    this.hasErrors,
-    this.errors,
-    this.requiresConfirmation,
-    this.confirmationData,
-    this.aiStatus,
-    this.reasoningSteps,
-    this.reasoningSummary,
-    this.isReasoningComplete,
-    this.meta,
-  }) : id = id ?? const Uuid().v4(),
-       createdAt = createdAt ?? DateTime.now();
-
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) => _$ChatMessageModelFromJson(json);
+  final MessageMeta? meta;
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
   ChatMessageModel copyWith({
@@ -91,8 +91,7 @@ class ChatMessageModel {
     String? reasoningSummary,
     bool? isReasoningComplete,
     MessageMeta? meta,
-  }) {
-    return ChatMessageModel(
+  }) => ChatMessageModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       conversationId: conversationId ?? this.conversationId,
@@ -112,19 +111,10 @@ class ChatMessageModel {
       isReasoningComplete: isReasoningComplete ?? this.isReasoningComplete,
       meta: meta ?? this.meta,
     );
-  }
 }
 
 @JsonSerializable()
-class MessageMeta {
-  @JsonKey(name: 'latency_ms')
-  final int? latencyMs;
-  @JsonKey(name: 'is_cache_hit')
-  final bool? isCacheHit;
-  @JsonKey(name: 'cost_saved')
-  final double? costSaved;
-  @JsonKey(name: 'breaker_status')
-  final String? breakerStatus; // 'open' | 'closed'
+class MessageMeta { // 'open' | 'closed'
 
   MessageMeta({
     this.latencyMs,
@@ -134,6 +124,14 @@ class MessageMeta {
   });
 
   factory MessageMeta.fromJson(Map<String, dynamic> json) => _$MessageMetaFromJson(json);
+  @JsonKey(name: 'latency_ms')
+  final int? latencyMs;
+  @JsonKey(name: 'is_cache_hit')
+  final bool? isCacheHit;
+  @JsonKey(name: 'cost_saved')
+  final double? costSaved;
+  @JsonKey(name: 'breaker_status')
+  final String? breakerStatus;
   Map<String, dynamic> toJson() => _$MessageMetaToJson(this);
 }
 
@@ -150,27 +148,17 @@ List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
 
 @JsonSerializable()
 class WidgetPayload {
-  final String type;  // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
-  final Map<String, dynamic> data;
 
   WidgetPayload({required this.type, required this.data});
 
   factory WidgetPayload.fromJson(Map<String, dynamic> json) => _$WidgetPayloadFromJson(json);
+  final String type;  // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
+  final Map<String, dynamic> data;
   Map<String, dynamic> toJson() => _$WidgetPayloadToJson(this);
 }
 
 @JsonSerializable()
 class ToolResultModel {
-  final bool success;
-  @JsonKey(name: 'tool_name')
-  final String toolName;
-  final Map<String, dynamic>? data;
-  @JsonKey(name: 'error_message')
-  final String? errorMessage;
-  @JsonKey(name: 'widget_type')
-  final String? widgetType;
-  @JsonKey(name: 'widget_data')
-  final Map<String, dynamic>? widgetData;
 
   ToolResultModel({
     required this.success,
@@ -182,29 +170,33 @@ class ToolResultModel {
   });
 
   factory ToolResultModel.fromJson(Map<String, dynamic> json) => _$ToolResultModelFromJson(json);
+  final bool success;
+  @JsonKey(name: 'tool_name')
+  final String toolName;
+  final Map<String, dynamic>? data;
+  @JsonKey(name: 'error_message')
+  final String? errorMessage;
+  @JsonKey(name: 'widget_type')
+  final String? widgetType;
+  @JsonKey(name: 'widget_data')
+  final Map<String, dynamic>? widgetData;
   Map<String, dynamic> toJson() => _$ToolResultModelToJson(this);
 }
 
 @JsonSerializable()
 class ErrorInfo {
-  final String tool;
-  final String message;
-  final String? suggestion;
 
   ErrorInfo({required this.tool, required this.message, this.suggestion});
 
   factory ErrorInfo.fromJson(Map<String, dynamic> json) => _$ErrorInfoFromJson(json);
+  final String tool;
+  final String message;
+  final String? suggestion;
   Map<String, dynamic> toJson() => _$ErrorInfoToJson(this);
 }
 
 @JsonSerializable()
 class ConfirmationData {
-  @JsonKey(name: 'action_id')
-  final String actionId;
-  @JsonKey(name: 'tool_name')
-  final String toolName;
-  final String description;
-  final Map<String, dynamic> preview;
 
   ConfirmationData({
     required this.actionId,
@@ -214,25 +206,18 @@ class ConfirmationData {
   });
 
   factory ConfirmationData.fromJson(Map<String, dynamic> json) => _$ConfirmationDataFromJson(json);
+  @JsonKey(name: 'action_id')
+  final String actionId;
+  @JsonKey(name: 'tool_name')
+  final String toolName;
+  final String description;
+  final Map<String, dynamic> preview;
   Map<String, dynamic> toJson() => _$ConfirmationDataToJson(this);
 }
 
 // Backend API response for chat endpoint
 @JsonSerializable()
 class ChatApiResponse {
-  final String message;
-  @JsonKey(name: 'conversation_id')
-  final String conversationId;
-  final List<WidgetPayload>? widgets;
-  @JsonKey(name: 'tool_results')
-  final List<ToolResultModel>? toolResults;
-  @JsonKey(name: 'has_errors')
-  final bool? hasErrors;
-  final List<ErrorInfo>? errors;
-  @JsonKey(name: 'requires_confirmation')
-  final bool? requiresConfirmation;
-  @JsonKey(name: 'confirmation_data')
-  final ConfirmationData? confirmationData;
 
   ChatApiResponse({
     required this.message,
@@ -246,5 +231,18 @@ class ChatApiResponse {
   });
 
   factory ChatApiResponse.fromJson(Map<String, dynamic> json) => _$ChatApiResponseFromJson(json);
+  final String message;
+  @JsonKey(name: 'conversation_id')
+  final String conversationId;
+  final List<WidgetPayload>? widgets;
+  @JsonKey(name: 'tool_results')
+  final List<ToolResultModel>? toolResults;
+  @JsonKey(name: 'has_errors')
+  final bool? hasErrors;
+  final List<ErrorInfo>? errors;
+  @JsonKey(name: 'requires_confirmation')
+  final bool? requiresConfirmation;
+  @JsonKey(name: 'confirmation_data')
+  final ConfirmationData? confirmationData;
   Map<String, dynamic> toJson() => _$ChatApiResponseToJson(this);
 }

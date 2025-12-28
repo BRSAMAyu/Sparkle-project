@@ -44,41 +44,46 @@ logger.add(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
-    
+    """
+    应用生命周期管理
+
+    P1 Fix: All startup/shutdown logic is now unified in lifespan context manager.
+    Removed deprecated @app.on_event("startup") to prevent race conditions.
+    """
+
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
-    
+
     # Ensure upload directory exists
     if not os.path.exists(settings.UPLOAD_DIR):
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
+
     # Initialize Cache (Redis)
     await cache_service.init_redis()
     # Initialize WebSocket Redis
     await manager.init_redis()
-    
+
     async with AsyncSessionLocal() as db:
         try:
-            # 🆕 0. 初始化数据库数据
+            # 0. 初始化数据库数据
             await init_db(db)
 
-            # 🆕 1. 恢复中断的 Job
+            # 1. 恢复中断的 Job
             job_service = JobService()
             await job_service.startup_recovery(db)
-            
-            # 🆕 2. 加载学科缓存
+
+            # 2. 加载学科缓存
             subject_service = SubjectService()
             await subject_service.load_cache(db)
 
-            # 🆕 3. 启动定时任务调度器
+            # 3. 启动定时任务调度器
             scheduler_service.start()
 
-            # 🆕 4. 启动知识拓展后台任务
+            # 4. 启动知识拓展后台任务
             await start_expansion_worker()
 
-            # 🆕 5. 启动图同步 Worker (AGE)
+            # 5. 启动图同步 Worker (AGE)
             await start_sync_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
@@ -124,7 +129,10 @@ RequestsInstrumentor().instrument()
 RedisInstrumentor().instrument()
 
 setup_rate_limiting(app)
->>>>+++ REPLACE
+
+# P1: Initialize Prometheus Instrumentator within app creation
+# Moved from deprecated @app.on_event("startup") to ensure proper lifecycle order
+_instrumentator = Instrumentator().instrument(app)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -151,13 +159,6 @@ app.add_middleware(
 # 🆕 幂等性中间件
 idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "memory")
 app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event to instrument and expose metrics"""
-    # prometheus_fastapi_instrumentator 已经提供了基本的 metrics 暴露
-    Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/")

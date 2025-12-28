@@ -1,9 +1,9 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
@@ -35,8 +35,7 @@ class LongTermPlanCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, GrowthData growth) {
-    return Column(
+  Widget _buildContent(BuildContext context, GrowthData growth) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Row(
@@ -104,10 +103,8 @@ class LongTermPlanCard extends ConsumerWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return const Column(
+  Widget _buildEmptyState(BuildContext context) => const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.add_circle_outline, color: DS.brandPrimary30, size: 32),
@@ -118,5 +115,4 @@ class LongTermPlanCard extends ConsumerWidget {
         ),
       ],
     );
-  }
 }

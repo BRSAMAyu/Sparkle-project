@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 class GalaxyMiniMap extends StatelessWidget {
-  final TransformationController transformationController;
-  final double canvasSize;
-  final double minimapSize;
 
   const GalaxyMiniMap({
     required this.transformationController, required this.canvasSize, super.key,
     this.minimapSize = 120.0,
   });
+  final TransformationController transformationController;
+  final double canvasSize;
+  final double minimapSize;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: minimapSize,
       height: minimapSize,
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DS.brandPrimary24, width: 1),
+        border: Border.all(color: DS.brandPrimary24),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -33,17 +31,16 @@ class GalaxyMiniMap extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _MiniMapPainter extends CustomPainter {
-  final double canvasSize;
-  final TransformationController listenable;
 
   _MiniMapPainter({
     required this.listenable,
     required this.canvasSize,
   }) : super(repaint: listenable);
+  final double canvasSize;
+  final TransformationController listenable;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -125,7 +122,5 @@ class _MiniMapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) {
-    return oldDelegate.listenable != listenable;
-  }
+  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) => oldDelegate.listenable != listenable;
 }

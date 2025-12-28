@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 class PatternCard extends StatelessWidget {
-  final BehaviorPatternModel pattern;
 
   const PatternCard({required this.pattern, super.key});
+  final BehaviorPatternModel pattern;
 
   @override
   Widget build(BuildContext context) {
@@ -24,17 +23,14 @@ class PatternCard extends StatelessWidget {
         iconColor = DS.brandPrimary.shade700;
         icon = Icons.psychology;
         gradient = AppDesignTokens.infoGradient;
-        break;
       case 'emotional':
         iconColor = Colors.purple.shade700;
         icon = Icons.sentiment_very_dissatisfied;
         gradient = AppDesignTokens.warningGradient;
-        break;
       case 'execution':
         iconColor = DS.success.shade700;
         icon = Icons.run_circle;
         gradient = AppDesignTokens.successGradient;
-        break;
       default:
         iconColor = AppDesignTokens.neutral600;
         icon = Icons.help_outline;
@@ -84,7 +80,6 @@ class PatternCard extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
-                shrinkWrap: true,
               ),
             if (pattern.solutionText != null) ...[
               const SizedBox(height: AppDesignTokens.spacing20),
@@ -114,7 +109,6 @@ class PatternCard extends StatelessWidget {
                             color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
                           ),
                         ),
-                        shrinkWrap: true,
                       ),
                     ),
                   ],

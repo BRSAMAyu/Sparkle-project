@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
+import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
-  final String taskId;
 
   const TaskDetailScreen({required this.taskId, super.key});
+  final String taskId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,13 +40,12 @@ class TaskDetailScreen extends ConsumerWidget {
 }
 
 class _TaskDetailView extends ConsumerWidget {
-  final TaskModel task;
 
   const _TaskDetailView({required this.task});
+  final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+  Widget build(BuildContext context, WidgetRef ref) => Column(
       children: [
         Expanded(
           child: CustomScrollView(
@@ -80,14 +78,13 @@ class _TaskDetailView extends ConsumerWidget {
         _BottomActionBar(task: task),
       ],
     );
-  }
 
   LinearGradient _getBackgroundGradient(TaskType type) {
     switch (type) {
       case TaskType.learning:
         return LinearGradient(colors: [DS.brandPrimary.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.training:
-        return LinearGradient(colors: [Colors.orange.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
+        return LinearGradient(colors: [DS.brandPrimary.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.errorFix:
         return LinearGradient(colors: [DS.error.shade50, DS.brandPrimary], begin: Alignment.topLeft, end: Alignment.bottomRight);
       case TaskType.reflection:
@@ -99,8 +96,7 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
+  Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
       expandedHeight: 200.0,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
@@ -108,7 +104,7 @@ class _TaskDetailView extends ConsumerWidget {
           tag: 'task-${task.id}',
           child: Material(
             type: MaterialType.transparency,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: _getBackgroundGradient(task.type),
               ),
@@ -151,10 +147,8 @@ class _TaskDetailView extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildInfoSection(BuildContext context) {
-    return Column(
+  Widget _buildInfoSection(BuildContext context) => Column(
       children: [
         _InfoTileCard(
           icon: Icons.timer_outlined,
@@ -195,10 +189,8 @@ class _TaskDetailView extends ConsumerWidget {
         ],
       ],
     );
-  }
 
-  Widget _buildGuideSection(BuildContext context) {
-    return Container(
+  Widget _buildGuideSection(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
@@ -256,7 +248,6 @@ class _TaskDetailView extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Color _getStatusColor(TaskStatus status) {
     switch (status) {
@@ -269,10 +260,6 @@ class _TaskDetailView extends ConsumerWidget {
 }
 
 class _InfoTileCard extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  final String content;
-  final LinearGradient gradient;
 
   const _InfoTileCard({
     required this.icon,
@@ -280,6 +267,10 @@ class _InfoTileCard extends StatefulWidget {
     required this.content,
     required this.gradient,
   });
+  final IconData icon;
+  final String title;
+  final String content;
+  final LinearGradient gradient;
 
   @override
   State<_InfoTileCard> createState() => _InfoTileCardState();
@@ -308,8 +299,7 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) => _controller.reverse(),
       onTapCancel: () => _controller.reverse(),
@@ -334,7 +324,6 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
             ],
             border: Border.all(
               color: widget.gradient.colors.first.withValues(alpha: 0.1),
-              width: 1,
             ),
           ),
           child: Row(
@@ -383,16 +372,14 @@ class _InfoTileCardState extends State<_InfoTileCard> with SingleTickerProviderS
         ),
       ),
     );
-  }
 }
 
 class _BottomActionBar extends ConsumerWidget {
-  final TaskModel task;
   const _BottomActionBar({required this.task});
+  final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
+  Widget build(BuildContext context, WidgetRef ref) => SafeArea(
       child: Container(
         padding: const EdgeInsets.all(AppDesignTokens.spacing16),
         decoration: BoxDecoration(
@@ -401,7 +388,6 @@ class _BottomActionBar extends ConsumerWidget {
           border: const Border(
             top: BorderSide(
               color: AppDesignTokens.neutral200,
-              width: 1,
             ),
           ),
         ),
@@ -434,7 +420,7 @@ class _BottomActionBar extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: AppDesignTokens.spacing12),
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(
                   color: AppDesignTokens.error.withValues(alpha: 0.3),
@@ -486,5 +472,4 @@ class _BottomActionBar extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

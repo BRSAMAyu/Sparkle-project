@@ -31,22 +31,19 @@
 /// ```
 library;
 
-export 'tokens_v2/color_token.dart';
-export 'tokens_v2/spacing_token.dart';
-export 'tokens_v2/typography_token.dart';
-export 'tokens_v2/animation_token.dart';
-export 'tokens_v2/theme_manager.dart';
-export 'tokens_v2/responsive_system.dart';
-
-export 'components/atoms/sparkle_button_v2.dart';
-
-export 'validation/design_validator.dart';
-
 // 便捷导入
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme_manager.dart';
+
+export 'components/atoms/sparkle_button_v2.dart';
+export 'tokens_v2/animation_token.dart';
+export 'tokens_v2/color_token.dart';
+export 'tokens_v2/responsive_system.dart';
+export 'tokens_v2/spacing_token.dart';
+export 'tokens_v2/theme_manager.dart';
+export 'tokens_v2/typography_token.dart';
+export 'validation/design_validator.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -60,8 +57,7 @@ class AppThemes {
     return _buildThemeData(theme, Brightness.dark);
   }
 
-  static ThemeData _buildThemeData(SparkleThemeData theme, Brightness brightness) {
-    return ThemeData(
+  static ThemeData _buildThemeData(SparkleThemeData theme, Brightness brightness) => ThemeData(
       useMaterial3: true,
       brightness: brightness,
       primaryColor: theme.colors.brandPrimary,
@@ -82,10 +78,8 @@ class AppThemes {
         _SparkleThemeExtension(theme),
       ],
     );
-  }
 
-  static TextTheme _buildTextTheme(SparkleThemeData theme) {
-    return TextTheme(
+  static TextTheme _buildTextTheme(SparkleThemeData theme) => TextTheme(
       displayLarge: theme.typography.displayLarge,
       headlineLarge: theme.typography.headingLarge,
       headlineMedium: theme.typography.headingMedium,
@@ -95,20 +89,16 @@ class AppThemes {
       labelLarge: theme.typography.labelLarge,
       labelSmall: theme.typography.labelSmall,
     );
-  }
 
-  static CardThemeData _buildCardTheme(SparkleThemeData theme) {
-    return CardThemeData(
+  static CardThemeData _buildCardTheme(SparkleThemeData theme) => CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(theme.spacing.sm),
       ),
       color: theme.colors.surfaceSecondary,
     );
-  }
 
-  static ButtonThemeData _buildButtonTheme(SparkleThemeData theme) {
-    return ButtonThemeData(
+  static ButtonThemeData _buildButtonTheme(SparkleThemeData theme) => ButtonThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(theme.spacing.sm),
       ),
@@ -117,10 +107,8 @@ class AppThemes {
         vertical: theme.spacing.sm,
       ),
     );
-  }
 
-  static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) {
-    return InputDecorationTheme(
+  static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) => InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(theme.spacing.sm),
         borderSide: BorderSide(color: theme.colors.surfaceTertiary),
@@ -137,20 +125,17 @@ class AppThemes {
       fillColor: theme.colors.surfaceSecondary,
       contentPadding: EdgeInsets.all(theme.spacing.lg),
     );
-  }
 }
 
 /// 主题扩展 - 用于访问自定义主题属性
 @immutable
 class _SparkleThemeExtension extends ThemeExtension<_SparkleThemeExtension> {
-  final SparkleThemeData sparkle;
 
   const _SparkleThemeExtension(this.sparkle);
+  final SparkleThemeData sparkle;
 
   @override
-  _SparkleThemeExtension copyWith({SparkleThemeData? sparkle}) {
-    return _SparkleThemeExtension(sparkle ?? this.sparkle);
-  }
+  _SparkleThemeExtension copyWith({SparkleThemeData? sparkle}) => _SparkleThemeExtension(sparkle ?? this.sparkle);
 
   @override
   _SparkleThemeExtension lerp(ThemeExtension<_SparkleThemeExtension>? other, double t) {
@@ -202,13 +187,16 @@ extension SparkleContext on BuildContext {
 class DS {
   DS._();
 
+  // 缓存 ThemeManager 实例以提升性能
+  static SparkleThemeData get _theme => ThemeManager().current;
+
   // 颜色
-  static Color get brandPrimary => ThemeManager().current.colors.brandPrimary;
-  static Color get brandSecondary => ThemeManager().current.colors.brandSecondary;
-  static Color get success => ThemeManager().current.colors.semanticSuccess;
-  static Color get warning => ThemeManager().current.colors.semanticWarning;
-  static Color get error => ThemeManager().current.colors.semanticError;
-  static Color get info => ThemeManager().current.colors.semanticInfo;
+  static Color get brandPrimary => _theme.colors.brandPrimary;
+  static Color get brandSecondary => _theme.colors.brandSecondary;
+  static Color get success => _theme.colors.semanticSuccess;
+  static Color get warning => _theme.colors.semanticWarning;
+  static Color get error => _theme.colors.semanticError;
+  static Color get info => _theme.colors.semanticInfo;
 
   // 间距
   static double get xs => SpacingSystem.xs;
@@ -251,13 +239,11 @@ class DesignSystemInitializer {
   }
 
   /// 检查系统状态
-  static Map<String, dynamic> get status {
-    return {
+  static Map<String, dynamic> get status => {
       'initialized': _initialized,
       'themeMode': ThemeManager().mode.name,
       'brandPreset': ThemeManager().brandPreset.name,
       'highContrast': ThemeManager().highContrast,
       'version': '2.0.0',
     };
-  }
 }

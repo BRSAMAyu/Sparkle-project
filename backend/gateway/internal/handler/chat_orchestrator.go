@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,46 @@ var upgrader = websocket.Upgrader{
 		return true // Allow all for dev
 	},
 }
+
+// P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
+
+// chatInputPool reuses input message structs
+var chatInputPool = sync.Pool{
+	New: func() interface{} {
+		return &chatInput{}
+	},
+}
+
+// chatInput represents a WebSocket chat message input
+type chatInput struct {
+	Message   string `json:"message"`
+	SessionID string `json:"session_id"`
+	Nickname  string `json:"nickname,omitempty"`
+}
+
+// Reset clears the input for reuse
+func (c *chatInput) Reset() {
+	c.Message = ""
+	c.SessionID = ""
+	c.Nickname = ""
+}
+
+// jsonResponsePool reuses response maps
+var jsonResponsePool = sync.Pool{
+	New: func() interface{} {
+		return make(map[string]interface{}, 8)
+	},
+}
+
+// stringBuilderPool reuses string builders for text accumulation
+var stringBuilderPool = sync.Pool{
+	New: func() interface{} {
+		return &strings.Builder{}
+	},
+}
+
+// sanitizerPool reuses bluemonday policies (they are thread-safe once created)
+var sanitizer = bluemonday.UGCPolicy()
 
 type ChatOrchestrator struct {
 	agentClient *agent.Client
@@ -79,21 +121,22 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			break
 		}
 
-		var input struct {
-			Message   string `json:"message"`
-			SessionID string `json:"session_id"`
-			Nickname  string `json:"nickname,omitempty"`
-		}
+		// P1: Get input from pool instead of allocating new struct
+		input := chatInputPool.Get().(*chatInput)
 
 		// Parse JSON input
-		if err := json.Unmarshal(msg, &input); err != nil {
+		if err := json.Unmarshal(msg, input); err != nil {
 			log.Printf("Failed to parse message: %v", err)
 			conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+			input.Reset()
+			chatInputPool.Put(input)
 			continue
 		}
 
 		if input.Message == "" {
 			conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
+			input.Reset()
+			chatInputPool.Put(input)
 			continue
 		}
 
@@ -104,9 +147,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			attribute.String("session_id", input.SessionID),
 		)
 
-		// Sanitize Input (Security Hygiene)
-		p := bluemonday.UGCPolicy()
-		input.Message = p.Sanitize(input.Message)
+		// Sanitize Input (Security Hygiene) - reuse global sanitizer
+		input.Message = sanitizer.Sanitize(input.Message)
 
 		// Canonicalize Input (Semantic Cache Prep)
 		_ = h.semantic.Canonicalize(input.Message)
@@ -139,6 +181,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			continue
 		}
 
+		// P1: Get string builder from pool for efficient text accumulation
+		textBuilder := stringBuilderPool.Get().(*strings.Builder)
+		textBuilder.Reset()
+
 		// Receive and forward streaming responses
 		var fullText string
 		for {
@@ -153,12 +199,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				break
 			}
 
-			// Accumulate full text for persistence
-			if resp.GetDelta() != "" {
-				fullText += resp.GetDelta()
+			// Accumulate full text for persistence using pooled builder
+			if delta := resp.GetDelta(); delta != "" {
+				textBuilder.WriteString(delta)
 			}
-			if resp.GetFullText() != "" {
-				fullText = resp.GetFullText()
+			if ft := resp.GetFullText(); ft != "" {
+				textBuilder.Reset()
+				textBuilder.WriteString(ft)
 			}
 
 			// Convert protobuf response to JSON-friendly map
@@ -167,10 +214,15 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				stringBuilderPool.Put(textBuilder)
+				input.Reset()
+				chatInputPool.Put(input)
 				span.End()
 				return
 			}
 		}
+		fullText = textBuilder.String()
+		stringBuilderPool.Put(textBuilder)
 
 		// Add metadata for the final state
 		latency := time.Since(startTime).Milliseconds()
@@ -195,7 +247,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 		// Persist completed message to database (async)
 		if fullText != "" && input.SessionID != "" {
-			go h.saveMessage(userID, input.SessionID, "assistant", fullText)
+			// Capture values for goroutine before returning input to pool
+			sessionID := input.SessionID
+			go h.saveMessage(userID, sessionID, "assistant", fullText)
 
 			// Also decrement quota (async)
 			go func() {
@@ -204,6 +258,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 			}()
 		}
+
+		// P1: Return input to pool for reuse
+		input.Reset()
+		chatInputPool.Put(input)
 		span.End()
 	}
 

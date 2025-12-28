@@ -7,13 +7,9 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 
 import 'package:sparkle/core/network/api_interceptor.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref);
-});
+final apiClientProvider = Provider<ApiClient>(ApiClient.new);
 
 class ApiClient {
-  final Ref _ref;
-  late final Dio _dio;
 
   ApiClient(this._ref) {
     final options = BaseOptions(
@@ -27,6 +23,8 @@ class ApiClient {
     _dio.interceptors.add(_ref.read(retryInterceptorProvider(_dio)));
     _dio.interceptors.add(_ref.read(loggingInterceptorProvider));
   }
+  final Ref _ref;
+  late final Dio _dio;
 
   /// 获取 Dio 实例 (用于需要直接访问的场景)
   Dio get dio => _dio;
@@ -88,7 +86,7 @@ class ApiClient {
         return;
       }
 
-      String buffer = '';
+      var buffer = '';
 
       await for (final chunk in stream) {
         buffer += utf8.decode(chunk);
@@ -144,7 +142,7 @@ class ApiClient {
         return;
       }
 
-      String buffer = '';
+      var buffer = '';
 
       await for (final chunk in stream) {
         buffer += utf8.decode(chunk);
@@ -210,10 +208,10 @@ class ApiClient {
 
 /// SSE 事件数据类
 class SSEEvent {
-  final String event;
-  final String data;
 
   SSEEvent({required this.event, required this.data});
+  final String event;
+  final String data;
 
   /// 解析 data 为 JSON Map
   Map<String, dynamic>? get jsonData {

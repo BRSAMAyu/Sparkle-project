@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -109,8 +109,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       decoration: const BoxDecoration(
         color: DS.brandPrimary,
@@ -173,7 +172,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
                     animation: _controller,
                     builder: (context, child) {
                       // Scale from 0.4 to 1.0
-                      final double scale = 0.4 + (_controller.value * 0.6);
+                      final scale = 0.4 + (_controller.value * 0.6);
                       return Transform.scale(
                         scale: scale,
                         child: Container(
@@ -273,5 +272,4 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
         ],
       ),
     );
-  }
 }

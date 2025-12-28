@@ -1,0 +1,139 @@
+[project]
+name = "sparkle-backend"
+version = "2.0.0"
+description = "Sparkle AI Learning Assistant - Backend Services"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Sparkle Team" }
+]
+keywords = ["ai", "learning", "assistant", "fastapi", "grpc"]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.3",
+    "pydantic-settings>=2.1.0",
+    "python-multipart>=0.0.6",
+
+    # Database
+    "sqlalchemy>=2.0.25",
+    "greenlet>=3.0.0",
+    "alembic>=1.13.1",
+    "psycopg2-binary>=2.9.9",
+    "asyncpg>=0.29.0",
+    "aiosqlite>=0.22.0",
+    "pgvector>=0.2.4",
+    "redis>=5.0.1",
+
+    # Authentication & Security
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-dotenv>=1.0.0",
+
+    # Task Scheduling
+    "apscheduler>=3.10.4",
+
+    # HTTP Client & Tools
+    "httpx>=0.26.0",
+    "aiofiles>=23.2.1",
+
+    # LLM & AI
+    "openai>=1.10.0",
+    "sentence-transformers>=2.2.2",
+    "langchain-text-splitters>=0.0.1",
+    "tiktoken>=0.5.2",
+
+    # Additional Dependencies
+    "sse-starlette",
+    "loguru",
+    "json-repair",
+    "typing-extensions",
+    "email-validator>=2.0.0",
+    "slowapi>=0.1.9",
+    "tenacity",
+    "prometheus-fastapi-instrumentator",
+    "networkx>=3.2.1",
+
+    # Observability
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp",
+    "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-grpc",
+    "opentelemetry-instrumentation-sqlalchemy",
+    "opentelemetry-instrumentation-requests",
+    "opentelemetry-instrumentation-redis",
+
+    # gRPC
+    "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
+    "protobuf>=4.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.3",
+    "black>=24.1.1",
+    "ruff>=0.1.9",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.3",
+    "black>=24.1.1",
+    "ruff>=0.1.9",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # raise from
+    "ARG001", # unused function argument
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**" = ["ARG001", "S101"]
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"

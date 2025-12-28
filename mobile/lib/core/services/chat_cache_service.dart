@@ -2,13 +2,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sparkle/data/models/community_model.dart';
 
 class ChatCacheService {
+  factory ChatCacheService() => _instance;
+  ChatCacheService._internal();
   static const String _groupPrefix = 'group_messages_';
   static const String _privatePrefix = 'private_messages_';
 
   // Singleton
   static final ChatCacheService _instance = ChatCacheService._internal();
-  factory ChatCacheService() => _instance;
-  ChatCacheService._internal();
 
   /// Initialize and register adapters
   /// This should be called in main.dart

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/central_flame.dart';
-import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/energy_particle.dart';
-import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
-import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_entrance_animation.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_mini_map.dart';
-import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
 import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
 import 'package:sparkle/presentation/widgets/galaxy/parallax_star_background.dart';
+import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
+import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
+import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
+import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
 
 class GalaxyScreen extends ConsumerStatefulWidget {
   const GalaxyScreen({super.key});
@@ -411,7 +410,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
                   sourcePosition: transfer.sourcePosition,
                   targetPosition: transfer.targetPosition,
                   targetColor: transfer.targetColor,
-                  duration: const Duration(milliseconds: 800),
                   onComplete: () => _onEnergyTransferComplete(transfer),
                 ),
               ),
@@ -528,13 +526,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
   }
 
   // Helper to shift logical (0,0) to center of the 4000x4000 canvas
-  Map<String, Offset> _centerPositions(Map<String, Offset> raw, double cx, double cy) {
-    return raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
-  }
+  Map<String, Offset> _centerPositions(Map<String, Offset> raw, double cx, double cy) => raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
 
   // Helper to shift cluster positions to center of the 4000x4000 canvas
-  Map<String, ClusterInfo> _centerClusters(Map<String, ClusterInfo> raw, double cx, double cy) {
-    return raw.map((key, cluster) => MapEntry(
+  Map<String, ClusterInfo> _centerClusters(Map<String, ClusterInfo> raw, double cx, double cy) => raw.map((key, cluster) => MapEntry(
       key,
       ClusterInfo(
         id: cluster.id,
@@ -546,16 +541,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with SingleTickerPr
         childNodeIds: cluster.childNodeIds,
       ),
     ),);
-  }
 }
 
 /// Data class for active energy transfer animation
 class _ActiveEnergyTransfer {
-  final Key key;
-  final String nodeId;
-  final Offset sourcePosition;
-  final Offset targetPosition;
-  final Color targetColor;
 
   _ActiveEnergyTransfer({
     required this.key,
@@ -564,17 +553,22 @@ class _ActiveEnergyTransfer {
     required this.targetPosition,
     required this.targetColor,
   });
+  final Key key;
+  final String nodeId;
+  final Offset sourcePosition;
+  final Offset targetPosition;
+  final Color targetColor;
 }
 
 /// Data class for active success animation
 class _ActiveSuccessAnimation {
-  final Key key;
-  final Offset position;
-  final Color color;
 
   _ActiveSuccessAnimation({
     required this.key,
     required this.position,
     required this.color,
   });
+  final Key key;
+  final Offset position;
+  final Color color;
 }

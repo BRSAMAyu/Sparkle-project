@@ -1,17 +1,5 @@
 
 class CalendarEventModel {
-  final String id;
-  final String title;
-  final String? description;
-  final DateTime startTime;
-  final DateTime endTime;
-  final bool isAllDay;
-  final String? location;
-  final int colorValue;
-  final List<int> reminderMinutes;
-  final String? recurrenceRule;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   CalendarEventModel({
     required this.id,
@@ -26,8 +14,7 @@ class CalendarEventModel {
     this.recurrenceRule,
   });
 
-  factory CalendarEventModel.fromJson(Map<String, dynamic> json) {
-    return CalendarEventModel(
+  factory CalendarEventModel.fromJson(Map<String, dynamic> json) => CalendarEventModel(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
@@ -41,10 +28,20 @@ class CalendarEventModel {
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
-  }
+  final String id;
+  final String title;
+  final String? description;
+  final DateTime startTime;
+  final DateTime endTime;
+  final bool isAllDay;
+  final String? location;
+  final int colorValue;
+  final List<int> reminderMinutes;
+  final String? recurrenceRule;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'title': title,
       'description': description,
@@ -58,7 +55,6 @@ class CalendarEventModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
-  }
 
   CalendarEventModel copyWith({
     String? id,
@@ -73,8 +69,7 @@ class CalendarEventModel {
     String? recurrenceRule,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return CalendarEventModel(
+  }) => CalendarEventModel(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -88,5 +83,4 @@ class CalendarEventModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
-  }
 }

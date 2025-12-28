@@ -1,7 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'dart:math' as math;
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 架构可视化动画 - 必杀技 C
@@ -14,14 +14,14 @@ import 'package:sparkle/core/design/design_tokens.dart';
 ///
 /// 用于 Onboarding 流程，帮助用户理解系统工作原理
 class ArchitectureAnimation extends StatefulWidget {
-  final VoidCallback? onComplete;
-  final bool autoPlay;
 
   const ArchitectureAnimation({
     this.onComplete,
     this.autoPlay = true,
     super.key,
   });
+  final VoidCallback? onComplete;
+  final bool autoPlay;
 
   @override
   State<ArchitectureAnimation> createState() => _ArchitectureAnimationState();
@@ -68,8 +68,8 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     }
   }
 
-  void _startAnimation() async {
-    for (int i = 0; i < _totalSteps; i++) {
+  Future<void> _startAnimation() async {
+    for (var i = 0; i < _totalSteps; i++) {
       setState(() => _currentStep = i);
       _mainController.forward(from: 0);
       await Future.delayed(const Duration(seconds: 3));
@@ -86,8 +86,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       height: 500,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -144,19 +143,14 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
         ],
       ),
     );
-  }
 
-  Widget _buildStarField() {
-    return CustomPaint(
+  Widget _buildStarField() => CustomPaint(
       painter: _StarFieldPainter(),
     );
-  }
 
-  Widget _buildStepIndicator() {
-    return Row(
+  Widget _buildStepIndicator() => Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_totalSteps, (index) {
-        return Container(
+      children: List.generate(_totalSteps, (index) => Container(
           width: index == _currentStep ? 24 : 8,
           height: 8,
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -166,10 +160,8 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
                 : DS.brandPrimary.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
           ),
-        );
-      }),
+        ),),
     );
-  }
 
   Widget _buildStepDescription() {
     final steps = [
@@ -254,15 +246,15 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
 }
 
 class _ArchitecturePainter extends CustomPainter {
-  final int currentStep;
-  final double fadeValue;
-  final double pulseValue;
 
   _ArchitecturePainter({
     required this.currentStep,
     required this.fadeValue,
     required this.pulseValue,
   });
+  final int currentStep;
+  final double fadeValue;
+  final double pulseValue;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -307,7 +299,7 @@ class _ArchitecturePainter extends CustomPainter {
     }
     if (currentStep >= 3) {
       _drawLayer(canvas, dbPos, 'PostgreSQL\n+ Redis', Icons.storage.codePoint,
-          currentStep >= 3 ? fadeValue : 0, Colors.orange.shade400,);
+          currentStep >= 3 ? fadeValue : 0, DS.brandPrimary.shade400,);
     }
   }
 
@@ -416,7 +408,7 @@ class _StarFieldPainter extends CustomPainter {
 
     final random = math.Random(42); // Fixed seed for consistent stars
 
-    for (int i = 0; i < 50; i++) {
+    for (var i = 0; i < 50; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final radius = random.nextDouble() * 2;

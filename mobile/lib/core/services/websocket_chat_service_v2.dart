@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// WebSocket 连接状态
 enum WsConnectionState {
@@ -17,6 +18,10 @@ enum WsConnectionState {
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 {
+
+  WebSocketChatServiceV2({
+    this.baseUrl = ApiConstants.wsBaseUrl,
+  });
   // WebSocket 连接
   WebSocketChannel? _channel;
 
@@ -47,10 +52,6 @@ class WebSocketChatServiceV2 {
 
   // 消息队列（连接断开时暂存）
   final List<Map<String, dynamic>> _pendingMessages = [];
-
-  WebSocketChatServiceV2({
-    this.baseUrl = ApiConstants.wsBaseUrl,
-  });
 
   /// 获取连接状态流
   Stream<WsConnectionState> get connectionStateStream =>
@@ -391,9 +392,7 @@ class WebSocketChatServiceV2 {
   }
 
   /// 生成 session ID
-  String _generateSessionId() {
-    return 'session_${DateTime.now().millisecondsSinceEpoch}';
-  }
+  String _generateSessionId() => 'session_${DateTime.now().millisecondsSinceEpoch}';
 
   /// 手动重连
   Future<void> manualReconnect() async {

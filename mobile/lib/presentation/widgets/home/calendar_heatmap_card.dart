@@ -1,18 +1,17 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 
 class CalendarHeatmapCard extends StatelessWidget {
   const CalendarHeatmapCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: () => context.push('/calendar-stats'),
       child: ClipRRect(
         borderRadius: AppDesignTokens.borderRadius20,
@@ -56,9 +55,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                 const SizedBox(height: DS.md),
                 Expanded(
                   child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return _buildMonthGrid(context, constraints);
-                    },
+                    builder: _buildMonthGrid,
                   ),
                 ),
                 const SizedBox(height: DS.sm),
@@ -92,10 +89,8 @@ class CalendarHeatmapCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildLegendItem(int level) {
-    return Container(
+  Widget _buildLegendItem(int level) => Container(
       width: 8,
       height: 8,
       decoration: BoxDecoration(
@@ -103,27 +98,26 @@ class CalendarHeatmapCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(2),
       ),
     );
-  }
 
   Widget _buildMonthGrid(BuildContext context, BoxConstraints constraints) {
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final firstWeekday = DateTime(now.year, now.month, 1).weekday; // 1=Mon, 7=Sun
+    final firstWeekday = DateTime(now.year, now.month).weekday; // 1=Mon, 7=Sun
 
     // We can use a Wrap or Column of Rows. Let's use GridView for simplicity but carefully sized.
     // Or just a custom loop to build rows.
     
-    final List<Widget> gridCells = [];
+    final gridCells = <Widget>[];
     
     // Empty cells for offset
-    for (int i = 0; i < firstWeekday - 1; i++) {
+    for (var i = 0; i < firstWeekday - 1; i++) {
       gridCells.add(const SizedBox());
     }
     
     // Days
-    for (int i = 1; i <= daysInMonth; i++) {
+    for (var i = 1; i <= daysInMonth; i++) {
       // Fake intensity based on day number
-      int intensity = (i * 7) % 5; 
+      var intensity = (i * 7) % 5; 
       if (i == now.day) intensity = 4; // Today is max
 
       gridCells.add(
@@ -143,15 +137,14 @@ class CalendarHeatmapCard extends StatelessWidget {
       crossAxisCount: 7,
       mainAxisSpacing: 4,
       crossAxisSpacing: 4,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.0, 
+      physics: const NeverScrollableScrollPhysics(), 
       children: gridCells,
     );
   }
 
   Color _getColorForLevel(int level) {
     // Theme color is orange.
-    const baseColor = Colors.orange;
+    const baseColor = DS.brandPrimary;
     switch (level) {
       case 0: return DS.brandPrimary.withValues(alpha: 0.1);
       case 1: return baseColor.withValues(alpha: 0.3);

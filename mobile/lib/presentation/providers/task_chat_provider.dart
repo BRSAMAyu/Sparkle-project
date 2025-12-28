@@ -4,35 +4,33 @@ import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 
 class TaskChatState {
-  final bool isLoading;
-  final List<ChatMessageModel> messages;
-  final String? error;
 
   TaskChatState({
     this.isLoading = false,
     this.messages = const [],
     this.error,
   });
+  final bool isLoading;
+  final List<ChatMessageModel> messages;
+  final String? error;
 
   TaskChatState copyWith({
     bool? isLoading,
     List<ChatMessageModel>? messages,
     String? error,
-  }) {
-    return TaskChatState(
+  }) => TaskChatState(
       isLoading: isLoading ?? this.isLoading,
       messages: messages ?? this.messages,
       error: error ?? this.error,
     );
-  }
 }
 
 class TaskChatNotifier extends StateNotifier<TaskChatState> {
+
+  TaskChatNotifier(this._repository, this.taskId) : super(TaskChatState());
   final ChatRepository _repository;
   final String taskId;
   String? _conversationId;
-
-  TaskChatNotifier(this._repository, this.taskId) : super(TaskChatState());
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
@@ -51,7 +49,6 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       isLoading: true,
-      error: null,
     );
 
     try {

@@ -1,12 +1,18 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'dart:math' as math;
 
 /// 多智能体头像堆叠组件
 ///
 /// 显示多个协作智能体的头像，带有动画转换效果
 class AgentAvatarStack extends StatefulWidget {
+
+  const AgentAvatarStack({
+    required this.activeAgents, super.key,
+    this.size = 40,
+    this.animate = true,
+  });
   /// 当前活跃的智能体
   final List<AgentInfo> activeAgents;
 
@@ -15,12 +21,6 @@ class AgentAvatarStack extends StatefulWidget {
 
   /// 是否显示动画
   final bool animate;
-
-  const AgentAvatarStack({
-    required this.activeAgents, super.key,
-    this.size = 40,
-    this.animate = true,
-  });
 
   @override
   State<AgentAvatarStack> createState() => _AgentAvatarStackState();
@@ -84,7 +84,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     final widgets = <Widget>[];
     final overlap = widget.size * 0.33;
 
-    for (int i = 0; i < widget.activeAgents.length; i++) {
+    for (var i = 0; i < widget.activeAgents.length; i++) {
       final agent = widget.activeAgents[i];
       final left = i * overlap;
 
@@ -114,8 +114,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     return widgets;
   }
 
-  Widget _buildAvatar(AgentInfo agent) {
-    return Container(
+  Widget _buildAvatar(AgentInfo agent) => Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
@@ -141,15 +140,10 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
         ),
       ),
     );
-  }
 }
 
 /// 智能体信息
 class AgentInfo {
-  final String type;
-  final String name;
-  final IconData icon;
-  final Color color;
 
   AgentInfo({
     required this.type,
@@ -179,7 +173,7 @@ class AgentInfo {
           type: 'writing',
           name: 'Writing Expert',
           icon: Icons.edit,
-          color: Colors.orange.shade600,
+          color: DS.brandPrimary.shade600,
         );
       case 'science':
         return AgentInfo(
@@ -198,12 +192,21 @@ class AgentInfo {
         );
     }
   }
+  final String type;
+  final String name;
+  final IconData icon;
+  final Color color;
 }
 
 /// 智能体转换动画组件
 ///
 /// 显示智能体之间的"接力"动画
 class AgentHandoffAnimation extends StatefulWidget {
+
+  const AgentHandoffAnimation({
+    required this.fromAgent, required this.toAgent, super.key,
+    this.onComplete,
+  });
   /// 发起智能体
   final AgentInfo fromAgent;
 
@@ -212,11 +215,6 @@ class AgentHandoffAnimation extends StatefulWidget {
 
   /// 动画完成回调
   final VoidCallback? onComplete;
-
-  const AgentHandoffAnimation({
-    required this.fromAgent, required this.toAgent, super.key,
-    this.onComplete,
-  });
 
   @override
   State<AgentHandoffAnimation> createState() => _AgentHandoffAnimationState();
@@ -253,34 +251,30 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _curveAnimation,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: const Size(200, 100),
           painter: _HandoffPainter(
             progress: _curveAnimation.value,
             fromColor: widget.fromAgent.color,
             toColor: widget.toAgent.color,
           ),
-        );
-      },
+        ),
     );
-  }
 }
 
 /// 接力动画绘制器
 class _HandoffPainter extends CustomPainter {
-  final double progress;
-  final Color fromColor;
-  final Color toColor;
 
   _HandoffPainter({
     required this.progress,
     required this.fromColor,
     required this.toColor,
   });
+  final double progress;
+  final Color fromColor;
+  final Color toColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -318,7 +312,5 @@ class _HandoffPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HandoffPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
+  bool shouldRepaint(_HandoffPainter oldDelegate) => oldDelegate.progress != progress;
 }

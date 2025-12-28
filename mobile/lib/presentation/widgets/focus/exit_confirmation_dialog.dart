@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -10,13 +9,13 @@ enum ExitStep { first, second, third }
 
 /// 三重确认退出对话框
 class ExitConfirmationDialog extends StatefulWidget {
-  final int elapsedMinutes;
-  final VoidCallback onConfirmExit;
-  final VoidCallback onCancel;
 
   const ExitConfirmationDialog({
     required this.elapsedMinutes, required this.onConfirmExit, required this.onCancel, super.key,
   });
+  final int elapsedMinutes;
+  final VoidCallback onConfirmExit;
+  final VoidCallback onCancel;
 
   @override
   State<ExitConfirmationDialog> createState() => _ExitConfirmationDialogState();
@@ -68,8 +67,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
+  Widget build(BuildContext context) => SlideTransition(
       position: _slideAnimation,
       child: Dialog(
         backgroundColor: Colors.transparent,
@@ -153,10 +151,8 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         ),
       ),
     );
-  }
 
-  Widget _buildProgressIndicator() {
-    return Row(
+  Widget _buildProgressIndicator() => Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(3, (index) {
         final isActive = index <= _currentStep.index;
@@ -173,7 +169,6 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         );
       }),
     );
-  }
 
   Widget _buildIcon() {
     IconData icon;

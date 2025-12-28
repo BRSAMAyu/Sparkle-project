@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 按钮变体类型
@@ -22,6 +21,91 @@ enum ButtonSize {
 ///
 /// 支持多种变体、尺寸和状态，具有精致的视觉效果和流畅的动画
 class CustomButton extends StatefulWidget {
+
+  const CustomButton({
+    super.key,
+    this.text,
+    this.icon,
+    this.onPressed,
+    this.variant = ButtonVariant.primary,
+    this.size = ButtonSize.medium,
+    this.isLoading = false,
+    this.isFullWidth = false,
+    this.customGradient,
+    this.isCircular = true,
+  }) : assert(
+          text != null || icon != null,
+          'Either text or icon must be provided',
+        );
+
+  /// 主要按钮工厂构造函数
+  factory CustomButton.primary({
+    required String text, required VoidCallback? onPressed, Key? key,
+    IconData? icon,
+    ButtonSize size = ButtonSize.medium,
+    bool isLoading = false,
+    bool isFullWidth = false,
+    LinearGradient? customGradient,
+  }) => CustomButton(
+      key: key,
+      text: text,
+      icon: icon,
+      onPressed: onPressed,
+      size: size,
+      isLoading: isLoading,
+      isFullWidth: isFullWidth,
+      customGradient: customGradient,
+    );
+
+  /// 次要按钮工厂构造函数
+  factory CustomButton.secondary({
+    required String text, required VoidCallback? onPressed, Key? key,
+    IconData? icon,
+    ButtonSize size = ButtonSize.medium,
+    bool isLoading = false,
+    bool isFullWidth = false,
+  }) => CustomButton(
+      key: key,
+      text: text,
+      icon: icon,
+      onPressed: onPressed,
+      variant: ButtonVariant.secondary,
+      size: size,
+      isLoading: isLoading,
+      isFullWidth: isFullWidth,
+    );
+
+  /// 文字按钮工厂构造函数
+  factory CustomButton.text({
+    required String text, required VoidCallback? onPressed, Key? key,
+    IconData? icon,
+    ButtonSize size = ButtonSize.medium,
+    bool isLoading = false,
+  }) => CustomButton(
+      key: key,
+      text: text,
+      icon: icon,
+      onPressed: onPressed,
+      variant: ButtonVariant.text,
+      size: size,
+      isLoading: isLoading,
+    );
+
+  /// 图标按钮工厂构造函数
+  factory CustomButton.icon({
+    required IconData icon, required VoidCallback? onPressed, Key? key,
+    ButtonSize size = ButtonSize.medium,
+    bool isLoading = false,
+    bool isCircular = true,
+  }) => CustomButton(
+      key: key,
+      icon: icon,
+      onPressed: onPressed,
+      variant: ButtonVariant.icon,
+      size: size,
+      isLoading: isLoading,
+      isCircular: isCircular,
+    );
   /// 按钮文本
   final String? text;
 
@@ -48,101 +132,6 @@ class CustomButton extends StatefulWidget {
 
   /// 图标按钮形状（仅适用于icon变体）
   final bool isCircular;
-
-  const CustomButton({
-    super.key,
-    this.text,
-    this.icon,
-    this.onPressed,
-    this.variant = ButtonVariant.primary,
-    this.size = ButtonSize.medium,
-    this.isLoading = false,
-    this.isFullWidth = false,
-    this.customGradient,
-    this.isCircular = true,
-  }) : assert(
-          text != null || icon != null,
-          'Either text or icon must be provided',
-        );
-
-  /// 主要按钮工厂构造函数
-  factory CustomButton.primary({
-    required String text, required VoidCallback? onPressed, Key? key,
-    IconData? icon,
-    ButtonSize size = ButtonSize.medium,
-    bool isLoading = false,
-    bool isFullWidth = false,
-    LinearGradient? customGradient,
-  }) {
-    return CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.primary,
-      size: size,
-      isLoading: isLoading,
-      isFullWidth: isFullWidth,
-      customGradient: customGradient,
-    );
-  }
-
-  /// 次要按钮工厂构造函数
-  factory CustomButton.secondary({
-    required String text, required VoidCallback? onPressed, Key? key,
-    IconData? icon,
-    ButtonSize size = ButtonSize.medium,
-    bool isLoading = false,
-    bool isFullWidth = false,
-  }) {
-    return CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.secondary,
-      size: size,
-      isLoading: isLoading,
-      isFullWidth: isFullWidth,
-    );
-  }
-
-  /// 文字按钮工厂构造函数
-  factory CustomButton.text({
-    required String text, required VoidCallback? onPressed, Key? key,
-    IconData? icon,
-    ButtonSize size = ButtonSize.medium,
-    bool isLoading = false,
-  }) {
-    return CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.text,
-      size: size,
-      isLoading: isLoading,
-      isFullWidth: false,
-    );
-  }
-
-  /// 图标按钮工厂构造函数
-  factory CustomButton.icon({
-    required IconData icon, required VoidCallback? onPressed, Key? key,
-    ButtonSize size = ButtonSize.medium,
-    bool isLoading = false,
-    bool isCircular = true,
-  }) {
-    return CustomButton(
-      key: key,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.icon,
-      size: size,
-      isLoading: isLoading,
-      isCircular: isCircular,
-    );
-  }
 
   @override
   State<CustomButton> createState() => _CustomButtonState();
@@ -190,7 +179,7 @@ class _CustomButtonState extends State<CustomButton>
 
   @override
   Widget build(BuildContext context) {
-    final bool isDisabled = widget.onPressed == null || widget.isLoading;
+    final isDisabled = widget.onPressed == null || widget.isLoading;
 
     return GestureDetector(
       onTapDown: _handleTapDown,
@@ -256,7 +245,7 @@ class _CustomButtonState extends State<CustomButton>
   Widget _buildPrimaryButton(BuildContext context, bool isDisabled) {
     final gradient = widget.customGradient ?? AppDesignTokens.primaryGradient;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isDisabled ? null : gradient,
         color: isDisabled ? AppDesignTokens.neutral300 : null,
@@ -285,8 +274,7 @@ class _CustomButtonState extends State<CustomButton>
     );
   }
 
-  Widget _buildSecondaryButton(BuildContext context, bool isDisabled) {
-    return Container(
+  Widget _buildSecondaryButton(BuildContext context, bool isDisabled) => DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.transparent,
         border: Border.all(
@@ -321,10 +309,8 @@ class _CustomButtonState extends State<CustomButton>
         ),
       ),
     );
-  }
 
-  Widget _buildTextButton(BuildContext context, bool isDisabled) {
-    return Material(
+  Widget _buildTextButton(BuildContext context, bool isDisabled) => Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: isDisabled ? null : widget.onPressed,
@@ -345,7 +331,6 @@ class _CustomButtonState extends State<CustomButton>
         ),
       ),
     );
-  }
 
   Widget _buildIconButton(BuildContext context, bool isDisabled) {
     final buttonSize = _getButtonHeight();
@@ -394,7 +379,7 @@ class _CustomButtonState extends State<CustomButton>
     required Color textColor,
     required bool isDisabled,
   }) {
-    final List<Widget> children = [];
+    final children = <Widget>[];
 
     if (widget.isLoading) {
       children.add(

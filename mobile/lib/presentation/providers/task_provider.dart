@@ -1,21 +1,16 @@
 import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/data/models/task_completion_result.dart';
-import 'package:sparkle/data/repositories/task_repository.dart';
+
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/data/models/task_completion_result.dart';
+import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/repositories/task_repository.dart';
 
 // A dummy filter class for now
 class TaskFilter {}
 
 // 1. TaskListState Class
 class TaskListState {
-  final bool isLoading;
-  final List<TaskModel> tasks;
-  final List<TaskModel> todayTasks;
-  final List<TaskModel> recommendedTasks;
-  final TaskFilter? currentFilter;
-  final String? error;
 
   TaskListState({
     this.isLoading = false,
@@ -25,6 +20,12 @@ class TaskListState {
     this.currentFilter,
     this.error,
   });
+  final bool isLoading;
+  final List<TaskModel> tasks;
+  final List<TaskModel> todayTasks;
+  final List<TaskModel> recommendedTasks;
+  final TaskFilter? currentFilter;
+  final String? error;
 
   TaskListState copyWith({
     bool? isLoading,
@@ -34,8 +35,7 @@ class TaskListState {
     TaskFilter? currentFilter,
     String? error,
     bool clearError = false,
-  }) {
-    return TaskListState(
+  }) => TaskListState(
       isLoading: isLoading ?? this.isLoading,
       tasks: tasks ?? this.tasks,
       todayTasks: todayTasks ?? this.todayTasks,
@@ -43,12 +43,10 @@ class TaskListState {
       currentFilter: currentFilter ?? this.currentFilter,
       error: clearError ? null : error ?? this.error,
     );
-  }
 }
 
 // 2. TaskNotifier Class
 class TaskNotifier extends StateNotifier<TaskListState> {
-  final TaskRepository _taskRepository;
 
   TaskNotifier(this._taskRepository) : super(TaskListState()) {
     // Load initial data
@@ -56,6 +54,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     loadRecommendedTasks();
     loadTasks();
   }
+  final TaskRepository _taskRepository;
 
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -142,7 +141,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
        return result;
     } catch (e) {
       // 4. 🆕 失败：标记为失败状态（不直接回滚）
-      String errorMsg = '操作失败';
+      var errorMsg = '操作失败';
       if (e is DioException) {
         errorMsg = e.message ?? '网络错误';
       }
@@ -159,7 +158,6 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> retryCompleteTask(String id, int minutes, String? note) async {
     _updateTask(id, (task) => task.copyWith(
       syncStatus: TaskSyncStatus.pending,
-      syncError: null,
     ),);
     
     try {
@@ -170,7 +168,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         syncStatus: TaskSyncStatus.synced,
       ),);
     } catch (e) {
-      String errorMsg = '重试失败';
+      var errorMsg = '重试失败';
        if (e is DioException) {
         errorMsg = e.message ?? '网络错误';
       }
@@ -224,9 +222,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
 // 3. Providers
 
-final taskListProvider = StateNotifierProvider<TaskNotifier, TaskListState>((ref) {
-  return TaskNotifier(ref.watch(taskRepositoryProvider));
-});
+final taskListProvider = StateNotifierProvider<TaskNotifier, TaskListState>((ref) => TaskNotifier(ref.watch(taskRepositoryProvider)));
 
 final taskDetailProvider = FutureProvider.family<TaskModel, String>((ref, id) {
   final taskRepo = ref.watch(taskRepositoryProvider);

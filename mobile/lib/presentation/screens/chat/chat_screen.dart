@@ -1,15 +1,15 @@
-import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
+import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
-import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
-import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -54,7 +54,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -125,7 +125,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: isDark
             ? AppDesignTokens.deepSpaceGradient
@@ -213,7 +213,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           }
 
                           // 4. 计算正式消息的索引
-                          int msgIndex = index;
+                          var msgIndex = index;
                           if (isStatusShowing) msgIndex--;
                           if (chatState.isReasoningActive) msgIndex--;
                           if (chatState.isSending) msgIndex--;
@@ -228,7 +228,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (chatState.error != null)
                  Container(
                    width: double.infinity,
-                   padding: const EdgeInsets.all(8.0),
+                   padding: const EdgeInsets.all(DS.sm),
                    color: AppDesignTokens.error.withValues(alpha: 0.1),
                    child: Text(
                      'Error: ${chatState.error}', 
@@ -247,7 +247,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             if (chatState.graphragTrace != null)
               GraphRAGVisualizer(
                 trace: chatState.graphragTrace,
-                isVisible: true,
               ),
           ],
         ),
@@ -256,7 +255,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _showHistoryBottomSheet(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     showModalBottomSheet(
       context: context,
@@ -280,7 +279,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(DS.lg),
               child: Row(
                 children: [
                   const Icon(Icons.history_rounded, color: AppDesignTokens.primaryBase),
@@ -317,7 +316,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     itemCount: sessions.length,
                     itemBuilder: (context, index) {
                       final session = sessions[index];
-                      final bool isCurrent = session['id'] == ref.read(chatProvider).conversationId;
+                      final isCurrent = session['id'] == ref.read(chatProvider).conversationId;
                       
                       return ListTile(
                         leading: Container(
@@ -361,10 +360,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(DS.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -412,7 +411,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _QuickActionChip(
                   icon: Icons.bug_report_rounded,
                   label: '错误归因',
-                  color: Colors.orange,
+                  color: DS.brandPrimary,
                   onTap: () => ref.read(chatProvider.notifier).sendMessage('我想分析一下最近的错误原因'),
                 ),
               ],
@@ -425,10 +424,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 }
 
 class _QuickActionChip extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
 
   const _QuickActionChip({
     required this.icon,
@@ -436,6 +431,10 @@ class _QuickActionChip extends StatefulWidget {
     required this.color,
     required this.onTap,
   });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   State<_QuickActionChip> createState() => _QuickActionChipState();
@@ -513,13 +512,13 @@ class _TypingIndicator extends StatefulWidget {
 
 /// 流式输出气泡 - 显示正在流式输出的 AI 响应
 class _StreamingBubble extends StatelessWidget {
-  final String content;
 
   const _StreamingBubble({required this.content});
+  final String content;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -591,8 +590,7 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _animation,
       child: Container(
         width: 2,
@@ -600,7 +598,6 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
         color: AppDesignTokens.primaryBase,
       ),
     );
-  }
 }
 
 class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerProviderStateMixin {
@@ -623,7 +620,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -639,8 +636,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: List.generate(3, (index) {
-          return AnimatedBuilder(
+        children: List.generate(3, (index) => AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
               final delay = index * 0.2;
@@ -660,8 +656,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
                 ),
               );
             },
-          );
-        }),
+          ),),
       ),
     );
   }

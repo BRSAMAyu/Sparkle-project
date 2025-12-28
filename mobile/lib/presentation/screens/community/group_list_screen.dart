@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -54,9 +53,7 @@ class GroupListScreen extends ConsumerWidget {
             );
           }
           return RefreshIndicator(
-            onRefresh: () async {
-              return ref.read(myGroupsProvider.notifier).refresh();
-            },
+            onRefresh: () async => ref.read(myGroupsProvider.notifier).refresh(),
             child: ListView.separated(
               padding: const EdgeInsets.all(AppDesignTokens.spacing16),
               itemCount: groups.length,
@@ -87,10 +84,10 @@ class GroupListScreen extends ConsumerWidget {
 }
 
 class _AnimatedGroupTile extends StatefulWidget {
-  final GroupListItem group;
-  final int index;
 
   const _AnimatedGroupTile({required this.group, required this.index});
+  final GroupListItem group;
+  final int index;
 
   @override
   State<_AnimatedGroupTile> createState() => _AnimatedGroupTileState();
@@ -131,27 +128,25 @@ class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTicke
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
         child: _GroupListTile(group: widget.group),
       ),
     );
-  }
 }
 
 class _GroupListTile extends StatelessWidget {
-  final GroupListItem group;
 
   const _GroupListTile({required this.group});
+  final GroupListItem group;
 
   @override
   Widget build(BuildContext context) {
     final isSprint = group.isSprint;
     
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
@@ -181,11 +176,11 @@ class _GroupListTile extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: isSprint 
-                          ? LinearGradient(colors: [Colors.orange.shade100, Colors.orange.shade50])
+                          ? LinearGradient(colors: [DS.brandPrimary.shade100, DS.brandPrimary.shade50])
                           : LinearGradient(colors: [DS.brandPrimary.shade100, DS.brandPrimary.shade50]),
                       boxShadow: [
                          BoxShadow(
-                           color: (isSprint ? Colors.orange : DS.brandPrimary).withValues(alpha: 0.2),
+                           color: (isSprint ? DS.brandPrimary : DS.brandPrimary).withValues(alpha: 0.2),
                            blurRadius: 8,
                            offset: const Offset(0, 4),
                          ),
@@ -243,7 +238,7 @@ class _GroupListTile extends StatelessWidget {
                             context, 
                             Icons.local_fire_department_rounded, 
                             '${group.totalFlamePower}',
-                            Colors.orange,
+                            DS.brandPrimary,
                           ),
                           const SizedBox(width: DS.md),
                           _buildInfoBadge(
@@ -267,8 +262,7 @@ class _GroupListTile extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) {
-    return Row(
+  Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) => Row(
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: DS.xs),
@@ -281,20 +275,17 @@ class _GroupListTile extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _GroupListLoading extends StatelessWidget {
   const _GroupListLoading();
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
+  Widget build(BuildContext context) => ListView.separated(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       itemCount: 6,
       separatorBuilder: (context, index) => const SizedBox(height: AppDesignTokens.spacing12),
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
+      itemBuilder: (context, index) => Shimmer.fromColors(
           baseColor: AppDesignTokens.neutral200,
           highlightColor: AppDesignTokens.neutral100,
           child: Container(
@@ -304,8 +295,6 @@ class _GroupListLoading extends StatelessWidget {
               borderRadius: AppDesignTokens.borderRadius16,
             ),
           ),
-        );
-      },
+        ),
     );
-  }
 }

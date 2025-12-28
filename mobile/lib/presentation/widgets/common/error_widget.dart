@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -22,6 +21,66 @@ enum ErrorSeverity {
 ///
 /// 支持多种错误展示样式：全屏错误页、顶部横幅、内联提示
 class CustomErrorWidget extends StatelessWidget {
+
+  const CustomErrorWidget({
+    required this.message, super.key,
+    this.type = ErrorType.inline,
+    this.severity = ErrorSeverity.error,
+    this.title,
+    this.icon,
+    this.onRetry,
+    this.onClose,
+    this.actions,
+    this.showIcon = true,
+  });
+
+  /// 全屏错误页工厂构造函数
+  factory CustomErrorWidget.page({
+    required String message, Key? key,
+    String? title,
+    IconData? icon,
+    VoidCallback? onRetry,
+    List<Widget>? actions,
+    ErrorSeverity severity = ErrorSeverity.error,
+  }) => CustomErrorWidget(
+      key: key,
+      type: ErrorType.page,
+      severity: severity,
+      title: title,
+      message: message,
+      icon: icon,
+      onRetry: onRetry,
+      actions: actions,
+    );
+
+  /// 错误横幅工厂构造函数
+  factory CustomErrorWidget.banner({
+    required String message, Key? key,
+    String? title,
+    VoidCallback? onClose,
+    ErrorSeverity severity = ErrorSeverity.error,
+  }) => CustomErrorWidget(
+      key: key,
+      type: ErrorType.banner,
+      severity: severity,
+      title: title,
+      message: message,
+      onClose: onClose,
+    );
+
+  /// 内联错误提示工厂构造函数
+  factory CustomErrorWidget.inline({
+    required String message, Key? key,
+    IconData? icon,
+    bool showIcon = true,
+    ErrorSeverity severity = ErrorSeverity.error,
+  }) => CustomErrorWidget(
+      key: key,
+      severity: severity,
+      message: message,
+      icon: icon,
+      showIcon: showIcon,
+    );
   /// 错误类型
   final ErrorType type;
 
@@ -48,73 +107,6 @@ class CustomErrorWidget extends StatelessWidget {
 
   /// 是否显示图标
   final bool showIcon;
-
-  const CustomErrorWidget({
-    required this.message, super.key,
-    this.type = ErrorType.inline,
-    this.severity = ErrorSeverity.error,
-    this.title,
-    this.icon,
-    this.onRetry,
-    this.onClose,
-    this.actions,
-    this.showIcon = true,
-  });
-
-  /// 全屏错误页工厂构造函数
-  factory CustomErrorWidget.page({
-    required String message, Key? key,
-    String? title,
-    IconData? icon,
-    VoidCallback? onRetry,
-    List<Widget>? actions,
-    ErrorSeverity severity = ErrorSeverity.error,
-  }) {
-    return CustomErrorWidget(
-      key: key,
-      type: ErrorType.page,
-      severity: severity,
-      title: title,
-      message: message,
-      icon: icon,
-      onRetry: onRetry,
-      actions: actions,
-    );
-  }
-
-  /// 错误横幅工厂构造函数
-  factory CustomErrorWidget.banner({
-    required String message, Key? key,
-    String? title,
-    VoidCallback? onClose,
-    ErrorSeverity severity = ErrorSeverity.error,
-  }) {
-    return CustomErrorWidget(
-      key: key,
-      type: ErrorType.banner,
-      severity: severity,
-      title: title,
-      message: message,
-      onClose: onClose,
-    );
-  }
-
-  /// 内联错误提示工厂构造函数
-  factory CustomErrorWidget.inline({
-    required String message, Key? key,
-    IconData? icon,
-    bool showIcon = true,
-    ErrorSeverity severity = ErrorSeverity.error,
-  }) {
-    return CustomErrorWidget(
-      key: key,
-      type: ErrorType.inline,
-      severity: severity,
-      message: message,
-      icon: icon,
-      showIcon: showIcon,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,8 +175,7 @@ class CustomErrorWidget extends StatelessWidget {
     }
   }
 
-  Widget _buildErrorPage(BuildContext context) {
-    return Center(
+  Widget _buildErrorPage(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDesignTokens.spacing32),
         child: Column(
@@ -249,10 +240,8 @@ class CustomErrorWidget extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildErrorBanner(BuildContext context) {
-    return Container(
+  Widget _buildErrorBanner(BuildContext context) => Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: _getGradient(),
@@ -318,16 +307,13 @@ class CustomErrorWidget extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildInlineError(BuildContext context) {
-    return Container(
+  Widget _buildInlineError(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing12),
       decoration: BoxDecoration(
         color: _getLightBackgroundColor(),
         border: Border.all(
           color: _getBackgroundColor().withValues(alpha: 0.3),
-          width: 1.0,
         ),
         borderRadius: AppDesignTokens.borderRadius12,
       ),
@@ -355,41 +341,37 @@ class CustomErrorWidget extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// 网络错误页面
 class NetworkErrorPage extends StatelessWidget {
-  final VoidCallback? onRetry;
 
   const NetworkErrorPage({
     super.key,
     this.onRetry,
   });
+  final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomErrorWidget.page(
+  Widget build(BuildContext context) => CustomErrorWidget.page(
       title: '网络连接失败',
       message: '请检查您的网络连接后重试',
       icon: Icons.wifi_off_rounded,
       onRetry: onRetry,
     );
-  }
 }
 
 /// 404错误页面
 class NotFoundErrorPage extends StatelessWidget {
-  final VoidCallback? onGoBack;
 
   const NotFoundErrorPage({
     super.key,
     this.onGoBack,
   });
+  final VoidCallback? onGoBack;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomErrorWidget.page(
+  Widget build(BuildContext context) => CustomErrorWidget.page(
       title: '页面不存在',
       message: '抱歉，您访问的页面不存在或已被删除',
       icon: Icons.search_off_rounded,
@@ -404,27 +386,24 @@ class NotFoundErrorPage extends StatelessWidget {
           ),
       ],
     );
-  }
 }
 
 /// 服务器错误页面
 class ServerErrorPage extends StatelessWidget {
-  final VoidCallback? onRetry;
-  final String? errorMessage;
 
   const ServerErrorPage({
     super.key,
     this.onRetry,
     this.errorMessage,
   });
+  final VoidCallback? onRetry;
+  final String? errorMessage;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomErrorWidget.page(
+  Widget build(BuildContext context) => CustomErrorWidget.page(
       title: '服务器错误',
       message: errorMessage ?? '服务器开小差了，请稍后重试',
       icon: Icons.cloud_off_rounded,
       onRetry: onRetry,
     );
-  }
 }

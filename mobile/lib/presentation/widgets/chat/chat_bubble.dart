@@ -1,25 +1,20 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
-import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatBubble extends StatefulWidget {
-  final dynamic message; // ChatMessageModel or PrivateMessageInfo
-  final bool showAvatar;
-  final String? currentUserId;
-  final Function(dynamic message)? onQuote;
-  final Function(dynamic message)? onRevoke;
 
   const ChatBubble({
     required this.message, 
@@ -29,6 +24,11 @@ class ChatBubble extends StatefulWidget {
     this.onQuote,
     this.onRevoke,
   });
+  final dynamic message; // ChatMessageModel or PrivateMessageInfo
+  final bool showAvatar;
+  final String? currentUserId;
+  final Function(dynamic message)? onQuote;
+  final Function(dynamic message)? onRevoke;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -112,12 +112,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (_isRevoked) return;
 
     // Allow revocation within 24 hours for user messages
-    final bool canRevoke = _isUser && DateTime.now().difference(_createdAt).inHours < 24;
+    final canRevoke = _isUser && DateTime.now().difference(_createdAt).inHours < 24;
     
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) => DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -167,8 +167,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     if (_isRevoked) return _buildRevokedPlaceholder();
 
-    final bool isUser = _isUser;
-    final String timeStr = DateFormat('HH:mm').format(_createdAt);
+    final isUser = _isUser;
+    final timeStr = DateFormat('HH:mm').format(_createdAt);
     
     return SlideTransition(
       position: _position,
@@ -232,7 +232,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   child: ClipRRect(
                                     borderRadius: _getBorderRadius(isUser),
                                     child: BackdropFilter(
-                                      filter: isUser ? ImageFilter.blur(sigmaX: 0, sigmaY: 0) : ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                      filter: isUser ? ImageFilter.blur() : ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                       child: Container(
                                         decoration: isUser ? null : BoxDecoration(
                                           gradient: LinearGradient(
@@ -261,7 +261,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                 padding: const EdgeInsets.only(bottom: 8.0),
                                                 child: AgentReasoningBubble(
                                                   steps: (widget.message as ChatMessageModel).reasoningSteps!,
-                                                  isThinking: false,
                                                   totalDurationMs: _calculateReasoningDuration(widget.message as ChatMessageModel),
                                                 ),
                                               ),
@@ -324,8 +323,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuoteArea(BuildContext context, bool isUser, PrivateMessageInfo msg) {
-    return Container(
+  Widget _buildQuoteArea(BuildContext context, bool isUser, PrivateMessageInfo msg) => Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
@@ -356,10 +354,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
 
-  Widget _buildRevokedPlaceholder() {
-    return Center(
+  Widget _buildRevokedPlaceholder() => Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
@@ -368,7 +364,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
 
   Widget _buildMessageStatus() {
     if (widget.message is! PrivateMessageInfo) return const SizedBox.shrink();
@@ -381,7 +376,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       return const Icon(Icons.error_outline, color: AppDesignTokens.error, size: 14);
     }
 
-    final bool isRead = msg.isRead || msg.readAt != null;
+    final isRead = msg.isRead || msg.readAt != null;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -400,9 +395,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   Widget _buildAvatar(bool isUser) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     String? avatarUrl;
-    String initial = '?';
+    var initial = '?';
 
     if (widget.message is ChatMessageModel) {
       initial = isUser ? 'U' : 'AI';
@@ -447,24 +442,20 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
-    return MarkdownStyleSheet(
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
       p: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeBase, height: AppDesignTokens.lineHeightNormal),
       h1: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeXl, fontWeight: AppDesignTokens.fontWeightBold),
       code: TextStyle(backgroundColor: isUser ? DS.brandPrimary.withValues(alpha: 0.2) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: AppDesignTokens.fontSizeSm, color: isUser ? DS.brandPrimary : AppDesignTokens.secondaryBase),
       codeblockDecoration: BoxDecoration(color: isUser ? DS.brandPrimary.withValues(alpha: 0.1) : context.colors.surfaceElevated, borderRadius: AppDesignTokens.borderRadius12),
       a: TextStyle(color: isUser ? DS.brandPrimary : AppDesignTokens.primaryBase, decoration: TextDecoration.underline),
     );
-  }
 
-  BorderRadius _getBorderRadius(bool isUser) {
-    return BorderRadius.only(
+  BorderRadius _getBorderRadius(bool isUser) => BorderRadius.only(
       topLeft: const Radius.circular(16),
       topRight: const Radius.circular(16),
       bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
       bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
     );
-  }
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
@@ -493,25 +484,22 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     return null;
   }
 
-  Widget _buildHeartAnimation() {
-    return TweenAnimationBuilder<double>(
+  Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 500),
       curve: Curves.elasticOut,
       builder: (context, value, child) => Transform.scale(scale: value, child: const Icon(Icons.favorite, color: AppDesignTokens.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: Offset(0, 4))])),
     );
-  }
 }
 
 class _MetaTag extends StatelessWidget {
+
+  const _MetaTag({required this.label, required this.color});
   final String label;
   final Color color;
 
-  const _MetaTag({required this.label, required this.color});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -528,5 +516,4 @@ class _MetaTag extends StatelessWidget {
         ),
       ),
     );
-  }
 }

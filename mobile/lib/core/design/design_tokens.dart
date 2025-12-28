@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// Design Tokens for Sparkle Application
 ///
-/// This file contains all design constants including colors, spacing,
-/// border radius, shadows, animation durations, and typography scales.
+/// ⚠️ **DEPRECATED**: This class is being phased out in favor of `DS` class.
 ///
-/// Usage: Import this file and use the static constants throughout the app
-/// to ensure design consistency.
-
+/// **Migration Guide**:
+/// - Use `Color(0xFFFF6B35)` instead of `AppDesignTokens.primaryBase`
+/// - Use `DS.lg` instead of `AppDesignTokens.spacing16`
+/// - Use `context.sparkleColors` for complex scenarios
+///
+/// This class will be removed in v3.0.0
+///
+@Deprecated('Use DS or SparkleContext instead. Will be removed in v3.0.0')
 class AppDesignTokens {
   AppDesignTokens._(); // Private constructor to prevent instantiation
 
   // ==================== Color System ====================
 
   /// Primary brand colors
-  static const Color primaryBase = DS.brandPrimary;
+  static const Color primaryBase = Color(0xFFFF6B35);
   static const Color primaryLight = Color(0xFFFF8C5A);
   static const Color primaryDark = Color(0xFFE55A24);
 
@@ -28,7 +30,7 @@ class AppDesignTokens {
   );
 
   /// Secondary brand colors
-  static const Color secondaryBase = DS.brandSecondary;
+  static const Color secondaryBase = Color(0xFF1A237E);
   static const Color secondaryLight = Color(0xFF3949AB);
   static const Color secondaryDark = Color(0xFF000051);
 
@@ -59,34 +61,34 @@ class AppDesignTokens {
   );
 
   /// Semantic colors
-  static const Color success = DS.success;
+  static const Color success = Color(0xFF4CAF50);
   static const Color successLight = Color(0xFF81C784);
   static const LinearGradient successGradient = LinearGradient(
-    colors: [DS.success, Color(0xFF66BB6A)],
+    colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const Color warning = DS.warning;
+  static const Color warning = Color(0xFFFF9800);
   static const Color warningLight = Color(0xFFFFB74D);
   static const LinearGradient warningGradient = LinearGradient(
-    colors: [DS.warning, Color(0xFFFFB74D)],
+    colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const Color error = DS.error;
+  static const Color error = Color(0xFFF44336);
   static const Color errorLight = Color(0xFFEF5350);
   static const LinearGradient errorGradient = LinearGradient(
-    colors: [DS.error, Color(0xFFE57373)],
+    colors: [Color(0xFFF44336), Color(0xFFE57373)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const Color info = DS.info;
+  static const Color info = Color(0xFF2196F3);
   static const Color infoLight = Color(0xFF42A5F5);
   static const LinearGradient infoGradient = LinearGradient(
-    colors: [DS.info, Color(0xFF42A5F5)],
+    colors: [Color(0xFF2196F3), Color(0xFF42A5F5)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -104,16 +106,16 @@ class AppDesignTokens {
   static const Color neutral900 = Color(0xFF212121);
 
   /// Overlay colors (semi-transparent black/white)
-  static final Color overlay10 = DS.brandPrimary.withValues(alpha: 0.1);
-  static final Color overlay20 = DS.brandPrimary.withValues(alpha: 0.2);
-  static final Color overlay30 = DS.brandPrimary.withValues(alpha: 0.3);
-  static final Color overlay40 = DS.brandPrimary.withValues(alpha: 0.4);
-  static final Color overlay50 = DS.brandPrimary.withValues(alpha: 0.5);
-  static final Color overlay60 = DS.brandPrimary.withValues(alpha: 0.6);
+  static final Color overlay10 = primaryBase.withValues(alpha: 0.1);
+  static final Color overlay20 = primaryBase.withValues(alpha: 0.2);
+  static final Color overlay30 = primaryBase.withValues(alpha: 0.3);
+  static final Color overlay40 = primaryBase.withValues(alpha: 0.4);
+  static final Color overlay50 = primaryBase.withValues(alpha: 0.5);
+  static final Color overlay60 = primaryBase.withValues(alpha: 0.6);
 
-  static final Color overlayLight10 = DS.brandPrimary.withValues(alpha: 0.1);
-  static final Color overlayLight20 = DS.brandPrimary.withValues(alpha: 0.2);
-  static final Color overlayLight30 = DS.brandPrimary.withValues(alpha: 0.3);
+  static final Color overlayLight10 = primaryBase.withValues(alpha: 0.1);
+  static final Color overlayLight20 = primaryBase.withValues(alpha: 0.2);
+  static final Color overlayLight30 = primaryBase.withValues(alpha: 0.3);
 
   // ==================== Deep Space Theme (v2.3) ====================
 
@@ -130,45 +132,45 @@ class AppDesignTokens {
   );
 
   /// Glassmorphism colors
-  static final Color glassBackground = DS.brandPrimary.withValues(alpha: 0.08);
-  static final Color glassBorder = DS.brandPrimary.withValues(alpha: 0.15);
-  static final Color glassHighlight = DS.brandPrimary.withValues(alpha: 0.25);
+  static final Color glassBackground = primaryBase.withValues(alpha: 0.08);
+  static final Color glassBorder = primaryBase.withValues(alpha: 0.15);
+  static final Color glassHighlight = primaryBase.withValues(alpha: 0.25);
 
   /// Weather theme colors
   static const Color weatherSunny = Color(0xFFFFD93D);
   static const Color weatherCloudy = Color(0xFF90A4AE);
   static const Color weatherRainy = Color(0xFF5C6BC0);
-  static const Color weatherMeteor = DS.brandPrimary;
+  static const Color weatherMeteor = Color(0xFFFF6B35);
 
   /// Cognitive Prism colors
   static const Color prismPurple = Color(0xFF9C27B0);
   static const Color prismBlue = Color(0xFF3F51B5);
-  static const Color prismGreen = DS.success;
+  static const Color prismGreen = Color(0xFF4CAF50);
 
   /// Focus flame colors
-  static const Color flameCore = DS.brandPrimary;
+  static const Color flameCore = Color(0xFFFF6B35);
   static const Color flameGlow = Color(0xFFFFAB91);
   static const LinearGradient flameGradient = LinearGradient(
-    colors: [Color(0xFFFF8A65), DS.brandPrimary, Color(0xFFE64A19)],
+    colors: [Color(0xFFFF8A65), Color(0xFFFF6B35), Color(0xFFE64A19)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   /// Card gradients for different contexts
   static const LinearGradient cardGradientPrimary = LinearGradient(
-    colors: [DS.brandPrimary, Color(0xFFFF8C5A)],
+    colors: [Color(0xFFFF6B35), Color(0xFFFF8C5A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient cardGradientSecondary = LinearGradient(
-    colors: [DS.brandSecondary, Color(0xFF3949AB)],
+    colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient cardGradientNeutral = LinearGradient(
-    colors: [Color(0xFFF5F5F5), DS.brandPrimary],
+    colors: [Color(0xFFF5F5F5), Color(0xFFFF6B35)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -213,7 +215,7 @@ class AppDesignTokens {
   /// Small elevation shadow
   static List<BoxShadow> get shadowSm => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.05),
+      color: primaryBase.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -222,12 +224,12 @@ class AppDesignTokens {
   /// Medium elevation shadow
   static List<BoxShadow> get shadowMd => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.08),
+      color: primaryBase.withValues(alpha: 0.08),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.03),
+      color: primaryBase.withValues(alpha: 0.03),
       blurRadius: 3,
       offset: const Offset(0, 1),
     ),
@@ -236,12 +238,12 @@ class AppDesignTokens {
   /// Large elevation shadow
   static List<BoxShadow> get shadowLg => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.10),
+      color: primaryBase.withValues(alpha: 0.10),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.05),
+      color: primaryBase.withValues(alpha: 0.05),
       blurRadius: 6,
       offset: const Offset(0, 2),
     ),
@@ -250,12 +252,12 @@ class AppDesignTokens {
   /// Extra large elevation shadow
   static List<BoxShadow> get shadowXl => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.12),
+      color: primaryBase.withValues(alpha: 0.12),
       blurRadius: 24,
       offset: const Offset(0, 12),
     ),
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.06),
+      color: primaryBase.withValues(alpha: 0.06),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
@@ -264,12 +266,12 @@ class AppDesignTokens {
   /// 2X large elevation shadow
   static List<BoxShadow> get shadow2xl => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.15),
+      color: primaryBase.withValues(alpha: 0.15),
       blurRadius: 32,
       offset: const Offset(0, 16),
     ),
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.08),
+      color: primaryBase.withValues(alpha: 0.08),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),
@@ -287,7 +289,7 @@ class AppDesignTokens {
   /// Inner shadow effect
   static List<BoxShadow> get shadowInner => [
     BoxShadow(
-      color: DS.brandPrimary.withValues(alpha: 0.05),
+      color: primaryBase.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 2),
       spreadRadius: -2,
@@ -296,7 +298,7 @@ class AppDesignTokens {
 
   // ==================== Animation Durations ====================
 
-  static const Duration durationInstant = Duration(milliseconds: 0);
+  static const Duration durationInstant = Duration();
   static const Duration durationFast = Duration(milliseconds: 150);
   static const Duration durationNormal = Duration(milliseconds: 250);
   static const Duration durationSlow = Duration(milliseconds: 350);

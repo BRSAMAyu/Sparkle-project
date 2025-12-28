@@ -1,6 +1,5 @@
 import 'dart:io';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:path/path.dart' as path;
 
 /// 设计系统合规检查工具
@@ -10,10 +9,10 @@ import 'package:path/path.dart' as path;
 /// 2. 硬编码间距值
 /// 3. 未使用设计系统组件
 class DesignSystemLinter {
-  final String projectRoot;
-  final List<String> _violations = [];
 
   DesignSystemLinter(this.projectRoot);
+  final String projectRoot;
+  final List<String> _violations = [];
 
   /// 运行所有检查
   Future<List<String>> runAllChecks() async {
@@ -34,7 +33,7 @@ class DesignSystemLinter {
       final content = await File(file).readAsString();
       final lines = content.split('\n');
 
-      for (int i = 0; i < lines.length; i++) {
+      for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
 
         // 检查硬编码颜色模式
@@ -53,7 +52,7 @@ class DesignSystemLinter {
       final content = await File(file).readAsString();
       final lines = content.split('\n');
 
-      for (int i = 0; i < lines.length; i++) {
+      for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
 
         // 检查硬编码间距模式
@@ -72,7 +71,7 @@ class DesignSystemLinter {
       final content = await File(file).readAsString();
       final lines = content.split('\n');
 
-      for (int i = 0; i < lines.length; i++) {
+      for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
 
         // 检查Material按钮使用

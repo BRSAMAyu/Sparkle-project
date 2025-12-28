@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class SparkleTheme {
   // 核心调色板 - 融合星空与火焰
@@ -21,8 +20,7 @@ class SparkleTheme {
   static const Duration medium = Duration(milliseconds: 400);
   static const Curve curve = Curves.easeInOutCubic;
 
-  static ThemeData get lightTheme {
-    return ThemeData(
+  static ThemeData get lightTheme => ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
@@ -43,5 +41,4 @@ class SparkleTheme {
         color: surface, // Material 3 uses color for CardTheme
       ),
     );
-  }
 }

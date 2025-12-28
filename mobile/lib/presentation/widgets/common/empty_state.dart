@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -19,6 +18,83 @@ enum EmptyStateType {
 ///
 /// 用于显示列表为空、搜索无结果等场景
 class EmptyState extends StatelessWidget {
+
+  const EmptyState({
+    super.key,
+    this.type = EmptyStateType.general,
+    this.title,
+    this.description,
+    this.icon,
+    this.actionText,
+    this.onAction,
+    this.customAction,
+    this.showIcon = true,
+  });
+
+  /// 无任务空状态
+  factory EmptyState.noTasks({
+    Key? key,
+    VoidCallback? onCreateTask,
+  }) => EmptyState(
+      key: key,
+      type: EmptyStateType.noTasks,
+      title: '还没有任务',
+      description: '创建您的第一个学习任务，开启高效学习之旅',
+      icon: Icons.task_alt_rounded,
+      actionText: '创建任务',
+      onAction: onCreateTask,
+    );
+
+  /// 无聊天记录空状态
+  factory EmptyState.noChats({
+    Key? key,
+    VoidCallback? onStartChat,
+  }) => EmptyState(
+      key: key,
+      type: EmptyStateType.noChats,
+      title: '我是你的 AI 导师 Sparkle',
+      description: '有什么可以帮你？',
+      icon: Icons.chat_bubble_outline_rounded,
+      actionText: '开始对话',
+      onAction: onStartChat,
+    );
+
+  /// 无计划空状态
+  factory EmptyState.noPlans({
+    Key? key,
+    VoidCallback? onCreatePlan,
+  }) => EmptyState(
+      key: key,
+      type: EmptyStateType.noPlans,
+      title: '还没有学习计划',
+      description: '制定学习计划，让AI帮您规划学习路线',
+      icon: Icons.calendar_today_rounded,
+      actionText: '创建计划',
+      onAction: onCreatePlan,
+    );
+
+  /// 无错题空状态
+  factory EmptyState.noErrors({
+    Key? key,
+  }) => EmptyState(
+      key: key,
+      type: EmptyStateType.noErrors,
+      title: '太棒了！',
+      description: '您还没有错题记录，继续保持',
+      icon: Icons.emoji_events_rounded,
+    );
+
+  /// 无搜索结果空状态
+  factory EmptyState.noResults({
+    Key? key,
+    String? searchQuery,
+  }) => EmptyState(
+      key: key,
+      type: EmptyStateType.noResults,
+      title: '没有找到结果',
+      description: searchQuery != null ? '没有找到与"$searchQuery"相关的内容' : '请尝试其他搜索关键词',
+      icon: Icons.search_off_rounded,
+    );
   /// 空状态类型
   final EmptyStateType type;
 
@@ -42,93 +118,6 @@ class EmptyState extends StatelessWidget {
 
   /// 是否显示图标
   final bool showIcon;
-
-  const EmptyState({
-    super.key,
-    this.type = EmptyStateType.general,
-    this.title,
-    this.description,
-    this.icon,
-    this.actionText,
-    this.onAction,
-    this.customAction,
-    this.showIcon = true,
-  });
-
-  /// 无任务空状态
-  factory EmptyState.noTasks({
-    Key? key,
-    VoidCallback? onCreateTask,
-  }) {
-    return EmptyState(
-      key: key,
-      type: EmptyStateType.noTasks,
-      title: '还没有任务',
-      description: '创建您的第一个学习任务，开启高效学习之旅',
-      icon: Icons.task_alt_rounded,
-      actionText: '创建任务',
-      onAction: onCreateTask,
-    );
-  }
-
-  /// 无聊天记录空状态
-  factory EmptyState.noChats({
-    Key? key,
-    VoidCallback? onStartChat,
-  }) {
-    return EmptyState(
-      key: key,
-      type: EmptyStateType.noChats,
-      title: '我是你的 AI 导师 Sparkle',
-      description: '有什么可以帮你？',
-      icon: Icons.chat_bubble_outline_rounded,
-      actionText: '开始对话',
-      onAction: onStartChat,
-    );
-  }
-
-  /// 无计划空状态
-  factory EmptyState.noPlans({
-    Key? key,
-    VoidCallback? onCreatePlan,
-  }) {
-    return EmptyState(
-      key: key,
-      type: EmptyStateType.noPlans,
-      title: '还没有学习计划',
-      description: '制定学习计划，让AI帮您规划学习路线',
-      icon: Icons.calendar_today_rounded,
-      actionText: '创建计划',
-      onAction: onCreatePlan,
-    );
-  }
-
-  /// 无错题空状态
-  factory EmptyState.noErrors({
-    Key? key,
-  }) {
-    return EmptyState(
-      key: key,
-      type: EmptyStateType.noErrors,
-      title: '太棒了！',
-      description: '您还没有错题记录，继续保持',
-      icon: Icons.emoji_events_rounded,
-    );
-  }
-
-  /// 无搜索结果空状态
-  factory EmptyState.noResults({
-    Key? key,
-    String? searchQuery,
-  }) {
-    return EmptyState(
-      key: key,
-      type: EmptyStateType.noResults,
-      title: '没有找到结果',
-      description: searchQuery != null ? '没有找到与"$searchQuery"相关的内容' : '请尝试其他搜索关键词',
-      icon: Icons.search_off_rounded,
-    );
-  }
 
   String _getDefaultTitle() {
     switch (type) {
@@ -204,8 +193,7 @@ class EmptyState extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDesignTokens.spacing32),
         child: Column(
@@ -250,10 +238,8 @@ class EmptyState extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildIcon() {
-    return Container(
+  Widget _buildIcon() => Container(
       width: 120.0,
       height: 120.0,
       decoration: BoxDecoration(
@@ -273,7 +259,6 @@ class EmptyState extends StatelessWidget {
         color: DS.brandPrimary,
       ),
     );
-  }
 
   IconData? _getActionIcon() {
     switch (type) {
@@ -293,10 +278,6 @@ class EmptyState extends StatelessWidget {
 ///
 /// 用于列表中的空状态展示，占用空间更小
 class CompactEmptyState extends StatelessWidget {
-  final String message;
-  final IconData? icon;
-  final VoidCallback? onAction;
-  final String? actionText;
 
   const CompactEmptyState({
     required this.message, super.key,
@@ -304,10 +285,13 @@ class CompactEmptyState extends StatelessWidget {
     this.onAction,
     this.actionText,
   });
+  final String message;
+  final IconData? icon;
+  final VoidCallback? onAction;
+  final String? actionText;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -347,5 +331,4 @@ class CompactEmptyState extends StatelessWidget {
         ],
       ),
     );
-  }
 }

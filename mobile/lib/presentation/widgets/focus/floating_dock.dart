@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
 /// 支持边缘吸附、自动隐藏、点击展开菜单
-class FocusFloatingDock extends StatefulWidget {
-  final VoidCallback? onMindfulnessTap;
-  final VoidCallback? onToolsTap;
-  final Axis initialEdge; // Left, Right, Top, Bottom
+class FocusFloatingDock extends StatefulWidget { // Left, Right, Top, Bottom
 
   const FocusFloatingDock({
     super.key,
@@ -16,6 +12,9 @@ class FocusFloatingDock extends StatefulWidget {
     this.onToolsTap,
     this.initialEdge = Axis.horizontal,
   });
+  final VoidCallback? onMindfulnessTap;
+  final VoidCallback? onToolsTap;
+  final Axis initialEdge;
 
   @override
   State<FocusFloatingDock> createState() => _FocusFloatingDockState();
@@ -75,8 +74,8 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final Size screenSize = MediaQuery.of(context).size;
-    final bool isRightSide = _position.dx > screenSize.width / 2;
+    final screenSize = MediaQuery.of(context).size;
+    final isRightSide = _position.dx > screenSize.width / 2;
 
     return Positioned(
       left: _position.dx,
@@ -128,18 +127,15 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
     );
   }
 
-  Widget _buildCollapsedIcon() {
-    return InkWell(
+  Widget _buildCollapsedIcon() => InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(30),
       child: const Center(
         child: Icon(Icons.timer_rounded, color: DS.brandPrimary, size: 30),
       ),
     );
-  }
 
-  Widget _buildExpandedMenu() {
-    return Column(
+  Widget _buildExpandedMenu() => Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         // Collapse Button
@@ -167,14 +163,12 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         ),
       ],
     );
-  }
 
   Widget _buildMenuItem({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-  }) {
-    return InkWell(
+  }) => InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -193,5 +187,4 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
         ),
       ),
     );
-  }
 }

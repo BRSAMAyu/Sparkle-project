@@ -1,9 +1,9 @@
 import 'package:lunar/lunar.dart';
 
 class LunarService {
-  static final LunarService _instance = LunarService._internal();
   factory LunarService() => _instance;
   LunarService._internal();
+  static final LunarService _instance = LunarService._internal();
 
   /// Get Lunar date info for a given solar date
   Map<String, dynamic> getLunarInfo(DateTime date) {
@@ -47,11 +47,6 @@ class LunarService {
 }
 
 class LunarData {
-  final String lunarDay;
-  final String lunarMonth;
-  final String term;
-  final List<String> festivals;
-  final bool isFestival;
 
   LunarData({
     required this.lunarDay,
@@ -60,6 +55,11 @@ class LunarData {
     required this.festivals,
     required this.isFestival,
   });
+  final String lunarDay;
+  final String lunarMonth;
+  final String term;
+  final List<String> festivals;
+  final bool isFestival;
   
   String get displayString {
     if (festivals.isNotEmpty) return festivals.first;

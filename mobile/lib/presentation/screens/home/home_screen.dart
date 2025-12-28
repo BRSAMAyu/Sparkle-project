@@ -1,31 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/core/services/message_notification_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
-import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';
+import 'package:sparkle/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
-import 'package:sparkle/presentation/widgets/home/weather_header.dart';
-import 'package:sparkle/presentation/widgets/home/focus_card.dart';
-import 'package:sparkle/presentation/widgets/home/prism_card.dart';
-import 'package:sparkle/presentation/widgets/home/sprint_card.dart';
-import 'package:sparkle/presentation/widgets/home/next_actions_card.dart';
-import 'package:sparkle/presentation/widgets/home/omnibar.dart';
 import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
 import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
-import 'package:sparkle/presentation/widgets/home/long_term_plan_card.dart';
+import 'package:sparkle/presentation/widgets/home/focus_card.dart';
 import 'package:sparkle/presentation/widgets/home/home_notification_card.dart';
-
-import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/presentation/widgets/home/long_term_plan_card.dart';
+import 'package:sparkle/presentation/widgets/home/next_actions_card.dart';
+import 'package:sparkle/presentation/widgets/home/omnibar.dart';
+import 'package:sparkle/presentation/widgets/home/prism_card.dart';
+import 'package:sparkle/presentation/widgets/home/sprint_card.dart';
+import 'package:sparkle/presentation/widgets/home/weather_header.dart';
 
 /// HomeScreen v2.0 - Project Cockpit
 class HomeScreen extends ConsumerStatefulWidget {
@@ -180,8 +178,7 @@ class _DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTopOverlay(BuildContext context, dynamic user, AppLocalizations l10n) {
-    return Padding(
+  Widget _buildTopOverlay(BuildContext context, dynamic user, AppLocalizations l10n) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
         children: [
@@ -216,7 +213,6 @@ class _DashboardScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop

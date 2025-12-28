@@ -2,14 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 
-final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
-  return NotificationRepository(ref.read(apiClientProvider));
-});
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) => NotificationRepository(ref.read(apiClientProvider)));
 
 class NotificationRepository {
-  final ApiClient _apiClient;
 
   NotificationRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<List<NotificationModel>> getNotifications({
     int skip = 0,
@@ -32,7 +30,7 @@ class NotificationRepository {
     // Let's check `api_response_model.dart`.
     
     // For now, I'll assume direct list as per my backend code.
-    final List<dynamic> list = response.data as List<dynamic>;
+    final list = response.data as List<dynamic>;
     return list.map((e) => NotificationModel.fromJson(e)).toList();
   }
 

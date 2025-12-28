@@ -31,13 +31,6 @@ extension LayoutTypeExtension on BuildContext {
 /// - 平板：左侧NavigationRail
 /// - 桌面：展开式NavigationDrawer（侧边栏）
 class ResponsiveScaffold extends StatelessWidget {
-  final Widget body;
-  final List<NavigationDestination> destinations;
-  final int currentIndex;
-  final ValueChanged<int> onDestinationSelected;
-  final Widget? floatingActionButton;
-  final PreferredSizeWidget? appBar;
-  final String? title;
 
   const ResponsiveScaffold({
     required this.body, required this.destinations, required this.currentIndex, required this.onDestinationSelected, super.key,
@@ -45,6 +38,13 @@ class ResponsiveScaffold extends StatelessWidget {
     this.appBar,
     this.title,
   });
+  final Widget body;
+  final List<NavigationDestination> destinations;
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final Widget? floatingActionButton;
+  final PreferredSizeWidget? appBar;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +61,7 @@ class ResponsiveScaffold extends StatelessWidget {
   }
 
   /// 移动端布局：底部导航栏
-  Widget _buildMobileLayout(BuildContext context) {
-    return Scaffold(
+  Widget _buildMobileLayout(BuildContext context) => Scaffold(
       appBar: appBar,
       body: body,
       bottomNavigationBar: NavigationBar(
@@ -72,11 +71,9 @@ class ResponsiveScaffold extends StatelessWidget {
       ),
       floatingActionButton: floatingActionButton,
     );
-  }
 
   /// 平板布局：侧边NavigationRail
-  Widget _buildTabletLayout(BuildContext context) {
-    return Scaffold(
+  Widget _buildTabletLayout(BuildContext context) => Scaffold(
       body: Row(
         children: [
           NavigationRail(
@@ -102,11 +99,9 @@ class ResponsiveScaffold extends StatelessWidget {
         ],
       ),
     );
-  }
 
   /// 桌面布局：展开式侧边栏NavigationDrawer
-  Widget _buildDesktopLayout(BuildContext context) {
-    return Scaffold(
+  Widget _buildDesktopLayout(BuildContext context) => Scaffold(
       body: Row(
         children: [
           SizedBox(
@@ -154,22 +149,21 @@ class ResponsiveScaffold extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// 内容宽度约束包装器
 ///
 /// 根据屏幕尺寸自动限制内容最大宽度，提升大屏幕阅读体验
 class ContentConstraint extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final bool enabled;
 
   const ContentConstraint({
     required this.child, super.key,
     this.padding,
     this.enabled = true,
   });
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -184,15 +178,12 @@ class ContentConstraint extends StatelessWidget {
       case LayoutType.desktop:
         maxWidth = AppDesignTokens.contentMaxWidthDesktop;
         horizontalPadding = AppDesignTokens.spacing32;
-        break;
       case LayoutType.tablet:
         maxWidth = AppDesignTokens.contentMaxWidthTablet;
         horizontalPadding = AppDesignTokens.spacing24;
-        break;
       case LayoutType.mobile:
         maxWidth = double.infinity;
         horizontalPadding = AppDesignTokens.spacing16;
-        break;
     }
 
     return Center(
@@ -215,15 +206,15 @@ class ContentConstraint extends StatelessWidget {
 /// - 平板：2列
 /// - 手机：1列
 class ResponsiveGrid extends StatelessWidget {
-  final List<Widget> children;
-  final double spacing;
-  final double? childAspectRatio;
 
   const ResponsiveGrid({
     required this.children, super.key,
     this.spacing = AppDesignTokens.spacing16,
     this.childAspectRatio,
   });
+  final List<Widget> children;
+  final double spacing;
+  final double? childAspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -233,13 +224,10 @@ class ResponsiveGrid extends StatelessWidget {
     switch (layoutType) {
       case LayoutType.desktop:
         crossAxisCount = 3;
-        break;
       case LayoutType.tablet:
         crossAxisCount = 2;
-        break;
       case LayoutType.mobile:
         crossAxisCount = 1;
-        break;
     }
 
     return GridView.builder(
@@ -259,15 +247,15 @@ class ResponsiveGrid extends StatelessWidget {
 
 /// 响应式列布局（Sliver版本，用于CustomScrollView）
 class ResponsiveSliverGrid extends StatelessWidget {
-  final List<Widget> children;
-  final double spacing;
-  final double? childAspectRatio;
 
   const ResponsiveSliverGrid({
     required this.children, super.key,
     this.spacing = AppDesignTokens.spacing16,
     this.childAspectRatio,
   });
+  final List<Widget> children;
+  final double spacing;
+  final double? childAspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -277,13 +265,10 @@ class ResponsiveSliverGrid extends StatelessWidget {
     switch (layoutType) {
       case LayoutType.desktop:
         crossAxisCount = 3;
-        break;
       case LayoutType.tablet:
         crossAxisCount = 2;
-        break;
       case LayoutType.mobile:
         crossAxisCount = 1;
-        break;
     }
 
     return SliverGrid(
@@ -306,14 +291,14 @@ class ResponsiveSliverGrid extends StatelessWidget {
 /// 桌面/平板：左右双栏（主内容+侧边栏）
 /// 手机：单栏（只显示主内容）
 class ResponsiveTwoColumn extends StatelessWidget {
-  final Widget main;
-  final Widget sidebar;
-  final double sidebarWidth;
 
   const ResponsiveTwoColumn({
     required this.main, required this.sidebar, super.key,
     this.sidebarWidth = 320,
   });
+  final Widget main;
+  final Widget sidebar;
+  final double sidebarWidth;
 
   @override
   Widget build(BuildContext context) {

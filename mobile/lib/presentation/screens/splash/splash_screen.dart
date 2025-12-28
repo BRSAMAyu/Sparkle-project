@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerWidget {
@@ -14,7 +13,7 @@ class SplashScreen extends ConsumerWidget {
     // This is robust against the initial state being loading.
     ref.listen<AuthState>(authProvider, (previous, next) {
       // Wait for the initial loading to be complete
-      if (previous?.isLoading == true && next.isLoading == false) {
+      if ((previous?.isLoading ?? false) && next.isLoading == false) {
         if (next.isAuthenticated) {
           // User is logged in, go to home
           // Using replace to prevent going back to splash screen

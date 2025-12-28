@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -47,12 +46,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     super.dispose();
   }
   
-  bool get _isDirty {
-    return _nameController.text.isNotEmpty || 
+  bool get _isDirty => _nameController.text.isNotEmpty || 
            _descController.text.isNotEmpty || 
            _tagsController.text.isNotEmpty ||
            _goalController.text.isNotEmpty;
-  }
 
   Future<bool> _onWillPop() async {
     if (!_isDirty || _isSubmitting) return true;
@@ -63,10 +60,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         title: const Text('Discard Group?'),
         content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep Editing'),
-          ),
+          SparkleButton.ghost(label: 'Keep Editing', onPressed: () => Navigator.of(context).pop(false)),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: DS.error),
@@ -82,7 +76,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     // No need to save(), controllers have values
-    List<String> focusTags = [];
+    var focusTags = <String>[];
     if (_tagsController.text.isNotEmpty) {
       focusTags = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     }
@@ -106,9 +100,6 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         focusTags: focusTags,
         deadline: _deadline,
         sprintGoal: _goalController.text.trim().isEmpty ? null : _goalController.text.trim(),
-        maxMembers: 50,
-        isPublic: true,
-        joinRequiresApproval: false,
       );
 
       final group = await ref.read(myGroupsProvider.notifier).createGroup(groupData);
@@ -135,8 +126,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return PopScope(
+  Widget build(BuildContext context) => PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
@@ -274,5 +264,4 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
         ),
       ),
     );
-  }
 }

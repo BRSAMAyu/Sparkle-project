@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/data/models/user_model.dart';
 
 class UserRepository {
-  final ApiClient _apiClient;
 
   UserRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   /// 更新用户学习偏好
   Future<UserModel> updateUserPreferences(UserPreferences preferences) async {

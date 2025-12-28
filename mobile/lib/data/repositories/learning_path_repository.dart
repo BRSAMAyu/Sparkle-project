@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/domain/models/learning_path_node.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/domain/models/learning_path_node.dart';
 
 final learningPathRepositoryProvider = Provider<LearningPathRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -11,9 +11,9 @@ final learningPathRepositoryProvider = Provider<LearningPathRepository>((ref) {
 });
 
 class LearningPathRepository {
-  final ApiClient _apiClient;
 
   LearningPathRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<List<LearningPathNode>> getLearningPath(String targetNodeId) async {
     if (DemoDataService.isDemoMode) {

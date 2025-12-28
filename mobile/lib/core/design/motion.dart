@@ -53,24 +53,20 @@ class SparkleMotion {
   static Widget pressScale({
     required Widget child,
     required Animation<double> animation,
-  }) {
-    return ScaleTransition(
+  }) => ScaleTransition(
       scale: Tween<double>(begin: 1.0, end: 0.98).animate(animation),
       child: child,
     );
-  }
 
   /// 淡入动画构建器
   /// opacity: 0.0 -> 1.0
   static Widget fadeIn({
     required Widget child,
     required Animation<double> animation,
-  }) {
-    return FadeTransition(
+  }) => FadeTransition(
       opacity: animation,
       child: child,
     );
-  }
 
   /// 上滑入场动画构建器
   /// translate Y: 20 -> 0
@@ -79,8 +75,7 @@ class SparkleMotion {
     required Widget child,
     required Animation<double> animation,
     double offset = 20.0,
-  }) {
-    return FadeTransition(
+  }) => FadeTransition(
       opacity: animation,
       child: SlideTransition(
         position: Tween<Offset>(
@@ -90,14 +85,11 @@ class SparkleMotion {
         child: child,
       ),
     );
-  }
 
   /// 呼吸动画控制器配置 (Helper)
   /// return AnimationController configured for breathing
-  static AnimationController createBreathingController(TickerProvider vsync) {
-    return AnimationController(
+  static AnimationController createBreathingController(TickerProvider vsync) => AnimationController(
       vsync: vsync,
       duration: const Duration(seconds: 4), // 4秒一个周期
     )..repeat(reverse: true);
-  }
 }

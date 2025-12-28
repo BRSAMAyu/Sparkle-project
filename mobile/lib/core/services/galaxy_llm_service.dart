@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/data/models/galaxy_model.dart';
-import 'package:sparkle/data/models/galaxy_llm_protocol.dart';
 import 'package:sparkle/core/services/galaxy_layout_engine.dart';
+import 'package:sparkle/data/models/galaxy_llm_protocol.dart';
+import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 /// 知识星图 LLM 服务
@@ -308,9 +308,7 @@ class GalaxyLLMService {
   }
 
   /// 将位置转换为 JSON 格式
-  Map<String, List<double>> _positionsToJson() {
-    return _positions.map((key, value) => MapEntry(key, [value.dx, value.dy]));
-  }
+  Map<String, List<double>> _positionsToJson() => _positions.map((key, value) => MapEntry(key, [value.dx, value.dy]));
 
   /// 获取星域默认颜色
   String _getDefaultColorForSector(SectorEnum sector) {
@@ -390,8 +388,7 @@ class GalaxyLLMService {
     String? parentId,
     List<NodeConnection> connections = const [],
     PositionHint? positionHint,
-  }) {
-    return LLMGalaxyAction(
+  }) => LLMGalaxyAction(
       action: LLMActionType.addNodes,
       nodes: [
         LLMNodeSpec(
@@ -405,7 +402,6 @@ class GalaxyLLMService {
         ),
       ],
     );
-  }
 
   /// 创建添加连接的快捷方法
   static LLMGalaxyAction createAddConnectionAction({
@@ -414,8 +410,7 @@ class GalaxyLLMService {
     RelationType relationType = RelationType.related,
     double strength = 0.5,
     bool bidirectional = false,
-  }) {
-    return LLMGalaxyAction(
+  }) => LLMGalaxyAction(
       action: LLMActionType.addConnections,
       connections: [
         LLMConnectionSpec(
@@ -427,5 +422,4 @@ class GalaxyLLMService {
         ),
       ],
     );
-  }
 }

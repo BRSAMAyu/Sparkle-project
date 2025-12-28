@@ -3,9 +3,9 @@ import 'package:sparkle/core/network/api_client.dart';
 
 /// 错题记录仓库
 class ErrorRepository {
-  final ApiClient _apiClient;
 
   ErrorRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   /// 创建错题记录
   Future<Map<String, dynamic>> createError({
@@ -40,6 +40,4 @@ class ErrorRepository {
   }
 }
 
-final errorRepositoryProvider = Provider<ErrorRepository>((ref) {
-  return ErrorRepository(ref.watch(apiClientProvider));
-});
+final errorRepositoryProvider = Provider<ErrorRepository>((ref) => ErrorRepository(ref.watch(apiClientProvider)));

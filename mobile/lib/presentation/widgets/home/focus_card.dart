@@ -1,17 +1,17 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/app/theme.dart';
 
 /// FocusCard - Deep Dive Entry Card for Project Cockpit
 class FocusCard extends ConsumerStatefulWidget {
-  final VoidCallback? onTap;
 
   const FocusCard({super.key, this.onTap});
+  final VoidCallback? onTap;
 
   @override
   ConsumerState<FocusCard> createState() => _FocusCardState();
@@ -109,8 +109,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       // Flame Animation
                       AnimatedBuilder(
                         animation: _flameAnimation,
-                        builder: (context, child) {
-                          return Transform.scale(
+                        builder: (context, child) => Transform.scale(
                             scale: _flameAnimation.value,
                             child: Container(
                               width: 60,
@@ -131,8 +130,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                                 size: 32,
                               ),
                             ),
-                          );
-                        },
+                          ),
                       ),
                       const SizedBox(height: DS.md),
                       // Nudge Message
@@ -178,8 +176,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
     );
   }
 
-  Widget _buildMetric(BuildContext context, String value, String label) {
-    return Column(
+  Widget _buildMetric(BuildContext context, String value, String label) => Column(
       children: [
         Text(
           value,
@@ -199,7 +196,6 @@ class _FocusCardState extends ConsumerState<FocusCard>
         ),
       ],
     );
-  }
 
   String _formatFocusTime(int minutes) {
     if (minutes < 60) return '${minutes}m';

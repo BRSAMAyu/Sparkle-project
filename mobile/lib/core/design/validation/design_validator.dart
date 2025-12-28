@@ -22,14 +22,10 @@ class DesignValidator {
   }
 
   /// 验证间距倍数 (4pt网格)
-  static bool validateSpacing(double value) {
-    return value % 4 == 0;
-  }
+  static bool validateSpacing(double value) => value % 4 == 0;
 
   /// 验证字体大小 (12-72px)
-  static bool validateFontSize(double size) {
-    return size >= 12 && size <= 72;
-  }
+  static bool validateFontSize(double size) => size >= 12 && size <= 72;
 
   /// 验证动画时长 (50-1000ms)
   static bool validateAnimationDuration(Duration duration) {
@@ -38,24 +34,16 @@ class DesignValidator {
   }
 
   /// 验证触控目标大小 (WCAG 2.1: 48x48px)
-  static bool validateTouchTarget(Size size) {
-    return size.width >= 48 && size.height >= 48;
-  }
+  static bool validateTouchTarget(Size size) => size.width >= 48 && size.height >= 48;
 
   /// 验证圆角半径 (4的倍数)
-  static bool validateBorderRadius(double radius) {
-    return radius % 4 == 0;
-  }
+  static bool validateBorderRadius(double radius) => radius % 4 == 0;
 
   /// 验证阴影模糊半径 (合理范围)
-  static bool validateShadowBlur(double blur) {
-    return blur >= 0 && blur <= 64;
-  }
+  static bool validateShadowBlur(double blur) => blur >= 0 && blur <= 64;
 
   /// 验证透明度 (0-1)
-  static bool validateOpacity(double opacity) {
-    return opacity >= 0 && opacity <= 1;
-  }
+  static bool validateOpacity(double opacity) => opacity >= 0 && opacity <= 1;
 
   /// 计算对比度比率
   static double _calculateContrastRatio(Color c1, Color c2) {
@@ -75,11 +63,9 @@ class DesignValidator {
   }
 
   /// sRGB转线性RGB
-  static double _srgbToLinear(double value) {
-    return value <= 0.03928
+  static double _srgbToLinear(double value) => value <= 0.03928
         ? value / 12.92
         : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
-  }
 
   /// 生成验证报告
   static ValidationReport generateReport({
@@ -181,15 +167,15 @@ enum Severity {
 
 @immutable
 class Violation {
-  final ViolationType type;
-  final String message;
-  final Severity severity;
 
   const Violation({
     required this.type,
     required this.message,
     required this.severity,
   });
+  final ViolationType type;
+  final String message;
+  final Severity severity;
 
   String get icon {
     switch (severity) {
@@ -210,23 +196,22 @@ class Violation {
 
 @immutable
 class ValidationReport {
-  final int totalChecks;
-  final List<Violation> violations;
-  final double score;
 
   const ValidationReport({
     required this.totalChecks,
     required this.violations,
     required this.score,
   });
+  final int totalChecks;
+  final List<Violation> violations;
+  final double score;
 
   bool get isValid => violations.isEmpty;
   int get errorCount => violations.where((v) => v.severity == Severity.high || v.severity == Severity.critical).length;
   int get warningCount => violations.where((v) => v.severity == Severity.medium).length;
   int get infoCount => violations.where((v) => v.severity == Severity.low).length;
 
-  String toMarkdown() {
-    return '''
+  String toMarkdown() => '''
 # 设计系统验证报告
 
 ## 📊 概览
@@ -246,7 +231,6 @@ ${violations.map((v) => '- $v').join('\n')}
 ## 💡 建议
 ${_generateRecommendations()}
 ''';
-  }
 
   String _generateRecommendations() {
     final recommendations = <String>[];

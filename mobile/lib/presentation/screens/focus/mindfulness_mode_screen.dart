@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
-import 'package:sparkle/presentation/widgets/focus/star_background.dart';
-import 'package:sparkle/presentation/widgets/focus/flip_clock.dart';
 import 'package:sparkle/presentation/widgets/focus/exit_confirmation_dialog.dart';
+import 'package:sparkle/presentation/widgets/focus/flip_clock.dart';
+import 'package:sparkle/presentation/widgets/focus/star_background.dart';
 
 /// 正念模式屏幕
 class MindfulnessModeScreen extends ConsumerStatefulWidget {
-  final TaskModel task;
 
   const MindfulnessModeScreen({
     required this.task, super.key,
   });
+  final TaskModel task;
 
   @override
   ConsumerState<MindfulnessModeScreen> createState() => _MindfulnessModeScreenState();
@@ -220,8 +219,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     );
   }
 
-  Widget _buildStatusBar(MindfulnessState state) {
-    return Padding(
+  Widget _buildStatusBar(MindfulnessState state) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -293,10 +291,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildTaskCard() {
-    return Container(
+  Widget _buildTaskCard() => Container(
       margin: const EdgeInsets.symmetric(horizontal: 40),
       padding: const EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
@@ -348,19 +344,15 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildFlameAnimation() {
-    return TweenAnimationBuilder<double>(
+  Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.9, end: 1.1),
       duration: const Duration(milliseconds: 1500),
       curve: Curves.easeInOut,
-      builder: (context, scale, child) {
-        return Transform.scale(
+      builder: (context, scale, child) => Transform.scale(
           scale: scale,
           child: child,
-        );
-      },
+        ),
       onEnd: () {
         // 循环动画
         if (mounted) {
@@ -388,10 +380,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
       ),
     );
-  }
 
-  Widget _buildExitButton() {
-    return Padding(
+  Widget _buildExitButton() => Padding(
       padding: const EdgeInsets.all(DS.xl),
       child: TextButton(
         onPressed: _handleExit,
@@ -409,5 +399,4 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         ),
       ),
     );
-  }
 }

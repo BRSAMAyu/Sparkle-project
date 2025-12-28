@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 
 class StaggeredResponsiveGrid extends StatefulWidget {
-  final Widget Function(BuildContext, int, Animation<double>) builder;
-  final int itemCount;
-  final Duration delay;
-  final Duration duration;
-  final double? childAspectRatio;
 
   const StaggeredResponsiveGrid({
     required this.builder,
@@ -16,6 +11,11 @@ class StaggeredResponsiveGrid extends StatefulWidget {
     this.duration = const Duration(milliseconds: 350),
     this.childAspectRatio,
   });
+  final Widget Function(BuildContext, int, Animation<double>) builder;
+  final int itemCount;
+  final Duration delay;
+  final Duration duration;
+  final double? childAspectRatio;
 
   @override
   State<StaggeredResponsiveGrid> createState() => _StaggeredResponsiveGridState();
@@ -45,8 +45,7 @@ class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ResponsiveGrid(
+  Widget build(BuildContext context) => ResponsiveGrid(
       childAspectRatio: widget.childAspectRatio,
       children: List.generate(widget.itemCount, (index) {
         final startTime = widget.delay.inMilliseconds * index;
@@ -68,5 +67,4 @@ class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
         return widget.builder(context, index, animation);
       }),
     );
-  }
 }

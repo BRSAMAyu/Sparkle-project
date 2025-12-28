@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class LearningModeControl extends StatefulWidget {
-  final double depth; // 0.0 - 1.0
-  final double curiosity; // 0.0 - 1.0
-  final Function(double depth, double curiosity) onChanged;
 
   const LearningModeControl({
     required this.depth, required this.curiosity, required this.onChanged, super.key,
   });
+  final double depth; // 0.0 - 1.0
+  final double curiosity; // 0.0 - 1.0
+  final Function(double depth, double curiosity) onChanged;
 
   @override
   State<LearningModeControl> createState() => _LearningModeControlState();
@@ -28,16 +27,16 @@ class _LearningModeControlState extends State<LearningModeControl> {
   }
 
   void _updatePosition(Offset localPosition, Size size) {
-    final double dx = localPosition.dx.clamp(0.0, size.width);
-    final double dy = localPosition.dy.clamp(0.0, size.height);
+    final dx = localPosition.dx.clamp(0.0, size.width);
+    final dy = localPosition.dy.clamp(0.0, size.height);
 
     // Curiosity is X axis (0 -> 1)
-    final double newCuriosity = dx / size.width;
+    final newCuriosity = dx / size.width;
 
     // Depth is Y axis (1 -> 0, usually "Deep" is top or bottom? Let's say Top is Deep=1, Bottom is Shallow=0?)
     // Actually typically Top-Right is High-High.
     // Let's say Y=0 (top) is Depth=1, Y=Height (bottom) is Depth=0.
-    final double newDepth = 1.0 - (dy / size.height);
+    final newDepth = 1.0 - (dy / size.height);
 
     setState(() {
       _currentCuriosity = newCuriosity;
@@ -63,7 +62,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
               child: SizedBox(
                 width: maxSize,
                 height: maxSize,
-                child: Container(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade100,
@@ -152,12 +151,10 @@ class _LearningModeControlState extends State<LearningModeControl> {
     );
   }
 
-  Widget _buildGrid(double width, double height) {
-    return CustomPaint(
+  Widget _buildGrid(double width, double height) => CustomPaint(
       size: Size(width, height),
       painter: GridPainter(),
     );
-  }
 
   Widget _buildInfoChip(String label) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -188,14 +185,14 @@ class GridPainter extends CustomPainter {
       ..strokeWidth = 1;
 
     // Vertical lines
-    for (int i = 1; i < 5; i++) {
-      final double x = size.width * (i / 5);
+    for (var i = 1; i < 5; i++) {
+      final x = size.width * (i / 5);
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
 
     // Horizontal lines
-    for (int i = 1; i < 5; i++) {
-      final double y = size.height * (i / 5);
+    for (var i = 1; i < 5; i++) {
+      final y = size.height * (i / 5);
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }

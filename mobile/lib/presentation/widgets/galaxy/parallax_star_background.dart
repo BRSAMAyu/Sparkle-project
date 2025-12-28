@@ -2,18 +2,16 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class ParallaxStarBackground extends StatelessWidget {
-  final TransformationController transformationController;
 
   const ParallaxStarBackground({
     required this.transformationController, super.key,
   });
+  final TransformationController transformationController;
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: transformationController,
       builder: (context, child) {
         // Invert the translation to simulate background moving slower than foreground
@@ -39,19 +37,18 @@ class ParallaxStarBackground extends StatelessWidget {
         );
       },
     );
-  }
 }
 
 class _ParallaxLayersPainter extends CustomPainter {
-  final double offsetX;
-  final double offsetY;
-  final double scale;
 
   _ParallaxLayersPainter({
     required this.offsetX,
     required this.offsetY,
     required this.scale,
   });
+  final double offsetX;
+  final double offsetY;
+  final double scale;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -104,10 +101,10 @@ class _ParallaxLayersPainter extends CustomPainter {
     final dx = offsetX * parallaxFactor;
     final dy = offsetY * parallaxFactor;
 
-    for (int i = 0; i < starCount; i++) {
+    for (var i = 0; i < starCount; i++) {
       // Original position
-      double x = random.nextDouble() * fieldWidth;
-      double y = random.nextDouble() * fieldHeight;
+      var x = random.nextDouble() * fieldWidth;
+      var y = random.nextDouble() * fieldHeight;
 
       // Apply parallax shift
       x = (x + dx) % fieldWidth;
@@ -118,7 +115,7 @@ class _ParallaxLayersPainter extends CustomPainter {
       if (y < 0) y += fieldHeight;
 
       // Draw star
-      final double r = baseSize * (0.8 + random.nextDouble() * 0.4);
+      final r = baseSize * (0.8 + random.nextDouble() * 0.4);
       // Scale star size slightly with zoom to give depth feeling (optional)
       // r = r * (0.5 + scale * 0.5); 
       
@@ -128,9 +125,7 @@ class _ParallaxLayersPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ParallaxLayersPainter oldDelegate) {
-    return oldDelegate.offsetX != offsetX ||
+  bool shouldRepaint(covariant _ParallaxLayersPainter oldDelegate) => oldDelegate.offsetX != offsetX ||
         oldDelegate.offsetY != offsetY ||
         oldDelegate.scale != scale;
-  }
 }

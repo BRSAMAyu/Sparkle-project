@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class ZoomControls extends StatefulWidget {
-  final TransformationController transformationController;
-  final double minScale;
-  final double maxScale;
 
   const ZoomControls({
     required this.transformationController, super.key,
     this.minScale = 0.1,
     this.maxScale = 3.0,
   });
+  final TransformationController transformationController;
+  final double minScale;
+  final double maxScale;
 
   @override
   State<ZoomControls> createState() => _ZoomControlsState();
@@ -72,8 +71,7 @@ class _ZoomControlsState extends State<ZoomControls> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.6),
@@ -118,5 +116,4 @@ class _ZoomControlsState extends State<ZoomControls> {
         ],
       ),
     );
-  }
 }

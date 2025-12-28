@@ -1,7 +1,6 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_avatar_switcher.dart';
 
@@ -12,12 +11,12 @@ import 'package:sparkle/presentation/widgets/chat/agent_avatar_switcher.dart';
 /// - Top 5最常用Agent卡片
 /// - 性能指标趋势图
 class AgentStatsDashboard extends StatelessWidget {
-  final Map<String, dynamic> statsData;
 
   const AgentStatsDashboard({
     required this.statsData,
     super.key,
   });
+  final Map<String, dynamic> statsData;
 
   @override
   Widget build(BuildContext context) {
@@ -79,8 +78,7 @@ class AgentStatsDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) {
-    return Row(
+  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) => Row(
       children: [
         Expanded(
           child: _buildStatCard(
@@ -98,7 +96,7 @@ class AgentStatsDashboard extends StatelessWidget {
             title: '平均耗时',
             value: '${overall['avg_duration_ms'] ?? 0}ms',
             icon: Icons.timer,
-            color: Colors.orange,
+            color: DS.brandPrimary,
           ),
         ),
         const SizedBox(width: DS.md),
@@ -113,7 +111,6 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       ],
     );
-  }
 
   Widget _buildStatCard(
     ThemeData theme, {
@@ -121,15 +118,13 @@ class AgentStatsDashboard extends StatelessWidget {
     required String value,
     required IconData icon,
     required Color color,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Column(
@@ -154,10 +149,8 @@ class AgentStatsDashboard extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) {
-    return SizedBox(
+  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) => SizedBox(
       height: 250,
       child: PieChart(
         PieChartData(
@@ -184,7 +177,6 @@ class AgentStatsDashboard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildAgentCard(ThemeData theme, dynamic agentData) {
     final agentType = _parseAgentType(agentData['agent_type'] as String);
@@ -312,19 +304,19 @@ class AgentStatsDashboard extends StatelessWidget {
 
   Color _getSuccessRateColor(num rate) {
     if (rate >= 90) return DS.success;
-    if (rate >= 70) return Colors.orange;
+    if (rate >= 70) return DS.brandPrimary;
     return DS.error;
   }
 }
 
 /// Agent性能趋势图
 class AgentPerformanceChart extends StatelessWidget {
-  final List<Map<String, dynamic>> performanceData;
 
   const AgentPerformanceChart({
     required this.performanceData,
     super.key,
   });
+  final List<Map<String, dynamic>> performanceData;
 
   @override
   Widget build(BuildContext context) {
@@ -350,38 +342,32 @@ class AgentPerformanceChart extends StatelessWidget {
             height: 200,
             child: LineChart(
               LineChartData(
-                gridData: const FlGridData(show: true),
                 titlesData: FlTitlesData(
-                  show: true,
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
+                      getTitlesWidget: (value, meta) => Text(
                           value.toInt().toString(),
                           style: const TextStyle(fontSize: 10),
-                        );
-                      },
+                        ),
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
+                      getTitlesWidget: (value, meta) => Text(
                           '${value.toInt()}ms',
                           style: const TextStyle(fontSize: 10),
-                        );
-                      },
+                        ),
                     ),
                   ),
                   topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    
                   ),
                   rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    
                   ),
                 ),
                 borderData: FlBorderData(show: true),

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
+
+  const GroupChatBubble({required this.message, this.onRevoke, this.onQuote, super.key});
   final MessageInfo message;
   final Function(MessageInfo message)? onRevoke;
   final Function(MessageInfo message)? onQuote;
-
-  const GroupChatBubble({required this.message, this.onRevoke, this.onQuote, super.key});
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -55,12 +54,12 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     if (widget.message.isRevoked) return;
 
     // Allow revocation within 24 hours for own messages
-    final bool canRevoke = isMe && DateTime.now().difference(widget.message.createdAt).inHours < 24;
+    final canRevoke = isMe && DateTime.now().difference(widget.message.createdAt).inHours < 24;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) => DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -149,7 +148,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
       );
     }
 
-    final String timeStr = DateFormat('HH:mm').format(widget.message.createdAt);
+    final timeStr = DateFormat('HH:mm').format(widget.message.createdAt);
 
     return SlideTransition(
       position: _slideAnimation,
@@ -288,8 +287,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     }
   }
 
-  Widget _buildTextBubble(BuildContext context, bool isMe) {
-    return Container(
+  Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? AppDesignTokens.primaryBase : DS.brandPrimary,
@@ -320,7 +318,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         ],
       ),
     );
-  }
 
   Widget _buildQuotePreview(BuildContext context, bool isMe) {
     final quoted = widget.message.quotedMessage;
@@ -374,20 +371,20 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isMe 
-              ? [Colors.orange.shade600, Colors.deepOrange.shade600]
-              : [Colors.orange.shade50, Colors.orange.shade100],
+              ? [DS.brandPrimary.shade600, Colors.deepOrange.shade600]
+              : [DS.brandPrimary.shade50, DS.brandPrimary.shade100],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withValues(alpha: 0.3),
+            color: DS.brandPrimary.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: isMe ? null : Border.all(color: Colors.orange.shade200),
+        border: isMe ? null : Border.all(color: DS.brandPrimary.shade200),
       ),
       child: Stack(
         children: [
@@ -398,7 +395,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
             child: Icon(
               Icons.local_fire_department,
               size: 80,
-              color: isMe ? DS.brandPrimary.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+              color: isMe ? DS.brandPrimary.withValues(alpha: 0.1) : DS.brandPrimary.withValues(alpha: 0.1),
             ),
           ),
           Padding(
@@ -462,8 +459,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
     );
   }
 
-  Widget _buildCheckinStat(String label, String value, bool isMe) {
-    return Column(
+  Widget _buildCheckinStat(String label, String value, bool isMe) => Column(
       children: [
         Text(
           value,
@@ -482,10 +478,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         ),
       ],
     );
-  }
 
-  Widget _buildTaskShareBubble(BuildContext context, bool isMe) {
-    return Container(
+  Widget _buildTaskShareBubble(BuildContext context, bool isMe) => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? DS.brandPrimary.shade600 : DS.brandPrimary.shade50,
@@ -506,10 +500,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         ],
       ),
     );
-  }
 
-  Widget _buildAvatar(UserBrief? user) {
-    return Container(
+  Widget _buildAvatar(UserBrief? user) => DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: DS.brandPrimary, width: 2),
@@ -521,5 +513,4 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
         fallbackText: user?.displayName,
       ),
     );
-  }
 }

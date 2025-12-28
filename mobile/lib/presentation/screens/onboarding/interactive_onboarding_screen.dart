@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/onboarding/architecture_animation.dart';
 
@@ -15,12 +14,12 @@ import 'package:sparkle/presentation/widgets/onboarding/architecture_animation.d
 /// 4. 权限请求
 /// 5. 个性化设置
 class InteractiveOnboardingScreen extends StatefulWidget {
-  final VoidCallback onComplete;
 
   const InteractiveOnboardingScreen({
     required this.onComplete,
     super.key,
   });
+  final VoidCallback onComplete;
 
   @override
   State<InteractiveOnboardingScreen> createState() =>
@@ -55,8 +54,7 @@ class _InteractiveOnboardingScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppDesignTokens.deepSpaceStart,
       body: SafeArea(
         child: Column(
@@ -101,8 +99,7 @@ class _InteractiveOnboardingScreenState
                 children: [
                   // Page dots
                   Row(
-                    children: List.generate(_totalPages, (index) {
-                      return Container(
+                    children: List.generate(_totalPages, (index) => Container(
                         width: index == _currentPage ? 24 : 8,
                         height: 8,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -112,8 +109,7 @@ class _InteractiveOnboardingScreenState
                               : DS.brandPrimary.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                      );
-                    }),
+                      ),),
                   ),
 
                   // Next/Done button
@@ -145,11 +141,9 @@ class _InteractiveOnboardingScreenState
         ),
       ),
     );
-  }
 
   // Page 1: Welcome
-  Widget _buildWelcomePage() {
-    return Padding(
+  Widget _buildWelcomePage() => Padding(
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -159,8 +153,7 @@ class _InteractiveOnboardingScreenState
             tween: Tween(begin: 0, end: 1),
             duration: const Duration(seconds: 1),
             curve: Curves.elasticOut,
-            builder: (context, value, child) {
-              return Transform.scale(
+            builder: (context, value, child) => Transform.scale(
                 scale: value,
                 child: Container(
                   width: 120,
@@ -187,8 +180,7 @@ class _InteractiveOnboardingScreenState
                     color: DS.brandPrimary,
                   ),
                 ),
-              );
-            },
+              ),
           ),
           const SizedBox(height: DS.xxxl),
 
@@ -226,10 +218,8 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildFeaturePreview(IconData icon, String title, String description) {
-    return Container(
+  Widget _buildFeaturePreview(IconData icon, String title, String description) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -272,11 +262,9 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
   // Page 2: Architecture Animation
-  Widget _buildArchitecturePage() {
-    return Padding(
+  Widget _buildArchitecturePage() => Padding(
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -300,15 +288,13 @@ class _InteractiveOnboardingScreenState
           const SizedBox(height: DS.xxl),
 
           // Architecture Animation
-          const ArchitectureAnimation(autoPlay: true),
+          const ArchitectureAnimation(),
         ],
       ),
     );
-  }
 
   // Page 3: Galaxy Feature
-  Widget _buildGalaxyFeaturePage() {
-    return _buildFeaturePage(
+  Widget _buildGalaxyFeaturePage() => _buildFeaturePage(
       icon: Icons.auto_graph,
       iconGradient: [DS.brandPrimary.shade400, Colors.cyan.shade400],
       title: '知识星图',
@@ -321,11 +307,9 @@ class _InteractiveOnboardingScreenState
       ],
       demoWidget: _buildGalaxyDemo(),
     );
-  }
 
   // Page 4: Chat Feature
-  Widget _buildChatFeaturePage() {
-    return _buildFeaturePage(
+  Widget _buildChatFeaturePage() => _buildFeaturePage(
       icon: Icons.psychology,
       iconGradient: [Colors.purple.shade400, Colors.pink.shade400],
       title: 'AI 对话',
@@ -338,11 +322,9 @@ class _InteractiveOnboardingScreenState
       ],
       demoWidget: _buildChatDemo(),
     );
-  }
 
   // Page 5: Task Feature
-  Widget _buildTaskFeaturePage() {
-    return _buildFeaturePage(
+  Widget _buildTaskFeaturePage() => _buildFeaturePage(
       icon: Icons.task_alt,
       iconGradient: [DS.success.shade400, Colors.teal.shade400],
       title: '智能任务',
@@ -355,11 +337,9 @@ class _InteractiveOnboardingScreenState
       ],
       demoWidget: _buildTaskDemo(),
     );
-  }
 
   // Page 6: Personalization
-  Widget _buildPersonalizationPage() {
-    return Padding(
+  Widget _buildPersonalizationPage() => Padding(
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -413,7 +393,6 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
   Widget _buildFeaturePage({
     required IconData icon,
@@ -422,8 +401,7 @@ class _InteractiveOnboardingScreenState
     required String description,
     required List<String> features,
     required Widget demoWidget,
-  }) {
-    return SingleChildScrollView(
+  }) => SingleChildScrollView(
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
         children: [
@@ -491,15 +469,13 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
   Widget _buildSettingOption({
     required IconData icon,
     required String title,
     required String description,
     required bool value,
-  }) {
-    return Container(
+  }) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -540,11 +516,9 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
   // Demo widgets
-  Widget _buildGalaxyDemo() {
-    return Container(
+  Widget _buildGalaxyDemo() => Container(
       height: 200,
       decoration: BoxDecoration(
         gradient: RadialGradient(
@@ -563,10 +537,8 @@ class _InteractiveOnboardingScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildChatDemo() {
-    return Container(
+  Widget _buildChatDemo() => Container(
       height: 200,
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
@@ -584,10 +556,8 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildChatMessage(String text, bool isAI) {
-    return Align(
+  Widget _buildChatMessage(String text, bool isAI) => Align(
       alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
         padding: const EdgeInsets.all(DS.md),
@@ -603,10 +573,8 @@ class _InteractiveOnboardingScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildTaskDemo() {
-    return Container(
+  Widget _buildTaskDemo() => Container(
       height: 200,
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
@@ -623,10 +591,8 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 
-  Widget _buildTaskItem(String type, String title, Color color) {
-    return Container(
+  Widget _buildTaskItem(String type, String title, Color color) => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.2),
@@ -658,5 +624,4 @@ class _InteractiveOnboardingScreenState
         ],
       ),
     );
-  }
 }

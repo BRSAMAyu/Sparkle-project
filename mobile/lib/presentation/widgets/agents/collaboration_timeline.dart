@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 多智能体协作时间线组件
 ///
 /// 展示多个 AI Agent 协作处理任务的完整流程
 class AgentCollaborationTimeline extends StatefulWidget {
-  final List<AgentTimelineStep> steps;
-  final String workflowType;
-  final double executionTime;
 
   const AgentCollaborationTimeline({
     required this.steps, required this.workflowType, super.key,
     this.executionTime = 0.0,
   });
+  final List<AgentTimelineStep> steps;
+  final String workflowType;
+  final double executionTime;
 
   @override
   State<AgentCollaborationTimeline> createState() =>
@@ -42,8 +41,7 @@ class _AgentCollaborationTimelineState
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -72,10 +70,8 @@ class _AgentCollaborationTimelineState
         ],
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Row(
+  Widget _buildHeader() => Row(
       children: [
         Container(
           padding: const EdgeInsets.all(DS.sm),
@@ -124,10 +120,8 @@ class _AgentCollaborationTimelineState
         ),
       ],
     );
-  }
 
-  Widget _buildTimeline() {
-    return Column(
+  Widget _buildTimeline() => Column(
       children: widget.steps.asMap().entries.map((entry) {
         final index = entry.key;
         final step = entry.value;
@@ -151,10 +145,8 @@ class _AgentCollaborationTimelineState
         );
       }).toList(),
     );
-  }
 
-  Widget _buildTimelineItem(AgentTimelineStep step, bool isLast) {
-    return Container(
+  Widget _buildTimelineItem(AgentTimelineStep step, bool isLast) => Container(
       margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,10 +159,8 @@ class _AgentCollaborationTimelineState
         ],
       ),
     );
-  }
 
-  Widget _buildTimelineNode(AgentTimelineStep step) {
-    return Column(
+  Widget _buildTimelineNode(AgentTimelineStep step) => Column(
       children: [
         Container(
           width: 40,
@@ -215,10 +205,8 @@ class _AgentCollaborationTimelineState
           ),
       ],
     );
-  }
 
-  Widget _buildStepCard(AgentTimelineStep step) {
-    return Container(
+  Widget _buildStepCard(AgentTimelineStep step) => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
@@ -284,10 +272,8 @@ class _AgentCollaborationTimelineState
         ],
       ),
     );
-  }
 
-  Widget _buildExpandableDetails(AgentTimelineStep step) {
-    return ExpansionTile(
+  Widget _buildExpandableDetails(AgentTimelineStep step) => ExpansionTile(
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(top: 8),
       title: Row(
@@ -330,7 +316,6 @@ class _AgentCollaborationTimelineState
         ),
       ],
     );
-  }
 
   String _getWorkflowDisplayName() {
     switch (widget.workflowType) {
@@ -350,12 +335,6 @@ class _AgentCollaborationTimelineState
 
 /// Agent 时间线步骤数据模型
 class AgentTimelineStep {
-  final String agentName;
-  final String action;
-  final IconData agentIcon;
-  final Color agentColor;
-  final double? timestamp; // 相对于开始时间的秒数
-  final String? outputSummary;
 
   AgentTimelineStep({
     required this.agentName,
@@ -366,8 +345,7 @@ class AgentTimelineStep {
     this.outputSummary,
   });
 
-  factory AgentTimelineStep.fromJson(Map<String, dynamic> json) {
-    return AgentTimelineStep(
+  factory AgentTimelineStep.fromJson(Map<String, dynamic> json) => AgentTimelineStep(
       agentName: json['agent'] as String,
       action: json['action'] as String,
       agentIcon: _getAgentIcon(json['agent'] as String),
@@ -375,7 +353,12 @@ class AgentTimelineStep {
       timestamp: (json['timestamp'] as num?)?.toDouble(),
       outputSummary: json['output_summary'] as String?,
     );
-  }
+  final String agentName;
+  final String action;
+  final IconData agentIcon;
+  final Color agentColor;
+  final double? timestamp; // 相对于开始时间的秒数
+  final String? outputSummary;
 
   static IconData _getAgentIcon(String agentName) {
     if (agentName.contains('StudyPlanner')) {
@@ -399,7 +382,7 @@ class AgentTimelineStep {
     if (agentName.contains('StudyPlanner')) {
       return DS.success;
     } else if (agentName.contains('ProblemSolver')) {
-      return Colors.orange;
+      return DS.brandPrimary;
     } else if (agentName.contains('Math')) {
       return DS.brandPrimary;
     } else if (agentName.contains('Code')) {

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// 智能体推理气泡组件
 ///
 /// 可展开的推理过程显示，展示AI的思考步骤
 class AgentReasoningBubble extends StatefulWidget {
+
+  const AgentReasoningBubble({
+    required this.agentName, required this.agentType, required this.reasoning, required this.responseText, required this.agentColor, super.key,
+    this.confidence,
+    this.citations,
+  });
   /// 智能体名称
   final String agentName;
 
@@ -26,12 +31,6 @@ class AgentReasoningBubble extends StatefulWidget {
 
   /// 引用资料
   final List<Map<String, dynamic>>? citations;
-
-  const AgentReasoningBubble({
-    required this.agentName, required this.agentType, required this.reasoning, required this.responseText, required this.agentColor, super.key,
-    this.confidence,
-    this.citations,
-  });
 
   @override
   State<AgentReasoningBubble> createState() => _AgentReasoningBubbleState();
@@ -99,7 +98,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+          SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
         ],
       ),
     );
@@ -289,7 +288,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: widget.agentColor.withOpacity(0.2),
-                  width: 1,
                 ),
               ),
               child: Column(
@@ -349,16 +347,16 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 ///
 /// 显示多个智能体的协作结果
 class MultiAgentCollaborationBubble extends StatelessWidget {
-  /// 参与的智能体列表
-  final List<AgentContribution> contributions;
-
-  /// 总结文本
-  final String? summary;
 
   const MultiAgentCollaborationBubble({
     required this.contributions, super.key,
     this.summary,
   });
+  /// 参与的智能体列表
+  final List<AgentContribution> contributions;
+
+  /// 总结文本
+  final String? summary;
 
   @override
   Widget build(BuildContext context) {
@@ -425,16 +423,14 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           ),
 
           // 各专家贡献
-          ...contributions.map((contribution) {
-            return AgentReasoningBubble(
+          ...contributions.map((contribution) => AgentReasoningBubble(
               agentName: contribution.agentName,
               agentType: contribution.agentType,
               reasoning: contribution.reasoning,
               responseText: contribution.responseText,
               agentColor: contribution.agentColor,
               confidence: contribution.confidence,
-            );
-          }),
+            ),),
 
           // 综合总结（如果有）
           if (summary != null)
@@ -446,7 +442,6 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Colors.purple.shade200,
-                  width: 1,
                 ),
               ),
               child: Column(
@@ -485,12 +480,6 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
 
 /// 智能体贡献信息
 class AgentContribution {
-  final String agentName;
-  final String agentType;
-  final String reasoning;
-  final String responseText;
-  final Color agentColor;
-  final double? confidence;
 
   AgentContribution({
     required this.agentName,
@@ -500,4 +489,10 @@ class AgentContribution {
     required this.agentColor,
     this.confidence,
   });
+  final String agentName;
+  final String agentType;
+  final String reasoning;
+  final String responseText;
+  final Color agentColor;
+  final double? confidence;
 }

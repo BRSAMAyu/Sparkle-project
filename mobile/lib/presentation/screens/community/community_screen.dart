@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/community_providers.dart';
 import 'package:sparkle/presentation/screens/community/create_post_screen.dart';
@@ -57,10 +56,7 @@ class CommunityScreen extends ConsumerWidget {
                     'Failed to load feed',
                     style: TextStyle(color: DS.brandPrimary[300]),
                   ),
-                  TextButton(
-                    onPressed: () => ref.read(feedProvider.notifier).refresh(),
-                    child: const Text('Retry'),
-                  ),
+                  SparkleButton.ghost(label: 'Retry', onPressed: () => ref.read(feedProvider.notifier).refresh()),
                 ],
               ),
             ),
@@ -73,9 +69,8 @@ class CommunityScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+  Widget _buildHeader(BuildContext context) => Padding(
+      padding: const EdgeInsets.all(DS.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -113,10 +108,8 @@ class CommunityScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return ListView(
+  Widget _buildEmptyState(BuildContext context) => ListView(
       children: [
         _buildHeader(context),
         const SizedBox(height: 100),
@@ -139,18 +132,16 @@ class CommunityScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
 }
 
 class _FilterChip extends StatelessWidget {
+
+  const _FilterChip({required this.label, required this.isSelected});
   final String label;
   final bool isSelected;
 
-  const _FilterChip({required this.label, required this.isSelected});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isSelected ? AppDesignTokens.primaryBase : DS.brandPrimary10,
@@ -167,5 +158,4 @@ class _FilterChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }

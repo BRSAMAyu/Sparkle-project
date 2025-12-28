@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/data/models/task_completion_result.dart';
+import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/presentation/widgets/task/timer_widget.dart';
-import 'package:sparkle/presentation/widgets/success_animation.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:sparkle/presentation/widgets/success_animation.dart';
+import 'package:sparkle/presentation/widgets/task/blocking_interceptor_dialog.dart';
 import 'package:sparkle/presentation/widgets/task/quick_tools_panel.dart';
 import 'package:sparkle/presentation/widgets/task/task_chat_panel.dart';
 import 'package:sparkle/presentation/widgets/task/task_feedback_dialog.dart';
-
-import 'package:sparkle/presentation/widgets/task/blocking_interceptor_dialog.dart';
+import 'package:sparkle/presentation/widgets/task/timer_widget.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
   const TaskExecutionScreen({super.key});
@@ -82,7 +80,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     return shouldPop ?? false;
   }
 
-  void _handleCompletion(int minutes, String? note) async {
+  Future<void> _handleCompletion(int minutes, String? note) async {
     // 1. Stop Timer
     setState(() {
       _isTimerRunning = false;
@@ -238,7 +236,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 style: const TextStyle(color: AppDesignTokens.neutral900),
               ),
             ),
-            body: Container(
+            body: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -282,14 +280,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             const SizedBox(height: AppDesignTokens.spacing40),
 
                             // 2. Task Guide Area
-                            Container(
+                            DecoratedBox(
                               decoration: BoxDecoration(
                                 color: DS.brandPrimary,
                                 borderRadius: AppDesignTokens.borderRadius16,
                                 boxShadow: AppDesignTokens.shadowMd,
                                 border: Border.all(
                                   color: AppDesignTokens.neutral200,
-                                  width: 1,
                                 ),
                               ),
                               child: ExpansionTile(
@@ -387,7 +384,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           // Celebration Overlay
           if (_showCelebration)
             Positioned.fill(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -464,19 +461,18 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 }
 
 class _TimerControls extends StatelessWidget {
-  final bool isPomodoroMode;
-  final VoidCallback onTogglePomodoro;
-  final Function(int minutes) onSetPreset;
 
   const _TimerControls({
     required this.isPomodoroMode,
     required this.onTogglePomodoro,
     required this.onSetPreset,
   });
+  final bool isPomodoroMode;
+  final VoidCallback onTogglePomodoro;
+  final Function(int minutes) onSetPreset;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       children: [
         Wrap(
           alignment: WrapAlignment.center,
@@ -510,19 +506,18 @@ class _TimerControls extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _BottomControls extends ConsumerWidget {
-  final TaskModel task;
-  final int elapsedSeconds;
-  final Function(int minutes, String? note) onComplete;
 
   const _BottomControls({
     required this.task, 
     required this.elapsedSeconds,
     required this.onComplete,
   });
+  final TaskModel task;
+  final int elapsedSeconds;
+  final Function(int minutes, String? note) onComplete;
 
   void _showCompleteDialog(BuildContext context, WidgetRef ref) {
     final noteController = TextEditingController();
@@ -634,8 +629,7 @@ class _BottomControls extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
       padding: const EdgeInsets.all(AppDesignTokens.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
@@ -650,7 +644,6 @@ class _BottomControls extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 1,
             child: CustomButton.text(
               text: '放弃',
               onPressed: () => _abandonTask(context, ref),
@@ -669,5 +662,4 @@ class _BottomControls extends ConsumerWidget {
         ],
       ),
     );
-  }
 }

@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
-  final bool enabled;
-  final String? hintText;
-  final Function(String text, {String? replyToId})? onSend;
-  final PrivateMessageInfo? quotedMessage;
-  final VoidCallback? onCancelQuote;
 
   const ChatInput({
     super.key,
@@ -21,6 +15,11 @@ class ChatInput extends ConsumerStatefulWidget {
     this.quotedMessage,
     this.onCancelQuote,
   });
+  final bool enabled;
+  final String? hintText;
+  final Function(String text, {String? replyToId})? onSend;
+  final PrivateMessageInfo? quotedMessage;
+  final VoidCallback? onCancelQuote;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -78,8 +77,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final bool canSend = widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
-    final bool enterToSend = ref.watch(enterToSendProvider);
+    final canSend = widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
+    final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -96,7 +95,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral100,
                       borderRadius: BorderRadius.circular(24),
@@ -178,8 +177,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
-  Widget _buildQuotePreview(bool isDark) {
-    return Container(
+  Widget _buildQuotePreview(bool isDark) => Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -232,5 +230,4 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         ],
       ),
     );
-  }
 }

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/repositories/omnibar_repository.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
+import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
-import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/presentation/providers/task_provider.dart';
 
 /// OmniBar - Project Cockpit Floating Dock
 class OmniBar extends ConsumerStatefulWidget {
-  final String? hintText;
   const OmniBar({super.key, this.hintText});
+  final String? hintText;
 
   @override
   ConsumerState<OmniBar> createState() => _OmniBarState();
@@ -103,15 +102,13 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
     switch (type) {
-      case 'CHAT': context.push('/chat'); break;
+      case 'CHAT': context.push('/chat');
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
-        break;
       case 'CAPSULE':
         await ref.read(cognitiveProvider.notifier).loadFragments();
         await ref.read(dashboardProvider.notifier).refresh();
-        break;
     }
   }
 
@@ -208,7 +205,8 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
 
     if (_isListening) {
       _glowController.repeat(reverse: true);
-      // TODO: Implement actual WebSocket audio streaming
+      // Feature: Implement WebSocket audio streaming
+      // See: lib/core/services/websocket_service.dart
       // For UI demo, simulate text input after 2 seconds
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted && _isListening) {

@@ -1,5 +1,5 @@
-import 'package:json_annotation/json_annotation.dart';
 import 'package:hive/hive.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'community_model.g.dart';
 
@@ -70,6 +70,19 @@ enum UserStatus {
 @JsonSerializable()
 @HiveType(typeId: 12)
 class UserBrief {
+
+  UserBrief({
+    required this.id,
+    required this.username,
+    this.nickname,
+    this.avatarUrl,
+    this.flameLevel = 1,
+    this.flameBrightness = 0.5,
+    this.status = UserStatus.offline,
+  });
+
+  factory UserBrief.fromJson(Map<String, dynamic> json) =>
+      _$UserBriefFromJson(json);
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -87,19 +100,6 @@ class UserBrief {
   final double flameBrightness;
   @HiveField(6)
   final UserStatus status;
-
-  UserBrief({
-    required this.id,
-    required this.username,
-    this.nickname,
-    this.avatarUrl,
-    this.flameLevel = 1,
-    this.flameBrightness = 0.5,
-    this.status = UserStatus.offline,
-  });
-
-  factory UserBrief.fromJson(Map<String, dynamic> json) =>
-      _$UserBriefFromJson(json);
   Map<String, dynamic> toJson() => _$UserBriefToJson(this);
 
   String get displayName => nickname ?? username;
@@ -109,17 +109,6 @@ class UserBrief {
 
 @JsonSerializable()
 class FriendshipInfo {
-  final String id;
-  final UserBrief friend;
-  final FriendshipStatus status;
-  @JsonKey(name: 'match_reason')
-  final Map<String, dynamic>? matchReason;
-  @JsonKey(name: 'initiated_by_me')
-  final bool initiatedByMe;
-  @JsonKey(name: 'created_at')
-  final DateTime createdAt;
-  @JsonKey(name: 'updated_at')
-  final DateTime updatedAt;
 
   FriendshipInfo({
     required this.id,
@@ -133,16 +122,22 @@ class FriendshipInfo {
 
   factory FriendshipInfo.fromJson(Map<String, dynamic> json) =>
       _$FriendshipInfoFromJson(json);
+  final String id;
+  final UserBrief friend;
+  final FriendshipStatus status;
+  @JsonKey(name: 'match_reason')
+  final Map<String, dynamic>? matchReason;
+  @JsonKey(name: 'initiated_by_me')
+  final bool initiatedByMe;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'updated_at')
+  final DateTime updatedAt;
   Map<String, dynamic> toJson() => _$FriendshipInfoToJson(this);
 }
 
 @JsonSerializable()
 class FriendRecommendation {
-  final UserBrief user;
-  @JsonKey(name: 'match_score')
-  final double matchScore;
-  @JsonKey(name: 'match_reasons')
-  final List<String> matchReasons;
 
   FriendRecommendation({
     required this.user,
@@ -152,6 +147,11 @@ class FriendRecommendation {
 
   factory FriendRecommendation.fromJson(Map<String, dynamic> json) =>
       _$FriendRecommendationFromJson(json);
+  final UserBrief user;
+  @JsonKey(name: 'match_score')
+  final double matchScore;
+  @JsonKey(name: 'match_reasons')
+  final List<String> matchReasons;
   Map<String, dynamic> toJson() => _$FriendRecommendationToJson(this);
 }
 
@@ -159,6 +159,31 @@ class FriendRecommendation {
 
 @JsonSerializable()
 class GroupInfo {
+
+  GroupInfo({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.focusTags,
+    required this.memberCount,
+    required this.totalFlamePower,
+    required this.todayCheckinCount,
+    required this.totalTasksCompleted,
+    required this.maxMembers,
+    required this.isPublic,
+    required this.joinRequiresApproval,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
+    this.avatarUrl,
+    this.deadline,
+    this.sprintGoal,
+    this.daysRemaining,
+    this.myRole,
+  });
+
+  factory GroupInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupInfoFromJson(json);
   final String id;
   final String name;
   final String? description;
@@ -192,31 +217,6 @@ class GroupInfo {
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
-
-  GroupInfo({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.focusTags,
-    required this.memberCount,
-    required this.totalFlamePower,
-    required this.todayCheckinCount,
-    required this.totalTasksCompleted,
-    required this.maxMembers,
-    required this.isPublic,
-    required this.joinRequiresApproval,
-    required this.createdAt,
-    required this.updatedAt,
-    this.description,
-    this.avatarUrl,
-    this.deadline,
-    this.sprintGoal,
-    this.daysRemaining,
-    this.myRole,
-  });
-
-  factory GroupInfo.fromJson(Map<String, dynamic> json) =>
-      _$GroupInfoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupInfoToJson(this);
 
   bool get isSprint => type == GroupType.sprint;
@@ -226,20 +226,6 @@ class GroupInfo {
 
 @JsonSerializable()
 class GroupListItem {
-  final String id;
-  final String name;
-  final GroupType type;
-  @JsonKey(name: 'member_count')
-  final int memberCount;
-  @JsonKey(name: 'total_flame_power')
-  final int totalFlamePower;
-  final DateTime? deadline;
-  @JsonKey(name: 'days_remaining')
-  final int? daysRemaining;
-  @JsonKey(name: 'focus_tags')
-  final List<String> focusTags;
-  @JsonKey(name: 'my_role')
-  final GroupRole? myRole;
 
   GroupListItem({
     required this.id,
@@ -255,6 +241,20 @@ class GroupListItem {
 
   factory GroupListItem.fromJson(Map<String, dynamic> json) =>
       _$GroupListItemFromJson(json);
+  final String id;
+  final String name;
+  final GroupType type;
+  @JsonKey(name: 'member_count')
+  final int memberCount;
+  @JsonKey(name: 'total_flame_power')
+  final int totalFlamePower;
+  final DateTime? deadline;
+  @JsonKey(name: 'days_remaining')
+  final int? daysRemaining;
+  @JsonKey(name: 'focus_tags')
+  final List<String> focusTags;
+  @JsonKey(name: 'my_role')
+  final GroupRole? myRole;
   Map<String, dynamic> toJson() => _$GroupListItemToJson(this);
 
   bool get isSprint => type == GroupType.sprint;
@@ -262,20 +262,6 @@ class GroupListItem {
 
 @JsonSerializable()
 class GroupCreate {
-  final String name;
-  final String? description;
-  final GroupType type;
-  @JsonKey(name: 'focus_tags')
-  final List<String> focusTags;
-  final DateTime? deadline;
-  @JsonKey(name: 'sprint_goal')
-  final String? sprintGoal;
-  @JsonKey(name: 'max_members')
-  final int maxMembers;
-  @JsonKey(name: 'is_public')
-  final bool isPublic;
-  @JsonKey(name: 'join_requires_approval')
-  final bool joinRequiresApproval;
 
   GroupCreate({
     required this.name,
@@ -291,6 +277,20 @@ class GroupCreate {
 
   factory GroupCreate.fromJson(Map<String, dynamic> json) =>
       _$GroupCreateFromJson(json);
+  final String name;
+  final String? description;
+  final GroupType type;
+  @JsonKey(name: 'focus_tags')
+  final List<String> focusTags;
+  final DateTime? deadline;
+  @JsonKey(name: 'sprint_goal')
+  final String? sprintGoal;
+  @JsonKey(name: 'max_members')
+  final int maxMembers;
+  @JsonKey(name: 'is_public')
+  final bool isPublic;
+  @JsonKey(name: 'join_requires_approval')
+  final bool joinRequiresApproval;
   Map<String, dynamic> toJson() => _$GroupCreateToJson(this);
 }
 
@@ -298,18 +298,6 @@ class GroupCreate {
 
 @JsonSerializable()
 class GroupMemberInfo {
-  final UserBrief user;
-  final GroupRole role;
-  @JsonKey(name: 'flame_contribution')
-  final int flameContribution;
-  @JsonKey(name: 'tasks_completed')
-  final int tasksCompleted;
-  @JsonKey(name: 'checkin_streak')
-  final int checkinStreak;
-  @JsonKey(name: 'joined_at')
-  final DateTime joinedAt;
-  @JsonKey(name: 'last_active_at')
-  final DateTime lastActiveAt;
 
   GroupMemberInfo({
     required this.user,
@@ -323,6 +311,18 @@ class GroupMemberInfo {
 
   factory GroupMemberInfo.fromJson(Map<String, dynamic> json) =>
       _$GroupMemberInfoFromJson(json);
+  final UserBrief user;
+  final GroupRole role;
+  @JsonKey(name: 'flame_contribution')
+  final int flameContribution;
+  @JsonKey(name: 'tasks_completed')
+  final int tasksCompleted;
+  @JsonKey(name: 'checkin_streak')
+  final int checkinStreak;
+  @JsonKey(name: 'joined_at')
+  final DateTime joinedAt;
+  @JsonKey(name: 'last_active_at')
+  final DateTime lastActiveAt;
   Map<String, dynamic> toJson() => _$GroupMemberInfoToJson(this);
 }
 
@@ -331,6 +331,24 @@ class GroupMemberInfo {
 @JsonSerializable()
 @HiveType(typeId: 13)
 class MessageInfo {
+
+  MessageInfo({
+    required this.id,
+    required this.messageType,
+    required this.createdAt,
+    required this.updatedAt,
+    this.sender,
+    this.content,
+    this.contentData,
+    this.replyToId,
+    this.isRevoked = false,
+    this.readBy,
+    this.quotedMessage,
+    this.readByUsers,
+  });
+
+  factory MessageInfo.fromJson(Map<String, dynamic> json) =>
+      _$MessageInfoFromJson(json);
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -369,24 +387,6 @@ class MessageInfo {
   // Avatar URLs for read-by users (populated by service layer)
   @JsonKey(name: 'read_by_avatars', includeFromJson: false, includeToJson: false)
   final List<UserBrief>? readByUsers;
-
-  MessageInfo({
-    required this.id,
-    required this.messageType,
-    required this.createdAt,
-    required this.updatedAt,
-    this.sender,
-    this.content,
-    this.contentData,
-    this.replyToId,
-    this.isRevoked = false,
-    this.readBy,
-    this.quotedMessage,
-    this.readByUsers,
-  });
-
-  factory MessageInfo.fromJson(Map<String, dynamic> json) =>
-      _$MessageInfoFromJson(json);
   Map<String, dynamic> toJson() => _$MessageInfoToJson(this);
 
   bool get isSystemMessage => sender == null;
@@ -397,6 +397,27 @@ class MessageInfo {
 @JsonSerializable()
 @HiveType(typeId: 14)
 class PrivateMessageInfo {
+
+  PrivateMessageInfo({
+    required this.id,
+    required this.sender,
+    required this.receiver,
+    required this.messageType,
+    required this.isRead,
+    required this.createdAt,
+    required this.updatedAt,
+    this.content,
+    this.contentData,
+    this.replyToId,
+    this.readAt,
+    this.isSending = false,
+    this.hasError = false,
+    this.isRevoked = false,
+    this.quotedMessage,
+  });
+
+  factory PrivateMessageInfo.fromJson(Map<String, dynamic> json) =>
+      _$PrivateMessageInfoFromJson(json);
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -439,27 +460,6 @@ class PrivateMessageInfo {
   // Quote support
   @JsonKey(name: 'quoted_message')
   final PrivateMessageInfo? quotedMessage;
-
-  PrivateMessageInfo({
-    required this.id,
-    required this.sender,
-    required this.receiver,
-    required this.messageType,
-    required this.isRead,
-    required this.createdAt,
-    required this.updatedAt,
-    this.content,
-    this.contentData,
-    this.replyToId,
-    this.readAt,
-    this.isSending = false,
-    this.hasError = false,
-    this.isRevoked = false,
-    this.quotedMessage,
-  });
-
-  factory PrivateMessageInfo.fromJson(Map<String, dynamic> json) =>
-      _$PrivateMessageInfoFromJson(json);
   Map<String, dynamic> toJson() => _$PrivateMessageInfoToJson(this);
 
   PrivateMessageInfo copyWith({
@@ -478,8 +478,7 @@ class PrivateMessageInfo {
     bool? hasError,
     bool? isRevoked,
     PrivateMessageInfo? quotedMessage,
-  }) {
-    return PrivateMessageInfo(
+  }) => PrivateMessageInfo(
       id: id ?? this.id,
       sender: sender ?? this.sender,
       receiver: receiver ?? this.receiver,
@@ -496,21 +495,10 @@ class PrivateMessageInfo {
       isRevoked: isRevoked ?? this.isRevoked,
       quotedMessage: quotedMessage ?? this.quotedMessage,
     );
-  }
 }
 
 @JsonSerializable()
 class PrivateMessageSend {
-  @JsonKey(name: 'target_user_id')
-  final String targetUserId;
-  @JsonKey(name: 'message_type')
-  final MessageType messageType;
-  final String? content;
-  @JsonKey(name: 'content_data')
-  final Map<String, dynamic>? contentData;
-  @JsonKey(name: 'reply_to_id')
-  final String? replyToId;
-  final String? nonce;
 
   PrivateMessageSend({
     required this.targetUserId,
@@ -523,11 +511,8 @@ class PrivateMessageSend {
 
   factory PrivateMessageSend.fromJson(Map<String, dynamic> json) =>
       _$PrivateMessageSendFromJson(json);
-  Map<String, dynamic> toJson() => _$PrivateMessageSendToJson(this);
-}
-
-@JsonSerializable()
-class MessageSend {
+  @JsonKey(name: 'target_user_id')
+  final String targetUserId;
   @JsonKey(name: 'message_type')
   final MessageType messageType;
   final String? content;
@@ -536,6 +521,11 @@ class MessageSend {
   @JsonKey(name: 'reply_to_id')
   final String? replyToId;
   final String? nonce;
+  Map<String, dynamic> toJson() => _$PrivateMessageSendToJson(this);
+}
+
+@JsonSerializable()
+class MessageSend {
 
   MessageSend({
     this.messageType = MessageType.text,
@@ -547,6 +537,14 @@ class MessageSend {
 
   factory MessageSend.fromJson(Map<String, dynamic> json) =>
       _$MessageSendFromJson(json);
+  @JsonKey(name: 'message_type')
+  final MessageType messageType;
+  final String? content;
+  @JsonKey(name: 'content_data')
+  final Map<String, dynamic>? contentData;
+  @JsonKey(name: 'reply_to_id')
+  final String? replyToId;
+  final String? nonce;
   Map<String, dynamic> toJson() => _$MessageSendToJson(this);
 }
 
@@ -554,6 +552,27 @@ class MessageSend {
 
 @JsonSerializable()
 class GroupTaskInfo {
+
+  GroupTaskInfo({
+    required this.id,
+    required this.title,
+    required this.tags,
+    required this.estimatedMinutes,
+    required this.difficulty,
+    required this.totalClaims,
+    required this.totalCompletions,
+    required this.completionRate,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
+    this.dueDate,
+    this.creator,
+    this.isClaimedByMe = false,
+    this.myCompletionStatus,
+  });
+
+  factory GroupTaskInfo.fromJson(Map<String, dynamic> json) =>
+      _$GroupTaskInfoFromJson(json);
   final String id;
   final String title;
   final String? description;
@@ -578,40 +597,11 @@ class GroupTaskInfo {
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
-
-  GroupTaskInfo({
-    required this.id,
-    required this.title,
-    required this.tags,
-    required this.estimatedMinutes,
-    required this.difficulty,
-    required this.totalClaims,
-    required this.totalCompletions,
-    required this.completionRate,
-    required this.createdAt,
-    required this.updatedAt,
-    this.description,
-    this.dueDate,
-    this.creator,
-    this.isClaimedByMe = false,
-    this.myCompletionStatus,
-  });
-
-  factory GroupTaskInfo.fromJson(Map<String, dynamic> json) =>
-      _$GroupTaskInfoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupTaskInfoToJson(this);
 }
 
 @JsonSerializable()
 class GroupTaskCreate {
-  final String title;
-  final String? description;
-  final List<String> tags;
-  @JsonKey(name: 'estimated_minutes')
-  final int estimatedMinutes;
-  final int difficulty;
-  @JsonKey(name: 'due_date')
-  final DateTime? dueDate;
 
   GroupTaskCreate({
     required this.title,
@@ -624,6 +614,14 @@ class GroupTaskCreate {
 
   factory GroupTaskCreate.fromJson(Map<String, dynamic> json) =>
       _$GroupTaskCreateFromJson(json);
+  final String title;
+  final String? description;
+  final List<String> tags;
+  @JsonKey(name: 'estimated_minutes')
+  final int estimatedMinutes;
+  final int difficulty;
+  @JsonKey(name: 'due_date')
+  final DateTime? dueDate;
   Map<String, dynamic> toJson() => _$GroupTaskCreateToJson(this);
 }
 
@@ -631,11 +629,6 @@ class GroupTaskCreate {
 
 @JsonSerializable()
 class CheckinRequest {
-  @JsonKey(name: 'group_id')
-  final String groupId;
-  final String? message;
-  @JsonKey(name: 'today_duration_minutes')
-  final int todayDurationMinutes;
 
   CheckinRequest({
     required this.groupId,
@@ -645,20 +638,16 @@ class CheckinRequest {
 
   factory CheckinRequest.fromJson(Map<String, dynamic> json) =>
       _$CheckinRequestFromJson(json);
+  @JsonKey(name: 'group_id')
+  final String groupId;
+  final String? message;
+  @JsonKey(name: 'today_duration_minutes')
+  final int todayDurationMinutes;
   Map<String, dynamic> toJson() => _$CheckinRequestToJson(this);
 }
 
 @JsonSerializable()
 class CheckinResponse {
-  final bool success;
-  @JsonKey(name: 'new_streak')
-  final int newStreak;
-  @JsonKey(name: 'flame_earned')
-  final int flameEarned;
-  @JsonKey(name: 'rank_in_group')
-  final int rankInGroup;
-  @JsonKey(name: 'group_checkin_count')
-  final int groupCheckinCount;
 
   CheckinResponse({
     required this.success,
@@ -670,6 +659,15 @@ class CheckinResponse {
 
   factory CheckinResponse.fromJson(Map<String, dynamic> json) =>
       _$CheckinResponseFromJson(json);
+  final bool success;
+  @JsonKey(name: 'new_streak')
+  final int newStreak;
+  @JsonKey(name: 'flame_earned')
+  final int flameEarned;
+  @JsonKey(name: 'rank_in_group')
+  final int rankInGroup;
+  @JsonKey(name: 'group_checkin_count')
+  final int groupCheckinCount;
   Map<String, dynamic> toJson() => _$CheckinResponseToJson(this);
 }
 
@@ -677,18 +675,6 @@ class CheckinResponse {
 
 @JsonSerializable()
 class FlameStatus {
-  @JsonKey(name: 'user_id')
-  final String userId;
-  @JsonKey(name: 'flame_power')
-  final int flamePower;
-  @JsonKey(name: 'flame_color')
-  final String flameColor;
-  @JsonKey(name: 'flame_size')
-  final double flameSize;
-  @JsonKey(name: 'position_x')
-  final double positionX;
-  @JsonKey(name: 'position_y')
-  final double positionY;
 
   FlameStatus({
     required this.userId,
@@ -701,18 +687,23 @@ class FlameStatus {
 
   factory FlameStatus.fromJson(Map<String, dynamic> json) =>
       _$FlameStatusFromJson(json);
+  @JsonKey(name: 'user_id')
+  final String userId;
+  @JsonKey(name: 'flame_power')
+  final int flamePower;
+  @JsonKey(name: 'flame_color')
+  final String flameColor;
+  @JsonKey(name: 'flame_size')
+  final double flameSize;
+  @JsonKey(name: 'position_x')
+  final double positionX;
+  @JsonKey(name: 'position_y')
+  final double positionY;
   Map<String, dynamic> toJson() => _$FlameStatusToJson(this);
 }
 
 @JsonSerializable()
 class GroupFlameStatus {
-  @JsonKey(name: 'group_id')
-  final String groupId;
-  @JsonKey(name: 'total_power')
-  final int totalPower;
-  final List<FlameStatus> flames;
-  @JsonKey(name: 'bonfire_level')
-  final int bonfireLevel;
 
   GroupFlameStatus({
     required this.groupId,
@@ -723,5 +714,12 @@ class GroupFlameStatus {
 
   factory GroupFlameStatus.fromJson(Map<String, dynamic> json) =>
       _$GroupFlameStatusFromJson(json);
+  @JsonKey(name: 'group_id')
+  final String groupId;
+  @JsonKey(name: 'total_power')
+  final int totalPower;
+  final List<FlameStatus> flames;
+  @JsonKey(name: 'bonfire_level')
+  final int bonfireLevel;
   Map<String, dynamic> toJson() => _$GroupFlameStatusToJson(this);
 }

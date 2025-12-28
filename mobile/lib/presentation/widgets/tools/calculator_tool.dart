@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:math_expressions/math_expressions.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class CalculatorTool extends StatefulWidget {
@@ -22,9 +21,9 @@ class _CalculatorToolState extends State<CalculatorTool> {
         _result = '';
       } else if (text == '=') {
         try {
-          final Parser p = Parser();
-          final Expression exp = p.parse(_expression.replaceAll('x', '*'));
-          final ContextModel cm = ContextModel();
+          final p = Parser();
+          final exp = p.parse(_expression.replaceAll('x', '*'));
+          final cm = ContextModel();
           // Using the older but working API with ignore if the new one isn't fully compatible 
           // or library version is locked. 
           // Actually, let's keep logic and just suppress the specific lint.
@@ -47,8 +46,7 @@ class _CalculatorToolState extends State<CalculatorTool> {
     });
   }
 
-  Widget _buildButton(String text, {Color? color, Color? textColor}) {
-    return Expanded(
+  Widget _buildButton(String text, {Color? color, Color? textColor}) => Expanded(
       child: InkWell(
         onTap: () => _onPressed(text),
         child: Container(
@@ -70,11 +68,9 @@ class _CalculatorToolState extends State<CalculatorTool> {
         ),
       ),
     );
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.lg),
       height: 500,
       decoration: const BoxDecoration(
@@ -182,5 +178,4 @@ class _CalculatorToolState extends State<CalculatorTool> {
         ],
       ),
     );
-  }
 }

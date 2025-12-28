@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
 
@@ -26,9 +25,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: capsules.length,
-                  itemBuilder: (context, index) {
-                    return CuriosityCapsuleCard(capsule: capsules[index]);
-                  },
+                  itemBuilder: (context, index) => CuriosityCapsuleCard(capsule: capsules[index]),
                 ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -37,8 +34,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -56,5 +52,4 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 }

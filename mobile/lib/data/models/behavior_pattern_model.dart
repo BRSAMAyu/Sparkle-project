@@ -4,6 +4,19 @@ part 'behavior_pattern_model.g.dart';
 
 @JsonSerializable()
 class BehaviorPatternModel {
+
+  BehaviorPatternModel({
+    required this.id,
+    required this.userId,
+    required this.patternName,
+    required this.patternType,
+    required this.isArchived, required this.createdAt, required this.updatedAt, this.description,
+    this.solutionText,
+    this.evidenceIds,
+  });
+
+  factory BehaviorPatternModel.fromJson(Map<String, dynamic> json) =>
+      _$BehaviorPatternModelFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String userId;
@@ -22,19 +35,6 @@ class BehaviorPatternModel {
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
-
-  BehaviorPatternModel({
-    required this.id,
-    required this.userId,
-    required this.patternName,
-    required this.patternType,
-    required this.isArchived, required this.createdAt, required this.updatedAt, this.description,
-    this.solutionText,
-    this.evidenceIds,
-  });
-
-  factory BehaviorPatternModel.fromJson(Map<String, dynamic> json) =>
-      _$BehaviorPatternModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$BehaviorPatternModelToJson(this);
 }

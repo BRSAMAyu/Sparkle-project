@@ -1,16 +1,11 @@
 import 'dart:math';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 星星数据
-class _Star {
-  final double x;
-  final double y;
-  final double size;
-  final double twinkleSpeed; // 闪烁速度因子
-  final double twinkleOffset; // 闪烁相位偏移
+class _Star { // 闪烁相位偏移
 
   const _Star({
     required this.x,
@@ -19,18 +14,23 @@ class _Star {
     required this.twinkleSpeed,
     required this.twinkleOffset,
   });
+  final double x;
+  final double y;
+  final double size;
+  final double twinkleSpeed; // 闪烁速度因子
+  final double twinkleOffset;
 }
 
 /// 星空背景组件
 class StarBackground extends StatefulWidget {
-  final int starCount;
-  final bool enableTwinkle;
 
   const StarBackground({
     super.key,
     this.starCount = 100,
     this.enableTwinkle = true,
   });
+  final int starCount;
+  final bool enableTwinkle;
 
   @override
   State<StarBackground> createState() => _StarBackgroundState();
@@ -59,15 +59,13 @@ class _StarBackgroundState extends State<StarBackground>
   }
 
   void _generateStars() {
-    _stars = List.generate(widget.starCount, (_) {
-      return _Star(
+    _stars = List.generate(widget.starCount, (_) => _Star(
         x: _random.nextDouble(),
         y: _random.nextDouble(),
         size: _random.nextDouble() * 2 + 0.5, // 0.5 - 2.5
         twinkleSpeed: _random.nextDouble() * 2 + 0.5, // 0.5 - 2.5
         twinkleOffset: _random.nextDouble() * 2 * pi,
-      );
-    });
+      ),);
   }
 
   @override
@@ -77,34 +75,30 @@ class _StarBackgroundState extends State<StarBackground>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, _) {
-        return CustomPaint(
+      builder: (context, _) => CustomPaint(
           painter: _StarPainter(
             stars: _stars,
             animationValue: _controller.value,
             enableTwinkle: widget.enableTwinkle,
           ),
           size: Size.infinite,
-        );
-      },
+        ),
     );
-  }
 }
 
 /// 星空绘制器
 class _StarPainter extends CustomPainter {
-  final List<_Star> stars;
-  final double animationValue;
-  final bool enableTwinkle;
 
   _StarPainter({
     required this.stars,
     required this.animationValue,
     required this.enableTwinkle,
   });
+  final List<_Star> stars;
+  final double animationValue;
+  final bool enableTwinkle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -161,21 +155,19 @@ class _StarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _StarPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
-  }
+  bool shouldRepaint(covariant _StarPainter oldDelegate) => oldDelegate.animationValue != animationValue;
 }
 
 /// 带渐入动画的星空背景
 class AnimatedStarBackground extends StatefulWidget {
-  final Duration fadeInDuration;
-  final int starCount;
 
   const AnimatedStarBackground({
     super.key,
     this.fadeInDuration = const Duration(milliseconds: 500),
     this.starCount = 100,
   });
+  final Duration fadeInDuration;
+  final int starCount;
 
   @override
   State<AnimatedStarBackground> createState() => _AnimatedStarBackgroundState();
@@ -207,10 +199,8 @@ class _AnimatedStarBackgroundState extends State<AnimatedStarBackground>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnimation,
       child: StarBackground(starCount: widget.starCount),
     );
-  }
 }

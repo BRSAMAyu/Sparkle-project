@@ -3,9 +3,9 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/curiosity_capsule_model.dart';
 
 class CapsuleRepository {
-  final ApiClient _apiClient;
 
   CapsuleRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<List<CuriosityCapsuleModel>> getTodayCapsules() async {
     final response = await _apiClient.get('/capsules/today');
@@ -17,6 +17,4 @@ class CapsuleRepository {
   }
 }
 
-final capsuleRepositoryProvider = Provider<CapsuleRepository>((ref) {
-  return CapsuleRepository(ref.watch(apiClientProvider));
-});
+final capsuleRepositoryProvider = Provider<CapsuleRepository>((ref) => CapsuleRepository(ref.watch(apiClientProvider)));

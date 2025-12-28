@@ -9,9 +9,9 @@ final communityRepositoryProvider = Provider((ref) {
 });
 
 class CommunityRepository {
-  final Dio _dio;
 
   CommunityRepository(this._dio);
+  final Dio _dio;
 
   Future<List<Post>> getFeed({int page = 1, int limit = 20}) async {
     final response = await _dio.get(

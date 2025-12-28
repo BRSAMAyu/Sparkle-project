@@ -60,6 +60,13 @@ dependencies:
   table_calendar: ^3.2.0
   lunar: ^1.7.8
 
+  path: any
+  freezed_annotation: any
+  path_provider: any
+  share_plus: any
+  flutter_animate: any
+  timeago: any
+  http: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

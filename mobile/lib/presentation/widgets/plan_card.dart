@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/design/motion.dart';
 
 /// 计划卡片组件
 /// 用于在聊天中显示 AI 生成的计划
 class PlanCard extends StatefulWidget {
-  final Map<String, dynamic> data;
 
   const PlanCard({
     required this.data, super.key,
   });
+  final Map<String, dynamic> data;
 
   @override
   State<PlanCard> createState() => _PlanCardState();
@@ -139,11 +139,9 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
       case 'sprint':
         icon = Icons.directions_run;
         color = AppDesignTokens.warning;
-        break;
       case 'growth':
         icon = Icons.trending_up;
         color = AppDesignTokens.success;
-        break;
       default:
         icon = Icons.assignment;
         color = AppDesignTokens.neutral500;

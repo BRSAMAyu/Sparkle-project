@@ -3,59 +3,55 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/screens/splash/splash_screen.dart';
 import 'package:sparkle/presentation/screens/auth/login_screen.dart';
 import 'package:sparkle/presentation/screens/auth/register_screen.dart';
-import 'package:sparkle/presentation/screens/home/home_screen.dart';
-import 'package:sparkle/presentation/screens/task/task_create_screen.dart';
-import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
-import 'package:sparkle/presentation/screens/task/task_detail_screen.dart';
-import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
 import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
-import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
+import 'package:sparkle/presentation/screens/cognitive/curiosity_capsule_screen.dart';
+import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
+import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
+import 'package:sparkle/presentation/screens/community/create_group_screen.dart';
+import 'package:sparkle/presentation/screens/community/friends_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_chat_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_detail_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_search_screen.dart';
+import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
+import 'package:sparkle/presentation/screens/community/private_chat_screen.dart';
+import 'package:sparkle/presentation/screens/focus/focus_main_screen.dart';
+import 'package:sparkle/presentation/screens/focus/mindfulness_mode_screen.dart';
+import 'package:sparkle/presentation/screens/galaxy_screen.dart';
+import 'package:sparkle/presentation/screens/home/home_screen.dart';
+import 'package:sparkle/presentation/screens/insights/learning_forecast_screen.dart';
+import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/plan/plan_create_screen.dart';
 import 'package:sparkle/presentation/screens/plan/plan_edit_screen.dart';
-import 'package:sparkle/presentation/screens/insights/learning_forecast_screen.dart';
+import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
-import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
-import 'package:sparkle/presentation/screens/galaxy_screen.dart';
-import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
-import 'package:sparkle/presentation/screens/community/group_list_screen.dart';
-import 'package:sparkle/presentation/screens/community/group_detail_screen.dart';
-import 'package:sparkle/presentation/screens/community/group_chat_screen.dart';
-import 'package:sparkle/presentation/screens/community/create_group_screen.dart';
-import 'package:sparkle/presentation/screens/community/group_search_screen.dart';
-import 'package:sparkle/presentation/screens/community/group_tasks_screen.dart';
-import 'package:sparkle/presentation/screens/community/friends_screen.dart';
-import 'package:sparkle/presentation/screens/community/private_chat_screen.dart';
-import 'package:sparkle/presentation/screens/cognitive/pattern_list_screen.dart';
-import 'package:sparkle/presentation/screens/cognitive/curiosity_capsule_screen.dart';
-import 'package:sparkle/presentation/screens/focus/mindfulness_mode_screen.dart';
-import 'package:sparkle/presentation/screens/focus/focus_main_screen.dart';
+import 'package:sparkle/presentation/screens/splash/splash_screen.dart';
 import 'package:sparkle/presentation/screens/stats/calendar_stats_screen.dart';
-import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/presentation/screens/task/task_create_screen.dart';
+import 'package:sparkle/presentation/screens/task/task_detail_screen.dart';
+import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
+import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
 
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({
   required GoRouterState state,
   required Widget child,
   SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) {
-  return CustomTransitionPage<void>(
+}) => CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return SharedAxisTransition(
+    transitionsBuilder: (context, animation, secondaryAnimation, child) => SharedAxisTransition(
         animation: animation,
         secondaryAnimation: secondaryAnimation,
         transitionType: type,
         child: child,
-      );
-    },
+      ),
   );
-}
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -116,7 +112,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const RegisterScreen(),
-          type: SharedAxisTransitionType.horizontal,
         ),
       ),
 
@@ -163,13 +158,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tasks/:id/execute',
         name: 'taskExecution',
-        pageBuilder: (context, state) {
-          return _buildTransitionPage(
+        pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const TaskExecutionScreen(),
             type: SharedAxisTransitionType.scaled, // Special mode
-          );
-        },
+          ),
       ),
 
       // Plan Routes

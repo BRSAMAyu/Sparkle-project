@@ -2,27 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/presentation/widgets/task/task_card.dart';
 import 'package:sparkle/presentation/widgets/knowledge_card.dart';
-import 'package:sparkle/presentation/widgets/task_list_widget.dart'; // New widget for task list
 import 'package:sparkle/presentation/widgets/plan_card.dart';       // New widget for plan card
+import 'package:sparkle/presentation/widgets/task/task_card.dart';
+import 'package:sparkle/presentation/widgets/task_list_widget.dart'; // New widget for task list
 
 /// Agent 消息渲染器
 /// 根据消息中的 widgets 字段动态渲染不同类型的组件
 class AgentMessageRenderer extends StatelessWidget {
-  final ChatMessageModel message;
-  final Function(String taskId)? onTaskAction;
-  final Function(String actionId, bool confirmed)? onConfirmation;
 
   const AgentMessageRenderer({
     required this.message, super.key,
     this.onTaskAction,
     this.onConfirmation,
   });
+  final ChatMessageModel message;
+  final Function(String taskId)? onTaskAction;
+  final Function(String actionId, bool confirmed)? onConfirmation;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1. 文本内容（如果有）
@@ -34,19 +33,17 @@ class AgentMessageRenderer extends StatelessWidget {
           ...message.widgets!.map((widget) => _buildWidget(context, widget)),
         
         // 3. 错误提示（如果有）
-        if (message.hasErrors == true && message.errors != null)
+        if ((message.hasErrors ?? false) && message.errors != null)
           _buildErrorCard(context, message.errors!),
         
         // 4. 确认操作（如果需要）
-        if (message.requiresConfirmation == true && 
+        if ((message.requiresConfirmation ?? false) && 
             message.confirmationData != null)
           _buildConfirmationCard(context, message.confirmationData!),
       ],
     );
-  }
 
-  Widget _buildTextBubble(BuildContext context, String text) {
-    return Container(
+  Widget _buildTextBubble(BuildContext context, String text) => Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
@@ -55,14 +52,13 @@ class AgentMessageRenderer extends StatelessWidget {
       ),
       child: Text(text),
     );
-  }
 
   Widget _buildWidget(BuildContext context, WidgetPayload widget) {
     switch (widget.type) {
       case 'task_card':
         try {
           // Ensure mandatory fields for TaskModel are present
-          final Map<String, dynamic> data = Map.from(widget.data);
+          final data = Map<String, dynamic>.from(widget.data);
           data['user_id'] ??= 'unknown';
           data['tags'] ??= <String>[];
           data['difficulty'] ??= 1;
@@ -84,8 +80,8 @@ class AgentMessageRenderer extends StatelessWidget {
           return Card(
             color: Theme.of(context).colorScheme.errorContainer,
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text('Invalid task data: ${e.toString()}'),
+              padding: const EdgeInsets.all(DS.sm),
+              child: Text('Invalid task data: $e'),
             ),
           );
         }
@@ -105,8 +101,7 @@ class AgentMessageRenderer extends StatelessWidget {
     }
   }
 
-  Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) {
-    return Card(
+  Widget _buildErrorCard(BuildContext context, List<ErrorInfo> errors) => Card(
       color: Theme.of(context).colorScheme.errorContainer,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -136,13 +131,11 @@ class AgentMessageRenderer extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildConfirmationCard(
     BuildContext context, 
     ConfirmationData data,
-  ) {
-    return Card(
+  ) => Card(
       color: Theme.of(context).colorScheme.tertiaryContainer,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -175,15 +168,12 @@ class AgentMessageRenderer extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildUnknownWidget(WidgetPayload widget) {
-    return Card(
+  Widget _buildUnknownWidget(WidgetPayload widget) => Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(DS.sm),
         child: Text('Unknown widget type: ${widget.type}'),
       ),
     );
-  }
 }

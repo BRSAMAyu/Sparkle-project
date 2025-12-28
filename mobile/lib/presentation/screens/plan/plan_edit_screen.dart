@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 计划编辑屏幕 - 占位页面
 class PlanEditScreen extends StatelessWidget {
-  final String planId;
 
   const PlanEditScreen({required this.planId, super.key});
+  final String planId;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('编辑计划'),
         leading: IconButton(
@@ -22,7 +21,7 @@ class PlanEditScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.construction, size: 80, color: Colors.orange),
+            const Icon(Icons.construction, size: 80, color: DS.brandPrimary),
             const SizedBox(height: DS.lg),
             Text(
               '计划编辑功能开发中',
@@ -39,13 +38,9 @@ class PlanEditScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: DS.xl),
-            ElevatedButton(
-              onPressed: () => context.pop(),
-              child: const Text('返回'),
-            ),
+            SparkleButton.primary(label: '返回', onPressed: () => context.pop()),
           ],
         ),
       ),
     );
-  }
 }

@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class ChaosControlDialog extends StatefulWidget {
   const ChaosControlDialog({super.key});
@@ -76,12 +76,12 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isTripped = _queueLength >= _currentThreshold;
+    final isTripped = _queueLength >= _currentThreshold;
 
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.flash_on, color: Colors.orange),
+          Icon(Icons.flash_on, color: DS.brandPrimary),
           SizedBox(width: DS.sm),
           Text('Sparkle 混沌控制台'),
         ],
@@ -131,10 +131,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
-        ),
+        SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
       ],
     );
   }

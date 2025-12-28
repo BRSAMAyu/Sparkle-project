@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
 
 final galaxyRepositoryProvider = Provider<GalaxyRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -12,9 +12,9 @@ final galaxyRepositoryProvider = Provider<GalaxyRepository>((ref) {
 });
 
 class GalaxyRepository {
-  final ApiClient _apiClient;
 
   GalaxyRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   Future<GalaxyGraphResponse> getGraph({double zoomLevel = 1.0}) async {
     if (DemoDataService.isDemoMode) {

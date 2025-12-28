@@ -12,28 +12,19 @@ enum InterruptionType {
 
 /// 分心事件记录
 class InterruptionEvent {
-  final DateTime timestamp;
-  final InterruptionType type;
-  final Duration? duration;
 
   const InterruptionEvent({
     required this.timestamp,
     required this.type,
     this.duration,
   });
+  final DateTime timestamp;
+  final InterruptionType type;
+  final Duration? duration;
 }
 
 /// 正念模式状态
 class MindfulnessState {
-  final bool isActive;
-  final DateTime? startTime;
-  final int elapsedSeconds;
-  final int interruptionCount;
-  final List<InterruptionEvent> interruptions;
-  final bool isDNDEnabled;
-  final TaskModel? currentTask;
-  final int exitConfirmationStep; // 0: 未开始, 1-3: 三重确认步骤
-  final bool isPaused;
 
   const MindfulnessState({
     this.isActive = false,
@@ -46,6 +37,15 @@ class MindfulnessState {
     this.exitConfirmationStep = 0,
     this.isPaused = false,
   });
+  final bool isActive;
+  final DateTime? startTime;
+  final int elapsedSeconds;
+  final int interruptionCount;
+  final List<InterruptionEvent> interruptions;
+  final bool isDNDEnabled;
+  final TaskModel? currentTask;
+  final int exitConfirmationStep; // 0: 未开始, 1-3: 三重确认步骤
+  final bool isPaused;
 
   MindfulnessState copyWith({
     bool? isActive,
@@ -59,8 +59,7 @@ class MindfulnessState {
     bool? isPaused,
     bool clearTask = false,
     bool clearStartTime = false,
-  }) {
-    return MindfulnessState(
+  }) => MindfulnessState(
       isActive: isActive ?? this.isActive,
       startTime: clearStartTime ? null : (startTime ?? this.startTime),
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
@@ -71,16 +70,15 @@ class MindfulnessState {
       exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
       isPaused: isPaused ?? this.isPaused,
     );
-  }
 }
 
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
+
+  MindfulnessNotifier() : super(const MindfulnessState());
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
-
-  MindfulnessNotifier() : super(const MindfulnessState());
 
   /// 开始正念模式
   void start(TaskModel task, {bool enableDND = false}) {
@@ -190,6 +188,4 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 }
 
 /// 正念模式 Provider
-final mindfulnessProvider = StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
-  return MindfulnessNotifier();
-});
+final mindfulnessProvider = StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) => MindfulnessNotifier());

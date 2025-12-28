@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
 class ThemeManager extends ChangeNotifier {
-  static final ThemeManager _instance = ThemeManager._internal();
   factory ThemeManager() => _instance;
   ThemeManager._internal();
+  static final ThemeManager _instance = ThemeManager._internal();
 
   ThemeMode _mode = ThemeMode.system;
   ThemeMode get mode => _mode;
@@ -136,11 +135,6 @@ enum BrandPreset { sparkle, ocean, forest }
 /// 主题数据容器
 @immutable
 class SparkleThemeData {
-  final SparkleColors colors;
-  final SparkleTypography typography;
-  final SparkleSpacing spacing;
-  final SparkleAnimations animations;
-  final SparkleShadows shadows;
 
   const SparkleThemeData({
     required this.colors,
@@ -150,25 +144,26 @@ class SparkleThemeData {
     required this.shadows,
   });
 
-  factory SparkleThemeData.light({bool highContrast = false}) {
-    return SparkleThemeData(
+  factory SparkleThemeData.light({bool highContrast = false}) => SparkleThemeData(
       colors: SparkleColors.light(highContrast: highContrast),
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
       shadows: SparkleShadows.light(),
     );
-  }
 
-  factory SparkleThemeData.dark({bool highContrast = false}) {
-    return SparkleThemeData(
+  factory SparkleThemeData.dark({bool highContrast = false}) => SparkleThemeData(
       colors: SparkleColors.dark(highContrast: highContrast),
       typography: SparkleTypography.standard(),
       spacing: const SparkleSpacing(),
       animations: const SparkleAnimations(),
       shadows: SparkleShadows.dark(),
     );
-  }
+  final SparkleColors colors;
+  final SparkleTypography typography;
+  final SparkleSpacing spacing;
+  final SparkleAnimations animations;
+  final SparkleShadows shadows;
 
   SparkleThemeData copyWith({
     SparkleColors? colors,
@@ -176,37 +171,18 @@ class SparkleThemeData {
     SparkleSpacing? spacing,
     SparkleAnimations? animations,
     SparkleShadows? shadows,
-  }) {
-    return SparkleThemeData(
+  }) => SparkleThemeData(
       colors: colors ?? this.colors,
       typography: typography ?? this.typography,
       spacing: spacing ?? this.spacing,
       animations: animations ?? this.animations,
       shadows: shadows ?? this.shadows,
     );
-  }
 }
 
 /// 颜色系统
 @immutable
 class SparkleColors {
-  final Color brandPrimary;
-  final Color brandSecondary;
-
-  final Color semanticSuccess;
-  final Color semanticWarning;
-  final Color semanticError;
-  final Color semanticInfo;
-
-  final Color surfacePrimary;
-  final Color surfaceSecondary;
-  final Color surfaceTertiary;
-
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color textDisabled;
-
-  final Brightness brightness;
 
   const SparkleColors({
     required this.brandPrimary,
@@ -293,6 +269,23 @@ class SparkleColors {
       brightness: Brightness.dark,
     );
   }
+  final Color brandPrimary;
+  final Color brandSecondary;
+
+  final Color semanticSuccess;
+  final Color semanticWarning;
+  final Color semanticError;
+  final Color semanticInfo;
+
+  final Color surfacePrimary;
+  final Color surfaceSecondary;
+  final Color surfaceTertiary;
+
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textDisabled;
+
+  final Brightness brightness;
 
   SparkleColors copyWith({
     Color? brandPrimary,
@@ -307,8 +300,7 @@ class SparkleColors {
     Color? textPrimary,
     Color? textSecondary,
     Color? textDisabled,
-  }) {
-    return SparkleColors(
+  }) => SparkleColors(
       brandPrimary: brandPrimary ?? this.brandPrimary,
       brandSecondary: brandSecondary ?? this.brandSecondary,
       semanticSuccess: semanticSuccess ?? this.semanticSuccess,
@@ -323,26 +315,15 @@ class SparkleColors {
       textDisabled: textDisabled ?? this.textDisabled,
       brightness: brightness,
     );
-  }
 
-  SparkleColors toHighContrast(bool enabled) {
-    return brightness == Brightness.light
+  SparkleColors toHighContrast(bool enabled) => brightness == Brightness.light
         ? SparkleColors.light(highContrast: enabled)
         : SparkleColors.dark(highContrast: enabled);
-  }
 }
 
 /// 排版系统
 @immutable
 class SparkleTypography {
-  final TextStyle displayLarge;
-  final TextStyle headingLarge;
-  final TextStyle headingMedium;
-  final TextStyle titleLarge;
-  final TextStyle bodyLarge;
-  final TextStyle bodyMedium;
-  final TextStyle labelLarge;
-  final TextStyle labelSmall;
 
   const SparkleTypography({
     required this.displayLarge,
@@ -355,8 +336,7 @@ class SparkleTypography {
     required this.labelSmall,
   });
 
-  factory SparkleTypography.standard() {
-    return const SparkleTypography(
+  factory SparkleTypography.standard() => const SparkleTypography(
       displayLarge: TextStyle(fontSize: 48.8, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.02),
       headingLarge: TextStyle(fontSize: 31.25, fontWeight: FontWeight.w700, height: 1.2, letterSpacing: -0.01),
       headingMedium: TextStyle(fontSize: 25.0, fontWeight: FontWeight.w600, height: 1.3, letterSpacing: 0),
@@ -366,12 +346,21 @@ class SparkleTypography {
       labelLarge: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500, height: 1.2, letterSpacing: 0.01),
       labelSmall: TextStyle(fontSize: 12.8, fontWeight: FontWeight.w500, height: 1.2, letterSpacing: 0.01),
     );
-  }
+  final TextStyle displayLarge;
+  final TextStyle headingLarge;
+  final TextStyle headingMedium;
+  final TextStyle titleLarge;
+  final TextStyle bodyLarge;
+  final TextStyle bodyMedium;
+  final TextStyle labelLarge;
+  final TextStyle labelSmall;
 }
 
 /// 间距系统
 @immutable
 class SparkleSpacing {
+
+  const SparkleSpacing();
   final double xs = 4.0;
   final double sm = 8.0;
   final double md = 12.0;
@@ -379,8 +368,6 @@ class SparkleSpacing {
   final double xl = 24.0;
   final double xxl = 32.0;
   final double xxxl = 48.0;
-
-  const SparkleSpacing();
 
   EdgeInsets edge({double? all, double? horizontal, double? vertical}) {
     if (all != null) return EdgeInsets.all(all);
@@ -394,19 +381,16 @@ class SparkleSpacing {
 /// 动画系统
 @immutable
 class SparkleAnimations {
+
+  const SparkleAnimations();
   final Duration quick = const Duration(milliseconds: 150);
   final Duration normal = const Duration(milliseconds: 250);
   final Duration slow = const Duration(milliseconds: 400);
-
-  const SparkleAnimations();
 }
 
 /// 阴影系统
 @immutable
 class SparkleShadows {
-  final List<BoxShadow> small;
-  final List<BoxShadow> medium;
-  final List<BoxShadow> large;
 
   const SparkleShadows({
     required this.small,
@@ -414,8 +398,7 @@ class SparkleShadows {
     required this.large,
   });
 
-  factory SparkleShadows.light() {
-    return SparkleShadows(
+  factory SparkleShadows.light() => SparkleShadows(
       small: [
         BoxShadow(
           color: DS.brandPrimary.withOpacity(0.05),
@@ -438,10 +421,8 @@ class SparkleShadows {
         ),
       ],
     );
-  }
 
-  factory SparkleShadows.dark() {
-    return SparkleShadows(
+  factory SparkleShadows.dark() => SparkleShadows(
       small: [
         BoxShadow(
           color: DS.brandPrimary.withOpacity(0.2),
@@ -464,5 +445,7 @@ class SparkleShadows {
         ),
       ],
     );
-  }
+  final List<BoxShadow> small;
+  final List<BoxShadow> medium;
+  final List<BoxShadow> large;
 }

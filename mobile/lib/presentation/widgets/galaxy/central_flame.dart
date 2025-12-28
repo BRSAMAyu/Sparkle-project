@@ -3,14 +3,14 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class CentralFlame extends StatefulWidget {
-  final double intensity; // 0.0 to 1.0 (or higher for super states)
-  final double size;
 
   const CentralFlame({
     required this.intensity,
     super.key,
     this.size = 40.0,
   });
+  final double intensity; // 0.0 to 1.0 (or higher for super states)
+  final double size;
 
   @override
   State<CentralFlame> createState() => _CentralFlameState();
@@ -35,30 +35,26 @@ class _CentralFlameState extends State<CentralFlame> with SingleTickerProviderSt
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size(widget.size, widget.size),
           painter: _SmallFlamePainter(
             progress: _controller.value,
             intensity: widget.intensity,
           ),
-        );
-      },
+        ),
     );
-  }
 }
 
 class _SmallFlamePainter extends CustomPainter {
-  final double progress;
-  final double intensity;
 
   _SmallFlamePainter({
     required this.progress,
     required this.intensity,
   });
+  final double progress;
+  final double intensity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -76,7 +72,7 @@ class _SmallFlamePainter extends CustomPainter {
       ..shader = RadialGradient(
         colors: [
           DS.brandPrimary,
-          Color.lerp(Colors.orangeAccent, DS.warningAccent, safeIntensity)!,
+          Color.lerp(AppDesignTokens.warningAccent, DS.warningAccent, safeIntensity)!,
           Colors.transparent,
         ],
         stops: const [0.2, 0.6, 1.0],
@@ -84,7 +80,7 @@ class _SmallFlamePainter extends CustomPainter {
 
     // Outer Glow (Orange -> Red)
     final glowPaint = Paint()
-      ..color = Color.lerp(Colors.orange.withValues(alpha: 0.3), DS.errorAccent.withValues(alpha: 0.5), safeIntensity)!
+      ..color = Color.lerp(DS.brandPrimary.withValues(alpha: 0.3), DS.errorAccent.withValues(alpha: 0.5), safeIntensity)!
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.5);
 
     // Draw Glow
@@ -107,7 +103,5 @@ class _SmallFlamePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SmallFlamePainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.intensity != intensity;
-  }
+  bool shouldRepaint(_SmallFlamePainter oldDelegate) => oldDelegate.progress != progress || oldDelegate.intensity != intensity;
 }

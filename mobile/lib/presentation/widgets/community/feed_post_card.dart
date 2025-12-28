@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/domain/community/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FeedPostCard extends StatelessWidget {
+
+  const FeedPostCard({required this.post, super.key, this.onLike});
   final Post post;
   final VoidCallback? onLike;
 
-  const FeedPostCard({required this.post, super.key, this.onLike});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
@@ -155,19 +153,17 @@ class FeedPostCard extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ActionButton extends StatelessWidget {
+
+  const _ActionButton({required this.icon, required this.label, this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
 
-  const _ActionButton({required this.icon, required this.label, this.onTap});
-
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Row(
         children: [
@@ -183,5 +179,4 @@ class _ActionButton extends StatelessWidget {
         ],
       ),
     );
-  }
 }

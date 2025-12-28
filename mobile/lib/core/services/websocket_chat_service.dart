@@ -1,14 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// WebSocket 聊天服务
 /// 连接到 Go Gateway 的 WebSocket 端点进行流式对话
 class WebSocketChatService {
+
+  WebSocketChatService({
+    this.baseUrl = ApiConstants.wsBaseUrl,
+  });
   WebSocketChannel? _channel;
   StreamController<ChatStreamEvent>? _streamController;
   final String baseUrl;
@@ -19,10 +24,6 @@ class WebSocketChatService {
   final int _maxRetries = 5;
   bool _isManuallyClosed = false;
   Timer? _reconnectTimer;
-
-  WebSocketChatService({
-    this.baseUrl = ApiConstants.wsBaseUrl,
-  });
 
   /// 发送消息并返回流式响应
   Stream<ChatStreamEvent> sendMessage({
@@ -240,9 +241,7 @@ class WebSocketChatService {
   }
 
   /// 生成 session ID
-  String _generateSessionId() {
-    return 'session_${DateTime.now().millisecondsSinceEpoch}';
-  }
+  String _generateSessionId() => 'session_${DateTime.now().millisecondsSinceEpoch}';
 
   /// 关闭连接
   void dispose() {

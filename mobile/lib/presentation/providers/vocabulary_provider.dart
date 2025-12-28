@@ -3,14 +3,6 @@ import 'package:sparkle/data/repositories/vocabulary_repository.dart';
 
 /// 生词本状态
 class VocabularyState {
-  final Map<String, dynamic>? lookupResult;
-  final List<dynamic> wordbook;
-  final List<dynamic> reviewList;
-  final List<String> associations;
-  final String? exampleSentence;
-  final bool isLoading;
-  final bool isLookingUp;
-  final String? error;
 
   const VocabularyState({
     this.lookupResult,
@@ -22,6 +14,14 @@ class VocabularyState {
     this.isLookingUp = false,
     this.error,
   });
+  final Map<String, dynamic>? lookupResult;
+  final List<dynamic> wordbook;
+  final List<dynamic> reviewList;
+  final List<String> associations;
+  final String? exampleSentence;
+  final bool isLoading;
+  final bool isLookingUp;
+  final String? error;
 
   VocabularyState copyWith({
     Map<String, dynamic>? lookupResult,
@@ -34,8 +34,7 @@ class VocabularyState {
     String? error,
     bool clearLookup = false,
     bool clearError = false,
-  }) {
-    return VocabularyState(
+  }) => VocabularyState(
       lookupResult: clearLookup ? null : (lookupResult ?? this.lookupResult),
       wordbook: wordbook ?? this.wordbook,
       reviewList: reviewList ?? this.reviewList,
@@ -45,14 +44,13 @@ class VocabularyState {
       isLookingUp: isLookingUp ?? this.isLookingUp,
       error: clearError ? null : (error ?? this.error),
     );
-  }
 }
 
 /// 生词本状态管理器
 class VocabularyNotifier extends StateNotifier<VocabularyState> {
-  final VocabularyRepository _repository;
 
   VocabularyNotifier(this._repository) : super(const VocabularyState());
+  final VocabularyRepository _repository;
 
   /// 查询单词
   Future<void> lookup(String word) async {
@@ -63,7 +61,6 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
       clearError: true,
       clearLookup: true,
       associations: [],
-      exampleSentence: null,
     );
 
     try {
@@ -169,7 +166,6 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     state = state.copyWith(
       clearLookup: true,
       associations: [],
-      exampleSentence: null,
       clearError: true,
     );
   }
@@ -181,6 +177,4 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
 }
 
 /// 生词本 Provider
-final vocabularyProvider = StateNotifierProvider<VocabularyNotifier, VocabularyState>((ref) {
-  return VocabularyNotifier(ref.watch(vocabularyRepositoryProvider));
-});
+final vocabularyProvider = StateNotifierProvider<VocabularyNotifier, VocabularyState>((ref) => VocabularyNotifier(ref.watch(vocabularyRepositoryProvider)));

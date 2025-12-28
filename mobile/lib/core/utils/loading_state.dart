@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 加载状态枚举
 enum LoadingState {
@@ -92,18 +92,14 @@ class LoadingStateManager<T> {
     T? data,
     String? error,
     Object? errorObject,
-  }) {
-    return LoadingStateManager<T>()
+  }) => LoadingStateManager<T>()
       ..state = state ?? this.state
       ..data = data ?? this.data
       ..error = error ?? this.error
       ..errorObject = errorObject ?? this.errorObject;
-  }
 
   @override
-  String toString() {
-    return 'LoadingStateManager(state: $state, hasData: ${data != null}, error: $error)';
-  }
+  String toString() => 'LoadingStateManager(state: $state, hasData: ${data != null}, error: $error)';
 }
 
 /// 便捷扩展方法
@@ -135,14 +131,11 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
     }
   }
 
-  Widget _defaultLoadingWidget() {
-    return const Center(
+  Widget _defaultLoadingWidget() => const Center(
       child: CircularProgressIndicator(),
     );
-  }
 
-  Widget _defaultErrorWidget(String error) {
-    return Center(
+  Widget _defaultErrorWidget(String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -152,10 +145,8 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
         ],
       ),
     );
-  }
 
-  Widget _defaultEmptyWidget() {
-    return const Center(
+  Widget _defaultEmptyWidget() => const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -165,7 +156,6 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
         ],
       ),
     );
-  }
 }
 
 /// 用于Riverpod的状态包装器

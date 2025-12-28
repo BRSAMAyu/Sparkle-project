@@ -15,9 +15,7 @@ class ResponsiveSystem {
   }
 
   /// 获取当前设备类别
-  static DeviceCategory getCategory(BuildContext context) {
-    return categorize(MediaQuery.of(context).size.width);
-  }
+  static DeviceCategory getCategory(BuildContext context) => categorize(MediaQuery.of(context).size.width);
 
   /// 获取密度等级
   static Density getDensity(BuildContext context) {
@@ -41,9 +39,7 @@ class ResponsiveSystem {
   }
 
   /// 是否为平板
-  static bool isTablet(BuildContext context) {
-    return getCategory(context) == DeviceCategory.tablet;
-  }
+  static bool isTablet(BuildContext context) => getCategory(context) == DeviceCategory.tablet;
 
   /// 是否为桌面
   static bool isDesktop(BuildContext context) {
@@ -52,39 +48,25 @@ class ResponsiveSystem {
   }
 
   /// 屏幕宽度
-  static double width(BuildContext context) {
-    return MediaQuery.of(context).size.width;
-  }
+  static double width(BuildContext context) => MediaQuery.of(context).size.width;
 
   /// 屏幕高度
-  static double height(BuildContext context) {
-    return MediaQuery.of(context).size.height;
-  }
+  static double height(BuildContext context) => MediaQuery.of(context).size.height;
 
   /// 屏幕方向
-  static Orientation orientation(BuildContext context) {
-    return MediaQuery.of(context).orientation;
-  }
+  static Orientation orientation(BuildContext context) => MediaQuery.of(context).orientation;
 
   /// 是否横屏
-  static bool isLandscape(BuildContext context) {
-    return orientation(context) == Orientation.landscape;
-  }
+  static bool isLandscape(BuildContext context) => orientation(context) == Orientation.landscape;
 
   /// 像素密度
-  static double pixelRatio(BuildContext context) {
-    return MediaQuery.of(context).devicePixelRatio;
-  }
+  static double pixelRatio(BuildContext context) => MediaQuery.of(context).devicePixelRatio;
 
   /// 文本比例
-  static double textScaleFactor(BuildContext context) {
-    return MediaQuery.of(context).textScaleFactor;
-  }
+  static double textScaleFactor(BuildContext context) => MediaQuery.of(context).textScaleFactor;
 
   /// 安全区域
-  static EdgeInsets safeArea(BuildContext context) {
-    return MediaQuery.of(context).padding;
-  }
+  static EdgeInsets safeArea(BuildContext context) => MediaQuery.of(context).padding;
 
   /// 响应式值解析
   static T resolve<T>({
@@ -146,13 +128,6 @@ enum Density {
 
 @immutable
 class BreakpointInfo {
-  final double width;
-  final DeviceCategory category;
-  final Density density;
-  final bool isMobile;
-  final bool isTablet;
-  final bool isDesktop;
-  final Orientation orientation;
 
   const BreakpointInfo({
     required this.width,
@@ -163,23 +138,24 @@ class BreakpointInfo {
     required this.isDesktop,
     required this.orientation,
   });
+  final double width;
+  final DeviceCategory category;
+  final Density density;
+  final bool isMobile;
+  final bool isTablet;
+  final bool isDesktop;
+  final Orientation orientation;
 
   bool get isPortrait => orientation == Orientation.portrait;
   bool get isLandscape => orientation == Orientation.landscape;
 
   @override
-  String toString() {
-    return 'BreakpointInfo(${category.name}, ${width.toStringAsFixed(0)}px, $density)';
-  }
+  String toString() => 'BreakpointInfo(${category.name}, ${width.toStringAsFixed(0)}px, $density)';
 }
 
 /// 响应式值容器
 @immutable
 class ResponsiveValue<T> {
-  final T mobile;
-  final T? tablet;
-  final T? desktop;
-  final T? wide;
 
   const ResponsiveValue({
     required this.mobile,
@@ -187,16 +163,18 @@ class ResponsiveValue<T> {
     this.desktop,
     this.wide,
   });
+  final T mobile;
+  final T? tablet;
+  final T? desktop;
+  final T? wide;
 
-  T resolve(BuildContext context) {
-    return ResponsiveSystem.resolve(
+  T resolve(BuildContext context) => ResponsiveSystem.resolve(
       context: context,
       mobile: mobile,
       tablet: tablet,
       desktop: desktop,
       wide: wide,
     );
-  }
 
   /// 便捷方法
   static ResponsiveValue<double> spacing({
@@ -204,52 +182,46 @@ class ResponsiveValue<T> {
     double? tablet,
     double? desktop,
     double? wide,
-  }) {
-    return ResponsiveValue(
+  }) => ResponsiveValue(
       mobile: mobile,
       tablet: tablet,
       desktop: desktop,
       wide: wide,
     );
-  }
 
   static ResponsiveValue<EdgeInsets> padding({
     required EdgeInsets mobile,
     EdgeInsets? tablet,
     EdgeInsets? desktop,
     EdgeInsets? wide,
-  }) {
-    return ResponsiveValue(
+  }) => ResponsiveValue(
       mobile: mobile,
       tablet: tablet,
       desktop: desktop,
       wide: wide,
     );
-  }
 
   static ResponsiveValue<TextStyle> textStyle({
     required TextStyle mobile,
     TextStyle? tablet,
     TextStyle? desktop,
     TextStyle? wide,
-  }) {
-    return ResponsiveValue(
+  }) => ResponsiveValue(
       mobile: mobile,
       tablet: tablet,
       desktop: desktop,
       wide: wide,
     );
-  }
 }
 
 /// 响应式组件构建器
 class ResponsiveBuilder extends StatelessWidget {
-  final Widget Function(BuildContext, BreakpointInfo) builder;
 
   const ResponsiveBuilder({
     required this.builder,
     super.key,
   });
+  final Widget Function(BuildContext, BreakpointInfo) builder;
 
   @override
   Widget build(BuildContext context) {
@@ -260,10 +232,6 @@ class ResponsiveBuilder extends StatelessWidget {
 
 /// 自适应布局包装器
 class AdaptiveLayout extends StatelessWidget {
-  final Widget mobile;
-  final Widget? tablet;
-  final Widget? desktop;
-  final Widget? wide;
 
   const AdaptiveLayout({
     required this.mobile,
@@ -272,10 +240,13 @@ class AdaptiveLayout extends StatelessWidget {
     this.wide,
     super.key,
   });
+  final Widget mobile;
+  final Widget? tablet;
+  final Widget? desktop;
+  final Widget? wide;
 
   @override
-  Widget build(BuildContext context) {
-    return ResponsiveBuilder(
+  Widget build(BuildContext context) => ResponsiveBuilder(
       builder: (context, info) {
         if (info.width >= 1440 && wide != null) return wide!;
         if (info.width >= 1024 && desktop != null) return desktop!;
@@ -283,7 +254,6 @@ class AdaptiveLayout extends StatelessWidget {
         return mobile;
       },
     );
-  }
 }
 
 /// 响应式网格系统
@@ -342,14 +312,12 @@ class ResponsiveGridSystem {
   }
 
   /// 创建响应式网格代理
-  static SliverGridDelegateWithFixedCrossAxisCount delegate(BuildContext context) {
-    return SliverGridDelegateWithFixedCrossAxisCount(
+  static SliverGridDelegateWithFixedCrossAxisCount delegate(BuildContext context) => SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount: columns(context),
       crossAxisSpacing: spacing(context),
       mainAxisSpacing: spacing(context),
       childAspectRatio: aspectRatio(context),
     );
-  }
 }
 
 /// 内容约束系统
@@ -390,8 +358,7 @@ class ContentConstraintSystem {
   }
 
   /// 应用内容约束
-  static Widget apply(BuildContext context, {required Widget child}) {
-    return Center(
+  static Widget apply(BuildContext context, {required Widget child}) => Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth(context)),
         child: Padding(
@@ -400,5 +367,4 @@ class ContentConstraintSystem {
         ),
       ),
     );
-  }
 }

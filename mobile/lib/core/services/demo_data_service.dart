@@ -1,18 +1,19 @@
 import 'dart:math';
-import 'package:sparkle/data/models/user_model.dart';
-import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/data/models/galaxy_model.dart';
-import 'package:sparkle/data/models/plan_model.dart';
+
 import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/data/models/plan_model.dart';
+import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/models/user_model.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoDataService {
+  factory DemoDataService() => _instance;
+  DemoDataService._internal();
   static bool isDemoMode = false;
 
   static final DemoDataService _instance = DemoDataService._internal();
-  factory DemoDataService() => _instance;
-  DemoDataService._internal();
 
   final _uuid = const Uuid();
   final _random = Random();
@@ -34,10 +35,7 @@ class DemoDataService {
     createdAt: DateTime.now().subtract(const Duration(days: 45)),
     updatedAt: DateTime.now(),
     pushPreferences: PushPreferences(
-      timezone: 'Asia/Shanghai',
-      enableCuriosity: true,
-      personaType: 'coach',
-      dailyCap: 5,
+      
     ),
   );
 
@@ -133,7 +131,7 @@ class DemoDataService {
 
   // --- Galaxy Data ---
   GalaxyGraphResponse get demoGalaxy {
-    final List<GalaxyNodeModel> nodes = [];
+    final nodes = <GalaxyNodeModel>[];
     
     // Core Subjects & Colors
     final subjects = ['数据结构', '离散数学', '计算机系统', '数字电路', '摄影', '文学'];
@@ -147,7 +145,7 @@ class DemoDataService {
     };
 
     // Generate ~500 nodes
-    for (int i = 0; i < 500; i++) {
+    for (var i = 0; i < 500; i++) {
       final subject = subjects[i % subjects.length];
       final isCore = i < 20; 
       final status = _determineNodeStatus(i);
@@ -301,8 +299,7 @@ class DemoDataService {
   }
 
   // --- Chat Data ---
-  List<ChatMessageModel> get demoChatHistory {
-    return [
+  List<ChatMessageModel> get demoChatHistory => [
       ChatMessageModel(
         id: 'msg_1',
         conversationId: 'demo_conv_1',
@@ -338,7 +335,8 @@ class DemoDataService {
         id: 'msg_5',
         conversationId: 'demo_conv_1',
         role: MessageRole.assistant,
-        content: '''这是一个简单的链表节点定义（C++），你可以作为参考：
+        content: '''
+这是一个简单的链表节点定义（C++），你可以作为参考：
 
 ```cpp
 struct ListNode {
@@ -352,11 +350,9 @@ struct ListNode {
         createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
       ),
     ];
-  }
 
   // --- Dashboard Data ---
-  Map<String, dynamic> get demoDashboard {
-    return {
+  Map<String, dynamic> get demoDashboard => {
       'weather': {
         'type': 'sunny',
         'condition': 'Clear sky',
@@ -406,7 +402,6 @@ struct ListNode {
         'has_new_insight': true,
       },
     };
-  }
 }
 
 enum NodeStatus { locked, unlocked, review, mastered }

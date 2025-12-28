@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
-  final PrivateMessageInfo message;
 
   const PrivateChatBubble({required this.message, super.key});
+  final PrivateMessageInfo message;
 
   @override
   ConsumerState<PrivateChatBubble> createState() => _PrivateChatBubbleState();
@@ -96,8 +95,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
     }
   }
 
-  Widget _buildTextBubble(BuildContext context, bool isMe) {
-    return Container(
+  Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: isMe ? AppDesignTokens.primaryBase : DS.brandPrimary,
@@ -121,10 +119,8 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
         ),
       ),
     );
-  }
 
-  Widget _buildAvatar(UserBrief user) {
-    return Container(
+  Widget _buildAvatar(UserBrief user) => DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: DS.brandPrimary, width: 2),
@@ -142,5 +138,4 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
             : null,
       ),
     );
-  }
 }

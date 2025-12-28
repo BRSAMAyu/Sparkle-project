@@ -2,14 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
 
 class PlanRepository {
-  final ApiClient _apiClient;
 
   PlanRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   T _handleDioError<T>(DioException e, String functionName) {
     final errorMessage = e.response?.data?['detail'] ?? 'An unknown error occurred in $functionName';
@@ -48,9 +48,7 @@ class PlanRepository {
     }
   }
 
-  Future<List<PlanModel>> getActivePlans() async {
-    return getPlans(isActive: true);
-  }
+  Future<List<PlanModel>> getActivePlans() async => getPlans(isActive: true);
 
   Future<PlanModel> createPlan(PlanCreate plan) async {
     if (DemoDataService.isDemoMode) {
@@ -127,13 +125,9 @@ class PlanRepository {
     }
   }
 
-  Future<PlanModel> activatePlan(String id) async {
-    return _updateActivation(id, true);
-  }
+  Future<PlanModel> activatePlan(String id) async => _updateActivation(id, true);
 
-  Future<PlanModel> deactivatePlan(String id) async {
-    return _updateActivation(id, false);
-  }
+  Future<PlanModel> deactivatePlan(String id) async => _updateActivation(id, false);
 
   Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
     if (DemoDataService.isDemoMode) {
@@ -165,6 +159,4 @@ class PlanRepository {
   }
 }
 
-final planRepositoryProvider = Provider<PlanRepository>((ref) {
-  return PlanRepository(ref.watch(apiClientProvider));
-});
+final planRepositoryProvider = Provider<PlanRepository>((ref) => PlanRepository(ref.watch(apiClientProvider)));

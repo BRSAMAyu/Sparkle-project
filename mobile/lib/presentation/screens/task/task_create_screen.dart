@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/data/repositories/task_repository.dart';
-import 'package:intl/intl.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
   const TaskCreateScreen({super.key});
@@ -163,15 +163,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('新建任务'),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(DS.lg),
           children: [
             // Title
             TextFormField(
@@ -203,15 +202,13 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     const SizedBox(height: DS.xs),
                     Wrap(
                       spacing: 8,
-                      children: _suggestions!.suggestedNodes.map((node) {
-                        return ActionChip(
+                      children: _suggestions!.suggestedNodes.map((node) => ActionChip(
                           avatar: Icon(node.isNew ? Icons.add_circle_outline : Icons.link, size: 16),
                           label: Text(node.name),
                           onPressed: () => _applySuggestion(node),
                           tooltip: node.reason,
                           backgroundColor: node.isNew ? DS.success.shade50 : DS.brandPrimary.shade50,
-                        );
-                      }).toList(),
+                        ),).toList(),
                     ),
                   ],
                 ),
@@ -225,8 +222,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 labelText: '任务类型',
                 border: OutlineInputBorder(),
               ),
-              items: TaskType.values.map((type) {
-                return DropdownMenuItem(
+              items: TaskType.values.map((type) => DropdownMenuItem(
                   value: type,
                   child: Row(
                     children: [
@@ -235,8 +231,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       Text(_getTypeLabel(type)),
                     ],
                   ),
-                );
-              }).toList(),
+                ),).toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() => _selectedType = value);
@@ -268,12 +263,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.timer_outlined),
                     ),
-                    items: [15, 25, 45, 60, 90, 120].map((m) {
-                      return DropdownMenuItem(
+                    items: [15, 25, 45, 60, 90, 120].map((m) => DropdownMenuItem(
                         value: m,
                         child: Text('$m 分钟'),
-                      );
-                    }).toList(),
+                      ),).toList(),
                     onChanged: (v) => setState(() => _estimatedMinutes = v!),
                   ),
                 ),
@@ -286,12 +279,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.bar_chart),
                     ),
-                    items: [1, 2, 3, 4, 5].map((l) {
-                      return DropdownMenuItem(
+                    items: [1, 2, 3, 4, 5].map((l) => DropdownMenuItem(
                         value: l,
                         child: Text('Level $l'),
-                      );
-                    }).toList(),
+                      ),).toList(),
                     onChanged: (v) => setState(() => _difficulty = v!),
                   ),
                 ),
@@ -307,12 +298,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.bolt),
               ),
-              items: [1, 2, 3, 4, 5].map((l) {
-                return DropdownMenuItem(
+              items: [1, 2, 3, 4, 5].map((l) => DropdownMenuItem(
                   value: l,
                   child: Text('$l 火苗'),
-                );
-              }).toList(),
+                ),).toList(),
               onChanged: (v) => setState(() => _energyCost = v!),
             ),
             const SizedBox(height: DS.lg),
@@ -373,7 +362,6 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         ),
       ),
     );
-  }
 
   IconData _getTypeIcon(TaskType type) {
     switch (type) {

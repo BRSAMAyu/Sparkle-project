@@ -7,11 +7,6 @@ part 'knowledge_detail_model.g.dart';
 /// Knowledge node detail response from API
 @JsonSerializable()
 class KnowledgeDetailResponse {
-  final KnowledgeNodeDetail node;
-  final List<NodeRelation> relations;
-  final List<TaskModel> relatedTasks;
-  final List<RelatedPlan> relatedPlans;
-  final KnowledgeUserStats userStats;
 
   KnowledgeDetailResponse({
     required this.node,
@@ -22,6 +17,11 @@ class KnowledgeDetailResponse {
 
   factory KnowledgeDetailResponse.fromJson(Map<String, dynamic> json) =>
       _$KnowledgeDetailResponseFromJson(json);
+  final KnowledgeNodeDetail node;
+  final List<NodeRelation> relations;
+  final List<TaskModel> relatedTasks;
+  final List<RelatedPlan> relatedPlans;
+  final KnowledgeUserStats userStats;
 
   Map<String, dynamic> toJson() => _$KnowledgeDetailResponseToJson(this);
 }
@@ -29,6 +29,25 @@ class KnowledgeDetailResponse {
 /// Detailed knowledge node information
 @JsonSerializable()
 class KnowledgeNodeDetail {
+
+  KnowledgeNodeDetail({
+    required this.id,
+    required this.name,
+    this.nameEn,
+    this.description,
+    this.keywords = const [],
+    this.importanceLevel = 1,
+    this.sectorCode = 'VOID',
+    this.isSeed = false,
+    this.sourceType = 'seed',
+    this.parentId,
+    this.subjectId,
+    this.subjectName,
+    this.createdAt,
+  });
+
+  factory KnowledgeNodeDetail.fromJson(Map<String, dynamic> json) =>
+      _$KnowledgeNodeDetailFromJson(json);
   final String id;
   final String name;
   @JsonKey(name: 'name_en')
@@ -52,22 +71,6 @@ class KnowledgeNodeDetail {
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
-  KnowledgeNodeDetail({
-    required this.id,
-    required this.name,
-    this.nameEn,
-    this.description,
-    this.keywords = const [],
-    this.importanceLevel = 1,
-    this.sectorCode = 'VOID',
-    this.isSeed = false,
-    this.sourceType = 'seed',
-    this.parentId,
-    this.subjectId,
-    this.subjectName,
-    this.createdAt,
-  });
-
   /// Convert sectorCode string to SectorEnum
   SectorEnum get sector {
     switch (sectorCode.toUpperCase()) {
@@ -88,15 +91,25 @@ class KnowledgeNodeDetail {
     }
   }
 
-  factory KnowledgeNodeDetail.fromJson(Map<String, dynamic> json) =>
-      _$KnowledgeNodeDetailFromJson(json);
-
   Map<String, dynamic> toJson() => _$KnowledgeNodeDetailToJson(this);
 }
 
 /// Node relation (edge in the knowledge graph)
 @JsonSerializable()
 class NodeRelation {
+
+  NodeRelation({
+    required this.id,
+    required this.sourceNodeId,
+    required this.targetNodeId,
+    required this.relationType,
+    this.strength = 0.5,
+    this.sourceNodeName,
+    this.targetNodeName,
+  });
+
+  factory NodeRelation.fromJson(Map<String, dynamic> json) =>
+      _$NodeRelationFromJson(json);
   final String id;
   @JsonKey(name: 'source_node_id')
   final String sourceNodeId;
@@ -109,16 +122,6 @@ class NodeRelation {
   final String? sourceNodeName;
   @JsonKey(name: 'target_node_name')
   final String? targetNodeName;
-
-  NodeRelation({
-    required this.id,
-    required this.sourceNodeId,
-    required this.targetNodeId,
-    required this.relationType,
-    this.strength = 0.5,
-    this.sourceNodeName,
-    this.targetNodeName,
-  });
 
   /// Get a human-readable label for the relation type
   String get relationLabel {
@@ -138,22 +141,12 @@ class NodeRelation {
     }
   }
 
-  factory NodeRelation.fromJson(Map<String, dynamic> json) =>
-      _$NodeRelationFromJson(json);
-
   Map<String, dynamic> toJson() => _$NodeRelationToJson(this);
 }
 
 /// Related plan brief info
 @JsonSerializable()
 class RelatedPlan {
-  final String id;
-  final String title;
-  @JsonKey(name: 'plan_type')
-  final String planType;
-  final String status;
-  @JsonKey(name: 'target_date')
-  final DateTime? targetDate;
 
   RelatedPlan({
     required this.id,
@@ -165,6 +158,13 @@ class RelatedPlan {
 
   factory RelatedPlan.fromJson(Map<String, dynamic> json) =>
       _$RelatedPlanFromJson(json);
+  final String id;
+  final String title;
+  @JsonKey(name: 'plan_type')
+  final String planType;
+  final String status;
+  @JsonKey(name: 'target_date')
+  final DateTime? targetDate;
 
   Map<String, dynamic> toJson() => _$RelatedPlanToJson(this);
 }
@@ -172,6 +172,20 @@ class RelatedPlan {
 /// User's stats for this knowledge node
 @JsonSerializable()
 class KnowledgeUserStats {
+
+  KnowledgeUserStats({
+    this.masteryScore = 0,
+    this.totalStudyMinutes = 0,
+    this.studyCount = 0,
+    this.isUnlocked = false,
+    this.isFavorite = false,
+    this.lastStudyAt,
+    this.nextReviewAt,
+    this.decayPaused = false,
+  });
+
+  factory KnowledgeUserStats.fromJson(Map<String, dynamic> json) =>
+      _$KnowledgeUserStatsFromJson(json);
   @JsonKey(name: 'mastery_score')
   final double masteryScore;
   @JsonKey(name: 'total_study_minutes')
@@ -189,17 +203,6 @@ class KnowledgeUserStats {
   @JsonKey(name: 'decay_paused')
   final bool decayPaused;
 
-  KnowledgeUserStats({
-    this.masteryScore = 0,
-    this.totalStudyMinutes = 0,
-    this.studyCount = 0,
-    this.isUnlocked = false,
-    this.isFavorite = false,
-    this.lastStudyAt,
-    this.nextReviewAt,
-    this.decayPaused = false,
-  });
-
   /// Get the mastery level label
   String get masteryLabel {
     if (!isUnlocked) return '未解锁';
@@ -212,9 +215,6 @@ class KnowledgeUserStats {
 
   /// Get mastery progress (0.0 - 1.0)
   double get masteryProgress => (masteryScore / 100).clamp(0.0, 1.0);
-
-  factory KnowledgeUserStats.fromJson(Map<String, dynamic> json) =>
-      _$KnowledgeUserStatsFromJson(json);
 
   Map<String, dynamic> toJson() => _$KnowledgeUserStatsToJson(this);
 }

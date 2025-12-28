@@ -4,14 +4,14 @@ import 'package:sparkle/core/design/design_system.dart';
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）
 class AiStatusIndicator extends StatelessWidget {
-  final String? status;
-  final String? details;
 
   const AiStatusIndicator({
     super.key,
     this.status,
     this.details,
   });
+  final String? status;
+  final String? details;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,6 @@ class AiStatusIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _getStatusColor(status!).withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Row(
@@ -68,8 +67,7 @@ class AiStatusIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildIndicator() {
-    return SizedBox(
+  Widget _buildIndicator() => SizedBox(
       width: 20,
       height: 20,
       child: CircularProgressIndicator(
@@ -77,7 +75,6 @@ class AiStatusIndicator extends StatelessWidget {
         valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(status!)),
       ),
     );
-  }
 
   String _getStatusText(String status) {
     switch (status) {
@@ -114,16 +111,15 @@ class AiStatusIndicator extends StatelessWidget {
 
 /// AI 状态气泡（紧凑版，用于聊天气泡中）
 class AiStatusBubble extends StatelessWidget {
-  final String status;
 
   const AiStatusBubble({
     required this.status,
     super.key,
   });
+  final String status;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: _getStatusColor(status).withValues(alpha: 0.1),
@@ -152,7 +148,6 @@ class AiStatusBubble extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String _getStatusText(String status) {
     switch (status) {

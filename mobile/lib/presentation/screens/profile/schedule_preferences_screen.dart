@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
 class SchedulePreferencesScreen extends ConsumerStatefulWidget {
@@ -51,7 +50,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
   }
 
   Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
@@ -69,7 +68,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
     final lunchStart = _lunchStartController.text;
     final lunchEnd = _lunchEndController.text;
 
-    final Map<String, dynamic> newPrefs = {};
+    final newPrefs = <String, dynamic>{};
 
     if (commuteStart.isNotEmpty && commuteEnd.isNotEmpty) {
       newPrefs['commute'] = [commuteStart, commuteEnd];
@@ -98,8 +97,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Schedule Preferences'),
         actions: [
@@ -110,7 +108,7 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -134,14 +132,12 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
         ),
       ),
     );
-  }
 
   Widget _buildTimeSlot(
     String label,
     TextEditingController startController,
     TextEditingController endController,
-  ) {
-    return Column(
+  ) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -177,5 +173,4 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
         ),
       ],
     );
-  }
 }

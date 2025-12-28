@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,7 +30,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _pickLocation() async {
-    // TODO: 实现位置选择功能
+    // Feature: Implement location picker using geolocator package
+    // Requires: flutter pub add geolocator
     // 暂时使用模拟位置
     setState(() {
       _selectedLocation = '模拟位置';
@@ -57,7 +57,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             _selectedImage != null ? [_selectedImage!.path] : [],
             _topicController.text.trim(),
           );
-      // TODO: 位置信息需要单独保存
+      // Feature: Save location data separately if provided
       if (_selectedLocation != null) {
         print('位置信息: $_selectedLocation');
       }
@@ -74,8 +74,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -104,7 +103,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           children: [
             TextField(
@@ -157,5 +156,4 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ),
       ),
     );
-  }
 }

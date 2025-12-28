@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class TranslatorTool extends StatefulWidget {
@@ -15,7 +14,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
   String _output = '';
   bool _isLoading = false;
 
-  void _translate() async {
+  Future<void> _translate() async {
     if (_inputController.text.isEmpty) return;
 
     setState(() {
@@ -35,8 +34,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.xl),
       height: 500,
       decoration: const BoxDecoration(
@@ -112,5 +110,4 @@ class _TranslatorToolState extends State<TranslatorTool> {
         ],
       ),
     );
-  }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/presentation/providers/plan_provider.dart';
 
@@ -46,29 +45,26 @@ class GrowthScreen extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(DS.sm),
       itemCount: plans.length,
-      itemBuilder: (context, index) {
-        return _GrowthPlanCard(plan: plans[index]);
-      },
+      itemBuilder: (context, index) => _GrowthPlanCard(plan: plans[index]),
     );
   }
 }
 
 class _GrowthPlanCard extends StatelessWidget {
-  final PlanModel plan;
   const _GrowthPlanCard({required this.plan});
+  final PlanModel plan;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
         onTap: () {
-          // TODO: 需要创建计划详情页面，暂时导航到编辑页面
+          // Navigation: Consider creating dedicated plan detail screen
           context.push('/plans/${plan.id}/edit');
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -96,10 +92,8 @@ class _GrowthPlanCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildStatRow(BuildContext context, String label, String valueText, double progressValue, Color color) {
-    return Column(
+  Widget _buildStatRow(BuildContext context, String label, String valueText, double progressValue, Color color) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
          Row(
@@ -117,5 +111,4 @@ class _GrowthPlanCard extends StatelessWidget {
         ),
       ],
     );
-  }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 enum AgendaType {
   busy,      // 1 繁忙
@@ -9,13 +8,13 @@ enum AgendaType {
 }
 
 class WeeklyAgendaGrid extends StatefulWidget {
-  final Map<String, dynamic>? initialData;
-  final Function(Map<String, dynamic> data) onChanged;
 
   const WeeklyAgendaGrid({
     required this.onChanged, super.key,
     this.initialData,
   });
+  final Map<String, dynamic>? initialData;
+  final Function(Map<String, dynamic> data) onChanged;
 
   @override
   State<WeeklyAgendaGrid> createState() => _WeeklyAgendaGridState();

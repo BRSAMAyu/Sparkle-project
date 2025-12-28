@@ -3,15 +3,6 @@ import 'package:sparkle/data/models/galaxy_model.dart';
 
 /// Sector visual style configuration
 class SectorStyle {
-  final String name;
-  final Color primaryColor;
-  final Color glowColor;
-  final double baseAngle;
-  final double sweepAngle;
-  final List<String> keywords;
-
-  /// 星域色系调色板（从深到浅的 5 个层次）
-  late final List<Color> colorPalette;
 
   SectorStyle({
     required this.name,
@@ -24,6 +15,15 @@ class SectorStyle {
     // 生成星域调色板
     colorPalette = _generatePalette(primaryColor);
   }
+  final String name;
+  final Color primaryColor;
+  final Color glowColor;
+  final double baseAngle;
+  final double sweepAngle;
+  final List<String> keywords;
+
+  /// 星域色系调色板（从深到浅的 5 个层次）
+  late final List<Color> colorPalette;
 
   /// 根据主色生成 5 层调色板
   static List<Color> _generatePalette(Color primary) {
@@ -130,17 +130,11 @@ class SectorConfig {
     ),
   };
 
-  static SectorStyle getStyle(SectorEnum sector) {
-    return styles[sector] ?? styles[SectorEnum.voidSector]!;
-  }
+  static SectorStyle getStyle(SectorEnum sector) => styles[sector] ?? styles[SectorEnum.voidSector]!;
 
-  static Color getColor(SectorEnum sector) {
-    return getStyle(sector).primaryColor;
-  }
+  static Color getColor(SectorEnum sector) => getStyle(sector).primaryColor;
 
-  static Color getGlowColor(SectorEnum sector) {
-    return getStyle(sector).glowColor;
-  }
+  static Color getGlowColor(SectorEnum sector) => getStyle(sector).glowColor;
 
   /// 获取节点颜色（基于星域、重要程度和掌握度）
   ///

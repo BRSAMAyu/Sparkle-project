@@ -1,10 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
-import 'package:sparkle/core/services/galaxy_layout_engine.dart';
 
 /// Aggregation level based on zoom scale
 enum AggregationLevel {
@@ -13,18 +14,7 @@ enum AggregationLevel {
   sectors,   // Only show sector centroids (scale < 0.3)
 }
 
-class GalaxyState {
-  final List<GalaxyNodeModel> nodes;
-  final List<GalaxyEdgeModel> edges;  // 节点连接
-  final Map<String, Offset> nodePositions;
-  final double userFlameIntensity;
-  final bool isLoading;
-  final bool isOptimizing;  // Whether force-directed optimization is running
-  final double currentScale;  // Current zoom scale
-  final AggregationLevel aggregationLevel;  // Current aggregation level
-  final Map<String, ClusterInfo> clusters;  // Cluster information for aggregated view
-  final Rect? viewport;  // Current visible viewport for culling
-  final String? predictedNodeId; // ID of the predicted next node to learn
+class GalaxyState { // ID of the predicted next node to learn
 
   GalaxyState({
     this.nodes = const [],
@@ -39,6 +29,17 @@ class GalaxyState {
     this.viewport,
     this.predictedNodeId,
   });
+  final List<GalaxyNodeModel> nodes;
+  final List<GalaxyEdgeModel> edges;  // 节点连接
+  final Map<String, Offset> nodePositions;
+  final double userFlameIntensity;
+  final bool isLoading;
+  final bool isOptimizing;  // Whether force-directed optimization is running
+  final double currentScale;  // Current zoom scale
+  final AggregationLevel aggregationLevel;  // Current aggregation level
+  final Map<String, ClusterInfo> clusters;  // Cluster information for aggregated view
+  final Rect? viewport;  // Current visible viewport for culling
+  final String? predictedNodeId;
 
   GalaxyState copyWith({
     List<GalaxyNodeModel>? nodes,
@@ -52,8 +53,7 @@ class GalaxyState {
     Map<String, ClusterInfo>? clusters,
     Rect? viewport,
     String? predictedNodeId,
-  }) {
-    return GalaxyState(
+  }) => GalaxyState(
       nodes: nodes ?? this.nodes,
       edges: edges ?? this.edges,
       nodePositions: nodePositions ?? this.nodePositions,
@@ -66,7 +66,6 @@ class GalaxyState {
       viewport: viewport ?? this.viewport,
       predictedNodeId: predictedNodeId ?? this.predictedNodeId,
     );
-  }
 
   /// 获取可见节点（基于视口裁剪）
   List<GalaxyNodeModel> get visibleNodes {
@@ -84,14 +83,7 @@ class GalaxyState {
 }
 
 /// Information about a cluster of nodes
-class ClusterInfo {
-  final String id;  // Cluster ID (parent node ID or sector code)
-  final String name;  // Display name
-  final Offset position;  // Center position
-  final int nodeCount;  // Number of nodes in cluster
-  final double totalMastery;  // Average mastery of nodes
-  final SectorEnum sector;  // Primary sector
-  final List<String> childNodeIds;  // IDs of nodes in this cluster
+class ClusterInfo {  // IDs of nodes in this cluster
 
   ClusterInfo({
     required this.id,
@@ -102,6 +94,13 @@ class ClusterInfo {
     required this.sector,
     required this.childNodeIds,
   });
+  final String id;  // Cluster ID (parent node ID or sector code)
+  final String name;  // Display name
+  final Offset position;  // Center position
+  final int nodeCount;  // Number of nodes in cluster
+  final double totalMastery;  // Average mastery of nodes
+  final SectorEnum sector;  // Primary sector
+  final List<String> childNodeIds;
 }
 
 final galaxyProvider = StateNotifierProvider<GalaxyNotifier, GalaxyState>((ref) {
@@ -110,12 +109,12 @@ final galaxyProvider = StateNotifierProvider<GalaxyNotifier, GalaxyState>((ref) 
 });
 
 class GalaxyNotifier extends StateNotifier<GalaxyState> {
-  final GalaxyRepository _repository;
-  StreamSubscription? _eventsSubscription;
 
   GalaxyNotifier(this._repository) : super(GalaxyState()) {
     _initEventsListener();
   }
+  final GalaxyRepository _repository;
+  StreamSubscription? _eventsSubscription;
 
   @override
   void dispose() {
@@ -218,9 +217,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return null;
   }
 
-  Future<List<GalaxySearchResult>> searchNodes(String query) async {
-    return _repository.searchNodes(query);
-  }
+  Future<List<GalaxySearchResult>> searchNodes(String query) async => _repository.searchNodes(query);
 
   /// Update current scale and recalculate aggregation level
   void updateScale(double scale) {
@@ -255,11 +252,11 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       return {};
     }
 
-    final Map<String, ClusterInfo> clusters = {};
+    final clusters = <String, ClusterInfo>{};
 
     if (level == AggregationLevel.clustered) {
       // Group by parent node
-      final Map<String, List<GalaxyNodeModel>> parentGroups = {};
+      final parentGroups = <String, List<GalaxyNodeModel>>{};
 
       for (final node in state.nodes) {
         final parentId = node.parentId ?? node.id; // Root nodes are their own cluster
@@ -279,7 +276,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         );
 
         // Calculate center position (average of all node positions)
-        Offset center = Offset.zero;
+        var center = Offset.zero;
         double totalMastery = 0;
         final childIds = <String>[];
 
@@ -308,7 +305,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       }
     } else if (level == AggregationLevel.sectors) {
       // Group by sector
-      final Map<SectorEnum, List<GalaxyNodeModel>> sectorGroups = {};
+      final sectorGroups = <SectorEnum, List<GalaxyNodeModel>>{};
 
       for (final node in state.nodes) {
         sectorGroups.putIfAbsent(node.sector, () => []);
@@ -322,7 +319,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         final style = SectorConfig.getStyle(sector);
 
         // Calculate sector centroid
-        Offset center = Offset.zero;
+        var center = Offset.zero;
         double totalMastery = 0;
         final childIds = <String>[];
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 /// 从protobuf的int值映射到前端AgentType枚举
@@ -33,11 +32,7 @@ AgentType agentTypeFromProto(int protoValue) {
 }
 
 /// Agent视觉配置
-class AgentConfig {
-  final IconData icon;
-  final Color color;
-  final String displayName;
-  final String animation; // 动画隐喻描述
+class AgentConfig { // 动画隐喻描述
 
   const AgentConfig({
     required this.icon,
@@ -45,6 +40,10 @@ class AgentConfig {
     required this.displayName,
     required this.animation,
   });
+  final IconData icon;
+  final Color color;
+  final String displayName;
+  final String animation;
 
   /// 获取指定AgentType的配置
   static AgentConfig forType(AgentType type) {
@@ -153,9 +152,6 @@ class AgentConfig {
 /// 使用AnimatedSwitcher实现图标的无缝溶解切换，
 /// 包含旋转、缩放和淡入淡出的组合动画
 class AgentAvatarSwitcher extends StatelessWidget {
-  final AgentType agentType;
-  final double size;
-  final bool showPulseAnimation;
 
   const AgentAvatarSwitcher({
     required this.agentType,
@@ -163,6 +159,9 @@ class AgentAvatarSwitcher extends StatelessWidget {
     this.size = 32,
     this.showPulseAnimation = false,
   });
+  final AgentType agentType;
+  final double size;
+  final bool showPulseAnimation;
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +209,6 @@ class AgentAvatarSwitcher extends StatelessWidget {
           BoxShadow(
             color: config.color.withValues(alpha: 0.3),
             blurRadius: 8,
-            spreadRadius: 0,
           ),
         ],
       ),
@@ -230,13 +228,13 @@ class AgentAvatarSwitcher extends StatelessWidget {
 
 /// 脉冲动画图标 - 用于Orchestrator思考时的呼吸效果
 class _PulsingIcon extends StatefulWidget {
-  final IconData icon;
-  final Color color;
 
   const _PulsingIcon({
     required this.icon,
     required this.color,
   });
+  final IconData icon;
+  final Color color;
 
   @override
   State<_PulsingIcon> createState() => _PulsingIconState();
@@ -273,8 +271,7 @@ class _PulsingIconState extends State<_PulsingIcon>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
+  Widget build(BuildContext context) => ScaleTransition(
       scale: _scaleAnimation,
       child: Icon(
         widget.icon,
@@ -282,16 +279,12 @@ class _PulsingIconState extends State<_PulsingIcon>
         size: 16,
       ),
     );
-  }
 }
 
 /// Agent状态指示器 - 带动画的完整状态显示
 ///
 /// 包含Agent头像、名称和当前状态描述
 class AgentStatusIndicator extends StatelessWidget {
-  final AgentType agentType;
-  final String statusText;
-  final bool isThinking;
 
   const AgentStatusIndicator({
     required this.agentType,
@@ -299,6 +292,9 @@ class AgentStatusIndicator extends StatelessWidget {
     super.key,
     this.isThinking = false,
   });
+  final AgentType agentType;
+  final String statusText;
+  final bool isThinking;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +308,6 @@ class AgentStatusIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: config.color.withValues(alpha: 0.3),
-          width: 1,
         ),
       ),
       child: Row(

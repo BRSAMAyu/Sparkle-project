@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 /// 🧠 Chain of Thought Visualization Bubble
@@ -11,6 +10,12 @@ import 'package:sparkle/data/models/reasoning_step_model.dart';
 /// - 实时状态更新
 /// - GraphRAG引用展示
 class AgentReasoningBubble extends StatefulWidget {
+
+  const AgentReasoningBubble({
+    required this.steps, super.key,
+    this.isThinking = false,
+    this.totalDurationMs,
+  });
   /// 推理步骤列表
   final List<ReasoningStep> steps;
 
@@ -19,12 +24,6 @@ class AgentReasoningBubble extends StatefulWidget {
 
   /// 总耗时（毫秒）
   final int? totalDurationMs;
-
-  const AgentReasoningBubble({
-    required this.steps, super.key,
-    this.isThinking = false,
-    this.totalDurationMs,
-  });
 
   @override
   State<AgentReasoningBubble> createState() => _AgentReasoningBubbleState();
@@ -205,8 +204,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     );
   }
 
-  Widget _buildStepStream(ThemeData theme) {
-    return Container(
+  Widget _buildStepStream(ThemeData theme) => Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
@@ -258,10 +256,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         ],
       ),
     );
-  }
 
-  Widget _buildStepItem(ReasoningStep step, bool isLast, ThemeData theme) {
-    return Column(
+  Widget _buildStepItem(ReasoningStep step, bool isLast, ThemeData theme) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -318,8 +314,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 4,
-                        children: step.citations!.map((citation) {
-                          return InkWell(
+                        children: step.citations!.map((citation) => InkWell(
                             onTap: () => _showCitationDialog(citation),
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
@@ -354,8 +349,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                 ],
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ),).toList(),
                       ),
                     ),
 
@@ -386,7 +380,6 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           ),
       ],
     );
-  }
 
   Widget _buildStepStatusIcon(StepStatus status) {
     switch (status) {
@@ -483,7 +476,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
   ReasoningStep? _getActiveStep() {
     // Find the first in-progress step, or the last completed step
-    for (var step in widget.steps) {
+    for (final step in widget.steps) {
       if (step.isInProgress) return step;
     }
     if (widget.steps.isNotEmpty) return widget.steps.last;
@@ -493,8 +486,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   void _showCitationDialog(String citation) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      builder: (context) => AlertDialog(
           title: Text('知识引用: $citation'),
           content: const Text(
             '这是一个来自知识星图的节点。\n\n'
@@ -502,13 +494,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             '证明AI确实检索了相关知识，而非凭空想象。',
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
-            ),
+            SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
           ],
-        );
-      },
+        ),
     );
   }
 }
@@ -517,15 +505,15 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 ///
 /// 展示多个智能体的协作过程和结果
 class MultiAgentCollaborationBubble extends StatelessWidget {
-  final List<AgentContribution> contributions;
-  final String? summary;
-  final bool isComplete;
 
   const MultiAgentCollaborationBubble({
     required this.contributions, super.key,
     this.summary,
     this.isComplete = false,
   });
+  final List<AgentContribution> contributions;
+  final String? summary;
+  final bool isComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -598,9 +586,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           ),
 
           // Individual Contributions
-          ...contributions.map((contribution) {
-            return _buildContributionTile(contribution, theme);
-          }),
+          ...contributions.map((contribution) => _buildContributionTile(contribution, theme)),
 
           // Summary (if provided)
           if (summary != null)
@@ -612,7 +598,6 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Colors.purple.shade200,
-                  width: 1,
                 ),
               ),
               child: Column(
@@ -648,8 +633,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildContributionTile(AgentContribution contribution, ThemeData theme) {
-    return Container(
+  Widget _buildContributionTile(AgentContribution contribution, ThemeData theme) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
@@ -707,8 +691,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               child: Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: contribution.citations!.map((citation) {
-                  return Container(
+                children: contribution.citations!.map((citation) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _getAgentColor(contribution.agentType).withOpacity(0.1),
@@ -721,14 +704,12 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),).toList(),
               ),
             ),
         ],
       ),
     );
-  }
 
   IconData _getAgentIcon(AgentType agent) {
     switch (agent) {

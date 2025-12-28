@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
-import 'package:sparkle/core/design/sparkle_theme.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  final String id;
-  final bool isGroup;
 
   const ChatScreen({required this.id, required this.isGroup, super.key});
+  final String id;
+  final bool isGroup;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -95,8 +94,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildInputArea() {
-    return Container(
+  Widget _buildInputArea() => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: const BoxDecoration(
         color: DS.brandPrimary,
@@ -131,7 +129,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ),
     );
-  }
 
   void _sendMessage() {
     final text = _controller.text.trim();

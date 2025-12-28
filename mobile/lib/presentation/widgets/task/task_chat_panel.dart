@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/providers/task_chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 
 class TaskChatPanel extends ConsumerStatefulWidget {
-  final String taskId;
 
   const TaskChatPanel({
     required this.taskId, super.key,
   });
+  final String taskId;
 
   @override
   ConsumerState<TaskChatPanel> createState() => _TaskChatPanelState();
@@ -39,7 +38,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
     final messages = chatState.messages;
     final lastMessage = messages.isNotEmpty ? messages.last : null;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
@@ -105,14 +104,12 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   : ListView.builder(
                       padding: const EdgeInsets.all(DS.lg),
                       itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        return ChatBubble(message: messages[index]);
-                      },
+                      itemBuilder: (context, index) => ChatBubble(message: messages[index]),
                     ),
             ),
             const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(DS.sm),
               child: Row(
                 children: [
                   Expanded(
@@ -128,7 +125,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                   ),
                   if (chatState.isLoading)
                     const Padding(
-                      padding: EdgeInsets.all(8.0),
+                      padding: EdgeInsets.all(DS.sm),
                       child: SizedBox(
                         width: 16, 
                         height: 16, 

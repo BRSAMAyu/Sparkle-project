@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/profile/password_reset_screen.dart';
-import 'package:sparkle/presentation/widgets/profile/avatar_selection_dialog.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
-import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/presentation/widgets/profile/avatar_selection_dialog.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -204,7 +203,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppDesignTokens.spacing24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Avatar Section
             Center(
@@ -307,7 +305,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             // Security Section
             _buildSectionHeader(isDark, '账户安全'),
             const SizedBox(height: AppDesignTokens.spacing12),
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
                 color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary,
                 borderRadius: AppDesignTokens.borderRadius12,
@@ -346,7 +344,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 children: [
                   _buildInfoRow('火焰等级', 'Lv.${user?.flameLevel ?? 1}'),
                   _buildInfoRow('火焰亮度', '${((user?.flameBrightness ?? 0.5) * 100).toInt()}%'),
-                  _buildInfoRow('账户类型', user?.id.startsWith('guest') == true ? '游客账户' : '正式账户'),
+                  _buildInfoRow('账户类型', user?.id.startsWith('guest') ?? false ? '游客账户' : '正式账户'),
                 ],
               ),
             ),
@@ -356,8 +354,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(bool isDark, String title) {
-    return Align(
+  Widget _buildSectionHeader(bool isDark, String title) => Align(
       alignment: Alignment.centerLeft,
       child: Text(
         title,
@@ -368,7 +365,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildInputField({
     required String label,

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/repositories/error_repository.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -19,14 +18,14 @@ const List<String> _errorTypes = [
 
 /// 闪念胶囊 - 快速错题记录
 class FlashCapsuleTool extends ConsumerStatefulWidget {
-  final String? taskId;
-  final String? initialSubject;
 
   const FlashCapsuleTool({
     super.key,
     this.taskId,
     this.initialSubject,
   });
+  final String? taskId;
+  final String? initialSubject;
 
   @override
   ConsumerState<FlashCapsuleTool> createState() => _FlashCapsuleToolState();
@@ -140,8 +139,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.xl),
       height: 600,
       decoration: const BoxDecoration(
@@ -216,9 +214,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                     ),
                   ),
                   const SizedBox(height: DS.sm),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                      : Container(
+                  if (_isLoading) const Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             color: AppDesignTokens.neutral50,
@@ -230,12 +226,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                               value: _selectedSubjectId,
                               isExpanded: true,
                               hint: const Text('选择科目'),
-                              items: _subjects.map((subject) {
-                                return DropdownMenuItem<int>(
+                              items: _subjects.map((subject) => DropdownMenuItem<int>(
                                   value: subject['id'],
                                   child: Text(subject['name'] ?? ''),
-                                );
-                              }).toList(),
+                                ),).toList(),
                               onChanged: (value) {
                                 setState(() => _selectedSubjectId = value);
                               },
@@ -358,5 +352,4 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         ],
       ),
     );
-  }
 }

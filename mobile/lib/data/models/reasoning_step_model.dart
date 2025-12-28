@@ -61,6 +61,21 @@ enum AgentType {
 /// 代表AI思考过程中的一个步骤，用于前端可视化展示
 @JsonSerializable()
 class ReasoningStep {
+
+  const ReasoningStep({
+    required this.id,
+    required this.description,
+    required this.agent,
+    required this.status,
+    this.toolOutput,
+    this.citations,
+    this.createdAt,
+    this.completedAt,
+    this.metadata,
+  });
+
+  factory ReasoningStep.fromJson(Map<String, dynamic> json) =>
+      _$ReasoningStepFromJson(json);
   /// 唯一标识符
   final String id;
 
@@ -90,18 +105,6 @@ class ReasoningStep {
   /// 额外元数据
   final Map<String, dynamic>? metadata;
 
-  const ReasoningStep({
-    required this.id,
-    required this.description,
-    required this.agent,
-    required this.status,
-    this.toolOutput,
-    this.citations,
-    this.createdAt,
-    this.completedAt,
-    this.metadata,
-  });
-
   /// 计算步骤耗时（毫秒）
   int? get durationMs {
     if (createdAt != null && completedAt != null) {
@@ -119,9 +122,6 @@ class ReasoningStep {
   /// 是否正在进行中
   bool get isInProgress => status == StepStatus.inProgress;
 
-  factory ReasoningStep.fromJson(Map<String, dynamic> json) =>
-      _$ReasoningStepFromJson(json);
-
   Map<String, dynamic> toJson() => _$ReasoningStepToJson(this);
 
   ReasoningStep copyWith({
@@ -134,8 +134,7 @@ class ReasoningStep {
     DateTime? createdAt,
     DateTime? completedAt,
     Map<String, dynamic>? metadata,
-  }) {
-    return ReasoningStep(
+  }) => ReasoningStep(
       id: id ?? this.id,
       description: description ?? this.description,
       agent: agent ?? this.agent,
@@ -146,22 +145,13 @@ class ReasoningStep {
       completedAt: completedAt ?? this.completedAt,
       metadata: metadata ?? this.metadata,
     );
-  }
 
   @override
-  String toString() {
-    return 'ReasoningStep(id: $id, agent: $agent, status: $status, desc: $description)';
-  }
+  String toString() => 'ReasoningStep(id: $id, agent: $agent, status: $status, desc: $description)';
 }
 
 /// 智能体贡献信息（用于多智能体协作展示）
 class AgentContribution {
-  final String agentName;
-  final AgentType agentType;
-  final String reasoning;
-  final String responseText;
-  final double? confidence;
-  final List<String>? citations;
 
   AgentContribution({
     required this.agentName,
@@ -171,4 +161,10 @@ class AgentContribution {
     this.confidence,
     this.citations,
   });
+  final String agentName;
+  final AgentType agentType;
+  final String reasoning;
+  final String responseText;
+  final double? confidence;
+  final List<String>? citations;
 }

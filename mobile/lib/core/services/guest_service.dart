@@ -3,18 +3,18 @@ import 'package:uuid/uuid.dart';
 
 /// 访客服务 - 管理访客 ID 的持久化
 class GuestService {
-  static const String _guestIdKey = 'guest_id';
-  static const String _guestNicknameKey = 'guest_nickname';
-
-  final SharedPreferences _prefs;
-  String? _cachedGuestId;
-  String? _cachedNickname;
 
   GuestService(this._prefs) {
     // 初始化时从本地存储加载
     _cachedGuestId = _prefs.getString(_guestIdKey);
     _cachedNickname = _prefs.getString(_guestNicknameKey);
   }
+  static const String _guestIdKey = 'guest_id';
+  static const String _guestNicknameKey = 'guest_nickname';
+
+  final SharedPreferences _prefs;
+  String? _cachedGuestId;
+  String? _cachedNickname;
 
   /// 获取或生成访客 ID
   Future<String> getGuestId() async {

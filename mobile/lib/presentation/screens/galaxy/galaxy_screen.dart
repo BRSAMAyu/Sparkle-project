@@ -1,7 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'dart:math' as math;
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/widgets/decay/interactive_decay_timeline.dart';
 
@@ -31,8 +31,7 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppDesignTokens.deepSpaceStart, // Void (Base)
       body: Stack(
         children: [
@@ -40,11 +39,9 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _controller,
-              builder: (context, child) {
-                return CustomPaint(
+              builder: (context, child) => CustomPaint(
                   painter: _SectorModelPainter(animationValue: _controller.value),
-                );
-              },
+                ),
             ),
           ),
           
@@ -116,20 +113,17 @@ class _GalaxyScreenState extends State<GalaxyScreen> with SingleTickerProviderSt
                 // 调用 GalaxyProvider 的 simulateReview(nodeIds, days)
                 print('模拟复习 ${nodeIds.length} 个节点');
               },
-              selectedNodeIds: const [], // TODO: 从provider获取选中节点
-              initialDays: 30,
             ),
           ),
         ],
       ),
     );
-  }
 }
 
 class _SectorModelPainter extends CustomPainter {
-  final double animationValue;
 
   _SectorModelPainter({required this.animationValue});
+  final double animationValue;
 
   // 6+1 Sector Definitions
   static final List<_SectorDef> sectors = [
@@ -179,13 +173,13 @@ class _SectorModelPainter extends CustomPainter {
     _drawVoid(canvas, size);
 
     // 2. Draw Radial Sectors
-    final double angleStep = (2 * math.pi) / sectors.length;
+    final angleStep = (2 * math.pi) / sectors.length;
     // Rotate slightly slowly
-    final double rotationOffset = animationValue * 2 * math.pi * 0.05; 
+    final rotationOffset = animationValue * 2 * math.pi * 0.05; 
 
-    for (int i = 0; i < sectors.length; i++) {
+    for (var i = 0; i < sectors.length; i++) {
       final sector = sectors[i];
-      final double startAngle = (i * angleStep) - (math.pi / 2) + rotationOffset;
+      final startAngle = (i * angleStep) - (math.pi / 2) + rotationOffset;
       
       _drawSector(
         canvas, 
@@ -205,7 +199,7 @@ class _SectorModelPainter extends CustomPainter {
     final paint = Paint();
     final random = math.Random(42); // Deterministic seed
 
-    for (int i = 0; i < 150; i++) {
+    for (var i = 0; i < 150; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final starSize = random.nextDouble() * 2;
@@ -308,7 +302,7 @@ class _SectorModelPainter extends CustomPainter {
     final random = math.Random(sector.id.hashCode);
     final starPaint = Paint()..color = sector.color;
     
-    for(int i=0; i<8; i++) {
+    for(var i=0; i<8; i++) {
         // Random polar coordinates within the sector wedge
         final r = (random.nextDouble() * 0.6 + 0.3) * radius; // 30% to 90% radius
         final a = startAngle + (random.nextDouble() * 0.8 + 0.1) * sweepAngle; // Keep away from edges
@@ -351,11 +345,6 @@ class _SectorModelPainter extends CustomPainter {
 }
 
 class _SectorDef {
-  final String id;
-  final String name;
-  final String description;
-  final Color color;
-  final IconData icon;
 
   _SectorDef({
     required this.id,
@@ -364,4 +353,9 @@ class _SectorDef {
     required this.color,
     required this.icon,
   });
+  final String id;
+  final String name;
+  final String description;
+  final Color color;
+  final IconData icon;
 }

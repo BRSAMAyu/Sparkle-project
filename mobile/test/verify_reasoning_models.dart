@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'package:sparkle/data/models/reasoning_step_model.dart';
+
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:sparkle/data/models/reasoning_step_model.dart';
 
 void main() {
   print('🧪 Testing Chain of Thought Visualization Models\n');
@@ -107,7 +108,7 @@ void main() {
   ];
 
   print('✓ Created ${contributions.length} agent contributions:');
-  for (var c in contributions) {
+  for (final c in contributions) {
     print('  - ${c.agentName} (${c.agentType}): ${c.responseText}');
   }
 

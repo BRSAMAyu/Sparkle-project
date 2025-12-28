@@ -1,16 +1,11 @@
 import 'dart:math';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// Model representing a single energy particle in the transfer animation
-class EnergyParticle {
-  final Offset position;
-  final double size;
-  final double opacity;
-  final Color color;
-  final double angle; // For trail effect
+class EnergyParticle { // For trail effect
 
   const EnergyParticle({
     required this.position,
@@ -19,6 +14,11 @@ class EnergyParticle {
     required this.color,
     this.angle = 0,
   });
+  final Offset position;
+  final double size;
+  final double opacity;
+  final Color color;
+  final double angle;
 
   EnergyParticle copyWith({
     Offset? position,
@@ -26,15 +26,13 @@ class EnergyParticle {
     double? opacity,
     Color? color,
     double? angle,
-  }) {
-    return EnergyParticle(
+  }) => EnergyParticle(
       position: position ?? this.position,
       size: size ?? this.size,
       opacity: opacity ?? this.opacity,
       color: color ?? this.color,
       angle: angle ?? this.angle,
     );
-  }
 }
 
 /// Callback when the energy transfer animation completes (particle hits target)
@@ -42,6 +40,11 @@ typedef OnEnergyTransferComplete = void Function();
 
 /// Widget that displays an animated energy particle traveling from center to target
 class EnergyTransferAnimation extends StatefulWidget {
+
+  const EnergyTransferAnimation({
+    required this.sourcePosition, required this.targetPosition, required this.targetColor, required this.onComplete, super.key,
+    this.duration = const Duration(milliseconds: 800),
+  });
   /// Screen coordinates of the flame core (source)
   final Offset sourcePosition;
 
@@ -56,11 +59,6 @@ class EnergyTransferAnimation extends StatefulWidget {
 
   /// Duration of the flight animation
   final Duration duration;
-
-  const EnergyTransferAnimation({
-    required this.sourcePosition, required this.targetPosition, required this.targetColor, required this.onComplete, super.key,
-    this.duration = const Duration(milliseconds: 800),
-  });
 
   @override
   State<EnergyTransferAnimation> createState() => _EnergyTransferAnimationState();
@@ -158,11 +156,9 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
+      builder: (context, child) => CustomPaint(
           size: Size.infinite,
           painter: _EnergyParticlePainter(
             currentPosition: _getCurrentPosition(),
@@ -172,17 +168,11 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
             trailParticles: List.from(_trailParticles),
             currentTime: _controller.value,
           ),
-        );
-      },
+        ),
     );
-  }
 }
 
 class _TrailParticle {
-  final Offset position;
-  final double opacity;
-  final double size;
-  final double createdAt;
 
   _TrailParticle({
     required this.position,
@@ -190,15 +180,13 @@ class _TrailParticle {
     required this.size,
     required this.createdAt,
   });
+  final Offset position;
+  final double opacity;
+  final double size;
+  final double createdAt;
 }
 
 class _EnergyParticlePainter extends CustomPainter {
-  final Offset currentPosition;
-  final double progress;
-  final double glowScale;
-  final Color targetColor;
-  final List<_TrailParticle> trailParticles;
-  final double currentTime;
 
   _EnergyParticlePainter({
     required this.currentPosition,
@@ -208,6 +196,12 @@ class _EnergyParticlePainter extends CustomPainter {
     required this.trailParticles,
     required this.currentTime,
   });
+  final Offset currentPosition;
+  final double progress;
+  final double glowScale;
+  final Color targetColor;
+  final List<_TrailParticle> trailParticles;
+  final double currentTime;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -277,16 +271,12 @@ class _EnergyParticlePainter extends CustomPainter {
     }
   }
 
-  Color _blendColor(Color from, Color to, double t) {
-    return Color.lerp(from, to, t) ?? from;
-  }
+  Color _blendColor(Color from, Color to, double t) => Color.lerp(from, to, t) ?? from;
 
   @override
-  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) {
-    return oldDelegate.currentPosition != currentPosition ||
+  bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) => oldDelegate.currentPosition != currentPosition ||
         oldDelegate.progress != progress ||
         oldDelegate.glowScale != glowScale;
-  }
 }
 
 /// Controller for managing energy transfer animations
@@ -326,18 +316,13 @@ class EnergyTransferController {
 }
 
 class _ActiveTransfer {
-  final EnergyTransferData data;
 
   _ActiveTransfer({required this.data});
+  final EnergyTransferData data;
 }
 
 /// Data for a single energy transfer
 class EnergyTransferData {
-  final Offset sourcePosition;
-  final Offset targetPosition;
-  final Color targetColor;
-  final String targetNodeId;
-  final VoidCallback onComplete;
 
   EnergyTransferData({
     required this.sourcePosition,
@@ -346,4 +331,9 @@ class EnergyTransferData {
     required this.targetNodeId,
     required this.onComplete,
   });
+  final Offset sourcePosition;
+  final Offset targetPosition;
+  final Color targetColor;
+  final String targetNodeId;
+  final VoidCallback onComplete;
 }

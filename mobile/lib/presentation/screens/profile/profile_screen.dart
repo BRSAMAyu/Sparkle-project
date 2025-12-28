@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/locale_provider.dart';
 import 'package:sparkle/presentation/screens/profile/edit_profile_screen.dart';
 import 'package:sparkle/presentation/screens/profile/unified_settings_screen.dart';
-import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
-import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -47,8 +46,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, dynamic user) {
-    return SizedBox(
+  Widget _buildHeader(BuildContext context, dynamic user) => SizedBox(
       height: 320,
       child: Stack(
         children: [
@@ -68,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
                   Row(
                     children: [
                       // Avatar Area
-                      Container(
+                      DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.3), width: 4),
@@ -145,10 +143,8 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    return Container(
+  Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimary,
         borderRadius: AppDesignTokens.borderRadius16,
@@ -207,7 +203,6 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   void _showLanguageDialog(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -274,8 +269,7 @@ class ProfileScreen extends ConsumerWidget {
     required LinearGradient gradient,
     required VoidCallback onTap,
     bool isDestructive = false,
-  }) {
-    return ListTile(
+  }) => ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppDesignTokens.spacing16,
@@ -302,7 +296,6 @@ class ProfileScreen extends ConsumerWidget {
         color: AppDesignTokens.neutral400,
       ),
     );
-  }
 }
 
 class _WaveHeaderPainter extends CustomPainter {

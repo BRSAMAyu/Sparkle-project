@@ -15,8 +15,7 @@ class _NotesToolState extends State<NotesTool> {
   final TextEditingController _controller = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.xl),
       height: 600, // Taller for notes
       decoration: const BoxDecoration(
@@ -45,7 +44,7 @@ class _NotesToolState extends State<NotesTool> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.note_alt_outlined, color: Colors.orange),
+                  const Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
                   const SizedBox(width: DS.sm),
                   Text(
                     '随手记',
@@ -69,7 +68,7 @@ class _NotesToolState extends State<NotesTool> {
               decoration: BoxDecoration(
                 color: DS.warning[50],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
               ),
               child: TextField(
                 controller: _controller,
@@ -96,5 +95,4 @@ class _NotesToolState extends State<NotesTool> {
         ],
       ),
     );
-  }
 }

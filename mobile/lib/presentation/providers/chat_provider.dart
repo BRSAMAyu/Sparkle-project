@@ -1,37 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
-import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
 
 // 1. ChatState Class
-class ChatState {
-  final bool isLoading;
-  final bool isSending;
-  final bool isLoadingMore; // 加载更多历史消息
-  final bool hasMoreMessages; // 是否还有更多消息
-  final String? conversationId;
-  final List<ChatMessageModel> messages;
-  final String? error;
-  final String? errorCode; // 错误代码
-  final bool isErrorRetryable; // 错误是否可重试
-  final String streamingContent;
-  final String? aiStatus; // THINKING, GENERATING, etc.
-  final String? aiStatusDetails;
-  final WsConnectionState wsConnectionState; // WebSocket 连接状态
-  final GraphRAGTrace? graphragTrace; // 🔥 必杀技 A: GraphRAG 追踪信息
-
-  // New: Chain of Thought Visualization
-  final List<ReasoningStep> reasoningSteps; // Real-time reasoning steps
-  final bool isReasoningActive; // Currently showing reasoning
-  final int? reasoningStartTime; // Timestamp for duration calculation
+class ChatState { // Timestamp for duration calculation
 
   ChatState({
     this.isLoading = false,
@@ -52,6 +33,25 @@ class ChatState {
     this.isReasoningActive = false,
     this.reasoningStartTime,
   });
+  final bool isLoading;
+  final bool isSending;
+  final bool isLoadingMore; // 加载更多历史消息
+  final bool hasMoreMessages; // 是否还有更多消息
+  final String? conversationId;
+  final List<ChatMessageModel> messages;
+  final String? error;
+  final String? errorCode; // 错误代码
+  final bool isErrorRetryable; // 错误是否可重试
+  final String streamingContent;
+  final String? aiStatus; // THINKING, GENERATING, etc.
+  final String? aiStatusDetails;
+  final WsConnectionState wsConnectionState; // WebSocket 连接状态
+  final GraphRAGTrace? graphragTrace; // 🔥 必杀技 A: GraphRAG 追踪信息
+
+  // New: Chain of Thought Visualization
+  final List<ReasoningStep> reasoningSteps; // Real-time reasoning steps
+  final bool isReasoningActive; // Currently showing reasoning
+  final int? reasoningStartTime;
 
   ChatState copyWith({
     bool? isLoading,
@@ -76,8 +76,7 @@ class ChatState {
     bool? isReasoningActive,
     int? reasoningStartTime,
     bool clearReasoning = false,
-  }) {
-    return ChatState(
+  }) => ChatState(
       isLoading: isLoading ?? this.isLoading,
       isSending: isSending ?? this.isSending,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
@@ -96,13 +95,10 @@ class ChatState {
       isReasoningActive: clearReasoning ? false : isReasoningActive ?? this.isReasoningActive,
       reasoningStartTime: clearReasoning ? null : reasoningStartTime ?? this.reasoningStartTime,
     );
-  }
 }
 
 // 2. ChatNotifier Class
 class ChatNotifier extends StateNotifier<ChatState> {
-  final ChatRepository _chatRepository;
-  final Ref _ref;
 
   ChatNotifier(this._chatRepository, this._ref) : super(ChatState()) {
     if (DemoDataService.isDemoMode) {
@@ -115,6 +111,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(wsConnectionState: connectionState);
     });
   }
+  final ChatRepository _chatRepository;
+  final Ref _ref;
 
   /// 手动触发重连
   Future<void> reconnect() async {
@@ -140,7 +138,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     } catch (e) {
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
-        '加载历史失败: ${e.toString()}',
+        '加载历史失败: $e',
       );
 
       state = state.copyWith(
@@ -153,9 +151,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   /// 获取最近对话列表
-  Future<List<Map<String, dynamic>>> getRecentConversations() async {
-    return _chatRepository.getRecentConversations();
-  }
+  Future<List<Map<String, dynamic>>> getRecentConversations() async => _chatRepository.getRecentConversations();
 
   /// 加载更多历史消息（分页）
   Future<void> loadMoreHistory() async {
@@ -189,7 +185,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     } catch (e) {
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
-        '加载更多消息失败: ${e.toString()}',
+        '加载更多消息失败: $e',
       );
 
       state = state.copyWith(
@@ -239,10 +235,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearError: true,
     );
 
-    String accumulatedContent = '';
+    var accumulatedContent = '';
     String? lastAiStatus;
-    final List<WidgetPayload> accumulatedWidgets = [];
-    final List<ReasoningStep> accumulatedReasoningSteps = [];
+    final accumulatedWidgets = <WidgetPayload>[];
+    final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
 
     try {
@@ -400,7 +396,5 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(apiClient.dio);
 });
 
-final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
-  return ChatNotifier(ref.watch(chatRepositoryProvider), ref);
-});
+final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) => ChatNotifier(ref.watch(chatRepositoryProvider), ref));
 

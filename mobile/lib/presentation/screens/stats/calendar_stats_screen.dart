@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/app/theme.dart';
-import 'package:sparkle/presentation/widgets/home/weather_header.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
-import 'package:sparkle/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
+import 'package:sparkle/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/presentation/screens/calendar/daily_detail_screen.dart';
+import 'package:sparkle/presentation/widgets/home/weather_header.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 
 enum CalendarViewMode { month, twoWeeks, year }
@@ -87,8 +86,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
+  Widget _buildHeader(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -113,10 +111,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildViewSwitcher() {
-    return Container(
+  Widget _buildViewSwitcher() => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       width: double.infinity,
       child: SegmentedButton<CalendarViewMode>(
@@ -145,10 +141,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildYearView() {
-    return LayoutBuilder(
+  Widget _buildYearView() => LayoutBuilder(
       builder: (context, constraints) {
         // Calculate cell size to fit 3 columns
         final monthWidth = (constraints.maxWidth - 40) / 3;
@@ -164,7 +158,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
           itemCount: 12,
           itemBuilder: (context, index) {
-            final monthDate = DateTime(_focusedDay.year, index + 1, 1);
+            final monthDate = DateTime(_focusedDay.year, index + 1);
             final isCurrentMonth = monthDate.month == DateTime.now().month && monthDate.year == DateTime.now().year;
             
             return GestureDetector(
@@ -174,7 +168,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                    _viewMode = CalendarViewMode.month;
                  });
               },
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: isCurrentMonth ? AppDesignTokens.primaryBase.withAlpha(30) : DS.brandPrimary.withAlpha(5),
                   borderRadius: BorderRadius.circular(8),
@@ -206,11 +200,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         );
       },
     );
-  }
 
   Widget _buildMiniMonthGrid(DateTime monthDate) {
     final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
-    final firstWeekday = DateTime(monthDate.year, monthDate.month, 1).weekday;
+    final firstWeekday = DateTime(monthDate.year, monthDate.month).weekday;
     final offset = firstWeekday % 7; // Sunday is 7, but in mini grid let's assume standard Sun-Sat or Mon-Sun. TableCalendar defaults to Mon start usually? Let's stick to Mon=1.
     // Actually DateTime.weekday: Mon=1, Sun=7.
     // Let's assume Mon start for consistency with TableCalendar default.
@@ -246,8 +239,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
   }
 
-  Widget _buildTableCalendar(CalendarNotifier notifier) {
-    return TableCalendar<CalendarEventModel>(
+  Widget _buildTableCalendar(CalendarNotifier notifier) => TableCalendar<CalendarEventModel>(
       firstDay: DateTime.utc(2020, 10, 16),
       lastDay: DateTime.utc(2030, 3, 14),
       focusedDay: _focusedDay,
@@ -281,9 +273,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       onPageChanged: (focusedDay) {
         _focusedDay = focusedDay;
       },
-      eventLoader: (day) {
-        return notifier.getEventsForDay(day);
-      },
+      eventLoader: (day) => notifier.getEventsForDay(day),
       calendarStyle: const CalendarStyle(
         outsideDaysVisible: false,
         defaultTextStyle: TextStyle(color: DS.brandPrimary),
@@ -311,8 +301,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             bottom: 1,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: events.take(3).map((event) {
-                return Container(
+              children: events.take(3).map((event) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 1.0),
                   width: 5.0,
                   height: 5.0,
@@ -320,23 +309,15 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     color: Color(event.colorValue),
                     shape: BoxShape.circle,
                   ),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           );
         },
-        defaultBuilder: (context, day, focusedDay) {
-           return _buildCalendarCell(day, false);
-        },
-        todayBuilder: (context, day, focusedDay) {
-           return _buildCalendarCell(day, true);
-        },
-        selectedBuilder: (context, day, focusedDay) {
-          return _buildCalendarCell(day, false, isSelected: true);
-        },
+        defaultBuilder: (context, day, focusedDay) => _buildCalendarCell(day, false),
+        todayBuilder: (context, day, focusedDay) => _buildCalendarCell(day, true),
+        selectedBuilder: (context, day, focusedDay) => _buildCalendarCell(day, false, isSelected: true),
       ),
     );
-  }
 
   Widget _buildCalendarCell(DateTime day, bool isToday, {bool isSelected = false}) {
     final lunarData = _lunarService.getLunarData(day);
@@ -365,7 +346,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               lunarData.displayString,
               style: TextStyle(
                 fontSize: 9,
-                color: isSelected ? DS.brandPrimary : Colors.orangeAccent, // Orange for festivals
+                color: isSelected ? DS.brandPrimary : AppDesignTokens.warningAccent, // Orange for festivals
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -477,9 +458,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
 }
 
 class _EventEditDialog extends ConsumerStatefulWidget {
-  final DateTime selectedDate;
 
   const _EventEditDialog({required this.selectedDate});
+  final DateTime selectedDate;
 
   @override
   ConsumerState<_EventEditDialog> createState() => _EventEditDialogState();
@@ -517,7 +498,6 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       widget.selectedDate.month,
       widget.selectedDate.day,
       now.hour + 1,
-      0,
     );
     _endTime = _startTime.add(const Duration(hours: 1));
   }
@@ -531,8 +511,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 16,
@@ -606,10 +585,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         ],
       ),
     );
-  }
 
-  Widget _buildTimeRow() {
-    return Row(
+  Widget _buildTimeRow() => Row(
       children: [
         Expanded(
           child: GestureDetector(
@@ -660,10 +637,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildOptionsRow() {
-    return Column(
+  Widget _buildOptionsRow() => Column(
       children: [
         SwitchListTile(
           title: const Text('全天', style: TextStyle(color: DS.brandPrimary)),
@@ -699,7 +674,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             style: const TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
-              DropdownMenuItem(value: null, child: Text('不重复')),
+              DropdownMenuItem(child: Text('不重复')),
               DropdownMenuItem(value: 'daily', child: Text('每天')),
               DropdownMenuItem(value: 'weekly', child: Text('每周')),
               DropdownMenuItem(value: 'monthly', child: Text('每月')),
@@ -710,10 +685,8 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildColorPicker() {
-    return Row(
+  Widget _buildColorPicker() => Row(
       children: _colorOptions.map((color) {
         final isSelected = _colorValue == color;
         return GestureDetector(
@@ -732,7 +705,6 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         );
       }).toList(),
     );
-  }
 
   Future<void> _pickDateTime(bool isStart) async {
     final initialDate = isStart ? _startTime : _endTime;

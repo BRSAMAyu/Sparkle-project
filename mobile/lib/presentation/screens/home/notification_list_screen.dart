@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
@@ -39,13 +38,12 @@ class NotificationListScreen extends ConsumerWidget {
 }
 
 class NotificationItem extends ConsumerWidget {
-  final NotificationModel notification;
 
   const NotificationItem({required this.notification, super.key});
+  final NotificationModel notification;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
+  Widget build(BuildContext context, WidgetRef ref) => ListTile(
       title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(notification.content),
       trailing: !notification.isRead ? const Icon(Icons.circle, size: 12, color: DS.brandPrimary) : null,
@@ -59,5 +57,4 @@ class NotificationItem extends ConsumerWidget {
         }
       },
     );
-  }
 }

@@ -1,18 +1,18 @@
 import 'dart:math';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 翻页时钟组件 - 星空渐变风格
 class FlipClock extends StatelessWidget {
-  final int seconds;
-  final bool showHours;
 
   const FlipClock({
     required this.seconds, super.key,
     this.showHours = false,
   });
+  final int seconds;
+  final bool showHours;
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +41,9 @@ class FlipClock extends StatelessWidget {
 
 /// 单个翻转数字
 class _FlipDigit extends StatefulWidget {
-  final int digit;
 
   const _FlipDigit({required this.digit});
+  final int digit;
 
   @override
   State<_FlipDigit> createState() => _FlipDigitState();
@@ -106,8 +106,7 @@ class _FlipDigitState extends State<_FlipDigit>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 3),
       child: Stack(
         children: [
@@ -128,8 +127,7 @@ class _FlipDigitState extends State<_FlipDigit>
           // 动画上半部分翻转（当前数字向下翻）
           AnimatedBuilder(
             animation: _topFlipAnimation,
-            builder: (context, _) {
-              return Transform(
+            builder: (context, _) => Transform(
                 alignment: Alignment.bottomCenter,
                 transform: Matrix4.identity()
                   ..setEntry(3, 2, 0.001)
@@ -139,15 +137,13 @@ class _FlipDigitState extends State<_FlipDigit>
                   isTop: true,
                   rotationX: _topFlipAnimation.value,
                 ),
-              );
-            },
+              ),
           ),
 
           // 动画下半部分翻转（下一个数字从上翻下来）
           AnimatedBuilder(
             animation: _bottomFlipAnimation,
-            builder: (context, _) {
-              return Transform(
+            builder: (context, _) => Transform(
                 alignment: Alignment.topCenter,
                 transform: Matrix4.identity()
                   ..setEntry(3, 2, 0.001)
@@ -157,20 +153,17 @@ class _FlipDigitState extends State<_FlipDigit>
                   isTop: false,
                   rotationX: _bottomFlipAnimation.value,
                 ),
-              );
-            },
+              ),
           ),
         ],
       ),
     );
-  }
 
   Widget _buildHalf({
     required int digit,
     required bool isTop,
     required double rotationX,
-  }) {
-    return ClipRect(
+  }) => ClipRect(
       child: Align(
         alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
         heightFactor: 0.5,
@@ -190,16 +183,14 @@ class _FlipDigitState extends State<_FlipDigit>
           ),
           child: Center(
             child: ShaderMask(
-              shaderCallback: (bounds) {
-                return const LinearGradient(
+              shaderCallback: (bounds) => const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
                     AppDesignTokens.primaryBase,
                     AppDesignTokens.secondaryLight,
                   ],
-                ).createShader(bounds);
-              },
+                ).createShader(bounds),
               child: Text(
                 '$digit',
                 style: const TextStyle(
@@ -215,7 +206,6 @@ class _FlipDigitState extends State<_FlipDigit>
         ),
       ),
     );
-  }
 }
 
 /// 冒号分隔符
@@ -248,11 +238,9 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _opacityAnimation,
-      builder: (context, _) {
-        return Padding(
+      builder: (context, _) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -262,13 +250,10 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
               _buildDot(_opacityAnimation.value),
             ],
           ),
-        );
-      },
+        ),
     );
-  }
 
-  Widget _buildDot(double opacity) {
-    return Container(
+  Widget _buildDot(double opacity) => Container(
       width: 8,
       height: 8,
       decoration: BoxDecoration(
@@ -288,20 +273,19 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
         ],
       ),
     );
-  }
 }
 
 /// 简化版时钟（无翻转动画）
 class SimpleFlipClock extends StatelessWidget {
-  final int seconds;
-  final bool showHours;
-  final double fontSize;
 
   const SimpleFlipClock({
     required this.seconds, super.key,
     this.showHours = false,
     this.fontSize = 64,
   });
+  final int seconds;
+  final bool showHours;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -318,16 +302,14 @@ class SimpleFlipClock extends StatelessWidget {
     }
 
     return ShaderMask(
-      shaderCallback: (bounds) {
-        return const LinearGradient(
+      shaderCallback: (bounds) => const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             AppDesignTokens.primaryBase,
             AppDesignTokens.secondaryLight,
           ],
-        ).createShader(bounds);
-      },
+        ).createShader(bounds),
       child: Text(
         timeString,
         style: TextStyle(

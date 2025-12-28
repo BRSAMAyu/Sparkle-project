@@ -11,24 +11,24 @@ import 'package:timezone/timezone.dart' as tz;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  final Logger _logger = Logger();
 
   NotificationService() {
     _initialize();
   }
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  final Logger _logger = Logger();
 
   Future<void> _initialize() async {
     tz_data.initializeTimeZones();
     // Assuming Asia/Shanghai for default, but should ideally get from device
     // tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    const initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher'); // Verify icon name
 
     // TODO: Add iOS settings
-    const InitializationSettings initializationSettings =
+    const initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
     );
@@ -40,7 +40,7 @@ class NotificationService {
     );
 
     // Create Channel
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    const channel = AndroidNotificationChannel(
       'sparkle_smart_push', // id
       'Smart Push Notifications', // title
       description: 'Notifications for Sparkle Smart Push', // description
@@ -115,7 +115,7 @@ class NotificationService {
     required String body,
     required Map<String, dynamic> payload,
   }) async {
-    const AndroidNotificationDetails androidDetails =
+    const androidDetails =
         AndroidNotificationDetails(
       'sparkle_smart_push',
       'Smart Push Notifications',
@@ -132,19 +132,15 @@ class NotificationService {
         AndroidNotificationAction(
           'SNOOZE',
           '💤 稍后',
-          showsUserInterface: false,
-          cancelNotification: true,
         ),
         AndroidNotificationAction(
           'DISMISS',
           '🔕 勿扰',
-          showsUserInterface: false,
-          cancelNotification: true,
         ),
       ],
     );
 
-    const NotificationDetails notificationDetails =
+    const notificationDetails =
         NotificationDetails(android: androidDetails);
 
     await _notificationsPlugin.show(
@@ -164,7 +160,7 @@ class NotificationService {
     required Map<String, dynamic> payload,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
-    const AndroidNotificationDetails androidDetails =
+    const androidDetails =
         AndroidNotificationDetails(
       'sparkle_calendar_reminders',
       'Calendar Reminders',
@@ -173,7 +169,7 @@ class NotificationService {
       priority: Priority.high,
     );
 
-    const NotificationDetails notificationDetails =
+    const notificationDetails =
         NotificationDetails(android: androidDetails);
 
     // Ensure we are scheduling in the future (unless it's a recurring event, logic might differ but for simple schedule, yes)
@@ -205,6 +201,4 @@ class NotificationService {
   }
 }
 
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
-});
+final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());

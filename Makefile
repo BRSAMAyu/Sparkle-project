@@ -30,9 +30,30 @@ sync-rag:
 	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
 	python backend/scripts/sync_pg_to_redis.py
 
-# 生成 Protobuf 代码
+# 生成 Protobuf 代码 (使用 Buf 工具链)
+# P1: Modernized protocol management with buf.build
 proto-gen:
-	@echo "🚀 Generating Protobuf Code..."
+	@echo "🚀 Generating Protobuf Code with Buf..."
+	@if command -v buf >/dev/null 2>&1; then \
+		buf generate; \
+		echo "✅ Protobuf code generated successfully via Buf!"; \
+	else \
+		echo "⚠️  Buf not installed, falling back to protoc..."; \
+		make proto-gen-legacy; \
+	fi
+
+# Buf linting and breaking change detection
+proto-lint:
+	@echo "🔍 Linting Protobuf files..."
+	buf lint
+
+proto-breaking:
+	@echo "🔍 Checking for breaking changes..."
+	buf breaking --against '.git#branch=main'
+
+# Legacy proto generation (fallback if buf not installed)
+proto-gen-legacy:
+	@echo "🚀 Generating Protobuf Code (Legacy)..."
 	@echo "  → Go..."
 	mkdir -p backend/gateway/gen/agent/v1
 	protoc --proto_path=proto \

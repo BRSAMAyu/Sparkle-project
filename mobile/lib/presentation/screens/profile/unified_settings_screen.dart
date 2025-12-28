@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
+import 'package:sparkle/presentation/widgets/chaos/chaos_control_dialog.dart';
 import 'package:sparkle/presentation/widgets/settings/learning_mode_control.dart';
 import 'package:sparkle/presentation/widgets/settings/weekly_agenda_grid.dart';
-import 'package:sparkle/presentation/widgets/chaos/chaos_control_dialog.dart';
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {
   const UnifiedSettingsScreen({super.key});
@@ -154,8 +153,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(IconData icon, String title) {
-    return Row(
+  Widget _buildSectionHeader(IconData icon, String title) => Row(
       children: [
         Icon(icon, color: AppDesignTokens.primaryBase),
         const SizedBox(width: DS.sm),
@@ -168,5 +166,4 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
       ],
     );
-  }
 }

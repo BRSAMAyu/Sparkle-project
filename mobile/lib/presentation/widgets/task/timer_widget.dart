@@ -6,12 +6,6 @@ import 'package:sparkle/core/design/design_tokens.dart';
 enum TimerMode { countUp, countDown }
 
 class TimerWidget extends StatefulWidget {
-  final int initialSeconds;
-  final int? maxSeconds; // For progress visualization
-  final TimerMode mode;
-  final Function(int seconds)? onTick;
-  final VoidCallback? onComplete;
-  final Function(bool isRunning)? onStateChange;
 
   const TimerWidget({
     required this.mode, 
@@ -22,6 +16,12 @@ class TimerWidget extends StatefulWidget {
     this.onComplete,
     this.onStateChange,
   });
+  final int initialSeconds;
+  final int? maxSeconds; // For progress visualization
+  final TimerMode mode;
+  final Function(int seconds)? onTick;
+  final VoidCallback? onComplete;
+  final Function(bool isRunning)? onStateChange;
 
   @override
   State<TimerWidget> createState() => _TimerWidgetState();
@@ -115,7 +115,7 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final int maxSecs = widget.maxSeconds ?? (widget.mode == TimerMode.countDown ? widget.initialSeconds : 3600); // Default 1hr base for countup
+    final maxSecs = widget.maxSeconds ?? (widget.mode == TimerMode.countDown ? widget.initialSeconds : 3600); // Default 1hr base for countup
     double progress;
     if (widget.mode == TimerMode.countDown) {
       progress = maxSecs > 0 ? _currentSeconds / maxSecs : 0.0;
@@ -128,12 +128,10 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
       children: [
         AnimatedBuilder(
           animation: _pulseAnimation,
-          builder: (context, child) {
-            return Transform.scale(
+          builder: (context, child) => Transform.scale(
               scale: _isRunning ? _pulseAnimation.value : 1.0,
               child: child,
-            );
-          },
+            ),
           child: CustomPaint(
             size: const Size(220, 220),
             painter: _CircularTimerPainter(
@@ -160,12 +158,10 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
         const SizedBox(height: AppDesignTokens.spacing32),
         AnimatedSwitcher(
           duration: AppDesignTokens.durationFast,
-          transitionBuilder: (child, animation) {
-            return ScaleTransition(
+          transitionBuilder: (child, animation) => ScaleTransition(
               scale: animation,
               child: FadeTransition(opacity: animation, child: child),
-            );
-          },
+            ),
           child: IconButton(
             key: ValueKey(_isRunning),
             icon: Icon(_isRunning ? Icons.pause_circle_filled : Icons.play_circle_filled),
@@ -181,15 +177,15 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
 }
 
 class _CircularTimerPainter extends CustomPainter {
-  final double progress;
-  final Gradient gradient;
-  final Color backgroundColor;
 
   _CircularTimerPainter({
     required this.progress,
     required this.gradient,
     required this.backgroundColor,
   });
+  final double progress;
+  final Gradient gradient;
+  final Color backgroundColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -224,9 +220,7 @@ class _CircularTimerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CircularTimerPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
+  bool shouldRepaint(covariant _CircularTimerPainter oldDelegate) => oldDelegate.progress != progress ||
            oldDelegate.gradient != gradient ||
            oldDelegate.backgroundColor != backgroundColor;
-  }
 }

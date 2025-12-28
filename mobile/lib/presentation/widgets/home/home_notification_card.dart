@@ -1,12 +1,12 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
-import 'package:go_router/go_router.dart';
 
 class HomeNotificationCard extends ConsumerWidget {
   const HomeNotificationCard({super.key});
@@ -141,7 +141,7 @@ class HomeNotificationCard extends ConsumerWidget {
   Color _getIconColor(String type) {
     switch (type) {
       case 'fragmented_time':
-        return Colors.orangeAccent;
+        return AppDesignTokens.warningAccent;
       case 'system':
         return DS.brandPrimaryAccent;
       case 'reminder':
@@ -151,8 +151,7 @@ class HomeNotificationCard extends ConsumerWidget {
     }
   }
 
-  Widget _buildCommunityNotificationCard(BuildContext context, int unreadCount) {
-    return GestureDetector(
+  Widget _buildCommunityNotificationCard(BuildContext context, int unreadCount) => GestureDetector(
       onTap: () => context.push('/community'),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -231,5 +230,4 @@ class HomeNotificationCard extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

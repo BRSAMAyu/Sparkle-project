@@ -5,14 +5,14 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
 
 class CalendarRepository {
+
+  CalendarRepository(this._notificationService);
   final NotificationService _notificationService;
   static const String _boxName = 'calendar_events_v1';
 
-  CalendarRepository(this._notificationService);
-
   Future<Box> _getBox() async {
     if (!Hive.isBoxOpen(_boxName)) {
-      return await Hive.openBox(_boxName);
+      return Hive.openBox(_boxName);
     }
     return Hive.box(_boxName);
   }
@@ -58,7 +58,7 @@ class CalendarRepository {
       matchComponents = DateTimeComponents.dayOfMonthAndTime;
     }
 
-    for (int i = 0; i < event.reminderMinutes.length; i++) {
+    for (var i = 0; i < event.reminderMinutes.length; i++) {
       final minutes = event.reminderMinutes[i];
       final reminderTime = event.startTime.subtract(Duration(minutes: minutes));
       
@@ -77,7 +77,7 @@ class CalendarRepository {
 
   void _cancelReminders(String eventId) {
     final baseId = eventId.hashCode;
-    for (int i = 0; i < 5; i++) {
+    for (var i = 0; i < 5; i++) {
       _notificationService.cancelNotification(baseId + i);
     }
   }

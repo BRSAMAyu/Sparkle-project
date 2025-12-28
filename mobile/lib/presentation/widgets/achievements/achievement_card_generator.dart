@@ -1,9 +1,9 @@
 import 'dart:typed_data';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 成就分享卡片生成器 - Week 7
@@ -26,7 +26,7 @@ class AchievementCardGenerator {
     final cardWidget = _buildAchievementCard(achievementType, data);
 
     // Convert widget to image
-    return await _widgetToImage(cardWidget);
+    return _widgetToImage(cardWidget);
   }
 
   /// 将 Widget 转换为图片
@@ -41,7 +41,6 @@ class AchievementCardGenerator {
     final renderView = RenderView(
       view: WidgetsBinding.instance.platformDispatcher.views.first,
       child: RenderPositionedBox(
-        alignment: Alignment.center,
         child: repaintBoundary,
       ),
       configuration: const ViewConfiguration(), // Use default configuration
@@ -95,9 +94,9 @@ class AchievementCardGenerator {
 
 /// 学习里程碑卡片
 class _LearningMilestoneCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const _LearningMilestoneCard({required this.data});
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +127,6 @@ class _LearningMilestoneCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(60),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Spacer(),
 
@@ -271,8 +269,7 @@ class _LearningMilestoneCard extends StatelessWidget {
 
   List<Widget> _buildStars() {
     final random = [0.1, 0.3, 0.5, 0.7, 0.9];
-    return List.generate(30, (index) {
-      return Positioned(
+    return List.generate(30, (index) => Positioned(
         left: (index * 73 % 800).toDouble(),
         top: (index * 97 % 1200).toDouble(),
         child: Container(
@@ -283,16 +280,15 @@ class _LearningMilestoneCard extends StatelessWidget {
             color: DS.brandPrimary.withValues(alpha: random[index % 5]),
           ),
         ),
-      );
-    });
+      ),);
   }
 }
 
 /// 连续学习记录卡片
 class _StreakRecordCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const _StreakRecordCard({required this.data});
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +303,7 @@ class _StreakRecordCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.orange.shade900,
+            DS.brandPrimary.shade900,
             DS.error.shade900,
           ],
         ),
@@ -323,10 +319,10 @@ class _StreakRecordCard extends StatelessWidget {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.orange.shade400,
+                color: DS.brandPrimary.shade400,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.orange.withValues(alpha: 0.6),
+                    color: DS.brandPrimary.withValues(alpha: 0.6),
                     blurRadius: 60,
                     spreadRadius: 20,
                   ),
@@ -378,9 +374,9 @@ class _StreakRecordCard extends StatelessWidget {
 
 /// 精通成就卡片
 class _MasteryAchievementCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const _MasteryAchievementCard({required this.data});
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
@@ -476,9 +472,9 @@ class _MasteryAchievementCard extends StatelessWidget {
 
 /// 任务完成卡片
 class _TaskCompletionCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const _TaskCompletionCard({required this.data});
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
@@ -546,13 +542,12 @@ class _TaskCompletionCard extends StatelessWidget {
 
 /// 通用成就卡片
 class _GenericAchievementCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const _GenericAchievementCard({required this.data});
+  final Map<String, dynamic> data;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: 800,
       height: 1200,
       color: DS.brandPrimary.shade900,
@@ -563,5 +558,4 @@ class _GenericAchievementCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }

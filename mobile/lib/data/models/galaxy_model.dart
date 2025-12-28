@@ -42,6 +42,18 @@ enum EdgeRelationType {
 /// 节点边/连接模型
 @JsonSerializable()
 class GalaxyEdgeModel {
+
+  const GalaxyEdgeModel({
+    required this.id,
+    required this.sourceId,
+    required this.targetId,
+    this.relationType = EdgeRelationType.related,
+    this.strength = 0.5,
+    this.bidirectional = false,
+  });
+
+  factory GalaxyEdgeModel.fromJson(Map<String, dynamic> json) =>
+      _$GalaxyEdgeModelFromJson(json);
   final String id;
 
   @JsonKey(name: 'source_id')
@@ -58,24 +70,22 @@ class GalaxyEdgeModel {
 
   /// 是否双向
   final bool bidirectional;
-
-  const GalaxyEdgeModel({
-    required this.id,
-    required this.sourceId,
-    required this.targetId,
-    this.relationType = EdgeRelationType.related,
-    this.strength = 0.5,
-    this.bidirectional = false,
-  });
-
-  factory GalaxyEdgeModel.fromJson(Map<String, dynamic> json) =>
-      _$GalaxyEdgeModelFromJson(json);
   Map<String, dynamic> toJson() => _$GalaxyEdgeModelToJson(this);
 }
 
 /// LLM 提供的位置提示
 @JsonSerializable()
 class NodePositionHint {
+
+  const NodePositionHint({
+    this.angleOffset,
+    this.radiusRatio,
+    this.nearNodeId,
+    this.distanceFromReference,
+  });
+
+  factory NodePositionHint.fromJson(Map<String, dynamic> json) =>
+      _$NodePositionHintFromJson(json);
   /// 在星域内的角度偏移 (0.0-1.0)
   @JsonKey(name: 'angle_offset')
   final double? angleOffset;
@@ -91,16 +101,6 @@ class NodePositionHint {
   /// 与参考节点的距离 (像素)
   @JsonKey(name: 'distance_from_reference')
   final double? distanceFromReference;
-
-  const NodePositionHint({
-    this.angleOffset,
-    this.radiusRatio,
-    this.nearNodeId,
-    this.distanceFromReference,
-  });
-
-  factory NodePositionHint.fromJson(Map<String, dynamic> json) =>
-      _$NodePositionHintFromJson(json);
   Map<String, dynamic> toJson() => _$NodePositionHintToJson(this);
 
   bool get hasValidHint =>
@@ -111,6 +111,26 @@ class NodePositionHint {
 
 @JsonSerializable()
 class GalaxyNodeModel {
+
+  GalaxyNodeModel({
+    required this.id,
+    required this.name,
+    required this.importance,
+    required this.sector,
+    required this.isUnlocked,
+    required this.masteryScore,
+    this.studyCount = 0,
+    this.parentId,
+    this.baseColor,
+    this.tags,
+    this.description,
+    this.positionHint,
+    this.outgoingEdgeIds,
+    this.incomingEdgeIds,
+  });
+
+  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) =>
+      _$GalaxyNodeModelFromJson(json);
   final String id;
 
   @JsonKey(name: 'parent_id')
@@ -153,26 +173,6 @@ class GalaxyNodeModel {
   /// 入边 ID 列表（该节点作为 target）
   @JsonKey(name: 'incoming_edge_ids')
   final List<String>? incomingEdgeIds;
-
-  GalaxyNodeModel({
-    required this.id,
-    required this.name,
-    required this.importance,
-    required this.sector,
-    required this.isUnlocked,
-    required this.masteryScore,
-    this.studyCount = 0,
-    this.parentId,
-    this.baseColor,
-    this.tags,
-    this.description,
-    this.positionHint,
-    this.outgoingEdgeIds,
-    this.incomingEdgeIds,
-  });
-
-  factory GalaxyNodeModel.fromJson(Map<String, dynamic> json) =>
-      _$GalaxyNodeModelFromJson(json);
   Map<String, dynamic> toJson() => _$GalaxyNodeModelToJson(this);
 
   /// Helper to read study_count from nested user_status if present
@@ -203,8 +203,7 @@ class GalaxyNodeModel {
     NodePositionHint? positionHint,
     List<String>? outgoingEdgeIds,
     List<String>? incomingEdgeIds,
-  }) {
-    return GalaxyNodeModel(
+  }) => GalaxyNodeModel(
       id: id ?? this.id,
       parentId: parentId ?? this.parentId,
       name: name ?? this.name,
@@ -220,18 +219,10 @@ class GalaxyNodeModel {
       outgoingEdgeIds: outgoingEdgeIds ?? this.outgoingEdgeIds,
       incomingEdgeIds: incomingEdgeIds ?? this.incomingEdgeIds,
     );
-  }
 }
 
 @JsonSerializable()
 class GalaxyGraphResponse {
-  final List<GalaxyNodeModel> nodes;
-
-  /// 节点间的连接关系
-  final List<GalaxyEdgeModel> edges;
-
-  @JsonKey(name: 'user_flame_intensity')
-  final double userFlameIntensity;
 
   GalaxyGraphResponse({
     required this.nodes,
@@ -240,32 +231,31 @@ class GalaxyGraphResponse {
 
   factory GalaxyGraphResponse.fromJson(Map<String, dynamic> json) =>
       _$GalaxyGraphResponseFromJson(json);
+  final List<GalaxyNodeModel> nodes;
+
+  /// 节点间的连接关系
+  final List<GalaxyEdgeModel> edges;
+
+  @JsonKey(name: 'user_flame_intensity')
+  final double userFlameIntensity;
   Map<String, dynamic> toJson() => _$GalaxyGraphResponseToJson(this);
 
   /// 获取特定节点的所有出边
-  List<GalaxyEdgeModel> getOutgoingEdges(String nodeId) {
-    return edges.where((e) => e.sourceId == nodeId).toList();
-  }
+  List<GalaxyEdgeModel> getOutgoingEdges(String nodeId) => edges.where((e) => e.sourceId == nodeId).toList();
 
   /// 获取特定节点的所有入边
-  List<GalaxyEdgeModel> getIncomingEdges(String nodeId) {
-    return edges.where((e) => e.targetId == nodeId).toList();
-  }
+  List<GalaxyEdgeModel> getIncomingEdges(String nodeId) => edges.where((e) => e.targetId == nodeId).toList();
 
   /// 获取特定节点的所有相连边
-  List<GalaxyEdgeModel> getAllEdgesFor(String nodeId) {
-    return edges.where((e) =>
+  List<GalaxyEdgeModel> getAllEdgesFor(String nodeId) => edges.where((e) =>
       e.sourceId == nodeId ||
       e.targetId == nodeId ||
       (e.bidirectional && e.targetId == nodeId),
     ).toList();
-  }
 }
 
 @JsonSerializable(createFactory: false)
 class GalaxySearchResult {
-  final GalaxyNodeModel node;
-  final double similarity;
 
   GalaxySearchResult({required this.node, required this.similarity});
 
@@ -292,14 +282,12 @@ class GalaxySearchResult {
       similarity: (json['similarity'] as num).toDouble(),
     );
   }
+  final GalaxyNodeModel node;
+  final double similarity;
 }
 
 @JsonSerializable()
 class GalaxySearchResponse {
-  final String query;
-  final List<GalaxySearchResult> results;
-  @JsonKey(name: 'total_count')
-  final int totalCount;
 
   GalaxySearchResponse({
     required this.query,
@@ -309,5 +297,9 @@ class GalaxySearchResponse {
 
   factory GalaxySearchResponse.fromJson(Map<String, dynamic> json) =>
       _$GalaxySearchResponseFromJson(json);
+  final String query;
+  final List<GalaxySearchResult> results;
+  @JsonKey(name: 'total_count')
+  final int totalCount;
   Map<String, dynamic> toJson() => _$GalaxySearchResponseToJson(this);
 }

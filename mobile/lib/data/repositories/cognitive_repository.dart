@@ -2,12 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
+import 'package:sparkle/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/data/repositories/mock_cognitive_repository.dart';
 
 class CognitiveRepository {
-  final ApiClient? _apiClient;
 
   // Modified constructor to allow null ApiClient for mock subclasses if needed,
   // though MockCognitiveRepository doesn't call super with arguments if it implements the interface.
@@ -17,6 +16,7 @@ class CognitiveRepository {
   // (implicit interface of this class) is to just change the provider.
   
   CognitiveRepository(this._apiClient);
+  final ApiClient? _apiClient;
 
   Future<CognitiveFragmentModel> createFragment(CognitiveFragmentCreate data) async {
     try {

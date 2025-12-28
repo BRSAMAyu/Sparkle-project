@@ -109,10 +109,10 @@ class SpacingSystem {
 /// 间距令牌 - 语义化命名
 @immutable
 class SpacingToken {
-  final String name;
-  final double value;
 
   const SpacingToken(this.name, this.value);
+  final String name;
+  final double value;
 
   /// 转换为EdgeInsets
   EdgeInsets get edge => EdgeInsets.all(value);
@@ -123,13 +123,11 @@ class SpacingToken {
   SpacingTokenVariant variant({
     required double tablet,
     required double desktop,
-  }) {
-    return SpacingTokenVariant(
+  }) => SpacingTokenVariant(
       mobile: value,
       tablet: tablet,
       desktop: desktop,
     );
-  }
 
   @override
   bool operator ==(Object other) =>
@@ -143,15 +141,15 @@ class SpacingToken {
 /// 响应式间距变体
 @immutable
 class SpacingTokenVariant {
-  final double mobile;
-  final double tablet;
-  final double desktop;
 
   const SpacingTokenVariant({
     required this.mobile,
     required this.tablet,
     required this.desktop,
   });
+  final double mobile;
+  final double tablet;
+  final double desktop;
 
   double resolve(BuildContext context) {
     final width = MediaQuery.of(context).size.width;

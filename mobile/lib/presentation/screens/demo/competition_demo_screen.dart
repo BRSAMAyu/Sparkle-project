@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 竞赛演示模式 - Week 8
@@ -54,7 +54,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       subtitle: '交互式时间机器',
       duration: const Duration(seconds: 90),
       icon: Icons.access_time,
-      gradient: [Colors.orange.shade600, DS.error.shade600],
+      gradient: [DS.brandPrimary.shade600, DS.error.shade600],
     ),
     _DemoStep(
       title: '必杀技 C',
@@ -82,7 +82,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
       subtitle: '未来发展方向',
       duration: const Duration(seconds: 30),
       icon: Icons.rocket_launch,
-      gradient: [Colors.amber.shade600, Colors.orange.shade600],
+      gradient: [Colors.amber.shade600, DS.brandPrimary.shade600],
     ),
   ];
 
@@ -194,8 +194,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
+  Widget _buildHeader() => Padding(
       padding: const EdgeInsets.all(DS.lg),
       child: Row(
         children: [
@@ -205,7 +204,6 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
           ),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
                   'Sparkle 竞赛演示',
@@ -235,10 +233,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildStepContent(_DemoStep step) {
-    return SingleChildScrollView(
+  Widget _buildStepContent(_DemoStep step) => SingleChildScrollView(
       key: ValueKey(_currentStep),
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
@@ -296,7 +292,6 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ],
       ),
     );
-  }
 
   Widget _buildStepDetails(int index) {
     switch (index) {
@@ -319,8 +314,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     }
   }
 
-  Widget _buildIntroContent() {
-    return Column(
+  Widget _buildIntroContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('AI 时间导师，帮助大学生高效学习'),
@@ -329,10 +323,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('三大必杀技 + 性能优化 + 预测分析'),
       ],
     );
-  }
 
-  Widget _buildGraphRAGContent() {
-    return Column(
+  Widget _buildGraphRAGContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('混合检索：向量搜索 + 图谱遍历 + 用户兴趣'),
@@ -351,10 +343,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ),
       ],
     );
-  }
 
-  Widget _buildTimeMachineContent() {
-    return Column(
+  Widget _buildTimeMachineContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('基于 Ebbinghaus 遗忘曲线的知识衰减预测'),
@@ -374,10 +364,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ),
       ],
     );
-  }
 
-  Widget _buildMultiAgentContent() {
-    return Column(
+  Widget _buildMultiAgentContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('4 个专家智能体：数学、代码、写作、科学'),
@@ -396,10 +384,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ),
       ],
     );
-  }
 
-  Widget _buildPerformanceContent() {
-    return Column(
+  Widget _buildPerformanceContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('Redis 语义缓存：SHA256 哈希，TTL 管理'),
@@ -414,10 +400,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ]),
       ],
     );
-  }
 
-  Widget _buildPredictiveContent() {
-    return Column(
+  Widget _buildPredictiveContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBulletPoint('活跃度预测：基于学习模式预测下次活跃时间'),
@@ -436,10 +420,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ),
       ],
     );
-  }
 
-  Widget _buildConclusionContent() {
-    return Column(
+  Widget _buildConclusionContent() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
@@ -471,10 +453,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         _buildBulletPoint('移动端性能优化（离线模式、增量同步）'),
       ],
     );
-  }
 
-  Widget _buildBulletPoint(String text) {
-    return Padding(
+  Widget _buildBulletPoint(String text) => Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -502,10 +482,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildDemoBox(String title, List<String> points) {
-    return Container(
+  Widget _buildDemoBox(String title, List<String> points) => Container(
       padding: const EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -542,10 +520,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildMetricsBox(List<_Metric> metrics) {
-    return Container(
+  Widget _buildMetricsBox(List<_Metric> metrics) => Container(
       padding: const EdgeInsets.all(DS.xl),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -578,10 +554,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
             ),).toList(),
       ),
     );
-  }
 
-  Widget _buildNavigationControls() {
-    return Padding(
+  Widget _buildNavigationControls() => Padding(
       padding: const EdgeInsets.all(DS.xl),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -600,8 +574,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
 
           // Progress indicator
           Row(
-            children: List.generate(_totalSteps, (index) {
-              return Container(
+            children: List.generate(_totalSteps, (index) => Container(
                 width: index == _currentStep ? 32 : 10,
                 height: 10,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -611,8 +584,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
                       : DS.brandPrimary.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(5),
                 ),
-              );
-            }),
+              ),),
           ),
 
           // Next button
@@ -629,10 +601,8 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildTimerOverlay(_DemoStep step) {
-    return Positioned(
+  Widget _buildTimerOverlay(_DemoStep step) => Positioned(
       top: 80,
       right: 20,
       child: Container(
@@ -654,15 +624,9 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
         ),
       ),
     );
-  }
 }
 
 class _DemoStep {
-  final String title;
-  final String subtitle;
-  final Duration duration;
-  final IconData icon;
-  final List<Color> gradient;
 
   _DemoStep({
     required this.title,
@@ -671,12 +635,17 @@ class _DemoStep {
     required this.icon,
     required this.gradient,
   });
+  final String title;
+  final String subtitle;
+  final Duration duration;
+  final IconData icon;
+  final List<Color> gradient;
 }
 
 class _Metric {
+
+  _Metric(this.label, this.value, this.icon);
   final String label;
   final String value;
   final IconData icon;
-
-  _Metric(this.label, this.value, this.icon);
 }

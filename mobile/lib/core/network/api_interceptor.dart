@@ -4,23 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
 
-final authInterceptorProvider = Provider((ref) => AuthInterceptor(ref));
+final authInterceptorProvider = Provider(AuthInterceptor.new);
 final loggingInterceptorProvider = Provider((ref) => LoggingInterceptor());
 final retryInterceptorProvider = Provider.family<RetryInterceptor, Dio>((ref, dio) => RetryInterceptor(dio: dio));
 
 class RetryInterceptor extends Interceptor {
-  final Dio dio;
-  final int maxRetries;
-  final List<int> retryableStatuses;
 
   RetryInterceptor({
     required this.dio,
     this.maxRetries = 3,
     this.retryableStatuses = const [502, 503, 504],
   });
+  final Dio dio;
+  final int maxRetries;
+  final List<int> retryableStatuses;
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (retryableStatuses.contains(err.response?.statusCode) && 
         _shouldRetry(err)) {
       
@@ -43,18 +43,16 @@ class RetryInterceptor extends Interceptor {
     super.onError(err, handler);
   }
 
-  bool _shouldRetry(DioException err) {
-    return err.type != DioExceptionType.cancel;
-  }
+  bool _shouldRetry(DioException err) => err.type != DioExceptionType.cancel;
 }
 
 class AuthInterceptor extends Interceptor {
-  final Ref _ref;
 
   AuthInterceptor(this._ref);
+  final Ref _ref;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final token = await _ref.read(authRepositoryProvider).getToken();
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -63,7 +61,7 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
       try {
         final authRepo = _ref.read(authRepositoryProvider);
@@ -89,9 +87,6 @@ class LoggingInterceptor extends Interceptor {
       methodCount: 0,
       errorMethodCount: 5,
       lineLength: 80,
-      colors: true,
-      printEmojis: true,
-      dateTimeFormat: DateTimeFormat.none,
     ),
   );
 

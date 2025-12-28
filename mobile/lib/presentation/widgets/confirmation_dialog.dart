@@ -3,20 +3,19 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// 确认操作对话框 (用于高风险操作)
 class ConfirmationDialog extends StatelessWidget {
+
+  const ConfirmationDialog({
+    required this.title, required this.content, required this.onConfirm, required this.onCancel, super.key,
+    this.previewData,
+  });
   final String title;
   final String content;
   final Map<String, dynamic>? previewData; // 数据预览
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
-  const ConfirmationDialog({
-    required this.title, required this.content, required this.onConfirm, required this.onCancel, super.key,
-    this.previewData,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: Text(title),
       content: SingleChildScrollView(
         child: ListBody(
@@ -47,20 +46,13 @@ class ConfirmationDialog extends StatelessWidget {
         ),
       ),
       actions: <Widget>[
-        TextButton(
-          onPressed: onCancel,
-          child: const Text('取消'),
-        ),
-        ElevatedButton(
-          onPressed: onConfirm,
-          child: const Text('确认'),
-        ),
+        SparkleButton.ghost(label: '取消', onPressed: onCancel),
+        SparkleButton.primary(label: '确认', onPressed: onConfirm),
       ],
     );
-  }
 
   String _formatPreview(Map<String, dynamic> data, [int indent = 0]) {
-    String buffer = '';
+    var buffer = '';
     final indentStr = '  ' * indent;
     data.forEach((key, value) {
       if (value is Map) {
@@ -68,7 +60,7 @@ class ConfirmationDialog extends StatelessWidget {
         buffer += _formatPreview(value.cast<String, dynamic>(), indent + 1);
       } else if (value is List) {
         buffer += '$indentStr$key: [\n';
-        for (var item in value) {
+        for (final item in value) {
           if (item is Map) {
             buffer += '${'  ' * (indent + 1)}{\n';
             buffer += _formatPreview(item.cast<String, dynamic>(), indent + 2);

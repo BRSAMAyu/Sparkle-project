@@ -1,8 +1,8 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
@@ -33,7 +33,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
     final cognitiveState = ref.watch(cognitiveProvider);
 
     return Scaffold(
-      body: Container(
+      body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: AppDesignTokens.deepSpaceGradient,
         ),
@@ -65,8 +65,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
-    return Padding(
+  Widget _buildAppBar(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
       child: Row(
         children: [
@@ -99,10 +98,8 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildEmptyState() {
-    return SingleChildScrollView(
+  Widget _buildEmptyState() => SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(DS.xxl),
       child: Column(
@@ -143,31 +140,25 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildPatternList(List<BehaviorPatternModel> patterns) {
-    return ListView.builder(
+  Widget _buildPatternList(List<BehaviorPatternModel> patterns) => ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: patterns.length,
-      itemBuilder: (context, index) {
-        return Padding(
+      itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: _PatternCard(pattern: patterns[index]),
-        );
-      },
+        ),
     );
-  }
 }
 
 /// Pattern Card with glassmorphism style
 class _PatternCard extends StatelessWidget {
-  final BehaviorPatternModel pattern;
 
   const _PatternCard({required this.pattern});
+  final BehaviorPatternModel pattern;
 
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
+  Widget build(BuildContext context) => ClipRRect(
       borderRadius: AppDesignTokens.borderRadius20,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -305,7 +296,6 @@ class _PatternCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Color _getTypeColor(String type) {
     switch (type) {
@@ -346,7 +336,5 @@ class _PatternCard extends StatelessWidget {
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.month}月${date.day}日';
-  }
+  String _formatDate(DateTime date) => '${date.month}月${date.day}日';
 }

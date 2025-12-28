@@ -2,15 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/data/models/api_response_model.dart';
-import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/data/models/task_completion_result.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/data/models/api_response_model.dart';
+import 'package:sparkle/data/models/task_completion_result.dart';
+import 'package:sparkle/data/models/task_model.dart';
 
 class TaskRepository {
-  final ApiClient _apiClient;
 
   TaskRepository(this._apiClient);
+  final ApiClient _apiClient;
 
   // A generic error handler for Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
@@ -34,7 +34,7 @@ class TaskRepository {
       );
     }
     try {
-      final Map<String, dynamic> queryParams = {'page': page, 'page_size': pageSize};
+      final queryParams = <String, dynamic>{'page': page, 'page_size': pageSize};
       if (filters != null) {
         queryParams.addAll(filters.map((key, value) => MapEntry(key, value.toString())));
       }

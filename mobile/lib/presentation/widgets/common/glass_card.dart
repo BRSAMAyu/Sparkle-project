@@ -1,11 +1,27 @@
 import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 class GlassCard extends StatefulWidget {
+
+  const GlassCard({
+    required this.child,
+    super.key,
+    this.width,
+    this.height,
+    this.margin,
+    this.padding = const EdgeInsets.all(DS.lg),
+    this.borderRadius,
+    this.color,
+    this.blurSigma = 10.0,
+    this.opacity = 0.1,
+    this.shadows,
+    this.onTap,
+    this.enableTapEffect = false,
+  });
   final Widget child;
   final double? width;
   final double? height;
@@ -18,22 +34,6 @@ class GlassCard extends StatefulWidget {
   final List<BoxShadow>? shadows;
   final VoidCallback? onTap;
   final bool enableTapEffect;
-
-  const GlassCard({
-    required this.child,
-    super.key,
-    this.width,
-    this.height,
-    this.margin,
-    this.padding = const EdgeInsets.all(16.0),
-    this.borderRadius,
-    this.color,
-    this.blurSigma = 10.0,
-    this.opacity = 0.1,
-    this.shadows,
-    this.onTap,
-    this.enableTapEffect = false,
-  });
 
   @override
   State<GlassCard> createState() => _GlassCardState();
@@ -94,7 +94,7 @@ class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMix
       decoration: BoxDecoration(
         color: defaultColor,
         borderRadius: defaultBorderRadius,
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor),
         boxShadow: defaultShadows,
       ),
       child: ClipRRect(

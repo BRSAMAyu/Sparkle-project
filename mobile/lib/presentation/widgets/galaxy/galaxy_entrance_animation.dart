@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class GalaxyEntranceAnimation extends StatefulWidget {
-  final VoidCallback onComplete;
 
   const GalaxyEntranceAnimation({
     required this.onComplete, super.key,
   });
+  final VoidCallback onComplete;
 
   @override
   State<GalaxyEntranceAnimation> createState() => _GalaxyEntranceAnimationState();
@@ -50,11 +49,9 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _mainController,
-      builder: (context, child) {
-        return Stack(
+      builder: (context, child) => Stack(
           alignment: Alignment.center,
           children: [
             // The expanding spark
@@ -105,8 +102,6 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation> with 
                  ),
               ),
           ],
-        );
-      },
+        ),
     );
-  }
 }

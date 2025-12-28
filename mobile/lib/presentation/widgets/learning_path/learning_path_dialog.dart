@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/domain/models/learning_path_node.dart';
 import 'package:sparkle/presentation/providers/learning_path_provider.dart';
 
 class LearningPathDialog extends ConsumerWidget {
-  final String targetNodeId;
-  final String targetNodeName;
 
   const LearningPathDialog({
     required this.targetNodeId, required this.targetNodeName, super.key,
   });
+  final String targetNodeId;
+  final String targetNodeName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pathAsync = ref.watch(learningPathProvider(targetNodeId));
 
     return Container(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(DS.xl),
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -75,16 +74,13 @@ class LearningPathDialog extends ConsumerWidget {
       case 'mastered':
         statusColor = DS.success;
         statusIcon = Icons.check_circle;
-        break;
       case 'unlocked':
-        statusColor = Colors.orange;
+        statusColor = DS.brandPrimary;
         statusIcon = Icons.lock_open;
-        break;
       case 'locked':
       default:
         statusColor = DS.brandPrimary;
         statusIcon = Icons.lock;
-        break;
     }
 
     return IntrinsicHeight(

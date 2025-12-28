@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 查词工具 - 快速词典查询
-class VocabularyLookupTool extends ConsumerStatefulWidget {
-  final String? taskId; // 当前任务ID，用于关联生词
+class VocabularyLookupTool extends ConsumerStatefulWidget { // 当前任务ID，用于关联生词
 
   const VocabularyLookupTool({super.key, this.taskId});
+  final String? taskId;
 
   @override
   ConsumerState<VocabularyLookupTool> createState() => _VocabularyLookupToolState();
@@ -53,7 +52,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     final word = result['word'] as String? ?? _controller.text;
     final definitions = result['definitions'];
-    String definition = '';
+    var definition = '';
 
     if (definitions is List && definitions.isNotEmpty) {
       definition = definitions.join('; ');
@@ -385,8 +384,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
   List<Widget> _buildDefinitions(dynamic definitions) {
     if (definitions is List) {
-      return definitions.asMap().entries.map((entry) {
-        return Padding(
+      return definitions.asMap().entries.map((entry) => Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,8 +407,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ],
           ),
-        );
-      }).toList();
+        ),).toList();
     } else {
       return [
         Text(
@@ -426,8 +423,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
   List<Widget> _buildExamples(dynamic examples) {
     if (examples is List) {
-      return examples.take(3).map((example) {
-        return Padding(
+      return examples.take(3).map((example) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,8 +446,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               ),
             ],
           ),
-        );
-      }).toList();
+        ),).toList();
     }
     return [];
   }

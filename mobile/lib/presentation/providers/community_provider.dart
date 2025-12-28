@@ -1,20 +1,19 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/services/chat_cache_service.dart';
 import 'package:sparkle/core/services/message_notification_service.dart';
+import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/data/repositories/mock_community_repository.dart';
-import 'package:sparkle/data/repositories/auth_repository.dart';
+import 'package:uuid/uuid.dart';
 
 // Mock Community Repository Provider
-final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
-  return MockCommunityRepository.instance();
-});
+final communityRepositoryProvider = Provider<CommunityRepository>((ref) => MockCommunityRepository.instance());
 
 // Token provider for WebSocket connections
 final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
@@ -32,7 +31,7 @@ final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref
     return const Stream.empty();
   }
 
-  final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
+  final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
   final wsUrl = '$baseUrl/community/ws/connect?token=$token';
 
   try {
@@ -42,9 +41,7 @@ final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref
     return const Stream.empty();
   }
 
-  ref.onDispose(() {
-    wsService.disconnect();
-  });
+  ref.onDispose(wsService.disconnect);
 
   return wsService.stream;
 });
@@ -56,12 +53,12 @@ final friendsProvider = StateNotifierProvider<FriendsNotifier, AsyncValue<List<F
 });
 
 class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
-  final CommunityRepository _repository;
 
   FriendsNotifier(this._repository, Stream<dynamic> events) : super(const AsyncValue.loading()) {
     loadFriends();
     events.listen(_handleEvent);
   }
+  final CommunityRepository _repository;
 
   void _handleEvent(dynamic data) {
     if (data is String) {
@@ -122,16 +119,14 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   Future<void> refresh() => loadFriends();
 }
 
-final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) {
-  return PendingRequestsNotifier(ref.watch(communityRepositoryProvider));
-});
+final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) => PendingRequestsNotifier(ref.watch(communityRepositoryProvider)));
 
 class PendingRequestsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
-  final CommunityRepository _repository;
 
   PendingRequestsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadPendingRequests();
   }
+  final CommunityRepository _repository;
 
   Future<void> loadPendingRequests() async {
     state = const AsyncValue.loading();
@@ -156,16 +151,14 @@ class PendingRequestsNotifier extends StateNotifier<AsyncValue<List<FriendshipIn
 }
 
 // 2. Recommendations Provider
-final friendRecommendationsProvider = StateNotifierProvider<FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>((ref) {
-  return FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider));
-});
+final friendRecommendationsProvider = StateNotifierProvider<FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>((ref) => FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider)));
 
 class FriendRecommendationsNotifier extends StateNotifier<AsyncValue<List<FriendRecommendation>>> {
-  final CommunityRepository _repository;
 
   FriendRecommendationsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadRecommendations();
   }
+  final CommunityRepository _repository;
 
   Future<void> loadRecommendations() async {
     state = const AsyncValue.loading();
@@ -189,14 +182,12 @@ class FriendRecommendationsNotifier extends StateNotifier<AsyncValue<List<Friend
 }
 
 // 3. User Search Provider
-final userSearchProvider = StateNotifierProvider<UserSearchNotifier, AsyncValue<List<UserBrief>>>((ref) {
-  return UserSearchNotifier(ref.watch(communityRepositoryProvider));
-});
+final userSearchProvider = StateNotifierProvider<UserSearchNotifier, AsyncValue<List<UserBrief>>>((ref) => UserSearchNotifier(ref.watch(communityRepositoryProvider)));
 
 class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
-  final CommunityRepository _repository;
 
   UserSearchNotifier(this._repository) : super(const AsyncValue.data([]));
+  final CommunityRepository _repository;
 
   Future<void> search(String keyword) async {
     if (keyword.isEmpty) {
@@ -214,21 +205,17 @@ class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
 }
 
 // 4. My Groups Provider
-final myGroupsProvider = StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>((ref) {
-  return MyGroupsNotifier(ref.watch(communityRepositoryProvider));
-});
+final myGroupsProvider = StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>((ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)));
 
-final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier, AsyncValue<GroupInfo>, String>((ref, groupId) {
-  return GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId);
-});
+final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier, AsyncValue<GroupInfo>, String>((ref, groupId) => GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId));
 
 class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
-  final CommunityRepository _repository;
-  final String _groupId;
 
   GroupDetailNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
     loadDetail();
   }
+  final CommunityRepository _repository;
+  final String _groupId;
 
   Future<void> loadDetail() async {
     state = const AsyncValue.loading();
@@ -272,11 +259,11 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 }
 
 class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
-  final CommunityRepository _repository;
 
   MyGroupsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadGroups();
   }
+  final CommunityRepository _repository;
 
   Future<void> loadGroups() async {
     state = const AsyncValue.loading();
@@ -302,16 +289,18 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
 }
 
 // 5. Group Chat Provider (Family)
-final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier, AsyncValue<List<MessageInfo>>, String>((ref, groupId) {
-  return GroupChatNotifier(
+final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier, AsyncValue<List<MessageInfo>>, String>((ref, groupId) => GroupChatNotifier(
     ref.watch(communityRepositoryProvider),
     ref.watch(authRepositoryProvider),
     groupId,
     ref,
-  );
-});
+  ),);
 
 class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
+
+  GroupChatNotifier(this._repository, this._authRepository, this._groupId, this._ref) : super(const AsyncValue.loading()) {
+    _initialize();
+  }
   final CommunityRepository _repository;
   final AuthRepository _authRepository;
   final String _groupId;
@@ -326,10 +315,6 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   MessageInfo? get quotedMessage => _quotedMessage;
 
   String? _currentUserId;
-
-  GroupChatNotifier(this._repository, this._authRepository, this._groupId, this._ref) : super(const AsyncValue.loading()) {
-    _initialize();
-  }
 
   Future<void> _initialize() async {
     // Get current user ID for filtering notifications
@@ -349,7 +334,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     final token = await _authRepository.getAccessToken();
     if (token == null) return;
 
-    final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp(r'^http'), 'ws');
+    final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
     final wsUrl = '$baseUrl/community/groups/$_groupId/ws?token=$token';
 
     try {
@@ -454,7 +439,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> revokeMessage(String messageId) async {
     try {
-      // TODO: Implement revokeGroupMessage in repository
+      // API: Implement revokeGroupMessage in CommunityRepository
       // await _repository.revokeGroupMessage(messageId);
       _handleRevokedEvent(messageId);
     } catch (e) {
@@ -488,14 +473,12 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 }
 
 // 6. Group Search Provider
-final groupSearchProvider = StateNotifierProvider<GroupSearchNotifier, AsyncValue<List<GroupListItem>>>((ref) {
-  return GroupSearchNotifier(ref.watch(communityRepositoryProvider));
-});
+final groupSearchProvider = StateNotifierProvider<GroupSearchNotifier, AsyncValue<List<GroupListItem>>>((ref) => GroupSearchNotifier(ref.watch(communityRepositoryProvider)));
 
 class GroupSearchNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
-  final CommunityRepository _repository;
 
   GroupSearchNotifier(this._repository) : super(const AsyncValue.data([]));
+  final CommunityRepository _repository;
 
   Future<void> search(String keyword) async {
     state = const AsyncValue.loading();
@@ -509,17 +492,15 @@ class GroupSearchNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>>
 }
 
 // 7. Group Tasks Provider (Family)
-final groupTasksProvider = StateNotifierProvider.family<GroupTasksNotifier, AsyncValue<List<GroupTaskInfo>>, String>((ref, groupId) {
-  return GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId);
-});
+final groupTasksProvider = StateNotifierProvider.family<GroupTasksNotifier, AsyncValue<List<GroupTaskInfo>>, String>((ref, groupId) => GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId));
 
 class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> {
-  final CommunityRepository _repository;
-  final String _groupId;
 
   GroupTasksNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
     loadTasks();
   }
+  final CommunityRepository _repository;
+  final String _groupId;
 
   Future<void> loadTasks() async {
     state = const AsyncValue.loading();
@@ -555,6 +536,10 @@ final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChat
 });
 
 class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
+
+  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events, this._ref) : super(const AsyncValue.loading()) {
+    _initialize(events);
+  }
   final CommunityRepository _repository;
   final String _friendId;
   final ChatCacheService _cacheService = ChatCacheService();
@@ -565,10 +550,6 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
 
   PrivateMessageInfo? _quotedMessage;
   PrivateMessageInfo? get quotedMessage => _quotedMessage;
-
-  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events, this._ref) : super(const AsyncValue.loading()) {
-    _initialize(events);
-  }
 
   Future<void> _initialize(Stream<dynamic> events) async {
     final cached = await _cacheService.getCachedPrivateMessages(_friendId);
@@ -705,13 +686,11 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
 }
 
 // 9. Current User Status Provider
-final currentUserStatusProvider = StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) {
-  return CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider));
-});
+final currentUserStatusProvider = StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) => CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider)));
 
 class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
-  final CommunityRepository _repository;
   CurrentUserStatusNotifier(this._repository) : super(UserStatus.online);
+  final CommunityRepository _repository;
 
   Future<void> updateStatus(UserStatus newStatus) async {
     try {

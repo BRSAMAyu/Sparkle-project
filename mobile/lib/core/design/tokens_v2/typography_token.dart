@@ -97,46 +97,38 @@ class TypographySystem {
 /// 排版令牌 - 语义化样式
 @immutable
 class TypographyToken {
+
+  const TypographyToken(this.name, this.style);
   final String name;
   final TextStyle style;
 
-  const TypographyToken(this.name, this.style);
-
   /// 应用颜色
-  TypographyToken withColor(Color color) {
-    return TypographyToken(
+  TypographyToken withColor(Color color) => TypographyToken(
       name,
       style.copyWith(color: color),
     );
-  }
 
   /// 应用字重
-  TypographyToken withWeight(FontWeight weight) {
-    return TypographyToken(
+  TypographyToken withWeight(FontWeight weight) => TypographyToken(
       name,
       style.copyWith(fontWeight: weight),
     );
-  }
 
   /// 应用字号
-  TypographyToken withSize(double size) {
-    return TypographyToken(
+  TypographyToken withSize(double size) => TypographyToken(
       name,
       style.copyWith(fontSize: size),
     );
-  }
 
   /// 响应式变体
   TypographyTokenVariant variant({
     required TextStyle tablet,
     required TextStyle desktop,
-  }) {
-    return TypographyTokenVariant(
+  }) => TypographyTokenVariant(
       mobile: style,
       tablet: tablet,
       desktop: desktop,
     );
-  }
 
   @override
   bool operator ==(Object other) =>
@@ -150,15 +142,15 @@ class TypographyToken {
 /// 响应式排版变体
 @immutable
 class TypographyTokenVariant {
-  final TextStyle mobile;
-  final TextStyle tablet;
-  final TextStyle desktop;
 
   const TypographyTokenVariant({
     required this.mobile,
     required this.tablet,
     required this.desktop,
   });
+  final TextStyle mobile;
+  final TextStyle tablet;
+  final TextStyle desktop;
 
   TextStyle resolve(BuildContext context) {
     final width = MediaQuery.of(context).size.width;

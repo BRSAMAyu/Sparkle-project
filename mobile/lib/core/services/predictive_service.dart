@@ -5,10 +5,10 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 
 /// 预测性服务 - 提供API集成和降级策略
 class PredictiveService {
-  final ApiClient _apiClient;
-  final DemoDataService _demoDataService;
 
   PredictiveService(this._apiClient, this._demoDataService);
+  final ApiClient _apiClient;
+  final DemoDataService _demoDataService;
 
   /// 获取学习预测数据
   Future<Map<String, dynamic>> getLearningForecast() async {
@@ -51,8 +51,7 @@ class PredictiveService {
   }
 
   /// 模拟学习预测数据
-  Map<String, dynamic> _getMockLearningForecast() {
-    return {
+  Map<String, dynamic> _getMockLearningForecast() => {
       'predictedMastery': 0.75,
       'confidenceInterval': [0.65, 0.85],
       'nextBestActions': [
@@ -79,11 +78,9 @@ class PredictiveService {
       'timestamp': DateTime.now().toIso8601String(),
       'isMockData': true, // 标记为模拟数据
     };
-  }
 
   /// 模拟仪表板数据
-  Map<String, dynamic> _getMockDashboardData() {
-    return {
+  Map<String, dynamic> _getMockDashboardData() => {
       'dailyStats': {
         'tasksCompleted': 8,
         'focusTime': 120, // 分钟
@@ -109,11 +106,9 @@ class PredictiveService {
       ],
       'isMockData': true,
     };
-  }
 
   /// 模拟用户洞察数据
-  Map<String, dynamic> _getMockUserInsights() {
-    return {
+  Map<String, dynamic> _getMockUserInsights() => {
       'learningPatterns': {
         'bestTime': 'morning',
         'preferredSubject': 'mathematics',
@@ -136,7 +131,6 @@ class PredictiveService {
       ],
       'isMockData': true,
     };
-  }
 
   /// 检查API可用性
   Future<bool> checkApiAvailability() async {
@@ -149,14 +143,12 @@ class PredictiveService {
   }
 
   /// 获取服务状态
-  Map<String, dynamic> getServiceStatus() {
-    return {
+  Map<String, dynamic> getServiceStatus() => {
       'service': 'PredictiveService',
       'apiAvailable': true, // 简化处理
       'demoMode': DemoDataService.isDemoMode,
       'version': '1.0.0',
     };
-  }
 }
 
 /// Provider定义

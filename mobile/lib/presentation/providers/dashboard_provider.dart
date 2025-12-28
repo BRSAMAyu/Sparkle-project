@@ -4,14 +4,6 @@ import 'package:sparkle/data/repositories/dashboard_repository.dart';
 
 // Data models for dashboard state
 class DashboardState {
-  final WeatherData weather;
-  final FlameData flame;
-  final SprintData? sprint;
-  final GrowthData? growth; // Added Growth Plan
-  final List<TaskData> nextActions;
-  final CognitiveData cognitive;
-  final bool isLoading;
-  final String? error;
 
   DashboardState({
     required this.weather,
@@ -41,6 +33,14 @@ class DashboardState {
     cognitive = CognitiveData(status: 'empty'),
     isLoading = false,
     error = errorMessage;
+  final WeatherData weather;
+  final FlameData flame;
+  final SprintData? sprint;
+  final GrowthData? growth; // Added Growth Plan
+  final List<TaskData> nextActions;
+  final CognitiveData cognitive;
+  final bool isLoading;
+  final String? error;
 
   DashboardState copyWith({
     WeatherData? weather,
@@ -51,8 +51,7 @@ class DashboardState {
     CognitiveData? cognitive,
     bool? isLoading,
     String? error,
-  }) {
-    return DashboardState(
+  }) => DashboardState(
       weather: weather ?? this.weather,
       flame: flame ?? this.flame,
       sprint: sprint ?? this.sprint,
@@ -62,22 +61,16 @@ class DashboardState {
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
-  }
 }
 
 class WeatherData {
-  final String type; // sunny, cloudy, rainy, meteor
-  final String condition;
 
   WeatherData({required this.type, required this.condition});
+  final String type; // sunny, cloudy, rainy, meteor
+  final String condition;
 }
 
 class FlameData {
-  final int level;
-  final int brightness;
-  final int todayFocusMinutes;
-  final int tasksCompleted;
-  final String nudgeMessage;
 
   FlameData({
     required this.level,
@@ -86,14 +79,14 @@ class FlameData {
     this.tasksCompleted = 0,
     this.nudgeMessage = '保持专注，继续前行',
   });
+  final int level;
+  final int brightness;
+  final int todayFocusMinutes;
+  final int tasksCompleted;
+  final String nudgeMessage;
 }
 
 class SprintData {
-  final String id;
-  final String name;
-  final double progress;
-  final int daysLeft;
-  final double totalEstimatedHours;
 
   SprintData({
     required this.id,
@@ -102,13 +95,14 @@ class SprintData {
     required this.daysLeft,
     required this.totalEstimatedHours,
   });
-}
-
-class GrowthData {
   final String id;
   final String name;
   final double progress;
-  final double masteryLevel;
+  final int daysLeft;
+  final double totalEstimatedHours;
+}
+
+class GrowthData {
 
   GrowthData({
     required this.id,
@@ -116,14 +110,13 @@ class GrowthData {
     required this.progress,
     required this.masteryLevel,
   });
+  final String id;
+  final String name;
+  final double progress;
+  final double masteryLevel;
 }
 
 class TaskData {
-  final String id;
-  final String title;
-  final int estimatedMinutes;
-  final int priority;
-  final String type;
 
   TaskData({
     required this.id,
@@ -132,15 +125,14 @@ class TaskData {
     required this.priority,
     required this.type,
   });
+  final String id;
+  final String title;
+  final int estimatedMinutes;
+  final int priority;
+  final String type;
 }
 
 class CognitiveData {
-  final String? weeklyPattern;
-  final String? patternType;
-  final String? description;
-  final String? solutionText;
-  final String status;
-  final bool hasNewInsight;
 
   CognitiveData({
     required this.status, this.weeklyPattern,
@@ -149,6 +141,12 @@ class CognitiveData {
     this.solutionText,
     this.hasNewInsight = false,
   });
+  final String? weeklyPattern;
+  final String? patternType;
+  final String? description;
+  final String? solutionText;
+  final String status;
+  final bool hasNewInsight;
 }
 
 // Provider
@@ -157,11 +155,11 @@ final dashboardProvider = StateNotifierProvider<DashboardNotifier, DashboardStat
 );
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
-  final DashboardRepository _repository;
 
   DashboardNotifier(this._repository) : super(DashboardState.loading()) {
     fetchData();
   }
+  final DashboardRepository _repository;
 
   Future<void> fetchData() async {
     try {
@@ -188,7 +186,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       
       // Parse sprint data (nullable)
       final sprintMap = dashboardData['sprint'] as Map<String, dynamic>?;
-      final SprintData? sprint = sprintMap != null ? SprintData(
+      final sprint = sprintMap != null ? SprintData(
         id: sprintMap['id'] as String,
         name: sprintMap['name'] as String,
         progress: (sprintMap['progress'] as num).toDouble(),
@@ -198,7 +196,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
 
       // Parse growth data (nullable)
       final growthMap = dashboardData['growth'] as Map<String, dynamic>?;
-      final GrowthData? growth = growthMap != null ? GrowthData(
+      final growth = growthMap != null ? GrowthData(
         id: growthMap['id'] as String,
         name: growthMap['name'] as String,
         progress: (growthMap['progress'] as num).toDouble(),

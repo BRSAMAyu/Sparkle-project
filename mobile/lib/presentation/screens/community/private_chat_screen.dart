@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
+import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
+import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class PrivateChatScreen extends ConsumerStatefulWidget {
-  final String friendId;
-  final String? friendName;
 
   const PrivateChatScreen({
     required this.friendId,
     this.friendName,
     super.key,
   });
+  final String friendId;
+  final String? friendName;
 
   @override
   ConsumerState<PrivateChatScreen> createState() => _PrivateChatScreenState();
@@ -114,9 +114,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
           ChatInput(
             quotedMessage: notifier.quotedMessage,
             onCancelQuote: () => setState(() => notifier.setQuote(null)),
-            onSend: (text, {replyToId}) {
-              return notifier.sendMessage(content: text, replyToId: replyToId);
-            },
+            onSend: (text, {replyToId}) => notifier.sendMessage(content: text, replyToId: replyToId),
           ),
         ],
       ),

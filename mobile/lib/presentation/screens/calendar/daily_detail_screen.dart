@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
 import 'package:sparkle/presentation/providers/calendar_provider.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/core/services/lunar_service.dart';
+import 'package:sparkle/presentation/providers/task_provider.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
-  final DateTime date;
 
   const DailyDetailScreen({required this.date, super.key});
+  final DateTime date;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,8 +72,7 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDateHeader(BuildContext context, DateTime date, LunarData lunar) {
-    return Container(
+  Widget _buildDateHeader(BuildContext context, DateTime date, LunarData lunar) => Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -107,17 +105,15 @@ class DailyDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildMetricsGrid(BuildContext context, DashboardState state) {
-    return Row(
+  Widget _buildMetricsGrid(BuildContext context, DashboardState state) => Row(
       children: [
         Expanded(
           child: _buildMetricCard(
             label: '火花强度',
             value: '${state.flame.level}',
             icon: Icons.local_fire_department,
-            color: Colors.orangeAccent,
+            color: AppDesignTokens.warningAccent,
           ),
         ),
         const SizedBox(width: DS.md),
@@ -140,10 +136,8 @@ class DailyDetailScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildMetricCard({required String label, required String value, required IconData icon, required Color color}) {
-    return Container(
+  Widget _buildMetricCard({required String label, required String value, required IconData icon, required Color color}) => Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(15),
@@ -160,7 +154,6 @@ class DailyDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildPrismSnapshot(BuildContext context, DashboardState state) {
     if (state.cognitive.status == 'empty') return const SizedBox();
@@ -199,15 +192,13 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) {
-    return Row(
+  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) => Row(
       children: [
         Icon(icon, size: 18, color: AppDesignTokens.primaryBase),
         const SizedBox(width: DS.sm),
         Text(title, style: const TextStyle(color: DS.brandPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
-  }
 
   Widget _buildEventList(BuildContext context, List<CalendarEventModel> events) {
     if (events.isEmpty) {
@@ -294,18 +285,16 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(String text) {
-    return Container(
+  Widget _buildEmptyState(String text) => Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withAlpha(5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DS.brandPrimary.withAlpha(10), style: BorderStyle.solid), // Dashed border needs CustomPainter
+        border: Border.all(color: DS.brandPrimary.withAlpha(10)), // Dashed border needs CustomPainter
       ),
       child: Center(
         child: Text(text, style: const TextStyle(color: DS.brandPrimary38)),
       ),
     );
-  }
 }

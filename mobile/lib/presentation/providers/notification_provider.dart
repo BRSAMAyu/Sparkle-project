@@ -2,16 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 import 'package:sparkle/data/repositories/notification_repository.dart';
 
-final unreadNotificationsProvider = StateNotifierProvider<NotificationNotifier, AsyncValue<List<NotificationModel>>>((ref) {
-  return NotificationNotifier(ref.read(notificationRepositoryProvider));
-});
+final unreadNotificationsProvider = StateNotifierProvider<NotificationNotifier, AsyncValue<List<NotificationModel>>>((ref) => NotificationNotifier(ref.read(notificationRepositoryProvider)));
 
 class NotificationNotifier extends StateNotifier<AsyncValue<List<NotificationModel>>> {
-  final NotificationRepository _repository;
 
   NotificationNotifier(this._repository) : super(const AsyncValue.loading()) {
     fetchUnreadNotifications();
   }
+  final NotificationRepository _repository;
 
   Future<void> fetchUnreadNotifications() async {
     try {

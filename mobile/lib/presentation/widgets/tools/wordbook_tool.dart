@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -44,7 +43,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     });
   }
 
-  void _handleReview(bool success) async {
+  Future<void> _handleReview(bool success) async {
     final reviewList = ref.read(vocabularyProvider).reviewList;
     if (_currentReviewIndex < reviewList.length) {
       final word = reviewList[_currentReviewIndex];
@@ -152,7 +151,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           const SizedBox(height: DS.lg),
 
           // Tab Bar
-          Container(
+          DecoratedBox(
             decoration: BoxDecoration(
               color: AppDesignTokens.neutral100,
               borderRadius: BorderRadius.circular(12),
@@ -474,12 +473,6 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
 /// 单词卡片组件
 class _WordCard extends StatelessWidget {
-  final String word;
-  final String? phonetic;
-  final String definition;
-  final String? dueText;
-  final int? masteryLevel;
-  final VoidCallback? onTap;
 
   const _WordCard({
     required this.word,
@@ -488,10 +481,15 @@ class _WordCard extends StatelessWidget {
     this.masteryLevel,
     this.onTap,
   });
+  final String word;
+  final String? phonetic;
+  final String definition;
+  final String? dueText;
+  final int? masteryLevel;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -571,21 +569,18 @@ class _WordCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 掌握程度指示器
 class _MasteryIndicator extends StatelessWidget {
-  final int level;
 
   const _MasteryIndicator({required this.level});
+  final int level;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(7, (index) {
-        return Container(
+      children: List.generate(7, (index) => Container(
           width: 4,
           height: 16,
           margin: const EdgeInsets.only(left: 2),
@@ -595,8 +590,6 @@ class _MasteryIndicator extends StatelessWidget {
                 : AppDesignTokens.neutral200,
             borderRadius: BorderRadius.circular(2),
           ),
-        );
-      }),
+        ),),
     );
-  }
 }

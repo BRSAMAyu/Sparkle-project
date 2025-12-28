@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 
 class GroupTasksScreen extends ConsumerWidget {
-  final String groupId;
 
   const GroupTasksScreen({required this.groupId, super.key});
+  final String groupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +19,7 @@ class GroupTasksScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Group Tasks')),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Create task dialog
+          // Feature: Show task creation dialog
           _showCreateTaskDialog(context, ref);
         },
         child: const Icon(Icons.add),
@@ -61,15 +59,12 @@ class GroupTasksScreen extends ConsumerWidget {
                       ],
                     ),
                     trailing: task.isClaimedByMe
-                        ? (task.myCompletionStatus == true
+                        ? (task.myCompletionStatus ?? false
                             ? const Icon(Icons.check_circle, color: DS.success)
-                            : const Icon(Icons.hourglass_bottom, color: Colors.orange))
-                        : ElevatedButton(
-                            onPressed: () {
+                            : const Icon(Icons.hourglass_bottom, color: DS.brandPrimary))
+                        : SparkleButton.primary(label: 'Claim', onPressed: () {
                                ref.read(groupTasksProvider(groupId).notifier).claimTask(task.id);
-                            },
-                            child: const Text('Claim'),
-                          ),
+                            },),
                   ),
                 );
               },

@@ -1,9 +1,9 @@
-import 'dart:ui';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
@@ -14,9 +14,9 @@ import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 /// - Days remaining
 /// - Sprint name
 class SprintCard extends ConsumerWidget {
-  final VoidCallback? onTap;
 
   const SprintCard({super.key, this.onTap});
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,8 +130,7 @@ class SprintCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Column(
+  Widget _buildEmptyState() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -167,17 +166,16 @@ class SprintCard extends ConsumerWidget {
         ),
       ],
     );
-  }
 }
 
 class _CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final bool isUrgent;
 
   _CircularProgressPainter({
     required this.progress,
     required this.isUrgent,
   });
+  final double progress;
+  final bool isUrgent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -209,7 +207,5 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.isUrgent != isUrgent;
-  }
+  bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) => oldDelegate.progress != progress || oldDelegate.isUrgent != isUrgent;
 }

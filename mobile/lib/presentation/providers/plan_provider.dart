@@ -5,10 +5,6 @@ import 'package:sparkle/presentation/providers/task_provider.dart';
 
 // 1. PlanListState Class
 class PlanListState {
-  final bool isLoading;
-  final List<PlanModel> plans;
-  final List<PlanModel> activePlans;
-  final String? error;
 
   PlanListState({
     this.isLoading = false,
@@ -16,6 +12,10 @@ class PlanListState {
     this.activePlans = const [],
     this.error,
   });
+  final bool isLoading;
+  final List<PlanModel> plans;
+  final List<PlanModel> activePlans;
+  final String? error;
 
   PlanListState copyWith({
     bool? isLoading,
@@ -23,25 +23,23 @@ class PlanListState {
     List<PlanModel>? activePlans,
     String? error,
     bool clearError = false,
-  }) {
-    return PlanListState(
+  }) => PlanListState(
       isLoading: isLoading ?? this.isLoading,
       plans: plans ?? this.plans,
       activePlans: activePlans ?? this.activePlans,
       error: clearError ? null : error ?? this.error,
     );
-  }
 }
 
 // 2. PlanNotifier Class
 class PlanNotifier extends StateNotifier<PlanListState> {
-  final PlanRepository _planRepository;
-  final Ref _ref;
 
   PlanNotifier(this._planRepository, this._ref) : super(PlanListState()) {
     loadPlans();
     loadActivePlans();
   }
+  final PlanRepository _planRepository;
+  final Ref _ref;
 
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -124,9 +122,7 @@ class PlanNotifier extends StateNotifier<PlanListState> {
 
 // 3. Providers
 
-final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>((ref) {
-  return PlanNotifier(ref.watch(planRepositoryProvider), ref);
-});
+final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>((ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref));
 
 final planDetailProvider = FutureProvider.family<PlanModel, String>((ref, id) async {
   final planRepo = ref.watch(planRepositoryProvider);

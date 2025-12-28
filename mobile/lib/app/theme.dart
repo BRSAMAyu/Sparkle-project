@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// App Colors - now using Design Tokens
@@ -28,28 +27,22 @@ class AppColors {
   static const darkDivider = AppDesignTokens.neutral600;
 
   // Semantic colors for both themes
-  static Color surfaceBright(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
+  static Color surfaceBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
         ? DS.brandPrimary
         : AppDesignTokens.neutral800;
-  }
 
-  static Color textOnBright(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
+  static Color textOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
         ? AppDesignTokens.neutral900
         : DS.brandPrimary;
-  }
 
   static Color textOnDark(BuildContext context) {
     // For dark backgrounds, always use light text for maximum contrast
     return DS.brandPrimary;
   }
 
-  static Color iconOnBright(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.light
+  static Color iconOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
         ? AppDesignTokens.neutral800
         : AppDesignTokens.neutral100;
-  }
 
   static Color iconOnDark(BuildContext context) {
     // For dark backgrounds, always use light icons for maximum contrast
@@ -59,11 +52,6 @@ class AppColors {
 
 /// Theme Extension for custom properties
 class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
-  final LinearGradient primaryGradient;
-  final LinearGradient secondaryGradient;
-  final LinearGradient cardGradient;
-  final List<BoxShadow> cardShadow;
-  final List<BoxShadow> elevatedShadow;
 
   const AppThemeExtension({
     required this.primaryGradient,
@@ -72,6 +60,11 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     required this.cardShadow,
     required this.elevatedShadow,
   });
+  final LinearGradient primaryGradient;
+  final LinearGradient secondaryGradient;
+  final LinearGradient cardGradient;
+  final List<BoxShadow> cardShadow;
+  final List<BoxShadow> elevatedShadow;
 
   @override
   AppThemeExtension copyWith({
@@ -80,15 +73,13 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     LinearGradient? cardGradient,
     List<BoxShadow>? cardShadow,
     List<BoxShadow>? elevatedShadow,
-  }) {
-    return AppThemeExtension(
+  }) => AppThemeExtension(
       primaryGradient: primaryGradient ?? this.primaryGradient,
       secondaryGradient: secondaryGradient ?? this.secondaryGradient,
       cardGradient: cardGradient ?? this.cardGradient,
       cardShadow: cardShadow ?? this.cardShadow,
       elevatedShadow: elevatedShadow ?? this.elevatedShadow,
     );
-  }
 
   @override
   AppThemeExtension lerp(ThemeExtension<AppThemeExtension>? other, double t) {
@@ -563,6 +554,26 @@ extension ThemeExtensionHelper on ThemeData {
 /// Sparkle 应用专用颜色扩展 - 支持深色/浅色模式
 @immutable
 class SparkleColors extends ThemeExtension<SparkleColors> {
+
+  const SparkleColors({
+    required this.taskLearning,
+    required this.taskTraining,
+    required this.taskErrorFix,
+    required this.taskReflection,
+    required this.taskSocial,
+    required this.taskPlanning,
+    required this.planSprint,
+    required this.planGrowth,
+    required this.surfaceCard,
+    required this.surfaceElevated,
+    required this.surfaceGlass,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    required this.textOnPrimary,
+    required this.border,
+    required this.divider,
+  });
   // 任务类型颜色
   final Color taskLearning;
   final Color taskTraining;
@@ -589,26 +600,6 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   // 边框和分割线颜色
   final Color border;
   final Color divider;
-
-  const SparkleColors({
-    required this.taskLearning,
-    required this.taskTraining,
-    required this.taskErrorFix,
-    required this.taskReflection,
-    required this.taskSocial,
-    required this.taskPlanning,
-    required this.planSprint,
-    required this.planGrowth,
-    required this.surfaceCard,
-    required this.surfaceElevated,
-    required this.surfaceGlass,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.textTertiary,
-    required this.textOnPrimary,
-    required this.border,
-    required this.divider,
-  });
 
   /// 浅色主题配色
   static const light = SparkleColors(
@@ -681,8 +672,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     Color? textOnPrimary,
     Color? border,
     Color? divider,
-  }) {
-    return SparkleColors(
+  }) => SparkleColors(
       taskLearning: taskLearning ?? this.taskLearning,
       taskTraining: taskTraining ?? this.taskTraining,
       taskErrorFix: taskErrorFix ?? this.taskErrorFix,
@@ -701,7 +691,6 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
       border: border ?? this.border,
       divider: divider ?? this.divider,
     );
-  }
 
   @override
   SparkleColors lerp(ThemeExtension<SparkleColors>? other, double t) {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 
 /// 预测洞察卡片 - 显示AI预测的学习建议
@@ -11,9 +10,6 @@ import 'package:sparkle/core/design/design_tokens.dart';
 /// - difficulty: 难度预测
 /// - risk: 流失风险预警
 class PredictiveInsightsCard extends StatelessWidget {
-  final String type;
-  final Map<String, dynamic> data;
-  final VoidCallback? onTap;
 
   const PredictiveInsightsCard({
     required this.type,
@@ -21,10 +17,12 @@ class PredictiveInsightsCard extends StatelessWidget {
     this.onTap,
     super.key,
   });
+  final String type;
+  final Map<String, dynamic> data;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
+  Widget build(BuildContext context) => Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
@@ -36,7 +34,6 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
   Widget _buildContent(BuildContext context) {
     switch (type) {
@@ -376,11 +373,10 @@ class PredictiveInsightsCard extends StatelessWidget {
   }
 
   // Helper Widgets
-  Widget _buildConfidenceBadge(double confidence) {
-    return Container(
+  Widget _buildConfidenceBadge(double confidence) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: confidence > 0.7 ? DS.success.shade50 : Colors.orange.shade50,
+        color: confidence > 0.7 ? DS.success.shade50 : DS.brandPrimary.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -389,7 +385,7 @@ class PredictiveInsightsCard extends StatelessWidget {
           Icon(
             confidence > 0.7 ? Icons.verified : Icons.info_outline,
             size: 12,
-            color: confidence > 0.7 ? DS.success.shade700 : Colors.orange.shade700,
+            color: confidence > 0.7 ? DS.success.shade700 : DS.brandPrimary.shade700,
           ),
           const SizedBox(width: DS.xs),
           Text(
@@ -397,16 +393,14 @@ class PredictiveInsightsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: confidence > 0.7 ? DS.success.shade700 : Colors.orange.shade700,
+              color: confidence > 0.7 ? DS.success.shade700 : DS.brandPrimary.shade700,
             ),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildDifficultyBadge(double score) {
-    return Container(
+  Widget _buildDifficultyBadge(double score) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: _getDifficultyColor(score).withValues(alpha: 0.1),
@@ -421,10 +415,8 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildRiskLevelBadge(String level) {
-    return Container(
+  Widget _buildRiskLevelBadge(String level) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: _getRiskColor(level).withValues(alpha: 0.1),
@@ -439,10 +431,8 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildRiskIndicator(String risk) {
-    return Container(
+  Widget _buildRiskIndicator(String risk) => Container(
       padding: const EdgeInsets.all(DS.sm),
       decoration: BoxDecoration(
         color: _getRiskColor(risk).withValues(alpha: 0.1),
@@ -459,7 +449,6 @@ class PredictiveInsightsCard extends StatelessWidget {
         ],
       ),
     );
-  }
 
   // Helper Methods
   String _formatDateTime(DateTime dt) {
@@ -479,7 +468,7 @@ class PredictiveInsightsCard extends StatelessWidget {
 
   Color _getDifficultyColor(double score) {
     if (score < 0.3) return DS.success.shade600;
-    if (score < 0.6) return Colors.orange.shade600;
+    if (score < 0.6) return DS.brandPrimary.shade600;
     return DS.error.shade600;
   }
 
@@ -494,7 +483,7 @@ class PredictiveInsightsCard extends StatelessWidget {
       case 'low':
         return DS.success.shade600;
       case 'medium':
-        return Colors.orange.shade600;
+        return DS.brandPrimary.shade600;
       case 'high':
         return DS.error.shade600;
       default:

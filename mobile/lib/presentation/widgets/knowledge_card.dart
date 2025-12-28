@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 知识卡片组件
 /// 用于在聊天中显示 AI 生成的知识节点
 class KnowledgeCard extends StatelessWidget {
-  final Map<String, dynamic> data;
 
   const KnowledgeCard({
     required this.data, super.key,
   });
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +102,7 @@ class KnowledgeCard extends StatelessWidget {
       color = DS.success;
       label = '已掌握';
     } else if (masteryLevel >= 50) {
-      color = Colors.orange;
+      color = DS.brandPrimary;
       label = '熟练中';
     } else if (masteryLevel > 0) {
       color = DS.brandPrimary;

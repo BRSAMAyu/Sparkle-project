@@ -125,6 +125,20 @@ enum RelationType {
 /// 位置提示
 @JsonSerializable()
 class PositionHint {
+
+  const PositionHint({
+    required this.strategy,
+    this.angleOffset,
+    this.radiusRatio,
+    this.referenceNodeId,
+    this.distance,
+    this.region,
+    this.x,
+    this.y,
+  });
+
+  factory PositionHint.fromJson(Map<String, dynamic> json) =>
+      _$PositionHintFromJson(json);
   final PositionStrategy strategy;
 
   /// 极坐标：相对于星域中心的角度偏移 (0.0-1.0, 映射到星域角度范围)
@@ -150,20 +164,6 @@ class PositionHint {
 
   /// absolute 策略：绝对 Y 坐标
   final double? y;
-
-  const PositionHint({
-    required this.strategy,
-    this.angleOffset,
-    this.radiusRatio,
-    this.referenceNodeId,
-    this.distance,
-    this.region,
-    this.x,
-    this.y,
-  });
-
-  factory PositionHint.fromJson(Map<String, dynamic> json) =>
-      _$PositionHintFromJson(json);
   Map<String, dynamic> toJson() => _$PositionHintToJson(this);
 
   /// 自动布局的默认提示
@@ -187,6 +187,16 @@ class PositionHint {
 /// 节点连接定义
 @JsonSerializable()
 class NodeConnection {
+
+  const NodeConnection({
+    required this.targetId,
+    required this.relationType,
+    this.strength = 0.5,
+    this.bidirectional = false,
+  });
+
+  factory NodeConnection.fromJson(Map<String, dynamic> json) =>
+      _$NodeConnectionFromJson(json);
   /// 目标节点 ID
   @JsonKey(name: 'target_id')
   final String targetId;
@@ -201,22 +211,30 @@ class NodeConnection {
   /// 是否双向连接
   @JsonKey(name: 'bidirectional')
   final bool bidirectional;
-
-  const NodeConnection({
-    required this.targetId,
-    required this.relationType,
-    this.strength = 0.5,
-    this.bidirectional = false,
-  });
-
-  factory NodeConnection.fromJson(Map<String, dynamic> json) =>
-      _$NodeConnectionFromJson(json);
   Map<String, dynamic> toJson() => _$NodeConnectionToJson(this);
 }
 
 /// LLM 节点创建请求
 @JsonSerializable()
 class LLMNodeSpec {
+
+  const LLMNodeSpec({
+    required this.id,
+    required this.name,
+    required this.sector,
+    this.importance = 3,
+    this.baseColor,
+    this.masteryScore = 0,
+    this.isUnlocked = true,
+    this.positionHint,
+    this.connections = const [],
+    this.tags = const [],
+    this.description,
+    this.parentId,
+  });
+
+  factory LLMNodeSpec.fromJson(Map<String, dynamic> json) =>
+      _$LLMNodeSpecFromJson(json);
   final String id;
   final String name;
 
@@ -254,30 +272,20 @@ class LLMNodeSpec {
   /// 父节点 ID（层级关系）
   @JsonKey(name: 'parent_id')
   final String? parentId;
-
-  const LLMNodeSpec({
-    required this.id,
-    required this.name,
-    required this.sector,
-    this.importance = 3,
-    this.baseColor,
-    this.masteryScore = 0,
-    this.isUnlocked = true,
-    this.positionHint,
-    this.connections = const [],
-    this.tags = const [],
-    this.description,
-    this.parentId,
-  });
-
-  factory LLMNodeSpec.fromJson(Map<String, dynamic> json) =>
-      _$LLMNodeSpecFromJson(json);
   Map<String, dynamic> toJson() => _$LLMNodeSpecToJson(this);
 }
 
 /// 节点移动请求
 @JsonSerializable()
 class LLMNodeMoveSpec {
+
+  const LLMNodeMoveSpec({
+    required this.nodeId,
+    required this.positionHint, this.newSector,
+  });
+
+  factory LLMNodeMoveSpec.fromJson(Map<String, dynamic> json) =>
+      _$LLMNodeMoveSpecFromJson(json);
   @JsonKey(name: 'node_id')
   final String nodeId;
 
@@ -288,20 +296,25 @@ class LLMNodeMoveSpec {
   /// 新的位置提示
   @JsonKey(name: 'position_hint')
   final PositionHint positionHint;
-
-  const LLMNodeMoveSpec({
-    required this.nodeId,
-    required this.positionHint, this.newSector,
-  });
-
-  factory LLMNodeMoveSpec.fromJson(Map<String, dynamic> json) =>
-      _$LLMNodeMoveSpecFromJson(json);
   Map<String, dynamic> toJson() => _$LLMNodeMoveSpecToJson(this);
 }
 
 /// LLM 操作请求
 @JsonSerializable()
 class LLMGalaxyAction {
+
+  const LLMGalaxyAction({
+    required this.action,
+    this.nodes,
+    this.nodeIds,
+    this.connections,
+    this.moveSpecs,
+    this.batchActions,
+    this.metadata,
+  });
+
+  factory LLMGalaxyAction.fromJson(Map<String, dynamic> json) =>
+      _$LLMGalaxyActionFromJson(json);
   final LLMActionType action;
 
   /// 添加/更新节点列表
@@ -324,25 +337,23 @@ class LLMGalaxyAction {
 
   /// 操作元数据
   final Map<String, dynamic>? metadata;
-
-  const LLMGalaxyAction({
-    required this.action,
-    this.nodes,
-    this.nodeIds,
-    this.connections,
-    this.moveSpecs,
-    this.batchActions,
-    this.metadata,
-  });
-
-  factory LLMGalaxyAction.fromJson(Map<String, dynamic> json) =>
-      _$LLMGalaxyActionFromJson(json);
   Map<String, dynamic> toJson() => _$LLMGalaxyActionToJson(this);
 }
 
 /// 连接规格
 @JsonSerializable()
 class LLMConnectionSpec {
+
+  const LLMConnectionSpec({
+    required this.sourceId,
+    required this.targetId,
+    required this.relationType,
+    this.strength = 0.5,
+    this.bidirectional = false,
+  });
+
+  factory LLMConnectionSpec.fromJson(Map<String, dynamic> json) =>
+      _$LLMConnectionSpecFromJson(json);
   @JsonKey(name: 'source_id')
   final String sourceId;
 
@@ -355,23 +366,24 @@ class LLMConnectionSpec {
   final double strength;
 
   final bool bidirectional;
-
-  const LLMConnectionSpec({
-    required this.sourceId,
-    required this.targetId,
-    required this.relationType,
-    this.strength = 0.5,
-    this.bidirectional = false,
-  });
-
-  factory LLMConnectionSpec.fromJson(Map<String, dynamic> json) =>
-      _$LLMConnectionSpecFromJson(json);
   Map<String, dynamic> toJson() => _$LLMConnectionSpecToJson(this);
 }
 
 /// LLM 操作结果
 @JsonSerializable()
 class LLMActionResult {
+
+  const LLMActionResult({
+    required this.success,
+    this.error,
+    this.addedNodeIds,
+    this.updatedNodeIds,
+    this.deletedNodeIds,
+    this.computedPositions,
+  });
+
+  factory LLMActionResult.fromJson(Map<String, dynamic> json) =>
+      _$LLMActionResultFromJson(json);
   final bool success;
   final String? error;
 
@@ -390,18 +402,6 @@ class LLMActionResult {
   /// 计算出的节点位置
   @JsonKey(name: 'computed_positions')
   final Map<String, List<double>>? computedPositions;
-
-  const LLMActionResult({
-    required this.success,
-    this.error,
-    this.addedNodeIds,
-    this.updatedNodeIds,
-    this.deletedNodeIds,
-    this.computedPositions,
-  });
-
-  factory LLMActionResult.fromJson(Map<String, dynamic> json) =>
-      _$LLMActionResultFromJson(json);
   Map<String, dynamic> toJson() => _$LLMActionResultToJson(this);
 
   static LLMActionResult successResult({

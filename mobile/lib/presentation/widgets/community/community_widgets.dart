@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 /// 带有在线状态指示器的头像
 class StatusAvatar extends StatelessWidget {
-  final String? url;
-  final UserStatus status;
-  final double size;
-  final String? fallbackText;
 
   const StatusAvatar({
     required this.status, super.key,
@@ -18,16 +13,20 @@ class StatusAvatar extends StatelessWidget {
     this.size = 48,
     this.fallbackText,
   });
+  final String? url;
+  final UserStatus status;
+  final double size;
+  final String? fallbackText;
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor = status == UserStatus.online 
+    final statusColor = status == UserStatus.online 
         ? SparkleTheme.online 
         : (status == UserStatus.invisible ? SparkleTheme.invisible : SparkleTheme.offline);
 
     return Stack(
       children: [
-        Container(
+        DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: SparkleTheme.primary.withValues(alpha: 0.1), width: 2),
@@ -64,20 +63,19 @@ class StatusAvatar extends StatelessWidget {
 }
 
 /// 优雅的消息气泡
-class ChatBubble extends StatelessWidget {
-  final String content;
-  final bool isMe;
-  final DateTime time;
-  final bool isSent; // 是否已确认 (ACK)
+class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
 
   const ChatBubble({
     required this.content, required this.isMe, required this.time, super.key,
     this.isSent = true,
   });
+  final String content;
+  final bool isMe;
+  final DateTime time;
+  final bool isSent;
 
   @override
-  Widget build(BuildContext context) {
-    return Align(
+  Widget build(BuildContext context) => Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -134,7 +132,6 @@ class ChatBubble extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 正在输入指示器 (动效)
@@ -161,10 +158,8 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(3, (index) {
-        return AnimatedBuilder(
+  Widget build(BuildContext context) => Row(
+      children: List.generate(3, (index) => AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
             final delay = index * 0.2;
@@ -179,8 +174,6 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
               ),
             );
           },
-        );
-      }),
+        ),),
     );
-  }
 }

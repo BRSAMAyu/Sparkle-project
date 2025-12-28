@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class BlockingInterceptorDialog extends ConsumerStatefulWidget {
-  final String taskId;
-  final VoidCallback onAbandonConfirmed;
 
   const BlockingInterceptorDialog({
     required this.taskId, required this.onAbandonConfirmed, super.key,
   });
+  final String taskId;
+  final VoidCallback onAbandonConfirmed;
 
   @override
   ConsumerState<BlockingInterceptorDialog> createState() => _BlockingInterceptorDialogState();
@@ -70,8 +70,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
+  Widget build(BuildContext context) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
       child: Padding(
         padding: const EdgeInsets.all(AppDesignTokens.spacing20),
@@ -143,10 +142,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('取消'),
-                  ),
+                  SparkleButton.ghost(label: '取消', onPressed: () => Navigator.of(context).pop()),
                   const SizedBox(width: AppDesignTokens.spacing12),
                   CustomButton.primary(
                     text: '确认放弃',
@@ -163,5 +159,4 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
         ),
       ),
     );
-  }
 }

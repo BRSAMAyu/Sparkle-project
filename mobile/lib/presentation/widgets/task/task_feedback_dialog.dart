@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/task_completion_result.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class TaskFeedbackDialog extends StatelessWidget {
-  final TaskCompletionResult result;
-  final VoidCallback onClose;
 
   const TaskFeedbackDialog({
     required this.result, required this.onClose, super.key,
   });
+  final TaskCompletionResult result;
+  final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
+  Widget build(BuildContext context) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
       backgroundColor: DS.brandPrimary,
       child: Padding(
@@ -83,7 +81,7 @@ class TaskFeedbackDialog extends StatelessWidget {
                     if (result.flameUpdate != null)
                       _StatItem(
                         icon: Icons.local_fire_department,
-                        color: Colors.orange,
+                        color: DS.brandPrimary,
                         value: "+${result.flameUpdate!['brightness_change']}%",
                         label: '亮度',
                       ),
@@ -108,14 +106,9 @@ class TaskFeedbackDialog extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _StatItem extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String value;
-  final String label;
 
   const _StatItem({
     required this.icon,
@@ -123,10 +116,13 @@ class _StatItem extends StatelessWidget {
     required this.value,
     required this.label,
   });
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       children: [
         Icon(icon, color: color),
         const SizedBox(height: DS.xs),
@@ -134,5 +130,4 @@ class _StatItem extends StatelessWidget {
         Text(label, style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
       ],
     );
-  }
 }

@@ -1,17 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/user_model.dart';
 
 class SparkleAvatar extends StatelessWidget {
-  final String? url;
-  final double radius;
-  final String? fallbackText;
-  final Color? backgroundColor;
-  final AvatarStatus status;
 
   const SparkleAvatar({
     super.key,
@@ -21,6 +16,11 @@ class SparkleAvatar extends StatelessWidget {
     this.backgroundColor,
     this.status = AvatarStatus.approved,
   });
+  final String? url;
+  final double radius;
+  final String? fallbackText;
+  final Color? backgroundColor;
+  final AvatarStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -113,8 +113,7 @@ class SparkleAvatar extends StatelessWidget {
     return avatar;
   }
 
-  Widget _buildFallback(Color bgColor) {
-    return CircleAvatar(
+  Widget _buildFallback(Color bgColor) => CircleAvatar(
       radius: radius,
       backgroundColor: bgColor,
       child: Text(
@@ -128,5 +127,4 @@ class SparkleAvatar extends StatelessWidget {
         ),
       ),
     );
-  }
 }

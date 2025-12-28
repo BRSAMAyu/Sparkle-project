@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 class StaggeredListAnimation extends StatefulWidget {
-  final Widget Function(BuildContext, int, Animation<double>) builder;
-  final int itemCount;
-  final Duration delay;
-  final Duration duration;
 
   const StaggeredListAnimation({
     required this.builder, required this.itemCount, super.key,
     this.delay = const Duration(milliseconds: 50),
     this.duration = const Duration(milliseconds: 350),
   });
+  final Widget Function(BuildContext, int, Animation<double>) builder;
+  final int itemCount;
+  final Duration delay;
+  final Duration duration;
 
   @override
   _StaggeredListAnimationState createState() => _StaggeredListAnimationState();
@@ -31,8 +31,7 @@ class _StaggeredListAnimationState extends State<StaggeredListAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
+  Widget build(BuildContext context) => ListView.builder(
       itemCount: widget.itemCount,
       padding: EdgeInsets.zero, // Allow parent to control padding
       physics: const NeverScrollableScrollPhysics(), // Usually wrapped in scroll view or expanded
@@ -51,7 +50,6 @@ class _StaggeredListAnimationState extends State<StaggeredListAnimation>
         return widget.builder(context, index, animation);
       },
     );
-  }
 
   @override
   void dispose() {

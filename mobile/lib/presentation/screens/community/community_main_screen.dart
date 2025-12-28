@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/presentation/providers/community_provider.dart';
-import 'package:sparkle/data/models/community_model.dart';
-import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
-import 'package:sparkle/core/design/sparkle_theme.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/sparkle_theme.dart';
+import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
+import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
 
 // Provider for focus mode
-final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>((ref) {
-  return FocusModeNotifier();
-});
+final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>((ref) => FocusModeNotifier());
 
 class FocusModeNotifier extends StateNotifier<bool> {
   FocusModeNotifier() : super(false) {
@@ -273,7 +271,7 @@ class _GroupsListTab extends ConsumerWidget {
                                 const SizedBox(width: DS.xs),
                                 Text('${g.memberCount} 成员', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
                                 const SizedBox(width: DS.md),
-                                const Icon(Icons.local_fire_department, size: 14, color: Colors.orange),
+                                const Icon(Icons.local_fire_department, size: 14, color: DS.brandPrimary),
                                 const SizedBox(width: DS.xs),
                                 Text('${g.totalFlamePower}', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
                               ],

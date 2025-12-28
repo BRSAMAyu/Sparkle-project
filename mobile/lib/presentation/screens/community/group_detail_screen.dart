@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_tokens.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
@@ -13,9 +12,9 @@ import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/community/bonfire_widget.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
-  final String groupId;
 
   const GroupDetailScreen({required this.groupId, super.key});
+  final String groupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,7 +49,6 @@ class GroupDetailScreen extends ConsumerWidget {
       slivers: [
         SliverAppBar(
           expandedHeight: 200.0,
-          floating: false,
           pinned: true,
           stretch: true,
           flexibleSpace: FlexibleSpaceBar(
@@ -61,11 +59,11 @@ class GroupDetailScreen extends ConsumerWidget {
                 shadows: [Shadow(color: DS.brandPrimary45, blurRadius: 4)],
               ),
             ),
-            background: Container(
+            background: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: isSprint 
                     ? const LinearGradient(
-                        colors: [Colors.deepOrange, Colors.orangeAccent],
+                        colors: [Colors.deepOrange, AppDesignTokens.warningAccent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
@@ -138,12 +136,10 @@ class GroupDetailScreen extends ConsumerWidget {
                   tween: Tween(begin: 0.0, end: 1.0),
                   duration: const Duration(milliseconds: 800),
                   curve: Curves.easeOutBack,
-                  builder: (context, value, child) {
-                    return Transform.scale(
+                  builder: (context, value, child) => Transform.scale(
                       scale: value,
                       child: Opacity(opacity: value, child: child),
-                    );
-                  },
+                    ),
                   child: Center(
                     child: BonfireWidget(
                       level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
@@ -257,8 +253,7 @@ class GroupDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
-    return Container(
+  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) => Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
         color: DS.brandPrimary,
@@ -290,13 +285,12 @@ class GroupDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   void _showGroupOptions(BuildContext context, WidgetRef ref, GroupInfo group) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) => DecoratedBox(
         decoration: const BoxDecoration(
           color: DS.brandPrimary,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -339,7 +333,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     ),
                   );
                   
-                  if (confirm == true) {
+                  if (confirm ?? false) {
                      try {
                       await ref.read(groupDetailProvider(groupId).notifier).leaveGroup();
                       if (context.mounted) context.pop();
@@ -362,8 +356,7 @@ class _DetailLoading extends StatelessWidget {
   const _DetailLoading();
 
   @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
+  Widget build(BuildContext context) => Shimmer.fromColors(
       baseColor: AppDesignTokens.neutral200,
       highlightColor: AppDesignTokens.neutral100,
       child: Column(
@@ -390,5 +383,4 @@ class _DetailLoading extends StatelessWidget {
         ],
       ),
     );
-  }
 }

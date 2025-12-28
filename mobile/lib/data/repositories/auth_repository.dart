@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/data/models/user_model.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
 
 // Keys for Secure Storage
 const String _accessTokenKey = 'accessToken';
 const String _refreshTokenKey = 'refreshToken';
 
 class AuthRepository {
-  final ApiClient _apiClient;
-  final FlutterSecureStorage _storage;
 
   AuthRepository(this._apiClient, this._storage);
+  final ApiClient _apiClient;
+  final FlutterSecureStorage _storage;
 
   Future<UserModel> register(String username, String email, String password) async {
     try {
@@ -232,16 +232,12 @@ class AuthRepository {
     await _storage.delete(key: _refreshTokenKey);
   }
 
-  Future<String?> getAccessToken() async {
-    return await _storage.read(key: _accessTokenKey);
-  }
+  Future<String?> getAccessToken() async => _storage.read(key: _accessTokenKey);
 
   // Alias for getAccessToken to match usage in ApiInterceptor
   Future<String?> getToken() => getAccessToken();
   
-  Future<String?> getRefreshToken() async {
-    return await _storage.read(key: _refreshTokenKey);
-  }
+  Future<String?> getRefreshToken() async => _storage.read(key: _refreshTokenKey);
 
   Future<bool> isLoggedIn() async {
     if (DemoDataService.isDemoMode) return true;
@@ -250,9 +246,7 @@ class AuthRepository {
 }
 
 // Provider for FlutterSecureStorage
-final flutterSecureStorageProvider = Provider<FlutterSecureStorage>((ref) {
-  return const FlutterSecureStorage();
-});
+final flutterSecureStorageProvider = Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
 
 
 // Provider for AuthRepository

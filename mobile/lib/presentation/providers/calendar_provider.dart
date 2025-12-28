@@ -3,23 +3,23 @@ import 'package:sparkle/data/models/calendar_event_model.dart';
 import 'package:sparkle/data/repositories/calendar_repository.dart';
 
 class CalendarState {
-  final List<CalendarEventModel> events;
-  final bool isLoading;
   
   CalendarState({this.events = const [], this.isLoading = false});
+  final List<CalendarEventModel> events;
+  final bool isLoading;
 }
 
 class CalendarNotifier extends StateNotifier<CalendarState> {
-  final CalendarRepository _repository;
   
   CalendarNotifier(this._repository) : super(CalendarState()) {
     loadEvents();
   }
+  final CalendarRepository _repository;
   
   Future<void> loadEvents() async {
     state = CalendarState(events: state.events, isLoading: true);
     final events = await _repository.getEvents();
-    state = CalendarState(events: events, isLoading: false);
+    state = CalendarState(events: events);
   }
   
   Future<void> addEvent(CalendarEventModel event) async {
@@ -37,11 +37,7 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
     loadEvents();
   }
   
-  List<CalendarEventModel> getEventsForDay(DateTime day) {
-    return state.events.where((event) {
-      return isSameDay(event.startTime, day);
-    }).toList();
-  }
+  List<CalendarEventModel> getEventsForDay(DateTime day) => state.events.where((event) => isSameDay(event.startTime, day)).toList();
   
   bool isSameDay(DateTime? a, DateTime? b) {
     if (a == null || b == null) return false;

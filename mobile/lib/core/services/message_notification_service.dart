@@ -1,19 +1,12 @@
 import 'dart:async';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/screens/community/community_main_screen.dart';
 
 // Notification message model
 class NotificationMessage {
-  final String id;
-  final String senderName;
-  final String? senderAvatarUrl;
-  final String content;
-  final DateTime timestamp;
-  final NotificationType type;
-  final String? targetId;
 
   NotificationMessage({
     required this.id,
@@ -21,14 +14,19 @@ class NotificationMessage {
     required this.content, required this.timestamp, required this.type, this.senderAvatarUrl,
     this.targetId,
   });
+  final String id;
+  final String senderName;
+  final String? senderAvatarUrl;
+  final String content;
+  final DateTime timestamp;
+  final NotificationType type;
+  final String? targetId;
 }
 
 enum NotificationType { privateMessage, groupMessage }
 
 // Unread message count provider
-final unreadMessageCountProvider = StateNotifierProvider<UnreadMessageCountNotifier, int>((ref) {
-  return UnreadMessageCountNotifier();
-});
+final unreadMessageCountProvider = StateNotifierProvider<UnreadMessageCountNotifier, int>((ref) => UnreadMessageCountNotifier());
 
 class UnreadMessageCountNotifier extends StateNotifier<int> {
   UnreadMessageCountNotifier() : super(0);
@@ -40,21 +38,17 @@ class UnreadMessageCountNotifier extends StateNotifier<int> {
 }
 
 // In-app notification stream provider
-final inAppNotificationProvider = StateNotifierProvider<InAppNotificationNotifier, NotificationMessage?>((ref) {
-  return InAppNotificationNotifier();
-});
+final inAppNotificationProvider = StateNotifierProvider<InAppNotificationNotifier, NotificationMessage?>((ref) => InAppNotificationNotifier());
 
 class InAppNotificationNotifier extends StateNotifier<NotificationMessage?> {
-  Timer? _dismissTimer;
 
   InAppNotificationNotifier() : super(null);
+  Timer? _dismissTimer;
 
   void show(NotificationMessage message) {
     _dismissTimer?.cancel();
     state = message;
-    _dismissTimer = Timer(const Duration(seconds: 4), () {
-      dismiss();
-    });
+    _dismissTimer = Timer(const Duration(seconds: 4), dismiss);
   }
 
   void dismiss() {
@@ -71,9 +65,9 @@ class InAppNotificationNotifier extends StateNotifier<NotificationMessage?> {
 
 // In-app notification overlay widget
 class InAppNotificationOverlay extends ConsumerWidget {
-  final Widget child;
 
   const InAppNotificationOverlay({required this.child, super.key});
+  final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -112,9 +106,6 @@ final _focusModeProviderOrFalse = Provider<bool>((ref) {
 });
 
 class InAppNotificationBanner extends StatefulWidget {
-  final NotificationMessage notification;
-  final VoidCallback onDismiss;
-  final VoidCallback onTap;
 
   const InAppNotificationBanner({
     required this.notification,
@@ -122,6 +113,9 @@ class InAppNotificationBanner extends StatefulWidget {
     required this.onTap,
     super.key,
   });
+  final NotificationMessage notification;
+  final VoidCallback onDismiss;
+  final VoidCallback onTap;
 
   @override
   State<InAppNotificationBanner> createState() => _InAppNotificationBannerState();
@@ -155,8 +149,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
+  Widget build(BuildContext context) => SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
@@ -247,14 +240,13 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
         ),
       ),
     );
-  }
 }
 
 // Message badge widget for navigation bar
 class MessageBadge extends ConsumerWidget {
-  final Widget child;
 
   const MessageBadge({required this.child, super.key});
+  final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
