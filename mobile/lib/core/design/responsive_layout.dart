@@ -1,5 +1,5 @@
   import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 布局类型枚举
 enum LayoutType {
@@ -11,8 +11,8 @@ enum LayoutType {
 /// 获取当前布局类型
 LayoutType getLayoutType(BuildContext context) {
   final width = MediaQuery.of(context).size.width;
-  if (width >= AppDesignTokens.breakpointDesktop) return LayoutType.desktop;
-  if (width >= AppDesignTokens.breakpointTablet) return LayoutType.tablet;
+  if (width >= DS.breakpointDesktop) return LayoutType.desktop;
+  if (width >= DS.breakpointTablet) return LayoutType.tablet;
   return LayoutType.mobile;
 }
 
@@ -112,15 +112,15 @@ class ResponsiveScaffold extends StatelessWidget {
               children: [
                 // Logo和标题
                 Padding(
-                  padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+                  padding: const EdgeInsets.all(DS.spacing24),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.local_fire_department,
-                        color: AppDesignTokens.primaryBase,
+                        color: DS.primaryBase,
                         size: 32,
                       ),
-                      const SizedBox(width: AppDesignTokens.spacing12),
+                      const SizedBox(width: DS.spacing12),
                       Text(
                         title ?? 'Sparkle',
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -176,14 +176,14 @@ class ContentConstraint extends StatelessWidget {
 
     switch (layoutType) {
       case LayoutType.desktop:
-        maxWidth = AppDesignTokens.contentMaxWidthDesktop;
-        horizontalPadding = AppDesignTokens.spacing32;
+        maxWidth = DS.contentMaxWidthDesktop;
+        horizontalPadding = DS.spacing32;
       case LayoutType.tablet:
-        maxWidth = AppDesignTokens.contentMaxWidthTablet;
-        horizontalPadding = AppDesignTokens.spacing24;
+        maxWidth = DS.contentMaxWidthTablet;
+        horizontalPadding = DS.spacing24;
       case LayoutType.mobile:
         maxWidth = double.infinity;
-        horizontalPadding = AppDesignTokens.spacing16;
+        horizontalPadding = DS.spacing16;
     }
 
     return Center(
@@ -209,7 +209,7 @@ class ResponsiveGrid extends StatelessWidget {
 
   const ResponsiveGrid({
     required this.children, super.key,
-    this.spacing = AppDesignTokens.spacing16,
+    this.spacing = DS.spacing16,
     this.childAspectRatio,
   });
   final List<Widget> children;
@@ -250,7 +250,7 @@ class ResponsiveSliverGrid extends StatelessWidget {
 
   const ResponsiveSliverGrid({
     required this.children, super.key,
-    this.spacing = AppDesignTokens.spacing16,
+    this.spacing = DS.spacing16,
     this.childAspectRatio,
   });
   final List<Widget> children;
@@ -314,7 +314,7 @@ class ResponsiveTwoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: main),
-        const SizedBox(width: AppDesignTokens.spacing16),
+        const SizedBox(width: DS.spacing16),
         SizedBox(
           width: sidebarWidth,
           child: sidebar,

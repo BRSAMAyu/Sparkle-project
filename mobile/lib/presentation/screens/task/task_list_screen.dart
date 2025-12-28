@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/animations/staggered_responsive_grid.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
@@ -48,11 +48,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: AppDesignTokens.primaryGradient,
+            gradient: DS.primaryGradient,
           ),
         ),
         title: AnimatedSwitcher(
-          duration: AppDesignTokens.durationNormal,
+          duration: DS.durationNormal,
           child: _isSearching
               ? TextField(
                   key: const ValueKey('search'),
@@ -60,7 +60,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   autofocus: true,
                   style: TextStyle(
                     color: DS.brandPrimaryConst,
-                    fontSize: AppDesignTokens.fontSizeBase,
+                    fontSize: DS.fontSizeBase,
                   ),
                   decoration: InputDecoration(
                     hintText: '搜索任务...',
@@ -82,7 +82,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       padding: const EdgeInsets.all(DS.sm),
                       decoration: BoxDecoration(
                         color: DS.brandPrimary.withValues(alpha: 0.2),
-                        borderRadius: AppDesignTokens.borderRadius8,
+                        borderRadius: DS.borderRadius8,
                       ),
                       child: Icon(
                         Icons.task_alt_rounded,
@@ -95,7 +95,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       '我的任务',
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
-                        fontWeight: AppDesignTokens.fontWeightBold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
@@ -136,9 +136,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            gradient: AppDesignTokens.primaryGradient,
+            gradient: DS.primaryGradient,
             shape: BoxShape.circle,
-            boxShadow: AppDesignTokens.shadowPrimary,
+            boxShadow: DS.shadowPrimary,
           ),
           child: Icon(
             Icons.add_rounded,
@@ -237,7 +237,7 @@ class _FilterChips extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        boxShadow: AppDesignTokens.shadowSm,
+        boxShadow: DS.shadowSm,
       ),
       child: SizedBox(
         height: 40,
@@ -253,22 +253,22 @@ class _FilterChips extends ConsumerWidget {
                   ref.read(taskFilterProvider.notifier).state = filter;
                 },
                 child: AnimatedContainer(
-                  duration: AppDesignTokens.durationFast,
+                  duration: DS.durationFast,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppDesignTokens.spacing16,
-                    vertical: AppDesignTokens.spacing8,
+                    horizontal: DS.spacing16,
+                    vertical: DS.spacing8,
                   ),
                   decoration: BoxDecoration(
-                    gradient: isSelected ? AppDesignTokens.primaryGradient : null,
-                    color: isSelected ? null : AppDesignTokens.neutral100,
-                    borderRadius: AppDesignTokens.borderRadius20,
+                    gradient: isSelected ? DS.primaryGradient : null,
+                    color: isSelected ? null : DS.neutral100,
+                    borderRadius: DS.borderRadius20,
                     border: Border.all(
                       color: isSelected
                           ? Colors.transparent
-                          : AppDesignTokens.neutral300,
+                          : DS.neutral300,
                       width: 1.5,
                     ),
-                    boxShadow: isSelected ? AppDesignTokens.shadowSm : null,
+                    boxShadow: isSelected ? DS.shadowSm : null,
                   ),
                   child: Center(
                     child: Text(
@@ -276,11 +276,11 @@ class _FilterChips extends ConsumerWidget {
                       style: TextStyle(
                         color: isSelected
                             ? DS.brandPrimary
-                            : AppDesignTokens.neutral700,
+                            : DS.neutral700,
                         fontWeight: isSelected
-                            ? AppDesignTokens.fontWeightBold
-                            : AppDesignTokens.fontWeightMedium,
-                        fontSize: AppDesignTokens.fontSizeSm,
+                            ? DS.fontWeightBold
+                            : DS.fontWeightMedium,
+                        fontSize: DS.fontSizeSm,
                       ),
                     ),
                   ),

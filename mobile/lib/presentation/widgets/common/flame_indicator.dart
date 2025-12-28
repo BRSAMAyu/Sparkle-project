@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 火焰等级指示器组件
 ///
@@ -102,11 +102,11 @@ class _FlameIndicatorState extends State<FlameIndicator>
     if (widget.brightness >= 80) {
       return const Color(0xFFFFD700); // 金色
     } else if (widget.brightness >= 60) {
-      return AppDesignTokens.accent; // 黄色
+      return DS.accent; // 黄色
     } else if (widget.brightness >= 40) {
-      return AppDesignTokens.primaryBase; // 橙色
+      return DS.primaryBase; // 橙色
     } else {
-      return AppDesignTokens.warning; // 浅橙色
+      return DS.warning; // 浅橙色
     }
   }
 
@@ -122,9 +122,9 @@ class _FlameIndicatorState extends State<FlameIndicator>
         end: Alignment.bottomRight,
       );
     } else if (widget.brightness >= 60) {
-      return AppDesignTokens.accentGradient;
+      return DS.accentGradient;
     } else {
-      return AppDesignTokens.primaryGradient;
+      return DS.primaryGradient;
     }
   }
 
@@ -166,7 +166,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
                         painter: _CircularProgressPainter(
                           progress: widget.brightness / 100.0,
                           gradient: _getProgressGradient(),
-                          backgroundColor: AppDesignTokens.neutral200,
+                          backgroundColor: DS.neutral200,
                           strokeWidth: 8.0,
                         ),
                       ),
@@ -179,7 +179,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
           ),
           // 标签
           if (widget.showLabel) ...[
-            const SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: DS.spacing12),
             _buildLabel(),
           ],
         ],
@@ -223,27 +223,27 @@ class _FlameIndicatorState extends State<FlameIndicator>
           children: [
             Icon(
               Icons.whatshot_rounded,
-              size: AppDesignTokens.iconSizeSm,
+              size: DS.iconSizeSm,
               color: _getFlameColor(),
             ),
-            const SizedBox(width: AppDesignTokens.spacing4),
+            const SizedBox(width: DS.spacing4),
             Text(
               'Lv.${widget.level}',
               style: const TextStyle(
-                fontSize: AppDesignTokens.fontSizeLg,
-                fontWeight: AppDesignTokens.fontWeightBold,
-                color: AppDesignTokens.neutral900,
+                fontSize: DS.fontSizeLg,
+                fontWeight: DS.fontWeightBold,
+                color: DS.neutral900,
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppDesignTokens.spacing4),
+        const SizedBox(height: DS.spacing4),
         // 亮度
         Text(
           '亮度 ${widget.brightness}%',
           style: const TextStyle(
-            fontSize: AppDesignTokens.fontSizeSm,
-            color: AppDesignTokens.neutral600,
+            fontSize: DS.fontSizeSm,
+            color: DS.neutral600,
           ),
         ),
       ],
@@ -339,11 +339,11 @@ class CompactFlameIndicator extends StatelessWidget {
     if (brightness >= 80) {
       return const Color(0xFFFFD700);
     } else if (brightness >= 60) {
-      return AppDesignTokens.accent;
+      return DS.accent;
     } else if (brightness >= 40) {
-      return AppDesignTokens.primaryBase;
+      return DS.primaryBase;
     } else {
-      return AppDesignTokens.warning;
+      return DS.warning;
     }
   }
 
@@ -352,12 +352,12 @@ class CompactFlameIndicator extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing12,
-          vertical: AppDesignTokens.spacing8,
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
         ),
         decoration: BoxDecoration(
           color: _getFlameColor().withValues(alpha: 0.1),
-          borderRadius: AppDesignTokens.borderRadius12,
+          borderRadius: DS.borderRadius12,
           border: Border.all(
             color: _getFlameColor().withValues(alpha: 0.3),
           ),
@@ -367,10 +367,10 @@ class CompactFlameIndicator extends StatelessWidget {
           children: [
             Icon(
               Icons.local_fire_department_rounded,
-              size: AppDesignTokens.iconSizeSm,
+              size: DS.iconSizeSm,
               color: _getFlameColor(),
             ),
-            const SizedBox(width: AppDesignTokens.spacing8),
+            const SizedBox(width: DS.spacing8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -378,16 +378,16 @@ class CompactFlameIndicator extends StatelessWidget {
                 Text(
                   'Lv.$level',
                   style: const TextStyle(
-                    fontSize: AppDesignTokens.fontSizeSm,
-                    fontWeight: AppDesignTokens.fontWeightBold,
-                    color: AppDesignTokens.neutral900,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.neutral900,
                   ),
                 ),
                 Text(
                   '$brightness%',
                   style: const TextStyle(
-                    fontSize: AppDesignTokens.fontSizeXs,
-                    color: AppDesignTokens.neutral600,
+                    fontSize: DS.fontSizeXs,
+                    color: DS.neutral600,
                   ),
                 ),
               ],

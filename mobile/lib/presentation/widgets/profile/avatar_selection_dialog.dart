@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class AvatarOption {
@@ -63,7 +63,7 @@ class AvatarSelectionDialog extends StatelessWidget {
 
     return AlertDialog(
       title: const Text('选择系统头像'),
-      shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
       content: SizedBox(
         width: double.maxFinite,
         child: GridView.builder(
@@ -91,13 +91,13 @@ class AvatarSelectionDialog extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? AppDesignTokens.primaryBase : Colors.transparent,
+                          color: isSelected ? DS.primaryBase : Colors.transparent,
                           width: 3,
                         ),
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppDesignTokens.primaryBase.withValues(alpha: 0.3),
+                                  color: DS.primaryBase.withValues(alpha: 0.3),
                                   blurRadius: 8,
                                 ),
                               ]
@@ -116,7 +116,7 @@ class AvatarSelectionDialog extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? AppDesignTokens.primaryBase : null,
+                      color: isSelected ? DS.primaryBase : null,
                     ),
                   ),
                 ],

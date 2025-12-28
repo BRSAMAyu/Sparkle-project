@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 
@@ -15,7 +15,7 @@ class FocusMainScreen extends ConsumerWidget {
     final todayTasks = taskState.todayTasks.where((t) => t.status != TaskStatus.completed).toList();
 
     return Scaffold(
-      backgroundColor: AppDesignTokens.deepSpaceStart,
+      backgroundColor: DS.deepSpaceStart,
       appBar: AppBar(
         title: const Text('选择专注任务'),
         backgroundColor: Colors.transparent,
@@ -115,7 +115,7 @@ class FocusMainScreen extends ConsumerWidget {
           context.push('/focus/mindfulness', extra: dummyTask);
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppDesignTokens.primaryBase,
+          backgroundColor: DS.primaryBase,
           foregroundColor: DS.brandPrimary,
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

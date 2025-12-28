@@ -1,6 +1,6 @@
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class SuccessAnimation extends StatefulWidget {
 
@@ -25,7 +25,7 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
   void initState() {
     super.initState();
     _confettiController =
-        ConfettiController(duration: AppDesignTokens.durationSlow);
+        ConfettiController(duration: DS.durationSlow);
     if (widget.playAnimation) {
       _confettiController.play();
     }
@@ -66,10 +66,10 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive, // All directions
             colors: const [
-              AppDesignTokens.primaryBase,
-              AppDesignTokens.accent,
-              AppDesignTokens.success,
-              AppDesignTokens.info,
+              DS.primaryBase,
+              DS.accent,
+              DS.success,
+              DS.info,
             ], // Customize colors
             gravity: 0.3,
             emissionFrequency: 0.05,

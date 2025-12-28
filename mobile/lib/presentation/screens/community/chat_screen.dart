@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
@@ -106,7 +105,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary[100],
+                  color: DS.brandPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -123,7 +122,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             IconButton.filled(
               onPressed: _sendMessage,
               icon: const Icon(Icons.send),
-              style: IconButton.styleFrom(backgroundColor: SparkleTheme.primary),
+              style: IconButton.styleFrom(backgroundColor: DS.brandPrimary),
             ),
           ],
         ),
@@ -141,6 +140,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
     
     _controller.clear();
-    _scrollController.animateTo(0, duration: SparkleTheme.fast, curve: SparkleTheme.curve);
+    _scrollController.animateTo(0, duration: DS.quick, curve: Curves.easeInOutCubic);
   }
 }

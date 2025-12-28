@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class BreathingTool extends StatefulWidget {
@@ -110,7 +110,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+      padding: const EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -266,7 +266,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
             icon: _isPlaying ? Icons.stop : Icons.play_arrow,
             onPressed: _isPlaying ? _stopBreathing : _startBreathing,
             customGradient: _isPlaying 
-              ? AppDesignTokens.warningGradient 
+              ? DS.warningGradient 
               : LinearGradient(colors: [Colors.indigo, DS.brandPrimaryConst]),
           ),
         ],

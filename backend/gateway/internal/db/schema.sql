@@ -198,6 +198,83 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: agent_execution_stats; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.agent_execution_stats (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    session_id character varying(255) NOT NULL,
+    request_id character varying(255) NOT NULL,
+    agent_type character varying(50) NOT NULL,
+    agent_name character varying(100),
+    started_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone,
+    duration_ms integer,
+    status character varying(20) NOT NULL,
+    tool_name character varying(100),
+    operation character varying(255),
+    metadata jsonb,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.agent_execution_stats OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.agent_execution_stats_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_execution_stats_id_seq OWNER TO postgres;
+
+--
+-- Name: agent_execution_stats_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.agent_execution_stats_id_seq OWNED BY public.agent_execution_stats.id;
+
+
+--
+-- Name: agent_stats_summary; Type: MATERIALIZED VIEW; Schema: public; Owner: postgres
+--
+
+CREATE MATERIALIZED VIEW public.agent_stats_summary AS
+ SELECT user_id,
+    agent_type,
+    count(*) AS execution_count,
+    avg(duration_ms) AS avg_duration_ms,
+    max(duration_ms) AS max_duration_ms,
+    min(duration_ms) AS min_duration_ms,
+    count(
+        CASE
+            WHEN ((status)::text = 'success'::text) THEN 1
+            ELSE NULL::integer
+        END) AS success_count,
+    count(
+        CASE
+            WHEN ((status)::text = 'failed'::text) THEN 1
+            ELSE NULL::integer
+        END) AS failure_count,
+    max(created_at) AS last_used_at
+   FROM public.agent_execution_stats
+  WHERE (completed_at IS NOT NULL)
+  GROUP BY user_id, agent_type
+  WITH NO DATA;
+
+
+ALTER MATERIALIZED VIEW public.agent_stats_summary OWNER TO postgres;
+
+--
 -- Name: alembic_version; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -347,6 +424,45 @@ CREATE TABLE public.error_records (
 
 
 ALTER TABLE public.error_records OWNER TO postgres;
+
+--
+-- Name: event_outbox; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.event_outbox (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    event_type character varying(100) NOT NULL,
+    event_version integer DEFAULT 1 NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb,
+    sequence_number bigint NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    published_at timestamp without time zone
+);
+
+
+ALTER TABLE public.event_outbox OWNER TO postgres;
+
+--
+-- Name: event_store; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.event_store (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    event_type character varying(100) NOT NULL,
+    event_version integer NOT NULL,
+    sequence_number bigint NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.event_store OWNER TO postgres;
 
 --
 -- Name: focus_sessions; Type: TABLE; Schema: public; Owner: postgres
@@ -657,6 +773,37 @@ CREATE TABLE public.plans (
 ALTER TABLE public.plans OWNER TO postgres;
 
 --
+-- Name: post_likes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.post_likes (
+    user_id uuid NOT NULL,
+    post_id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.post_likes OWNER TO postgres;
+
+--
+-- Name: posts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.posts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    content text NOT NULL,
+    image_urls json,
+    topic character varying(100),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.posts OWNER TO postgres;
+
+--
 -- Name: private_messages; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -677,6 +824,53 @@ CREATE TABLE public.private_messages (
 
 
 ALTER TABLE public.private_messages OWNER TO postgres;
+
+--
+-- Name: processed_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.processed_events (
+    event_id character varying(100) NOT NULL,
+    consumer_group character varying(100) NOT NULL,
+    processed_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.processed_events OWNER TO postgres;
+
+--
+-- Name: projection_metadata; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.projection_metadata (
+    projection_name character varying(100) NOT NULL,
+    last_processed_position character varying(100),
+    last_processed_at timestamp without time zone,
+    version integer DEFAULT 1 NOT NULL,
+    status character varying(20) DEFAULT '''active'''::character varying NOT NULL,
+    error_message text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.projection_metadata OWNER TO postgres;
+
+--
+-- Name: projection_snapshots; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.projection_snapshots (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    projection_name character varying(100) NOT NULL,
+    aggregate_id uuid,
+    snapshot_data jsonb NOT NULL,
+    stream_position character varying(100) NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.projection_snapshots OWNER TO postgres;
 
 --
 -- Name: push_histories; Type: TABLE; Schema: public; Owner: postgres
@@ -840,6 +1034,28 @@ CREATE TABLE public.tasks (
 ALTER TABLE public.tasks OWNER TO postgres;
 
 --
+-- Name: token_usage; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.token_usage (
+    user_id uuid NOT NULL,
+    session_id character varying(100) NOT NULL,
+    request_id character varying(100) NOT NULL,
+    prompt_tokens integer NOT NULL,
+    completion_tokens integer NOT NULL,
+    total_tokens integer NOT NULL,
+    model character varying(100) NOT NULL,
+    cost double precision,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.token_usage OWNER TO postgres;
+
+--
 -- Name: user_daily_metrics; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -952,10 +1168,25 @@ CREATE TABLE public.word_books (
 ALTER TABLE public.word_books OWNER TO postgres;
 
 --
+-- Name: agent_execution_stats id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.agent_execution_stats ALTER COLUMN id SET DEFAULT nextval('public.agent_execution_stats_id_seq'::regclass);
+
+
+--
 -- Name: subjects id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.subjects ALTER COLUMN id SET DEFAULT nextval('public.subjects_id_seq'::regclass);
+
+
+--
+-- Name: agent_execution_stats agent_execution_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.agent_execution_stats
+    ADD CONSTRAINT agent_execution_stats_pkey PRIMARY KEY (id);
 
 
 --
@@ -1020,6 +1251,22 @@ ALTER TABLE ONLY public.dictionary_entries
 
 ALTER TABLE ONLY public.error_records
     ADD CONSTRAINT error_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: event_outbox event_outbox_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_outbox
+    ADD CONSTRAINT event_outbox_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: event_store event_store_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_store
+    ADD CONSTRAINT event_store_pkey PRIMARY KEY (id);
 
 
 --
@@ -1135,11 +1382,51 @@ ALTER TABLE ONLY public.plans
 
 
 --
+-- Name: post_likes post_likes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_pkey PRIMARY KEY (user_id, post_id);
+
+
+--
+-- Name: posts posts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: private_messages private_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.private_messages
     ADD CONSTRAINT private_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: processed_events processed_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.processed_events
+    ADD CONSTRAINT processed_events_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: projection_metadata projection_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.projection_metadata
+    ADD CONSTRAINT projection_metadata_pkey PRIMARY KEY (projection_name);
+
+
+--
+-- Name: projection_snapshots projection_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.projection_snapshots
+    ADD CONSTRAINT projection_snapshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -1188,6 +1475,38 @@ ALTER TABLE ONLY public.subjects
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: token_usage token_usage_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.token_usage
+    ADD CONSTRAINT token_usage_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: token_usage token_usage_request_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.token_usage
+    ADD CONSTRAINT token_usage_request_id_key UNIQUE (request_id);
+
+
+--
+-- Name: event_store unique_event; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_store
+    ADD CONSTRAINT unique_event UNIQUE (aggregate_type, aggregate_id, sequence_number);
+
+
+--
+-- Name: projection_snapshots unique_snapshot; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.projection_snapshots
+    ADD CONSTRAINT unique_snapshot UNIQUE (projection_name, aggregate_id);
 
 
 --
@@ -1279,10 +1598,24 @@ ALTER TABLE ONLY public.word_books
 
 
 --
+-- Name: agent_stats_summary_user_id_agent_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX agent_stats_summary_user_id_agent_type_idx ON public.agent_stats_summary USING btree (user_id, agent_type);
+
+
+--
 -- Name: idx_chat_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_chat_created_at ON public.chat_messages USING btree (created_at);
+
+
+--
+-- Name: idx_chat_messages_session_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_chat_messages_session_created ON public.chat_messages USING btree (session_id, created_at DESC);
 
 
 --
@@ -1325,6 +1658,13 @@ CREATE INDEX idx_claim_task ON public.group_task_claims USING btree (group_task_
 --
 
 CREATE INDEX idx_claim_user ON public.group_task_claims USING btree (user_id);
+
+
+--
+-- Name: idx_cognitive_fragments_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_cognitive_fragments_embedding_hnsw ON public.cognitive_fragments USING hnsw (embedding public.vector_cosine_ops) WITH (m='16', ef_construction='64');
 
 
 --
@@ -1381,6 +1721,20 @@ CREATE INDEX idx_error_topic ON public.error_records USING btree (topic);
 --
 
 CREATE INDEX idx_error_user_id ON public.error_records USING btree (user_id);
+
+
+--
+-- Name: idx_event_store_aggregate; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_event_store_aggregate ON public.event_store USING btree (aggregate_type, aggregate_id, sequence_number);
+
+
+--
+-- Name: idx_event_store_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_event_store_type ON public.event_store USING btree (event_type, created_at);
 
 
 --
@@ -1461,6 +1815,13 @@ CREATE INDEX idx_jobs_user_id ON public.jobs USING btree (user_id);
 
 
 --
+-- Name: idx_knowledge_nodes_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_knowledge_nodes_embedding_hnsw ON public.knowledge_nodes USING hnsw (embedding public.vector_cosine_ops) WITH (m='16', ef_construction='64');
+
+
+--
 -- Name: idx_member_group; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1479,6 +1840,20 @@ CREATE INDEX idx_member_user ON public.group_members USING btree (user_id);
 --
 
 CREATE INDEX idx_message_group_time ON public.group_messages USING btree (group_id, created_at);
+
+
+--
+-- Name: idx_outbox_aggregate; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_outbox_aggregate ON public.event_outbox USING btree (aggregate_type, aggregate_id, sequence_number);
+
+
+--
+-- Name: idx_outbox_unpublished; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_outbox_unpublished ON public.event_outbox USING btree (created_at) WHERE (published_at IS NULL);
 
 
 --
@@ -1510,6 +1885,27 @@ CREATE INDEX idx_plans_user_id ON public.plans USING btree (user_id);
 
 
 --
+-- Name: idx_post_likes_post_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_post_likes_post_id ON public.post_likes USING btree (post_id);
+
+
+--
+-- Name: idx_posts_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_posts_created_at ON public.posts USING btree (created_at);
+
+
+--
+-- Name: idx_posts_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_posts_user_id ON public.posts USING btree (user_id);
+
+
+--
 -- Name: idx_private_message_conversation; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1521,6 +1917,20 @@ CREATE INDEX idx_private_message_conversation ON public.private_messages USING b
 --
 
 CREATE INDEX idx_private_message_receiver_unread ON public.private_messages USING btree (receiver_id, is_read);
+
+
+--
+-- Name: idx_processed_events_cleanup; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_processed_events_cleanup ON public.processed_events USING btree (processed_at);
+
+
+--
+-- Name: idx_processed_events_group; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_processed_events_group ON public.processed_events USING btree (consumer_group, processed_at);
 
 
 --
@@ -1542,6 +1952,13 @@ CREATE INDEX idx_share_resource_plan ON public.shared_resources USING btree (pla
 --
 
 CREATE INDEX idx_share_target_user ON public.shared_resources USING btree (target_user_id);
+
+
+--
+-- Name: idx_snapshots_projection; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_snapshots_projection ON public.projection_snapshots USING btree (projection_name, created_at);
 
 
 --
@@ -1580,6 +1997,27 @@ CREATE INDEX idx_tasks_user_id ON public.tasks USING btree (user_id);
 
 
 --
+-- Name: idx_token_usage_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_token_usage_created_at ON public.token_usage USING btree (created_at);
+
+
+--
+-- Name: idx_token_usage_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_token_usage_session_id ON public.token_usage USING btree (session_id);
+
+
+--
+-- Name: idx_token_usage_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_token_usage_user_id ON public.token_usage USING btree (user_id);
+
+
+--
 -- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1598,6 +2036,41 @@ CREATE INDEX idx_users_username ON public.users USING btree (username);
 --
 
 CREATE INDEX idx_wordbook_review ON public.word_books USING btree (user_id, next_review_at);
+
+
+--
+-- Name: ix_agent_stats_agent_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_agent_type ON public.agent_execution_stats USING btree (agent_type);
+
+
+--
+-- Name: ix_agent_stats_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_created_at ON public.agent_execution_stats USING btree (created_at);
+
+
+--
+-- Name: ix_agent_stats_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_session_id ON public.agent_execution_stats USING btree (session_id);
+
+
+--
+-- Name: ix_agent_stats_user_agent_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_user_agent_type ON public.agent_execution_stats USING btree (user_id, agent_type);
+
+
+--
+-- Name: ix_agent_stats_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_stats_user_id ON public.agent_execution_stats USING btree (user_id);
 
 
 --
@@ -2112,6 +2585,27 @@ CREATE INDEX ix_tasks_user_id ON public.tasks USING btree (user_id);
 
 
 --
+-- Name: ix_token_usage_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_token_usage_deleted_at ON public.token_usage USING btree (deleted_at);
+
+
+--
+-- Name: ix_token_usage_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_token_usage_session_id ON public.token_usage USING btree (session_id);
+
+
+--
+-- Name: ix_token_usage_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_token_usage_user_id ON public.token_usage USING btree (user_id);
+
+
+--
 -- Name: ix_user_daily_metrics_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -2477,6 +2971,30 @@ ALTER TABLE ONLY public.plans
 
 
 --
+-- Name: post_likes post_likes_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: post_likes post_likes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.post_likes
+    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: posts posts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: private_messages private_messages_receiver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2613,6 +3131,14 @@ ALTER TABLE ONLY public.tasks
 
 
 --
+-- Name: token_usage token_usage_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.token_usage
+    ADD CONSTRAINT token_usage_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: user_daily_metrics user_daily_metrics_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2657,136 +3183,3 @@ ALTER TABLE ONLY public.word_books
 --
 
 
-
-
---
--- Community Module Tables
---
-
-CREATE TABLE public.posts (
-    id uuid NOT NULL DEFAULT gen_random_uuid(),
-    user_id uuid NOT NULL,
-    content text NOT NULL,
-    image_urls json,
-    topic character varying(100),
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp without time zone
-);
-
-ALTER TABLE public.posts OWNER TO postgres;
-
-ALTER TABLE ONLY public.posts
-    ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY public.posts
-    ADD CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-CREATE INDEX idx_posts_user_id ON public.posts USING btree (user_id);
-CREATE INDEX idx_posts_created_at ON public.posts USING btree (created_at);
-
-CREATE TABLE public.post_likes (
-    user_id uuid NOT NULL,
-    post_id uuid NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-ALTER TABLE public.post_likes OWNER TO postgres;
-
-ALTER TABLE ONLY public.post_likes
-    ADD CONSTRAINT post_likes_pkey PRIMARY KEY (user_id, post_id);
-
-ALTER TABLE ONLY public.post_likes
-    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
-
-ALTER TABLE ONLY public.post_likes
-    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-CREATE INDEX idx_post_likes_post_id ON public.post_likes USING btree (post_id);
-
---
--- CQRS Infrastructure Tables
---
-
--- 1. Outbox table (transactional event publishing)
-CREATE TABLE public.event_outbox (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    aggregate_type character varying(100) NOT NULL,
-    aggregate_id uuid NOT NULL,
-    event_type character varying(100) NOT NULL,
-    event_version integer NOT NULL DEFAULT 1,
-    payload jsonb NOT NULL,
-    metadata jsonb,
-    sequence_number bigserial,
-    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
-    published_at timestamp without time zone,
-
-    CONSTRAINT unique_aggregate_sequence
-        UNIQUE (aggregate_type, aggregate_id, sequence_number)
-);
-
-ALTER TABLE public.event_outbox OWNER TO postgres;
-
-CREATE INDEX idx_outbox_unpublished ON public.event_outbox (created_at)
-    WHERE published_at IS NULL;
-
--- 2. Event Store (complete event history)
-CREATE TABLE public.event_store (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    aggregate_type character varying(100) NOT NULL,
-    aggregate_id uuid NOT NULL,
-    event_type character varying(100) NOT NULL,
-    event_version integer NOT NULL,
-    sequence_number bigint NOT NULL,
-    payload jsonb NOT NULL,
-    metadata jsonb,
-    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT unique_event
-        UNIQUE (aggregate_type, aggregate_id, sequence_number)
-);
-
-ALTER TABLE public.event_store OWNER TO postgres;
-
-CREATE INDEX idx_event_store_aggregate
-    ON public.event_store (aggregate_type, aggregate_id, sequence_number);
-CREATE INDEX idx_event_store_type ON public.event_store (event_type, created_at);
-
--- 3. Idempotency tracking
-CREATE TABLE public.processed_events (
-    event_id character varying(100) PRIMARY KEY,
-    consumer_group character varying(100) NOT NULL,
-    processed_at timestamp without time zone NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE public.processed_events OWNER TO postgres;
-
-CREATE INDEX idx_processed_events_cleanup ON public.processed_events (processed_at);
-
--- 4. Projection metadata
-CREATE TABLE public.projection_metadata (
-    projection_name character varying(100) PRIMARY KEY,
-    last_processed_position character varying(100),
-    last_processed_at timestamp without time zone,
-    version integer NOT NULL DEFAULT 1,
-    status character varying(20) NOT NULL DEFAULT 'active',
-    error_message text,
-    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
-    updated_at timestamp without time zone NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE public.projection_metadata OWNER TO postgres;
-
--- 5. Projection snapshots
-CREATE TABLE public.projection_snapshots (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    projection_name character varying(100) NOT NULL,
-    aggregate_id uuid,
-    snapshot_data jsonb NOT NULL,
-    stream_position character varying(100) NOT NULL,
-    created_at timestamp without time zone NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT unique_snapshot UNIQUE (projection_name, aggregate_id)
-);
-
-ALTER TABLE public.projection_snapshots OWNER TO postgres;

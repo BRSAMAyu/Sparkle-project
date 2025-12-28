@@ -297,8 +297,8 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Admin Routes (Chaos Engineering + CQRS Management)
-	// In production, this should be protected by a strong admin secret or VPN
-	admin := r.Group("/admin")
+	// Protected by X-Admin-Secret header (required in production)
+	admin := r.Group("/admin", middleware.AdminAuthMiddleware(cfg))
 	{
 		// Chaos Engineering
 		admin.POST("/chaos/inject", chaosManager.HandleInject)

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
 /// WeatherHeader - Full-screen background weather system
@@ -68,7 +68,7 @@ class WeatherHeader extends ConsumerWidget {
     switch (type) {
       case 'sunny':
         return const LinearGradient(
-          colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceEnd, Color(0xFF415A77)],
+          colors: [DS.deepSpaceStart, DS.deepSpaceEnd, Color(0xFF415A77)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
@@ -80,7 +80,7 @@ class WeatherHeader extends ConsumerWidget {
         );
       case 'rainy':
         return const LinearGradient(
-          colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceSurface, AppDesignTokens.neutral700],
+          colors: [DS.deepSpaceStart, DS.deepSpaceSurface, DS.neutral700],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
@@ -92,7 +92,7 @@ class WeatherHeader extends ConsumerWidget {
         );
       default:
         return const LinearGradient(
-          colors: [AppDesignTokens.deepSpaceStart, AppDesignTokens.deepSpaceEnd],
+          colors: [DS.deepSpaceStart, DS.deepSpaceEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );

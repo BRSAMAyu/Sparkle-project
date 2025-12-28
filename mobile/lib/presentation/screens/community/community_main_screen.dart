@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
-import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
@@ -95,7 +93,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
           IconButton(
             icon: Icon(
               focusMode ? Icons.do_not_disturb_on : Icons.do_not_disturb_off_outlined,
-              color: focusMode ? AppDesignTokens.warning : null,
+              color: focusMode ? DS.warning : null,
             ),
             tooltip: focusMode ? '专注模式开启中' : '开启专注模式',
             onPressed: () {
@@ -114,7 +112,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: '好友'), Tab(text: '群组')],
-          indicatorColor: SparkleTheme.primary,
+          indicatorColor: DS.brandPrimary,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -141,13 +139,13 @@ class _FriendsListTab extends ConsumerWidget {
     return friendsAsync.when(
       data: (friends) {
         if (friends.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.people_outline, size: 64, color: AppDesignTokens.neutral300),
+                Icon(Icons.people_outline, size: 64, color: DS.neutral300),
                 SizedBox(height: DS.lg),
-                Text('还没有好友', style: TextStyle(color: AppDesignTokens.neutral500)),
+                Text('还没有好友', style: TextStyle(color: DS.neutral500)),
               ],
             ),
           );
@@ -182,8 +180,8 @@ class _FriendsListTab extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: f.friend.status == UserStatus.online
-                                      ? AppDesignTokens.success
-                                      : AppDesignTokens.neutral300,
+                                      ? DS.success
+                                      : DS.neutral300,
                                 ),
                               ),
                               const SizedBox(width: DS.xs),
@@ -191,22 +189,22 @@ class _FriendsListTab extends ConsumerWidget {
                                 f.friend.status == UserStatus.online ? '在线' : '离线',
                                 style: TextStyle(
                                   color: f.friend.status == UserStatus.online
-                                      ? AppDesignTokens.success
-                                      : AppDesignTokens.neutral500,
+                                      ? DS.success
+                                      : DS.neutral500,
                                   fontSize: 12,
                                 ),
                               ),
                               const SizedBox(width: DS.sm),
                               Text(
                                 'Lv.${f.friend.flameLevel}',
-                                style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12),
+                                style: TextStyle(color: DS.neutral500, fontSize: 12),
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, size: 20, color: AppDesignTokens.neutral400),
+                    Icon(Icons.chevron_right, size: 20, color: DS.neutral400),
                   ],
                 ),
               ),
@@ -228,13 +226,13 @@ class _GroupsListTab extends ConsumerWidget {
     return groupsAsync.when(
       data: (groups) {
         if (groups.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.group_outlined, size: 64, color: AppDesignTokens.neutral300),
+                Icon(Icons.group_outlined, size: 64, color: DS.neutral300),
                 SizedBox(height: DS.lg),
-                Text('还没有加入群组', style: TextStyle(color: AppDesignTokens.neutral500)),
+                Text('还没有加入群组', style: TextStyle(color: DS.neutral500)),
               ],
             ),
           );
@@ -255,7 +253,7 @@ class _GroupsListTab extends ConsumerWidget {
                     children: [
                       SparkleAvatar(
                         radius: 24,
-                        backgroundColor: SparkleTheme.primary.withValues(alpha: 0.1),
+                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
                         fallbackText: g.name,
                       ),
                       const SizedBox(width: DS.md),
@@ -267,19 +265,19 @@ class _GroupsListTab extends ConsumerWidget {
                             const SizedBox(height: DS.xs),
                             Row(
                               children: [
-                                const Icon(Icons.people, size: 14, color: AppDesignTokens.neutral500),
+                                Icon(Icons.people, size: 14, color: DS.neutral500),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.memberCount} 成员', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+                                Text('${g.memberCount} 成员', style: TextStyle(color: DS.neutral500, fontSize: 12)),
                                 const SizedBox(width: DS.md),
                                 Icon(Icons.local_fire_department, size: 14, color: DS.brandPrimary),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.totalFlamePower}', style: const TextStyle(color: AppDesignTokens.neutral500, fontSize: 12)),
+                                Text('${g.totalFlamePower}', style: TextStyle(color: DS.neutral500, fontSize: 12)),
                               ],
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+                      Icon(Icons.chevron_right, color: DS.neutral400),
                     ],
                   ),
                 ),

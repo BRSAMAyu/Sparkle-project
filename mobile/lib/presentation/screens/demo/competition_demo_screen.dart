@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 竞赛演示模式 - Week 8
 ///
@@ -151,7 +151,7 @@ class _CompetitionDemoScreenState extends State<CompetitionDemoScreen>
     final currentStep = _steps[_currentStep];
 
     return Scaffold(
-      backgroundColor: AppDesignTokens.deepSpaceStart,
+      backgroundColor: DS.deepSpaceStart,
       body: Stack(
         children: [
           // Background gradient

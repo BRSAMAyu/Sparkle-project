@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 成就分享卡片生成器 - Week 7
 ///
@@ -112,9 +112,9 @@ class _LearningMilestoneCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppDesignTokens.deepSpaceStart,
-            AppDesignTokens.deepSpaceEnd,
-            AppDesignTokens.secondaryDark,
+            DS.deepSpaceStart,
+            DS.deepSpaceEnd,
+            DS.secondaryDark,
           ],
         ),
       ),

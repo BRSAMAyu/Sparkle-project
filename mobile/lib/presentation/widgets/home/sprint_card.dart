@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
 /// SprintCard - Sprint Progress Card for v2.3 dashboard
@@ -26,14 +26,14 @@ class SprintCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius20,
+        borderRadius: DS.borderRadius20,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: AppDesignTokens.glassBackground,
-              borderRadius: AppDesignTokens.borderRadius20,
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              color: DS.glassBackground,
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: DS.glassBorder),
             ),
             padding: const EdgeInsets.all(DS.lg),
             child: sprint != null
@@ -191,7 +191,7 @@ class _CircularProgressPainter extends CustomPainter {
 
     // Progress arc
     final progressPaint = Paint()
-      ..color = isUrgent ? DS.error : AppDesignTokens.primaryBase
+      ..color = isUrgent ? DS.error : DS.primaryBase
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;

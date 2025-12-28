@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
 
@@ -43,9 +43,9 @@ class HomeNotificationCard extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.glassBackground,
+                    color: DS.glassBackground,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppDesignTokens.glassBorder),
+                    border: Border.all(color: DS.glassBorder),
                   ),
                   child: Row(
                     children: [
@@ -94,7 +94,7 @@ class HomeNotificationCard extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppDesignTokens.error,
+                            color: DS.error,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -141,7 +141,7 @@ class HomeNotificationCard extends ConsumerWidget {
   Color _getIconColor(String type) {
     switch (type) {
       case 'fragmented_time':
-        return AppDesignTokens.warningAccent;
+        return DS.warningAccent;
       case 'system':
         return DS.brandPrimaryAccent;
       case 'reminder':
@@ -160,9 +160,9 @@ class HomeNotificationCard extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppDesignTokens.glassBackground,
+              color: DS.glassBackground,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              border: Border.all(color: DS.glassBorder),
             ),
             child: Row(
               children: [
@@ -206,7 +206,7 @@ class HomeNotificationCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.error,
+                    color: DS.error,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

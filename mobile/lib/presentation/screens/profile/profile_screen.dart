@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -22,19 +22,19 @@ class ProfileScreen extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
-      backgroundColor: AppDesignTokens.neutral50,
+      backgroundColor: DS.neutral50,
       body: SingleChildScrollView(
         padding: EdgeInsets.zero,
         child: Column(
           children: [
             _buildHeader(context, user),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16),
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
               child: Column(
                 children: [
-                  const SizedBox(height: AppDesignTokens.spacing24),
+                  const SizedBox(height: DS.spacing24),
                   const StatisticsCard(),
-                  const SizedBox(height: AppDesignTokens.spacing24),
+                  const SizedBox(height: DS.spacing24),
                   _buildSettingsSection(context, ref, l10n),
                   const SizedBox(height: 100), // Bottom padding
                 ],
@@ -59,10 +59,10 @@ class ProfileScreen extends ConsumerWidget {
           // Content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+              padding: const EdgeInsets.all(DS.spacing24),
               child: Column(
                 children: [
-                  const SizedBox(height: AppDesignTokens.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   Row(
                     children: [
                       // Avatar Area
@@ -88,7 +88,7 @@ class ProfileScreen extends ConsumerWidget {
                           status: user.avatarStatus,
                         ),
                       ),
-                      const SizedBox(width: AppDesignTokens.spacing20),
+                      const SizedBox(width: DS.spacing20),
                       // Info Area
                       Expanded(
                         child: Column(
@@ -98,7 +98,7 @@ class ProfileScreen extends ConsumerWidget {
                               user.nickname ?? user.username,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: DS.brandPrimaryConst,
-                                fontWeight: AppDesignTokens.fontWeightBold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                             const SizedBox(height: DS.sm),
@@ -106,7 +106,7 @@ class ProfileScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: DS.brandPrimary.withValues(alpha: 0.2),
-                                borderRadius: AppDesignTokens.borderRadius20,
+                                borderRadius: DS.borderRadius20,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -147,8 +147,8 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildSettingsSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        borderRadius: AppDesignTokens.borderRadius16,
-        boxShadow: AppDesignTokens.shadowSm,
+        borderRadius: DS.borderRadius16,
+        boxShadow: DS.shadowSm,
       ),
       child: Column(
         children: [
@@ -156,7 +156,7 @@ class ProfileScreen extends ConsumerWidget {
             context,
             icon: Icons.person_outline_rounded,
             title: l10n.nickname,
-            gradient: AppDesignTokens.primaryGradient,
+            gradient: DS.primaryGradient,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -170,7 +170,7 @@ class ProfileScreen extends ConsumerWidget {
             context,
             icon: Icons.tune_rounded,
             title: l10n.schedulePreferences,
-            gradient: AppDesignTokens.secondaryGradient,
+            gradient: DS.secondaryGradient,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -184,7 +184,7 @@ class ProfileScreen extends ConsumerWidget {
             context,
             icon: Icons.language_rounded,
             title: l10n.language,
-            gradient: AppDesignTokens.infoGradient,
+            gradient: DS.infoGradient,
             onTap: () {
               _showLanguageDialog(context, ref);
             },
@@ -194,7 +194,7 @@ class ProfileScreen extends ConsumerWidget {
             context,
             icon: Icons.logout_rounded,
             title: l10n.logout,
-            gradient: AppDesignTokens.errorGradient,
+            gradient: DS.errorGradient,
             isDestructive: true,
             onTap: () {
               _showLogoutDialog(context, ref, l10n);
@@ -212,13 +212,13 @@ class ProfileScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.language),
-        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+        shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text(l10n.languageChinese),
-              trailing: currentLocale.languageCode == 'zh' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'zh' ? const Icon(Icons.check, color: DS.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('zh'));
                 Navigator.pop(context);
@@ -226,7 +226,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ListTile(
               title: Text(l10n.languageEnglish),
-              trailing: currentLocale.languageCode == 'en' ? const Icon(Icons.check, color: AppDesignTokens.primaryBase) : null,
+              trailing: currentLocale.languageCode == 'en' ? const Icon(Icons.check, color: DS.primaryBase) : null,
               onTap: () {
                 ref.read(localeProvider.notifier).setLocale(const Locale('en'));
                 Navigator.pop(context);
@@ -244,7 +244,7 @@ class ProfileScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Text(l10n.logout),
         content: Text(l10n.confirmLogout),
-        shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius16),
+        shape: RoundedRectangleBorder(borderRadius: DS.borderRadius16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -255,7 +255,7 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: Text(l10n.confirm, style: const TextStyle(color: AppDesignTokens.error)),
+            child: Text(l10n.confirm, style: const TextStyle(color: DS.error)),
           ),
         ],
       ),
@@ -272,28 +272,28 @@ class ProfileScreen extends ConsumerWidget {
   }) => ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppDesignTokens.spacing16,
-        vertical: AppDesignTokens.spacing4,
+        horizontal: DS.spacing16,
+        vertical: DS.spacing4,
       ),
       leading: Container(
         padding: const EdgeInsets.all(DS.sm),
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: AppDesignTokens.borderRadius8,
+          borderRadius: DS.borderRadius8,
         ),
         child: Icon(icon, color: DS.brandPrimaryConst, size: 20),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? AppDesignTokens.error : AppDesignTokens.neutral900,
-          fontWeight: AppDesignTokens.fontWeightMedium,
+          color: isDestructive ? DS.error : DS.neutral900,
+          fontWeight: DS.fontWeightMedium,
         ),
       ),
       trailing: const Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
-        color: AppDesignTokens.neutral400,
+        color: DS.neutral400,
       ),
     );
 }
@@ -302,7 +302,7 @@ class _WaveHeaderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..shader = AppDesignTokens.primaryGradient.createShader(
+      ..shader = DS.primaryGradient.createShader(
         Rect.fromLTWH(0, 0, size.width, size.height),
       );
 

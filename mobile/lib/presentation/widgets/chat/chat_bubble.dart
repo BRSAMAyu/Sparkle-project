@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
@@ -148,8 +148,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
               ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
-                  leading: const Icon(Icons.undo_rounded, color: AppDesignTokens.error),
-                  title: const Text('撤销', style: TextStyle(color: AppDesignTokens.error)),
+                  leading: const Icon(Icons.undo_rounded, color: DS.error),
+                  title: const Text('撤销', style: TextStyle(color: DS.error)),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onRevoke!(widget.message);
@@ -207,11 +207,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                                   decoration: isUser
                                     ? BoxDecoration(
-                                        gradient: AppDesignTokens.primaryGradient,
+                                        gradient: DS.primaryGradient,
                                         borderRadius: _getBorderRadius(true),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: AppDesignTokens.primaryBase.withValues(alpha: 0.25),
+                                            color: DS.primaryBase.withValues(alpha: 0.25),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
@@ -311,7 +311,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     const SizedBox(width: DS.xs),
                     Text(
                       timeStr,
-                      style: const TextStyle(fontSize: 10, color: AppDesignTokens.neutral500),
+                      style: const TextStyle(fontSize: 10, color: DS.neutral500),
                     ),
                   ],
                 ),
@@ -329,7 +329,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: isUser ? DS.brandPrimary.withValues(alpha: 0.15) : context.colors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
-        border: Border(left: BorderSide(color: isUser ? DS.brandPrimary70 : AppDesignTokens.primaryBase, width: 3)),
+        border: Border(left: BorderSide(color: isUser ? DS.brandPrimary70 : DS.primaryBase, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +338,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
             msg.sender.displayName,
             style: TextStyle(
               fontSize: 11, fontWeight: FontWeight.bold,
-              color: isUser ? DS.brandPrimary : AppDesignTokens.primaryBase,
+              color: isUser ? DS.brandPrimary : DS.primaryBase,
             ),
           ),
           const SizedBox(height: 2),
@@ -360,7 +360,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
           _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
-          style: const TextStyle(fontSize: 12, color: AppDesignTokens.neutral400),
+          style: const TextStyle(fontSize: 12, color: DS.neutral400),
         ),
       ),
     );
@@ -373,7 +373,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
     }
     if (msg.hasError) {
-      return const Icon(Icons.error_outline, color: AppDesignTokens.error, size: 14);
+      return const Icon(Icons.error_outline, color: DS.error, size: 14);
     }
 
     final isRead = msg.isRead || msg.readAt != null;
@@ -383,12 +383,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         Icon(
           isRead ? Icons.done_all_rounded : Icons.done_rounded,
           size: 14,
-          color: isRead ? AppDesignTokens.info : AppDesignTokens.neutral400,
+          color: isRead ? DS.info : DS.neutral400,
         ),
         if (isRead)
           const Padding(
             padding: EdgeInsets.only(left: 2),
-            child: Text('已读', style: TextStyle(fontSize: 10, color: AppDesignTokens.info)),
+            child: Text('已读', style: TextStyle(fontSize: 10, color: DS.info)),
           ),
       ],
     );
@@ -415,11 +415,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        gradient: isUser ? AppDesignTokens.primaryGradient : AppDesignTokens.secondaryGradient,
+        gradient: isUser ? DS.primaryGradient : DS.secondaryGradient,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isUser ? AppDesignTokens.primaryBase : AppDesignTokens.secondaryBase).withValues(alpha: 0.2),
+            color: (isUser ? DS.primaryBase : DS.secondaryBase).withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -430,24 +430,24 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: isUser ? DS.brandPrimary : (isDark ? AppDesignTokens.neutral800 : DS.brandPrimary),
+            color: isUser ? DS.brandPrimary : (isDark ? DS.neutral800 : DS.brandPrimary),
             shape: BoxShape.circle,
           ),
           clipBehavior: Clip.antiAlias,
           child: avatarUrl != null 
             ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => Center(child: Text(initial)))
-            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isUser ? AppDesignTokens.primaryBase : AppDesignTokens.secondaryBase))),
+            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isUser ? DS.primaryBase : DS.secondaryBase))),
         ),
       ),
     );
   }
 
   MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
-      p: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeBase, height: AppDesignTokens.lineHeightNormal),
-      h1: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: AppDesignTokens.fontSizeXl, fontWeight: AppDesignTokens.fontWeightBold),
-      code: TextStyle(backgroundColor: isUser ? DS.brandPrimary.withValues(alpha: 0.2) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: AppDesignTokens.fontSizeSm, color: isUser ? DS.brandPrimary : AppDesignTokens.secondaryBase),
-      codeblockDecoration: BoxDecoration(color: isUser ? DS.brandPrimary.withValues(alpha: 0.1) : context.colors.surfaceElevated, borderRadius: AppDesignTokens.borderRadius12),
-      a: TextStyle(color: isUser ? DS.brandPrimary : AppDesignTokens.primaryBase, decoration: TextDecoration.underline),
+      p: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: DS.fontSizeBase, height: DS.lineHeightNormal),
+      h1: TextStyle(color: isUser ? DS.brandPrimary : context.colors.textPrimary, fontSize: DS.fontSizeXl, fontWeight: DS.fontWeightBold),
+      code: TextStyle(backgroundColor: isUser ? DS.brandPrimary.withValues(alpha: 0.2) : context.colors.surfaceElevated, fontFamily: 'monospace', fontSize: DS.fontSizeSm, color: isUser ? DS.brandPrimary : DS.secondaryBase),
+      codeblockDecoration: BoxDecoration(color: isUser ? DS.brandPrimary.withValues(alpha: 0.1) : context.colors.surfaceElevated, borderRadius: DS.borderRadius12),
+      a: TextStyle(color: isUser ? DS.brandPrimary : DS.primaryBase, decoration: TextDecoration.underline),
     );
 
   BorderRadius _getBorderRadius(bool isUser) => BorderRadius.only(
@@ -488,7 +488,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 500),
       curve: Curves.elasticOut,
-      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: AppDesignTokens.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: const Offset(0, 4))])),
+      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: const Offset(0, 4))])),
     );
 }
 

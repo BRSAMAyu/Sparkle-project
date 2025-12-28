@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 星星数据
 class _Star { // 闪烁相位偏移
@@ -109,8 +109,8 @@ class _StarPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppDesignTokens.deepSpaceStart,
-          AppDesignTokens.deepSpaceEnd,
+          DS.deepSpaceStart,
+          DS.deepSpaceEnd,
         ],
       ).createShader(bgRect);
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/repositories/omnibar_repository.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
@@ -91,7 +91,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('发送失败: $e'), backgroundColor: AppDesignTokens.error),
+          SnackBar(content: Text('发送失败: $e'), backgroundColor: DS.error),
         );
       }
     } finally {
@@ -160,7 +160,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                         : (widget.hintText ?? 'Tell me what you think...'),
                     hintStyle: TextStyle(
                       color: _isListening 
-                          ? AppDesignTokens.primaryBase 
+                          ? DS.primaryBase 
                           : AppColors.textOnDark(context).withAlpha(80), 
                       fontSize: 14,
                     ),
@@ -172,7 +172,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               else if (_controller.text.isEmpty && !_isListening)
                  IconButton(
-                  icon: const Icon(Icons.mic, color: AppDesignTokens.primaryBase),
+                  icon: const Icon(Icons.mic, color: DS.primaryBase),
                   onPressed: _toggleListening,
                   tooltip: '语音输入',
                 )

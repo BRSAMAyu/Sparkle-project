@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
 class LongTermPlanCard extends ConsumerWidget {
@@ -18,14 +18,14 @@ class LongTermPlanCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.push('/growth'),
       child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius20,
+        borderRadius: DS.borderRadius20,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             decoration: BoxDecoration(
-              color: AppDesignTokens.glassBackground,
-              borderRadius: AppDesignTokens.borderRadius20,
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              color: DS.glassBackground,
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: DS.glassBorder),
             ),
             padding: const EdgeInsets.all(DS.lg),
             child: growth != null ? _buildContent(context, growth) : _buildEmptyState(context),
@@ -49,7 +49,7 @@ class LongTermPlanCard extends ConsumerWidget {
                 color: DS.brandPrimary70Const,
               ),
             ),
-            const Icon(Icons.spa_rounded, color: AppDesignTokens.success, size: 16),
+            const Icon(Icons.spa_rounded, color: DS.success, size: 16),
           ],
         ),
         
@@ -63,7 +63,7 @@ class LongTermPlanCard extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppDesignTokens.success,
+                  color: DS.success,
                 ),
               ),
               const SizedBox(height: DS.xs),
@@ -73,7 +73,7 @@ class LongTermPlanCard extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: growth.progress,
                   backgroundColor: DS.brandPrimary10,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppDesignTokens.success),
+                  valueColor: const AlwaysStoppedAnimation<Color>(DS.success),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

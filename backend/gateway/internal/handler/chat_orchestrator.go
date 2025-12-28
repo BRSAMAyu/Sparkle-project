@@ -103,13 +103,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	userID := c.GetString("user_id") // Assumes middleware set this
+	// Require authenticated user_id from context (must be set by AuthMiddleware)
+	userID := c.GetString("user_id")
 	if userID == "" {
-		// Fallback for dev/demo if no auth middleware yet
-		userID = c.Query("user_id")
-		if userID == "" {
-			userID = "anonymous"
-		}
+		log.Printf("WebSocket rejected: missing authentication")
+		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
+		conn.Close()
+		return
 	}
 
 	log.Printf("WebSocket connected for user: %s", userID)

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart' hide CustomButtonSize;
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -65,7 +65,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('太棒了！今日复习完成'),
-            backgroundColor: AppDesignTokens.success,
+            backgroundColor: DS.success,
           ),
         );
       }
@@ -103,7 +103,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppDesignTokens.neutral300,
+                color: DS.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -125,7 +125,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               Text(
                 '生词本',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: AppDesignTokens.fontWeightBold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const Spacer(),
@@ -134,7 +134,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.warning,
+                    color: DS.warning,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -153,7 +153,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           // Tab Bar
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppDesignTokens.neutral100,
+              color: DS.neutral100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
@@ -161,11 +161,11 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               indicator: BoxDecoration(
                 color: DS.brandPrimaryConst,
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: AppDesignTokens.shadowSm,
+                boxShadow: DS.shadowSm,
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: DS.success,
-              unselectedLabelColor: AppDesignTokens.neutral500,
+              unselectedLabelColor: DS.neutral500,
               dividerColor: Colors.transparent,
               tabs: const [
                 Tab(text: '待复习'),
@@ -215,13 +215,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             Icon(
               Icons.check_circle_outline_rounded,
               size: 64,
-              color: AppDesignTokens.success.withValues(alpha: 0.5),
+              color: DS.success.withValues(alpha: 0.5),
             ),
             const SizedBox(height: DS.lg),
             const Text(
               '太棒了！暂无待复习单词',
               style: TextStyle(
-                color: AppDesignTokens.neutral500,
+                color: DS.neutral500,
                 fontSize: 16,
               ),
             ),
@@ -254,13 +254,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             Icon(
               Icons.library_books_outlined,
               size: 64,
-              color: AppDesignTokens.neutral300,
+              color: DS.neutral300,
             ),
             SizedBox(height: DS.lg),
             Text(
               '生词本空空如也',
               style: TextStyle(
-                color: AppDesignTokens.neutral500,
+                color: DS.neutral500,
                 fontSize: 16,
               ),
             ),
@@ -268,7 +268,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             Text(
               '使用查词工具添加生词',
               style: TextStyle(
-                color: AppDesignTokens.neutral400,
+                color: DS.neutral400,
                 fontSize: 14,
               ),
             ),
@@ -351,7 +351,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               Text(
                 '${_currentReviewIndex + 1} / ${reviewList.length}',
                 style: const TextStyle(
-                  color: AppDesignTokens.neutral500,
+                  color: DS.neutral500,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -380,7 +380,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                           end: Alignment.bottomRight,
                         ),
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: AppDesignTokens.shadowMd,
+                  boxShadow: DS.shadowMd,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -388,7 +388,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     Text(
                       (word['word'] as String?) ?? '',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: AppDesignTokens.fontWeightBold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     if (word['phonetic'] != null) ...[
@@ -396,7 +396,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       Text(
                         word['phonetic'] as String,
                         style: const TextStyle(
-                          color: AppDesignTokens.neutral500,
+                          color: DS.neutral500,
                           fontSize: 18,
                           fontStyle: FontStyle.italic,
                         ),
@@ -407,7 +407,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       Container(
                         width: 60,
                         height: 2,
-                        color: AppDesignTokens.neutral300,
+                        color: DS.neutral300,
                       ),
                       const SizedBox(height: DS.xl),
                       Text(
@@ -422,7 +422,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       const Text(
                         '点击显示释义',
                         style: TextStyle(
-                          color: AppDesignTokens.neutral400,
+                          color: DS.neutral400,
                           fontSize: 14,
                         ),
                       ),
@@ -452,7 +452,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     text: '认识',
                     icon: Icons.check_rounded,
                     onPressed: () => _handleReview(true),
-                    customGradient: AppDesignTokens.successGradient,
+                    customGradient: DS.successGradient,
                     size: CustomButtonSize.large,
                   ),
                 ),
@@ -494,7 +494,7 @@ class _WordCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppDesignTokens.neutral200),
+        side: const BorderSide(color: DS.neutral200),
       ),
       child: InkWell(
         onTap: onTap,
@@ -521,7 +521,7 @@ class _WordCard extends StatelessWidget {
                           Text(
                             phonetic!,
                             style: const TextStyle(
-                              color: AppDesignTokens.neutral500,
+                              color: DS.neutral500,
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
                             ),
@@ -535,7 +535,7 @@ class _WordCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppDesignTokens.neutral600,
+                        color: DS.neutral600,
                         fontSize: 14,
                       ),
                     ),
@@ -547,16 +547,16 @@ class _WordCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: dueText == '已到期'
-                        ? AppDesignTokens.error.withValues(alpha: 0.1)
-                        : AppDesignTokens.warning.withValues(alpha: 0.1),
+                        ? DS.error.withValues(alpha: 0.1)
+                        : DS.warning.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     dueText!,
                     style: TextStyle(
                       color: dueText == '已到期'
-                          ? AppDesignTokens.error
-                          : AppDesignTokens.warning,
+                          ? DS.error
+                          : DS.warning,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -587,7 +587,7 @@ class _MasteryIndicator extends StatelessWidget {
           decoration: BoxDecoration(
             color: index < level
                 ? DS.success
-                : AppDesignTokens.neutral200,
+                : DS.neutral200,
             borderRadius: BorderRadius.circular(2),
           ),
         ),),

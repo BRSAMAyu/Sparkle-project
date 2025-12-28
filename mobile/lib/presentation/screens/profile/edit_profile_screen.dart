@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/profile/password_reset_screen.dart';
@@ -193,7 +193,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 : const Text(
                     '保存',
                     style: TextStyle(
-                      color: AppDesignTokens.primaryBase,
+                      color: DS.primaryBase,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -201,7 +201,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+        padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
           children: [
             // Avatar Section
@@ -225,7 +225,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: AppDesignTokens.primaryBase,
+                          color: DS.primaryBase,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary,
@@ -271,12 +271,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               child: const Text(
                 '更换头像',
                 style: TextStyle(
-                  color: AppDesignTokens.primaryBase,
+                  color: DS.primaryBase,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
 
             // Form Fields
             _buildInputField(
@@ -285,7 +285,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               hint: '请输入昵称',
               icon: Icons.person_outline_rounded,
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             _buildInputField(
               label: '邮箱',
               controller: _emailController,
@@ -293,28 +293,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             _buildReadOnlyField(
               label: '用户名',
               value: user?.username ?? '',
               icon: Icons.badge_outlined,
               helperText: '用户名不可修改',
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
 
             // Security Section
             _buildSectionHeader(isDark, '账户安全'),
-            const SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: DS.spacing12),
             DecoratedBox(
               decoration: BoxDecoration(
                 color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary,
-                borderRadius: AppDesignTokens.borderRadius12,
+                borderRadius: DS.borderRadius12,
                 border: Border.all(
                   color: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade200,
                 ),
               ),
               child: ListTile(
-                leading: const Icon(Icons.lock_reset_rounded, color: AppDesignTokens.primaryBase),
+                leading: const Icon(Icons.lock_reset_rounded, color: DS.primaryBase),
                 title: const Text('重置密码', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
@@ -325,16 +325,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
 
             // Account Info Section
             _buildSectionHeader(isDark, '账户信息'),
-            const SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: DS.spacing12),
             Container(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+              padding: const EdgeInsets.all(DS.spacing16),
               decoration: BoxDecoration(
                 color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade50,
-                borderRadius: AppDesignTokens.borderRadius12,
+                borderRadius: DS.borderRadius12,
                 border: Border.all(
                   color: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade200,
                 ),
@@ -402,19 +402,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ? (isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade50)
                 : (isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade100),
             border: OutlineInputBorder(
-              borderRadius: AppDesignTokens.borderRadius12,
+              borderRadius: DS.borderRadius12,
               borderSide: BorderSide(color: isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade300),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: AppDesignTokens.borderRadius12,
+              borderRadius: DS.borderRadius12,
               borderSide: BorderSide(color: isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: AppDesignTokens.borderRadius12,
-              borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+              borderRadius: DS.borderRadius12,
+              borderSide: const BorderSide(color: DS.primaryBase, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
-              borderRadius: AppDesignTokens.borderRadius12,
+              borderRadius: DS.borderRadius12,
               borderSide: BorderSide(color: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade200),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -459,7 +459,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade100,
-            borderRadius: AppDesignTokens.borderRadius12,
+            borderRadius: DS.borderRadius12,
             border: Border.all(color: isDark ? DS.brandPrimary.shade700 : DS.brandPrimary.shade200),
           ),
           child: Row(
@@ -510,7 +510,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: isDark ? DS.brandPrimary : AppDesignTokens.neutral900,
+              color: isDark ? DS.brandPrimary : DS.neutral900,
             ),
           ),
         ],

@@ -31,22 +31,28 @@ func (h *CommunityHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 type CreatePostInput struct {
-	UserID    string   `json:"user_id" binding:"required"`
 	Content   string   `json:"content" binding:"required"`
 	ImageURLs []string `json:"image_urls"`
 	Topic     string   `json:"topic"`
 }
 
 func (h *CommunityHandler) CreatePost(c *gin.Context) {
-	var input CreatePostInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Extract authenticated user_id from context (set by AuthMiddleware)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing user ID in context"})
 		return
 	}
 
-	userID, err := uuid.Parse(input.UserID)
+	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in context"})
+		return
+	}
+
+	var input CreatePostInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -83,23 +89,23 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 }
 
 func (h *CommunityHandler) LikePost(c *gin.Context) {
+	// Extract authenticated user_id from context (set by AuthMiddleware)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing user ID in context"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in context"})
+		return
+	}
+
 	idStr := c.Param("id")
 	postID, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
-		return
-	}
-
-	var input struct {
-		UserID string `json:"user_id" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	userID, err := uuid.Parse(input.UserID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id"})
 		return
 	}
 

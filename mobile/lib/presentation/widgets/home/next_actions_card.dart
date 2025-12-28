@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
@@ -21,14 +21,14 @@ class NextActionsCard extends ConsumerWidget {
     final nextActions = dashboardState.nextActions;
 
     return ClipRRect(
-      borderRadius: AppDesignTokens.borderRadius20,
+      borderRadius: DS.borderRadius20,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           decoration: BoxDecoration(
-            color: AppDesignTokens.glassBackground,
-            borderRadius: AppDesignTokens.borderRadius20,
-            border: Border.all(color: AppDesignTokens.glassBorder),
+            color: DS.glassBackground,
+            borderRadius: DS.borderRadius20,
+            border: Border.all(color: DS.glassBorder),
           ),
           padding: const EdgeInsets.all(DS.md),
           child: Column(
@@ -151,7 +151,7 @@ class _NextActionItem extends ConsumerWidget {
       case 'learning': return DS.brandPrimary;
       case 'training': return DS.success;
       case 'error_fix': return DS.error;
-      case 'reflection': return AppDesignTokens.prismPurple;
+      case 'reflection': return DS.prismPurple;
       default: return DS.brandPrimary;
     }
   }

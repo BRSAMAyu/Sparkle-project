@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -63,12 +63,12 @@ class GroupDetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 gradient: isSprint 
                     ? LinearGradient(
-                        colors: [Colors.deepOrange, AppDesignTokens.warningAccent],
+                        colors: [Colors.deepOrange, DS.warningAccent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
                     : const LinearGradient(
-                        colors: [AppDesignTokens.primaryBase, AppDesignTokens.secondaryBase],
+                        colors: [DS.primaryBase, DS.secondaryBase],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -106,7 +106,7 @@ class GroupDetailScreen extends ConsumerWidget {
         
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+            padding: const EdgeInsets.all(DS.spacing16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -168,7 +168,7 @@ class GroupDetailScreen extends ConsumerWidget {
                 const SizedBox(height: DS.sm),
                 Text(
                   group.description ?? 'No description provided.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: AppDesignTokens.neutral700, height: 1.5),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: DS.neutral700, height: 1.5),
                 ),
 
                 const SizedBox(height: DS.xl),
@@ -180,8 +180,8 @@ class GroupDetailScreen extends ConsumerWidget {
                     runSpacing: 8,
                     children: group.focusTags.map((tag) => Chip(
                       label: Text(tag),
-                      backgroundColor: AppDesignTokens.neutral100,
-                      labelStyle: const TextStyle(color: AppDesignTokens.neutral800),
+                      backgroundColor: DS.neutral100,
+                      labelStyle: const TextStyle(color: DS.neutral800),
                     ),).toList(),
                   ),
                   const SizedBox(height: DS.xxl),
@@ -258,19 +258,19 @@ class GroupDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: AppDesignTokens.shadowSm,
-        border: Border.all(color: AppDesignTokens.neutral100),
+        boxShadow: DS.shadowSm,
+        border: Border.all(color: DS.neutral100),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppDesignTokens.primaryBase, size: 24),
+          Icon(icon, color: DS.primaryBase, size: 24),
           const SizedBox(height: DS.sm),
           Text(
             value,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppDesignTokens.neutral900,
+              color: DS.neutral900,
             ),
           ),
           const SizedBox(height: DS.xs),
@@ -278,7 +278,7 @@ class GroupDetailScreen extends ConsumerWidget {
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: AppDesignTokens.neutral500,
+              color: DS.neutral500,
             ),
             textAlign: TextAlign.center,
           ),
@@ -304,7 +304,7 @@ class GroupDetailScreen extends ConsumerWidget {
                 height: 4,
                 margin: const EdgeInsets.only(top: 8, bottom: 20),
                 decoration: BoxDecoration(
-                  color: AppDesignTokens.neutral300,
+                  color: DS.neutral300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -357,8 +357,8 @@ class _DetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Shimmer.fromColors(
-      baseColor: AppDesignTokens.neutral200,
-      highlightColor: AppDesignTokens.neutral100,
+      baseColor: DS.neutral200,
+      highlightColor: DS.neutral100,
       child: Column(
         children: [
           Container(height: 200, color: DS.brandPrimary),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 加载指示器类型
 enum LoadingType {
@@ -122,7 +122,7 @@ class LoadingIndicator extends StatelessWidget {
       child: CircularProgressIndicator(
         strokeWidth: 3.0,
         valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? AppDesignTokens.primaryBase,
+          color ?? DS.primaryBase,
         ),
       ),
     );
@@ -132,12 +132,12 @@ class LoadingIndicator extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           indicator,
-          const SizedBox(height: AppDesignTokens.spacing12),
+          const SizedBox(height: DS.spacing12),
           Text(
             loadingText ?? '加载中...',
             style: const TextStyle(
-              fontSize: AppDesignTokens.fontSizeSm,
-              color: AppDesignTokens.neutral600,
+              fontSize: DS.fontSizeSm,
+              color: DS.neutral600,
             ),
           ),
         ],
@@ -155,7 +155,7 @@ class LoadingIndicator extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: skeletonCount,
       separatorBuilder: (context, index) =>
-          const SizedBox(height: AppDesignTokens.spacing12),
+          const SizedBox(height: DS.spacing12),
       itemBuilder: (context, index) {
         switch (variant) {
           case SkeletonVariant.taskCard:
@@ -173,20 +173,20 @@ class LoadingIndicator extends StatelessWidget {
 
   Widget _buildLinearLoading() => LinearProgressIndicator(
       valueColor: AlwaysStoppedAnimation<Color>(
-        color ?? AppDesignTokens.primaryBase,
+        color ?? DS.primaryBase,
       ),
-      backgroundColor: AppDesignTokens.neutral200,
+      backgroundColor: DS.neutral200,
     );
 
   Widget _buildFullScreenLoading() => ColoredBox(
-      color: AppDesignTokens.overlay30,
+      color: DS.overlay30,
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(AppDesignTokens.spacing32),
+          padding: const EdgeInsets.all(DS.spacing32),
           decoration: BoxDecoration(
-            gradient: AppDesignTokens.cardGradientNeutral,
-            borderRadius: AppDesignTokens.borderRadius20,
-            boxShadow: AppDesignTokens.shadowXl,
+            gradient: DS.cardGradientNeutral,
+            borderRadius: DS.borderRadius20,
+            boxShadow: DS.shadowXl,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -195,8 +195,8 @@ class LoadingIndicator extends StatelessWidget {
                 width: 80.0,
                 height: 80.0,
                 decoration: BoxDecoration(
-                  gradient: AppDesignTokens.primaryGradient,
-                  borderRadius: AppDesignTokens.borderRadiusFull,
+                  gradient: DS.primaryGradient,
+                  borderRadius: DS.borderRadiusFull,
                 ),
                 child: Center(
                   child: SizedBox(
@@ -210,13 +210,13 @@ class LoadingIndicator extends StatelessWidget {
                 ),
               ),
               if (loadingText != null) ...[
-                const SizedBox(height: AppDesignTokens.spacing20),
+                const SizedBox(height: DS.spacing20),
                 Text(
                   loadingText!,
                   style: const TextStyle(
-                    fontSize: AppDesignTokens.fontSizeBase,
-                    fontWeight: AppDesignTokens.fontWeightMedium,
-                    color: AppDesignTokens.neutral900,
+                    fontSize: DS.fontSizeBase,
+                    fontWeight: DS.fontWeightMedium,
+                    color: DS.neutral900,
                   ),
                 ),
               ],
@@ -237,8 +237,8 @@ class _ShimmerWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Shimmer.fromColors(
-      baseColor: AppDesignTokens.neutral200,
-      highlightColor: AppDesignTokens.neutral100,
+      baseColor: DS.neutral200,
+      highlightColor: DS.neutral100,
       child: child,
     );
 }
@@ -260,8 +260,8 @@ class _SkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: AppDesignTokens.neutral300,
-        borderRadius: borderRadius ?? AppDesignTokens.borderRadius8,
+        color: DS.neutral300,
+        borderRadius: borderRadius ?? DS.borderRadius8,
       ),
     );
 }
@@ -273,11 +273,11 @@ class TaskCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
-          borderRadius: AppDesignTokens.borderRadius16,
-          boxShadow: AppDesignTokens.shadowSm,
+          borderRadius: DS.borderRadius16,
+          boxShadow: DS.shadowSm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,9 +288,9 @@ class TaskCardSkeleton extends StatelessWidget {
                 _SkeletonBox(
                   width: 4.0,
                   height: 40.0,
-                  borderRadius: AppDesignTokens.borderRadius4,
+                  borderRadius: DS.borderRadius4,
                 ),
-                const SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: DS.spacing12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +299,7 @@ class TaskCardSkeleton extends StatelessWidget {
                         width: double.infinity,
                         height: 20.0,
                       ),
-                      SizedBox(height: AppDesignTokens.spacing8),
+                      SizedBox(height: DS.spacing8),
                       _SkeletonBox(
                         width: 150.0,
                         height: 14.0,
@@ -309,20 +309,20 @@ class TaskCardSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             // 标签行
             Row(
               children: [
                 _SkeletonBox(
                   width: 60.0,
                   height: 24.0,
-                  borderRadius: AppDesignTokens.borderRadius12,
+                  borderRadius: DS.borderRadius12,
                 ),
-                const SizedBox(width: AppDesignTokens.spacing8),
+                const SizedBox(width: DS.spacing8),
                 _SkeletonBox(
                   width: 80.0,
                   height: 24.0,
-                  borderRadius: AppDesignTokens.borderRadius12,
+                  borderRadius: DS.borderRadius12,
                 ),
               ],
             ),
@@ -345,8 +345,8 @@ class ChatBubbleSkeleton extends StatelessWidget {
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing16,
-          vertical: AppDesignTokens.spacing8,
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
         ),
         child: Row(
           mainAxisAlignment:
@@ -357,16 +357,16 @@ class ChatBubbleSkeleton extends StatelessWidget {
               _SkeletonBox(
                 width: 40.0,
                 height: 40.0,
-                borderRadius: AppDesignTokens.borderRadiusFull,
+                borderRadius: DS.borderRadiusFull,
               ),
-              const SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: DS.spacing12),
             ],
             Flexible(
               child: Container(
-                padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+                padding: const EdgeInsets.all(DS.spacing12),
                 decoration: BoxDecoration(
-                  color: AppDesignTokens.neutral200,
-                  borderRadius: AppDesignTokens.borderRadius16,
+                  color: DS.neutral200,
+                  borderRadius: DS.borderRadius16,
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,12 +375,12 @@ class ChatBubbleSkeleton extends StatelessWidget {
                       width: double.infinity,
                       height: 16.0,
                     ),
-                    SizedBox(height: AppDesignTokens.spacing8),
+                    SizedBox(height: DS.spacing8),
                     _SkeletonBox(
                       width: 200.0,
                       height: 16.0,
                     ),
-                    SizedBox(height: AppDesignTokens.spacing8),
+                    SizedBox(height: DS.spacing8),
                     _SkeletonBox(
                       width: 150.0,
                       height: 16.0,
@@ -390,11 +390,11 @@ class ChatBubbleSkeleton extends StatelessWidget {
               ),
             ),
             if (isUser) ...[
-              const SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: DS.spacing12),
               _SkeletonBox(
                 width: 40.0,
                 height: 40.0,
-                borderRadius: AppDesignTokens.borderRadiusFull,
+                borderRadius: DS.borderRadiusFull,
               ),
             ],
           ],
@@ -410,11 +410,11 @@ class ProfileCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Container(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
-          borderRadius: AppDesignTokens.borderRadius20,
-          boxShadow: AppDesignTokens.shadowMd,
+          borderRadius: DS.borderRadius20,
+          boxShadow: DS.shadowMd,
         ),
         child: Column(
           children: [
@@ -422,21 +422,21 @@ class ProfileCardSkeleton extends StatelessWidget {
             _SkeletonBox(
               width: 80.0,
               height: 80.0,
-              borderRadius: AppDesignTokens.borderRadiusFull,
+              borderRadius: DS.borderRadiusFull,
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             // 用户名
             const _SkeletonBox(
               width: 120.0,
               height: 20.0,
             ),
-            const SizedBox(height: AppDesignTokens.spacing8),
+            const SizedBox(height: DS.spacing8),
             // 邮箱
             const _SkeletonBox(
               width: 180.0,
               height: 14.0,
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
             // 统计数据行
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -457,7 +457,7 @@ class ProfileCardSkeleton extends StatelessWidget {
           width: 40.0,
           height: 24.0,
         ),
-        SizedBox(height: AppDesignTokens.spacing4),
+        SizedBox(height: DS.spacing4),
         _SkeletonBox(
           width: 60.0,
           height: 12.0,
@@ -474,17 +474,17 @@ class ListItemSkeleton extends StatelessWidget {
   Widget build(BuildContext context) => _ShimmerWrapper(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing16,
-          vertical: AppDesignTokens.spacing12,
+          horizontal: DS.spacing16,
+          vertical: DS.spacing12,
         ),
         child: Row(
           children: [
             _SkeletonBox(
               width: 48.0,
               height: 48.0,
-              borderRadius: AppDesignTokens.borderRadius12,
+              borderRadius: DS.borderRadius12,
             ),
-            const SizedBox(width: AppDesignTokens.spacing12),
+            const SizedBox(width: DS.spacing12),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,7 +493,7 @@ class ListItemSkeleton extends StatelessWidget {
                     width: double.infinity,
                     height: 18.0,
                   ),
-                  SizedBox(height: AppDesignTokens.spacing8),
+                  SizedBox(height: DS.spacing8),
                   _SkeletonBox(
                     width: 200.0,
                     height: 14.0,

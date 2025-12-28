@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 按钮变体类型
 enum ButtonVariant {
@@ -146,13 +146,13 @@ class _CustomButtonState extends State<CustomButton>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: AppDesignTokens.durationFast,
+      duration: DS.durationFast,
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: AppDesignTokens.curveEaseInOut,
+        curve: DS.curveEaseInOut,
       ),
     );
   }
@@ -210,22 +210,22 @@ class _CustomButtonState extends State<CustomButton>
   double _getIconSize() {
     switch (widget.size) {
       case CustomButtonSize.small:
-        return AppDesignTokens.iconSizeSm;
+        return DS.iconSizeSm;
       case CustomButtonSize.medium:
-        return AppDesignTokens.iconSizeBase;
+        return DS.iconSizeBase;
       case CustomButtonSize.large:
-        return AppDesignTokens.iconSizeLg;
+        return DS.iconSizeLg;
     }
   }
 
   double _getFontSize() {
     switch (widget.size) {
       case CustomButtonSize.small:
-        return AppDesignTokens.fontSizeSm;
+        return DS.fontSizeSm;
       case CustomButtonSize.medium:
-        return AppDesignTokens.fontSizeBase;
+        return DS.fontSizeBase;
       case CustomButtonSize.large:
-        return AppDesignTokens.fontSizeLg;
+        return DS.fontSizeLg;
     }
   }
 
@@ -243,25 +243,25 @@ class _CustomButtonState extends State<CustomButton>
   }
 
   Widget _buildPrimaryButton(BuildContext context, bool isDisabled) {
-    final gradient = widget.customGradient ?? AppDesignTokens.primaryGradient;
+    final gradient = widget.customGradient ?? DS.primaryGradient;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: isDisabled ? null : gradient,
-        color: isDisabled ? AppDesignTokens.neutral300 : null,
-        borderRadius: AppDesignTokens.borderRadius12,
-        boxShadow: isDisabled ? null : AppDesignTokens.shadowMd,
+        color: isDisabled ? DS.neutral300 : null,
+        borderRadius: DS.borderRadius12,
+        boxShadow: isDisabled ? null : DS.shadowMd,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
-          borderRadius: AppDesignTokens.borderRadius12,
+          borderRadius: DS.borderRadius12,
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: widget.size == CustomButtonSize.small
-                  ? AppDesignTokens.spacing16
-                  : AppDesignTokens.spacing24,
+                  ? DS.spacing16
+                  : DS.spacing24,
             ),
             child: _buildButtonRow(
               iconColor: DS.brandPrimary,
@@ -279,30 +279,30 @@ class _CustomButtonState extends State<CustomButton>
         color: Colors.transparent,
         border: Border.all(
           color: isDisabled
-              ? AppDesignTokens.neutral300
-              : AppDesignTokens.primaryBase,
+              ? DS.neutral300
+              : DS.primaryBase,
           width: 2.0,
         ),
-        borderRadius: AppDesignTokens.borderRadius12,
+        borderRadius: DS.borderRadius12,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
-          borderRadius: AppDesignTokens.borderRadius12,
+          borderRadius: DS.borderRadius12,
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: widget.size == CustomButtonSize.small
-                  ? AppDesignTokens.spacing16
-                  : AppDesignTokens.spacing24,
+                  ? DS.spacing16
+                  : DS.spacing24,
             ),
             child: _buildButtonRow(
               iconColor: isDisabled
-                  ? AppDesignTokens.neutral400
-                  : AppDesignTokens.primaryBase,
+                  ? DS.neutral400
+                  : DS.primaryBase,
               textColor: isDisabled
-                  ? AppDesignTokens.neutral400
-                  : AppDesignTokens.primaryBase,
+                  ? DS.neutral400
+                  : DS.primaryBase,
               isDisabled: isDisabled,
             ),
           ),
@@ -314,18 +314,18 @@ class _CustomButtonState extends State<CustomButton>
       color: Colors.transparent,
       child: InkWell(
         onTap: isDisabled ? null : widget.onPressed,
-        borderRadius: AppDesignTokens.borderRadius8,
+        borderRadius: DS.borderRadius8,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppDesignTokens.spacing12,
+            horizontal: DS.spacing12,
           ),
           child: _buildButtonRow(
             iconColor: isDisabled
-                ? AppDesignTokens.neutral400
-                : AppDesignTokens.primaryBase,
+                ? DS.neutral400
+                : DS.primaryBase,
             textColor: isDisabled
-                ? AppDesignTokens.neutral400
-                : AppDesignTokens.primaryBase,
+                ? DS.neutral400
+                : DS.primaryBase,
             isDisabled: isDisabled,
           ),
         ),
@@ -339,20 +339,20 @@ class _CustomButtonState extends State<CustomButton>
       width: buttonSize,
       height: buttonSize,
       decoration: BoxDecoration(
-        gradient: isDisabled ? null : AppDesignTokens.primaryGradient,
-        color: isDisabled ? AppDesignTokens.neutral300 : null,
+        gradient: isDisabled ? null : DS.primaryGradient,
+        color: isDisabled ? DS.neutral300 : null,
         borderRadius: widget.isCircular
-            ? AppDesignTokens.borderRadiusFull
-            : AppDesignTokens.borderRadius12,
-        boxShadow: isDisabled ? null : AppDesignTokens.shadowSm,
+            ? DS.borderRadiusFull
+            : DS.borderRadius12,
+        boxShadow: isDisabled ? null : DS.shadowSm,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
           borderRadius: widget.isCircular
-              ? AppDesignTokens.borderRadiusFull
-              : AppDesignTokens.borderRadius12,
+              ? DS.borderRadiusFull
+              : DS.borderRadius12,
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
@@ -391,13 +391,13 @@ class _CustomButtonState extends State<CustomButton>
             valueColor: AlwaysStoppedAnimation<Color>(
               widget.variant == ButtonVariant.primary
                   ? DS.brandPrimary
-                  : AppDesignTokens.primaryBase,
+                  : DS.primaryBase,
             ),
           ),
         ),
       );
       if (widget.text != null) {
-        children.add(const SizedBox(width: AppDesignTokens.spacing8));
+        children.add(const SizedBox(width: DS.spacing8));
       }
     } else if (widget.icon != null) {
       children.add(
@@ -408,7 +408,7 @@ class _CustomButtonState extends State<CustomButton>
         ),
       );
       if (widget.text != null) {
-        children.add(const SizedBox(width: AppDesignTokens.spacing8));
+        children.add(const SizedBox(width: DS.spacing8));
       }
     }
 
@@ -418,7 +418,7 @@ class _CustomButtonState extends State<CustomButton>
           widget.text!,
           style: TextStyle(
             fontSize: _getFontSize(),
-            fontWeight: AppDesignTokens.fontWeightMedium,
+            fontWeight: DS.fontWeightMedium,
             color: textColor,
           ),
         ),
@@ -426,7 +426,7 @@ class _CustomButtonState extends State<CustomButton>
     }
 
     return Opacity(
-      opacity: isDisabled ? AppDesignTokens.opacityDisabled : 1.0,
+      opacity: isDisabled ? DS.opacityDisabled : 1.0,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,

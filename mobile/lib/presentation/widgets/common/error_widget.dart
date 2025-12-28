@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 错误组件类型
@@ -123,33 +123,33 @@ class CustomErrorWidget extends StatelessWidget {
   Color _getBackgroundColor() {
     switch (severity) {
       case ErrorSeverity.error:
-        return AppDesignTokens.error;
+        return DS.error;
       case ErrorSeverity.warning:
-        return AppDesignTokens.warning;
+        return DS.warning;
       case ErrorSeverity.info:
-        return AppDesignTokens.info;
+        return DS.info;
     }
   }
 
   Color _getLightBackgroundColor() {
     switch (severity) {
       case ErrorSeverity.error:
-        return AppDesignTokens.errorLight.withValues(alpha: 0.1);
+        return DS.errorLight.withValues(alpha: 0.1);
       case ErrorSeverity.warning:
-        return AppDesignTokens.warningLight.withValues(alpha: 0.1);
+        return DS.warningLight.withValues(alpha: 0.1);
       case ErrorSeverity.info:
-        return AppDesignTokens.infoLight.withValues(alpha: 0.1);
+        return DS.infoLight.withValues(alpha: 0.1);
     }
   }
 
   LinearGradient _getGradient() {
     switch (severity) {
       case ErrorSeverity.error:
-        return AppDesignTokens.errorGradient;
+        return DS.errorGradient;
       case ErrorSeverity.warning:
-        return AppDesignTokens.warningGradient;
+        return DS.warningGradient;
       case ErrorSeverity.info:
-        return AppDesignTokens.infoGradient;
+        return DS.infoGradient;
     }
   }
 
@@ -177,7 +177,7 @@ class CustomErrorWidget extends StatelessWidget {
 
   Widget _buildErrorPage(BuildContext context) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing32),
+        padding: const EdgeInsets.all(DS.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -188,7 +188,7 @@ class CustomErrorWidget extends StatelessWidget {
                 height: 120.0,
                 decoration: BoxDecoration(
                   gradient: _getGradient(),
-                  borderRadius: AppDesignTokens.borderRadiusFull,
+                  borderRadius: DS.borderRadiusFull,
                   boxShadow: [
                     BoxShadow(
                       color: _getBackgroundColor().withValues(alpha: 0.3),
@@ -199,33 +199,33 @@ class CustomErrorWidget extends StatelessWidget {
                 ),
                 child: Icon(
                   icon ?? _getDefaultIcon(),
-                  size: AppDesignTokens.iconSize3xl,
+                  size: DS.iconSize3xl,
                   color: DS.brandPrimaryConst,
                 ),
               ),
-            const SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: DS.spacing32),
             // 错误标题
             Text(
               title ?? _getDefaultTitle(),
               style: const TextStyle(
-                fontSize: AppDesignTokens.fontSize2xl,
-                fontWeight: AppDesignTokens.fontWeightBold,
-                color: AppDesignTokens.neutral900,
+                fontSize: DS.fontSize2xl,
+                fontWeight: DS.fontWeightBold,
+                color: DS.neutral900,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: DS.spacing12),
             // 错误消息
             Text(
               message,
               style: const TextStyle(
-                fontSize: AppDesignTokens.fontSizeBase,
-                color: AppDesignTokens.neutral600,
-                height: AppDesignTokens.lineHeightNormal,
+                fontSize: DS.fontSizeBase,
+                color: DS.neutral600,
+                height: DS.lineHeightNormal,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppDesignTokens.spacing32),
+            const SizedBox(height: DS.spacing32),
             // 操作按钮
             if (actions != null)
               ...actions!
@@ -245,14 +245,14 @@ class CustomErrorWidget extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: _getGradient(),
-        boxShadow: AppDesignTokens.shadowMd,
+        boxShadow: DS.shadowMd,
       ),
       child: Material(
         color: Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppDesignTokens.spacing16,
-            vertical: AppDesignTokens.spacing12,
+            horizontal: DS.spacing16,
+            vertical: DS.spacing12,
           ),
           child: Row(
             children: [
@@ -260,9 +260,9 @@ class CustomErrorWidget extends StatelessWidget {
               Icon(
                 icon ?? _getDefaultIcon(),
                 color: DS.brandPrimaryConst,
-                size: AppDesignTokens.iconSizeBase,
+                size: DS.iconSizeBase,
               ),
-              const SizedBox(width: AppDesignTokens.spacing12),
+              const SizedBox(width: DS.spacing12),
               // 内容
               Expanded(
                 child: Column(
@@ -273,17 +273,17 @@ class CustomErrorWidget extends StatelessWidget {
                       Text(
                         title!,
                         style: TextStyle(
-                          fontSize: AppDesignTokens.fontSizeSm,
-                          fontWeight: AppDesignTokens.fontWeightSemibold,
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightSemibold,
                           color: DS.brandPrimaryConst,
                         ),
                       ),
-                      const SizedBox(height: AppDesignTokens.spacing4),
+                      const SizedBox(height: DS.spacing4),
                     ],
                     Text(
                       message,
                       style: TextStyle(
-                        fontSize: AppDesignTokens.fontSizeSm,
+                        fontSize: DS.fontSizeSm,
                         color: DS.brandPrimaryConst,
                       ),
                     ),
@@ -292,11 +292,11 @@ class CustomErrorWidget extends StatelessWidget {
               ),
               // 关闭按钮
               if (onClose != null) ...[
-                const SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: DS.spacing12),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   color: DS.brandPrimaryConst,
-                  iconSize: AppDesignTokens.iconSizeSm,
+                  iconSize: DS.iconSizeSm,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: onClose,
@@ -309,13 +309,13 @@ class CustomErrorWidget extends StatelessWidget {
     );
 
   Widget _buildInlineError(BuildContext context) => Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+      padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: _getLightBackgroundColor(),
         border: Border.all(
           color: _getBackgroundColor().withValues(alpha: 0.3),
         ),
-        borderRadius: AppDesignTokens.borderRadius12,
+        borderRadius: DS.borderRadius12,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,17 +324,17 @@ class CustomErrorWidget extends StatelessWidget {
             Icon(
               icon ?? _getDefaultIcon(),
               color: _getBackgroundColor(),
-              size: AppDesignTokens.iconSizeSm,
+              size: DS.iconSizeSm,
             ),
-            const SizedBox(width: AppDesignTokens.spacing8),
+            const SizedBox(width: DS.spacing8),
           ],
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                fontSize: AppDesignTokens.fontSizeSm,
+                fontSize: DS.fontSizeSm,
                 color: _getBackgroundColor(),
-                height: AppDesignTokens.lineHeightNormal,
+                height: DS.lineHeightNormal,
               ),
             ),
           ),
@@ -382,7 +382,7 @@ class NotFoundErrorPage extends StatelessWidget {
             text: '返回',
             onPressed: onGoBack,
             icon: Icons.arrow_back_rounded,
-            customGradient: AppDesignTokens.warningGradient,
+            customGradient: DS.warningGradient,
           ),
       ],
     );

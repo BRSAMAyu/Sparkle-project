@@ -21,7 +21,7 @@
 ///
 /// // 3. 在UI中使用设计令牌
 /// Container(
-///   color: AppDesignTokens.brandPrimary,
+///   color: DS.brandPrimary,
 ///   padding: SpacingSystem.edgeLg,
 ///   child: SparkleButton.primary(
 ///     label: '点击',
@@ -33,6 +33,10 @@ library;
 
 // 便捷导入
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
+import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
+import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
+import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
 export 'tokens_v2/animation_token.dart';
@@ -289,6 +293,34 @@ class DS {
   static TextStyle get headingLarge => TypographySystem.headingLarge();
   static TextStyle get bodyLarge => TypographySystem.bodyLarge();
   static TextStyle get labelLarge => TypographySystem.labelLarge();
+
+  // 任务类型颜色
+  static Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
+  static Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
+  static LinearGradient getTaskGradient(String taskType) => _theme.colors.getTaskGradient(taskType);
+
+  // 任务类型颜色快捷方式
+  static Color get taskLearning => _theme.colors.taskLearning;
+  static Color get taskTraining => _theme.colors.taskTraining;
+  static Color get taskErrorFix => _theme.colors.taskErrorFix;
+  static Color get taskReflection => _theme.colors.taskReflection;
+  static Color get taskSocial => _theme.colors.taskSocial;
+  static Color get taskPlanning => _theme.colors.taskPlanning;
+  static Color get planSprint => _theme.colors.planSprint;
+  static Color get planGrowth => _theme.colors.planGrowth;
+
+  // 用户状态颜色
+  static Color getStatusColor(String userStatus) => _theme.colors.getStatusColor(userStatus);
+  static Color get statusOnline => _theme.colors.statusOnline;
+  static Color get statusOffline => _theme.colors.statusOffline;
+  static Color get statusInvisible => _theme.colors.statusInvisible;
+
+  // 中性色
+  static Color get neutral200 => _theme.colors.neutral200;
+  static Color get neutral300 => _theme.colors.neutral300;
+  static Color get neutral400 => _theme.colors.neutral400;
+  static Color get neutral500 => _theme.colors.neutral500;
+  static Color get neutral600 => _theme.colors.neutral600;
 }
 
 /// Extension on Color to provide Material Design shade-like methods

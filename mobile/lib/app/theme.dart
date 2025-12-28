@@ -1,38 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// App Colors - now using Design Tokens
 class AppColors {
-  static const primary = AppDesignTokens.primaryBase;
-  static const secondary = AppDesignTokens.secondaryBase;
-  static const accent = AppDesignTokens.accent;
+  static const primary = DS.primaryBase;
+  static const secondary = DS.secondaryBase;
+  static const accent = DS.accent;
 
   // Light Theme
-  static const lightBackground = AppDesignTokens.neutral100;
+  static const lightBackground = DS.neutral100;
   static final lightCard = DS.brandPrimary;
-  static const lightText = AppDesignTokens.neutral900;
-  static const lightTextSecondary = AppDesignTokens.neutral700;
-  static const lightIcon = AppDesignTokens.neutral800;
-  static const lightBorder = AppDesignTokens.neutral300;
-  static const lightDivider = AppDesignTokens.neutral200;
+  static const lightText = DS.neutral900;
+  static const lightTextSecondary = DS.neutral700;
+  static const lightIcon = DS.neutral800;
+  static const lightBorder = DS.neutral300;
+  static const lightDivider = DS.neutral200;
 
   // Dark Theme
-  static const darkBackground = AppDesignTokens.neutral900;
-  static const darkCard = AppDesignTokens.neutral800;
-  static const darkText = AppDesignTokens.neutral50;
-  static const darkTextSecondary = AppDesignTokens.neutral300;
-  static const darkIcon = AppDesignTokens.neutral100;
-  static const darkBorder = AppDesignTokens.neutral700;
-  static const darkDivider = AppDesignTokens.neutral600;
+  static const darkBackground = DS.neutral900;
+  static const darkCard = DS.neutral800;
+  static const darkText = DS.neutral50;
+  static const darkTextSecondary = DS.neutral300;
+  static const darkIcon = DS.neutral100;
+  static const darkBorder = DS.neutral700;
+  static const darkDivider = DS.neutral600;
 
   // Semantic colors for both themes
   static Color surfaceBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
         ? DS.brandPrimary
-        : AppDesignTokens.neutral800;
+        : DS.neutral800;
 
   static Color textOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
-        ? AppDesignTokens.neutral900
+        ? DS.neutral900
         : DS.brandPrimary;
 
   static Color textOnDark(BuildContext context) {
@@ -41,8 +41,8 @@ class AppColors {
   }
 
   static Color iconOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
-        ? AppDesignTokens.neutral800
-        : AppDesignTokens.neutral100;
+        ? DS.neutral800
+        : DS.neutral100;
 
   static Color iconOnDark(BuildContext context) {
     // For dark backgrounds, always use light icons for maximum contrast
@@ -112,18 +112,18 @@ class AppThemes {
       onPrimary: DS.brandPrimary,
       onSecondary: DS.brandPrimary,
       onSurface: AppColors.lightText,
-      error: AppDesignTokens.error,
+      error: DS.error,
       onError: DS.brandPrimary,
     ),
 
     // Extensions
     extensions: <ThemeExtension<dynamic>>[
       AppThemeExtension(
-        primaryGradient: AppDesignTokens.primaryGradient,
-        secondaryGradient: AppDesignTokens.secondaryGradient,
-        cardGradient: AppDesignTokens.cardGradientNeutral,
-        cardShadow: AppDesignTokens.shadowMd,
-        elevatedShadow: AppDesignTokens.shadowLg,
+        primaryGradient: DS.primaryGradient,
+        secondaryGradient: DS.secondaryGradient,
+        cardGradient: DS.cardGradientNeutral,
+        cardShadow: DS.shadowMd,
+        elevatedShadow: DS.shadowLg,
       ),
       SparkleColors.light,
     ],
@@ -132,7 +132,7 @@ class AppThemes {
     cardTheme: CardThemeData(
       elevation: 0, // We use custom shadows
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius12),
+        borderRadius: BorderRadius.circular(DS.radius12),
       ),
       color: AppColors.lightCard,
       shadowColor: DS.brandPrimary.withValues(alpha: 0.1),
@@ -145,15 +145,15 @@ class AppThemes {
         foregroundColor: DS.brandPrimary,
         elevation: 0, // Flat by default, add shadow manually if needed
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing24,
-          vertical: AppDesignTokens.spacing12,
+          horizontal: DS.spacing24,
+          vertical: DS.spacing12,
         ),
         textStyle: const TextStyle(
-          fontSize: AppDesignTokens.fontSizeBase,
-          fontWeight: AppDesignTokens.fontWeightSemibold,
+          fontSize: DS.fontSizeBase,
+          fontWeight: DS.fontWeightSemibold,
         ),
       ),
     ),
@@ -163,8 +163,8 @@ class AppThemes {
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing16,
-          vertical: AppDesignTokens.spacing8,
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
         ),
       ),
     ),
@@ -175,11 +175,11 @@ class AppThemes {
         foregroundColor: AppColors.primary,
         side: const BorderSide(color: AppColors.primary, width: 1.5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing24,
-          vertical: AppDesignTokens.spacing12,
+          horizontal: DS.spacing24,
+          vertical: DS.spacing12,
         ),
       ),
     ),
@@ -187,40 +187,40 @@ class AppThemes {
     // Input decoration theme
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
-        borderSide: const BorderSide(color: AppDesignTokens.neutral300),
+        borderRadius: BorderRadius.circular(DS.radius8),
+        borderSide: const BorderSide(color: DS.neutral300),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
-        borderSide: const BorderSide(color: AppDesignTokens.neutral300),
+        borderRadius: BorderRadius.circular(DS.radius8),
+        borderSide: const BorderSide(color: DS.neutral300),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+        borderRadius: BorderRadius.circular(DS.radius8),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       filled: true,
-      fillColor: AppDesignTokens.neutral50,
-      contentPadding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      fillColor: DS.neutral50,
+      contentPadding: const EdgeInsets.all(DS.spacing16),
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
-      backgroundColor: AppDesignTokens.neutral100,
+      backgroundColor: DS.neutral100,
       selectedColor: AppColors.primary,
-      labelStyle: const TextStyle(fontSize: AppDesignTokens.fontSizeSm),
+      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
       padding: const EdgeInsets.symmetric(
-        horizontal: AppDesignTokens.spacing12,
-        vertical: AppDesignTokens.spacing4,
+        horizontal: DS.spacing12,
+        vertical: DS.spacing4,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius16),
+        borderRadius: BorderRadius.circular(DS.radius16),
       ),
     ),
 
     // Bottom navigation bar theme
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppDesignTokens.neutral500,
+      unselectedItemColor: DS.neutral500,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
       backgroundColor: AppColors.lightCard,
@@ -233,8 +233,8 @@ class AppThemes {
       backgroundColor: Colors.transparent,
       foregroundColor: AppColors.lightText,
       titleTextStyle: TextStyle(
-        fontSize: AppDesignTokens.fontSizeLg,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSizeLg,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
       ),
     ),
@@ -242,78 +242,78 @@ class AppThemes {
     // Text theme
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSize6xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize6xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
       ),
       displayMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSize5xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize5xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
       ),
       displaySmall: TextStyle(
-        fontSize: AppDesignTokens.fontSize4xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize4xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
       ),
       headlineLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSize3xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize3xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
       ),
       headlineMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSize2xl,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSize2xl,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFF212121),
       ),
       headlineSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXl,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSizeXl,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFF212121),
       ),
       titleLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeLg,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSizeLg,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFF212121),
       ),
       titleMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFF212121),
       ),
       titleSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFF212121),
       ),
       bodyLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFF212121),
       ),
       bodyMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFF212121),
       ),
       bodySmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXs,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeXs,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFF212121),
       ),
       labelLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFF212121),
       ),
       labelMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFF212121),
       ),
       labelSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXs,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeXs,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFF212121),
       ),
     ),
@@ -329,27 +329,27 @@ class AppThemes {
     // Color scheme - use brighter secondary for dark mode
     colorScheme: ColorScheme.dark(
       primary: AppColors.primary,
-      secondary: AppDesignTokens.secondaryBaseDark,
+      secondary: DS.secondaryBaseDark,
       surface: AppColors.darkCard,
       onPrimary: DS.brandPrimary,
       onSecondary: DS.brandPrimary,
       onSurface: AppColors.darkText,
-      error: AppDesignTokens.error,
+      error: DS.error,
       onError: DS.brandPrimary,
     ),
 
     // Extensions - use brighter secondary gradient for dark mode
     extensions: <ThemeExtension<dynamic>>[
       AppThemeExtension(
-        primaryGradient: AppDesignTokens.primaryGradient,
-        secondaryGradient: AppDesignTokens.secondaryGradientDark,
+        primaryGradient: DS.primaryGradient,
+        secondaryGradient: DS.secondaryGradientDark,
         cardGradient: const LinearGradient( // Darker gradient for dark mode
-          colors: [AppDesignTokens.neutral800, AppDesignTokens.neutral700],
+          colors: [DS.neutral800, DS.neutral700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        cardShadow: AppDesignTokens.shadowMd,
-        elevatedShadow: AppDesignTokens.shadowLg,
+        cardShadow: DS.shadowMd,
+        elevatedShadow: DS.shadowLg,
       ),
       SparkleColors.dark,
     ],
@@ -358,7 +358,7 @@ class AppThemes {
     cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius12),
+        borderRadius: BorderRadius.circular(DS.radius12),
       ),
       color: AppColors.darkCard,
       shadowColor: DS.brandPrimary.withValues(alpha: 0.3),
@@ -371,15 +371,15 @@ class AppThemes {
         foregroundColor: DS.brandPrimary,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing24,
-          vertical: AppDesignTokens.spacing12,
+          horizontal: DS.spacing24,
+          vertical: DS.spacing12,
         ),
         textStyle: const TextStyle(
-          fontSize: AppDesignTokens.fontSizeBase,
-          fontWeight: AppDesignTokens.fontWeightSemibold,
+          fontSize: DS.fontSizeBase,
+          fontWeight: DS.fontWeightSemibold,
         ),
       ),
     ),
@@ -389,8 +389,8 @@ class AppThemes {
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing16,
-          vertical: AppDesignTokens.spacing8,
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
         ),
       ),
     ),
@@ -401,11 +401,11 @@ class AppThemes {
         foregroundColor: AppColors.primary,
         side: const BorderSide(color: AppColors.primary, width: 1.5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+          borderRadius: BorderRadius.circular(DS.radius8),
         ),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDesignTokens.spacing24,
-          vertical: AppDesignTokens.spacing12,
+          horizontal: DS.spacing24,
+          vertical: DS.spacing12,
         ),
       ),
     ),
@@ -413,40 +413,40 @@ class AppThemes {
     // Input decoration theme
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
-        borderSide: const BorderSide(color: AppDesignTokens.neutral700),
+        borderRadius: BorderRadius.circular(DS.radius8),
+        borderSide: const BorderSide(color: DS.neutral700),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
-        borderSide: const BorderSide(color: AppDesignTokens.neutral700),
+        borderRadius: BorderRadius.circular(DS.radius8),
+        borderSide: const BorderSide(color: DS.neutral700),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius8),
+        borderRadius: BorderRadius.circular(DS.radius8),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       filled: true,
-      fillColor: AppDesignTokens.neutral800,
-      contentPadding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      fillColor: DS.neutral800,
+      contentPadding: const EdgeInsets.all(DS.spacing16),
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
-      backgroundColor: AppDesignTokens.neutral800,
+      backgroundColor: DS.neutral800,
       selectedColor: AppColors.primary,
-      labelStyle: const TextStyle(fontSize: AppDesignTokens.fontSizeSm),
+      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
       padding: const EdgeInsets.symmetric(
-        horizontal: AppDesignTokens.spacing12,
-        vertical: AppDesignTokens.spacing4,
+        horizontal: DS.spacing12,
+        vertical: DS.spacing4,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesignTokens.radius16),
+        borderRadius: BorderRadius.circular(DS.radius16),
       ),
     ),
 
     // Bottom navigation bar theme
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppDesignTokens.neutral500,
+      unselectedItemColor: DS.neutral500,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
       backgroundColor: AppColors.darkCard,
@@ -459,8 +459,8 @@ class AppThemes {
       backgroundColor: Colors.transparent,
       foregroundColor: Color(0xFFE0E0E0),
       titleTextStyle: TextStyle(
-        fontSize: AppDesignTokens.fontSizeLg,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSizeLg,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFFE0E0E0),
       ),
     ),
@@ -468,78 +468,78 @@ class AppThemes {
     // Text theme
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSize6xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize6xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFFE0E0E0),
       ),
       displayMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSize5xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize5xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFFE0E0E0),
       ),
       displaySmall: TextStyle(
-        fontSize: AppDesignTokens.fontSize4xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize4xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFFE0E0E0),
       ),
       headlineLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSize3xl,
-        fontWeight: AppDesignTokens.fontWeightBold,
+        fontSize: DS.fontSize3xl,
+        fontWeight: DS.fontWeightBold,
         color: Color(0xFFE0E0E0),
       ),
       headlineMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSize2xl,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSize2xl,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFFE0E0E0),
       ),
       headlineSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXl,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSizeXl,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFFE0E0E0),
       ),
       titleLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeLg,
-        fontWeight: AppDesignTokens.fontWeightSemibold,
+        fontSize: DS.fontSizeLg,
+        fontWeight: DS.fontWeightSemibold,
         color: Color(0xFFE0E0E0),
       ),
       titleMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFFE0E0E0),
       ),
       titleSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFFE0E0E0),
       ),
       bodyLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFFE0E0E0),
       ),
       bodyMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFFE0E0E0),
       ),
       bodySmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXs,
-        fontWeight: AppDesignTokens.fontWeightRegular,
+        fontSize: DS.fontSizeXs,
+        fontWeight: DS.fontWeightRegular,
         color: Color(0xFFE0E0E0),
       ),
       labelLarge: TextStyle(
-        fontSize: AppDesignTokens.fontSizeBase,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeBase,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFFE0E0E0),
       ),
       labelMedium: TextStyle(
-        fontSize: AppDesignTokens.fontSizeSm,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeSm,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFFE0E0E0),
       ),
       labelSmall: TextStyle(
-        fontSize: AppDesignTokens.fontSizeXs,
-        fontWeight: AppDesignTokens.fontWeightMedium,
+        fontSize: DS.fontSizeXs,
+        fontWeight: DS.fontWeightMedium,
         color: Color(0xFFE0E0E0),
       ),
     ),
@@ -618,13 +618,13 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     surfaceElevated: Color(0xFFFAFAFA),
     surfaceGlass: Color(0xF0FFFFFF),
     // 文本颜色
-    textPrimary: AppDesignTokens.neutral900,
-    textSecondary: AppDesignTokens.neutral700,
-    textTertiary: AppDesignTokens.neutral500,
+    textPrimary: DS.neutral900,
+    textSecondary: DS.neutral700,
+    textTertiary: DS.neutral500,
     textOnPrimary: Color(0xFFFFFFFF),
     // 边框和分割线
-    border: AppDesignTokens.neutral300,
-    divider: AppDesignTokens.neutral200,
+    border: DS.neutral300,
+    divider: DS.neutral200,
   );
 
   /// 深色主题配色
@@ -640,17 +640,17 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     planSprint: Color(0xFFFF5252),
     planGrowth: Color(0xFF66BB6A),
     // 表面颜色
-    surfaceCard: AppDesignTokens.neutral800,
-    surfaceElevated: AppDesignTokens.neutral700,
+    surfaceCard: DS.neutral800,
+    surfaceElevated: DS.neutral700,
     surfaceGlass: Color(0xF0424242),
     // 文本颜色
-    textPrimary: AppDesignTokens.neutral50,
-    textSecondary: AppDesignTokens.neutral300,
-    textTertiary: AppDesignTokens.neutral500,
+    textPrimary: DS.neutral50,
+    textSecondary: DS.neutral300,
+    textTertiary: DS.neutral500,
     textOnPrimary: Color(0xFFFFFFFF),
     // 边框和分割线
-    border: AppDesignTokens.neutral700,
-    divider: AppDesignTokens.neutral600,
+    border: DS.neutral700,
+    divider: DS.neutral600,
   );
 
   @override

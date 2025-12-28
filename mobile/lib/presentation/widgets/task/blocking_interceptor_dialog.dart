@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -62,7 +62,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('提交失败: $e'), backgroundColor: AppDesignTokens.error),
+          SnackBar(content: Text('提交失败: $e'), backgroundColor: DS.error),
         );
         setState(() => _isSubmitting = false);
       }
@@ -71,9 +71,9 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
 
   @override
   Widget build(BuildContext context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
+      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       child: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -84,30 +84,30 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
-                      color: AppDesignTokens.warning.withValues(alpha: 0.1),
+                      color: DS.warning.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.block, color: AppDesignTokens.warning),
+                    child: const Icon(Icons.block, color: DS.warning),
                   ),
-                  const SizedBox(width: AppDesignTokens.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   Expanded(
                     child: Text(
                       '遇到阻碍了吗？',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: AppDesignTokens.fontWeightBold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppDesignTokens.spacing16),
+              const SizedBox(height: DS.spacing16),
               Text(
                 '记录下原因，AI 会帮你分析行为定式，下次做得更好。',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppDesignTokens.neutral600,
+                  color: DS.neutral600,
                 ),
               ),
-              const SizedBox(height: AppDesignTokens.spacing20),
+              const SizedBox(height: DS.spacing20),
               
               // Preset Options
               ..._reasons.map((reason) => RadioListTile<String>(
@@ -116,7 +116,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                 groupValue: _selectedReason,
                 onChanged: (value) => setState(() => _selectedReason = value),
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppDesignTokens.primaryBase,
+                activeColor: DS.primaryBase,
               ),),
 
               // Other/Custom Input
@@ -126,7 +126,7 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                 groupValue: _selectedReason == null || !_reasons.contains(_selectedReason) ? 'other' : null,
                 onChanged: (value) => setState(() => _selectedReason = 'other'), // Hacky handling
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppDesignTokens.primaryBase,
+                activeColor: DS.primaryBase,
               ),
               
               if (_selectedReason == 'other')
@@ -138,19 +138,19 @@ class _BlockingInterceptorDialogState extends ConsumerState<BlockingInterceptorD
                   ),
                 ),
 
-              const SizedBox(height: AppDesignTokens.spacing24),
+              const SizedBox(height: DS.spacing24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton.ghost(label: '取消', onPressed: () => Navigator.of(context).pop()),
-                  const SizedBox(width: AppDesignTokens.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   CustomButton.primary(
                     text: '确认放弃',
                     icon: Icons.check,
                     onPressed: _isSubmitting ? () {} : _submit,
                     isLoading: _isSubmitting,
                     size: CustomButtonSize.small,
-                    customGradient: AppDesignTokens.warningGradient, // Orange/Red warning
+                    customGradient: DS.warningGradient, // Orange/Red warning
                   ),
                 ],
               ),

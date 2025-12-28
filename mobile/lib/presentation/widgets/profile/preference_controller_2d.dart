@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class PreferenceController2D extends StatefulWidget {
 
@@ -75,8 +75,8 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                 width: size,
                 height: size,
                 decoration: BoxDecoration(
-                  borderRadius: AppDesignTokens.borderRadius16,
-                  border: Border.all(color: AppDesignTokens.neutral300, width: 2),
+                  borderRadius: DS.borderRadius16,
+                  border: Border.all(color: DS.neutral300, width: 2),
                   // Gradient representing the axes
                   gradient: const LinearGradient(
                     begin: Alignment.topCenter,
@@ -92,7 +92,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                     // Horizontal Gradient Overlay (Curiosity)
                     Container(
                       decoration: BoxDecoration(
-                        borderRadius: AppDesignTokens.borderRadius16,
+                        borderRadius: DS.borderRadius16,
                         gradient: LinearGradient(
                           colors: [
                             DS.brandPrimary.withValues(alpha: 0.1), // Low Curiosity (Focus) - Left
@@ -119,11 +119,11 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                         width: handleSize,
                         height: handleSize,
                         decoration: BoxDecoration(
-                          gradient: AppDesignTokens.primaryGradient,
+                          gradient: DS.primaryGradient,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppDesignTokens.primaryBase.withValues(alpha: 0.5),
+                              color: DS.primaryBase.withValues(alpha: 0.5),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -147,7 +147,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     const textStyle = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.bold,
-      color: AppDesignTokens.neutral600,
+      color: DS.neutral600,
     );
 
     return const Stack(
@@ -199,7 +199,7 @@ class _GridAxisPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppDesignTokens.neutral300
+      ..color = DS.neutral300
       ..strokeWidth = 1;
 
     // Center Cross

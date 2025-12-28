@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class FocusStatsTool extends StatelessWidget {
   const FocusStatsTool({super.key});
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+      padding: const EdgeInsets.all(DS.spacing24),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -99,7 +99,7 @@ class FocusStatsTool extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(DS.lg),
             decoration: BoxDecoration(
-              color: AppDesignTokens.neutral50,
+              color: DS.neutral50,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -162,7 +162,7 @@ class FocusStatsTool extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 10,
-            color: AppDesignTokens.neutral500,
+            color: DS.neutral500,
           ),
         ),
       ],
@@ -170,21 +170,21 @@ class FocusStatsTool extends StatelessWidget {
 
   Widget _buildDetailStat(IconData icon, String value, String label) => Column(
       children: [
-        Icon(icon, color: AppDesignTokens.neutral600, size: 24),
+        Icon(icon, color: DS.neutral600, size: 24),
         const SizedBox(height: DS.xs),
         Text(
           value,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: AppDesignTokens.neutral900,
+            color: DS.neutral900,
           ),
         ),
         Text(
           label,
           style: const TextStyle(
             fontSize: 12,
-            color: AppDesignTokens.neutral500,
+            color: DS.neutral500,
           ),
         ),
       ],

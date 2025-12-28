@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -36,7 +36,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('捕捉失败: $e'), backgroundColor: AppDesignTokens.error),
+          SnackBar(content: Text('捕捉失败: $e'), backgroundColor: DS.error),
         );
         setState(() => _isSubmitting = false);
       }
@@ -45,9 +45,9 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
 
   @override
   Widget build(BuildContext context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: AppDesignTokens.borderRadius20),
+      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       child: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing20),
+        padding: const EdgeInsets.all(DS.spacing20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,48 +57,48 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                 Container(
                   padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
+                    color: DS.primaryBase.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.psychology, color: AppDesignTokens.primaryBase),
+                  child: const Icon(Icons.psychology, color: DS.primaryBase),
                 ),
-                const SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: DS.spacing12),
                 Text(
                   '闪念胶囊',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: AppDesignTokens.fontWeightBold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             Text(
               '此刻是什么拦住了你？或者有什么想吐槽的？',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppDesignTokens.neutral600,
+                color: DS.neutral600,
               ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             TextField(
               controller: _controller,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: '输入你的想法...',
                 border: OutlineInputBorder(
-                  borderRadius: AppDesignTokens.borderRadius12,
+                  borderRadius: DS.borderRadius12,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: AppDesignTokens.borderRadius12,
-                  borderSide: const BorderSide(color: AppDesignTokens.primaryBase, width: 2),
+                  borderRadius: DS.borderRadius12,
+                  borderSide: const BorderSide(color: DS.primaryBase, width: 2),
                 ),
               ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 SparkleButton.ghost(label: '取消', onPressed: () => Navigator.of(context).pop()),
-                const SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: DS.spacing12),
                 CustomButton.primary(
                   text: '发送',
                   icon: Icons.send_rounded,

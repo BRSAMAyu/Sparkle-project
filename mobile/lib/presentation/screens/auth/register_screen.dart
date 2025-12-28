@@ -29,7 +29,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
+    if (_formKey.currentState!.validate()) {
       ref.read(authProvider.notifier).register(
             _usernameController.text.trim(),
             _emailController.text.trim(),
@@ -57,19 +57,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Account'),
+        title: const Text('Create Account'),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(DS.xl),
+          padding: const EdgeInsets.all(DS.xl),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Text(
                   'Join Sparkle',
                   textAlign: TextAlign.center,
@@ -78,12 +78,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                SizedBox(height: DS.xxl),
+                const SizedBox(height: DS.xxl),
 
                 // Username field
                 TextFormField(
                   controller: _usernameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Username',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person_outline),
@@ -98,12 +98,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 
                 // Email field
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.email_outlined),
@@ -116,7 +116,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -125,7 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: const OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_isPasswordVisible
                           ? Icons.visibility_off
@@ -141,13 +141,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Confirm Password field
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Confirm Password',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock_person_outlined),
@@ -159,12 +159,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
 
                 // Register Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: DS.brandPrimary,
                     foregroundColor: DS.brandPrimary,
                   ),
@@ -175,9 +175,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                         )
-                      : Text('Register'),
+                      : const Text('Register'),
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Login Link
                 SparkleButton.ghost(label: 'Already have an account? Login', onPressed: () => context.go('/login')),

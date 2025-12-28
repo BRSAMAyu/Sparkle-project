@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
 /// PrismCard - Cognitive Prism Card (2x1 wide)
@@ -47,21 +47,21 @@ class _PrismCardState extends ConsumerState<PrismCard>
     return GestureDetector(
       onTap: () => context.push('/cognitive/patterns'),
       child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius20,
+        borderRadius: DS.borderRadius20,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppDesignTokens.prismPurple.withAlpha(40),
-                  AppDesignTokens.glassBackground,
+                  DS.prismPurple.withAlpha(40),
+                  DS.glassBackground,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: AppDesignTokens.borderRadius20,
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: DS.glassBorder),
             ),
             padding: const EdgeInsets.all(DS.lg),
             child: Stack(
@@ -79,7 +79,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              AppDesignTokens.prismPurple.withValues(alpha: _breathingAnimation.value),
+                              DS.prismPurple.withValues(alpha: _breathingAnimation.value),
                               Colors.transparent,
                             ],
                           ),
@@ -109,7 +109,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                             width: 6,
                             height: 6,
                             decoration: const BoxDecoration(
-                              color: AppDesignTokens.prismPurple,
+                              color: DS.prismPurple,
                               shape: BoxShape.circle,
                             ),
                           ),

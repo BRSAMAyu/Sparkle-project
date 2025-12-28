@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
 import 'package:sparkle/presentation/providers/calendar_provider.dart';
@@ -50,10 +50,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final selectedEvents = notifier.getEventsForDay(_selectedDay ?? _focusedDay);
 
     return Scaffold(
-      backgroundColor: AppDesignTokens.deepSpaceStart,
+      backgroundColor: DS.deepSpaceStart,
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEventDialog(context),
-        backgroundColor: AppDesignTokens.primaryBase,
+        backgroundColor: DS.primaryBase,
         child: Icon(Icons.add, color: DS.brandPrimary),
       ),
       body: Stack(
@@ -132,7 +132,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           backgroundColor: WidgetStateProperty.resolveWith<Color>(
             (Set<WidgetState> states) {
               if (states.contains(WidgetState.selected)) {
-                return AppDesignTokens.primaryBase;
+                return DS.primaryBase;
               }
               return DS.brandPrimary10;
             },
@@ -170,9 +170,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               },
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: isCurrentMonth ? AppDesignTokens.primaryBase.withAlpha(30) : DS.brandPrimary.withAlpha(5),
+                  color: isCurrentMonth ? DS.primaryBase.withAlpha(30) : DS.brandPrimary.withAlpha(5),
                   borderRadius: BorderRadius.circular(8),
-                  border: isCurrentMonth ? Border.all(color: AppDesignTokens.primaryBase.withAlpha(100)) : null,
+                  border: isCurrentMonth ? Border.all(color: DS.primaryBase.withAlpha(100)) : null,
                 ),
                 child: Column(
                   children: [
@@ -184,7 +184,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isCurrentMonth ? AppDesignTokens.primaryBase : DS.brandPrimary70,
+                          color: isCurrentMonth ? DS.primaryBase : DS.brandPrimary70,
                         ),
                       ),
                     ),
@@ -279,7 +279,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         defaultTextStyle: TextStyle(color: DS.brandPrimary),
         weekendTextStyle: TextStyle(color: DS.brandPrimary70),
         selectedDecoration: const BoxDecoration(
-          color: AppDesignTokens.primaryBase,
+          color: DS.primaryBase,
           shape: BoxShape.circle,
         ),
         todayDecoration: BoxDecoration(
@@ -325,7 +325,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     return Container(
       margin: const EdgeInsets.all(DS.xs),
       decoration: isSelected ? const BoxDecoration(
-        color: AppDesignTokens.primaryBase,
+        color: DS.primaryBase,
         shape: BoxShape.circle,
       ) : isToday ? BoxDecoration(
         color: DS.brandPrimary24,
@@ -346,7 +346,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               lunarData.displayString,
               style: TextStyle(
                 fontSize: 9,
-                color: isSelected ? DS.brandPrimary : AppDesignTokens.warningAccent, // Orange for festivals
+                color: isSelected ? DS.brandPrimary : DS.warningAccent, // Orange for festivals
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
@@ -384,8 +384,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                      MaterialPageRoute(builder: (_) => DailyDetailScreen(date: _selectedDay ?? _focusedDay)),
                    );
                  },
-                 icon: const Icon(Icons.info_outline, size: 16, color: AppDesignTokens.primaryBase),
-                 label: const Text('查看详情', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                 icon: const Icon(Icons.info_outline, size: 16, color: DS.primaryBase),
+                 label: const Text('查看详情', style: TextStyle(color: DS.primaryBase)),
                ),
              ],
            ),
@@ -531,7 +531,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               ),
               TextButton(
                 onPressed: _saveEvent,
-                child: const Text('保存', style: TextStyle(color: AppDesignTokens.primaryBase)),
+                child: const Text('保存', style: TextStyle(color: DS.primaryBase)),
               ),
             ],
           ),
@@ -644,7 +644,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: Text('全天', style: TextStyle(color: DS.brandPrimary)),
           value: _isAllDay,
           onChanged: (val) => setState(() => _isAllDay = val),
-          activeThumbColor: AppDesignTokens.primaryBase,
+          activeThumbColor: DS.primaryBase,
           contentPadding: EdgeInsets.zero,
         ),
         ListTile(

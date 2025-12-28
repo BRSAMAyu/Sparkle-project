@@ -25,7 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
+    if (_formKey.currentState!.validate()) {
       ref.read(authProvider.notifier).login(
             _usernameController.text.trim(),
             _passwordController.text.trim(),
@@ -53,20 +53,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(DS.xl),
+          padding: const EdgeInsets.all(DS.xl),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 60),
+                const SizedBox(height: 60),
                 // Logo and Welcome
                 Icon(
                   Icons.whatshot_outlined,
                   size: 60,
                   color: DS.brandPrimaryConst,
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
                 Text(
                   'Welcome Back to Sparkle',
                   textAlign: TextAlign.center,
@@ -75,18 +75,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                 ),
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 Text(
                   'Ignite your learning potential.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                SizedBox(height: DS.xxxl),
+                const SizedBox(height: DS.xxxl),
 
                 // Username field
                 TextFormField(
                   controller: _usernameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Username or Email',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person_outline),
@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your username or email' : null,
                 ),
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Password field
                 TextFormField(
@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: const OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_isPasswordVisible
                           ? Icons.visibility_off
@@ -115,12 +115,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (value) =>
                       value!.isEmpty ? 'Please enter your password' : null,
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
 
                 // Login Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: DS.brandPrimary,
                     foregroundColor: DS.brandPrimary,
                   ),
@@ -131,21 +131,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
                         )
-                      : Text('Login'),
+                      : const Text('Login'),
                 ),
                 
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
                 Row(
                   children: [
-                    Expanded(child: Divider()),
+                    const Expanded(child: Divider()),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text('OR', style: TextStyle(color: DS.brandPrimary)),
                     ),
-                    Expanded(child: Divider()),
+                    const Expanded(child: Divider()),
                   ],
                 ),
-                SizedBox(height: DS.xl),
+                const SizedBox(height: DS.xl),
 
                 // Social Login Buttons
                 Row(
@@ -190,15 +190,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
 
-                SizedBox(height: DS.lg),
+                const SizedBox(height: DS.lg),
 
                 // Register Link
                 TextButton(
                   onPressed: () => context.go('/register'),
-                  child: Text("Don't have an account? Register"),
+                  child: const Text("Don't have an account? Register"),
                 ),
                 
-                SizedBox(height: DS.sm),
+                const SizedBox(height: DS.sm),
                 
                 // Guest Mode
                 TextButton(
@@ -240,7 +240,7 @@ class _SocialLoginButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.all(DS.md),
+        padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/repositories/error_repository.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
@@ -82,7 +82,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   Future<void> _submit() async {
     if (_selectedSubjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择科目'), backgroundColor: AppDesignTokens.warning),
+        const SnackBar(content: Text('请选择科目'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -90,7 +90,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入知识点'), backgroundColor: AppDesignTokens.warning),
+        const SnackBar(content: Text('请输入知识点'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -98,7 +98,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入错误描述'), backgroundColor: AppDesignTokens.warning),
+        const SnackBar(content: Text('请输入错误描述'), backgroundColor: DS.warning),
       );
       return;
     }
@@ -120,7 +120,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('已记录错题'),
-            backgroundColor: AppDesignTokens.success,
+            backgroundColor: DS.success,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -131,7 +131,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('记录失败: $e'),
-            backgroundColor: AppDesignTokens.error,
+            backgroundColor: DS.error,
           ),
         );
       }
@@ -158,7 +158,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppDesignTokens.neutral300,
+                color: DS.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -183,13 +183,13 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   Text(
                     '闪念胶囊',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: AppDesignTokens.fontWeightBold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   const Text(
                     '快速记录学习中遇到的问题',
                     style: TextStyle(
-                      color: AppDesignTokens.neutral500,
+                      color: DS.neutral500,
                       fontSize: 12,
                     ),
                   ),
@@ -209,17 +209,17 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const Text(
                     '科目',
                     style: TextStyle(
-                      fontWeight: AppDesignTokens.fontWeightMedium,
-                      color: AppDesignTokens.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.neutral700,
                     ),
                   ),
                   const SizedBox(height: DS.sm),
                   if (_isLoading) const Center(child: CircularProgressIndicator(strokeWidth: 2)) else Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: AppDesignTokens.neutral50,
+                            color: DS.neutral50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppDesignTokens.neutral200),
+                            border: Border.all(color: DS.neutral200),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
@@ -242,8 +242,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const Text(
                     '知识点',
                     style: TextStyle(
-                      fontWeight: AppDesignTokens.fontWeightMedium,
-                      color: AppDesignTokens.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.neutral700,
                     ),
                   ),
                   const SizedBox(height: DS.sm),
@@ -252,7 +252,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                     decoration: InputDecoration(
                       hintText: '例如：三角函数求导、牛顿第二定律...',
                       filled: true,
-                      fillColor: AppDesignTokens.neutral50,
+                      fillColor: DS.neutral50,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -270,8 +270,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const Text(
                     '错误类型',
                     style: TextStyle(
-                      fontWeight: AppDesignTokens.fontWeightMedium,
-                      color: AppDesignTokens.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.neutral700,
                     ),
                   ),
                   const SizedBox(height: DS.sm),
@@ -289,9 +289,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                           }
                         },
                         selectedColor: Colors.amber.withValues(alpha: 0.2),
-                        backgroundColor: AppDesignTokens.neutral100,
+                        backgroundColor: DS.neutral100,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.amber.shade800 : AppDesignTokens.neutral600,
+                          color: isSelected ? Colors.amber.shade800 : DS.neutral600,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                         shape: RoundedRectangleBorder(
@@ -309,8 +309,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   const Text(
                     '描述',
                     style: TextStyle(
-                      fontWeight: AppDesignTokens.fontWeightMedium,
-                      color: AppDesignTokens.neutral700,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.neutral700,
                     ),
                   ),
                   const SizedBox(height: DS.sm),

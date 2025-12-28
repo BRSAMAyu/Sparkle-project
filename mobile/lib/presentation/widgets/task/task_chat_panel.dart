@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/providers/task_chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
@@ -41,9 +41,9 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        borderRadius: AppDesignTokens.borderRadius16,
-        boxShadow: AppDesignTokens.shadowMd,
-        border: Border.all(color: AppDesignTokens.neutral200),
+        borderRadius: DS.borderRadius16,
+        boxShadow: DS.shadowMd,
+        border: Border.all(color: DS.neutral200),
       ),
       child: Column(
         children: [
@@ -52,27 +52,27 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+              padding: const EdgeInsets.all(DS.spacing12),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: const BoxDecoration(
-                      gradient: AppDesignTokens.secondaryGradient,
+                      gradient: DS.secondaryGradient,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 18),
                   ),
-                  const SizedBox(width: AppDesignTokens.spacing12),
+                  const SizedBox(width: DS.spacing12),
                   const Text(
                     'AI 学习助手',
                     style: TextStyle(
-                      fontWeight: AppDesignTokens.fontWeightBold,
-                      color: AppDesignTokens.neutral900,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.neutral900,
                     ),
                   ),
                   const Spacer(),
-                  Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, color: AppDesignTokens.neutral500),
+                  Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, color: DS.neutral500),
                 ],
               ),
             ),
@@ -85,7 +85,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                  "${lastMessage.role == MessageRole.user ? '我' : 'AI'}: ${lastMessage.content}",
                  maxLines: 1,
                  overflow: TextOverflow.ellipsis,
-                 style: const TextStyle(color: AppDesignTokens.neutral600, fontSize: 12),
+                 style: const TextStyle(color: DS.neutral600, fontSize: 12),
                ),
              ),
 
@@ -93,12 +93,12 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
             const Divider(height: 1),
             Container(
               height: 300,
-              color: AppDesignTokens.neutral50,
+              color: DS.neutral50,
               child: messages.isEmpty 
                   ? const Center(
                       child: Text(
                         '有问题尽管问我！', 
-                        style: TextStyle(color: AppDesignTokens.neutral400),
+                        style: TextStyle(color: DS.neutral400),
                       ),
                     )
                   : ListView.builder(
@@ -134,7 +134,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     )
                   else
                     IconButton(
-                      icon: const Icon(Icons.send, color: AppDesignTokens.primaryBase),
+                      icon: const Icon(Icons.send, color: DS.primaryBase),
                       onPressed: _sendMessage,
                     ),
                 ],

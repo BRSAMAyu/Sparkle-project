@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/user_model.dart';
 import 'package:sparkle/data/repositories/user_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
@@ -78,17 +78,17 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
         title: const Text('学习模式设置'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               '拖动火苗调整你的学习偏好',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: AppDesignTokens.fontWeightMedium,
+                    fontWeight: DS.fontWeightMedium,
                   ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
             Center(
               child: PreferenceController2D(
                 initialDepth: _currentDepthPreference,
@@ -101,14 +101,14 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                 },
               ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing24),
+            const SizedBox(height: DS.spacing24),
             Text(
               '深度偏好 (Y轴): ${(_currentDepthPreference * 100).toStringAsFixed(0)}%',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppDesignTokens.neutral600),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.neutral600),
             ),
             Text(
               '好奇心偏好 (X轴): ${(_currentCuriosityPreference * 100).toStringAsFixed(0)}%',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppDesignTokens.neutral600),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.neutral600),
             ),
             const Spacer(),
             Center(
@@ -117,7 +117,7 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: AppDesignTokens.borderRadius12,
+                    borderRadius: DS.borderRadius12,
                   ),
                 ),
                 child: _isLoading ? const CircularProgressIndicator() : const Text('保存偏好'),

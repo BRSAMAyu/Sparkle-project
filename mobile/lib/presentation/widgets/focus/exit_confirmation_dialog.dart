@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 退出确认步骤
@@ -75,7 +75,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         child: Container(
           padding: const EdgeInsets.all(DS.xl),
           decoration: BoxDecoration(
-            color: AppDesignTokens.deepSpaceSurface,
+            color: DS.deepSpaceSurface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: DS.brandPrimary.withValues(alpha: 0.1),
@@ -138,7 +138,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                       text: _getConfirmText(),
                       onPressed: _nextStep,
                       customGradient: _currentStep == ExitStep.third
-                          ? AppDesignTokens.errorGradient
+                          ? DS.errorGradient
                           : null,
                     ),
                   ),
@@ -160,7 +160,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: isActive
-                ? AppDesignTokens.primaryBase
+                ? DS.primaryBase
                 : DS.brandPrimary.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(2),
           ),
@@ -175,13 +175,13 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
     switch (_currentStep) {
       case ExitStep.first:
         icon = Icons.pause_circle_outline_rounded;
-        color = AppDesignTokens.warning;
+        color = DS.warning;
       case ExitStep.second:
         icon = Icons.warning_amber_rounded;
-        color = AppDesignTokens.warning;
+        color = DS.warning;
       case ExitStep.third:
         icon = Icons.exit_to_app_rounded;
-        color = AppDesignTokens.error;
+        color = DS.error;
     }
 
     return Container(

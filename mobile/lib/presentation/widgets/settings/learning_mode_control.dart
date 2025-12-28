@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class LearningModeControl extends StatefulWidget {
 
@@ -69,7 +69,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                     border: Border.all(color: isDark ? DS.brandPrimary24 : DS.brandPrimary.shade300),
                     boxShadow: [
                        BoxShadow(
-                          color: AppDesignTokens.primaryBase.withValues(alpha: 0.15 * _currentCuriosity),
+                          color: DS.primaryBase.withValues(alpha: 0.15 * _currentCuriosity),
                           blurRadius: 16,
                           spreadRadius: 2,
                        ),
@@ -121,13 +121,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppDesignTokens.primaryBase.withValues(alpha: 0.6),
+                                  color: DS.primaryBase.withValues(alpha: 0.6),
                                   blurRadius: 8,
                                   spreadRadius: 1,
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.touch_app, size: 16, color: AppDesignTokens.primaryBase),
+                            child: const Icon(Icons.touch_app, size: 16, color: DS.primaryBase),
                           ),
                         ),
                       ],
@@ -162,13 +162,13 @@ class _LearningModeControlState extends State<LearningModeControl> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? DS.brandPrimary10 : AppDesignTokens.primaryBase.withValues(alpha: 0.1),
+        color: isDark ? DS.brandPrimary10 : DS.primaryBase.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isDark ? DS.brandPrimary : AppDesignTokens.primaryBase,
+          color: isDark ? DS.brandPrimary : DS.primaryBase,
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),

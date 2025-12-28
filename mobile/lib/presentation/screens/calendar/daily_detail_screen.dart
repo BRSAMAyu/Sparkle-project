@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
 import 'package:sparkle/presentation/providers/calendar_provider.dart';
@@ -76,7 +76,7 @@ class DailyDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppDesignTokens.primaryBase.withAlpha(150), AppDesignTokens.primaryBase.withAlpha(50)],
+          colors: [DS.primaryBase.withAlpha(150), DS.primaryBase.withAlpha(50)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -113,7 +113,7 @@ class DailyDetailScreen extends ConsumerWidget {
             label: '火花强度',
             value: '${state.flame.level}',
             icon: Icons.local_fire_department,
-            color: AppDesignTokens.warningAccent,
+            color: DS.warningAccent,
           ),
         ),
         const SizedBox(width: DS.md),
@@ -161,16 +161,16 @@ class DailyDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
-        color: AppDesignTokens.prismPurple.withAlpha(30),
+        color: DS.prismPurple.withAlpha(30),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppDesignTokens.prismPurple.withAlpha(80)),
+        border: Border.all(color: DS.prismPurple.withAlpha(80)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.diamond_outlined, color: AppDesignTokens.prismPurple, size: 20),
+              const Icon(Icons.diamond_outlined, color: DS.prismPurple, size: 20),
               const SizedBox(width: DS.smConst),
               Text('当日认知棱镜', style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold)),
             ],
@@ -194,7 +194,7 @@ class DailyDetailScreen extends ConsumerWidget {
 
   Widget _buildSectionTitle(BuildContext context, String title, IconData icon) => Row(
       children: [
-        Icon(icon, size: 18, color: AppDesignTokens.primaryBase),
+        Icon(icon, size: 18, color: DS.primaryBase),
         const SizedBox(width: DS.sm),
         Text(title, style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16, fontWeight: FontWeight.bold)),
       ],

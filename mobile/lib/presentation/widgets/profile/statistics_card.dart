@@ -1,18 +1,18 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class StatisticsCard extends StatelessWidget {
   const StatisticsCard({super.key});
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        borderRadius: AppDesignTokens.borderRadius16,
-        boxShadow: AppDesignTokens.shadowSm,
+        borderRadius: DS.borderRadius16,
+        boxShadow: DS.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -22,27 +22,27 @@ class StatisticsCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
+                  color: DS.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.show_chart_rounded,
-                  color: AppDesignTokens.primaryBase,
+                  color: DS.primaryBase,
                   size: 16,
                 ),
               ),
-              const SizedBox(width: AppDesignTokens.spacing8),
+              const SizedBox(width: DS.spacing8),
               const Text(
                 '本周成长趋势',
                 style: TextStyle(
-                  fontSize: AppDesignTokens.fontSizeBase,
-                  fontWeight: AppDesignTokens.fontWeightSemibold,
-                  color: AppDesignTokens.neutral900,
+                  fontSize: DS.fontSizeBase,
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppDesignTokens.spacing16),
+          const SizedBox(height: DS.spacing16),
           const SizedBox(
             height: 120,
             child: _WeeklyTrendChart(),
@@ -87,7 +87,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                       child: Text(
                         days[value.toInt()],
                         style: const TextStyle(
-                          color: AppDesignTokens.neutral500,
+                          color: DS.neutral500,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -105,7 +105,7 @@ class _WeeklyTrendChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppDesignTokens.primaryBase,
+              color: DS.primaryBase,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
@@ -113,15 +113,15 @@ class _WeeklyTrendChart extends StatelessWidget {
                     radius: 4,
                     color: DS.brandPrimaryConst,
                     strokeWidth: 2,
-                    strokeColor: AppDesignTokens.primaryBase,
+                    strokeColor: DS.primaryBase,
                   ),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    AppDesignTokens.primaryBase.withValues(alpha: 0.2),
-                    AppDesignTokens.primaryBase.withValues(alpha: 0.0),
+                    DS.primaryBase.withValues(alpha: 0.2),
+                    DS.primaryBase.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,

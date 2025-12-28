@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/tools/breathing_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
@@ -107,7 +107,7 @@ class _ToolButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: DS.brandPrimaryConst,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: AppDesignTokens.shadowSm,
+          boxShadow: DS.shadowSm,
         ),
         child: Column(
           children: [

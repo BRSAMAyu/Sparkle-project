@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -140,7 +140,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       child: Scaffold(
         appBar: AppBar(title: const Text('Create Group')),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+          padding: const EdgeInsets.all(DS.spacing16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -161,7 +161,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: AppDesignTokens.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 DropdownButtonFormField<GroupType>(
                   initialValue: _type,
@@ -185,7 +185,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: AppDesignTokens.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 TextFormField(
                   controller: _descController,
@@ -196,7 +196,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   ),
                   maxLines: 3,
                 ),
-                const SizedBox(height: AppDesignTokens.spacing16),
+                const SizedBox(height: DS.spacing16),
                 
                 TextFormField(
                   controller: _tagsController,
@@ -208,11 +208,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 ),
                 
                 if (_type == GroupType.sprint) ...[
-                  const SizedBox(height: AppDesignTokens.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   const Divider(),
-                  const SizedBox(height: AppDesignTokens.spacing8),
+                  const SizedBox(height: DS.spacing8),
                   Text('Sprint Settings', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: AppDesignTokens.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   
                   ListTile(
                     title: const Text('Deadline'),
@@ -234,7 +234,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       }
                     },
                   ),
-                  const SizedBox(height: AppDesignTokens.spacing16),
+                  const SizedBox(height: DS.spacing16),
                   
                   TextFormField(
                     controller: _goalController,
@@ -252,7 +252,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   ),
                 ],
                 
-                const SizedBox(height: AppDesignTokens.spacing32),
+                const SizedBox(height: DS.spacing32),
                 
                 CustomButton.primary(
                   text: _isSubmitting ? 'Creating...' : 'Create Group',

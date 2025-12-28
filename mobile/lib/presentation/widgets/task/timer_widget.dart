@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 enum TimerMode { countUp, countDown }
 
@@ -136,8 +136,8 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
             size: const Size(220, 220),
             painter: _CircularTimerPainter(
               progress: progress,
-              gradient: AppDesignTokens.primaryGradient,
-              backgroundColor: AppDesignTokens.neutral200,
+              gradient: DS.primaryGradient,
+              backgroundColor: DS.neutral200,
             ),
             child: SizedBox(
               width: 220,
@@ -146,18 +146,18 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
                 child: Text(
                   _formatTime(_currentSeconds),
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    fontWeight: AppDesignTokens.fontWeightBold,
+                    fontWeight: DS.fontWeightBold,
                     fontFamily: 'monospace',
-                    color: AppDesignTokens.neutral900,
+                    color: DS.neutral900,
                   ),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: AppDesignTokens.spacing32),
+        const SizedBox(height: DS.spacing32),
         AnimatedSwitcher(
-          duration: AppDesignTokens.durationFast,
+          duration: DS.durationFast,
           transitionBuilder: (child, animation) => ScaleTransition(
               scale: animation,
               child: FadeTransition(opacity: animation, child: child),
@@ -166,7 +166,7 @@ class _TimerWidgetState extends State<TimerWidget> with TickerProviderStateMixin
             key: ValueKey(_isRunning),
             icon: Icon(_isRunning ? Icons.pause_circle_filled : Icons.play_circle_filled),
             iconSize: 80, // Slightly larger
-            color: AppDesignTokens.primaryBase,
+            color: DS.primaryBase,
             onPressed: _toggleTimer,
             padding: EdgeInsets.zero,
           ),

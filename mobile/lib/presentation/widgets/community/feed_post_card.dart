@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/domain/community/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -15,10 +15,10 @@ class FeedPostCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
-        color: AppDesignTokens.surface,
+        color: DS.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppDesignTokens.border.withOpacity(0.3),
+          color: DS.border.withOpacity(0.3),
         ),
         boxShadow: [
           BoxShadow(
@@ -35,7 +35,7 @@ class FeedPostCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: AppDesignTokens.primaryBase,
+                backgroundColor: DS.primaryBase,
                 backgroundImage: post.user.avatarUrl != null
                     ? NetworkImage(post.user.avatarUrl!)
                     : null,
@@ -69,7 +69,7 @@ class FeedPostCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.primaryBase.withOpacity(0.2),
+                    color: DS.primaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -83,7 +83,7 @@ class FeedPostCard extends StatelessWidget {
                       Text(
                         'Posting...',
                         style: TextStyle(
-                          color: AppDesignTokens.primaryBase,
+                          color: DS.primaryBase,
                           fontSize: 10,
                         ),
                       ),
@@ -137,13 +137,13 @@ class FeedPostCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.secondaryBase.withOpacity(0.2),
+                    color: DS.secondaryBase.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '#${post.topic}',
                     style: const TextStyle(
-                      color: AppDesignTokens.secondaryBase,
+                      color: DS.secondaryBase,
                       fontSize: 12,
                     ),
                   ),

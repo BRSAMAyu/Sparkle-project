@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/common/empty_state.dart';
@@ -35,7 +35,7 @@ class GroupListScreen extends ConsumerWidget {
         },
         icon: const Icon(Icons.add),
         label: const Text('Create'),
-        backgroundColor: AppDesignTokens.primaryBase,
+        backgroundColor: DS.primaryBase,
         elevation: 4,
       ),
       body: groupsState.when(
@@ -55,10 +55,10 @@ class GroupListScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.read(myGroupsProvider.notifier).refresh(),
             child: ListView.separated(
-              padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+              padding: const EdgeInsets.all(DS.spacing16),
               itemCount: groups.length,
               separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppDesignTokens.spacing12),
+                  const SizedBox(height: DS.spacing12),
               itemBuilder: (context, index) {
                 final group = groups[index];
                 return _AnimatedGroupTile(
@@ -149,22 +149,22 @@ class _GroupListTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
-        borderRadius: AppDesignTokens.borderRadius16,
-        boxShadow: AppDesignTokens.shadowSm,
-        border: Border.all(color: AppDesignTokens.neutral100),
+        borderRadius: DS.borderRadius16,
+        boxShadow: DS.shadowSm,
+        border: Border.all(color: DS.neutral100),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: AppDesignTokens.borderRadius16,
+        borderRadius: DS.borderRadius16,
         child: InkWell(
           onTap: () {
             context.push('/community/groups/${group.id}');
           },
-          borderRadius: AppDesignTokens.borderRadius16,
-          splashColor: AppDesignTokens.primaryBase.withValues(alpha: 0.1),
-          highlightColor: AppDesignTokens.primaryBase.withValues(alpha: 0.05),
+          borderRadius: DS.borderRadius16,
+          splashColor: DS.primaryBase.withValues(alpha: 0.1),
+          highlightColor: DS.primaryBase.withValues(alpha: 0.05),
           child: Padding(
-            padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+            padding: const EdgeInsets.all(DS.spacing16),
             child: Row(
               children: [
                 // Avatar with Hero
@@ -193,7 +193,7 @@ class _GroupListTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppDesignTokens.spacing16),
+                const SizedBox(width: DS.spacing16),
                 
                 // Content
                 Expanded(
@@ -207,7 +207,7 @@ class _GroupListTile extends StatelessWidget {
                               group.name,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: AppDesignTokens.neutral900,
+                                    color: DS.neutral900,
                                   ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -253,7 +253,7 @@ class _GroupListTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: DS.sm),
-                const Icon(Icons.chevron_right, color: AppDesignTokens.neutral400),
+                const Icon(Icons.chevron_right, color: DS.neutral400),
               ],
             ),
           ),
@@ -269,7 +269,7 @@ class _GroupListTile extends StatelessWidget {
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppDesignTokens.neutral600,
+            color: DS.neutral600,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -282,17 +282,17 @@ class _GroupListLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing16),
+      padding: const EdgeInsets.all(DS.spacing16),
       itemCount: 6,
-      separatorBuilder: (context, index) => const SizedBox(height: AppDesignTokens.spacing12),
+      separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
       itemBuilder: (context, index) => Shimmer.fromColors(
-          baseColor: AppDesignTokens.neutral200,
-          highlightColor: AppDesignTokens.neutral100,
+          baseColor: DS.neutral200,
+          highlightColor: DS.neutral100,
           child: Container(
             height: 88,
             decoration: BoxDecoration(
               color: DS.brandPrimaryConst,
-              borderRadius: AppDesignTokens.borderRadius16,
+              borderRadius: DS.borderRadius16,
             ),
           ),
         ),

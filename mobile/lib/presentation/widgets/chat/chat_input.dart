@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
 
@@ -90,17 +90,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
           
           Padding(
-            padding: const EdgeInsets.all(AppDesignTokens.spacing8),
+            padding: const EdgeInsets.all(DS.spacing8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral100,
+                      color: isDark ? DS.neutral800 : DS.neutral100,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: isDark ? AppDesignTokens.neutral700 : AppDesignTokens.neutral300,
+                        color: isDark ? DS.neutral700 : DS.neutral300,
                       ),
                     ),
                     child: TextField(
@@ -112,11 +112,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       decoration: InputDecoration(
                         hintText: widget.hintText ?? 'Type a message...',
                         hintStyle: TextStyle(
-                          color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral500,
+                          color: isDark ? DS.neutral400 : DS.neutral500,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppDesignTokens.spacing16,
-                          vertical: AppDesignTokens.spacing10,
+                          horizontal: DS.spacing16,
+                          vertical: DS.spacing10,
                         ),
                         border: InputBorder.none,
                         isDense: true,
@@ -125,7 +125,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppDesignTokens.spacing12),
+                const SizedBox(width: DS.spacing12),
                 GestureDetector(
                   onTapDown: (_) => setState(() => _isButtonPressed = true),
                   onTapUp: (_) => setState(() => _isButtonPressed = false),
@@ -140,8 +140,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        gradient: canSend ? AppDesignTokens.primaryGradient : null,
-                        color: canSend ? null : (isDark ? AppDesignTokens.neutral800 : AppDesignTokens.neutral200),
+                        gradient: canSend ? DS.primaryGradient : null,
+                        color: canSend ? null : (isDark ? DS.neutral800 : DS.neutral200),
                         shape: BoxShape.circle,
                         boxShadow: canSend 
                           ? [
@@ -182,7 +182,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppDesignTokens.neutral800 : DS.brandPrimary200,
+        color: isDark ? DS.neutral800 : DS.brandPrimary200,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
           left: BorderSide(color: DS.brandPrimary, width: 4),
@@ -197,31 +197,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 Text(
                   '引用 ${widget.quotedMessage!.sender.displayName}',
                   style: const TextStyle(
-                    fontSize: AppDesignTokens.fontSizeXs,
-                    fontWeight: AppDesignTokens.fontWeightBold,
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightBold,
                     color: DS.brandPrimary,
                   ),
                 ),
-                const SizedBox(height: AppDesignTokens.spacing4),
+                const SizedBox(height: DS.spacing4),
                 Text(
                   widget.quotedMessage!.content ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: AppDesignTokens.fontSizeXs,
-                    color: isDark ? AppDesignTokens.neutral400 : AppDesignTokens.neutral600,
+                    fontSize: DS.fontSizeXs,
+                    color: isDark ? DS.neutral400 : DS.neutral600,
                   ),
                 ),
               ],
             ),
           ),
           SizedBox(
-            width: AppDesignTokens.touchTargetMinSize,
-            height: AppDesignTokens.touchTargetMinSize,
+            width: DS.touchTargetMinSize,
+            height: DS.touchTargetMinSize,
             child: IconButton(
               icon: const Icon(Icons.close_rounded,
-                size: AppDesignTokens.iconSizeSm,
-                color: AppDesignTokens.neutral600,),
+                size: DS.iconSizeSm,
+                color: DS.neutral600,),
               onPressed: widget.onCancelQuote,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

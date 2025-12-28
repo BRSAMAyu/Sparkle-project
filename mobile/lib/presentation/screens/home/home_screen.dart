@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -100,7 +100,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: AppDesignTokens.error,
+              color: DS.error,
               borderRadius: BorderRadius.circular(8),
             ),
             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -185,7 +185,7 @@ class _DashboardScreen extends ConsumerWidget {
           CircleAvatar(
             radius: 18,
             backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-            backgroundColor: AppDesignTokens.primaryBase,
+            backgroundColor: DS.primaryBase,
             child: user?.avatarUrl == null ? Text((user?.nickname ?? 'U')[0].toUpperCase()) : null,
           ),
           const SizedBox(width: 10),
@@ -195,16 +195,16 @@ class _DashboardScreen extends ConsumerWidget {
               Text(
                 'Lv.${user?.flameLevel ?? 1}',
                 style: const TextStyle(
-                  fontSize: AppDesignTokens.fontSizeXs,
-                  fontWeight: AppDesignTokens.fontWeightBold,
-                  color: AppDesignTokens.warning,
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightBold,
+                  color: DS.warning,
                 ),
               ),
               Text(
                 user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
                 style: TextStyle(
-                  fontSize: AppDesignTokens.fontSizeSm,
-                  fontWeight: AppDesignTokens.fontWeightBold,
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.brandPrimaryConst,
                 ),
               ),

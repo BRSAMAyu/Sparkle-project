@@ -31,7 +31,7 @@ WHERE session_id = $1
 ORDER BY created_at ASC;
 
 -- name: GetGroupMessages :many
-SELECT 
+SELECT
     gm.id, gm.group_id, gm.sender_id, gm.message_type, gm.content, gm.content_data, gm.reply_to_id, gm.created_at, gm.updated_at,
     u.username as sender_username, u.nickname as sender_nickname, u.avatar_url as sender_avatar_url,
     rm.id as reply_id, rm.content as reply_content, rm.message_type as reply_type,
@@ -40,10 +40,13 @@ FROM group_messages gm
 LEFT JOIN users u ON gm.sender_id = u.id
 LEFT JOIN group_messages rm ON gm.reply_to_id = rm.id
 LEFT JOIN users ru ON rm.sender_id = ru.id
-WHERE gm.group_id = $1 
+WHERE gm.group_id = $1
 AND gm.deleted_at IS NULL
 ORDER BY gm.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: IsGroupMember :one
+SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2);
 
 -- name: CreatePost :one
 INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)

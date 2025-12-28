@@ -20,6 +20,7 @@ type Config struct {
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
 	BackendURL    string `mapstructure:"BACKEND_URL"`
 	AppleClientID string `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret   string `mapstructure:"ADMIN_SECRET"`
 
 	// P3: WebSocket security configuration
 	Environment     string   `mapstructure:"ENVIRONMENT"`          // dev, staging, production
@@ -91,6 +92,11 @@ func Load() *Config {
 	// Validate JWT_SECRET is set in non-development environments
 	if !cfg.IsDevelopment() && cfg.JWTSecret == "" {
 		log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET environment variable or .env file.")
+	}
+
+	// Validate ADMIN_SECRET is set in non-development environments
+	if !cfg.IsDevelopment() && cfg.AdminSecret == "" {
+		log.Fatal("ADMIN_SECRET must be set in non-development environments. Set via ADMIN_SECRET environment variable or .env file.")
 	}
 
 	// Warn about default database password in non-development environments

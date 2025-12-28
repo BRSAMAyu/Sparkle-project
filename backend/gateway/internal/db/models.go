@@ -533,6 +533,36 @@ func (ns NullUserstatus) Value() (driver.Value, error) {
 	return string(ns.Userstatus), nil
 }
 
+type AgentExecutionStat struct {
+	ID           int32              `json:"id"`
+	UserID       int32              `json:"user_id"`
+	SessionID    string             `json:"session_id"`
+	RequestID    string             `json:"request_id"`
+	AgentType    string             `json:"agent_type"`
+	AgentName    pgtype.Text        `json:"agent_name"`
+	StartedAt    pgtype.Timestamptz `json:"started_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	DurationMs   pgtype.Int4        `json:"duration_ms"`
+	Status       string             `json:"status"`
+	ToolName     pgtype.Text        `json:"tool_name"`
+	Operation    pgtype.Text        `json:"operation"`
+	Metadata     []byte             `json:"metadata"`
+	ErrorMessage pgtype.Text        `json:"error_message"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type AgentStatsSummary struct {
+	UserID         int32       `json:"user_id"`
+	AgentType      string      `json:"agent_type"`
+	ExecutionCount int64       `json:"execution_count"`
+	AvgDurationMs  float64     `json:"avg_duration_ms"`
+	MaxDurationMs  interface{} `json:"max_duration_ms"`
+	MinDurationMs  interface{} `json:"min_duration_ms"`
+	SuccessCount   int64       `json:"success_count"`
+	FailureCount   int64       `json:"failure_count"`
+	LastUsedAt     interface{} `json:"last_used_at"`
+}
+
 type AlembicVersion struct {
 	VersionNum string `json:"version_num"`
 }
@@ -643,7 +673,7 @@ type EventOutbox struct {
 	EventVersion   int32            `json:"event_version"`
 	Payload        []byte           `json:"payload"`
 	Metadata       []byte           `json:"metadata"`
-	SequenceNumber pgtype.Int8      `json:"sequence_number"`
+	SequenceNumber int64            `json:"sequence_number"`
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 	PublishedAt    pgtype.Timestamp `json:"published_at"`
 }
@@ -1023,6 +1053,21 @@ type Task struct {
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+}
+
+type TokenUsage struct {
+	UserID           pgtype.UUID      `json:"user_id"`
+	SessionID        string           `json:"session_id"`
+	RequestID        string           `json:"request_id"`
+	PromptTokens     int32            `json:"prompt_tokens"`
+	CompletionTokens int32            `json:"completion_tokens"`
+	TotalTokens      int32            `json:"total_tokens"`
+	Model            string           `json:"model"`
+	Cost             pgtype.Float8    `json:"cost"`
+	ID               pgtype.UUID      `json:"id"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type User struct {

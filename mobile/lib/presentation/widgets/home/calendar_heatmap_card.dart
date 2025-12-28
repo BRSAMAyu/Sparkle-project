@@ -3,9 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class CalendarHeatmapCard extends StatelessWidget {
   const CalendarHeatmapCard({super.key});
@@ -14,21 +14,21 @@ class CalendarHeatmapCard extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
       onTap: () => context.push('/calendar-stats'),
       child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius20,
+        borderRadius: DS.borderRadius20,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppDesignTokens.deepSpaceSurface.withValues(alpha: 0.6),
-                  AppDesignTokens.glassBackground,
+                  DS.deepSpaceSurface.withValues(alpha: 0.6),
+                  DS.glassBackground,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: AppDesignTokens.borderRadius20,
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: DS.glassBorder),
             ),
             padding: const EdgeInsets.all(DS.lg),
             child: Column(

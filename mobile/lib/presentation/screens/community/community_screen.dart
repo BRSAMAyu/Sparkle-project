@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/community_providers.dart';
 import 'package:sparkle/presentation/screens/community/create_post_screen.dart';
 import 'package:sparkle/presentation/widgets/community/feed_post_card.dart';
@@ -21,13 +21,13 @@ class CommunityScreen extends ConsumerWidget {
             MaterialPageRoute(builder: (ctx) => const CreatePostScreen()),
           );
         },
-        backgroundColor: AppDesignTokens.primaryBase,
+        backgroundColor: DS.primaryBase,
         child: const Icon(Icons.edit),
       ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.read(feedProvider.notifier).refresh(),
-          color: AppDesignTokens.primaryBase,
+          color: DS.primaryBase,
           child: feedState.when(
             data: (posts) {
               if (posts.isEmpty) {
@@ -50,7 +50,7 @@ class CommunityScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: AppDesignTokens.error),
+                  const Icon(Icons.error_outline, size: 48, color: DS.error),
                   const SizedBox(height: DS.lg),
                   Text(
                     'Failed to load feed',
@@ -61,7 +61,7 @@ class CommunityScreen extends ConsumerWidget {
               ),
             ),
             loading: () => const Center(
-              child: CircularProgressIndicator(color: AppDesignTokens.primaryBase),
+              child: CircularProgressIndicator(color: DS.primaryBase),
             ),
           ),
         ),
@@ -144,10 +144,10 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? AppDesignTokens.primaryBase : DS.brandPrimary10,
+        color: isSelected ? DS.primaryBase : DS.brandPrimary10,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? AppDesignTokens.primaryBase : DS.brandPrimary24,
+          color: isSelected ? DS.primaryBase : DS.brandPrimary24,
         ),
       ),
       child: Text(

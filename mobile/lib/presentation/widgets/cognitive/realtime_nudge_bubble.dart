@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 
 class RealtimeNudgeBubble extends ConsumerStatefulWidget {
@@ -45,31 +45,31 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
         context.go('/cognitive/patterns');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: AppDesignTokens.spacing16),
-        padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+        margin: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: isDark ? AppDesignTokens.neutral800 : AppDesignTokens.info.withValues(alpha: 0.1),
-          borderRadius: AppDesignTokens.borderRadius16,
-          boxShadow: isDark ? null : AppDesignTokens.shadowSm,
-          border: Border.all(color: AppDesignTokens.info.withValues(alpha: 0.3)),
+          color: isDark ? DS.neutral800 : DS.info.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius16,
+          boxShadow: isDark ? null : DS.shadowSm,
+          border: Border.all(color: DS.info.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.lightbulb_outline, color: AppDesignTokens.info, size: 24),
-            const SizedBox(width: AppDesignTokens.spacing12),
+            const Icon(Icons.lightbulb_outline, color: DS.info, size: 24),
+            const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
                 '💡 ${latestPatternWithSolution.patternName}: ${latestPatternWithSolution.solutionText}',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppDesignTokens.neutral200 : AppDesignTokens.neutral800,
+                  color: isDark ? DS.neutral200 : DS.neutral800,
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: AppDesignTokens.spacing8),
-            const Icon(Icons.arrow_forward_ios_rounded, color: AppDesignTokens.neutral400, size: 16),
+            const SizedBox(width: DS.spacing8),
+            const Icon(Icons.arrow_forward_ios_rounded, color: DS.neutral400, size: 16),
           ],
         ),
       ),

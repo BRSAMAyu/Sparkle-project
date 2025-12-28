@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/community_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
@@ -80,9 +80,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.chat_bubble_outline, size: 48, color: AppDesignTokens.neutral300),
+                        Icon(Icons.chat_bubble_outline, size: 48, color: DS.neutral300),
                         SizedBox(height: DS.lg),
-                        Text('开始对话吧!', style: TextStyle(color: AppDesignTokens.neutral500)),
+                        Text('开始对话吧!', style: TextStyle(color: DS.neutral500)),
                       ],
                     ),
                   );

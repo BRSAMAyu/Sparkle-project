@@ -54,8 +54,47 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		// Set user_id in context
+		// Extract role information from JWT claims
+		isAdmin := false
+		if adminClaim, exists := claims["is_admin"]; exists {
+			if adminBool, ok := adminClaim.(bool); ok {
+				isAdmin = adminBool
+			}
+		}
+
+		// Set user context
 		c.Set("user_id", userID)
+		c.Set("is_admin", isAdmin)
 		c.Next()
 	}
+}
+
+// AdminAuthMiddleware validates the X-Admin-Secret header for admin endpoints
+func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// In development mode, allow admin access without secret
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
+		// In production, require X-Admin-Secret header
+		secretFromHeader := c.GetHeader("X-Admin-Secret")
+		if secretFromHeader == "" || secretFromHeader != cfg.AdminSecret {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing admin secret"})
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// RequireAdmin middleware checks if user has admin role
+func RequireAdmin(c *gin.Context) {
+	isAdmin := c.GetBool("is_admin")
+	if !isAdmin {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+		return
+	}
+	c.Next()
 }

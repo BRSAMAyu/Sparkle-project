@@ -210,6 +210,22 @@ class SparkleColors {
     required this.textSecondary,
     required this.textDisabled,
     required this.brightness,
+    required this.taskLearning,
+    required this.taskTraining,
+    required this.taskErrorFix,
+    required this.taskReflection,
+    required this.taskSocial,
+    required this.taskPlanning,
+    required this.planSprint,
+    required this.planGrowth,
+    required this.statusOnline,
+    required this.statusOffline,
+    required this.statusInvisible,
+    required this.neutral200,
+    required this.neutral300,
+    required this.neutral400,
+    required this.neutral500,
+    required this.neutral600,
   });
 
   factory SparkleColors.light({bool highContrast = false}) {
@@ -228,6 +244,22 @@ class SparkleColors {
         textSecondary: Color(0xFF000000),
         textDisabled: Color(0xFF666666),
         brightness: Brightness.light,
+        taskLearning: Color(0xFF64B5F6),
+        taskTraining: Color(0xFFFF9800),
+        taskErrorFix: Color(0xFFEF5350),
+        taskReflection: Color(0xFF9C27B0),
+        taskSocial: Color(0xFF81C784),
+        taskPlanning: Color(0xFF009688),
+        planSprint: Color(0xFFE53935),
+        planGrowth: Color(0xFF43A047),
+        statusOnline: Color(0xFF2ECC71),
+        statusOffline: Color(0xFF95A5A6),
+        statusInvisible: Color(0xFF34495E),
+        neutral200: Color(0xFFF5F5F5),
+        neutral300: Color(0xFFE0E0E0),
+        neutral400: Color(0xFFBDBDBD),
+        neutral500: Color(0xFF9E9E9E),
+        neutral600: Color(0xFF757575),
       );
     }
     return const SparkleColors(
@@ -244,6 +276,22 @@ class SparkleColors {
       textSecondary: Color(0xFF757575),
       textDisabled: Color(0xFFBDBDBD),
       brightness: Brightness.light,
+      taskLearning: Color(0xFF64B5F6),
+      taskTraining: Color(0xFFFF9800),
+      taskErrorFix: Color(0xFFEF5350),
+      taskReflection: Color(0xFF9C27B0),
+      taskSocial: Color(0xFF81C784),
+      taskPlanning: Color(0xFF009688),
+      planSprint: Color(0xFFE53935),
+      planGrowth: Color(0xFF43A047),
+      statusOnline: Color(0xFF2ECC71),
+      statusOffline: Color(0xFF95A5A6),
+      statusInvisible: Color(0xFF34495E),
+      neutral200: Color(0xFFF5F5F5),
+      neutral300: Color(0xFFE0E0E0),
+      neutral400: Color(0xFFBDBDBD),
+      neutral500: Color(0xFF9E9E9E),
+      neutral600: Color(0xFF757575),
     );
   }
 
@@ -263,6 +311,22 @@ class SparkleColors {
         textSecondary: Color(0xFFFFFFFF),
         textDisabled: Color(0xFF999999),
         brightness: Brightness.dark,
+        taskLearning: Color(0xFF64B5F6),
+        taskTraining: Color(0xFFFFB74D),
+        taskErrorFix: Color(0xFFEF5350),
+        taskReflection: Color(0xFFBA68C8),
+        taskSocial: Color(0xFF81C784),
+        taskPlanning: Color(0xFF4DB6AC),
+        planSprint: Color(0xFFFF5252),
+        planGrowth: Color(0xFF66BB6A),
+        statusOnline: Color(0xFF2ECC71),
+        statusOffline: Color(0xFF95A5A6),
+        statusInvisible: Color(0xFF34495E),
+        neutral200: Color(0xFF2D2D2D),
+        neutral300: Color(0xFF424242),
+        neutral400: Color(0xFF616161),
+        neutral500: Color(0xFF757575),
+        neutral600: Color(0xFF9E9E9E),
       );
     }
     return const SparkleColors(
@@ -279,6 +343,22 @@ class SparkleColors {
       textSecondary: Color(0xFFE0E0E0),
       textDisabled: Color(0xFF757575),
       brightness: Brightness.dark,
+      taskLearning: Color(0xFF64B5F6),
+      taskTraining: Color(0xFFFFB74D),
+      taskErrorFix: Color(0xFFEF5350),
+      taskReflection: Color(0xFFBA68C8),
+      taskSocial: Color(0xFF81C784),
+      taskPlanning: Color(0xFF4DB6AC),
+      planSprint: Color(0xFFFF5252),
+      planGrowth: Color(0xFF66BB6A),
+      statusOnline: Color(0xFF2ECC71),
+      statusOffline: Color(0xFF95A5A6),
+      statusInvisible: Color(0xFF34495E),
+      neutral200: Color(0xFF2D2D2D),
+      neutral300: Color(0xFF424242),
+      neutral400: Color(0xFF616161),
+      neutral500: Color(0xFF757575),
+      neutral600: Color(0xFF9E9E9E),
     );
   }
   final Color brandPrimary;
@@ -297,6 +377,28 @@ class SparkleColors {
   final Color textSecondary;
   final Color textDisabled;
 
+  // Task and plan type colors
+  final Color taskLearning;
+  final Color taskTraining;
+  final Color taskErrorFix;
+  final Color taskReflection;
+  final Color taskSocial;
+  final Color taskPlanning;
+  final Color planSprint;
+  final Color planGrowth;
+
+  // User status colors
+  final Color statusOnline;
+  final Color statusOffline;
+  final Color statusInvisible;
+
+  // Neutral colors
+  final Color neutral200;
+  final Color neutral300;
+  final Color neutral400;
+  final Color neutral500;
+  final Color neutral600;
+
   final Brightness brightness;
 
   SparkleColors copyWith({
@@ -312,6 +414,22 @@ class SparkleColors {
     Color? textPrimary,
     Color? textSecondary,
     Color? textDisabled,
+    Color? taskLearning,
+    Color? taskTraining,
+    Color? taskErrorFix,
+    Color? taskReflection,
+    Color? taskSocial,
+    Color? taskPlanning,
+    Color? planSprint,
+    Color? planGrowth,
+    Color? statusOnline,
+    Color? statusOffline,
+    Color? statusInvisible,
+    Color? neutral200,
+    Color? neutral300,
+    Color? neutral400,
+    Color? neutral500,
+    Color? neutral600,
   }) => SparkleColors(
       brandPrimary: brandPrimary ?? this.brandPrimary,
       brandSecondary: brandSecondary ?? this.brandSecondary,
@@ -326,11 +444,83 @@ class SparkleColors {
       textSecondary: textSecondary ?? this.textSecondary,
       textDisabled: textDisabled ?? this.textDisabled,
       brightness: brightness,
+      taskLearning: taskLearning ?? this.taskLearning,
+      taskTraining: taskTraining ?? this.taskTraining,
+      taskErrorFix: taskErrorFix ?? this.taskErrorFix,
+      taskReflection: taskReflection ?? this.taskReflection,
+      taskSocial: taskSocial ?? this.taskSocial,
+      taskPlanning: taskPlanning ?? this.taskPlanning,
+      planSprint: planSprint ?? this.planSprint,
+      planGrowth: planGrowth ?? this.planGrowth,
+      statusOnline: statusOnline ?? this.statusOnline,
+      statusOffline: statusOffline ?? this.statusOffline,
+      statusInvisible: statusInvisible ?? this.statusInvisible,
+      neutral200: neutral200 ?? this.neutral200,
+      neutral300: neutral300 ?? this.neutral300,
+      neutral400: neutral400 ?? this.neutral400,
+      neutral500: neutral500 ?? this.neutral500,
+      neutral600: neutral600 ?? this.neutral600,
     );
 
   SparkleColors toHighContrast(bool enabled) => brightness == Brightness.light
         ? SparkleColors.light(highContrast: enabled)
         : SparkleColors.dark(highContrast: enabled);
+
+  /// Get task color by type
+  Color getTaskColor(String taskType) {
+    switch (taskType.toLowerCase()) {
+      case 'learning':
+        return taskLearning;
+      case 'training':
+        return taskTraining;
+      case 'error_fix':
+        return taskErrorFix;
+      case 'reflection':
+        return taskReflection;
+      case 'social':
+        return taskSocial;
+      case 'planning':
+        return taskPlanning;
+      default:
+        return taskLearning;
+    }
+  }
+
+  /// Get plan color by type
+  Color getPlanColor(String planType) {
+    switch (planType.toLowerCase()) {
+      case 'sprint':
+        return planSprint;
+      case 'growth':
+        return planGrowth;
+      default:
+        return planSprint;
+    }
+  }
+
+  /// Create gradient for task type
+  LinearGradient getTaskGradient(String taskType) {
+    final color = getTaskColor(taskType);
+    return LinearGradient(
+      colors: [color, color.withValues(alpha: 0.7)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+
+  /// Get status color by user status
+  Color getStatusColor(String userStatus) {
+    switch (userStatus.toLowerCase()) {
+      case 'online':
+        return statusOnline;
+      case 'offline':
+        return statusOffline;
+      case 'invisible':
+        return statusInvisible;
+      default:
+        return statusOffline;
+    }
+  }
 }
 
 /// 排版系统

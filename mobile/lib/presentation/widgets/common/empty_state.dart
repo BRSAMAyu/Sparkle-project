@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 空状态场景类型
@@ -173,60 +173,60 @@ class EmptyState extends StatelessWidget {
   Color _getIconColor() {
     switch (type) {
       case EmptyStateType.noErrors:
-        return AppDesignTokens.success;
+        return DS.success;
       case EmptyStateType.noResults:
-        return AppDesignTokens.warning;
+        return DS.warning;
       default:
-        return AppDesignTokens.primaryBase;
+        return DS.primaryBase;
     }
   }
 
   LinearGradient _getIconGradient() {
     switch (type) {
       case EmptyStateType.noErrors:
-        return AppDesignTokens.successGradient;
+        return DS.successGradient;
       case EmptyStateType.noResults:
-        return AppDesignTokens.warningGradient;
+        return DS.warningGradient;
       default:
-        return AppDesignTokens.primaryGradient;
+        return DS.primaryGradient;
     }
   }
 
   @override
   Widget build(BuildContext context) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppDesignTokens.spacing32),
+        padding: const EdgeInsets.all(DS.spacing32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             // 图标
             if (showIcon) _buildIcon(),
-            if (showIcon) const SizedBox(height: AppDesignTokens.spacing24),
+            if (showIcon) const SizedBox(height: DS.spacing24),
             // 标题
             Text(
               title ?? _getDefaultTitle(),
               style: TextStyle(
-                fontSize: AppDesignTokens.fontSize2xl,
-                fontWeight: AppDesignTokens.fontWeightBold,
+                fontSize: DS.fontSize2xl,
+                fontWeight: DS.fontWeightBold,
                 color: context.colors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppDesignTokens.spacing12),
+            const SizedBox(height: DS.spacing12),
             // 描述
             Text(
               description ?? _getDefaultDescription(),
               style: const TextStyle(
-                fontSize: AppDesignTokens.fontSizeBase,
-                color: AppDesignTokens.neutral600,
-                height: AppDesignTokens.lineHeightNormal,
+                fontSize: DS.fontSizeBase,
+                color: DS.neutral600,
+                height: DS.lineHeightNormal,
               ),
               textAlign: TextAlign.center,
             ),
             // 操作按钮
             if (customAction != null || (actionText != null && onAction != null)) ...[
-              const SizedBox(height: AppDesignTokens.spacing32),
+              const SizedBox(height: DS.spacing32),
               customAction ??
                   CustomButton.primary(
                     text: actionText!,
@@ -255,7 +255,7 @@ class EmptyState extends StatelessWidget {
       ),
       child: Icon(
         icon ?? _getDefaultIcon(),
-        size: AppDesignTokens.iconSize3xl,
+        size: DS.iconSize3xl,
         color: DS.brandPrimaryConst,
       ),
     );
@@ -292,7 +292,7 @@ class CompactEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(AppDesignTokens.spacing24),
+      padding: const EdgeInsets.all(DS.spacing24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -301,27 +301,27 @@ class CompactEmptyState extends StatelessWidget {
               width: 64.0,
               height: 64.0,
               decoration: const BoxDecoration(
-                color: AppDesignTokens.neutral100,
+                color: DS.neutral100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: AppDesignTokens.iconSizeLg,
-                color: AppDesignTokens.neutral400,
+                size: DS.iconSizeLg,
+                color: DS.neutral400,
               ),
             ),
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
           ],
           Text(
             message,
             style: const TextStyle(
-              fontSize: AppDesignTokens.fontSizeBase,
-              color: AppDesignTokens.neutral600,
+              fontSize: DS.fontSizeBase,
+              color: DS.neutral600,
             ),
             textAlign: TextAlign.center,
           ),
           if (onAction != null && actionText != null) ...[
-            const SizedBox(height: AppDesignTokens.spacing16),
+            const SizedBox(height: DS.spacing16),
             CustomButton.text(
               text: actionText!,
               onPressed: onAction,

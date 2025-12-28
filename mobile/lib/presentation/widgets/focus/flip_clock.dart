@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 翻页时钟组件 - 星空渐变风格
 class FlipClock extends StatelessWidget {
@@ -171,7 +171,7 @@ class _FlipDigitState extends State<_FlipDigit>
           width: 50,
           height: 80,
           decoration: BoxDecoration(
-            color: AppDesignTokens.deepSpaceSurface,
+            color: DS.deepSpaceSurface,
             borderRadius: BorderRadius.vertical(
               top: isTop ? const Radius.circular(8) : Radius.zero,
               bottom: isTop ? Radius.zero : const Radius.circular(8),
@@ -187,8 +187,8 @@ class _FlipDigitState extends State<_FlipDigit>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppDesignTokens.primaryBase,
-                    AppDesignTokens.secondaryLight,
+                    DS.primaryBase,
+                    DS.secondaryLight,
                   ],
                 ).createShader(bounds),
               child: Text(
@@ -260,13 +260,13 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            AppDesignTokens.primaryBase.withValues(alpha: opacity),
-            AppDesignTokens.secondaryLight.withValues(alpha: opacity),
+            DS.primaryBase.withValues(alpha: opacity),
+            DS.secondaryLight.withValues(alpha: opacity),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppDesignTokens.primaryBase.withValues(alpha: opacity * 0.5),
+            color: DS.primaryBase.withValues(alpha: opacity * 0.5),
             blurRadius: 8,
             spreadRadius: 2,
           ),
@@ -306,8 +306,8 @@ class SimpleFlipClock extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppDesignTokens.primaryBase,
-            AppDesignTokens.secondaryLight,
+            DS.primaryBase,
+            DS.secondaryLight,
           ],
         ).createShader(bounds),
       child: Text(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class TranslatorTool extends StatefulWidget {
   const TranslatorTool({super.key});
@@ -52,7 +52,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppDesignTokens.neutral300,
+                color: DS.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -76,7 +76,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
               hintText: '输入要翻译的文本...',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
-              fillColor: AppDesignTokens.neutral50,
+              fillColor: DS.neutral50,
             ),
           ),
           const SizedBox(height: DS.lg),
@@ -102,7 +102,7 @@ class _TranslatorToolState extends State<TranslatorTool> {
                     child: Text(
                       _output.isEmpty ? '翻译结果将显示在这里' : _output,
                       style: TextStyle(
-                        color: _output.isEmpty ? AppDesignTokens.neutral400 : AppDesignTokens.neutral900,
+                        color: _output.isEmpty ? DS.neutral400 : DS.neutral900,
                       ),
                     ),
                   ),

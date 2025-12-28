@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 
 /// FocusCard - Deep Dive Entry Card for Project Cockpit
@@ -52,21 +52,21 @@ class _FocusCardState extends ConsumerState<FocusCard>
     return GestureDetector(
       onTap: widget.onTap,
       child: ClipRRect(
-        borderRadius: AppDesignTokens.borderRadius20,
+        borderRadius: DS.borderRadius20,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppDesignTokens.flameCore.withValues(alpha: 0.15), // Corrected .withValues
-                  AppDesignTokens.glassBackground,
+                  DS.flameCore.withValues(alpha: 0.15), // Corrected .withValues
+                  DS.glassBackground,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: AppDesignTokens.borderRadius20,
-              border: Border.all(color: AppDesignTokens.glassBorder),
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: DS.glassBorder),
             ),
             padding: const EdgeInsets.all(DS.lg),
             child: Column(
@@ -87,7 +87,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppDesignTokens.flameCore.withValues(alpha: 0.2),
+                        color: DS.flameCore.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -117,8 +117,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                               decoration: BoxDecoration(
                                 gradient: RadialGradient(
                                   colors: [
-                                    AppDesignTokens.flameCore,
-                                    AppDesignTokens.flameCore.withValues(alpha: 0.4),
+                                    DS.flameCore,
+                                    DS.flameCore.withValues(alpha: 0.4),
                                     Colors.transparent,
                                   ],
                                 ),

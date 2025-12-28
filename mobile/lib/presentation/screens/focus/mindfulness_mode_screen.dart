@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/presentation/widgets/focus/exit_confirmation_dialog.dart';
@@ -113,7 +113,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             ),
           ],
         ),
-        backgroundColor: AppDesignTokens.warning,
+        backgroundColor: DS.warning,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),
@@ -155,7 +155,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: AppDesignTokens.deepSpaceStart,
+        backgroundColor: DS.deepSpaceStart,
         body: Stack(
           children: [
             // 1. 星空背景
@@ -229,21 +229,21 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppDesignTokens.warning.withValues(alpha: 0.2),
+                color: DS.warning.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.visibility_off_rounded,
-                    color: AppDesignTokens.warning,
+                    color: DS.warning,
                     size: 16,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '分心 ${state.interruptionCount} 次',
                     style: const TextStyle(
-                      color: AppDesignTokens.warning,
+                      color: DS.warning,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -329,7 +329,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              gradient: AppDesignTokens.primaryGradient,
+              gradient: DS.primaryGradient,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -363,11 +363,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          gradient: AppDesignTokens.flameGradient,
+          gradient: DS.flameGradient,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppDesignTokens.flameCore.withValues(alpha: 0.6),
+              color: DS.flameCore.withValues(alpha: 0.6),
               blurRadius: 20,
               spreadRadius: 5,
             ),

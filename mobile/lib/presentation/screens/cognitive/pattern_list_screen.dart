@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 
@@ -35,7 +35,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: AppDesignTokens.deepSpaceGradient,
+          gradient: DS.deepSpaceGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -86,7 +86,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
           Container(
             padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              color: AppDesignTokens.prismPurple.withAlpha(40),
+              color: DS.prismPurple.withAlpha(40),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -109,13 +109,13 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
           Container(
             padding: const EdgeInsets.all(DS.xl),
             decoration: BoxDecoration(
-              color: AppDesignTokens.prismPurple.withAlpha(30),
+              color: DS.prismPurple.withAlpha(30),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.psychology_alt_rounded,
               size: 64,
-              color: AppDesignTokens.prismPurple.withAlpha(150),
+              color: DS.prismPurple.withAlpha(150),
             ),
           ),
           const SizedBox(height: DS.xl),
@@ -159,14 +159,14 @@ class _PatternCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-      borderRadius: AppDesignTokens.borderRadius20,
+      borderRadius: DS.borderRadius20,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: AppDesignTokens.glassBackground,
-            borderRadius: AppDesignTokens.borderRadius20,
-            border: Border.all(color: AppDesignTokens.glassBorder),
+            color: DS.glassBackground,
+            borderRadius: DS.borderRadius20,
+            border: Border.all(color: DS.glassBorder),
           ),
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -218,14 +218,14 @@ class _PatternCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppDesignTokens.success.withAlpha(40),
+                        color: DS.success.withAlpha(40),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         '已克服',
                         style: TextStyle(
                           fontSize: 10,
-                          color: AppDesignTokens.success,
+                          color: DS.success,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -252,10 +252,10 @@ class _PatternCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(DS.md),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.success.withAlpha(20),
+                    color: DS.success.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppDesignTokens.success.withAlpha(50),
+                      color: DS.success.withAlpha(50),
                     ),
                   ),
                   child: Row(
@@ -263,7 +263,7 @@ class _PatternCard extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.lightbulb_outline_rounded,
-                        color: AppDesignTokens.success,
+                        color: DS.success,
                         size: 18,
                       ),
                       const SizedBox(width: 10),
@@ -272,7 +272,7 @@ class _PatternCard extends StatelessWidget {
                           pattern.solutionText!,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: AppDesignTokens.successLight,
+                            color: DS.successLight,
                             height: 1.4,
                           ),
                         ),
@@ -300,13 +300,13 @@ class _PatternCard extends StatelessWidget {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'cognitive':
-        return AppDesignTokens.prismBlue;
+        return DS.prismBlue;
       case 'emotional':
-        return AppDesignTokens.prismPurple;
+        return DS.prismPurple;
       case 'execution':
-        return AppDesignTokens.prismGreen;
+        return DS.prismGreen;
       default:
-        return AppDesignTokens.neutral400;
+        return DS.neutral400;
     }
   }
 

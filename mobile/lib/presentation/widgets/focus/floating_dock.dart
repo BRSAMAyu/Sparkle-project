@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
 /// 支持边缘吸附、自动隐藏、点击展开菜单
@@ -97,7 +97,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
           width: _isHiding ? 20 : (_isExpanded ? 180 : 60),
           height: _isExpanded ? 160 : 60,
           decoration: BoxDecoration(
-            color: AppDesignTokens.primaryBase.withValues(alpha: 0.95),
+            color: DS.primaryBase.withValues(alpha: 0.95),
             borderRadius: _isHiding 
                 ? BorderRadius.horizontal(
                     left: isRightSide ? const Radius.circular(30) : Radius.zero,

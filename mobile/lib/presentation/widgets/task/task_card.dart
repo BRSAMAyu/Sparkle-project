@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 
@@ -39,7 +39,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: AppDesignTokens.durationFast,
+      duration: DS.durationFast,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -95,8 +95,8 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                   margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: _getBackgroundGradient(context, widget.task.type),
-                    borderRadius: AppDesignTokens.borderRadius12,
-                    boxShadow: AppDesignTokens.shadowSm,
+                    borderRadius: DS.borderRadius12,
+                    boxShadow: DS.shadowSm,
                   ),
                   foregroundDecoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -109,10 +109,10 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: AppDesignTokens.borderRadius12,
+                    borderRadius: DS.borderRadius12,
                   ),
                   child: ClipRRect(
-                    borderRadius: AppDesignTokens.borderRadius12,
+                    borderRadius: DS.borderRadius12,
                     child: Stack(
                       children: [
                         IntrinsicHeight(
@@ -129,7 +129,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               // Content
                               Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(AppDesignTokens.spacing12),
+                                  padding: const EdgeInsets.all(DS.spacing12),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -140,53 +140,53 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             child: Text(
                                               widget.task.title,
                                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                fontWeight: AppDesignTokens.fontWeightBold,
+                                                fontWeight: DS.fontWeightBold,
                                                 decoration: widget.task.status == TaskStatus.completed
                                                     ? TextDecoration.lineThrough
                                                     : null,
                                                 color: widget.task.status == TaskStatus.completed
-                                                    ? AppDesignTokens.neutral500
-                                                    : AppDesignTokens.neutral900,
+                                                    ? DS.neutral500
+                                                    : DS.neutral900,
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           if (!widget.compact) ...[
-                                            const SizedBox(width: AppDesignTokens.spacing8),
+                                            const SizedBox(width: DS.spacing8),
                                             _TaskTypeChip(type: widget.task.type),
                                             if (widget.task.status == TaskStatus.completed) ...[
-                                              const SizedBox(width: AppDesignTokens.spacing4),
-                                              const Icon(Icons.check_circle, color: AppDesignTokens.success, size: 16),
+                                              const SizedBox(width: DS.spacing4),
+                                              const Icon(Icons.check_circle, color: DS.success, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
-                                               const SizedBox(width: AppDesignTokens.spacing4),
+                                               const SizedBox(width: DS.spacing4),
                                               _StatusChip(status: widget.task.status),
                                             ],
                                           ],
                                         ],
                                       ),
-                                      const SizedBox(height: AppDesignTokens.spacing8),
+                                      const SizedBox(height: DS.spacing8),
                                       Row(
                                         children: [
                                           if (widget.task.dueDate != null) ...[
-                                            const Icon(Icons.calendar_today, size: 14, color: AppDesignTokens.neutral600),
+                                            const Icon(Icons.calendar_today, size: 14, color: DS.neutral600),
                                             const SizedBox(width: DS.xs),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
-                                              style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                              style: const TextStyle(color: DS.neutral700, fontSize: 12),
                                             ),
-                                            const SizedBox(width: AppDesignTokens.spacing12),
+                                            const SizedBox(width: DS.spacing12),
                                           ],
-                                          const Icon(Icons.timer_outlined, size: 14, color: AppDesignTokens.neutral600),
+                                          const Icon(Icons.timer_outlined, size: 14, color: DS.neutral600),
                                           const SizedBox(width: DS.xs),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
-                                            style: const TextStyle(color: AppDesignTokens.neutral700, fontSize: 12),
+                                            style: const TextStyle(color: DS.neutral700, fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       if (!widget.compact) ...[
-                                        const SizedBox(height: AppDesignTokens.spacing8),
+                                        const SizedBox(height: DS.spacing8),
                                         Row(
                                           children: [
                                             _DifficultyStars(difficulty: widget.task.difficulty),
@@ -194,17 +194,17 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             if (widget.onStart != null && widget.task.status != TaskStatus.completed)
                                               _ActionButton(
                                                 icon: Icons.play_arrow_rounded,
-                                                color: AppDesignTokens.primaryBase,
+                                                color: DS.primaryBase,
                                                 onPressed: () {
                                                   HapticFeedback.selectionClick();
                                                   widget.onStart!();
                                                 },
                                               ),
                                             if (widget.onComplete != null && widget.task.status != TaskStatus.completed) ...[
-                                              const SizedBox(width: AppDesignTokens.spacing8),
+                                              const SizedBox(width: DS.spacing8),
                                               _ActionButton(
                                                 icon: Icons.check_rounded,
-                                                color: AppDesignTokens.success,
+                                                color: DS.success,
                                                 onPressed: () {
                                                   HapticFeedback.mediumImpact();
                                                   widget.onComplete!();
@@ -228,18 +228,18 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                               child: ColoredBox(
-                                color: AppDesignTokens.error.withValues(alpha: 0.8),
+                                color: DS.error.withValues(alpha: 0.8),
                                 child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
-                                      const SizedBox(height: AppDesignTokens.spacing8),
+                                      const SizedBox(height: DS.spacing8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
                                         style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(height: AppDesignTokens.spacing12),
+                                      const SizedBox(height: DS.spacing12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -261,7 +261,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: DS.brandPrimary,
-                                              foregroundColor: AppDesignTokens.error,
+                                              foregroundColor: DS.error,
                                             ),
                                             child: const Text('Retry'),
                                           ),
@@ -284,7 +284,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppDesignTokens.primaryBase),
+                                valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
                               ),
                             ),
                           ),
@@ -310,7 +310,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
       onTap: onPressed,
-      borderRadius: AppDesignTokens.borderRadius20,
+      borderRadius: DS.borderRadius20,
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
@@ -374,7 +374,7 @@ class _TaskTypeChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: AppDesignTokens.borderRadius12,
+        borderRadius: DS.borderRadius12,
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
@@ -411,7 +411,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: AppDesignTokens.borderRadius12,
+        borderRadius: DS.borderRadius12,
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(

@@ -2,24 +2,24 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// ResponsiveUtils - Utility class for handling multi-platform and responsive layouts
 class ResponsiveUtils {
   ResponsiveUtils._();
 
   /// Returns true if the screen width is mobile scale
-  static bool isMobile(BuildContext context) => MediaQuery.of(context).size.width < AppDesignTokens.breakpointTablet;
+  static bool isMobile(BuildContext context) => MediaQuery.of(context).size.width < DS.breakpointTablet;
 
   /// Returns true if the screen width is tablet scale
   static bool isTablet(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    return width >= AppDesignTokens.breakpointTablet && 
-           width < AppDesignTokens.breakpointDesktop;
+    return width >= DS.breakpointTablet && 
+           width < DS.breakpointDesktop;
   }
 
   /// Returns true if the screen width is desktop scale
-  static bool isDesktop(BuildContext context) => MediaQuery.of(context).size.width >= AppDesignTokens.breakpointDesktop;
+  static bool isDesktop(BuildContext context) => MediaQuery.of(context).size.width >= DS.breakpointDesktop;
 
   /// Returns the current screen width
   static double screenWidth(BuildContext context) => MediaQuery.of(context).size.width;

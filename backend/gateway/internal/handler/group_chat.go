@@ -18,10 +18,38 @@ func NewGroupChatHandler(queries *db.Queries) *GroupChatHandler {
 }
 
 func (h *GroupChatHandler) GetMessages(c *gin.Context) {
+	// Extract authenticated user_id from context (set by AuthMiddleware)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing user ID in context"})
+		return
+	}
+
+	var userID pgtype.UUID
+	if err := userID.Scan(userIDStr.(string)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in context"})
+		return
+	}
+
 	groupIDStr := c.Param("group_id")
 	var groupID pgtype.UUID
 	if err := groupID.Scan(groupIDStr); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
+		return
+	}
+
+	// Check if user is a member of the group
+	isMember, err := h.queries.IsGroupMember(c.Request.Context(), db.IsGroupMemberParams{
+		GroupID: groupID,
+		UserID:  userID,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify group membership"})
+		return
+	}
+
+	if !isMember {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not a member of this group"})
 		return
 	}
 

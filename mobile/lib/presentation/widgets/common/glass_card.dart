@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_tokens.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class GlassCard extends StatefulWidget {
 
@@ -68,7 +68,7 @@ class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMix
 
     // Default glass color based on theme
     final defaultColor = widget.color ?? (isDark 
-        ? AppDesignTokens.neutral900.withValues(alpha: widget.opacity)
+        ? DS.neutral900.withValues(alpha: widget.opacity)
         : DS.brandPrimary.withValues(alpha: widget.opacity));
 
     final borderColor = isDark
@@ -76,7 +76,7 @@ class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMix
         : DS.brandPrimary.withValues(alpha: 0.2);
 
     // Default border radius
-    final defaultBorderRadius = widget.borderRadius ?? AppDesignTokens.borderRadius20;
+    final defaultBorderRadius = widget.borderRadius ?? DS.borderRadius20;
 
     // Default shadows - subtly customized for glass effect
     final defaultShadows = widget.shadows ?? [

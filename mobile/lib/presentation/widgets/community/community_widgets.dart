@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/sparkle_theme.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
@@ -20,16 +19,16 @@ class StatusAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = status == UserStatus.online 
-        ? SparkleTheme.online 
-        : (status == UserStatus.invisible ? SparkleTheme.invisible : SparkleTheme.offline);
+    final statusColor = status == UserStatus.online
+        ? DS.statusOnline
+        : (status == UserStatus.invisible ? DS.statusInvisible : DS.statusOffline);
 
     return Stack(
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: SparkleTheme.primary.withValues(alpha: 0.1), width: 2),
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.1), width: 2),
           ),
           child: SparkleAvatar(
             radius: size / 2,
@@ -82,7 +81,7 @@ class ChatBubble extends StatelessWidget { // 是否已确认 (ACK)
         padding: const EdgeInsets.all(DS.md),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMe ? SparkleTheme.primary : DS.brandPrimary,
+          color: isMe ? DS.brandPrimary : DS.brandPrimary,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -169,7 +168,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
               height: 6,
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: SparkleTheme.primary.withValues(alpha: 0.3 + (value * 0.7)),
+                color: DS.brandPrimary.withValues(alpha: 0.3 + (value * 0.7)),
                 shape: BoxShape.circle,
               ),
             );
