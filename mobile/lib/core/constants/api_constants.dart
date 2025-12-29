@@ -8,9 +8,17 @@ class ApiConstants {
   // Base URL (HTTP)
   static String get baseUrl {
     if (_baseUrlOverride.isNotEmpty) {
+      if (kReleaseMode && _baseUrlOverride.startsWith('http:')) {
+        debugPrint('⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.');
+      }
       return _baseUrlOverride;
     }
+
+    // Default fallback logic
     if (kIsWeb) {
+      if (kReleaseMode) {
+        debugPrint('⚠️ WARNING: Flutter Web in release mode may require HTTPS for many features.');
+      }
       return 'http://localhost:8080';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -24,19 +32,13 @@ class ApiConstants {
 
   // WebSocket URL (Go Gateway)
   static String get wsBaseUrl {
-    if (_wsBaseUrlOverride.isNotEmpty) {
-      return _wsBaseUrlOverride;
-    }
-    if (_baseUrlOverride.isNotEmpty) {
-      return _toWsUrl(_baseUrlOverride);
-    }
-    if (kIsWeb) {
-      return 'ws://localhost:8080';
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'ws://10.0.2.2:8080';
-    }
-    return 'ws://localhost:8080';
+    final String rawBaseUrl = _wsBaseUrlOverride.isNotEmpty
+        ? _wsBaseUrlOverride
+        : _baseUrlOverride.isNotEmpty
+            ? _toWsUrl(_baseUrlOverride)
+            : _defaultWsBaseUrl();
+    final bool isProduction = kReleaseMode;
+    return _applyWsSchemeForEnvironment(rawBaseUrl, isProduction: isProduction);
   }
   static const String wsChat = '/ws/chat';
 
@@ -57,6 +59,34 @@ class ApiConstants {
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
   static const Duration sendTimeout = Duration(seconds: 30);
+
+  static String _defaultWsBaseUrl() {
+    if (kIsWeb) {
+      return 'ws://localhost:8080';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'ws://10.0.2.2:8080';
+    }
+    return 'ws://localhost:8080';
+  }
+
+  static String _applyWsSchemeForEnvironment(
+    String rawBaseUrl, {
+    required bool isProduction,
+  }) {
+    final uri = Uri.parse(rawBaseUrl);
+    if (isProduction) {
+      // 仅警告，不强制修改协议，避免破坏用户显式配置
+      if (uri.scheme == 'ws') {
+        debugPrint('⚠️ WARNING: Using insecure WebSocket (ws://) in RELEASE mode. '
+            'Consider using secure WebSocket (wss://) for production.');
+      } else if (uri.scheme == 'http') {
+        debugPrint('⚠️ WARNING: Using insecure HTTP (http://) in RELEASE mode. '
+            'Consider using HTTPS for production.');
+      }
+    }
+    return rawBaseUrl;
+  }
 
   static String _toWsUrl(String httpBase) {
     final uri = Uri.parse(httpBase);

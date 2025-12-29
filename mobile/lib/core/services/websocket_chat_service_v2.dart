@@ -377,7 +377,7 @@ class WebSocketChatServiceV2 {
   }
 
   void _safeAdd<T>(StreamController<T> controller, T event) {
-    if (controller.isClosed) return;
+    if (_disposed || controller.isClosed) return;
     controller.add(event);
   }
 
@@ -394,10 +394,8 @@ class WebSocketChatServiceV2 {
       // Parse event in isolate to avoid blocking main thread
       final event = await compute(_parseChatEvent, data);
 
-      if (!_disposed &&
-          _messageStreamController != null &&
-          !_messageStreamController!.isClosed) {
-        _messageStreamController!.add(event);
+      if (_messageStreamController != null) {
+        _safeAdd(_messageStreamController!, event);
       }
     } catch (e) {
       _log('❌ Parse error: $e');
@@ -411,10 +409,9 @@ class WebSocketChatServiceV2 {
     _log('❌ Connection error: $error');
 
     // 发送错误事件给消息流
-    if (!_disposed &&
-        _messageStreamController != null &&
-        !_messageStreamController!.isClosed) {
-      _messageStreamController!.add(
+    if (_messageStreamController != null) {
+      _safeAdd(
+        _messageStreamController!,
         ErrorEvent(
           code: 'CONNECTION_ERROR',
           message: 'Network connection failed',
@@ -448,10 +445,9 @@ class WebSocketChatServiceV2 {
       // TODO-A7: Clear pending
       _pendingMessages.clear();
 
-      if (!_disposed &&
-          _messageStreamController != null &&
-          !_messageStreamController!.isClosed) {
-        _messageStreamController!.add(
+      if (_messageStreamController != null) {
+        _safeAdd(
+          _messageStreamController!,
           ErrorEvent(
             code: 'MAX_RETRIES_EXCEEDED',
             message: 'Unable to connect after $_maxReconnectAttempts attempts',
