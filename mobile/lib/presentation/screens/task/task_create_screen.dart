@@ -153,12 +153,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
-        title: Text('新建任务'),
+        title: const Text('新建任务'),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           children: [
             // Title
             TextFormField(
@@ -195,13 +195,13 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           label: Text(node.name),
                           onPressed: () => _applySuggestion(node),
                           tooltip: node.reason,
-                          backgroundColor: node.isNew ? DS.success.withValues(alpha: 0.1) : DS.brandPrimary.withValues(alpha: 0.1),  // 使用设计系统成功色
+                          backgroundColor: node.isNew ? Colors.green.shade50 : DS.brandPrimary.withValues(alpha: 0.1),
                         ),).toList(),
                     ),
                   ],
                 ),
               ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Type Selector
             DropdownButtonFormField<TaskType>(
@@ -215,7 +215,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                   child: Row(
                     children: [
                       Icon(_getTypeIcon(type), size: 18),
-                      SizedBox(width: DS.sm),
+                      const SizedBox(width: DS.sm),
                       Text(_getTypeLabel(type)),
                     ],
                   ),
@@ -226,19 +226,19 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 }
               },
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Tags
             TextFormField(
               controller: _tagsController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '标签 (用逗号分隔)',
                 hintText: '数学, 习题, 重点',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.label_outline),
               ),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Estimated Time & Difficulty Row
             Row(
@@ -258,7 +258,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     onChanged: (v) => setState(() => _estimatedMinutes = v!),
                   ),
                 ),
-                SizedBox(width: DS.lg),
+                const SizedBox(width: DS.lg),
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _difficulty,
@@ -276,7 +276,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 ),
               ],
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
             
             // Energy Cost
             DropdownButtonFormField<int>(
@@ -292,15 +292,15 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 ),).toList(),
               onChanged: (v) => setState(() => _energyCost = v!),
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // Due Date
             ListTile(
-              title: Text('截止日期'),
+              title: const Text('截止日期'),
               subtitle: Text(_dueDate == null 
                 ? '未设置' 
                 : DateFormat('yyyy-MM-dd').format(_dueDate!),),
-              leading: Icon(Icons.calendar_today),
+              leading: const Icon(Icons.calendar_today),
               shape: RoundedRectangleBorder(
                 side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
                 borderRadius: BorderRadius.circular(4),
@@ -318,28 +318,28 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
               },
               trailing: _dueDate != null
                   ? IconButton(
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                       onPressed: () => setState(() => _dueDate = null),
                     )
                   : null,
             ),
-            SizedBox(height: DS.lg),
+            const SizedBox(height: DS.lg),
 
             // AI Guide Switch
             SwitchListTile(
-              title: Text('生成 AI 执行指南'),
-              subtitle: Text('根据任务类型和你的偏好生成分步指导'),
+              title: const Text('生成 AI 执行指南'),
+              subtitle: const Text('根据任务类型和你的偏好生成分步指导'),
               value: _generateGuide,
               onChanged: (v) => setState(() => _generateGuide = v),
-              secondary: Icon(Icons.auto_awesome),
+              secondary: const Icon(Icons.auto_awesome),
             ),
-            SizedBox(height: DS.xxl),
+            const SizedBox(height: DS.xxl),
 
             // Submit Button
             FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitTask,
-              icon: _isSubmitting
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))  // FilledButton中白色加载指示器
+              icon: _isSubmitting 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.check),
               label: Text(_isSubmitting ? '创建中...' : '创建任务'),
               style: FilledButton.styleFrom(
