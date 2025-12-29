@@ -70,9 +70,9 @@ class MockCommunityRepository implements CommunityRepository {
             'resource_meta': {
               'progress': 0.42,
               'target_date': DateTime.now().add(const Duration(days: 20)).toIso8601String(),
-              'subject': 'English'
+              'subject': 'English',
             },
-            'comment': '需要的话一起进度对齐'
+            'comment': '需要的话一起进度对齐',
           },
           readBy: [alice.id, charlie.id],
         ),
@@ -112,7 +112,7 @@ class MockCommunityRepository implements CommunityRepository {
             'resource_title': '图灵测试为什么仍然有趣',
             'resource_summary': '从哲学到工程，图灵测试仍是理解智能边界的一扇窗...',
             'resource_meta': {'related_subject': 'AI'},
-            'comment': '这段可以当作读书会材料'
+            'comment': '这段可以当作读书会材料',
           },
           readBy: [charlie.id],
         ),
@@ -166,7 +166,7 @@ class MockCommunityRepository implements CommunityRepository {
             'resource_title': '计划谬误',
             'resource_summary': '我经常低估任务复杂度，导致计划频繁延期...',
             'resource_meta': {'pattern_type': 'cognitive', 'frequency': 5},
-            'comment': '想听听你的建议'
+            'comment': '想听听你的建议',
           },
         ),
       ],
@@ -187,7 +187,7 @@ class MockCommunityRepository implements CommunityRepository {
             'resource_title': '拖延的触发点',
             'resource_summary': '我发现只要任务没有明确的下一步，就会开始刷手机...',
             'resource_meta': {'source_type': 'capsule', 'severity': 2},
-            'comment': '帮我看看有没有更好的拆解方式'
+            'comment': '帮我看看有没有更好的拆解方式',
           },
         ),
       ],
@@ -281,6 +281,7 @@ class MockCommunityRepository implements CommunityRepository {
     }
   }
 
+  @override
   Future<PrivateMessageInfo> editPrivateMessage(
     String messageId, {
     String? content,
@@ -304,6 +305,7 @@ class MockCommunityRepository implements CommunityRepository {
     throw Exception('Message not found');
   }
 
+  @override
   Future<PrivateMessageInfo> updatePrivateReaction(
     String messageId, {
     required String emoji,
@@ -339,6 +341,7 @@ class MockCommunityRepository implements CommunityRepository {
     throw Exception('Message not found');
   }
 
+  @override
   Future<List<PrivateMessageInfo>> searchPrivateMessages(String friendId, String keyword, {int limit = 50}) async {
     final list = _mockPrivateMessages[friendId] ?? [];
     final lower = keyword.toLowerCase();
@@ -398,6 +401,7 @@ class MockCommunityRepository implements CommunityRepository {
     return newMsg;
   }
 
+  @override
   Future<MessageInfo> editGroupMessage(
     String groupId,
     String messageId, {
@@ -434,6 +438,7 @@ class MockCommunityRepository implements CommunityRepository {
     return updated;
   }
 
+  @override
   Future<void> revokeGroupMessage(String groupId, String messageId) async {
     final list = _mockGroupMessages[groupId] ?? [];
     final index = list.indexWhere((m) => m.id == messageId);
@@ -460,6 +465,7 @@ class MockCommunityRepository implements CommunityRepository {
     );
   }
 
+  @override
   Future<MessageInfo> updateGroupReaction(
     String groupId,
     String messageId, {
@@ -510,6 +516,7 @@ class MockCommunityRepository implements CommunityRepository {
     return updated;
   }
 
+  @override
   Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword, {int limit = 50}) async {
     final list = _mockGroupMessages[groupId] ?? [];
     final lower = keyword.toLowerCase();
@@ -519,6 +526,7 @@ class MockCommunityRepository implements CommunityRepository {
         .toList();
   }
 
+  @override
   Future<List<MessageInfo>> getThreadMessages(String groupId, String threadRootId, {int limit = 100}) async {
     final list = _mockGroupMessages[groupId] ?? [];
     MessageInfo? root;

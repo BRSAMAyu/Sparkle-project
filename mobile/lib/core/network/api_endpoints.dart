@@ -90,6 +90,42 @@ class ApiEndpoints {
   static String claimTask(String id) => '/community/tasks/$id/claim';
   static const String checkin = '/community/checkin';
 
+  // Community - Encryption
+  static const String encryptionKeys = '/community/encryption/keys';
+  static String encryptionKey(String keyId) => '/community/encryption/keys/$keyId';
+  static String encryptionKeyRevoke(String keyId) => '/community/encryption/keys/$keyId/revoke';
+  static String userPublicKey(String userId) => '/community/encryption/keys/user/$userId';
+
+  // Community - Group Moderation
+  static String groupAnnouncement(String groupId) => '/community/groups/$groupId/announcement';
+  static String groupModerationSettings(String groupId) => '/community/groups/$groupId/moderation';
+  static String groupMemberMute(String groupId, String userId) => '/community/groups/$groupId/members/$userId/mute';
+  static String groupMemberUnmute(String groupId, String userId) => '/community/groups/$groupId/members/$userId/unmute';
+  static String groupMemberWarn(String groupId, String userId) => '/community/groups/$groupId/members/$userId/warn';
+
+  // Community - Message Reports
+  static const String messageReports = '/community/reports';
+  static String messageReport(String reportId) => '/community/reports/$reportId';
+  static String messageReportReview(String reportId) => '/community/reports/$reportId/review';
+
+  // Community - Message Favorites
+  static const String messageFavorites = '/community/favorites';
+  static String messageFavorite(String favoriteId) => '/community/favorites/$favoriteId';
+
+  // Community - Message Forwarding
+  static const String messageForward = '/community/messages/forward';
+
+  // Community - Broadcast
+  static const String broadcast = '/community/broadcast';
+
+  // Community - Advanced Search
+  static const String messagesAdvancedSearch = '/community/messages/search';
+
+  // Community - Offline Queue
+  static const String offlineQueuePending = '/community/offline/pending';
+  static const String offlineQueueFailed = '/community/offline/failed';
+  static const String offlineQueueRetry = '/community/offline/retry';
+
   // Cognitive Prism
   static const String cognitiveFragments = '/cognitive/fragments';
   static const String cognitivePatterns = '/cognitive/patterns';

@@ -42,13 +42,33 @@ from app.schemas.community import (
     # 共享资源
     SharedResourceCreate, SharedResourceInfo,
     # 枚举
-    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum, MessageTypeEnum, ReactionActionEnum
+    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum, MessageTypeEnum, ReactionActionEnum,
+    # 加密相关
+    EncryptionKeyCreate, EncryptionKeyInfo, EncryptedMessageSend,
+    # 举报相关
+    MessageReportCreate, MessageReportInfo, MessageReportReview, ReportStatusEnum,
+    # 收藏相关
+    MessageFavoriteCreate, MessageFavoriteInfo,
+    # 转发相关
+    MessageForwardRequest,
+    # 广播相关
+    BroadcastMessageCreate, BroadcastMessageInfo,
+    # 群管理相关
+    GroupAnnouncementUpdate, GroupModerationSettings, MemberMuteRequest, MemberWarnRequest,
+    # 离线队列相关
+    OfflineMessageInfo, OfflineMessageRetryRequest, OfflineMessageStatusEnum,
+    # 搜索相关
+    MessageSearchRequest, MessageSearchResult
 )
 from app.services.community_service import (
     FriendshipService, GroupService, GroupMessageService,
     CheckinService, GroupTaskService, PrivateMessageService
 )
 from app.services.collaboration_service import collaboration_service
+from app.services.community_advanced_service import (
+    EncryptionService, ModerationService, ReportService, FavoriteService,
+    ForwardService, BroadcastService, MessageSearchService, OfflineQueueService
+)
 from app.models.community import SharedResourceType, GroupMessage, PrivateMessage
 from app.db.session import AsyncSessionLocal
 
@@ -178,6 +198,17 @@ def _is_self_only_visibility(content_data: Optional[dict], user_id: UUID) -> boo
     if isinstance(visible_to, list):
         return str(user_id) in [str(item) for item in visible_to]
     return str(visible_to) == str(user_id)
+
+def _normalize_self_visibility(content_data: Optional[dict], user_id: UUID) -> Optional[dict]:
+    if not content_data:
+        return content_data
+    if content_data.get("visibility") != "self":
+        return content_data
+    if content_data.get("visible_to") is not None:
+        return content_data
+    updated = dict(content_data)
+    updated["visible_to"] = str(user_id)
+    return updated
 
 def _truncate_text(text: Optional[str], limit: int = 160) -> Optional[str]:
     if not text:
@@ -450,7 +481,7 @@ async def websocket_endpoint(
 ):
     """
     群组实时通讯 WebSocket 接口
-    连接地址: ws://host/api/v1/groups/{group_id}/ws?token={jwt_token}
+    连接地址: ws://host/api/v1/community/groups/{group_id}/ws?token={jwt_token}
     """
     try:
         # 验证 Token
@@ -649,6 +680,7 @@ async def send_message(
 ):
     """发送群消息"""
     try:
+        data.content_data = _normalize_self_visibility(data.content_data, current_user.id)
         message = await GroupMessageService.send_message(db, group_id, current_user.id, data)
         await db.commit()
 
@@ -826,6 +858,7 @@ async def send_private_message(
 ):
     """发送私聊消息"""
     try:
+        data.content_data = _normalize_self_visibility(data.content_data, current_user.id)
         message = await PrivateMessageService.send_message(db, current_user.id, data)
         await db.commit()
 
@@ -1432,3 +1465,559 @@ async def get_group_resources(
             resource_summary=resource_summary
         ))
     return result
+
+
+# ============ 端到端加密 ============
+
+@router.post("/encryption/keys", response_model=EncryptionKeyInfo, summary="注册加密公钥")
+async def register_encryption_key(
+    data: EncryptionKeyCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    注册用户的公钥用于端到端加密
+
+    - **public_key**: Base64编码的公钥
+    - **key_type**: 密钥类型 (x25519, rsa)
+    - **device_id**: 可选的设备标识
+    """
+    key = await EncryptionService.register_public_key(db, current_user.id, data)
+    await db.commit()
+    return EncryptionKeyInfo(
+        id=key.id,
+        created_at=key.created_at,
+        updated_at=key.updated_at,
+        public_key=key.public_key,
+        key_type=key.key_type,
+        device_id=key.device_id,
+        is_active=key.is_active,
+        expires_at=key.expires_at
+    )
+
+
+@router.get("/encryption/keys/{user_id}", response_model=List[EncryptionKeyInfo], summary="获取用户公钥")
+async def get_user_encryption_keys(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取指定用户的活跃公钥列表"""
+    keys = await EncryptionService.get_user_public_keys(db, user_id)
+    return [
+        EncryptionKeyInfo(
+            id=key.id,
+            created_at=key.created_at,
+            updated_at=key.updated_at,
+            public_key=key.public_key,
+            key_type=key.key_type,
+            device_id=key.device_id,
+            is_active=key.is_active,
+            expires_at=key.expires_at
+        ) for key in keys
+    ]
+
+
+@router.delete("/encryption/keys/{key_id}", summary="撤销加密密钥")
+async def revoke_encryption_key(
+    key_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """撤销指定的加密密钥"""
+    success = await EncryptionService.revoke_key(db, current_user.id, key_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="密钥不存在或无权操作")
+    await db.commit()
+    return {"success": True}
+
+
+# ============ 群管理与风控 ============
+
+@router.put("/groups/{group_id}/announcement", summary="更新群公告")
+async def update_group_announcement(
+    group_id: UUID,
+    data: GroupAnnouncementUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """更新群公告（仅群主/管理员）"""
+    try:
+        group = await ModerationService.update_announcement(db, group_id, current_user.id, data)
+        await db.commit()
+
+        # 广播公告更新
+        await manager.broadcast({
+            "type": "announcement_update",
+            "group_id": str(group_id),
+            "announcement": group.announcement,
+            "updated_at": group.announcement_updated_at.isoformat() if group.announcement_updated_at else None
+        }, str(group_id))
+
+        return {"success": True, "announcement": group.announcement}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.put("/groups/{group_id}/moderation", summary="更新群管理设置")
+async def update_group_moderation_settings(
+    group_id: UUID,
+    data: GroupModerationSettings,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """更新群管理设置（仅群主/管理员）"""
+    try:
+        group = await ModerationService.update_moderation_settings(db, group_id, current_user.id, data)
+        await db.commit()
+        return {
+            "success": True,
+            "mute_all": group.mute_all,
+            "slow_mode_seconds": group.slow_mode_seconds,
+            "keyword_filters_count": len(group.keyword_filters or [])
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/members/{user_id}/mute", summary="禁言成员")
+async def mute_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    data: MemberMuteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """禁言群成员（仅群主/管理员）"""
+    try:
+        # 覆盖 data 中的 user_id
+        data.user_id = user_id
+        member = await ModerationService.mute_member(db, group_id, current_user.id, data)
+        await db.commit()
+
+        # 通知被禁言用户
+        await manager.send_personal_message({
+            "type": "muted",
+            "group_id": str(group_id),
+            "mute_until": member.mute_until.isoformat() if member.mute_until else None,
+            "reason": data.reason
+        }, str(user_id))
+
+        return {"success": True, "mute_until": member.mute_until}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.delete("/groups/{group_id}/members/{user_id}/mute", summary="解除禁言")
+async def unmute_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """解除成员禁言（仅群主/管理员）"""
+    try:
+        await ModerationService.unmute_member(db, group_id, current_user.id, user_id)
+        await db.commit()
+
+        # 通知用户
+        await manager.send_personal_message({
+            "type": "unmuted",
+            "group_id": str(group_id)
+        }, str(user_id))
+
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.post("/groups/{group_id}/members/{user_id}/warn", summary="警告成员")
+async def warn_group_member(
+    group_id: UUID,
+    user_id: UUID,
+    data: MemberWarnRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """警告群成员（仅群主/管理员）"""
+    try:
+        data.user_id = user_id
+        member = await ModerationService.warn_member(db, group_id, current_user.id, data)
+        await db.commit()
+
+        # 通知被警告用户
+        await manager.send_personal_message({
+            "type": "warned",
+            "group_id": str(group_id),
+            "reason": data.reason,
+            "warn_count": member.warn_count
+        }, str(user_id))
+
+        return {"success": True, "warn_count": member.warn_count}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+# ============ 消息举报 ============
+
+@router.post("/reports", response_model=MessageReportInfo, summary="举报消息")
+@limiter.limit("10/minute")
+async def report_message(
+    request: Request,
+    data: MessageReportCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """举报违规消息"""
+    try:
+        report = await ReportService.create_report(db, current_user.id, data)
+        await db.commit()
+
+        return MessageReportInfo(
+            id=report.id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+            reporter=UserBrief.model_validate(current_user),
+            reason=report.reason,
+            description=report.description,
+            status=report.status,
+            reviewed_by=None,
+            reviewed_at=None,
+            action_taken=None
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/reports", response_model=List[MessageReportInfo], summary="获取群组待处理举报")
+async def get_group_pending_reports(
+    group_id: UUID,
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取群组中待处理的举报（仅群主/管理员）"""
+    # 验证管理员权限
+    result = await db.execute(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == current_user.id,
+            GroupMember.role.in_(['owner', 'admin']),
+            GroupMember.not_deleted_filter()
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="无权访问")
+
+    reports = await ReportService.get_pending_reports(db, group_id, limit)
+    return [
+        MessageReportInfo(
+            id=r.id,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+            reporter=UserBrief.model_validate(r.reporter) if r.reporter else None,
+            reason=r.reason,
+            description=r.description,
+            status=r.status,
+            reviewed_by=None,
+            reviewed_at=r.reviewed_at,
+            action_taken=r.action_taken
+        ) for r in reports
+    ]
+
+
+@router.put("/reports/{report_id}", response_model=MessageReportInfo, summary="审核举报")
+async def review_message_report(
+    report_id: UUID,
+    data: MessageReportReview,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """审核消息举报（仅管理员）"""
+    try:
+        report = await ReportService.review_report(db, current_user.id, report_id, data)
+        await db.commit()
+
+        return MessageReportInfo(
+            id=report.id,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+            reporter=UserBrief.model_validate(report.reporter) if report.reporter else None,
+            reason=report.reason,
+            description=report.description,
+            status=report.status,
+            reviewed_by=UserBrief.model_validate(current_user),
+            reviewed_at=report.reviewed_at,
+            action_taken=report.action_taken
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============ 消息收藏 ============
+
+@router.post("/favorites", response_model=MessageFavoriteInfo, summary="收藏消息")
+async def add_message_favorite(
+    data: MessageFavoriteCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """收藏消息"""
+    try:
+        favorite = await FavoriteService.add_favorite(db, current_user.id, data)
+        await db.commit()
+
+        # 获取消息预览
+        preview = None
+        if favorite.group_message_id:
+            msg = await db.get(GroupMessage, favorite.group_message_id)
+            if msg:
+                preview = msg.content[:100] if msg.content else None
+        elif favorite.private_message_id:
+            msg = await db.get(PrivateMessage, favorite.private_message_id)
+            if msg:
+                preview = msg.content[:100] if msg.content else None
+
+        return MessageFavoriteInfo(
+            id=favorite.id,
+            created_at=favorite.created_at,
+            updated_at=favorite.updated_at,
+            group_message_id=favorite.group_message_id,
+            private_message_id=favorite.private_message_id,
+            note=favorite.note,
+            tags=favorite.tags,
+            message_preview=preview
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/favorites", response_model=List[MessageFavoriteInfo], summary="获取收藏列表")
+async def get_message_favorites(
+    tags: Optional[List[str]] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取我的消息收藏列表"""
+    favorites = await FavoriteService.get_favorites(db, current_user.id, tags, limit, offset)
+
+    result = []
+    for fav in favorites:
+        preview = None
+        if fav.group_message and fav.group_message.content:
+            preview = fav.group_message.content[:100]
+        elif fav.private_message and fav.private_message.content:
+            preview = fav.private_message.content[:100]
+
+        result.append(MessageFavoriteInfo(
+            id=fav.id,
+            created_at=fav.created_at,
+            updated_at=fav.updated_at,
+            group_message_id=fav.group_message_id,
+            private_message_id=fav.private_message_id,
+            note=fav.note,
+            tags=fav.tags,
+            message_preview=preview
+        ))
+    return result
+
+
+@router.delete("/favorites/{favorite_id}", summary="取消收藏")
+async def remove_message_favorite(
+    favorite_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """取消消息收藏"""
+    success = await FavoriteService.remove_favorite(db, current_user.id, favorite_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="收藏不存在")
+    await db.commit()
+    return {"success": True}
+
+
+# ============ 消息转发 ============
+
+@router.post("/forward", summary="转发消息")
+async def forward_message(
+    data: MessageForwardRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """转发消息到群组或用户"""
+    try:
+        forwarded = await ForwardService.forward_message(db, current_user.id, data)
+        await db.commit()
+
+        # 构建消息信息并广播
+        if data.target_group_id:
+            msg_info = _build_message_info(forwarded)
+            await manager.broadcast(msg_info.model_dump(mode='json'), str(data.target_group_id))
+        elif data.target_user_id:
+            msg_info = _build_private_message_info(forwarded)
+            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
+            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(current_user.id))
+
+        return {"success": True, "message_id": str(forwarded.id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============ 跨群广播 ============
+
+@router.post("/broadcast", response_model=BroadcastMessageInfo, summary="跨群广播")
+async def create_broadcast_message(
+    data: BroadcastMessageCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """发送跨群广播消息（需要在所有目标群组中是管理员）"""
+    try:
+        broadcast = await BroadcastService.create_broadcast(db, current_user.id, data)
+        await db.commit()
+
+        # 广播到所有目标群组
+        for group_id in data.target_group_ids:
+            await manager.broadcast({
+                "type": "broadcast",
+                "broadcast_id": str(broadcast.id),
+                "sender_id": str(current_user.id),
+                "content": broadcast.content,
+                "content_data": broadcast.content_data
+            }, str(group_id))
+
+        return BroadcastMessageInfo(
+            id=broadcast.id,
+            created_at=broadcast.created_at,
+            updated_at=broadcast.updated_at,
+            sender=UserBrief.model_validate(current_user),
+            content=broadcast.content,
+            content_data=broadcast.content_data,
+            target_group_ids=data.target_group_ids,
+            delivered_count=broadcast.delivered_count
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+# ============ 高级搜索 ============
+
+@router.post("/groups/{group_id}/messages/search/advanced", response_model=MessageSearchResult, summary="高级搜索群消息")
+async def advanced_search_group_messages(
+    group_id: UUID,
+    data: MessageSearchRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    高级消息搜索
+
+    支持多条件组合搜索:
+    - 关键词全文搜索
+    - 发送者过滤
+    - 时间范围
+    - 消息类型
+    - 话题/标签
+    """
+    try:
+        result = await MessageSearchService.search_group_messages(db, group_id, current_user.id, data)
+
+        messages = [_build_message_info(msg) for msg in result["messages"]]
+
+        return MessageSearchResult(
+            messages=messages,
+            total=result["total"],
+            page=result["page"],
+            page_size=result["page_size"],
+            has_more=result["has_more"]
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.get("/groups/{group_id}/topics", summary="获取群组话题列表")
+async def get_group_topics(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取群组中使用的话题列表及消息数量"""
+    # 验证成员身份
+    result = await db.execute(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == current_user.id,
+            GroupMember.not_deleted_filter()
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="不是群组成员")
+
+    topics = await MessageSearchService.get_topics(db, group_id)
+    return {"topics": topics}
+
+
+# ============ 离线队列 ============
+
+@router.get("/offline/pending", response_model=List[OfflineMessageInfo], summary="获取待发送的离线消息")
+async def get_pending_offline_messages(
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取当前用户待发送的离线消息"""
+    messages = await OfflineQueueService.get_pending_messages(db, current_user.id, limit)
+    return [
+        OfflineMessageInfo(
+            id=msg.id,
+            created_at=msg.created_at,
+            updated_at=msg.updated_at,
+            client_nonce=msg.client_nonce,
+            message_type=msg.message_type,
+            target_id=msg.target_id,
+            status=msg.status,
+            retry_count=msg.retry_count,
+            error_message=msg.error_message
+        ) for msg in messages
+    ]
+
+
+@router.get("/offline/failed", response_model=List[OfflineMessageInfo], summary="获取发送失败的离线消息")
+async def get_failed_offline_messages(
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取发送失败的离线消息（用于批量重试UI）"""
+    messages = await OfflineQueueService.get_failed_messages(db, current_user.id, limit)
+    return [
+        OfflineMessageInfo(
+            id=msg.id,
+            created_at=msg.created_at,
+            updated_at=msg.updated_at,
+            client_nonce=msg.client_nonce,
+            message_type=msg.message_type,
+            target_id=msg.target_id,
+            status=msg.status,
+            retry_count=msg.retry_count,
+            error_message=msg.error_message
+        ) for msg in messages
+    ]
+
+
+@router.post("/offline/retry", summary="批量重试失败消息")
+async def retry_offline_messages(
+    data: OfflineMessageRetryRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """批量重试失败的离线消息"""
+    messages = await OfflineQueueService.retry_messages(db, current_user.id, data)
+    await db.commit()
+    return {
+        "success": True,
+        "retried_count": len(messages),
+        "message_ids": [str(m.id) for m in messages]
+    }

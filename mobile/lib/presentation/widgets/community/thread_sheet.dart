@@ -48,8 +48,7 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
+  Widget build(BuildContext context) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.only(top: DS.lg),
         child: Column(
@@ -90,5 +89,4 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
         ),
       ),
     );
-  }
 }

@@ -1,16 +1,15 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class StatisticsCard extends StatelessWidget {
-  StatisticsCard({super.key});
+  const StatisticsCard({super.key});
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.spacing16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: context.sparkleColors.surfaceSecondary,
+        color: DS.brandPrimaryConst,
         borderRadius: DS.borderRadius16,
         boxShadow: DS.shadowSm,
       ),
@@ -20,29 +19,29 @@ class StatisticsCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(6),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.1),
+                  color: DS.primaryBase.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.show_chart_rounded,
-                  color: DS.brandPrimary,
+                  color: DS.primaryBase,
                   size: 16,
                 ),
               ),
-              SizedBox(width: DS.spacing8),
+              const SizedBox(width: DS.spacing8),
               Text(
                 '本周成长趋势',
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
                   fontWeight: DS.fontWeightSemibold,
-                  color: context.sparkleColors.textPrimary,
+                  color: DS.neutral900,
                 ),
               ),
             ],
           ),
-          SizedBox(height: DS.spacing16),
+          const SizedBox(height: DS.spacing16),
           const SizedBox(
             height: 120,
             child: _WeeklyTrendChart(),
@@ -83,7 +82,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                   if (value.toInt() >= 0 && value.toInt() < days.length) {
                     return Padding(
-                      padding: EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         days[value.toInt()],
                         style: TextStyle(
@@ -105,23 +104,23 @@ class _WeeklyTrendChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: DS.brandPrimary,
+              color: DS.primaryBase,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
                 getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                     radius: 4,
-                    color: DS.brandPrimary,
+                    color: DS.brandPrimaryConst,
                     strokeWidth: 2,
-                    strokeColor: Colors.white,
+                    strokeColor: DS.primaryBase,
                   ),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    DS.brandPrimary.withValues(alpha: 0.2),
-                    DS.brandPrimary.withValues(alpha: 0.0),
+                    DS.primaryBase.withValues(alpha: 0.2),
+                    DS.primaryBase.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,

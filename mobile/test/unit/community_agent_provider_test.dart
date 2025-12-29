@@ -13,8 +13,8 @@ MessageInfo _groupMessage(String id, String content, UserBrief sender) => Messag
       messageType: MessageType.text,
       sender: sender,
       content: content,
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024, 1),
+      updatedAt: DateTime(2024, 1),
     );
 
 PrivateMessageInfo _privateMessage(String id, String content, UserBrief sender, UserBrief receiver) =>
@@ -25,8 +25,8 @@ PrivateMessageInfo _privateMessage(String id, String content, UserBrief sender, 
       messageType: MessageType.text,
       isRead: true,
       content: content,
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024, 1),
+      updatedAt: DateTime(2024, 1),
     );
 
 void main() {
@@ -47,8 +47,8 @@ void main() {
         sender: buildCommunityAgentUser(),
         content: 'AGENT_SHOULD_NOT_APPEAR',
         contentData: {kAgentMetadataKey: true},
-        createdAt: DateTime(2024, 1, 1),
-        updatedAt: DateTime(2024, 1, 1),
+        createdAt: DateTime(2024, 1),
+        updatedAt: DateTime(2024, 1),
       ),
       _groupMessage('1', 'msg-1', alice),
     ];

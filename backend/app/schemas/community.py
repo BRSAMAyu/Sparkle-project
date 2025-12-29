@@ -427,3 +427,210 @@ class PrivateMessageInfo(BaseSchema):
 # Handle recursive references
 MessageInfo.model_rebuild()
 PrivateMessageInfo.model_rebuild()
+
+
+# ============ 加密相关 Schemas ============
+
+class EncryptionKeyCreate(BaseModel):
+    """创建加密密钥"""
+    public_key: str = Field(description="Base64编码的公钥")
+    key_type: str = Field(default="x25519", pattern="^(x25519|rsa)$", description="密钥类型")
+    device_id: Optional[str] = Field(default=None, max_length=100, description="设备ID")
+
+
+class EncryptionKeyInfo(BaseSchema):
+    """加密密钥信息"""
+    public_key: str = Field(description="Base64编码的公钥")
+    key_type: str = Field(description="密钥类型")
+    device_id: Optional[str] = Field(description="设备ID")
+    is_active: bool = Field(description="是否激活")
+    expires_at: Optional[datetime] = Field(description="过期时间")
+
+
+class EncryptedMessageSend(BaseModel):
+    """发送加密消息"""
+    encrypted_content: str = Field(description="加密后的内容")
+    content_signature: Optional[str] = Field(default=None, max_length=512, description="消息签名")
+    encryption_version: int = Field(default=1, ge=1, le=10, description="加密版本")
+    # 其他字段同普通消息
+    message_type: MessageTypeEnum = Field(default=MessageTypeEnum.TEXT)
+    content_data: Optional[Dict[str, Any]] = Field(default=None)
+    reply_to_id: Optional[UUID] = Field(default=None)
+    nonce: Optional[str] = Field(default=None)
+
+
+# ============ 举报相关 Schemas ============
+
+class ReportReasonEnum(str, Enum):
+    SPAM = "spam"
+    HARASSMENT = "harassment"
+    VIOLENCE = "violence"
+    MISINFORMATION = "misinformation"
+    INAPPROPRIATE = "inappropriate"
+    OTHER = "other"
+
+
+class ReportStatusEnum(str, Enum):
+    PENDING = "pending"
+    REVIEWED = "reviewed"
+    DISMISSED = "dismissed"
+    ACTIONED = "actioned"
+
+
+class ModerationActionEnum(str, Enum):
+    WARN = "warn"
+    MUTE = "mute"
+    KICK = "kick"
+    BAN = "ban"
+
+
+class MessageReportCreate(BaseModel):
+    """创建消息举报"""
+    group_message_id: Optional[UUID] = Field(default=None, description="群消息ID")
+    private_message_id: Optional[UUID] = Field(default=None, description="私聊消息ID")
+    reason: ReportReasonEnum = Field(description="举报原因")
+    description: Optional[str] = Field(default=None, max_length=500, description="详细描述")
+
+
+class MessageReportInfo(BaseSchema):
+    """消息举报信息"""
+    reporter: UserBrief = Field(description="举报人")
+    reason: ReportReasonEnum = Field(description="举报原因")
+    description: Optional[str] = Field(description="详细描述")
+    status: ReportStatusEnum = Field(description="状态")
+    reviewed_by: Optional[UserBrief] = Field(default=None, description="审核人")
+    reviewed_at: Optional[datetime] = Field(default=None, description="审核时间")
+    action_taken: Optional[ModerationActionEnum] = Field(default=None, description="处理动作")
+
+
+class MessageReportReview(BaseModel):
+    """审核消息举报"""
+    status: ReportStatusEnum = Field(description="审核状态")
+    action_taken: Optional[ModerationActionEnum] = Field(default=None, description="处理动作")
+
+
+# ============ 收藏相关 Schemas ============
+
+class MessageFavoriteCreate(BaseModel):
+    """创建消息收藏"""
+    group_message_id: Optional[UUID] = Field(default=None, description="群消息ID")
+    private_message_id: Optional[UUID] = Field(default=None, description="私聊消息ID")
+    note: Optional[str] = Field(default=None, max_length=500, description="个人备注")
+    tags: Optional[List[str]] = Field(default=None, max_length=10, description="自定义标签")
+
+
+class MessageFavoriteInfo(BaseSchema):
+    """消息收藏信息"""
+    group_message_id: Optional[UUID] = Field(default=None)
+    private_message_id: Optional[UUID] = Field(default=None)
+    note: Optional[str] = Field(default=None)
+    tags: Optional[List[str]] = Field(default=None)
+    # 可选：嵌入消息摘要
+    message_preview: Optional[str] = Field(default=None, description="消息预览")
+
+
+# ============ 转发相关 Schemas ============
+
+class MessageForwardRequest(BaseModel):
+    """转发消息请求"""
+    source_message_id: UUID = Field(description="源消息ID")
+    source_type: str = Field(pattern="^(group|private)$", description="源消息类型")
+    target_group_id: Optional[UUID] = Field(default=None, description="目标群组ID")
+    target_user_id: Optional[UUID] = Field(default=None, description="目标用户ID")
+    comment: Optional[str] = Field(default=None, max_length=200, description="转发留言")
+
+
+# ============ 广播相关 Schemas ============
+
+class BroadcastMessageCreate(BaseModel):
+    """创建跨群广播"""
+    content: str = Field(min_length=1, max_length=2000, description="广播内容")
+    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
+    target_group_ids: List[UUID] = Field(min_length=1, max_length=50, description="目标群组ID列表")
+
+
+class BroadcastMessageInfo(BaseSchema):
+    """广播消息信息"""
+    sender: UserBrief = Field(description="发送者")
+    content: str = Field(description="广播内容")
+    content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
+    target_group_ids: List[UUID] = Field(description="目标群组ID列表")
+    delivered_count: int = Field(description="已送达数量")
+
+
+# ============ 群管理相关 Schemas ============
+
+class GroupAnnouncementUpdate(BaseModel):
+    """更新群公告"""
+    announcement: Optional[str] = Field(default=None, max_length=2000, description="群公告内容")
+
+
+class GroupModerationSettings(BaseModel):
+    """群管理设置"""
+    keyword_filters: Optional[List[str]] = Field(default=None, max_length=100, description="敏感词列表")
+    mute_all: Optional[bool] = Field(default=None, description="全员禁言")
+    slow_mode_seconds: Optional[int] = Field(default=None, ge=0, le=3600, description="慢速模式秒数")
+
+
+class MemberMuteRequest(BaseModel):
+    """禁言成员请求"""
+    user_id: UUID = Field(description="用户ID")
+    duration_minutes: int = Field(ge=1, le=43200, description="禁言时长（分钟）")  # 最多30天
+    reason: Optional[str] = Field(default=None, max_length=200, description="禁言原因")
+
+
+class MemberWarnRequest(BaseModel):
+    """警告成员请求"""
+    user_id: UUID = Field(description="用户ID")
+    reason: str = Field(min_length=1, max_length=200, description="警告原因")
+
+
+# ============ 离线队列相关 Schemas ============
+
+class OfflineMessageStatusEnum(str, Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    EXPIRED = "expired"
+
+
+class OfflineMessageInfo(BaseSchema):
+    """离线消息信息"""
+    client_nonce: str = Field(description="客户端唯一标识")
+    message_type: str = Field(description="消息类型")
+    target_id: UUID = Field(description="目标ID")
+    status: OfflineMessageStatusEnum = Field(description="状态")
+    retry_count: int = Field(description="重试次数")
+    error_message: Optional[str] = Field(default=None, description="错误信息")
+    created_at: datetime = Field(description="创建时间")
+
+
+class OfflineMessageRetryRequest(BaseModel):
+    """重试离线消息请求"""
+    message_ids: List[UUID] = Field(min_length=1, max_length=50, description="消息ID列表")
+
+
+# ============ 搜索相关 Schemas ============
+
+class MessageSearchRequest(BaseModel):
+    """消息搜索请求"""
+    keyword: Optional[str] = Field(default=None, max_length=100, description="关键词")
+    sender_id: Optional[UUID] = Field(default=None, description="发送者ID")
+    start_date: Optional[datetime] = Field(default=None, description="开始时间")
+    end_date: Optional[datetime] = Field(default=None, description="结束时间")
+    message_types: Optional[List[MessageTypeEnum]] = Field(default=None, description="消息类型")
+    topic: Optional[str] = Field(default=None, max_length=100, description="话题")
+    tags: Optional[List[str]] = Field(default=None, max_length=10, description="标签")
+    has_attachments: Optional[bool] = Field(default=None, description="是否有附件")
+    # 分页
+    page: int = Field(default=1, ge=1, description="页码")
+    page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
+
+
+class MessageSearchResult(BaseModel):
+    """消息搜索结果"""
+    messages: List[MessageInfo] = Field(description="消息列表")
+    total: int = Field(description="总数")
+    page: int = Field(description="当前页码")
+    page_size: int = Field(description="每页数量")
+    has_more: bool = Field(description="是否有更多")

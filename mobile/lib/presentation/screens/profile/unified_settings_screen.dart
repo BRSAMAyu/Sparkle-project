@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -28,7 +26,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final enterToSend = ref.watch(enterToSendProvider);
-    final themeManager = ref.read(themeManagerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,17 +41,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionHeader(Icons.psychology, l10n.learningMode),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             Text(
               '拖动控制点，调整你的AI辅导风格',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             LearningModeControl(
               depth: _depth,
               curiosity: _curiosity,
@@ -65,24 +62,24 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 });
               },
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
 
             _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             Text(
               '框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息',
               style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
             ),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             WeeklyAgendaGrid(
               onChanged: (data) {
                 // Handle updates
               },
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
 
             _buildSectionHeader(Icons.brightness_6, l10n.theme),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.theme),
@@ -92,7 +89,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 underline: const SizedBox.shrink(),
                 onChanged: (AppThemeMode? newValue) {
                   if (newValue != null) {
-                    unawaited(themeManager.setAppThemeMode(newValue));
+                    ref.read(themeModeProvider.notifier).state = newValue;
                   }
                 },
                 items: [
@@ -102,10 +99,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ],
               ),
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
 
             _buildSectionHeader(Icons.touch_app, l10n.interactionSettings),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.enterToSend),
@@ -114,31 +111,31 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               onChanged: (v) => ref.read(enterToSendProvider.notifier).setEnabled(v),
               activeThumbColor: DS.primaryBase,
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
 
             _buildSectionHeader(Icons.notifications, l10n.notificationSettings),
-            SizedBox(height: DS.spacing16),
+            const SizedBox(height: DS.spacing16),
             SwitchListTile(
-              title: Text('启用通知'),
+              title: const Text('启用通知'),
               value: _notificationsEnabled,
               onChanged: (v) => setState(() => _notificationsEnabled = v),
               activeThumbColor: DS.primaryBase,
             ),
             SwitchListTile(
-              title: Text('智能碎片时间提醒'),
-              subtitle: Text('在绿色时间段主动推送微任务'),
+              title: const Text('智能碎片时间提醒'),
+              subtitle: const Text('在绿色时间段主动推送微任务'),
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: DS.primaryBase,
             ),
 
-            SizedBox(height: DS.spacing64),
+            const SizedBox(height: DS.spacing64),
             Center(
               child: GestureDetector(
                 onLongPress: () {
                   showDialog(
                     context: context,
-                    builder: (context) => ChaosControlDialog(),
+                    builder: (context) => const ChaosControlDialog(),
                   );
                 },
                 child: Text(
@@ -148,7 +145,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
             ),
-            SizedBox(height: DS.spacing32),
+            const SizedBox(height: DS.spacing32),
           ],
         ),
       ),
@@ -158,7 +155,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   Widget _buildSectionHeader(IconData icon, String title) => Row(
       children: [
         Icon(icon, color: DS.primaryBase),
-        SizedBox(width: DS.sm),
+        const SizedBox(width: DS.sm),
         Text(
           title,
           style: const TextStyle(

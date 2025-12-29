@@ -24,7 +24,7 @@ class FakeTaskChatNotifier extends TaskChatNotifier {
       userId: 'user',
       role: MessageRole.user,
       content: text,
-      createdAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024, 1),
       taskId: taskId,
       conversationId: 'test',
     );
@@ -33,7 +33,7 @@ class FakeTaskChatNotifier extends TaskChatNotifier {
 }
 
 class FakeMindfulnessNotifier extends StateNotifier<MindfulnessState> {
-  FakeMindfulnessNotifier(MindfulnessState state) : super(state);
+  FakeMindfulnessNotifier(super.state);
 }
 
 void main() {
@@ -55,8 +55,8 @@ void main() {
       energyCost: 1,
       status: TaskStatus.pending,
       priority: 1,
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024, 1),
+      updatedAt: DateTime(2024, 1),
     );
     final sentMessages = <String>[];
     final container = ProviderContainer(

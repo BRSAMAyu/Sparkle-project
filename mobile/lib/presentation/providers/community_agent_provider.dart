@@ -111,7 +111,6 @@ Future<_AgentUserContext> _resolveUserContext(Ref ref) async {
       id: guestId,
       username: guestName,
       nickname: guestName,
-      flameLevel: 1,
       flameBrightness: 0.4,
       status: UserStatus.online,
     ),
@@ -389,7 +388,6 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
       return await repository.sendPrivateMessage(
         PrivateMessageSend(
           targetUserId: _friendId,
-          messageType: MessageType.text,
           content: content,
           contentData: contentData,
         ),

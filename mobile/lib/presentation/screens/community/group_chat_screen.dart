@@ -141,9 +141,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   itemCount: mergedMessages.length + (showAgentStatus ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (showAgentStatus && index == 0) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: DS.md),
-                        child: const AiStatusIndicator(
+                      return const Padding(
+                        padding: EdgeInsets.only(bottom: DS.md),
+                        child: AiStatusIndicator(
                           status: 'THINKING',
                           details: 'AI助手正在整理思路...',
                         ),
@@ -287,8 +287,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     required AgentChatState<MessageInfo> agentState,
     required GroupInfo? groupInfo,
     required List<MessageInfo> messages,
-  }) {
-    return Padding(
+  }) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.sm, DS.lg, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +362,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         ],
       ),
     );
-  }
 
   void _openThread(MessageInfo message) {
     showModalBottomSheet(
@@ -377,8 +375,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   Future<void> _showSearchSheet() async {
     final notifier = ref.read(groupChatProvider(widget.groupId).notifier);
     final controller = TextEditingController();
-    List<MessageInfo> results = [];
-    bool isLoading = false;
+    var results = <MessageInfo>[];
+    var isLoading = false;
 
     try {
       await showModalBottomSheet(

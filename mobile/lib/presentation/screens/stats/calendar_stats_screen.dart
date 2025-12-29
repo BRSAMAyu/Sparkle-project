@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/app/theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
@@ -62,7 +63,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               children: [
                 _buildHeader(context),
                 _buildViewSwitcher(),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Expanded(
                   child: _viewMode == CalendarViewMode.year
                       ? _buildYearView()
@@ -89,7 +90,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back_ios_new, color: DS.brandPrimary),
+            icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textOnDark(context)),
             onPressed: () => context.pop(),
           ),
           Text(
@@ -97,10 +98,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: DS.brandPrimary,
+              color: AppColors.textOnDark(context),
             ),
           ),
-          Spacer(),
+          const Spacer(),
           // Year display
           Text(
             DateFormat('yyyy年').format(_focusedDay),
@@ -147,7 +148,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         final monthHeight = (constraints.maxHeight - 40) / 4;
         
         return GridView.builder(
-          padding: EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.all(DS.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             childAspectRatio: monthWidth / monthHeight,
@@ -176,7 +177,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   children: [
                     // Month Name
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
                         '${index + 1}月',
                         style: TextStyle(
@@ -321,7 +322,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final lunarData = _lunarService.getLunarData(day);
     
     return Container(
-      margin: EdgeInsets.all(DS.xs),
+      margin: const EdgeInsets.all(DS.xs),
       decoration: isSelected ? BoxDecoration(
         color: DS.primaryBase,
         shape: BoxShape.circle,
@@ -368,7 +369,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
      return Column(
        children: [
          Padding(
-           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
            child: Row(
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
@@ -407,13 +408,13 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   background: Container(
                     color: DS.error,
                     alignment: Alignment.centerRight,
-                    padding: EdgeInsets.only(right: 20),
+                    padding: const EdgeInsets.only(right: 20),
                     child: Icon(Icons.delete, color: DS.brandPrimary),
                   ),
                   child: Container(
-                    margin: EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       tileColor: DS.brandPrimary10,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: Container(
@@ -444,7 +445,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -533,7 +534,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           TextField(
             controller: _titleController,
             style: TextStyle(color: DS.brandPrimary),
@@ -548,11 +549,11 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           ),
           const SizedBox(height: 10),
           _buildTimeRow(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildOptionsRow(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildColorPicker(),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           TextField(
             controller: _locationController,
             style: TextStyle(color: DS.brandPrimary),
@@ -565,7 +566,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
               fillColor: DS.brandPrimary10,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           TextField(
             controller: _descController,
             style: TextStyle(color: DS.brandPrimary),
@@ -590,7 +591,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           child: GestureDetector(
             onTap: () => _pickDateTime(true),
             child: Container(
-              padding: EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -608,14 +609,14 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
             ),
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Icon(Icons.arrow_forward, color: DS.brandPrimary38, size: 16),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: GestureDetector(
             onTap: () => _pickDateTime(false),
             child: Container(
-              padding: EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary10,
                 borderRadius: BorderRadius.circular(8),
@@ -649,7 +650,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: Text('提醒', style: TextStyle(color: DS.brandPrimary)),
           trailing: DropdownButton<int>(
             value: _reminderMinutes,
-            dropdownColor: Theme.of(context).colorScheme.surface,
+            dropdownColor: const Color(0xFF2C2C2C),
             style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
@@ -668,7 +669,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
           title: Text('重复', style: TextStyle(color: DS.brandPrimary)),
           trailing: DropdownButton<String?>(
             value: _recurrenceRule,
-            dropdownColor: Theme.of(context).colorScheme.surface,
+            dropdownColor: const Color(0xFF2C2C2C),
             style: TextStyle(color: DS.brandPrimary),
             underline: Container(),
             items: const [
@@ -690,7 +691,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         return GestureDetector(
           onTap: () => setState(() => _colorValue = color),
           child: Container(
-            margin: EdgeInsets.only(right: 12),
+            margin: const EdgeInsets.only(right: 12),
             width: 32,
             height: 32,
             decoration: BoxDecoration(

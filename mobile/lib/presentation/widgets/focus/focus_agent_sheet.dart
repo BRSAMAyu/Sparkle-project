@@ -50,7 +50,7 @@ class FocusAgentSheet extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('AI专注教练', style: TextStyle(fontWeight: DS.fontWeightBold, fontSize: 16)),
+                    const Text('AI专注教练', style: TextStyle(fontWeight: DS.fontWeightBold, fontSize: 16)),
                     Text(
                       '任务：${task.title} · 已专注$elapsedMinutes分钟',
                       style: TextStyle(color: DS.neutral500, fontSize: 12),

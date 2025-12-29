@@ -64,6 +64,58 @@ enum FriendshipStatus {
   blocked,
 }
 
+// ============ 举报相关枚举 ============
+
+enum ReportReason {
+  @JsonValue('spam')
+  spam,
+  @JsonValue('harassment')
+  harassment,
+  @JsonValue('violence')
+  violence,
+  @JsonValue('hate_speech')
+  hateSpeech,
+  @JsonValue('misinformation')
+  misinformation,
+  @JsonValue('other')
+  other,
+}
+
+enum ReportStatus {
+  @JsonValue('pending')
+  pending,
+  @JsonValue('reviewed')
+  reviewed,
+  @JsonValue('dismissed')
+  dismissed,
+  @JsonValue('actioned')
+  actioned,
+}
+
+enum ModerationAction {
+  @JsonValue('warn')
+  warn,
+  @JsonValue('mute')
+  mute,
+  @JsonValue('kick')
+  kick,
+  @JsonValue('ban')
+  ban,
+}
+
+// ============ 离线队列状态 ============
+
+enum OfflineMessageStatus {
+  @JsonValue('pending')
+  pending,
+  @JsonValue('sent')
+  sent,
+  @JsonValue('failed')
+  failed,
+  @JsonValue('expired')
+  expired,
+}
+
 @HiveType(typeId: 10)
 enum UserStatus {
   @JsonValue('online')
@@ -800,4 +852,474 @@ class GroupFlameStatus {
   @JsonKey(name: 'bonfire_level')
   final int bonfireLevel;
   Map<String, dynamic> toJson() => _$GroupFlameStatusToJson(this);
+}
+
+// ============ 加密密钥 ============
+
+@JsonSerializable()
+class EncryptionKeyInfo {
+
+  EncryptionKeyInfo({
+    required this.id,
+    required this.userId,
+    required this.publicKey,
+    required this.keyType,
+    required this.isActive,
+    required this.createdAt,
+    this.deviceId,
+    this.expiresAt,
+  });
+
+  factory EncryptionKeyInfo.fromJson(Map<String, dynamic> json) =>
+      _$EncryptionKeyInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'user_id')
+  final String userId;
+  @JsonKey(name: 'public_key')
+  final String publicKey;
+  @JsonKey(name: 'key_type')
+  final String keyType;
+  @JsonKey(name: 'device_id')
+  final String? deviceId;
+  @JsonKey(name: 'is_active')
+  final bool isActive;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'expires_at')
+  final DateTime? expiresAt;
+  Map<String, dynamic> toJson() => _$EncryptionKeyInfoToJson(this);
+}
+
+@JsonSerializable()
+class EncryptionKeyCreate {
+
+  EncryptionKeyCreate({
+    required this.publicKey,
+    this.keyType = 'x25519',
+    this.deviceId,
+    this.expiresAt,
+  });
+
+  factory EncryptionKeyCreate.fromJson(Map<String, dynamic> json) =>
+      _$EncryptionKeyCreateFromJson(json);
+  @JsonKey(name: 'public_key')
+  final String publicKey;
+  @JsonKey(name: 'key_type')
+  final String keyType;
+  @JsonKey(name: 'device_id')
+  final String? deviceId;
+  @JsonKey(name: 'expires_at')
+  final DateTime? expiresAt;
+  Map<String, dynamic> toJson() => _$EncryptionKeyCreateToJson(this);
+}
+
+// ============ 消息举报 ============
+
+@JsonSerializable()
+class MessageReportInfo {
+
+  MessageReportInfo({
+    required this.id,
+    required this.reporterId,
+    required this.reason,
+    required this.status,
+    required this.createdAt,
+    this.groupMessageId,
+    this.privateMessageId,
+    this.description,
+    this.reviewedBy,
+    this.reviewedAt,
+    this.actionTaken,
+    this.reporter,
+  });
+
+  factory MessageReportInfo.fromJson(Map<String, dynamic> json) =>
+      _$MessageReportInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'reporter_id')
+  final String reporterId;
+  @JsonKey(name: 'group_message_id')
+  final String? groupMessageId;
+  @JsonKey(name: 'private_message_id')
+  final String? privateMessageId;
+  final ReportReason reason;
+  final String? description;
+  final ReportStatus status;
+  @JsonKey(name: 'reviewed_by')
+  final String? reviewedBy;
+  @JsonKey(name: 'reviewed_at')
+  final DateTime? reviewedAt;
+  @JsonKey(name: 'action_taken')
+  final ModerationAction? actionTaken;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  final UserBrief? reporter;
+  Map<String, dynamic> toJson() => _$MessageReportInfoToJson(this);
+}
+
+@JsonSerializable()
+class MessageReportCreate {
+
+  MessageReportCreate({
+    required this.reason,
+    this.groupMessageId,
+    this.privateMessageId,
+    this.description,
+  });
+
+  factory MessageReportCreate.fromJson(Map<String, dynamic> json) =>
+      _$MessageReportCreateFromJson(json);
+  @JsonKey(name: 'group_message_id')
+  final String? groupMessageId;
+  @JsonKey(name: 'private_message_id')
+  final String? privateMessageId;
+  final ReportReason reason;
+  final String? description;
+  Map<String, dynamic> toJson() => _$MessageReportCreateToJson(this);
+}
+
+@JsonSerializable()
+class MessageReportReview {
+
+  MessageReportReview({
+    required this.status,
+    this.actionTaken,
+  });
+
+  factory MessageReportReview.fromJson(Map<String, dynamic> json) =>
+      _$MessageReportReviewFromJson(json);
+  final ReportStatus status;
+  @JsonKey(name: 'action_taken')
+  final ModerationAction? actionTaken;
+  Map<String, dynamic> toJson() => _$MessageReportReviewToJson(this);
+}
+
+// ============ 消息收藏 ============
+
+@JsonSerializable()
+class MessageFavoriteInfo {
+
+  MessageFavoriteInfo({
+    required this.id,
+    required this.userId,
+    required this.createdAt,
+    this.groupMessageId,
+    this.privateMessageId,
+    this.note,
+    this.tags,
+    this.groupMessage,
+    this.privateMessage,
+  });
+
+  factory MessageFavoriteInfo.fromJson(Map<String, dynamic> json) =>
+      _$MessageFavoriteInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'user_id')
+  final String userId;
+  @JsonKey(name: 'group_message_id')
+  final String? groupMessageId;
+  @JsonKey(name: 'private_message_id')
+  final String? privateMessageId;
+  final String? note;
+  final List<String>? tags;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'group_message')
+  final MessageInfo? groupMessage;
+  @JsonKey(name: 'private_message')
+  final PrivateMessageInfo? privateMessage;
+  Map<String, dynamic> toJson() => _$MessageFavoriteInfoToJson(this);
+}
+
+@JsonSerializable()
+class MessageFavoriteCreate {
+
+  MessageFavoriteCreate({
+    this.groupMessageId,
+    this.privateMessageId,
+    this.note,
+    this.tags,
+  });
+
+  factory MessageFavoriteCreate.fromJson(Map<String, dynamic> json) =>
+      _$MessageFavoriteCreateFromJson(json);
+  @JsonKey(name: 'group_message_id')
+  final String? groupMessageId;
+  @JsonKey(name: 'private_message_id')
+  final String? privateMessageId;
+  final String? note;
+  final List<String>? tags;
+  Map<String, dynamic> toJson() => _$MessageFavoriteCreateToJson(this);
+}
+
+// ============ 消息转发 ============
+
+@JsonSerializable()
+class MessageForwardRequest {
+
+  MessageForwardRequest({
+    this.sourceGroupMessageId,
+    this.sourcePrivateMessageId,
+    this.targetGroupId,
+    this.targetUserId,
+    this.additionalContent,
+  });
+
+  factory MessageForwardRequest.fromJson(Map<String, dynamic> json) =>
+      _$MessageForwardRequestFromJson(json);
+  @JsonKey(name: 'source_group_message_id')
+  final String? sourceGroupMessageId;
+  @JsonKey(name: 'source_private_message_id')
+  final String? sourcePrivateMessageId;
+  @JsonKey(name: 'target_group_id')
+  final String? targetGroupId;
+  @JsonKey(name: 'target_user_id')
+  final String? targetUserId;
+  @JsonKey(name: 'additional_content')
+  final String? additionalContent;
+  Map<String, dynamic> toJson() => _$MessageForwardRequestToJson(this);
+}
+
+// ============ 跨群广播 ============
+
+@JsonSerializable()
+class BroadcastMessageInfo {
+
+  BroadcastMessageInfo({
+    required this.id,
+    required this.senderId,
+    required this.content,
+    required this.targetGroupIds,
+    required this.deliveredCount,
+    required this.createdAt,
+    this.contentData,
+    this.sender,
+  });
+
+  factory BroadcastMessageInfo.fromJson(Map<String, dynamic> json) =>
+      _$BroadcastMessageInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'sender_id')
+  final String senderId;
+  final String content;
+  @JsonKey(name: 'content_data')
+  final Map<String, dynamic>? contentData;
+  @JsonKey(name: 'target_group_ids')
+  final List<String> targetGroupIds;
+  @JsonKey(name: 'delivered_count')
+  final int deliveredCount;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  final UserBrief? sender;
+  Map<String, dynamic> toJson() => _$BroadcastMessageInfoToJson(this);
+}
+
+@JsonSerializable()
+class BroadcastMessageCreate {
+
+  BroadcastMessageCreate({
+    required this.content,
+    required this.targetGroupIds,
+    this.contentData,
+  });
+
+  factory BroadcastMessageCreate.fromJson(Map<String, dynamic> json) =>
+      _$BroadcastMessageCreateFromJson(json);
+  final String content;
+  @JsonKey(name: 'content_data')
+  final Map<String, dynamic>? contentData;
+  @JsonKey(name: 'target_group_ids')
+  final List<String> targetGroupIds;
+  Map<String, dynamic> toJson() => _$BroadcastMessageCreateToJson(this);
+}
+
+// ============ 群管理设置 ============
+
+@JsonSerializable()
+class GroupModerationSettings {
+
+  GroupModerationSettings({
+    this.keywordFilters,
+    this.muteAll,
+    this.slowModeSeconds,
+  });
+
+  factory GroupModerationSettings.fromJson(Map<String, dynamic> json) =>
+      _$GroupModerationSettingsFromJson(json);
+  @JsonKey(name: 'keyword_filters')
+  final List<String>? keywordFilters;
+  @JsonKey(name: 'mute_all')
+  final bool? muteAll;
+  @JsonKey(name: 'slow_mode_seconds')
+  final int? slowModeSeconds;
+  Map<String, dynamic> toJson() => _$GroupModerationSettingsToJson(this);
+}
+
+@JsonSerializable()
+class GroupAnnouncementUpdate {
+
+  GroupAnnouncementUpdate({
+    this.announcement,
+  });
+
+  factory GroupAnnouncementUpdate.fromJson(Map<String, dynamic> json) =>
+      _$GroupAnnouncementUpdateFromJson(json);
+  final String? announcement;
+  Map<String, dynamic> toJson() => _$GroupAnnouncementUpdateToJson(this);
+}
+
+@JsonSerializable()
+class MemberMuteRequest {
+
+  MemberMuteRequest({
+    required this.durationMinutes,
+    this.reason,
+  });
+
+  factory MemberMuteRequest.fromJson(Map<String, dynamic> json) =>
+      _$MemberMuteRequestFromJson(json);
+  @JsonKey(name: 'duration_minutes')
+  final int durationMinutes;
+  final String? reason;
+  Map<String, dynamic> toJson() => _$MemberMuteRequestToJson(this);
+}
+
+@JsonSerializable()
+class MemberWarnRequest {
+
+  MemberWarnRequest({
+    required this.reason,
+  });
+
+  factory MemberWarnRequest.fromJson(Map<String, dynamic> json) =>
+      _$MemberWarnRequestFromJson(json);
+  final String reason;
+  Map<String, dynamic> toJson() => _$MemberWarnRequestToJson(this);
+}
+
+// ============ 高级搜索 ============
+
+@JsonSerializable()
+class MessageSearchRequest {
+
+  MessageSearchRequest({
+    this.keyword,
+    this.groupId,
+    this.friendId,
+    this.senderId,
+    this.messageTypes,
+    this.startDate,
+    this.endDate,
+    this.topic,
+    this.tags,
+    this.useFullText = false,
+    this.limit = 50,
+    this.offset = 0,
+  });
+
+  factory MessageSearchRequest.fromJson(Map<String, dynamic> json) =>
+      _$MessageSearchRequestFromJson(json);
+  final String? keyword;
+  @JsonKey(name: 'group_id')
+  final String? groupId;
+  @JsonKey(name: 'friend_id')
+  final String? friendId;
+  @JsonKey(name: 'sender_id')
+  final String? senderId;
+  @JsonKey(name: 'message_types')
+  final List<MessageType>? messageTypes;
+  @JsonKey(name: 'start_date')
+  final DateTime? startDate;
+  @JsonKey(name: 'end_date')
+  final DateTime? endDate;
+  final String? topic;
+  final List<String>? tags;
+  @JsonKey(name: 'use_full_text')
+  final bool useFullText;
+  final int limit;
+  final int offset;
+  Map<String, dynamic> toJson() => _$MessageSearchRequestToJson(this);
+}
+
+@JsonSerializable()
+class MessageSearchResult {
+
+  MessageSearchResult({
+    required this.totalCount,
+    required this.groupMessages,
+    required this.privateMessages,
+    this.hasMore = false,
+  });
+
+  factory MessageSearchResult.fromJson(Map<String, dynamic> json) =>
+      _$MessageSearchResultFromJson(json);
+  @JsonKey(name: 'total_count')
+  final int totalCount;
+  @JsonKey(name: 'group_messages')
+  final List<MessageInfo> groupMessages;
+  @JsonKey(name: 'private_messages')
+  final List<PrivateMessageInfo> privateMessages;
+  @JsonKey(name: 'has_more')
+  final bool hasMore;
+  Map<String, dynamic> toJson() => _$MessageSearchResultToJson(this);
+}
+
+// ============ 离线队列 ============
+
+@JsonSerializable()
+class OfflineMessageInfo {
+
+  OfflineMessageInfo({
+    required this.id,
+    required this.userId,
+    required this.clientNonce,
+    required this.messageType,
+    required this.targetId,
+    required this.payload,
+    required this.status,
+    required this.retryCount,
+    required this.createdAt,
+    this.lastRetryAt,
+    this.errorMessage,
+    this.expiresAt,
+  });
+
+  factory OfflineMessageInfo.fromJson(Map<String, dynamic> json) =>
+      _$OfflineMessageInfoFromJson(json);
+  final String id;
+  @JsonKey(name: 'user_id')
+  final String userId;
+  @JsonKey(name: 'client_nonce')
+  final String clientNonce;
+  @JsonKey(name: 'message_type')
+  final String messageType;
+  @JsonKey(name: 'target_id')
+  final String targetId;
+  final Map<String, dynamic> payload;
+  final OfflineMessageStatus status;
+  @JsonKey(name: 'retry_count')
+  final int retryCount;
+  @JsonKey(name: 'last_retry_at')
+  final DateTime? lastRetryAt;
+  @JsonKey(name: 'error_message')
+  final String? errorMessage;
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @JsonKey(name: 'expires_at')
+  final DateTime? expiresAt;
+  Map<String, dynamic> toJson() => _$OfflineMessageInfoToJson(this);
+}
+
+@JsonSerializable()
+class OfflineMessageRetryRequest {
+
+  OfflineMessageRetryRequest({
+    required this.messageIds,
+  });
+
+  factory OfflineMessageRetryRequest.fromJson(Map<String, dynamic> json) =>
+      _$OfflineMessageRetryRequestFromJson(json);
+  @JsonKey(name: 'message_ids')
+  final List<String> messageIds;
+  Map<String, dynamic> toJson() => _$OfflineMessageRetryRequestToJson(this);
 }

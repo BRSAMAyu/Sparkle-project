@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/galaxy_layout_engine.dart';
@@ -385,7 +385,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
       SnackBar(
         content: Text('推荐学习: ${node.name}'),
         backgroundColor: DS.brandPrimary,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: '查看',
           textColor: DS.brandPrimary,
@@ -412,7 +412,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
     final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: DS.brandPrimary, // Deep space
       body: Stack(
         children: [
           // 0. Parallax Background (Deepest Layer)
@@ -637,7 +637,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
               right: 20,
               child: Center(
                 child: OfflineIndicator(
-                  isOffline: false,
                   isUsingCache: galaxyState.isUsingCache,
                   onRetry: galaxyState.isUsingCache
                       ? () => unawaited(

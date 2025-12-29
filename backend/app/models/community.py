@@ -1,6 +1,6 @@
 """
 社群功能数据模型
-Community Models - 好友系统、群组、消息、任务
+Community Models - 好友系统、群组、消息、任务、加密、风控
 
 包含:
 - Friendship: 好友关系
@@ -9,6 +9,11 @@ Community Models - 好友系统、群组、消息、任务
 - GroupMessage: 群消息
 - GroupTask: 群任务
 - GroupTaskClaim: 任务认领记录
+- UserEncryptionKey: 用户加密密钥
+- MessageReport: 消息举报
+- MessageFavorite: 消息收藏
+- BroadcastMessage: 跨群广播
+- OfflineMessageQueue: 离线消息队列
 """
 import enum
 from datetime import datetime
@@ -58,6 +63,7 @@ class MessageType(str, enum.Enum):
     ACHIEVEMENT = "achievement"      # 成就达成
     CHECKIN = "checkin"              # 打卡
     SYSTEM = "system"                # 系统消息
+    BROADCAST = "broadcast"          # 跨群广播
 
 
 class SharedResourceType(str, enum.Enum):
@@ -67,6 +73,40 @@ class SharedResourceType(str, enum.Enum):
     COGNITIVE_FRAGMENT = "cognitive_fragment"
     CURIOSITY_CAPSULE = "curiosity_capsule"
     COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
+
+
+class ReportReason(str, enum.Enum):
+    """举报原因"""
+    SPAM = "spam"                    # 垃圾信息
+    HARASSMENT = "harassment"        # 骚扰
+    VIOLENCE = "violence"            # 暴力内容
+    MISINFORMATION = "misinformation"  # 虚假信息
+    INAPPROPRIATE = "inappropriate"  # 不当内容
+    OTHER = "other"                  # 其他
+
+
+class ReportStatus(str, enum.Enum):
+    """举报状态"""
+    PENDING = "pending"              # 待处理
+    REVIEWED = "reviewed"            # 已审核
+    DISMISSED = "dismissed"          # 已驳回
+    ACTIONED = "actioned"            # 已处理
+
+
+class ModerationAction(str, enum.Enum):
+    """风控处置动作"""
+    WARN = "warn"                    # 警告
+    MUTE = "mute"                    # 禁言
+    KICK = "kick"                    # 踢出
+    BAN = "ban"                      # 封禁
+
+
+class OfflineMessageStatus(str, enum.Enum):
+    """离线消息状态"""
+    PENDING = "pending"              # 待发送
+    SENT = "sent"                    # 已发送
+    FAILED = "failed"                # 发送失败
+    EXPIRED = "expired"              # 已过期
 
 
 # ============ 好友系统 ============
@@ -150,6 +190,13 @@ class Group(BaseModel):
     today_checkin_count = Column(Integer, default=0, nullable=False)
     total_tasks_completed = Column(Integer, default=0, nullable=False)
 
+    # 群管理与风控
+    announcement = Column(Text, nullable=True)  # 群公告
+    announcement_updated_at = Column(DateTime, nullable=True)
+    keyword_filters = Column(JSON, nullable=True)  # 敏感词过滤列表
+    mute_all = Column(Boolean, default=False, nullable=False)  # 全员禁言
+    slow_mode_seconds = Column(Integer, default=0, nullable=False)  # 慢速模式（秒）
+
     # 关系
     members = relationship(
         "GroupMember",
@@ -194,6 +241,8 @@ class GroupMember(BaseModel):
 
     # 成员状态
     is_muted = Column(Boolean, default=False, nullable=False)      # 是否被禁言
+    mute_until = Column(DateTime, nullable=True)  # 禁言截止时间
+    warn_count = Column(Integer, default=0, nullable=False)  # 警告次数
     notifications_enabled = Column(Boolean, default=True, nullable=False)
 
     # 贡献统计
@@ -257,11 +306,25 @@ class GroupMessage(BaseModel):
     reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
     mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
 
+    # 端到端加密
+    encrypted_content = Column(Text, nullable=True)  # 加密后的内容
+    content_signature = Column(String(512), nullable=True)  # 消息签名
+    encryption_version = Column(Integer, nullable=True)  # 加密版本
+
+    # 话题与标签
+    topic = Column(String(100), nullable=True)  # 话题
+    tags = Column(JSON, nullable=True)  # 标签列表
+
+    # 转发
+    forwarded_from_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True)
+    forward_count = Column(Integer, default=0, nullable=False)
+
     # 关系
     group = relationship("Group", back_populates="messages")
     sender = relationship("User")
-    reply_to = relationship("GroupMessage", remote_side="GroupMessage.id")
+    reply_to = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[reply_to_id])
     thread_root = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[thread_root_id])
+    forwarded_from = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[forwarded_from_id])
 
     __table_args__ = (
         Index('idx_message_group_time', 'group_id', 'created_at'),
@@ -444,14 +507,177 @@ class PrivateMessage(BaseModel):
     reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
     mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
 
+    # 端到端加密
+    encrypted_content = Column(Text, nullable=True)  # 加密后的内容
+    content_signature = Column(String(512), nullable=True)  # 消息签名
+    encryption_version = Column(Integer, nullable=True)  # 加密版本
+
+    # 话题与标签
+    topic = Column(String(100), nullable=True)  # 话题
+    tags = Column(JSON, nullable=True)  # 标签列表
+
+    # 转发
+    forwarded_from_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True)
+    forward_count = Column(Integer, default=0, nullable=False)
+
     # 关系
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
-    reply_to = relationship("PrivateMessage", remote_side="PrivateMessage.id")
+    reply_to = relationship("PrivateMessage", remote_side="PrivateMessage.id", foreign_keys=[reply_to_id])
     thread_root = relationship("PrivateMessage", remote_side="PrivateMessage.id", foreign_keys=[thread_root_id])
+    forwarded_from = relationship("PrivateMessage", remote_side="PrivateMessage.id", foreign_keys=[forwarded_from_id])
 
     __table_args__ = (
         Index('idx_private_message_conversation', 'sender_id', 'receiver_id', 'created_at'),
         Index('idx_private_message_receiver_unread', 'receiver_id', 'is_read'),
         Index('idx_private_message_thread', 'sender_id', 'receiver_id', 'thread_root_id', 'created_at'),
+    )
+
+
+# ============ 加密密钥系统 ============
+
+class UserEncryptionKey(BaseModel):
+    """
+    用户加密密钥表
+
+    设计说明：
+    - 存储用户的公钥，用于端到端加密
+    - 支持多设备，每个设备可以有独立的密钥对
+    - 私钥由客户端本地保存，服务器只存储公钥
+    """
+    __tablename__ = "user_encryption_keys"
+
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    public_key = Column(Text, nullable=False)  # Base64 编码的公钥
+    key_type = Column(String(50), default="x25519", nullable=False)  # x25519, rsa, etc.
+    device_id = Column(String(100), nullable=True)  # 可选的设备绑定
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+
+    # 关系
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_user_encryption_keys_user', 'user_id', 'is_active'),
+    )
+
+
+# ============ 消息举报系统 ============
+
+class MessageReport(BaseModel):
+    """
+    消息举报表
+
+    设计说明：
+    - 支持举报群消息和私聊消息
+    - 记录举报原因、状态和处理结果
+    """
+    __tablename__ = "message_reports"
+
+    reporter_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_message_id = Column(GUID(), ForeignKey("group_messages.id", ondelete="SET NULL"), nullable=True)
+    private_message_id = Column(GUID(), ForeignKey("private_messages.id", ondelete="SET NULL"), nullable=True)
+
+    reason = Column(Enum(ReportReason), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(Enum(ReportStatus), default=ReportStatus.PENDING, nullable=False)
+
+    reviewed_by = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    action_taken = Column(Enum(ModerationAction), nullable=True)
+
+    # 关系
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+    group_message = relationship("GroupMessage")
+    private_message = relationship("PrivateMessage")
+
+    __table_args__ = (
+        Index('idx_message_reports_status', 'status'),
+        Index('idx_message_reports_group_msg', 'group_message_id'),
+    )
+
+
+# ============ 消息收藏系统 ============
+
+class MessageFavorite(BaseModel):
+    """
+    消息收藏表
+
+    设计说明：
+    - 用户可以收藏群消息或私聊消息
+    - 支持添加个人备注和标签
+    """
+    __tablename__ = "message_favorites"
+
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_message_id = Column(GUID(), ForeignKey("group_messages.id", ondelete="CASCADE"), nullable=True)
+    private_message_id = Column(GUID(), ForeignKey("private_messages.id", ondelete="CASCADE"), nullable=True)
+
+    note = Column(Text, nullable=True)  # 用户的个人备注
+    tags = Column(JSON, nullable=True)  # 用户自定义标签
+
+    # 关系
+    user = relationship("User")
+    group_message = relationship("GroupMessage")
+    private_message = relationship("PrivateMessage")
+
+    __table_args__ = (
+        Index('idx_message_favorites_user', 'user_id'),
+    )
+
+
+# ============ 跨群广播系统 ============
+
+class BroadcastMessage(BaseModel):
+    """
+    跨群广播消息表
+
+    设计说明：
+    - 允许管理员向多个群组同时发送消息
+    - 记录发送状态和送达统计
+    """
+    __tablename__ = "broadcast_messages"
+
+    sender_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    content_data = Column(JSON, nullable=True)
+    target_group_ids = Column(JSON, nullable=False)  # 目标群组ID列表
+    delivered_count = Column(Integer, default=0, nullable=False)
+
+    # 关系
+    sender = relationship("User")
+
+
+# ============ 离线消息队列 ============
+
+class OfflineMessageQueue(BaseModel):
+    """
+    离线消息队列表
+
+    设计说明：
+    - 存储用户离线时发送的消息
+    - 支持去重（通过 client_nonce）
+    - 支持重试和过期机制
+    """
+    __tablename__ = "offline_message_queue"
+
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_nonce = Column(String(100), nullable=False)  # 客户端生成的唯一标识，用于去重
+    message_type = Column(String(50), nullable=False)  # group, private
+    target_id = Column(GUID(), nullable=False)  # group_id 或 receiver_id
+    payload = Column(JSON, nullable=False)
+
+    status = Column(Enum(OfflineMessageStatus), default=OfflineMessageStatus.PENDING, nullable=False)
+    retry_count = Column(Integer, default=0, nullable=False)
+    last_retry_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+    # 关系
+    user = relationship("User")
+
+    __table_args__ = (
+        Index('idx_offline_queue_user_status', 'user_id', 'status'),
+        UniqueConstraint('user_id', 'client_nonce', name='uq_offline_queue_nonce'),
     )

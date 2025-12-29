@@ -146,11 +146,11 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DS.radius8),
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing24,
           vertical: DS.spacing12,
         ),
-        textStyle: TextStyle(
+        textStyle: const TextStyle(
           fontSize: DS.fontSizeBase,
           fontWeight: DS.fontWeightSemibold,
         ),
@@ -161,7 +161,7 @@ class AppThemes {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing8,
         ),
@@ -176,7 +176,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DS.radius8),
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing24,
           vertical: DS.spacing12,
         ),
@@ -199,15 +199,15 @@ class AppThemes {
       ),
       filled: true,
       fillColor: DS.neutral50,
-      contentPadding: EdgeInsets.all(DS.spacing16),
+      contentPadding: const EdgeInsets.all(DS.spacing16),
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
       backgroundColor: DS.neutral100,
       selectedColor: AppColors.primary,
-      labelStyle: TextStyle(fontSize: DS.fontSizeSm),
-      padding: EdgeInsets.symmetric(
+      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
+      padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing4,
       ),
@@ -231,7 +231,7 @@ class AppThemes {
       elevation: 0,
       backgroundColor: Colors.transparent,
       foregroundColor: AppColors.lightText,
-      titleTextStyle: TextStyle(
+      titleTextStyle: const TextStyle(
         fontSize: DS.fontSizeLg,
         fontWeight: DS.fontWeightBold,
         color: Color(0xFF212121),
@@ -239,7 +239,7 @@ class AppThemes {
     ),
 
     // Text theme
-    textTheme: TextTheme(
+    textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: DS.fontSize6xl,
         fontWeight: DS.fontWeightBold,
@@ -372,11 +372,11 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DS.radius8),
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing24,
           vertical: DS.spacing12,
         ),
-        textStyle: TextStyle(
+        textStyle: const TextStyle(
           fontSize: DS.fontSizeBase,
           fontWeight: DS.fontWeightSemibold,
         ),
@@ -387,7 +387,7 @@ class AppThemes {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing8,
         ),
@@ -402,7 +402,7 @@ class AppThemes {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DS.radius8),
         ),
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing24,
           vertical: DS.spacing12,
         ),
@@ -425,15 +425,15 @@ class AppThemes {
       ),
       filled: true,
       fillColor: DS.neutral800,
-      contentPadding: EdgeInsets.all(DS.spacing16),
+      contentPadding: const EdgeInsets.all(DS.spacing16),
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
       backgroundColor: DS.neutral800,
       selectedColor: AppColors.primary,
-      labelStyle: TextStyle(fontSize: DS.fontSizeSm),
-      padding: EdgeInsets.symmetric(
+      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
+      padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing4,
       ),
@@ -452,7 +452,7 @@ class AppThemes {
     ),
 
     // App bar theme
-    appBarTheme: AppBarTheme(
+    appBarTheme: const AppBarTheme(
       centerTitle: false,
       elevation: 0,
       backgroundColor: Colors.transparent,
@@ -465,7 +465,7 @@ class AppThemes {
     ),
 
     // Text theme
-    textTheme: TextTheme(
+    textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: DS.fontSize6xl,
         fontWeight: DS.fontWeightBold,
@@ -603,24 +603,24 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   /// 浅色主题配色
   static SparkleColors get light => SparkleColors(
     // 任务类型 - 使用饱和度适中的颜色
-    taskLearning: Color(0xFF64B5F6),
-    taskTraining: Color(0xFFFF9800),
-    taskErrorFix: Color(0xFFEF5350),
-    taskReflection: Color(0xFF9C27B0),
-    taskSocial: Color(0xFF81C784),
-    taskPlanning: Color(0xFF009688),
+    taskLearning: const Color(0xFF64B5F6),
+    taskTraining: const Color(0xFFFF9800),
+    taskErrorFix: const Color(0xFFEF5350),
+    taskReflection: const Color(0xFF9C27B0),
+    taskSocial: const Color(0xFF81C784),
+    taskPlanning: const Color(0xFF009688),
     // 计划类型
-    planSprint: Color(0xFFE53935),
-    planGrowth: Color(0xFF43A047),
+    planSprint: const Color(0xFFE53935),
+    planGrowth: const Color(0xFF43A047),
     // 表面颜色
-    surfaceCard: Color(0xFFFFFFFF),
-    surfaceElevated: Color(0xFFFAFAFA),
-    surfaceGlass: Color(0xF0FFFFFF),
+    surfaceCard: const Color(0xFFFFFFFF),
+    surfaceElevated: const Color(0xFFFAFAFA),
+    surfaceGlass: const Color(0xF0FFFFFF),
     // 文本颜色
     textPrimary: DS.neutral900,
     textSecondary: DS.neutral700,
     textTertiary: DS.neutral500,
-    textOnPrimary: Color(0xFFFFFFFF),
+    textOnPrimary: const Color(0xFFFFFFFF),
     // 边框和分割线
     border: DS.neutral300,
     divider: DS.neutral200,
@@ -629,24 +629,24 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   /// 深色主题配色
   static SparkleColors get dark => SparkleColors(
     // 任务类型 - 使用更亮的颜色以提高对比度
-    taskLearning: Color(0xFF64B5F6),
-    taskTraining: Color(0xFFFFB74D),
-    taskErrorFix: Color(0xFFEF5350),
-    taskReflection: Color(0xFFBA68C8),
-    taskSocial: Color(0xFF81C784),
-    taskPlanning: Color(0xFF4DB6AC),
+    taskLearning: const Color(0xFF64B5F6),
+    taskTraining: const Color(0xFFFFB74D),
+    taskErrorFix: const Color(0xFFEF5350),
+    taskReflection: const Color(0xFFBA68C8),
+    taskSocial: const Color(0xFF81C784),
+    taskPlanning: const Color(0xFF4DB6AC),
     // 计划类型
-    planSprint: Color(0xFFFF5252),
-    planGrowth: Color(0xFF66BB6A),
+    planSprint: const Color(0xFFFF5252),
+    planGrowth: const Color(0xFF66BB6A),
     // 表面颜色
     surfaceCard: DS.neutral800,
     surfaceElevated: DS.neutral700,
-    surfaceGlass: Color(0xF0424242),
+    surfaceGlass: const Color(0xF0424242),
     // 文本颜色
     textPrimary: DS.neutral50,
     textSecondary: DS.neutral300,
     textTertiary: DS.neutral500,
-    textOnPrimary: Color(0xFFFFFFFF),
+    textOnPrimary: const Color(0xFFFFFFFF),
     // 边框和分割线
     border: DS.neutral700,
     divider: DS.neutral600,

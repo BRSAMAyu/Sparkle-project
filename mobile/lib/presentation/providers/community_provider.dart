@@ -10,6 +10,7 @@ import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/presentation/providers/guest_provider.dart';
 import 'package:uuid/uuid.dart';
 
 // Token provider for WebSocket connections
@@ -538,9 +539,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   Future<void> toggleReaction(String messageId, String emoji) async {
-    final userId = _currentUserId ??
-        _ref.read(currentUserProvider)?.id ??
-        MockCommunityRepository.currentUserId;
+    final userId = await _resolveCurrentUserId();
+    if (userId == null || userId.isEmpty) return;
     final messages = state.valueOrNull ?? [];
     if (messages.isEmpty) return;
     final targetIndex = messages.indexWhere((m) => m.id == messageId);
@@ -640,6 +640,19 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         state = AsyncValue.data(updated);
       }
     });
+  }
+
+  Future<String?> _resolveCurrentUserId() async {
+    final current = _ref.read(currentUserProvider)?.id;
+    if (current != null && current.isNotEmpty) {
+      return current;
+    }
+    try {
+      final guestService = _ref.read(guestServiceProvider);
+      return await guestService.getGuestId();
+    } catch (_) {
+      return 'guest';
+    }
   }
 }
 
@@ -943,7 +956,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     };
 
     final tempId = 'local_$nonce';
-    final sender = _buildCurrentUserBrief();
+    final sender = await _buildCurrentUserBrief();
     final receiver = _buildFriendBrief();
     final tempMessage = PrivateMessageInfo(
       id: tempId,
@@ -951,7 +964,6 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       receiver: receiver,
       messageType: type,
       content: content,
-      contentData: null,
       replyToId: replyToId,
       threadRootId: threadRootId,
       mentionUserIds: mentionUserIds,
@@ -1022,7 +1034,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   }
 
   Future<void> toggleReaction(String messageId, String emoji) async {
-    final userId = _ref.read(currentUserProvider)?.id ?? MockCommunityRepository.currentUserId;
+    final userId = await _resolveCurrentUserId();
+    if (userId == null || userId.isEmpty) return;
     final messages = state.valueOrNull ?? [];
     if (messages.isEmpty) return;
     final targetIndex = messages.indexWhere((m) => m.id == messageId);
@@ -1047,10 +1060,23 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   Future<List<PrivateMessageInfo>> searchMessages(String keyword) async =>
       _repository.searchPrivateMessages(_friendId, keyword);
 
-  UserBrief _buildCurrentUserBrief() {
+  Future<UserBrief> _buildCurrentUserBrief() async {
     final user = _ref.read(currentUserProvider);
     if (user == null) {
-      return UserBrief(id: MockCommunityRepository.currentUserId, username: 'Me');
+      var userId = 'guest';
+      var nickname = '访客';
+      try {
+        final guestService = _ref.read(guestServiceProvider);
+        userId = await guestService.getGuestId();
+        nickname = guestService.getGuestNickname();
+      } catch (_) {}
+      return UserBrief(
+        id: userId,
+        username: nickname,
+        nickname: nickname,
+        flameBrightness: 0.4,
+        status: UserStatus.online,
+      );
     }
     return UserBrief(
       id: user.id,
@@ -1083,6 +1109,19 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       return existing.receiver;
     }
     return UserBrief(id: _friendId, username: 'Friend');
+  }
+
+  Future<String?> _resolveCurrentUserId() async {
+    final current = _currentUserId ?? _ref.read(currentUserProvider)?.id;
+    if (current != null && current.isNotEmpty) {
+      return current;
+    }
+    try {
+      final guestService = _ref.read(guestServiceProvider);
+      return await guestService.getGuestId();
+    } catch (_) {
+      return 'guest';
+    }
   }
 }
 
