@@ -7,6 +7,7 @@ from app.routing.graph_router import GraphBasedRouter
 from app.learning.bayesian_learner import BayesianLearner
 from app.core.business_metrics import track_routing_decision, metrics_collector
 from app.routing.exploration_router import HybridExplorationRouter
+from app.routing.tool_preference_router import ToolPreferenceRouter
 
 class RouterNode:
     """
@@ -44,17 +45,43 @@ class RouterNode:
 
     async def __call__(self, state: WorkflowState) -> WorkflowState:
         """
-        Execute routing logic.
+        Execute routing logic with tool preference learning.
         Updates state.context_data['next_step']
         """
         last_msg = state.messages[-1]['content'] if state.messages else ""
         current_node = state.context_data.get("current_node", "orchestrator")
-        
+        user_id = state.context_data.get("user_id")
+        db_session = state.context_data.get("db_session")
+
         # 1. Get Candidate Routes (Hybrid + Neighbors)
         target_capability = self._extract_capability(last_msg)
         candidates = await self._get_candidate_routes(current_node, last_msg, state.context_data)
-        
-        # 2. Exploration Selection
+
+        # 2. Apply Tool Preference Learning (if available)
+        if user_id and db_session and hasattr(self, 'learner'):
+            try:
+                pref_router = ToolPreferenceRouter(db_session, int(user_id), redis_client=None)
+
+                # 从历史记录更新学习器
+                await pref_router.update_learner_from_history()
+
+                # 根据工具偏好重新排序候选路由
+                if candidates:
+                    ranked_candidates = await pref_router.rank_tools_by_success(candidates)
+                    candidates = [tool_name for tool_name, _ in ranked_candidates]
+
+                    logger.info(f"Tool preference ranked candidates: {candidates}")
+
+                    # 存储偏好信息供后续使用
+                    state.context_data['tool_preferences'] = {
+                        tool: await pref_router.get_tool_stats_snapshot(tool)
+                        for tool in candidates[:3]
+                    }
+
+            except Exception as e:
+                logger.warning(f"Tool preference learning failed: {e}")
+
+        # 3. Exploration Selection
         if candidates:
             # Use exploration router to pick one
             next_route = await self.exploration_router.select_route(
@@ -66,20 +93,20 @@ class RouterNode:
             # Fallback to simple logic if no candidates found via graph/exploration
             next_route = self._simple_route(last_msg)
 
-        # 3. Metrics Update
+        # 4. Metrics Update
         prob = 0.5
         if next_route:
             prob = await self.learner.get_probability(current_node, next_route)
             metrics_collector.update_route_probability(current_node, next_route, prob)
-            
+
             if prob < 0.3:
                 logger.warning(f"Low probability route {current_node}->{next_route} ({prob:.2f})")
-        
+
         logger.info(f"🧭 Router selected: {next_route} (Confidence: {prob:.2f})")
-        
+
         state.context_data['router_decision'] = next_route
         state.context_data['router_confidence'] = prob if next_route else 0.0
-        
+
         return state
 
     @track_routing_decision(method="hybrid")

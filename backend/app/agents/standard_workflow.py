@@ -11,6 +11,12 @@ from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.gen.agent.v1 import agent_service_pb2
 from google.protobuf import struct_pb2
+from app.agents.collaboration_workflows import (
+    TaskDecompositionWorkflow,
+    ProgressiveExplorationWorkflow,
+    ErrorDiagnosisWorkflow
+)
+from app.agents.enhanced_agents import EnhancedAgentContext
 
 # ==========================================
 # Nodes
@@ -184,6 +190,8 @@ def _classify_user_intent(message: str) -> Optional[str]:
         "skill_building": ["学习", "掌握", "提升", "精通", "练习"],
         "quick_task": ["15分钟", "碎片时间", "快速", "快点学"],
         "task_decomposition": ["分解", "拆解", "怎么", "怎样", "如何", "帮我规划"],
+        "error_diagnosis": ["错误", "不懂", "不理解", "为什么", "错在哪里", "诊断"],
+        "deep_learning": ["详细", "深入", "原理", "详解", "彻底理解"],
     }
 
     for intent, patterns in intent_patterns.items():
@@ -191,6 +199,192 @@ def _classify_user_intent(message: str) -> Optional[str]:
             return intent
 
     return None
+
+
+def _should_use_collaboration(message: str, intent: Optional[str]) -> bool:
+    """Determine if collaboration workflow should be triggered."""
+    if not intent:
+        return False
+
+    # 这些意图触发协作工作流
+    collaboration_intents = [
+        "exam_preparation",
+        "task_decomposition",
+        "error_diagnosis",
+        "deep_learning"
+    ]
+
+    return intent in collaboration_intents
+
+
+def _select_workflow(intent: str):
+    """Select appropriate collaboration workflow based on intent."""
+    workflow_mapping = {
+        "exam_preparation": TaskDecompositionWorkflow,
+        "task_decomposition": TaskDecompositionWorkflow,
+        "deep_learning": ProgressiveExplorationWorkflow,
+        "error_diagnosis": ErrorDiagnosisWorkflow,
+    }
+
+    return workflow_mapping.get(intent)
+
+
+async def collaboration_node(state: WorkflowState) -> WorkflowState:
+    """Execute collaboration workflow based on user intent."""
+    logger.info("Collaboration node: Executing multi-agent workflow...")
+
+    user_message = state.messages[-1]["content"] if state.messages else ""
+    intent = state.context_data.get("detected_intent")
+    stream_callback = state.context_data.get("stream_callback")
+    user_id = state.context_data.get("user_id", "")
+
+    if not intent or not _should_use_collaboration(user_message, intent):
+        logger.info("No collaboration needed, moving to standard workflow")
+        state.next_step = "tool_planning"
+        return state
+
+    # Select workflow
+    WorkflowClass = _select_workflow(intent)
+    if not WorkflowClass:
+        logger.warning(f"No workflow found for intent: {intent}")
+        state.next_step = "tool_planning"
+        return state
+
+    try:
+        # Build enhanced context
+        context = EnhancedAgentContext(
+            user_id=user_id,
+            user_query=user_message,
+            conversation_history=state.messages[:-1],
+            knowledge_graph=state.context_data.get("knowledge_graph"),
+            learning_status=state.context_data.get("learning_status"),
+            focus_stats=state.context_data.get("focus_stats"),
+        )
+
+        # Send status update
+        if stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.MULTI_AGENT_COLLABORATION,
+                    details=f"Executing {intent} collaboration workflow...",
+                    active_agent=agent_service_pb2.ORCHESTRATOR
+                )
+            ))
+
+        # Execute workflow
+        logger.info(f"Executing {WorkflowClass.__name__} for intent: {intent}")
+        workflow = WorkflowClass(None)  # orchestrator is optional
+        result = await workflow.execute(user_message, context)
+
+        logger.info(f"Collaboration result: {result.workflow_type}, participants: {result.participants}")
+
+        # Validate and ensure action cards in output
+        validated_result = await _ensure_action_cards(result, state)
+
+        # Store result for generation node
+        state.context_data["collaboration_result"] = validated_result
+
+        # Send collaboration result to client (optional: timeline visualization)
+        if stream_callback and hasattr(validated_result, 'timeline'):
+            for event in validated_result.timeline:
+                logger.info(f"Timeline event: {event}")
+
+        state.next_step = "collaboration_post_process"
+
+    except Exception as e:
+        logger.error(f"Collaboration workflow failed: {e}", exc_info=True)
+        # Fallback to standard workflow
+        state.context_data["collaboration_error"] = str(e)
+        state.next_step = "tool_planning"
+
+    return state
+
+
+async def collaboration_post_process_node(state: WorkflowState) -> WorkflowState:
+    """Post-process collaboration result and convert to tool calls."""
+    logger.info("Post-processing collaboration result...")
+
+    collaboration_result = state.context_data.get("collaboration_result")
+    if not collaboration_result:
+        state.next_step = "tool_planning"
+        return state
+
+    stream_callback = state.context_data.get("stream_callback")
+
+    # Stream the final response
+    if stream_callback and hasattr(collaboration_result, 'final_response'):
+        await stream_callback(agent_service_pb2.ChatResponse(
+            delta=collaboration_result.final_response
+        ))
+
+    # Extract and queue action cards for execution
+    action_cards = []
+    if hasattr(collaboration_result, 'outputs'):
+        for output in collaboration_result.outputs:
+            if hasattr(output, 'tool_results'):
+                for tool_result in output.tool_results:
+                    if hasattr(tool_result, 'widget_type') and tool_result.widget_type:
+                        action_cards.append(tool_result)
+
+    if action_cards:
+        logger.info(f"Found {len(action_cards)} action cards from collaboration")
+        # 这些卡片已经包含 widget_type 和 widget_data，前端可以直接渲染
+        state.context_data["collaboration_action_cards"] = action_cards
+        # 后续可选择直接返回或继续对话
+        state.next_step = "__end__"
+    else:
+        # 如果没有动作卡片，继续标准流程
+        state.next_step = "tool_planning"
+
+    return state
+
+
+async def _ensure_action_cards(collaboration_result, state: WorkflowState):
+    """Validate collaboration result contains action cards, if not generate them."""
+    has_action_cards = False
+
+    # Check if result already has action cards
+    if hasattr(collaboration_result, 'outputs'):
+        for output in collaboration_result.outputs:
+            if hasattr(output, 'tool_results'):
+                for tr in output.tool_results:
+                    if hasattr(tr, 'widget_type') and tr.widget_type:
+                        has_action_cards = True
+                        break
+
+    if not has_action_cards:
+        logger.warning("Collaboration result missing action cards, attempting to generate...")
+        # Use LLM to convert result to action cards
+        llm_prompt = f"""
+Based on the collaboration result below, generate structured action card data.
+Return a JSON array with items containing: title, description, type (task|plan|focus), estimated_minutes
+
+Result: {collaboration_result.final_response}
+
+Return only valid JSON array, no markdown.
+"""
+        try:
+            action_data = await llm_service.chat_json(llm_prompt)
+            if action_data and isinstance(action_data, list):
+                # Wrap as ToolResult objects
+                from app.tools.base import ToolResult
+                action_cards = [
+                    ToolResult(
+                        widget_type="task_list",
+                        widget_data={
+                            "tasks": action_data,
+                            "source": "collaboration_fallback"
+                        }
+                    )
+                ]
+                if hasattr(collaboration_result, 'outputs') and collaboration_result.outputs:
+                    collaboration_result.outputs[0].tool_results = action_cards
+                has_action_cards = True
+                logger.info("Generated fallback action cards")
+        except Exception as e:
+            logger.error(f"Failed to generate fallback action cards: {e}")
+
+    return collaboration_result
 
 
 async def tool_planning_node(state: WorkflowState) -> WorkflowState:
@@ -202,6 +396,9 @@ async def tool_planning_node(state: WorkflowState) -> WorkflowState:
     intent = _classify_user_intent(user_message)
 
     logger.info(f"Classified intent: {intent}")
+
+    # Store intent for collaboration node decision
+    state.context_data["detected_intent"] = intent
 
     # Define tool sequences for different intents
     tool_sequences = {
@@ -271,10 +468,12 @@ def create_standard_chat_graph() -> StateGraph:
 
     graph.add_node("context_builder", context_builder_node)
     graph.add_node("retrieval", retrieval_node)
+    graph.add_node("router", router_node)
+    graph.add_node("collaboration", collaboration_node)
+    graph.add_node("collaboration_post_process", collaboration_post_process_node)
     graph.add_node("tool_planning", tool_planning_node)
     graph.add_node("generation", generation_node)
     graph.add_node("tool_execution", tool_execution_node)
-    graph.add_node("router", router_node)
 
     graph.set_entry_point("context_builder")
 
@@ -284,9 +483,9 @@ def create_standard_chat_graph() -> StateGraph:
     # Router decides next step
     def router_condition(state: WorkflowState) -> str:
         decision = state.context_data.get('router_decision')
-        # If router logic failed or returned None, fallback to tool planning
+        # If router logic failed or returned None, fallback to collaboration check
         if not decision:
-            return "tool_planning"
+            return "collaboration"
 
         # Map specialized agents to generation node for now
         # In Phase 4, these will be separate nodes
@@ -296,9 +495,21 @@ def create_standard_chat_graph() -> StateGraph:
         if decision in ["generation", "tool_execution"]:
             return decision
 
-        return "tool_planning"
+        return "collaboration"
 
     graph.add_conditional_edge("router", router_condition)
+
+    # Collaboration node routes to collaboration workflows or standard flow
+    def collaboration_condition(state: WorkflowState) -> str:
+        return state.next_step or "tool_planning"
+
+    graph.add_conditional_edge("collaboration", collaboration_condition)
+
+    # Post-process collaboration result
+    def collaboration_post_condition(state: WorkflowState) -> str:
+        return state.next_step or "__end__"
+
+    graph.add_conditional_edge("collaboration_post_process", collaboration_post_condition)
 
     # Tool planning analyzes intent and sequences tools
     graph.add_edge("tool_planning", "generation")
