@@ -1,4 +1,4 @@
-from typing import Dict, Any, AsyncGenerator
+from typing import Dict, Any, AsyncGenerator, Optional, List
 from loguru import logger
 import json
 import uuid
@@ -103,7 +103,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     """Execute Tools."""
     tool_calls = state.context_data.get("tool_calls", [])
     executor = ToolExecutor() # Should be injected or cached
-    
+
     stream_callback = state.context_data.get("stream_callback")
     user_id = state.context_data.get("user_id", "")
     db_session = state.context_data.get("db_session")
@@ -117,7 +117,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     active_agent=agent_service_pb2.ORCHESTRATOR
                 )
             ))
-        
+
         # Parse arguments if needed (ToolExecutor expects dict)
         args = tc.full_arguments
         if isinstance(args, str):
@@ -153,7 +153,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     tool_call_id=tc.tool_call_id
                 )
             ))
-        
+
         # ToolResult object to JSON
         result_json = json.dumps({
             "success": result.success,
@@ -161,12 +161,104 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             "error": result.error_message
         })
         state.append_message("tool", result_json, name=tc.tool_name)
-        
+
     # Clear tool calls and loop back to generation
     state.context_data["tool_calls"] = []
     # If we want to feed result back to LLM:
-    state.next_step = "generation" 
-    
+    state.next_step = "generation"
+
+    return state
+
+
+# ==========================================
+# Intent Classification & Tool Planning
+# ==========================================
+
+def _classify_user_intent(message: str) -> Optional[str]:
+    """Classify user intent from message for multi-step tool planning."""
+    message_lower = message.lower()
+
+    # Intent patterns mapping
+    intent_patterns = {
+        "exam_preparation": ["准备考试", "备考", "复习计划", "考前冲刺", "准备期末"],
+        "skill_building": ["学习", "掌握", "提升", "精通", "练习"],
+        "quick_task": ["15分钟", "碎片时间", "快速", "快点学"],
+        "task_decomposition": ["分解", "拆解", "怎么", "怎样", "如何", "帮我规划"],
+    }
+
+    for intent, patterns in intent_patterns.items():
+        if any(pattern in message_lower for pattern in patterns):
+            return intent
+
+    return None
+
+
+async def tool_planning_node(state: WorkflowState) -> WorkflowState:
+    """Intelligent tool planning node for multi-step workflows."""
+    logger.info("Tool planning node: Analyzing user intent for multi-step execution...")
+
+    # Get the latest user message
+    user_message = state.messages[-1]["content"] if state.messages else ""
+    intent = _classify_user_intent(user_message)
+
+    logger.info(f"Classified intent: {intent}")
+
+    # Define tool sequences for different intents
+    tool_sequences = {
+        "exam_preparation": [
+            {
+                "tool": "create_plan",
+                "description": "创建考前冲刺计划",
+                "requires_context": ["subject"]
+            },
+            {
+                "tool": "generate_tasks_for_plan",
+                "description": "自动生成微任务",
+                "requires_context": ["plan_id"]
+            },
+            {
+                "tool": "suggest_focus_session",
+                "description": "建议专注时段",
+                "requires_context": ["task_ids"]
+            }
+        ],
+        "task_decomposition": [
+            {
+                "tool": "breakdown_task",
+                "description": "分解任务为子任务",
+                "requires_context": ["task_description"]
+            },
+            {
+                "tool": "suggest_focus_session",
+                "description": "建议专注时段",
+                "requires_context": ["task_ids"]
+            }
+        ],
+        "skill_building": [
+            {
+                "tool": "create_plan",
+                "description": "创建学习计划",
+                "requires_context": ["topic", "target_level"]
+            },
+            {
+                "tool": "generate_tasks_for_plan",
+                "description": "生成学习路径",
+                "requires_context": ["plan_id"]
+            }
+        ]
+    }
+
+    if intent and intent in tool_sequences:
+        # Store the planned tool sequence for generation node to pick up
+        state.context_data["planned_tool_sequence"] = tool_sequences[intent]
+        logger.info(f"Planning multi-step sequence for intent '{intent}': {len(tool_sequences[intent])} steps")
+        state.next_step = "generation"  # Let generation node handle the sequence
+    else:
+        # No specific planning needed, go straight to generation
+        state.context_data["planned_tool_sequence"] = None
+        logger.info("No specific tool planning needed, using standard generation")
+        state.next_step = "generation"
+
     return state
 
 
@@ -176,47 +268,50 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 
 def create_standard_chat_graph() -> StateGraph:
     graph = StateGraph("StandardChat")
-    
+
     graph.add_node("context_builder", context_builder_node)
     graph.add_node("retrieval", retrieval_node)
+    graph.add_node("tool_planning", tool_planning_node)
     graph.add_node("generation", generation_node)
     graph.add_node("tool_execution", tool_execution_node)
-    
-    graph.set_entry_point("context_builder")
-    
     graph.add_node("router", router_node)
-    
+
+    graph.set_entry_point("context_builder")
+
     graph.add_edge("context_builder", "retrieval")
     graph.add_edge("retrieval", "router")
-    
+
     # Router decides next step
     def router_condition(state: WorkflowState) -> str:
         decision = state.context_data.get('router_decision')
-        # If router logic failed or returned None, fallback
+        # If router logic failed or returned None, fallback to tool planning
         if not decision:
-            return "generation"
-            
+            return "tool_planning"
+
         # Map specialized agents to generation node for now
         # In Phase 4, these will be separate nodes
         if decision in ["math_agent", "code_agent", "knowledge_agent"]:
             return "generation"
-            
+
         if decision in ["generation", "tool_execution"]:
             return decision
-            
-        return "generation"
+
+        return "tool_planning"
 
     graph.add_conditional_edge("router", router_condition)
-    
+
+    # Tool planning analyzes intent and sequences tools
+    graph.add_edge("tool_planning", "generation")
+
     # Generation node decides if tools or end
     def generation_router(state: WorkflowState) -> str:
         return state.next_step or "__end__"
-        
+
     graph.add_conditional_edge("generation", generation_router)
-    
+
     # Tool execution loops back to generation (to interpret results)
     graph.add_edge("tool_execution", "generation")
-    
+
     return graph
 
 async def router_node(state: WorkflowState) -> WorkflowState:

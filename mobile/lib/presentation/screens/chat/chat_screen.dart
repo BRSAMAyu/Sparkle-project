@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
+import 'package:sparkle/presentation/widgets/chat/action_card.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
@@ -48,6 +50,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         );
       }
     });
+  }
+
+  void _handleActionConfirm(WidgetRef ref, WidgetPayload action) {
+    // Send action feedback to backend
+    final chatService = ref.read(chatProvider.notifier).chatService;
+    chatService.sendActionFeedback(
+      action: 'confirm',
+      toolResultId: action.id ?? 'unknown',
+      widgetType: action.type,
+    );
+
+    // Show confirmation feedback to user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ ${action.type} confirmed'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _handleActionDismiss(WidgetRef ref, WidgetPayload action) {
+    // Send action feedback to backend
+    final chatService = ref.read(chatProvider.notifier).chatService;
+    chatService.sendActionFeedback(
+      action: 'dismiss',
+      toolResultId: action.id ?? 'unknown',
+      widgetType: action.type,
+    );
+
+    // Show dismissal feedback to user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('❌ ${action.type} dismissed'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -221,7 +261,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (msgIndex < 0) return const SizedBox.shrink();
 
                           final message = messages[messages.length - 1 - msgIndex];
-                          return ChatBubble(message: message);
+                          return ChatBubble(
+                            message: message,
+                            onActionConfirm: (action) => _handleActionConfirm(ref, action),
+                            onActionDismiss: (action) => _handleActionDismiss(ref, action),
+                          );
                         },
                       ),
               ),

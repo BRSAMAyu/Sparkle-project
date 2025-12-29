@@ -83,6 +83,7 @@ func main() {
 	chatHistoryService := service.NewChatHistoryService(rdb)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
+	userContextService := service.NewUserContextService(pool) // P0: Add user context service
 
 	// Connect to Agent Service
 	agentClient, err := agent.NewClient(cfg)
@@ -101,6 +102,7 @@ func main() {
 		semanticCacheService,
 		billingService,
 		wsFactory,
+		userContextService, // P0: Pass user context service
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService)

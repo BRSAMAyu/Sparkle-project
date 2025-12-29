@@ -74,7 +74,7 @@ class ChatRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., message: _Optional[str] = ..., tool_result: _Optional[_Union[ToolResult, _Mapping]] = ..., user_profile: _Optional[_Union[UserProfile, _Mapping]] = ..., extra_context: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., history: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., config: _Optional[_Union[ChatConfig, _Mapping]] = ..., request_id: _Optional[str] = ...) -> None: ...
 
 class UserProfile(_message.Message):
-    __slots__ = ("nickname", "timezone", "language", "is_pro", "preferences")
+    __slots__ = ("nickname", "timezone", "language", "is_pro", "preferences", "extra_context")
     class PreferencesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -87,12 +87,14 @@ class UserProfile(_message.Message):
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     IS_PRO_FIELD_NUMBER: _ClassVar[int]
     PREFERENCES_FIELD_NUMBER: _ClassVar[int]
+    EXTRA_CONTEXT_FIELD_NUMBER: _ClassVar[int]
     nickname: str
     timezone: str
     language: str
     is_pro: bool
     preferences: _containers.ScalarMap[str, str]
-    def __init__(self, nickname: _Optional[str] = ..., timezone: _Optional[str] = ..., language: _Optional[str] = ..., is_pro: bool = ..., preferences: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    extra_context: str
+    def __init__(self, nickname: _Optional[str] = ..., timezone: _Optional[str] = ..., language: _Optional[str] = ..., is_pro: bool = ..., preferences: _Optional[_Mapping[str, str]] = ..., extra_context: _Optional[str] = ...) -> None: ...
 
 class ToolResult(_message.Message):
     __slots__ = ("tool_call_id", "tool_name", "result_json", "is_error", "error_message")
@@ -142,7 +144,7 @@ class ChatMessage(_message.Message):
     def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ChatResponse(_message.Message):
-    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "finish_reason")
+    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "finish_reason")
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
@@ -153,6 +155,7 @@ class ChatResponse(_message.Message):
     ERROR_FIELD_NUMBER: _ClassVar[int]
     USAGE_FIELD_NUMBER: _ClassVar[int]
     CITATIONS_FIELD_NUMBER: _ClassVar[int]
+    TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     response_id: str
     created_at: int
@@ -164,8 +167,9 @@ class ChatResponse(_message.Message):
     error: Error
     usage: Usage
     citations: CitationBlock
+    tool_result: ToolResultPayload
     finish_reason: FinishReason
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ...) -> None: ...
+    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ...) -> None: ...
 
 class CitationBlock(_message.Message):
     __slots__ = ("citations",)
@@ -198,6 +202,26 @@ class ToolCall(_message.Message):
     name: str
     arguments: str
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
+
+class ToolResultPayload(_message.Message):
+    __slots__ = ("tool_name", "success", "data", "error_message", "suggestion", "widget_type", "widget_data", "tool_call_id")
+    TOOL_NAME_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    SUGGESTION_FIELD_NUMBER: _ClassVar[int]
+    WIDGET_TYPE_FIELD_NUMBER: _ClassVar[int]
+    WIDGET_DATA_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    tool_name: str
+    success: bool
+    data: _struct_pb2.Struct
+    error_message: str
+    suggestion: str
+    widget_type: str
+    widget_data: _struct_pb2.Struct
+    tool_call_id: str
+    def __init__(self, tool_name: _Optional[str] = ..., success: bool = ..., data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., error_message: _Optional[str] = ..., suggestion: _Optional[str] = ..., widget_type: _Optional[str] = ..., widget_data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., tool_call_id: _Optional[str] = ...) -> None: ...
 
 class AgentStatus(_message.Message):
     __slots__ = ("state", "details", "current_agent_name", "active_agent")

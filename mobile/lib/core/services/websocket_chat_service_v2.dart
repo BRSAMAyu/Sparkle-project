@@ -100,6 +100,42 @@ class WebSocketChatServiceV2 {
     return _messageStreamController!.stream;
   }
 
+  /// 发送行动反馈（确认/拒绝）
+  void sendActionFeedback({
+    required String action,
+    required String toolResultId,
+    required String widgetType,
+  }) {
+    final feedback = {
+      'type': 'action_feedback',
+      'action': action, // 'confirm' or 'dismiss'
+      'tool_result_id': toolResultId,
+      'widget_type': widgetType,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    _sendMessage(feedback);
+    debugPrint('📤 Action feedback sent: $action for $widgetType');
+  }
+
+  /// 发送专注完成事件
+  void sendFocusCompleted({
+    required String sessionId,
+    required int actualDuration,
+    List<String> completedTaskIds = const [],
+  }) {
+    final event = {
+      'type': 'focus_completed',
+      'session_id': sessionId,
+      'actual_duration': actualDuration,
+      'tasks_completed': completedTaskIds,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    _sendMessage(event);
+    debugPrint('📤 Focus completed event sent');
+  }
+
   /// 判断是否需要建立连接
   bool _shouldConnect(String userId) {
     // 用户切换

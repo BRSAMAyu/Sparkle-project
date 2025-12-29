@@ -22,7 +22,7 @@ class ThemeManager extends ChangeNotifier {
   /// 当前主题数据
   SparkleThemeData get current {
     if (!_initialized) {
-      return themeForBrightness(Brightness.light);
+      return SparkleThemeData.light();
     }
     return _resolveCurrentTheme();
   }
@@ -78,30 +78,28 @@ class ThemeManager extends ChangeNotifier {
   }
 
   /// 解析当前主题
-  SparkleThemeData _resolveCurrentTheme() => themeForBrightness(_resolveBrightness());
+  SparkleThemeData _resolveCurrentTheme() {
+    Brightness brightness;
 
-  Brightness _resolveBrightness() {
     switch (_mode) {
       case AppThemeMode.light:
-        return Brightness.light;
+        brightness = Brightness.light;
       case AppThemeMode.dark:
-        return Brightness.dark;
+        brightness = Brightness.dark;
       case AppThemeMode.system:
-        return WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
     }
-  }
 
-  /// 根据亮度生成主题（忽略当前模式，便于构建 light/dark theme）
-  SparkleThemeData themeForBrightness(Brightness brightness) {
     final baseTheme = brightness == Brightness.light
         ? SparkleThemeData.light(highContrast: _highContrast)
         : SparkleThemeData.dark(highContrast: _highContrast);
+
     return _applyBrandPreset(baseTheme);
   }
 
   /// 应用品牌预设
   SparkleThemeData _applyBrandPreset(SparkleThemeData base) {
-    SparkleColors colors = base.colors;
+    var colors = base.colors;
     switch (_brandPreset) {
       case BrandPreset.sparkle:
         return base;

@@ -71,9 +71,10 @@ type ChatOrchestrator struct {
 	semantic    *service.SemanticCacheService
 	billing     *service.CostCalculator
 	wsFactory   *WebSocketFactory
+	userContext *service.UserContextService
 }
 
-func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient: ac,
 		queries:     q,
@@ -82,6 +83,7 @@ func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistor
 		semantic:    sc,
 		billing:     bc,
 		wsFactory:   wsFactory,
+		userContext: uc,
 	}
 }
 
@@ -127,6 +129,37 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			break
 		}
 
+		// First, check message type
+		msgMap := make(map[string]interface{})
+		if err := json.Unmarshal(msg, &msgMap); err != nil {
+			log.Printf("Failed to parse message: %v", err)
+			conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+			continue
+		}
+
+		msgType, ok := msgMap["type"].(string)
+		if !ok {
+			msgType = "message" // Default to chat message
+		}
+
+		// Route based on message type
+		switch msgType {
+		case "action_feedback":
+			h.handleActionFeedback(msgMap, userID)
+			continue
+
+		case "focus_completed":
+			h.handleFocusCompleted(msgMap, userID)
+			continue
+
+		case "message", "":
+			// Continue with normal chat message handling
+		default:
+			log.Printf("Unknown message type: %s", msgType)
+			conn.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
+			continue
+		}
+
 		// P1: Get input from pool instead of allocating new struct
 		input := chatInputPool.Get().(*chatInput)
 
@@ -162,6 +195,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 		startTime := time.Now()
 
+		// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
+		userContextJSON := ""
+		if h.userContext != nil {
+			contextData, err := h.userContext.GetUserContextData(ctx, uuid.MustParse(userID))
+			if err != nil {
+				log.Printf("Failed to fetch user context: %v", err)
+				// Non-fatal: continue with empty context
+			} else {
+				userContextJSON = contextData
+			}
+		}
+
 		// Build ChatRequest
 		req := &agentv1.ChatRequest{
 			RequestId: fmt.Sprintf("req_%s", uuid.New().String()),
@@ -171,9 +216,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				Message: input.Message,
 			},
 			UserProfile: &agentv1.UserProfile{
-				Nickname: input.Nickname,
-				Timezone: "Asia/Shanghai",
-				Language: "zh-CN",
+				Nickname:     input.Nickname,
+				Timezone:     "Asia/Shanghai",
+				Language:     "zh-CN",
+				ExtraContext: userContextJSON, // P0: Inject user context here
 			},
 		}
 
@@ -377,4 +423,95 @@ func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) 
 	if err := h.chatHistory.SaveMessage(ctx, sessionID, data); err != nil {
 		log.Printf("Failed to save chat message: %v", err)
 	}
+}
+
+// handleActionFeedback processes action confirmation/dismissal feedback from user
+func (h *ChatOrchestrator) handleActionFeedback(msgMap map[string]interface{}, userID string) {
+	action, ok := msgMap["action"].(string)
+	if !ok {
+		log.Printf("Invalid action feedback: missing action field")
+		return
+	}
+
+	toolResultID, ok := msgMap["tool_result_id"].(string)
+	if !ok {
+		log.Printf("Invalid action feedback: missing tool_result_id field")
+		return
+	}
+
+	widgetType, ok := msgMap["widget_type"].(string)
+	if !ok {
+		log.Printf("Invalid action feedback: missing widget_type field")
+		return
+	}
+
+	log.Printf("Action feedback from user %s: action=%s, widget_type=%s, tool_result_id=%s",
+		userID, action, widgetType, toolResultID)
+
+	// Route feedback to appropriate service handler
+	switch widgetType {
+	case "task_list":
+		if action == "confirm" {
+			// Handle task list confirmation (tasks were created)
+			log.Printf("Task list creation confirmed for user %s", userID)
+			// TODO: Update task status or trigger post-creation logic
+		} else if action == "dismiss" {
+			// Handle task list dismissal (user rejected generated tasks)
+			log.Printf("Task list creation dismissed by user %s", userID)
+			// TODO: Log dismissal or cleanup tasks
+		}
+
+	case "plan_card":
+		if action == "confirm" {
+			// Handle plan confirmation
+			log.Printf("Plan creation confirmed for user %s", userID)
+			// TODO: Update plan status
+		} else if action == "dismiss" {
+			log.Printf("Plan creation dismissed by user %s", userID)
+			// TODO: Archive plan or log dismissal
+		}
+
+	case "focus_card":
+		if action == "confirm" {
+			// Handle focus session start confirmation
+			log.Printf("Focus session start confirmed for user %s", userID)
+			// TODO: Start focus session in database
+		} else if action == "dismiss" {
+			log.Printf("Focus session dismissed by user %s", userID)
+		}
+
+	default:
+		log.Printf("Unknown widget type in action feedback: %s", widgetType)
+	}
+}
+
+// handleFocusCompleted processes focus session completion events
+func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, userID string) {
+	sessionID, ok := msgMap["session_id"].(string)
+	if !ok {
+		log.Printf("Invalid focus_completed event: missing session_id field")
+		return
+	}
+
+	actualDuration, ok := msgMap["actual_duration"].(float64)
+	if !ok {
+		log.Printf("Invalid focus_completed event: missing actual_duration field")
+		return
+	}
+
+	var completedTaskIDs []string
+	if tasks, ok := msgMap["tasks_completed"].([]interface{}); ok {
+		for _, t := range tasks {
+			if taskID, ok := t.(string); ok {
+				completedTaskIDs = append(completedTaskIDs, taskID)
+			}
+		}
+	}
+
+	log.Printf("Focus session completed: user=%s, session_id=%s, duration=%d minutes, completed_tasks=%d",
+		userID, sessionID, int(actualDuration), len(completedTaskIDs))
+
+	// TODO: Update focus session status to completed
+	// TODO: Update associated task statuses to completed
+	// TODO: Record metrics for focus session
 }

@@ -63,12 +63,16 @@ message UserProfile {
     string nickname = 1;
     string timezone = 2;
     string language = 3;
-    
+
     // Pro status might determine access to advanced models or tools.
     bool is_pro = 4;
-    
+
     // Dynamic preferences (e.g., "concise_mode", "role_play_enabled")
     map<string, string> preferences = 5;
+
+    // P0: Extra context (JSON string) containing user state for context propagation
+    // Includes pending_tasks, active_plans, focus_stats, recent_progress (set by Go Gateway)
+    string extra_context = 6;
 }
 
 // ToolResult represents the output of a tool execution performed by the Client/Gateway.

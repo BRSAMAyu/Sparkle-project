@@ -216,6 +216,35 @@ class ChatOrchestrator:
         if self.state_manager:
             await self.state_manager.cache_response(session_id, request_id, response_data)
 
+    def _merge_user_contexts(self, local_context: Dict[str, Any], grpc_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        P0: Merge user context from Go Gateway (gRPC) with local context (Python).
+        Prioritizes gRPC context as it's more recent (fetched at request time).
+
+        Returns:
+            Merged context dict with both sources
+        """
+        if not grpc_context:
+            return local_context
+
+        merged = {}
+
+        # Start with local context as base
+        merged.update(local_context)
+
+        # Override with gRPC context (prioritized as more recent)
+        if "pending_tasks" in grpc_context:
+            merged["next_actions"] = grpc_context["pending_tasks"]  # Normalize field name
+        if "active_plans" in grpc_context:
+            merged["active_plans"] = grpc_context["active_plans"]
+        if "focus_stats" in grpc_context:
+            merged["focus_stats"] = grpc_context["focus_stats"]
+        if "recent_progress" in grpc_context:
+            merged["recent_progress"] = grpc_context["recent_progress"]
+
+        logger.debug(f"Merged context keys: {list(merged.keys())}")
+        return merged
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -440,11 +469,28 @@ class ChatOrchestrator:
                 tool_result = request.tool_result
                 user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
 
-            # Build user + conversation context
+            # P0: Build user + conversation context
+            # First, try to merge extra_context from gRPC (from Go Gateway)
+            grpc_context = {}
+            if request.user_profile and request.user_profile.extra_context:
+                try:
+                    grpc_context = json.loads(request.user_profile.extra_context)
+                    logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse extra_context JSON: {e}")
+
             user_context_payload = None
             conversation_context = None
             if active_db and user_id:
-                user_context_payload = await self._build_user_context(user_id, active_db)
+                local_context = await self._build_user_context(user_id, active_db)
+                # P0: Merge contexts - prioritize gRPC context (more recent) over local context
+                user_context_payload = self._merge_user_contexts(local_context, grpc_context)
+                logger.info(f"Merged user context: {user_context_payload is not None}")
+            elif grpc_context:
+                # If no DB session but have gRPC context, use it
+                user_context_payload = grpc_context
+                logger.info("Using gRPC context without local DB context")
+
             if self.context_pruner:
                 conversation_context = await self._build_conversation_context(session_id, user_id)
 

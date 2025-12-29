@@ -17,18 +17,22 @@ import 'package:url_launcher/url_launcher.dart';
 class ChatBubble extends StatefulWidget {
 
   const ChatBubble({
-    required this.message, 
+    required this.message,
     super.key,
     this.showAvatar = true,
     this.currentUserId,
     this.onQuote,
     this.onRevoke,
+    this.onActionConfirm,
+    this.onActionDismiss,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
   final String? currentUserId;
   final Function(dynamic message)? onQuote;
   final Function(dynamic message)? onRevoke;
+  final Function(WidgetPayload action)? onActionConfirm;
+  final Function(WidgetPayload action)? onActionDismiss;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -278,10 +282,18 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).widgets != null)
-                                  ... (widget.message as ChatMessageModel).widgets!.map((w) => 
+                                  ... (widget.message as ChatMessageModel).widgets!.map((w) =>
                                     Padding(
                                       padding: const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
-                                      child: ActionCard(action: w),
+                                      child: ActionCard(
+                                        action: w,
+                                        onConfirm: widget.onActionConfirm != null
+                                            ? () => widget.onActionConfirm!(w)
+                                            : null,
+                                        onDismiss: widget.onActionDismiss != null
+                                            ? () => widget.onActionDismiss!(w)
+                                            : null,
+                                      ),
                                     ),
                                   ),
                               ],

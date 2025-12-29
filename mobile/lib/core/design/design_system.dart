@@ -50,12 +50,12 @@ export 'validation/design_validator.dart';
 /// MaterialApp 主题配置
 class AppThemes {
   static ThemeData get lightTheme {
-    final theme = ThemeManager().themeForBrightness(Brightness.light);
+    final theme = ThemeManager().current;
     return _buildThemeData(theme, Brightness.light);
   }
 
   static ThemeData get darkTheme {
-    final theme = ThemeManager().themeForBrightness(Brightness.dark);
+    final theme = ThemeManager().current;
     return _buildThemeData(theme, Brightness.dark);
   }
 
@@ -191,7 +191,7 @@ extension SparkleContext on BuildContext {
 /// Legacy color aliases used by older widgets.
 @immutable
 class SparkleColorAliases {
-  SparkleColorAliases(this._theme);
+  const SparkleColorAliases(this._theme);
   final SparkleThemeData _theme;
 
   Color get surfaceCard => _theme.colors.surfaceSecondary;
