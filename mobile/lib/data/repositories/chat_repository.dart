@@ -87,6 +87,7 @@ class ChatRepository {
     String? conversationId, {
     String? userId,
     String? nickname,
+    Map<String, dynamic>? extraContext,
   }) {
     if (DemoDataService.isDemoMode) {
       // Mock stream generator
@@ -99,6 +100,7 @@ class ChatRepository {
       userId: userId ?? 'anonymous',
       sessionId: conversationId,
       nickname: nickname,
+      extraContext: extraContext,
     );
   }
 
@@ -219,4 +221,3 @@ class ChatRepository {
     }
   }
 }
-

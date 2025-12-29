@@ -8,6 +8,7 @@ import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/presentation/widgets/focus/exit_confirmation_dialog.dart';
 import 'package:sparkle/presentation/widgets/focus/flip_clock.dart';
+import 'package:sparkle/presentation/widgets/focus/focus_agent_sheet.dart';
 import 'package:sparkle/presentation/widgets/focus/star_background.dart';
 
 /// 正念模式屏幕
@@ -116,6 +117,18 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         backgroundColor: DS.warning,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showAgentSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: FocusAgentSheet(task: widget.task),
       ),
     );
   }
@@ -274,19 +287,31 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             ],
           ),
 
-          // 暂停按钮
-          IconButton(
-            icon: Icon(
-              state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-              color: DS.brandPrimary.withValues(alpha: 0.7),
-            ),
-            onPressed: () {
-              if (state.isPaused) {
-                ref.read(mindfulnessProvider.notifier).resume();
-              } else {
-                ref.read(mindfulnessProvider.notifier).pause();
-              }
-            },
+          // AI 助手 + 暂停按钮
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.auto_awesome,
+                  color: DS.brandPrimary.withValues(alpha: 0.7),
+                ),
+                onPressed: _showAgentSheet,
+                tooltip: 'AI专注教练',
+              ),
+              IconButton(
+                icon: Icon(
+                  state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  color: DS.brandPrimary.withValues(alpha: 0.7),
+                ),
+                onPressed: () {
+                  if (state.isPaused) {
+                    ref.read(mindfulnessProvider.notifier).resume();
+                  } else {
+                    ref.read(mindfulnessProvider.notifier).pause();
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),

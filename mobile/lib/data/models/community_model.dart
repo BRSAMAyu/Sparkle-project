@@ -29,6 +29,18 @@ enum MessageType {
   @JsonValue('task_share')
   @HiveField(1)
   taskShare,
+  @JsonValue('plan_share')
+  @HiveField(6)
+  planShare,
+  @JsonValue('fragment_share')
+  @HiveField(7)
+  fragmentShare,
+  @JsonValue('capsule_share')
+  @HiveField(8)
+  capsuleShare,
+  @JsonValue('prism_share')
+  @HiveField(9)
+  prismShare,
   @JsonValue('progress')
   @HiveField(2)
   progress,
@@ -341,7 +353,12 @@ class MessageInfo {
     this.content,
     this.contentData,
     this.replyToId,
+    this.threadRootId,
+    this.mentionUserIds,
+    this.reactions,
     this.isRevoked = false,
+    this.revokedAt,
+    this.editedAt,
     this.readBy,
     this.quotedMessage,
     this.readByUsers,
@@ -364,6 +381,15 @@ class MessageInfo {
   @JsonKey(name: 'reply_to_id')
   @HiveField(5)
   final String? replyToId;
+  @JsonKey(name: 'thread_root_id')
+  @HiveField(11)
+  final String? threadRootId;
+  @JsonKey(name: 'mention_user_ids')
+  @HiveField(12)
+  final List<String>? mentionUserIds;
+  @JsonKey(name: 'reactions')
+  @HiveField(13)
+  final Map<String, dynamic>? reactions;
   @JsonKey(name: 'created_at')
   @HiveField(6)
   final DateTime createdAt;
@@ -373,6 +399,12 @@ class MessageInfo {
   @JsonKey(name: 'is_revoked')
   @HiveField(8)
   final bool isRevoked;
+  @JsonKey(name: 'revoked_at')
+  @HiveField(14)
+  final DateTime? revokedAt;
+  @JsonKey(name: 'edited_at')
+  @HiveField(15)
+  final DateTime? editedAt;
 
   // Group chat read-by tracking
   @JsonKey(name: 'read_by')
@@ -392,6 +424,8 @@ class MessageInfo {
   bool get isSystemMessage => sender == null;
 
   int get readCount => readBy?.length ?? 0;
+
+  bool get isEdited => editedAt != null;
 }
 
 @JsonSerializable()
@@ -409,10 +443,15 @@ class PrivateMessageInfo {
     this.content,
     this.contentData,
     this.replyToId,
+    this.threadRootId,
+    this.mentionUserIds,
+    this.reactions,
     this.readAt,
     this.isSending = false,
     this.hasError = false,
     this.isRevoked = false,
+    this.revokedAt,
+    this.editedAt,
     this.quotedMessage,
   });
 
@@ -435,6 +474,15 @@ class PrivateMessageInfo {
   @JsonKey(name: 'reply_to_id')
   @HiveField(6)
   final String? replyToId;
+  @JsonKey(name: 'thread_root_id')
+  @HiveField(12)
+  final String? threadRootId;
+  @JsonKey(name: 'mention_user_ids')
+  @HiveField(13)
+  final List<String>? mentionUserIds;
+  @JsonKey(name: 'reactions')
+  @HiveField(14)
+  final Map<String, dynamic>? reactions;
   @JsonKey(name: 'is_read')
   @HiveField(7)
   final bool isRead;
@@ -450,6 +498,12 @@ class PrivateMessageInfo {
   @JsonKey(name: 'is_revoked')
   @HiveField(11)
   final bool isRevoked;
+  @JsonKey(name: 'revoked_at')
+  @HiveField(15)
+  final DateTime? revokedAt;
+  @JsonKey(name: 'edited_at')
+  @HiveField(16)
+  final DateTime? editedAt;
   
   // Client-side transient status
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -470,6 +524,9 @@ class PrivateMessageInfo {
     String? content,
     Map<String, dynamic>? contentData,
     String? replyToId,
+    String? threadRootId,
+    List<String>? mentionUserIds,
+    Map<String, dynamic>? reactions,
     bool? isRead,
     DateTime? readAt,
     DateTime? createdAt,
@@ -477,6 +534,8 @@ class PrivateMessageInfo {
     bool? isSending,
     bool? hasError,
     bool? isRevoked,
+    DateTime? revokedAt,
+    DateTime? editedAt,
     PrivateMessageInfo? quotedMessage,
   }) => PrivateMessageInfo(
       id: id ?? this.id,
@@ -486,6 +545,9 @@ class PrivateMessageInfo {
       content: content ?? this.content,
       contentData: contentData ?? this.contentData,
       replyToId: replyToId ?? this.replyToId,
+      threadRootId: threadRootId ?? this.threadRootId,
+      mentionUserIds: mentionUserIds ?? this.mentionUserIds,
+      reactions: reactions ?? this.reactions,
       isRead: isRead ?? this.isRead,
       readAt: readAt ?? this.readAt,
       createdAt: createdAt ?? this.createdAt,
@@ -493,8 +555,12 @@ class PrivateMessageInfo {
       isSending: isSending ?? this.isSending,
       hasError: hasError ?? this.hasError,
       isRevoked: isRevoked ?? this.isRevoked,
+      revokedAt: revokedAt ?? this.revokedAt,
+      editedAt: editedAt ?? this.editedAt,
       quotedMessage: quotedMessage ?? this.quotedMessage,
     );
+
+  bool get isEdited => editedAt != null;
 }
 
 @JsonSerializable()
@@ -506,6 +572,8 @@ class PrivateMessageSend {
     this.content,
     this.contentData,
     this.replyToId,
+    this.threadRootId,
+    this.mentionUserIds,
     this.nonce,
   });
 
@@ -520,6 +588,10 @@ class PrivateMessageSend {
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
   final String? replyToId;
+  @JsonKey(name: 'thread_root_id')
+  final String? threadRootId;
+  @JsonKey(name: 'mention_user_ids')
+  final List<String>? mentionUserIds;
   final String? nonce;
   Map<String, dynamic> toJson() => _$PrivateMessageSendToJson(this);
 }
@@ -532,6 +604,8 @@ class MessageSend {
     this.content,
     this.contentData,
     this.replyToId,
+    this.threadRootId,
+    this.mentionUserIds,
     this.nonce,
   });
 
@@ -544,6 +618,10 @@ class MessageSend {
   final Map<String, dynamic>? contentData;
   @JsonKey(name: 'reply_to_id')
   final String? replyToId;
+  @JsonKey(name: 'thread_root_id')
+  final String? threadRootId;
+  @JsonKey(name: 'mention_user_ids')
+  final List<String>? mentionUserIds;
   final String? nonce;
   Map<String, dynamic> toJson() => _$MessageSendToJson(this);
 }

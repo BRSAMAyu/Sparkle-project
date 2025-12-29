@@ -77,7 +77,12 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       content: fields[3] as String?,
       contentData: (fields[4] as Map?)?.cast<String, dynamic>(),
       replyToId: fields[5] as String?,
+      threadRootId: fields[11] as String?,
+      mentionUserIds: (fields[12] as List?)?.cast<String>(),
+      reactions: (fields[13] as Map?)?.cast<String, dynamic>(),
       isRevoked: fields[8] as bool,
+      revokedAt: fields[14] as DateTime?,
+      editedAt: fields[15] as DateTime?,
       readBy: (fields[9] as List?)?.cast<String>(),
       quotedMessage: fields[10] as MessageInfo?,
     );
@@ -86,7 +91,7 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
   @override
   void write(BinaryWriter writer, MessageInfo obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -108,7 +113,17 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       ..writeByte(9)
       ..write(obj.readBy)
       ..writeByte(10)
-      ..write(obj.quotedMessage);
+      ..write(obj.quotedMessage)
+      ..writeByte(11)
+      ..write(obj.threadRootId)
+      ..writeByte(12)
+      ..write(obj.mentionUserIds)
+      ..writeByte(13)
+      ..write(obj.reactions)
+      ..writeByte(14)
+      ..write(obj.revokedAt)
+      ..writeByte(15)
+      ..write(obj.editedAt);
   }
 
   @override
@@ -143,15 +158,20 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       content: fields[4] as String?,
       contentData: (fields[5] as Map?)?.cast<String, dynamic>(),
       replyToId: fields[6] as String?,
+      threadRootId: fields[12] as String?,
+      mentionUserIds: (fields[13] as List?)?.cast<String>(),
+      reactions: (fields[14] as Map?)?.cast<String, dynamic>(),
       readAt: fields[8] as DateTime?,
       isRevoked: fields[11] as bool,
+      revokedAt: fields[15] as DateTime?,
+      editedAt: fields[16] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PrivateMessageInfo obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -175,7 +195,17 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       ..writeByte(10)
       ..write(obj.updatedAt)
       ..writeByte(11)
-      ..write(obj.isRevoked);
+      ..write(obj.isRevoked)
+      ..writeByte(12)
+      ..write(obj.threadRootId)
+      ..writeByte(13)
+      ..write(obj.mentionUserIds)
+      ..writeByte(14)
+      ..write(obj.reactions)
+      ..writeByte(15)
+      ..write(obj.revokedAt)
+      ..writeByte(16)
+      ..write(obj.editedAt);
   }
 
   @override
@@ -200,6 +230,14 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         return MessageType.text;
       case 1:
         return MessageType.taskShare;
+      case 6:
+        return MessageType.planShare;
+      case 7:
+        return MessageType.fragmentShare;
+      case 8:
+        return MessageType.capsuleShare;
+      case 9:
+        return MessageType.prismShare;
       case 2:
         return MessageType.progress;
       case 3:
@@ -221,6 +259,18 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         break;
       case MessageType.taskShare:
         writer.writeByte(1);
+        break;
+      case MessageType.planShare:
+        writer.writeByte(6);
+        break;
+      case MessageType.fragmentShare:
+        writer.writeByte(7);
+        break;
+      case MessageType.capsuleShare:
+        writer.writeByte(8);
+        break;
+      case MessageType.prismShare:
+        writer.writeByte(9);
         break;
       case MessageType.progress:
         writer.writeByte(2);
@@ -521,7 +571,18 @@ MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      threadRootId: json['thread_root_id'] as String?,
+      mentionUserIds: (json['mention_user_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      reactions: json['reactions'] as Map<String, dynamic>?,
       isRevoked: json['is_revoked'] as bool? ?? false,
+      revokedAt: json['revoked_at'] == null
+          ? null
+          : DateTime.parse(json['revoked_at'] as String),
+      editedAt: json['edited_at'] == null
+          ? null
+          : DateTime.parse(json['edited_at'] as String),
       readBy:
           (json['read_by'] as List<dynamic>?)?.map((e) => e as String).toList(),
       quotedMessage: json['quoted_message'] == null
@@ -538,9 +599,14 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'thread_root_id': instance.threadRootId,
+      'mention_user_ids': instance.mentionUserIds,
+      'reactions': instance.reactions,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
       'is_revoked': instance.isRevoked,
+      'revoked_at': instance.revokedAt?.toIso8601String(),
+      'edited_at': instance.editedAt?.toIso8601String(),
       'read_by': instance.readBy,
       'quoted_message': instance.quotedMessage,
     };
@@ -548,6 +614,10 @@ Map<String, dynamic> _$MessageInfoToJson(MessageInfo instance) =>
 const _$MessageTypeEnumMap = {
   MessageType.text: 'text',
   MessageType.taskShare: 'task_share',
+  MessageType.planShare: 'plan_share',
+  MessageType.fragmentShare: 'fragment_share',
+  MessageType.capsuleShare: 'capsule_share',
+  MessageType.prismShare: 'prism_share',
   MessageType.progress: 'progress',
   MessageType.achievement: 'achievement',
   MessageType.checkin: 'checkin',
@@ -566,10 +636,21 @@ PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      threadRootId: json['thread_root_id'] as String?,
+      mentionUserIds: (json['mention_user_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      reactions: json['reactions'] as Map<String, dynamic>?,
       readAt: json['read_at'] == null
           ? null
           : DateTime.parse(json['read_at'] as String),
       isRevoked: json['is_revoked'] as bool? ?? false,
+      revokedAt: json['revoked_at'] == null
+          ? null
+          : DateTime.parse(json['revoked_at'] as String),
+      editedAt: json['edited_at'] == null
+          ? null
+          : DateTime.parse(json['edited_at'] as String),
       quotedMessage: json['quoted_message'] == null
           ? null
           : PrivateMessageInfo.fromJson(
@@ -585,11 +666,16 @@ Map<String, dynamic> _$PrivateMessageInfoToJson(PrivateMessageInfo instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'thread_root_id': instance.threadRootId,
+      'mention_user_ids': instance.mentionUserIds,
+      'reactions': instance.reactions,
       'is_read': instance.isRead,
       'read_at': instance.readAt?.toIso8601String(),
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
       'is_revoked': instance.isRevoked,
+      'revoked_at': instance.revokedAt?.toIso8601String(),
+      'edited_at': instance.editedAt?.toIso8601String(),
       'quoted_message': instance.quotedMessage,
     };
 
@@ -602,6 +688,10 @@ PrivateMessageSend _$PrivateMessageSendFromJson(Map<String, dynamic> json) =>
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      threadRootId: json['thread_root_id'] as String?,
+      mentionUserIds: (json['mention_user_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       nonce: json['nonce'] as String?,
     );
 
@@ -612,6 +702,8 @@ Map<String, dynamic> _$PrivateMessageSendToJson(PrivateMessageSend instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'thread_root_id': instance.threadRootId,
+      'mention_user_ids': instance.mentionUserIds,
       'nonce': instance.nonce,
     };
 
@@ -622,6 +714,10 @@ MessageSend _$MessageSendFromJson(Map<String, dynamic> json) => MessageSend(
       content: json['content'] as String?,
       contentData: json['content_data'] as Map<String, dynamic>?,
       replyToId: json['reply_to_id'] as String?,
+      threadRootId: json['thread_root_id'] as String?,
+      mentionUserIds: (json['mention_user_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       nonce: json['nonce'] as String?,
     );
 
@@ -631,6 +727,8 @@ Map<String, dynamic> _$MessageSendToJson(MessageSend instance) =>
       'content': instance.content,
       'content_data': instance.contentData,
       'reply_to_id': instance.replyToId,
+      'thread_root_id': instance.threadRootId,
+      'mention_user_ids': instance.mentionUserIds,
       'nonce': instance.nonce,
     };
 

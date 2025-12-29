@@ -22,21 +22,21 @@ class FocusActionCard extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: EdgeInsets.all(DS.lg),
+        padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(DS.spacing8),
+                  padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
                     gradient: DS.secondaryGradient,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 18),
                 ),
-                SizedBox(width: DS.md),
+                const SizedBox(width: DS.md),
                 Expanded(
                   child: Text(
                     title,
@@ -49,7 +49,7 @@ class FocusActionCard extends StatelessWidget {
               ],
             ),
             if (reason != null && reason.isNotEmpty) ...[
-              SizedBox(height: DS.sm),
+              const SizedBox(height: DS.sm),
               Text(
                 reason,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -57,7 +57,7 @@ class FocusActionCard extends StatelessWidget {
                 ),
               ),
             ],
-            SizedBox(height: DS.md),
+            const SizedBox(height: DS.md),
             CustomButton.primary(
               text: '开始专注',
               icon: Icons.play_arrow_rounded,
@@ -75,7 +75,7 @@ class FocusActionCard extends StatelessWidget {
   }
 
   Widget _buildDurationChip(BuildContext context, int minutes) => Container(
-      padding: EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing4),
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing4),
       decoration: BoxDecoration(
         color: DS.secondaryBase.withValues(alpha: 0.1),
         borderRadius: DS.borderRadius12,

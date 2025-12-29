@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
 /// 支持边缘吸附、自动隐藏、点击展开菜单

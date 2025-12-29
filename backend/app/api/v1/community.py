@@ -2,6 +2,7 @@
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,6 +16,10 @@ from app.core.websocket import manager
 from app.core.rate_limiting import limiter
 from app.models.user import User, UserStatus
 from app.models.community import GroupType, GroupMember
+from app.models.plan import Plan
+from app.models.task import Task
+from app.models.cognitive import CognitiveFragment, BehaviorPattern
+from app.models.curiosity_capsule import CuriosityCapsule
 from app.schemas.community import (
     # 好友
     FriendRequest, FriendResponse, FriendshipInfo, FriendRecommendation,
@@ -22,7 +27,7 @@ from app.schemas.community import (
     GroupCreate, GroupUpdate, GroupInfo, GroupListItem, GroupMemberInfo,
     MemberRoleUpdate, UserBrief,
     # 消息
-    MessageSend, MessageInfo,
+    MessageSend, MessageInfo, MessageEdit, MessageReactionUpdate,
     PrivateMessageSend, PrivateMessageInfo,
     # 任务
     GroupTaskCreate, GroupTaskInfo,
@@ -37,7 +42,7 @@ from app.schemas.community import (
     # 共享资源
     SharedResourceCreate, SharedResourceInfo,
     # 枚举
-    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum
+    GroupTypeEnum, GroupRoleEnum, SharedResourceTypeEnum, MessageTypeEnum, ReactionActionEnum
 )
 from app.services.community_service import (
     FriendshipService, GroupService, GroupMessageService,
@@ -83,6 +88,12 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             content=msg.reply_to.content,
             content_data=msg.reply_to.content_data,
             reply_to_id=msg.reply_to.reply_to_id,
+            thread_root_id=msg.reply_to.thread_root_id,
+            mention_user_ids=msg.reply_to.mention_user_ids,
+            reactions=msg.reply_to.reactions,
+            is_revoked=msg.reply_to.is_revoked,
+            revoked_at=msg.reply_to.revoked_at,
+            edited_at=msg.reply_to.edited_at,
             quoted_message=None # Stop recursion
         )
 
@@ -95,6 +106,12 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         content=msg.content,
         content_data=msg.content_data,
         reply_to_id=msg.reply_to_id,
+        thread_root_id=msg.thread_root_id,
+        mention_user_ids=msg.mention_user_ids,
+        reactions=msg.reactions,
+        is_revoked=msg.is_revoked,
+        revoked_at=msg.revoked_at,
+        edited_at=msg.edited_at,
         quoted_message=quoted_message
     )
 
@@ -118,6 +135,12 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
             content=msg.reply_to.content,
             content_data=msg.reply_to.content_data,
             reply_to_id=msg.reply_to.reply_to_id,
+            thread_root_id=msg.reply_to.thread_root_id,
+            mention_user_ids=msg.reply_to.mention_user_ids,
+            reactions=msg.reply_to.reactions,
+            is_revoked=msg.reply_to.is_revoked,
+            revoked_at=msg.reply_to.revoked_at,
+            edited_at=msg.reply_to.edited_at,
             is_read=msg.reply_to.is_read,
             read_at=msg.reply_to.read_at,
             quoted_message=None
@@ -133,10 +156,162 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
         content=msg.content,
         content_data=msg.content_data,
         reply_to_id=msg.reply_to_id,
+        thread_root_id=msg.thread_root_id,
+        mention_user_ids=msg.mention_user_ids,
+        reactions=msg.reactions,
+        is_revoked=msg.is_revoked,
+        revoked_at=msg.revoked_at,
+        edited_at=msg.edited_at,
         is_read=msg.is_read,
         read_at=msg.read_at,
         quoted_message=quoted_message
     )
+
+def _is_self_only_visibility(content_data: Optional[dict], user_id: UUID) -> bool:
+    if not content_data:
+        return False
+    if content_data.get("visibility") != "self":
+        return False
+    visible_to = content_data.get("visible_to")
+    if visible_to is None:
+        return False
+    if isinstance(visible_to, list):
+        return str(user_id) in [str(item) for item in visible_to]
+    return str(visible_to) == str(user_id)
+
+def _truncate_text(text: Optional[str], limit: int = 160) -> Optional[str]:
+    if not text:
+        return None
+    cleaned = text.strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return f"{cleaned[: max(0, limit - 3)].rstrip()}..."
+
+def _compact_dict(data: dict) -> dict:
+    return {k: v for k, v in data.items() if v is not None}
+
+def _build_share_meta(resource_type: SharedResourceType, resource: object) -> dict:
+    if resource_type == SharedResourceType.PLAN:
+        plan = resource
+        return _compact_dict({
+            "plan_type": plan.type.value if plan.type else None,
+            "subject": plan.subject,
+            "progress": plan.progress,
+            "target_date": plan.target_date.isoformat() if plan.target_date else None,
+            "total_estimated_hours": plan.total_estimated_hours,
+        })
+    if resource_type == SharedResourceType.TASK:
+        task = resource
+        return _compact_dict({
+            "task_type": task.type.value if task.type else None,
+            "status": task.status.value if task.status else None,
+            "estimated_minutes": task.estimated_minutes,
+            "difficulty": task.difficulty,
+            "tags": task.tags or [],
+            "due_date": task.due_date.isoformat() if task.due_date else None,
+        })
+    if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+        capsule = resource
+        return _compact_dict({
+            "related_subject": capsule.related_subject,
+            "related_task_id": str(capsule.related_task_id) if capsule.related_task_id else None,
+        })
+    if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+        pattern = resource
+        return _compact_dict({
+            "pattern_type": pattern.pattern_type,
+            "confidence_score": pattern.confidence_score,
+            "frequency": pattern.frequency,
+            "is_archived": pattern.is_archived,
+        })
+    fragment = resource
+    return _compact_dict({
+        "source_type": fragment.source_type,
+        "severity": fragment.severity,
+        "tags": fragment.tags,
+        "error_tags": fragment.error_tags,
+        "context_tags": fragment.context_tags,
+    })
+
+def _build_share_brief(resource_type: SharedResourceType, resource: object) -> dict:
+    if resource_type == SharedResourceType.PLAN:
+        plan = resource
+        title = plan.name
+        summary = plan.description or plan.subject
+    elif resource_type == SharedResourceType.TASK:
+        task = resource
+        title = task.title
+        summary = task.user_note or task.guide_content
+    elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+        capsule = resource
+        title = capsule.title
+        summary = capsule.content
+    elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+        pattern = resource
+        title = pattern.pattern_name
+        summary = pattern.description or pattern.solution_text
+    else:
+        fragment = resource
+        title = _truncate_text(fragment.content, 48) or "Cognitive Fragment"
+        summary = fragment.content
+
+    return {
+        "title": title,
+        "summary": _truncate_text(summary, 160),
+        "meta": _build_share_meta(resource_type, resource)
+    }
+
+def _share_message_type(resource_type: SharedResourceType) -> MessageTypeEnum:
+    if resource_type == SharedResourceType.PLAN:
+        return MessageTypeEnum.PLAN_SHARE
+    if resource_type == SharedResourceType.TASK:
+        return MessageTypeEnum.TASK_SHARE
+    if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+        return MessageTypeEnum.CAPSULE_SHARE
+    if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+        return MessageTypeEnum.PRISM_SHARE
+    return MessageTypeEnum.FRAGMENT_SHARE
+
+async def _get_share_resource(
+    db: AsyncSession,
+    resource_type: SharedResourceType,
+    resource_id: UUID,
+    owner_id: UUID
+):
+    if resource_type == SharedResourceType.PLAN:
+        plan = await db.get(Plan, resource_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail="计划不存在")
+        if plan.user_id != owner_id:
+            raise HTTPException(status_code=403, detail="无权限分享该计划")
+        return plan
+    if resource_type == SharedResourceType.TASK:
+        task = await db.get(Task, resource_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        if task.user_id != owner_id:
+            raise HTTPException(status_code=403, detail="无权限分享该任务")
+        return task
+    if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+        capsule = await db.get(CuriosityCapsule, resource_id)
+        if not capsule:
+            raise HTTPException(status_code=404, detail="好奇心胶囊不存在")
+        if capsule.user_id != owner_id:
+            raise HTTPException(status_code=403, detail="无权限分享该好奇心胶囊")
+        return capsule
+    if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+        pattern = await db.get(BehaviorPattern, resource_id)
+        if not pattern:
+            raise HTTPException(status_code=404, detail="认知棱镜不存在")
+        if pattern.user_id != owner_id:
+            raise HTTPException(status_code=403, detail="无权限分享该认知棱镜")
+        return pattern
+    fragment = await db.get(CognitiveFragment, resource_id)
+    if not fragment:
+        raise HTTPException(status_code=404, detail="认知碎片不存在")
+    if fragment.user_id != owner_id:
+        raise HTTPException(status_code=403, detail="无权限分享该认知碎片")
+    return fragment
 
 
 # ============ 好友系统 ============
@@ -479,8 +654,22 @@ async def send_message(
 
         message_info = _build_message_info(message)
 
+        is_self_only = _is_self_only_visibility(data.content_data, current_user.id)
+
         # 广播消息到 WebSocket
-        await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
+        if not is_self_only:
+            await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
+
+        # 提及通知
+        if message.mention_user_ids and not is_self_only:
+            for mentioned_id in message.mention_user_ids:
+                if str(mentioned_id) == str(current_user.id):
+                    continue
+                await manager.send_personal_message({
+                    "type": "mention",
+                    "group_id": str(group_id),
+                    "message": message_info.model_dump(mode='json')
+                }, str(mentioned_id))
 
         # 回传 ACK 给发送者
         if data.nonce:
@@ -516,6 +705,117 @@ async def get_messages(
     return result
 
 
+@router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
+async def edit_group_message(
+    group_id: UUID,
+    message_id: UUID,
+    data: MessageEdit,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """编辑群消息"""
+    try:
+        message = await GroupMessageService.edit_message(db, group_id, message_id, current_user.id, data)
+        await db.commit()
+        message_info = _build_message_info(message)
+        if not _is_self_only_visibility(message.content_data, current_user.id):
+            await manager.broadcast({
+                "type": "message_edit",
+                "message": message_info.model_dump(mode='json')
+            }, str(group_id))
+        return message_info
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/groups/{group_id}/messages/{message_id}/revoke", response_model=MessageInfo, summary="撤回群消息")
+async def revoke_group_message(
+    group_id: UUID,
+    message_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """撤回群消息"""
+    try:
+        existing = await db.get(GroupMessage, message_id)
+        is_self_only = False
+        if existing and existing.group_id == group_id:
+            is_self_only = _is_self_only_visibility(existing.content_data, current_user.id)
+        message = await GroupMessageService.revoke_message(db, group_id, message_id, current_user.id)
+        await db.commit()
+        message_info = _build_message_info(message)
+        if not is_self_only:
+            await manager.broadcast({
+                "type": "message_revoke",
+                "message_id": str(message.id)
+            }, str(group_id))
+        return message_info
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/groups/{group_id}/messages/{message_id}/reactions", response_model=MessageInfo, summary="更新群消息表情")
+async def update_group_message_reaction(
+    group_id: UUID,
+    message_id: UUID,
+    data: MessageReactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """更新群消息表情反应"""
+    try:
+        message = await GroupMessageService.update_reaction(
+            db,
+            group_id,
+            message_id,
+            current_user.id,
+            data.emoji,
+            data.action == ReactionActionEnum.ADD
+        )
+        await db.commit()
+        if not _is_self_only_visibility(message.content_data, current_user.id):
+            await manager.broadcast({
+                "type": "reaction_update",
+                "message_id": str(message.id),
+                "reactions": message.reactions or {}
+            }, str(group_id))
+        return _build_message_info(message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/threads/{thread_root_id}", response_model=List[MessageInfo], summary="获取群消息线程")
+async def get_group_thread_messages(
+    group_id: UUID,
+    thread_root_id: UUID,
+    limit: int = Query(default=100, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取群消息线程"""
+    try:
+        messages = await GroupMessageService.get_thread_messages(db, group_id, current_user.id, thread_root_id, limit)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return [_build_message_info(msg) for msg in messages]
+
+
+@router.get("/groups/{group_id}/messages/search", response_model=List[MessageInfo], summary="搜索群消息")
+async def search_group_messages(
+    group_id: UUID,
+    keyword: str = Query(min_length=1, max_length=120),
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """搜索群消息"""
+    try:
+        messages = await GroupMessageService.search_messages(db, group_id, current_user.id, keyword, limit)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return [_build_message_info(msg) for msg in messages]
+
+
 # ============ 私聊消息 ============
 
 @router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
@@ -531,8 +831,12 @@ async def send_private_message(
 
         msg_info = _build_private_message_info(message)
 
+        is_self_only = _is_self_only_visibility(data.content_data, current_user.id)
+
         # 推送 WebSocket
-        await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
+        if not is_self_only:
+            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
+        await manager.send_personal_message(msg_info.model_dump(mode='json'), str(current_user.id))
 
         # 回传 ACK 给发送者
         if data.nonce:
@@ -567,6 +871,106 @@ async def get_private_messages(
     for msg in messages:
         result.append(_build_private_message_info(msg))
     return result
+
+
+@router.patch("/messages/{message_id}", response_model=PrivateMessageInfo, summary="编辑私信")
+async def edit_private_message(
+    message_id: UUID,
+    data: MessageEdit,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """编辑私聊消息"""
+    try:
+        message = await PrivateMessageService.edit_message(db, message_id, current_user.id, data)
+        await db.commit()
+        msg_info = _build_private_message_info(message)
+        await manager.send_personal_message({
+            "type": "message_edit",
+            "message": msg_info.model_dump(mode='json')
+        }, str(message.sender_id))
+        if not _is_self_only_visibility(message.content_data, current_user.id):
+            await manager.send_personal_message({
+                "type": "message_edit",
+                "message": msg_info.model_dump(mode='json')
+            }, str(message.receiver_id))
+        return msg_info
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/messages/{message_id}/revoke", response_model=PrivateMessageInfo, summary="撤回私信")
+async def revoke_private_message(
+    message_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """撤回私聊消息"""
+    try:
+        existing = await db.get(PrivateMessage, message_id)
+        is_self_only = False
+        if existing and existing.sender_id == current_user.id:
+            is_self_only = _is_self_only_visibility(existing.content_data, current_user.id)
+        message = await PrivateMessageService.revoke_message(db, message_id, current_user.id)
+        await db.commit()
+        await manager.send_personal_message({
+            "type": "message_revoke",
+            "message_id": str(message.id)
+        }, str(message.sender_id))
+        if not is_self_only:
+            await manager.send_personal_message({
+                "type": "message_revoke",
+                "message_id": str(message.id)
+            }, str(message.receiver_id))
+        return _build_private_message_info(message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/messages/{message_id}/reactions", response_model=PrivateMessageInfo, summary="更新私信表情")
+async def update_private_message_reaction(
+    message_id: UUID,
+    data: MessageReactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """更新私聊消息表情反应"""
+    try:
+        message = await PrivateMessageService.update_reaction(
+            db,
+            message_id,
+            current_user.id,
+            data.emoji,
+            data.action == ReactionActionEnum.ADD
+        )
+        await db.commit()
+        await manager.send_personal_message({
+            "type": "reaction_update",
+            "message_id": str(message.id),
+            "reactions": message.reactions or {}
+        }, str(message.sender_id))
+        if not _is_self_only_visibility(message.content_data, current_user.id):
+            await manager.send_personal_message({
+                "type": "reaction_update",
+                "message_id": str(message.id),
+                "reactions": message.reactions or {}
+            }, str(message.receiver_id))
+        return _build_private_message_info(message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/friends/{friend_id}/messages/search", response_model=List[PrivateMessageInfo], summary="搜索私信")
+async def search_private_messages(
+    friend_id: UUID,
+    keyword: str = Query(min_length=1, max_length=120),
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """搜索私聊消息"""
+    messages = await PrivateMessageService.search_messages(db, current_user.id, friend_id, keyword, limit)
+    return [_build_private_message_info(msg) for msg in messages]
 
 
 async def _update_user_status(user_id: str, status: UserStatus):
@@ -866,7 +1270,10 @@ async def share_resource(
     try:
         # Convert enum schema to model enum
         resource_type = SharedResourceType(data.resource_type.value)
-        
+
+        resource = await _get_share_resource(db, resource_type, data.resource_id, current_user.id)
+        brief = _build_share_brief(resource_type, resource)
+
         shared = await collaboration_service.share_resource(
             db,
             current_user.id,
@@ -877,8 +1284,56 @@ async def share_resource(
             permission=data.permission,
             comment=data.comment
         )
+
+        share_payload = _compact_dict({
+            "resource_type": resource_type.value,
+            "resource_id": str(data.resource_id),
+            "shared_resource_id": str(shared.id),
+            "resource_title": brief["title"],
+            "resource_summary": brief["summary"],
+            "resource_meta": brief["meta"],
+            "permission": shared.permission,
+            "comment": data.comment
+        })
+
+        message_type = _share_message_type(resource_type)
+        message_content = data.comment
+
+        message_info = None
+        if data.target_group_id:
+            message = await GroupMessageService.send_message(
+                db,
+                data.target_group_id,
+                current_user.id,
+                MessageSend(
+                    message_type=message_type,
+                    content=message_content,
+                    content_data=share_payload
+                )
+            )
+            message_info = _build_message_info(message)
+        elif data.target_user_id:
+            message = await PrivateMessageService.send_message(
+                db,
+                current_user.id,
+                PrivateMessageSend(
+                    target_user_id=data.target_user_id,
+                    message_type=message_type,
+                    content=message_content,
+                    content_data=share_payload
+                )
+            )
+            message_info = _build_private_message_info(message)
+
         await db.commit()
-        
+
+        if message_info:
+            if data.target_group_id:
+                await manager.broadcast(message_info.model_dump(mode='json'), str(data.target_group_id))
+            elif data.target_user_id:
+                await manager.send_personal_message(message_info.model_dump(mode='json'), str(data.target_user_id))
+                await manager.send_personal_message(message_info.model_dump(mode='json'), str(current_user.id))
+
         # Construct response
         return SharedResourceInfo(
             id=shared.id,
@@ -888,12 +1343,15 @@ async def share_resource(
             plan_id=shared.plan_id,
             task_id=shared.task_id,
             cognitive_fragment_id=shared.cognitive_fragment_id,
+            curiosity_capsule_id=shared.curiosity_capsule_id,
+            behavior_pattern_id=shared.behavior_pattern_id,
             permission=shared.permission,
             comment=shared.comment,
             view_count=shared.view_count,
             save_count=shared.save_count,
-            sharer=UserBrief.model_validate(shared.sharer) if shared.sharer else None,
-            # We skip embedding full object details for now or fetch if needed
+            sharer=UserBrief.model_validate(current_user),
+            resource_title=brief["title"],
+            resource_summary=brief["summary"]
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -927,15 +1385,33 @@ async def get_group_resources(
     for res in resources:
         # Determine strict type string
         r_type_str = "unknown"
-        if res.plan_id: r_type_str = "plan"
-        elif res.task_id: r_type_str = "task"
-        elif res.cognitive_fragment_id: r_type_str = "cognitive_fragment"
-        
-        # Prepare embedded title/summary if possible
-        title = None
-        if res.plan: title = res.plan.name
-        elif res.task: title = res.task.title
-        # elif res.cognitive_fragment: title = ...
+        resource_title = None
+        resource_summary = None
+        if res.plan_id and res.plan:
+            r_type_str = "plan"
+            brief = _build_share_brief(SharedResourceType.PLAN, res.plan)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
+        elif res.task_id and res.task:
+            r_type_str = "task"
+            brief = _build_share_brief(SharedResourceType.TASK, res.task)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
+        elif res.cognitive_fragment_id and res.cognitive_fragment:
+            r_type_str = "cognitive_fragment"
+            brief = _build_share_brief(SharedResourceType.COGNITIVE_FRAGMENT, res.cognitive_fragment)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
+        elif res.curiosity_capsule_id and res.curiosity_capsule:
+            r_type_str = "curiosity_capsule"
+            brief = _build_share_brief(SharedResourceType.CURIOSITY_CAPSULE, res.curiosity_capsule)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
+        elif res.behavior_pattern_id and res.behavior_pattern:
+            r_type_str = "cognitive_prism_pattern"
+            brief = _build_share_brief(SharedResourceType.COGNITIVE_PRISM_PATTERN, res.behavior_pattern)
+            resource_title = brief["title"]
+            resource_summary = brief["summary"]
         
         result.append(SharedResourceInfo(
             id=res.id,
@@ -945,11 +1421,14 @@ async def get_group_resources(
             plan_id=res.plan_id,
             task_id=res.task_id,
             cognitive_fragment_id=res.cognitive_fragment_id,
+            curiosity_capsule_id=res.curiosity_capsule_id,
+            behavior_pattern_id=res.behavior_pattern_id,
             permission=res.permission,
             comment=res.comment,
             view_count=res.view_count,
             save_count=res.save_count,
             sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
-            resource_title=title
+            resource_title=resource_title,
+            resource_summary=resource_summary
         ))
     return result

@@ -56,6 +56,14 @@ class ApiClient {
     }
   }
 
+  Future<Response<T>> patch<T>(String path, {data}) async {
+    try {
+      return await _dio.patch(path, data: data);
+    } on DioException {
+      rethrow;
+    }
+  }
+
   Future<Response<T>> delete<T>(String path) async {
     try {
       return await _dio.delete(path);

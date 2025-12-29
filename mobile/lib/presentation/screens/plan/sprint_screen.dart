@@ -20,6 +20,13 @@ class SprintScreen extends ConsumerWidget {
         actions: [
           if (activeSprint != null)
             IconButton(
+              icon: const Icon(Icons.open_in_new),
+              onPressed: () {
+                context.push('/plans/${activeSprint.id}');
+              },
+            ),
+          if (activeSprint != null)
+            IconButton(
               icon: const Icon(Icons.edit_outlined),
               onPressed: () {
                 context.push('/plans/${activeSprint.id}/edit');

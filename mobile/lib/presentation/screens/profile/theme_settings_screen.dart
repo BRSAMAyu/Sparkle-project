@@ -107,7 +107,7 @@ class _ThemeModeSection extends StatelessWidget {
           '主题模式',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        SizedBox(height: DS.md),
+        const SizedBox(height: DS.md),
         _SegmentedThemeButton(
           currentMode: currentMode,
           onModeChanged: onModeChanged,
@@ -205,7 +205,7 @@ class _BrandPresetSection extends StatelessWidget {
           '品牌预设',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        SizedBox(height: DS.md),
+        const SizedBox(height: DS.md),
         Wrap(
           spacing: DS.md,
           runSpacing: DS.md,
@@ -218,7 +218,7 @@ class _BrandPresetSection extends StatelessWidget {
             return GestureDetector(
               onTap: () => onPresetChanged(preset),
               child: Container(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: DS.lg,
                   vertical: DS.md,
                 ),
@@ -261,7 +261,7 @@ class _HighContrastSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         border: Border.all(color: DS.brandPrimary30),
         borderRadius: BorderRadius.circular(DS.md),
@@ -276,7 +276,7 @@ class _HighContrastSection extends StatelessWidget {
                 '高对比度模式',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              SizedBox(height: DS.xs),
+              const SizedBox(height: DS.xs),
               Text(
                 '增强文字和背景的对比度',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -288,7 +288,7 @@ class _HighContrastSection extends StatelessWidget {
           Switch(
             value: highContrast,
             onChanged: onToggled,
-            activeColor: DS.brandPrimary,
+            activeThumbColor: DS.brandPrimary,
           ),
         ],
       ),
@@ -308,7 +308,7 @@ class _ResetButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: DS.brandPrimary),
-          padding: EdgeInsets.symmetric(vertical: DS.lg),
+          padding: const EdgeInsets.symmetric(vertical: DS.lg),
         ),
         child: Text(
           '恢复默认设置',
@@ -430,12 +430,12 @@ class _ColorBox extends StatelessWidget {
               BoxShadow(
                 color: color.withValues(alpha: 0.3),
                 blurRadius: DS.md,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
         ),
-        SizedBox(height: DS.xs),
+        const SizedBox(height: DS.xs),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall,

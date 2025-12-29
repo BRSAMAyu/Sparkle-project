@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/presentation/widgets/charts/engagement_heatmap.dart';
 import 'package:sparkle/presentation/widgets/insights/predictive_insights_card.dart';

@@ -27,6 +27,7 @@ import 'package:sparkle/presentation/screens/insights/learning_forecast_screen.d
 import 'package:sparkle/presentation/screens/knowledge/knowledge_detail_screen.dart';
 import 'package:sparkle/presentation/screens/plan/growth_screen.dart';
 import 'package:sparkle/presentation/screens/plan/plan_create_screen.dart';
+import 'package:sparkle/presentation/screens/plan/plan_detail_screen.dart';
 import 'package:sparkle/presentation/screens/plan/plan_edit_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/profile/learning_mode_screen.dart';
@@ -198,6 +199,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/plans/:id',
+        name: 'planDetail',
+        pageBuilder: (context, state) {
+          final planId = state.pathParameters['id']!;
+          return _buildTransitionPage(
+            state: state,
+            child: PlanDetailScreen(planId: planId),
+          );
+        },
+      ),
+      GoRoute(
         path: '/plans/:id/edit',
         name: 'editPlan',
         pageBuilder: (context, state) {
@@ -346,18 +358,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/cognitive/patterns',
         name: 'patternList',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const PatternListScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final highlightId = state.uri.queryParameters['highlight'];
+          return _buildTransitionPage(
+            state: state,
+            child: PatternListScreen(highlightId: highlightId),
+          );
+        },
       ),
       GoRoute(
         path: '/curiosity-capsule',
         name: 'curiosityCapsule',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const CuriosityCapsuleScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final highlightId = state.uri.queryParameters['highlight'];
+          return _buildTransitionPage(
+            state: state,
+            child: CuriosityCapsuleScreen(highlightId: highlightId),
+          );
+        },
       ),
 
       // Community Routes

@@ -5,10 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
@@ -23,6 +22,8 @@ class ChatBubble extends StatefulWidget {
     this.currentUserId,
     this.onQuote,
     this.onRevoke,
+    this.onEdit,
+    this.onReaction,
     this.onActionConfirm,
     this.onActionDismiss,
   });
@@ -31,6 +32,8 @@ class ChatBubble extends StatefulWidget {
   final String? currentUserId;
   final Function(dynamic message)? onQuote;
   final Function(dynamic message)? onRevoke;
+  final void Function(dynamic message, String newContent)? onEdit;
+  final void Function(dynamic message, String emoji)? onReaction;
   final Function(WidgetPayload action)? onActionConfirm;
   final Function(WidgetPayload action)? onActionDismiss;
 
@@ -45,6 +48,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   bool _showHeart = false;
   bool _isPressed = false;
+  static const List<String> _quickReactions = ['👍', '❤️', '😂', '😮', '🎯', '🔥'];
 
   @override
   void initState() {
@@ -74,14 +78,30 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   bool get _isUser {
     final myId = widget.currentUserId ?? 'me';
+    var isUser = false;
     if (widget.message is ChatMessageModel) {
-      return (widget.message as ChatMessageModel).role == MessageRole.user;
+      isUser = (widget.message as ChatMessageModel).role == MessageRole.user;
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
-      return msg.sender.id == myId;
+      isUser = msg.sender.id == myId;
     } else if (widget.message is MessageInfo) {
       final msg = widget.message as MessageInfo;
-      return msg.sender?.id == myId;
+      isUser = msg.sender?.id == myId;
+    }
+    if (_isAgent) {
+      return false;
+    }
+    return isUser;
+  }
+
+  bool get _isAgent {
+    if (widget.message is PrivateMessageInfo) {
+      final msg = widget.message as PrivateMessageInfo;
+      return isPrivateAgentMessage(msg);
+    }
+    if (widget.message is MessageInfo) {
+      final msg = widget.message as MessageInfo;
+      return isCommunityAgentMessage(msg);
     }
     return false;
   }
@@ -92,11 +112,41 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     return false;
   }
 
+  bool _canEditMessage() {
+    if (widget.message is PrivateMessageInfo) {
+      return (widget.message as PrivateMessageInfo).messageType == MessageType.text;
+    }
+    if (widget.message is MessageInfo) {
+      return (widget.message as MessageInfo).messageType == MessageType.text;
+    }
+    return false;
+  }
+
   String get _content => (widget.message is ChatMessageModel) 
       ? (widget.message as ChatMessageModel).content 
       : (widget.message is PrivateMessageInfo)
           ? (widget.message as PrivateMessageInfo).content ?? ''
           : (widget.message as MessageInfo).content ?? '';
+
+  Map<String, dynamic>? get _reactions {
+    if (widget.message is PrivateMessageInfo) {
+      return (widget.message as PrivateMessageInfo).reactions;
+    }
+    if (widget.message is MessageInfo) {
+      return (widget.message as MessageInfo).reactions;
+    }
+    return null;
+  }
+
+  DateTime? get _editedAt {
+    if (widget.message is PrivateMessageInfo) {
+      return (widget.message as PrivateMessageInfo).editedAt;
+    }
+    if (widget.message is MessageInfo) {
+      return (widget.message as MessageInfo).editedAt;
+    }
+    return null;
+  }
 
   DateTime get _createdAt => (widget.message is ChatMessageModel) 
       ? (widget.message as ChatMessageModel).createdAt 
@@ -110,6 +160,70 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) setState(() => _showHeart = false);
     });
+    if (widget.onReaction != null) {
+      widget.onReaction!(widget.message, '❤️');
+    }
+  }
+
+  void _showEditDialog(BuildContext context) {
+    if (widget.onEdit == null || _isRevoked) return;
+    if (widget.message is ChatMessageModel) return;
+    final controller = TextEditingController(text: _content);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('编辑消息'),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          decoration: const InputDecoration(hintText: '输入新的内容'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                widget.onEdit?.call(widget.message, text);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReactionPicker(BuildContext context) {
+    if (widget.onReaction == null || _isRevoked) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.lg),
+            child: Wrap(
+              spacing: DS.md,
+              children: _quickReactions.map((emoji) {
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onReaction?.call(widget.message, emoji);
+                  },
+                  child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showContextMenu(BuildContext context) {
@@ -117,6 +231,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     // Allow revocation within 24 hours for user messages
     final canRevoke = _isUser && DateTime.now().difference(_createdAt).inHours < 24;
+    final canEdit = _isUser && _canEditMessage();
     
     showModalBottomSheet(
       context: context,
@@ -139,6 +254,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                     widget.onQuote!(widget.message);
                   },
                 ),
+              if (canEdit && widget.onEdit != null)
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('编辑'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showEditDialog(context);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: const Text('复制'),
@@ -150,6 +274,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   );
                 },
               ),
+              if (widget.onReaction != null)
+                ListTile(
+                  leading: const Icon(Icons.emoji_emotions_outlined),
+                  title: const Text('表情'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showReactionPicker(context);
+                  },
+                ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
                   leading: Icon(Icons.undo_rounded, color: DS.error),
@@ -172,6 +305,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (_isRevoked) return _buildRevokedPlaceholder();
 
     final isUser = _isUser;
+    final isAgent = _isAgent;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     
     return SlideTransition(
@@ -210,29 +344,42 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   margin: EdgeInsets.symmetric(horizontal: 8.0),
                                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
                                   decoration: isUser
-                                    ? BoxDecoration(
-                                        gradient: DS.primaryGradient,
-                                        borderRadius: _getBorderRadius(true),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: DS.brandPrimary.withValues(alpha: 0.25),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      )
-                                    : BoxDecoration(
-                                        color: context.colors.surfaceCard,
-                                        borderRadius: _getBorderRadius(false),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: DS.brandPrimary.withValues(alpha: 0.05),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                        border: Border.all(color: context.colors.border.withValues(alpha: 0.5)),
-                                      ),
+                                      ? BoxDecoration(
+                                          gradient: DS.primaryGradient,
+                                          borderRadius: _getBorderRadius(true),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: DS.brandPrimary.withValues(alpha: 0.25),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        )
+                                      : isAgent
+                                          ? BoxDecoration(
+                                              gradient: DS.secondaryGradient,
+                                              borderRadius: _getBorderRadius(false),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: DS.brandSecondary.withValues(alpha: 0.2),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                              border: Border.all(color: DS.brandSecondary.withValues(alpha: 0.2)),
+                                            )
+                                          : BoxDecoration(
+                                              color: context.colors.surfaceCard,
+                                              borderRadius: _getBorderRadius(false),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: DS.brandPrimary.withValues(alpha: 0.05),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                              border: Border.all(color: context.colors.border.withValues(alpha: 0.5)),
+                                            ),
                                   child: ClipRRect(
                                     borderRadius: _getBorderRadius(isUser),
                                     child: BackdropFilter(
@@ -253,6 +400,25 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            if (isAgent)
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 6.0),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.auto_awesome, size: 14, color: DS.brandPrimaryConst),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      'AI助手',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: DS.brandPrimaryConst,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             if (widget.message is PrivateMessageInfo && (widget.message as PrivateMessageInfo).quotedMessage != null)
                                               _buildQuoteArea(context, isUser, (widget.message as PrivateMessageInfo).quotedMessage!),
                                             if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).aiStatus != null)
@@ -270,7 +436,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               ),
                                             MarkdownBody(
                                               data: _content,
-                                              styleSheet: _getMarkdownStyle(context, isUser),
+                                              styleSheet: _getMarkdownStyle(context, isUser, isAgent),
                                               onTapLink: (text, href, title) {
                                                 if (href != null) launchUrl(Uri.parse(href));
                                               },
@@ -310,6 +476,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                 ],
               ),
               
+              if (_reactions != null && _reactions!.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: 4,
+                    left: isUser ? 0 : 52,
+                    right: isUser ? 52 : 0,
+                  ),
+                  child: _buildReactionRow(widget.currentUserId),
+                ),
               Padding(
                 padding: EdgeInsets.only(
                   top: 4,
@@ -321,6 +496,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   children: [
                     if (isUser) _buildMessageStatus(),
                     SizedBox(width: DS.xs),
+                    if (_editedAt != null) ...[
+                      Text('已编辑', style: TextStyle(fontSize: 10, color: DS.textTertiary)),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
                       timeStr,
                       style: TextStyle(fontSize: 10, color: DS.textTertiary),  // 使用设计系统三级文本色
@@ -367,6 +546,37 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
       ),
     );
 
+  Widget _buildReactionRow(String? currentUserId) {
+    final reactions = _reactions ?? {};
+    if (reactions.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      children: reactions.entries.map((entry) {
+        final users = List<String>.from(entry.value as List? ?? <String>[]);
+        final isMine = currentUserId != null && users.contains(currentUserId);
+        return GestureDetector(
+          onTap: widget.onReaction == null ? null : () => widget.onReaction!(widget.message, entry.key),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isMine ? DS.brandPrimary.withValues(alpha: 0.15) : DS.neutral100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isMine ? DS.brandPrimary : DS.neutral200),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(entry.key, style: const TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                Text('${users.length}', style: TextStyle(fontSize: 11, color: DS.neutral600)),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildRevokedPlaceholder() => Center(
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
@@ -411,7 +621,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     String? avatarUrl;
     var initial = '?';
 
-    if (widget.message is ChatMessageModel) {
+    if (_isAgent) {
+      initial = 'AI';
+    } else if (widget.message is ChatMessageModel) {
       initial = isUser ? 'U' : 'AI';
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
@@ -454,8 +666,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) {
-    final textColor = isUser ? Colors.white : context.colors.textPrimary;
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser, bool isAgent) {
+    final textColor = isUser
+        ? Colors.white
+        : (isAgent ? DS.brandPrimaryConst : context.colors.textPrimary);
     return MarkdownStyleSheet(
       p: TextStyle(color: textColor, fontSize: DS.fontSizeBase, height: DS.lineHeightNormal),
       h1: TextStyle(color: textColor, fontSize: DS.fontSizeXl, fontWeight: DS.fontWeightBold),

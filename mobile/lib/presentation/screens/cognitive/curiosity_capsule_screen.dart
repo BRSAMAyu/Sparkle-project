@@ -5,7 +5,8 @@ import 'package:sparkle/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/presentation/widgets/home/curiosity_capsule_card.dart';
 
 class CuriosityCapsuleScreen extends ConsumerWidget {
-  const CuriosityCapsuleScreen({super.key});
+  const CuriosityCapsuleScreen({this.highlightId, super.key});
+  final String? highlightId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +26,15 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: capsules.length,
-                  itemBuilder: (context, index) => CuriosityCapsuleCard(capsule: capsules[index]),
+                  itemBuilder: (context, index) {
+                    final capsule = capsules[index];
+                    final isHighlight = highlightId != null && capsule.id == highlightId;
+                    return CuriosityCapsuleCard(
+                      capsule: capsule,
+                      highlighted: isHighlight,
+                      initiallyExpanded: isHighlight,
+                    );
+                  },
                 ),
               ),
         loading: () => const Center(child: CircularProgressIndicator()),

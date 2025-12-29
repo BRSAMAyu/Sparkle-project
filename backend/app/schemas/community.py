@@ -34,10 +34,19 @@ class GroupRoleEnum(str, Enum):
 class MessageTypeEnum(str, Enum):
     TEXT = "text"
     TASK_SHARE = "task_share"
+    PLAN_SHARE = "plan_share"
+    FRAGMENT_SHARE = "fragment_share"
+    CAPSULE_SHARE = "capsule_share"
+    PRISM_SHARE = "prism_share"
     PROGRESS = "progress"
     ACHIEVEMENT = "achievement"
     CHECKIN = "checkin"
     SYSTEM = "system"
+
+
+class ReactionActionEnum(str, Enum):
+    ADD = "add"
+    REMOVE = "remove"
 
 
 class UserStatusEnum(str, Enum):
@@ -213,6 +222,8 @@ class MessageSend(BaseModel):
     content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
     reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
+    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
     nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
@@ -231,7 +242,26 @@ class MessageInfo(BaseSchema):
     content: Optional[str] = Field(description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
     reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
+    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
+    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
+    reactions: Optional[Dict[str, List[UUID]]] = Field(default=None, description="表情反应")
+    is_revoked: bool = Field(default=False, description="是否已撤回")
+    revoked_at: Optional[datetime] = Field(default=None, description="撤回时间")
+    edited_at: Optional[datetime] = Field(default=None, description="编辑时间")
     quoted_message: Optional['MessageInfo'] = Field(default=None, description="引用消息详情")
+
+
+class MessageEdit(BaseModel):
+    """编辑消息"""
+    content: Optional[str] = Field(default=None, max_length=2000, description="新内容")
+    content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
+    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
+
+
+class MessageReactionUpdate(BaseModel):
+    """更新消息表情反应"""
+    emoji: str = Field(min_length=1, max_length=12, description="表情")
+    action: ReactionActionEnum = Field(default=ReactionActionEnum.ADD, description="添加/移除")
 
 
 # ============ 群任务 Schemas ============
@@ -308,6 +338,8 @@ class SharedResourceTypeEnum(str, Enum):
     PLAN = "plan"
     TASK = "task"
     COGNITIVE_FRAGMENT = "cognitive_fragment"
+    CURIOSITY_CAPSULE = "curiosity_capsule"
+    COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
 
 
 class SharedResourceCreate(BaseModel):
@@ -332,6 +364,8 @@ class SharedResourceInfo(BaseSchema):
     plan_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
     cognitive_fragment_id: Optional[UUID] = None
+    curiosity_capsule_id: Optional[UUID] = None
+    behavior_pattern_id: Optional[UUID] = None
     
     # Metadata
     permission: str
@@ -359,6 +393,8 @@ class PrivateMessageSend(BaseModel):
     content: Optional[str] = Field(default=None, max_length=2000, description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(default=None, description="结构化内容")
     reply_to_id: Optional[UUID] = Field(default=None, description="回复的消息ID")
+    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
+    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
     nonce: Optional[str] = Field(default=None, description="客户端生成的随机串，用于ACK确认")
 
     @field_validator('content')
@@ -378,6 +414,12 @@ class PrivateMessageInfo(BaseSchema):
     content: Optional[str] = Field(description="消息内容")
     content_data: Optional[Dict[str, Any]] = Field(description="结构化内容")
     reply_to_id: Optional[UUID] = Field(description="回复的消息ID")
+    thread_root_id: Optional[UUID] = Field(default=None, description="线程根消息ID")
+    mention_user_ids: Optional[List[UUID]] = Field(default=None, description="提及用户ID列表")
+    reactions: Optional[Dict[str, List[UUID]]] = Field(default=None, description="表情反应")
+    is_revoked: bool = Field(default=False, description="是否已撤回")
+    revoked_at: Optional[datetime] = Field(default=None, description="撤回时间")
+    edited_at: Optional[datetime] = Field(default=None, description="编辑时间")
     is_read: bool = Field(description="是否已读")
     read_at: Optional[datetime] = Field(description="阅读时间")
     quoted_message: Optional['PrivateMessageInfo'] = Field(default=None, description="引用消息详情")

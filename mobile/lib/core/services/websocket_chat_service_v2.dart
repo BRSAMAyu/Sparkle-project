@@ -69,6 +69,7 @@ class WebSocketChatServiceV2 {
     required String userId,
     String? sessionId,
     String? nickname,
+    Map<String, dynamic>? extraContext,
   }) {
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
@@ -87,6 +88,7 @@ class WebSocketChatServiceV2 {
       'message': message,
       'session_id': _currentSessionId,
       if (nickname != null) 'nickname': nickname,
+      if (extraContext != null) 'extra_context': extraContext,
     };
 
     // 发送或排队

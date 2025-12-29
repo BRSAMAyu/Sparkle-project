@@ -11,6 +11,7 @@ import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/presentation/widgets/community/share_resource_sheet.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
 
@@ -50,7 +51,7 @@ class _TaskDetailView extends ConsumerWidget {
         Expanded(
           child: CustomScrollView(
             slivers: [
-              _buildSliverAppBar(context),
+              _buildSliverAppBar(context, ref),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(DS.spacing16),
@@ -96,9 +97,21 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
-  Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
+  Widget _buildSliverAppBar(BuildContext context, WidgetRef ref) => SliverAppBar(
       expandedHeight: 200.0,
       pinned: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.share_outlined),
+          onPressed: () => showShareResourceSheet(
+            context,
+            resourceType: 'task',
+            resourceId: task.id,
+            title: task.title,
+            subtitle: task.userNote ?? task.guideContent ?? '',
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Hero(
           tag: 'task-${task.id}',

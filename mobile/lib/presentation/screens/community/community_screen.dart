@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/community_providers.dart';
 import 'package:sparkle/presentation/screens/community/create_post_screen.dart';
 import 'package:sparkle/presentation/widgets/community/feed_post_card.dart';

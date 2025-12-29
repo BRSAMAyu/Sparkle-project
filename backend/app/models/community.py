@@ -52,6 +52,8 @@ class MessageType(str, enum.Enum):
     TASK_SHARE = "task_share"        # 分享任务卡
     PLAN_SHARE = "plan_share"        # 分享计划
     FRAGMENT_SHARE = "fragment_share" # 分享认知碎片
+    CAPSULE_SHARE = "capsule_share"  # 分享好奇心胶囊
+    PRISM_SHARE = "prism_share"      # 分享认知棱镜模式
     PROGRESS = "progress"            # 进度更新
     ACHIEVEMENT = "achievement"      # 成就达成
     CHECKIN = "checkin"              # 打卡
@@ -63,6 +65,8 @@ class SharedResourceType(str, enum.Enum):
     PLAN = "plan"
     TASK = "task"
     COGNITIVE_FRAGMENT = "cognitive_fragment"
+    CURIOSITY_CAPSULE = "curiosity_capsule"
+    COGNITIVE_PRISM_PATTERN = "cognitive_prism_pattern"
 
 
 # ============ 好友系统 ============
@@ -244,14 +248,24 @@ class GroupMessage(BaseModel):
 
     # 回复相关
     reply_to_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True)
+    thread_root_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True, index=True)
+
+    # 状态与协作
+    is_revoked = Column(Boolean, default=False, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    edited_at = Column(DateTime, nullable=True)
+    reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
+    mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
 
     # 关系
     group = relationship("Group", back_populates="messages")
     sender = relationship("User")
     reply_to = relationship("GroupMessage", remote_side="GroupMessage.id")
+    thread_root = relationship("GroupMessage", remote_side="GroupMessage.id", foreign_keys=[thread_root_id])
 
     __table_args__ = (
         Index('idx_message_group_time', 'group_id', 'created_at'),
+        Index('idx_message_group_thread', 'group_id', 'thread_root_id', 'created_at'),
     )
 
 
@@ -361,6 +375,8 @@ class SharedResource(BaseModel):
     plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
     task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
     cognitive_fragment_id = Column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
+    curiosity_capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id"), nullable=True)
+    behavior_pattern_id = Column(GUID(), ForeignKey("behavior_patterns.id"), nullable=True)
 
     # 权限与元数据
     permission = Column(String(20), default="view", nullable=False)  # view, comment, edit
@@ -379,11 +395,15 @@ class SharedResource(BaseModel):
     plan = relationship("Plan", foreign_keys=[plan_id])
     task = relationship("Task", foreign_keys=[task_id])
     cognitive_fragment = relationship("CognitiveFragment", foreign_keys=[cognitive_fragment_id])
+    curiosity_capsule = relationship("CuriosityCapsule", foreign_keys=[curiosity_capsule_id])
+    behavior_pattern = relationship("BehaviorPattern", foreign_keys=[behavior_pattern_id])
 
     __table_args__ = (
         Index('idx_share_group', 'group_id'),
         Index('idx_share_target_user', 'target_user_id'),
         Index('idx_share_resource_plan', 'plan_id'),
+        Index('idx_share_resource_capsule', 'curiosity_capsule_id'),
+        Index('idx_share_resource_pattern', 'behavior_pattern_id'),
     )
 
 
@@ -413,17 +433,25 @@ class PrivateMessage(BaseModel):
 
     # 回复相关
     reply_to_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True)
+    thread_root_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True, index=True)
 
     # 状态
     is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime, nullable=True)
+    is_revoked = Column(Boolean, default=False, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    edited_at = Column(DateTime, nullable=True)
+    reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
+    mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
 
     # 关系
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
     reply_to = relationship("PrivateMessage", remote_side="PrivateMessage.id")
+    thread_root = relationship("PrivateMessage", remote_side="PrivateMessage.id", foreign_keys=[thread_root_id])
 
     __table_args__ = (
         Index('idx_private_message_conversation', 'sender_id', 'receiver_id', 'created_at'),
         Index('idx_private_message_receiver_unread', 'receiver_id', 'is_read'),
+        Index('idx_private_message_thread', 'sender_id', 'receiver_id', 'thread_root_id', 'created_at'),
     )

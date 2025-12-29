@@ -61,6 +61,22 @@ class MockCommunityRepository implements CommunityRepository {
           readBy: [alice.id, charlie.id, diana.id, bob.id, eva.id],
         ),
         MessageInfo(
+          id: const Uuid().v4(), messageType: MessageType.planShare, sender: me,
+          content: '把我的冲刺计划分享给大家', createdAt: DateTime.now().subtract(const Duration(minutes: 28)), updatedAt: DateTime.now(),
+          contentData: {
+            'resource_type': 'plan',
+            'resource_title': 'CET-6 冲刺计划',
+            'resource_summary': '每日阅读+听力+背词节奏',
+            'resource_meta': {
+              'progress': 0.42,
+              'target_date': DateTime.now().add(const Duration(days: 20)).toIso8601String(),
+              'subject': 'English'
+            },
+            'comment': '需要的话一起进度对齐'
+          },
+          readBy: [alice.id, charlie.id],
+        ),
+        MessageInfo(
           id: const Uuid().v4(), messageType: MessageType.text, sender: charlie,
           content: '今天做完了阅读理解，感觉题目变简单了', createdAt: DateTime.now().subtract(const Duration(minutes: 25)), updatedAt: DateTime.now(),
           readBy: [alice.id, diana.id, bob.id],
@@ -87,6 +103,18 @@ class MockCommunityRepository implements CommunityRepository {
           id: const Uuid().v4(), messageType: MessageType.text, sender: charlie,
           content: '有人能解释一下红黑树的平衡操作吗？', createdAt: DateTime.now().subtract(const Duration(hours: 2)), updatedAt: DateTime.now(),
           readBy: [alice.id, me.id],
+        ),
+        MessageInfo(
+          id: const Uuid().v4(), messageType: MessageType.capsuleShare, sender: alice,
+          content: '分享一个好奇心胶囊', createdAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 40)), updatedAt: DateTime.now(),
+          contentData: {
+            'resource_type': 'curiosity_capsule',
+            'resource_title': '图灵测试为什么仍然有趣',
+            'resource_summary': '从哲学到工程，图灵测试仍是理解智能边界的一扇窗...',
+            'resource_meta': {'related_subject': 'AI'},
+            'comment': '这段可以当作读书会材料'
+          },
+          readBy: [charlie.id],
         ),
         MessageInfo(
           id: const Uuid().v4(), messageType: MessageType.text, sender: me,
@@ -129,6 +157,18 @@ class MockCommunityRepository implements CommunityRepository {
           isRead: false, createdAt: DateTime.now().subtract(const Duration(hours: 1)), updatedAt: DateTime.now(),
           content: '明天一起去图书馆吗？',
         ),
+        PrivateMessageInfo(
+          id: 'pm_charlie_2', sender: me, receiver: charlie, messageType: MessageType.prismShare,
+          isRead: false, createdAt: DateTime.now().subtract(const Duration(minutes: 50)), updatedAt: DateTime.now(),
+          content: '分享一个认知棱镜',
+          contentData: {
+            'resource_type': 'cognitive_prism_pattern',
+            'resource_title': '计划谬误',
+            'resource_summary': '我经常低估任务复杂度，导致计划频繁延期...',
+            'resource_meta': {'pattern_type': 'cognitive', 'frequency': 5},
+            'comment': '想听听你的建议'
+          },
+        ),
       ],
       diana.id: [
         PrivateMessageInfo(
@@ -136,6 +176,19 @@ class MockCommunityRepository implements CommunityRepository {
           isRead: true, readAt: DateTime.now().subtract(const Duration(days: 1)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)), updatedAt: DateTime.now(),
           content: '上次的笔记整理好了',
+        ),
+        PrivateMessageInfo(
+          id: 'pm_diana_2', sender: me, receiver: diana, messageType: MessageType.fragmentShare,
+          isRead: true, readAt: DateTime.now().subtract(const Duration(hours: 4)),
+          createdAt: DateTime.now().subtract(const Duration(hours: 6)), updatedAt: DateTime.now(),
+          content: '分享一个认知碎片',
+          contentData: {
+            'resource_type': 'cognitive_fragment',
+            'resource_title': '拖延的触发点',
+            'resource_summary': '我发现只要任务没有明确的下一步，就会开始刷手机...',
+            'resource_meta': {'source_type': 'capsule', 'severity': 2},
+            'comment': '帮我看看有没有更好的拆解方式'
+          },
         ),
       ],
     };
@@ -196,6 +249,8 @@ class MockCommunityRepository implements CommunityRepository {
       id: const Uuid().v4(), sender: me, receiver: target, messageType: message.messageType,
       content: message.content, isRead: false, createdAt: DateTime.now(), updatedAt: DateTime.now(),
       replyToId: message.replyToId,
+      threadRootId: message.threadRootId,
+      mentionUserIds: message.mentionUserIds,
       quotedMessage: quotedMessage,
     );
 
@@ -220,10 +275,77 @@ class MockCommunityRepository implements CommunityRepository {
     for (final list in _mockPrivateMessages.values) {
       final index = list.indexWhere((m) => m.id == messageId);
       if (index != -1) {
-        list[index] = list[index].copyWith(isRevoked: true);
+        list[index] = list[index].copyWith(isRevoked: true, revokedAt: DateTime.now());
         return;
       }
     }
+  }
+
+  Future<PrivateMessageInfo> editPrivateMessage(
+    String messageId, {
+    String? content,
+    Map<String, dynamic>? contentData,
+    List<String>? mentionUserIds,
+  }) async {
+    for (final list in _mockPrivateMessages.values) {
+      final index = list.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        final updated = list[index].copyWith(
+          content: content ?? list[index].content,
+          contentData: contentData ?? list[index].contentData,
+          mentionUserIds: mentionUserIds ?? list[index].mentionUserIds,
+          editedAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        list[index] = updated;
+        return updated;
+      }
+    }
+    throw Exception('Message not found');
+  }
+
+  Future<PrivateMessageInfo> updatePrivateReaction(
+    String messageId, {
+    required String emoji,
+    required String userId,
+    required bool isAdd,
+  }) async {
+    for (final list in _mockPrivateMessages.values) {
+      final index = list.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        final original = list[index];
+        final reactions = Map<String, dynamic>.from(original.reactions ?? {});
+        final users = List<String>.from(reactions[emoji] ?? <String>[]);
+        if (isAdd) {
+          if (!users.contains(userId)) {
+            users.add(userId);
+          }
+        } else {
+          users.remove(userId);
+        }
+        if (users.isEmpty) {
+          reactions.remove(emoji);
+        } else {
+          reactions[emoji] = users;
+        }
+        final updated = original.copyWith(
+          reactions: reactions,
+          updatedAt: DateTime.now(),
+        );
+        list[index] = updated;
+        return updated;
+      }
+    }
+    throw Exception('Message not found');
+  }
+
+  Future<List<PrivateMessageInfo>> searchPrivateMessages(String friendId, String keyword, {int limit = 50}) async {
+    final list = _mockPrivateMessages[friendId] ?? [];
+    final lower = keyword.toLowerCase();
+    return list
+        .where((m) => (m.content ?? '').toLowerCase().contains(lower))
+        .take(limit)
+        .toList();
   }
 
   @override
@@ -239,7 +361,16 @@ class MockCommunityRepository implements CommunityRepository {
   Future<List<MessageInfo>> getMessages(String groupId, {String? beforeId, int limit = 50}) async => _mockGroupMessages[groupId] ?? [];
 
   @override
-  Future<MessageInfo> sendMessage(String groupId, {required MessageType type, String? content, Map<String, dynamic>? contentData, String? replyToId, String? nonce}) async {
+  Future<MessageInfo> sendMessage(
+    String groupId, {
+    required MessageType type,
+    String? content,
+    Map<String, dynamic>? contentData,
+    String? replyToId,
+    String? threadRootId,
+    List<String>? mentionUserIds,
+    String? nonce,
+  }) async {
     // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -250,6 +381,8 @@ class MockCommunityRepository implements CommunityRepository {
       content: content,
       contentData: contentData,
       replyToId: replyToId,
+      threadRootId: threadRootId,
+      mentionUserIds: mentionUserIds,
       sender: currentUser,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -263,6 +396,144 @@ class MockCommunityRepository implements CommunityRepository {
     }
 
     return newMsg;
+  }
+
+  Future<MessageInfo> editGroupMessage(
+    String groupId,
+    String messageId, {
+    String? content,
+    Map<String, dynamic>? contentData,
+    List<String>? mentionUserIds,
+  }) async {
+    final list = _mockGroupMessages[groupId] ?? [];
+    final index = list.indexWhere((m) => m.id == messageId);
+    if (index == -1) {
+      throw Exception('Message not found');
+    }
+    final original = list[index];
+    final updated = MessageInfo(
+      id: original.id,
+      messageType: original.messageType,
+      sender: original.sender,
+      content: content ?? original.content,
+      contentData: contentData ?? original.contentData,
+      replyToId: original.replyToId,
+      threadRootId: original.threadRootId,
+      mentionUserIds: mentionUserIds ?? original.mentionUserIds,
+      reactions: original.reactions,
+      createdAt: original.createdAt,
+      updatedAt: DateTime.now(),
+      isRevoked: original.isRevoked,
+      revokedAt: original.revokedAt,
+      editedAt: DateTime.now(),
+      readBy: original.readBy,
+      quotedMessage: original.quotedMessage,
+      readByUsers: original.readByUsers,
+    );
+    list[index] = updated;
+    return updated;
+  }
+
+  Future<void> revokeGroupMessage(String groupId, String messageId) async {
+    final list = _mockGroupMessages[groupId] ?? [];
+    final index = list.indexWhere((m) => m.id == messageId);
+    if (index == -1) return;
+    final original = list[index];
+    list[index] = MessageInfo(
+      id: original.id,
+      messageType: original.messageType,
+      sender: original.sender,
+      content: original.content,
+      contentData: original.contentData,
+      replyToId: original.replyToId,
+      threadRootId: original.threadRootId,
+      mentionUserIds: original.mentionUserIds,
+      reactions: original.reactions,
+      createdAt: original.createdAt,
+      updatedAt: DateTime.now(),
+      isRevoked: true,
+      revokedAt: DateTime.now(),
+      editedAt: original.editedAt,
+      readBy: original.readBy,
+      quotedMessage: original.quotedMessage,
+      readByUsers: original.readByUsers,
+    );
+  }
+
+  Future<MessageInfo> updateGroupReaction(
+    String groupId,
+    String messageId, {
+    required String emoji,
+    required String userId,
+    required bool isAdd,
+  }) async {
+    final list = _mockGroupMessages[groupId] ?? [];
+    final index = list.indexWhere((m) => m.id == messageId);
+    if (index == -1) {
+      throw Exception('Message not found');
+    }
+    final original = list[index];
+    final reactions = Map<String, dynamic>.from(original.reactions ?? {});
+    final users = List<String>.from(reactions[emoji] ?? <String>[]);
+    if (isAdd) {
+      if (!users.contains(userId)) {
+        users.add(userId);
+      }
+    } else {
+      users.remove(userId);
+    }
+    if (users.isEmpty) {
+      reactions.remove(emoji);
+    } else {
+      reactions[emoji] = users;
+    }
+    final updated = MessageInfo(
+      id: original.id,
+      messageType: original.messageType,
+      sender: original.sender,
+      content: original.content,
+      contentData: original.contentData,
+      replyToId: original.replyToId,
+      threadRootId: original.threadRootId,
+      mentionUserIds: original.mentionUserIds,
+      reactions: reactions,
+      createdAt: original.createdAt,
+      updatedAt: DateTime.now(),
+      isRevoked: original.isRevoked,
+      revokedAt: original.revokedAt,
+      editedAt: original.editedAt,
+      readBy: original.readBy,
+      quotedMessage: original.quotedMessage,
+      readByUsers: original.readByUsers,
+    );
+    list[index] = updated;
+    return updated;
+  }
+
+  Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword, {int limit = 50}) async {
+    final list = _mockGroupMessages[groupId] ?? [];
+    final lower = keyword.toLowerCase();
+    return list
+        .where((m) => (m.content ?? '').toLowerCase().contains(lower))
+        .take(limit)
+        .toList();
+  }
+
+  Future<List<MessageInfo>> getThreadMessages(String groupId, String threadRootId, {int limit = 100}) async {
+    final list = _mockGroupMessages[groupId] ?? [];
+    MessageInfo? root;
+    for (final msg in list) {
+      if (msg.id == threadRootId) {
+        root = msg;
+        break;
+      }
+    }
+    final replies = list
+        .where((m) => m.threadRootId == threadRootId)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final combined = root != null ? [root, ...replies] : replies;
+    return combined.take(limit).toList();
   }
 
   // Other methods remain as minimal implementation

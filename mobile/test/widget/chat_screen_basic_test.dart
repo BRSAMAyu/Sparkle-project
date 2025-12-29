@@ -360,10 +360,10 @@ void main() {
               home: Scaffold(
                 body: Column(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: ColoredBox(
                         color: Colors.blue,
-                        child: const Center(
+                        child: Center(
                           child: Text('Messages'),
                         ),
                       ),

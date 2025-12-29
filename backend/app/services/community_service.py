@@ -20,8 +20,21 @@ from app.models.community import (
 )
 from app.schemas.community import (
     GroupCreate, GroupUpdate, GroupTaskCreate,
-    MessageSend, CheckinRequest
+    MessageSend, MessageEdit, CheckinRequest
 )
+
+def _is_visible_to(content_data: Optional[dict], user_id: UUID) -> bool:
+    if not content_data:
+        return True
+    visibility = content_data.get("visibility")
+    if visibility != "self":
+        return True
+    visible_to = content_data.get("visible_to")
+    if visible_to is None:
+        return False
+    if isinstance(visible_to, list):
+        return str(user_id) in [str(item) for item in visible_to]
+    return str(visible_to) == str(user_id)
 
 
 class FriendshipService:
@@ -514,13 +527,29 @@ class GroupMessageService:
             # await manager.kick_user_from_group(str(group_id), str(sender_id), "Muted")
             raise ValueError("您已被禁言")
 
+        if data.reply_to_id:
+            reply_msg = await db.get(GroupMessage, data.reply_to_id)
+            if not reply_msg or reply_msg.group_id != group_id:
+                raise ValueError("回复消息不存在")
+
+        if data.thread_root_id:
+            root_msg = await db.get(GroupMessage, data.thread_root_id)
+            if not root_msg or root_msg.group_id != group_id:
+                raise ValueError("线程根消息不存在")
+
+        mention_user_ids = None
+        if data.mention_user_ids:
+            mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+
         message = GroupMessage(
             group_id=group_id,
             sender_id=sender_id,
             message_type=data.message_type,
             content=data.content,
             content_data=data.content_data,
-            reply_to_id=data.reply_to_id
+            reply_to_id=data.reply_to_id,
+            thread_root_id=data.thread_root_id,
+            mention_user_ids=mention_user_ids
         )
         db.add(message)
 
@@ -537,6 +566,218 @@ class GroupMessageService:
         
         result = await db.execute(stmt)
         return result.scalar_one()
+
+    @staticmethod
+    async def edit_message(
+        db: AsyncSession,
+        group_id: UUID,
+        message_id: UUID,
+        editor_id: UUID,
+        data: MessageEdit
+    ) -> GroupMessage:
+        """编辑消息"""
+        msg = await db.get(GroupMessage, message_id)
+        if not msg or msg.group_id != group_id or msg.is_deleted:
+            raise ValueError("消息不存在")
+        if msg.sender_id != editor_id:
+            raise ValueError("无权限编辑该消息")
+        if msg.is_revoked:
+            raise ValueError("消息已撤回，无法编辑")
+        if msg.message_type == MessageType.SYSTEM:
+            raise ValueError("系统消息不可编辑")
+
+        if data.content is not None:
+            msg.content = data.content
+        if data.content_data is not None:
+            msg.content_data = data.content_data
+        if data.mention_user_ids is not None:
+            msg.mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+
+        if msg.message_type == MessageType.TEXT and not msg.content:
+            raise ValueError("文本消息必须有内容")
+
+        msg.edited_at = datetime.utcnow()
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(GroupMessage).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).where(GroupMessage.id == msg.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def revoke_message(
+        db: AsyncSession,
+        group_id: UUID,
+        message_id: UUID,
+        user_id: UUID
+    ) -> GroupMessage:
+        """撤回消息"""
+        msg = await db.get(GroupMessage, message_id)
+        if not msg or msg.group_id != group_id or msg.is_deleted:
+            raise ValueError("消息不存在")
+
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        member = membership_result.scalar_one_or_none()
+        if not member:
+            raise ValueError("不是群组成员")
+
+        is_sender = msg.sender_id == user_id
+        is_admin = member.role in [GroupRole.ADMIN, GroupRole.OWNER]
+        if not is_sender and not is_admin:
+            raise ValueError("无权限撤回该消息")
+
+        if is_sender and datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+            raise ValueError("超过撤回时限")
+
+        if msg.is_revoked:
+            return msg
+
+        msg.is_revoked = True
+        msg.revoked_at = datetime.utcnow()
+        msg.content = None
+        msg.content_data = None
+        msg.reactions = None
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(GroupMessage).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).where(GroupMessage.id == msg.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def update_reaction(
+        db: AsyncSession,
+        group_id: UUID,
+        message_id: UUID,
+        user_id: UUID,
+        emoji: str,
+        is_add: bool
+    ) -> GroupMessage:
+        """更新消息表情反应"""
+        msg = await db.get(GroupMessage, message_id)
+        if not msg or msg.group_id != group_id or msg.is_deleted:
+            raise ValueError("消息不存在")
+        if msg.is_revoked:
+            raise ValueError("消息已撤回")
+
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("不是群组成员")
+
+        reactions = msg.reactions or {}
+        user_key = str(user_id)
+        users = set(reactions.get(emoji, []))
+        if is_add:
+            users.add(user_key)
+        else:
+            users.discard(user_key)
+        if users:
+            reactions[emoji] = list(users)
+        else:
+            reactions.pop(emoji, None)
+
+        msg.reactions = reactions
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(GroupMessage).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).where(GroupMessage.id == msg.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def get_thread_messages(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        thread_root_id: UUID,
+        limit: int = 100
+    ) -> List[GroupMessage]:
+        """获取线程消息"""
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("不是群组成员，无法查看消息")
+
+        root_stmt = select(GroupMessage).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).where(GroupMessage.id == thread_root_id)
+        root_result = await db.execute(root_stmt)
+        root = root_result.scalar_one_or_none()
+        if not root or root.group_id != group_id or root.is_deleted:
+            raise ValueError("线程不存在")
+        if not _is_visible_to(root.content_data, user_id):
+            raise ValueError("线程不存在")
+
+        query = select(GroupMessage).where(
+            GroupMessage.group_id == group_id,
+            GroupMessage.thread_root_id == thread_root_id,
+            GroupMessage.not_deleted_filter()
+        ).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).order_by(GroupMessage.created_at.asc()).limit(limit)
+
+        result = await db.execute(query)
+        replies = [msg for msg in result.scalars().all() if _is_visible_to(msg.content_data, user_id)]
+        return [root, *replies]
+
+    @staticmethod
+    async def search_messages(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        keyword: str,
+        limit: int = 50
+    ) -> List[GroupMessage]:
+        """搜索群消息"""
+        membership_result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+                GroupMember.not_deleted_filter()
+            )
+        )
+        if not membership_result.scalar_one_or_none():
+            raise ValueError("不是群组成员，无法搜索消息")
+
+        query = select(GroupMessage).where(
+            GroupMessage.group_id == group_id,
+            GroupMessage.not_deleted_filter(),
+            GroupMessage.content.ilike(f"%{keyword}%")
+        ).options(
+            selectinload(GroupMessage.sender),
+            selectinload(GroupMessage.reply_to).selectinload(GroupMessage.sender)
+        ).order_by(desc(GroupMessage.created_at)).limit(limit)
+
+        result = await db.execute(query)
+        return [msg for msg in result.scalars().all() if _is_visible_to(msg.content_data, user_id)]
 
     @staticmethod
     async def get_messages(
@@ -574,7 +815,8 @@ class GroupMessageService:
 
         query = query.limit(limit)
         result = await db.execute(query)
-        return list(result.scalars().all())
+        messages = list(result.scalars().all())
+        return [msg for msg in messages if _is_visible_to(msg.content_data, user_id)]
 
     @staticmethod
     async def send_system_message(
@@ -919,6 +1161,24 @@ class PrivateMessageService:
         if rel_result.scalar_one_or_none():
             raise ValueError("消息发送失败")
 
+        if data.reply_to_id:
+            reply_msg = await db.get(PrivateMessage, data.reply_to_id)
+            if not reply_msg or reply_msg.is_deleted:
+                raise ValueError("回复消息不存在")
+            if sender_id not in [reply_msg.sender_id, reply_msg.receiver_id]:
+                raise ValueError("不能回复非会话内消息")
+
+        if data.thread_root_id:
+            root_msg = await db.get(PrivateMessage, data.thread_root_id)
+            if not root_msg or root_msg.is_deleted:
+                raise ValueError("线程根消息不存在")
+            if sender_id not in [root_msg.sender_id, root_msg.receiver_id]:
+                raise ValueError("不能回复非会话内消息")
+
+        mention_user_ids = None
+        if data.mention_user_ids:
+            mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+
         message = PrivateMessage(
             sender_id=sender_id,
             receiver_id=data.target_user_id,
@@ -926,6 +1186,8 @@ class PrivateMessageService:
             content=data.content,
             content_data=data.content_data,
             reply_to_id=data.reply_to_id,
+            thread_root_id=data.thread_root_id,
+            mention_user_ids=mention_user_ids,
             created_at=datetime.utcnow()
         )
         db.add(message)
@@ -940,6 +1202,154 @@ class PrivateMessageService:
         
         result = await db.execute(stmt)
         return result.scalar_one()
+
+    @staticmethod
+    async def edit_message(
+        db: AsyncSession,
+        message_id: UUID,
+        editor_id: UUID,
+        data: MessageEdit
+    ) -> Any:
+        """编辑私聊消息"""
+        from app.models.community import PrivateMessage
+
+        msg = await db.get(PrivateMessage, message_id)
+        if not msg or msg.is_deleted:
+            raise ValueError("消息不存在")
+        if msg.sender_id != editor_id:
+            raise ValueError("无权限编辑该消息")
+        if msg.is_revoked:
+            raise ValueError("消息已撤回，无法编辑")
+        if msg.message_type == MessageType.SYSTEM:
+            raise ValueError("系统消息不可编辑")
+
+        if data.content is not None:
+            msg.content = data.content
+        if data.content_data is not None:
+            msg.content_data = data.content_data
+        if data.mention_user_ids is not None:
+            msg.mention_user_ids = [str(uid) for uid in data.mention_user_ids]
+
+        if msg.message_type == MessageType.TEXT and not msg.content:
+            raise ValueError("文本消息必须有内容")
+
+        msg.edited_at = datetime.utcnow()
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(PrivateMessage).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
+        ).where(PrivateMessage.id == msg.id)
+
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def revoke_message(
+        db: AsyncSession,
+        message_id: UUID,
+        user_id: UUID
+    ) -> Any:
+        """撤回私聊消息"""
+        from app.models.community import PrivateMessage
+
+        msg = await db.get(PrivateMessage, message_id)
+        if not msg or msg.is_deleted:
+            raise ValueError("消息不存在")
+        if msg.sender_id != user_id:
+            raise ValueError("无权限撤回该消息")
+        if msg.is_revoked:
+            return msg
+        if datetime.utcnow().difference(msg.created_at).total_seconds() > 86400:
+            raise ValueError("超过撤回时限")
+
+        msg.is_revoked = True
+        msg.revoked_at = datetime.utcnow()
+        msg.content = None
+        msg.content_data = None
+        msg.reactions = None
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(PrivateMessage).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
+        ).where(PrivateMessage.id == msg.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def update_reaction(
+        db: AsyncSession,
+        message_id: UUID,
+        user_id: UUID,
+        emoji: str,
+        is_add: bool
+    ) -> Any:
+        """更新私聊消息表情反应"""
+        from app.models.community import PrivateMessage
+
+        msg = await db.get(PrivateMessage, message_id)
+        if not msg or msg.is_deleted:
+            raise ValueError("消息不存在")
+        if msg.is_revoked:
+            raise ValueError("消息已撤回")
+        if user_id not in [msg.sender_id, msg.receiver_id]:
+            raise ValueError("无权限更新消息")
+
+        reactions = msg.reactions or {}
+        user_key = str(user_id)
+        users = set(reactions.get(emoji, []))
+        if is_add:
+            users.add(user_key)
+        else:
+            users.discard(user_key)
+        if users:
+            reactions[emoji] = list(users)
+        else:
+            reactions.pop(emoji, None)
+
+        msg.reactions = reactions
+        db.add(msg)
+        await db.flush()
+
+        stmt = select(PrivateMessage).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
+        ).where(PrivateMessage.id == msg.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
+
+    @staticmethod
+    async def search_messages(
+        db: AsyncSession,
+        user_id: UUID,
+        friend_id: UUID,
+        keyword: str,
+        limit: int = 50
+    ) -> List[Any]:
+        """搜索私聊消息"""
+        from app.models.community import PrivateMessage
+
+        query = select(PrivateMessage).where(
+            or_(
+                and_(PrivateMessage.sender_id == user_id, PrivateMessage.receiver_id == friend_id),
+                and_(PrivateMessage.sender_id == friend_id, PrivateMessage.receiver_id == user_id)
+            ),
+            PrivateMessage.not_deleted_filter(),
+            PrivateMessage.content.ilike(f"%{keyword}%")
+        ).options(
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.receiver),
+            selectinload(PrivateMessage.reply_to).selectinload(PrivateMessage.sender)
+        ).order_by(desc(PrivateMessage.created_at)).limit(limit)
+
+        result = await db.execute(query)
+        return [msg for msg in result.scalars().all() if _is_visible_to(msg.content_data, user_id)]
 
     @staticmethod
     async def get_messages(
@@ -971,7 +1381,8 @@ class PrivateMessageService:
 
         query = query.limit(limit)
         result = await db.execute(query)
-        return list(result.scalars().all())
+        messages = list(result.scalars().all())
+        return [msg for msg in messages if _is_visible_to(msg.content_data, user_id)]
 
     @staticmethod
     async def mark_as_read(

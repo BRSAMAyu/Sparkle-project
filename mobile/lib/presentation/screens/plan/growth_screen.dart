@@ -58,10 +58,9 @@ class _GrowthPlanCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8),
-      child: InkWell(
+        child: InkWell(
         onTap: () {
-          // Navigation: Consider creating dedicated plan detail screen
-          context.push('/plans/${plan.id}/edit');
+          context.push('/plans/${plan.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(DS.lg),

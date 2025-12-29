@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 class FocusStatsTool extends StatelessWidget {
   const FocusStatsTool({super.key});

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/tools/breathing_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
 import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';

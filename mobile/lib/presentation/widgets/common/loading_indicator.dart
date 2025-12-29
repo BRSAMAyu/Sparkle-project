@@ -471,8 +471,8 @@ class ListItemSkeleton extends StatelessWidget {
   const ListItemSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) => _ShimmerWrapper(
-      child: const Padding(
+  Widget build(BuildContext context) => const _ShimmerWrapper(
+      child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: DS.spacing16,
           vertical: DS.spacing12,

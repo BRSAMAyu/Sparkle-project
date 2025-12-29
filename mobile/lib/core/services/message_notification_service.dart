@@ -23,7 +23,7 @@ class NotificationMessage {
   final String? targetId;
 }
 
-enum NotificationType { privateMessage, groupMessage }
+enum NotificationType { privateMessage, groupMessage, mention }
 
 // Unread message count provider
 final unreadMessageCountProvider = StateNotifierProvider<UnreadMessageCountNotifier, int>((ref) => UnreadMessageCountNotifier());
@@ -199,7 +199,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(width: DS.sm),
-                              if (widget.notification.type == NotificationType.groupMessage)
+                              if (widget.notification.type != NotificationType.privateMessage)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
@@ -207,7 +207,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    '群消息',
+                                    widget.notification.type == NotificationType.mention ? '提及' : '群消息',
                                     style: TextStyle(fontSize: 10, color: DS.brandPrimaryConst),
                                   ),
                                 ),

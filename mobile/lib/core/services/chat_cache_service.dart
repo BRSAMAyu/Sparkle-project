@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sparkle/data/models/community_model.dart';
 
@@ -6,6 +8,8 @@ class ChatCacheService {
   ChatCacheService._internal();
   static const String _groupPrefix = 'group_messages_';
   static const String _privatePrefix = 'private_messages_';
+  static const String _pendingGroupPrefix = 'pending_group_';
+  static const String _pendingPrivatePrefix = 'pending_private_';
 
   // Singleton
   static final ChatCacheService _instance = ChatCacheService._internal();
@@ -47,5 +51,43 @@ class ChatCacheService {
     // This is expensive to implement perfectly with dynamic box names, 
     // but we can clear known prefixes if we track them.
     // For now, assume simple cleanup or rely on Hive.deleteFromDisk
+  }
+
+  Future<void> enqueuePendingGroupMessage(String groupId, Map<String, dynamic> payload) async {
+    final box = await Hive.openBox<String>('$_pendingGroupPrefix$groupId');
+    final nonce = payload['nonce']?.toString();
+    if (nonce == null || nonce.isEmpty) return;
+    await box.put(nonce, jsonEncode(payload));
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingGroupMessages(String groupId) async {
+    final box = await Hive.openBox<String>('$_pendingGroupPrefix$groupId');
+    return box.values
+        .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+        .toList();
+  }
+
+  Future<void> removePendingGroupMessage(String groupId, String nonce) async {
+    final box = await Hive.openBox<String>('$_pendingGroupPrefix$groupId');
+    await box.delete(nonce);
+  }
+
+  Future<void> enqueuePendingPrivateMessage(String friendId, Map<String, dynamic> payload) async {
+    final box = await Hive.openBox<String>('$_pendingPrivatePrefix$friendId');
+    final nonce = payload['nonce']?.toString();
+    if (nonce == null || nonce.isEmpty) return;
+    await box.put(nonce, jsonEncode(payload));
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingPrivateMessages(String friendId) async {
+    final box = await Hive.openBox<String>('$_pendingPrivatePrefix$friendId');
+    return box.values
+        .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+        .toList();
+  }
+
+  Future<void> removePendingPrivateMessage(String friendId, String nonce) async {
+    final box = await Hive.openBox<String>('$_pendingPrivatePrefix$friendId');
+    await box.delete(nonce);
   }
 }

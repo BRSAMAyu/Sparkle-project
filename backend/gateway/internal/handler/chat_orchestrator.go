@@ -20,6 +20,7 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 
@@ -37,6 +38,7 @@ type chatInput struct {
 	Message   string `json:"message"`
 	SessionID string `json:"session_id"`
 	Nickname  string `json:"nickname,omitempty"`
+	ExtraContext map[string]interface{} `json:"extra_context,omitempty"`
 }
 
 // Reset clears the input for reuse
@@ -44,6 +46,7 @@ func (c *chatInput) Reset() {
 	c.Message = ""
 	c.SessionID = ""
 	c.Nickname = ""
+	c.ExtraContext = nil
 }
 
 // jsonResponsePool reuses response maps
@@ -189,6 +192,12 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		// Sanitize Input (Security Hygiene) - reuse global sanitizer
 		input.Message = sanitizer.Sanitize(input.Message)
 
+		// Persist user message to Redis history for context pruning
+		if input.SessionID != "" {
+			sessionID := input.SessionID
+			go h.saveMessage(userID, sessionID, "user", input.Message)
+		}
+
 		// Canonicalize Input (Semantic Cache Prep)
 		_ = h.semantic.Canonicalize(input.Message)
 		// TODO: Use canonicalized input for semantic search or caching in future
@@ -221,6 +230,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				Language:     "zh-CN",
 				ExtraContext: userContextJSON, // P0: Inject user context here
 			},
+		}
+		if input.ExtraContext != nil {
+			if extra, err := structpb.NewStruct(input.ExtraContext); err == nil {
+				req.ExtraContext = extra
+			}
 		}
 
 		// Call Python Agent via gRPC (server-side streaming)

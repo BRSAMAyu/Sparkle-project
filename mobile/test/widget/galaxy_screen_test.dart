@@ -1,12 +1,9 @@
-import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
-import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 void main() {
   group('Galaxy Widget Tests', () {

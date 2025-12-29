@@ -129,6 +129,8 @@ CREATE TYPE public.messagetype AS ENUM (
     'TASK_SHARE',
     'PLAN_SHARE',
     'FRAGMENT_SHARE',
+    'CAPSULE_SHARE',
+    'PRISM_SHARE',
     'PROGRESS',
     'ACHIEVEMENT',
     'CHECKIN',
@@ -540,7 +542,13 @@ CREATE TABLE public.group_messages (
     message_type public.messagetype NOT NULL,
     content text,
     content_data json,
+    thread_root_id uuid,
     reply_to_id uuid,
+    is_revoked boolean DEFAULT false NOT NULL,
+    revoked_at timestamp without time zone,
+    edited_at timestamp without time zone,
+    reactions json,
+    mention_user_ids json,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -813,7 +821,13 @@ CREATE TABLE public.private_messages (
     message_type public.messagetype NOT NULL,
     content text,
     content_data json,
+    thread_root_id uuid,
     reply_to_id uuid,
+    is_revoked boolean DEFAULT false NOT NULL,
+    revoked_at timestamp without time zone,
+    edited_at timestamp without time zone,
+    reactions json,
+    mention_user_ids json,
     is_read boolean NOT NULL,
     read_at timestamp without time zone,
     id uuid NOT NULL,
@@ -923,6 +937,8 @@ CREATE TABLE public.shared_resources (
     plan_id uuid,
     task_id uuid,
     cognitive_fragment_id uuid,
+    curiosity_capsule_id uuid,
+    behavior_pattern_id uuid,
     permission character varying(20) NOT NULL,
     comment text,
     view_count integer,
@@ -1843,6 +1859,13 @@ CREATE INDEX idx_message_group_time ON public.group_messages USING btree (group_
 
 
 --
+-- Name: idx_message_group_thread; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_message_group_thread ON public.group_messages USING btree (group_id, thread_root_id, created_at);
+
+
+--
 -- Name: idx_outbox_aggregate; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1913,6 +1936,13 @@ CREATE INDEX idx_private_message_conversation ON public.private_messages USING b
 
 
 --
+-- Name: idx_private_message_thread; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_private_message_thread ON public.private_messages USING btree (sender_id, receiver_id, thread_root_id, created_at);
+
+
+--
 -- Name: idx_private_message_receiver_unread; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1945,6 +1975,20 @@ CREATE INDEX idx_share_group ON public.shared_resources USING btree (group_id);
 --
 
 CREATE INDEX idx_share_resource_plan ON public.shared_resources USING btree (plan_id);
+
+
+--
+-- Name: idx_share_resource_capsule; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_capsule ON public.shared_resources USING btree (curiosity_capsule_id);
+
+
+--
+-- Name: idx_share_resource_pattern; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_pattern ON public.shared_resources USING btree (behavior_pattern_id);
 
 
 --
@@ -2835,6 +2879,14 @@ ALTER TABLE ONLY public.group_messages
 
 
 --
+-- Name: group_messages group_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_messages
+    ADD CONSTRAINT group_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.group_messages(id);
+
+
+--
 -- Name: group_messages group_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3011,6 +3063,14 @@ ALTER TABLE ONLY public.private_messages
 
 
 --
+-- Name: private_messages private_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.private_messages
+    ADD CONSTRAINT private_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.private_messages(id);
+
+
+--
 -- Name: private_messages private_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3040,6 +3100,22 @@ ALTER TABLE ONLY public.push_preferences
 
 ALTER TABLE ONLY public.shared_resources
     ADD CONSTRAINT shared_resources_cognitive_fragment_id_fkey FOREIGN KEY (cognitive_fragment_id) REFERENCES public.cognitive_fragments(id);
+
+
+--
+-- Name: shared_resources shared_resources_curiosity_capsule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shared_resources
+    ADD CONSTRAINT shared_resources_curiosity_capsule_id_fkey FOREIGN KEY (curiosity_capsule_id) REFERENCES public.curiosity_capsules(id);
+
+
+--
+-- Name: shared_resources shared_resources_behavior_pattern_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shared_resources
+    ADD CONSTRAINT shared_resources_behavior_pattern_id_fkey FOREIGN KEY (behavior_pattern_id) REFERENCES public.behavior_patterns(id);
 
 
 --
@@ -3181,5 +3257,3 @@ ALTER TABLE ONLY public.word_books
 --
 -- PostgreSQL database dump complete
 --
-
-
