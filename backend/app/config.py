@@ -141,7 +141,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security(self):
-        env = (self.ENVIRONMENT or "").lower()
+        env = (self.ENVIRONMENT or "").strip().lower()
+        if env == "":
+            env = "production"
+        self.ENVIRONMENT = env
         if self.DEBUG is None:
             self.DEBUG = env not in ("prod", "production")
 

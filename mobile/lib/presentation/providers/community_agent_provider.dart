@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-
+import 'package:sparkle/core/services/agent_session_store.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
-import 'package:sparkle/core/services/agent_session_store.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/agent_session_provider.dart';
+import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
+import 'package:uuid/uuid.dart';
 
 const String kCommunityAgentUserId = 'sparkle_agent';
 const String kCommunityAgentDisplayName = 'Sparkle AI';
@@ -212,12 +212,14 @@ class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> 
 
     var buffer = '';
     try {
+      final token = await _ref.read(authRepositoryProvider).getAccessToken();
       await for (final event in _repository.chatStream(
         fullPrompt,
         sessionId,
         userId: userContext.userId,
         nickname: userContext.nickname,
         extraContext: extraContext,
+        token: token,
       )) {
         if (event is TextEvent) {
           buffer += event.content;
@@ -325,12 +327,14 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
 
     var buffer = '';
     try {
+      final token = await _ref.read(authRepositoryProvider).getAccessToken();
       await for (final event in _repository.chatStream(
         fullPrompt,
         sessionId,
         userId: userContext.userId,
         nickname: userContext.nickname,
         extraContext: extraContext,
+        token: token,
       )) {
         if (event is TextEvent) {
           buffer += event.content;

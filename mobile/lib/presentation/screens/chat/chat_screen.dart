@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
@@ -20,11 +21,12 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
+  ProviderSubscription<List<ChatMessageModel>>? _messagesSubscription;
 
   @override
   void initState() {
     super.initState();
-    ref.listenManual(chatProvider.select((state) => state.messages), (previous, next) {
+    _messagesSubscription = ref.listenManual(chatProvider.select((state) => state.messages), (previous, next) {
       if (next.length > (previous?.length ?? 0)) {
         _scrollToBottom();
       }
@@ -33,6 +35,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _messagesSubscription?.close();
     _scrollController.dispose();
     super.dispose();
   }
@@ -219,7 +222,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                           if (msgIndex < 0) return const SizedBox.shrink();
 
-                          final message = messages[messages.length - 1 - msgIndex];
+                          final adjustedIndex = messages.length - 1 - msgIndex;
+                          if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
+                            return const SizedBox.shrink();
+                          }
+
+                          final message = messages[adjustedIndex];
                           return ChatBubble(message: message);
                         },
                       ),

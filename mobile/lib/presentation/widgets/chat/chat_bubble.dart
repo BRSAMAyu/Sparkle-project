@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/presentation/providers/community_agent_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/action_card.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
@@ -68,14 +69,28 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
   bool get _isUser {
     final myId = widget.currentUserId ?? 'me';
+    var isUser = false;
     if (widget.message is ChatMessageModel) {
-      return (widget.message as ChatMessageModel).role == MessageRole.user;
+      isUser = (widget.message as ChatMessageModel).role == MessageRole.user;
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;
-      return msg.sender.id == myId;
+      isUser = msg.sender.id == myId;
     } else if (widget.message is MessageInfo) {
       final msg = widget.message as MessageInfo;
-      return msg.sender?.id == myId;
+      isUser = msg.sender?.id == myId;
+    }
+    if (_isAgent) {
+      return false;
+    }
+    return isUser;
+  }
+
+  bool get _isAgent {
+    if (widget.message is PrivateMessageInfo) {
+      return isPrivateAgentMessage(widget.message as PrivateMessageInfo);
+    }
+    if (widget.message is MessageInfo) {
+      return isCommunityAgentMessage(widget.message as MessageInfo);
     }
     return false;
   }
@@ -265,8 +280,23 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                             MarkdownBody(
                                               data: _content,
                                               styleSheet: _getMarkdownStyle(context, isUser),
-                                              onTapLink: (text, href, title) {
-                                                if (href != null) launchUrl(Uri.parse(href));
+                                              onTapLink: (text, href, title) async {
+                                                if (href == null) return;
+                                                final uri = Uri.tryParse(href);
+                                                if (uri == null) return;
+                                                
+                                                final scheme = uri.scheme.toLowerCase();
+                                                if (scheme != 'http' && scheme != 'https') {
+                                                  // Prevent malicious schemes (javascript:, file:, etc.)
+                                                  return;
+                                                }
+                                                
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(
+                                                    uri,
+                                                    mode: LaunchMode.externalApplication,
+                                                  );
+                                                }
                                               },
                                             ),
                                           ],
@@ -397,7 +427,11 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     String? avatarUrl;
     var initial = '?';
 
-    if (widget.message is ChatMessageModel) {
+    if (_isAgent) {
+      final agent = buildCommunityAgentUser();
+      avatarUrl = agent.avatarUrl;
+      initial = 'AI';
+    } else if (widget.message is ChatMessageModel) {
       initial = isUser ? 'U' : 'AI';
     } else if (widget.message is PrivateMessageInfo) {
       final msg = widget.message as PrivateMessageInfo;

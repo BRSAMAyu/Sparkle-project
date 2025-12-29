@@ -71,7 +71,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
                     _buildContent(context, isMe),
                     const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      Text(brandPrimary),,,,,,),
+                      Text(brandPrimary),,,,,,,),
                   ],
                 ),
               ),

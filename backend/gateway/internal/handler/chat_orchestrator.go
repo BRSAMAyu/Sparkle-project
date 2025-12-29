@@ -132,203 +132,207 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			break
 		}
 
-		// First, check message type
-		msgMap := make(map[string]interface{})
-		if err := json.Unmarshal(msg, &msgMap); err != nil {
-			log.Printf("Failed to parse message: %v", err)
-			conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
-			continue
-		}
+		shouldClose := func() bool {
+			// First, check message type
+			msgMap := make(map[string]interface{})
+			if err := json.Unmarshal(msg, &msgMap); err != nil {
+				log.Printf("Failed to parse message: %v", err)
+				conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+				return false
+			}
 
-		msgType, ok := msgMap["type"].(string)
-		if !ok {
-			msgType = "message" // Default to chat message
-		}
+			msgType, ok := msgMap["type"].(string)
+			if !ok {
+				msgType = "message" // Default to chat message
+			}
 
-		// Route based on message type
-		switch msgType {
-		case "action_feedback":
-			h.handleActionFeedback(msgMap, userID)
-			continue
+			// Route based on message type
+			switch msgType {
+			case "action_feedback":
+				h.handleActionFeedback(msgMap, userID)
+				return false
 
-		case "focus_completed":
-			h.handleFocusCompleted(msgMap, userID)
-			continue
+			case "focus_completed":
+				h.handleFocusCompleted(msgMap, userID)
+				return false
 
-		case "message", "":
-			// Continue with normal chat message handling
-		default:
-			log.Printf("Unknown message type: %s", msgType)
-			conn.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
-			continue
-		}
+			case "message", "":
+				// Continue with normal chat message handling
+			default:
+				log.Printf("Unknown message type: %s", msgType)
+				conn.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
+				return false
+			}
 
-		// P1: Get input from pool instead of allocating new struct
-		input := chatInputPool.Get().(*chatInput)
-
-		// Parse JSON input
-		if err := json.Unmarshal(msg, input); err != nil {
-			log.Printf("Failed to parse message: %v", err)
-			conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+			// P1: Get input from pool instead of allocating new struct
+			input := chatInputPool.Get().(*chatInput)
 			input.Reset()
-			chatInputPool.Put(input)
-			continue
-		}
-
-		if input.Message == "" {
-			conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
-			input.Reset()
-			chatInputPool.Put(input)
-			continue
-		}
-
-		// Start a new span for this message processing
-		ctx, span := tracer.Start(c.Request.Context(), "HandleMessage")
-		span.SetAttributes(
-			attribute.String("user_id", userID),
-			attribute.String("session_id", input.SessionID),
-		)
-
-		// Sanitize Input (Security Hygiene) - reuse global sanitizer
-		input.Message = sanitizer.Sanitize(input.Message)
-
-		// Persist user message to Redis history for context pruning
-		if input.SessionID != "" {
-			sessionID := input.SessionID
-			go h.saveMessage(userID, sessionID, "user", input.Message)
-		}
-
-		// Canonicalize Input (Semantic Cache Prep)
-		_ = h.semantic.Canonicalize(input.Message)
-		// TODO: Use canonicalized input for semantic search or caching in future
-
-		startTime := time.Now()
-
-		// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
-		userContextJSON := ""
-		if h.userContext != nil {
-			contextData, err := h.userContext.GetUserContextData(ctx, uuid.MustParse(userID))
-			if err != nil {
-				log.Printf("Failed to fetch user context: %v", err)
-				// Non-fatal: continue with empty context
-			} else {
-				userContextJSON = contextData
-			}
-		}
-
-		// Build ChatRequest
-		req := &agentv1.ChatRequest{
-			RequestId: fmt.Sprintf("req_%s", uuid.New().String()),
-			UserId:    userID,
-			SessionId: input.SessionID,
-			Input: &agentv1.ChatRequest_Message{
-				Message: input.Message,
-			},
-			UserProfile: &agentv1.UserProfile{
-				Nickname:     input.Nickname,
-				Timezone:     "Asia/Shanghai",
-				Language:     "zh-CN",
-				ExtraContext: userContextJSON, // P0: Inject user context here
-			},
-		}
-		if input.ExtraContext != nil {
-			if extra, err := structpb.NewStruct(input.ExtraContext); err == nil {
-				req.ExtraContext = extra
-			}
-		}
-
-		// Call Python Agent via gRPC (server-side streaming)
-		// Use the new span context
-		stream, err := h.agentClient.StreamChat(ctx, req)
-		if err != nil {
-			log.Printf("Failed to call StreamChat: %v", err)
-			conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
-			span.End()
-			continue
-		}
-
-		// P1: Get string builder from pool for efficient text accumulation
-		textBuilder := stringBuilderPool.Get().(*strings.Builder)
-		textBuilder.Reset()
-
-		// Receive and forward streaming responses
-		var fullText string
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				// Stream ended normally
-				break
-			}
-			if err != nil {
-				log.Printf("Stream recv error: %v", err)
-				conn.WriteJSON(gin.H{"type": "error", "message": "Stream interrupted"})
-				break
-			}
-
-			// Accumulate full text for persistence using pooled builder
-			if delta := resp.GetDelta(); delta != "" {
-				textBuilder.WriteString(delta)
-			}
-			if ft := resp.GetFullText(); ft != "" {
-				textBuilder.Reset()
-				textBuilder.WriteString(ft)
-			}
-
-			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp)
-
-			// Forward to WebSocket client
-			if err := conn.WriteJSON(jsonResp); err != nil {
-				log.Printf("Failed to write to WebSocket: %v", err)
-				stringBuilderPool.Put(textBuilder)
+			defer func() {
 				input.Reset()
 				chatInputPool.Put(input)
-				span.End()
-				return
-			}
-		}
-		fullText = textBuilder.String()
-		stringBuilderPool.Put(textBuilder)
-
-		// Add metadata for the final state
-		latency := time.Since(startTime).Milliseconds()
-		qLen, _ := h.chatHistory.GetQueueLength(ctx)
-		threshold := h.chatHistory.GetBreakerThreshold()
-
-		meta := map[string]interface{}{
-			"latency_ms":     latency,
-			"is_cache_hit":   false, // Set to true if semantic cache hit (to be implemented)
-			"cost_saved":     0.0,
-			"breaker_status": "closed",
-		}
-		if qLen >= threshold {
-			meta["breaker_status"] = "open"
-		}
-
-		// Send final metadata
-		conn.WriteJSON(gin.H{
-			"type": "meta",
-			"meta": meta,
-		})
-
-		// Persist completed message to database (async)
-		if fullText != "" && input.SessionID != "" {
-			// Capture values for goroutine before returning input to pool
-			sessionID := input.SessionID
-			go h.saveMessage(userID, sessionID, "assistant", fullText)
-
-			// Also decrement quota (async)
-			go func() {
-				if _, err := h.quota.DecrQuota(context.Background(), userID); err != nil {
-					log.Printf("Failed to decrement quota: %v", err)
-				}
 			}()
-		}
 
-		// P1: Return input to pool for reuse
-		input.Reset()
-		chatInputPool.Put(input)
-		span.End()
+			// Parse JSON input
+			if err := json.Unmarshal(msg, input); err != nil {
+				log.Printf("Failed to parse message: %v", err)
+				conn.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+				return false
+			}
+
+			if input.Message == "" {
+				conn.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
+				return false
+			}
+
+			// Start a new span for this message processing
+			ctx, span := tracer.Start(c.Request.Context(), "HandleMessage")
+			span.SetAttributes(
+				attribute.String("user_id", userID),
+				attribute.String("session_id", input.SessionID),
+			)
+			defer span.End()
+
+			// Sanitize Input (Security Hygiene) - reuse global sanitizer
+			input.Message = sanitizer.Sanitize(input.Message)
+
+			// Persist user message to Redis history for context pruning
+			if input.SessionID != "" {
+				sessionID := input.SessionID
+				message := input.Message
+				go h.saveMessage(userID, sessionID, "user", message)
+			}
+
+			// Canonicalize Input (Semantic Cache Prep)
+			_ = h.semantic.Canonicalize(input.Message)
+			// TODO: Use canonicalized input for semantic search or caching in future
+
+			startTime := time.Now()
+
+			// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
+			userContextJSON := ""
+			if h.userContext != nil {
+				contextData, err := h.userContext.GetUserContextData(ctx, uuid.MustParse(userID))
+				if err != nil {
+					log.Printf("Failed to fetch user context: %v", err)
+					// Non-fatal: continue with empty context
+				} else {
+					userContextJSON = contextData
+				}
+			}
+
+			// Build ChatRequest
+			req := &agentv1.ChatRequest{
+				RequestId: fmt.Sprintf("req_%s", uuid.New().String()),
+				UserId:    userID,
+				SessionId: input.SessionID,
+				Input: &agentv1.ChatRequest_Message{
+					Message: input.Message,
+				},
+				UserProfile: &agentv1.UserProfile{
+					Nickname:     input.Nickname,
+					Timezone:     "Asia/Shanghai",
+					Language:     "zh-CN",
+					ExtraContext: userContextJSON, // P0: Inject user context here
+				},
+			}
+			if input.ExtraContext != nil {
+				if extra, err := structpb.NewStruct(input.ExtraContext); err == nil {
+					req.ExtraContext = extra
+				}
+			}
+
+			// Call Python Agent via gRPC (server-side streaming)
+			// Use the new span context
+			stream, err := h.agentClient.StreamChat(ctx, req)
+			if err != nil {
+				log.Printf("Failed to call StreamChat: %v", err)
+				conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
+				return false
+			}
+
+			// P1: Get string builder from pool for efficient text accumulation
+			textBuilder := stringBuilderPool.Get().(*strings.Builder)
+			textBuilder.Reset()
+			defer func() {
+				textBuilder.Reset()
+				stringBuilderPool.Put(textBuilder)
+			}()
+
+			// Receive and forward streaming responses
+			var fullText string
+			for {
+				resp, err := stream.Recv()
+				if err == io.EOF {
+					// Stream ended normally
+					break
+				}
+				if err != nil {
+					log.Printf("Stream recv error: %v", err)
+					conn.WriteJSON(gin.H{"type": "error", "message": "Stream interrupted"})
+					break
+				}
+
+				// Accumulate full text for persistence using pooled builder
+				if delta := resp.GetDelta(); delta != "" {
+					textBuilder.WriteString(delta)
+				}
+				if ft := resp.GetFullText(); ft != "" {
+					textBuilder.Reset()
+					textBuilder.WriteString(ft)
+				}
+
+				// Convert protobuf response to JSON-friendly map
+				jsonResp := convertResponseToJSON(resp)
+
+				// Forward to WebSocket client
+				if err := conn.WriteJSON(jsonResp); err != nil {
+					log.Printf("Failed to write to WebSocket: %v", err)
+					return true
+				}
+			}
+			fullText = textBuilder.String()
+
+			// Add metadata for the final state
+			latency := time.Since(startTime).Milliseconds()
+			qLen, _ := h.chatHistory.GetQueueLength(ctx)
+			threshold := h.chatHistory.GetBreakerThreshold()
+
+			meta := map[string]interface{}{
+				"latency_ms":     latency,
+				"is_cache_hit":   false, // Set to true if semantic cache hit (to be implemented)
+				"cost_saved":     0.0,
+				"breaker_status": "closed",
+			}
+			if qLen >= threshold {
+				meta["breaker_status"] = "open"
+			}
+
+			// Send final metadata
+			conn.WriteJSON(gin.H{
+				"type": "meta",
+				"meta": meta,
+			})
+
+			// Persist completed message to database (async)
+			if fullText != "" && input.SessionID != "" {
+				// Capture values for goroutine before returning input to pool
+				sessionID := input.SessionID
+				result := fullText
+				go h.saveMessage(userID, sessionID, "assistant", result)
+
+				// Also decrement quota (async)
+				go func(uid string) {
+					if _, err := h.quota.DecrQuota(context.Background(), uid); err != nil {
+						log.Printf("Failed to decrement quota: %v", err)
+					}
+				}(userID)
+			}
+
+			return false
+		}()
+		if shouldClose {
+			return
+		}
 	}
 
 	log.Printf("WebSocket disconnected for user: %s", userID)

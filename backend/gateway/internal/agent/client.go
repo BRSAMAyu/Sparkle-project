@@ -22,7 +22,11 @@ type Client struct {
 
 func NewClient(cfg *config.Config) (*Client, error) {
 	// Simple retry logic or keepalive can be added here
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	timeoutSeconds := cfg.GRPCTimeoutSeconds
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 5
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
 	creds := insecure.NewCredentials()

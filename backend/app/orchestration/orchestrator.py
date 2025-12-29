@@ -6,6 +6,8 @@ from loguru import logger
 from datetime import datetime
 import uuid
 
+from google.protobuf.json_format import MessageToDict
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.llm_service import llm_service
 from app.services.knowledge_service import KnowledgeService
@@ -107,34 +109,35 @@ class ChatOrchestrator:
     """
 
     def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None):
+        if redis_client is None:
+            logger.error("ChatOrchestrator requires Redis, but no redis_client was provided")
+            raise RuntimeError("Redis client is required for ChatOrchestrator")
         self.db_session = db_session
         self.redis = redis_client
 
         # Initialize components
-        self.state_manager = SessionStateManager(redis_client) if redis_client else None
-        self.validator = RequestValidator(redis_client, daily_quota=100000) if redis_client else None
+        self.state_manager = SessionStateManager(redis_client)
+        self.validator = RequestValidator(redis_client, daily_quota=100000)
         self.tool_executor = ToolExecutor()
         self.response_composer = ResponseComposer()
 
         # Initialize ContextPruner (P0 feature)
         self.context_pruner = None
         self.token_tracker = None
-        if redis_client:
-            self.context_pruner = ContextPruner(
-                redis_client=redis_client,
-                max_history_messages=10,      # 保留最近10轮对话
-                summary_threshold=20,         # 超过20轮触发总结
-                summary_cache_ttl=3600        # 总结缓存1小时
-            )
+        self.context_pruner = ContextPruner(
+            redis_client=redis_client,
+            max_history_messages=10,      # 保留最近10轮对话
+            summary_threshold=20,         # 超过20轮触发总结
+            summary_cache_ttl=3600        # 总结缓存1小时
+        )
 
-            # Initialize TokenTracker (P1 feature)
-            self.token_tracker = TokenTracker(redis_client)
+        # Initialize TokenTracker (P1 feature)
+        self.token_tracker = TokenTracker(redis_client)
 
-            logger.info("ChatOrchestrator initialized with ContextPruner and TokenTracker")
+        logger.info("ChatOrchestrator initialized with ContextPruner and TokenTracker")
 
         # Initialize tool registry (auto-discover tools)
-        if redis_client:  # Only log if initialized
-            logger.info("ChatOrchestrator initialized with all components")
+        logger.info("ChatOrchestrator initialized with all components")
 
         # Ensure tools are registered
         self._ensure_tools_registered()
@@ -143,19 +146,18 @@ class ChatOrchestrator:
         self.graph = create_standard_chat_graph()
         
         # Connect Checkpointer
-        if redis_client:
-            self.graph.checkpointer = RedisCheckpointer(redis_client)
-            
-            # Connect Visualizer and Tracer
-            from app.visualization.realtime_visualizer import visualizer
-            from app.visualization.execution_tracer import ExecutionTracer
-            
-            self.tracer = ExecutionTracer(redis_client)
-            
-            self.graph.on_event = self._chain_event_handlers(
-                visualizer.on_graph_event,
-                self.tracer.record_event
-            )
+        self.graph.checkpointer = RedisCheckpointer(redis_client)
+        
+        # Connect Visualizer and Tracer
+        from app.visualization.realtime_visualizer import visualizer
+        from app.visualization.execution_tracer import ExecutionTracer
+        
+        self.tracer = ExecutionTracer(redis_client)
+        
+        self.graph.on_event = self._chain_event_handlers(
+            visualizer.on_graph_event,
+            self.tracer.record_event
+        )
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -478,6 +480,18 @@ class ChatOrchestrator:
                     logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse extra_context JSON: {e}")
+
+            request_context = {}
+            if request.HasField("extra_context"):
+                try:
+                    request_context = MessageToDict(request.extra_context)
+                    if request_context:
+                        logger.debug(f"Parsed request extra_context: {list(request_context.keys())}")
+                except Exception as e:
+                    logger.warning(f"Failed to parse request extra_context: {e}")
+
+            if request_context:
+                grpc_context = {**grpc_context, **request_context}
 
             user_context_payload = None
             conversation_context = None

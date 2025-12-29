@@ -24,7 +24,7 @@ class FakeTaskChatNotifier extends TaskChatNotifier {
       userId: 'user',
       role: MessageRole.user,
       content: text,
-      createdAt: DateTime(2024, 1),
+      createdAt: DateTime(2024),
       taskId: taskId,
       conversationId: 'test',
     );
@@ -55,8 +55,8 @@ void main() {
       energyCost: 1,
       status: TaskStatus.pending,
       priority: 1,
-      createdAt: DateTime(2024, 1),
-      updatedAt: DateTime(2024, 1),
+      createdAt: DateTime(2024),
+      updatedAt: DateTime(2024),
     );
     final sentMessages = <String>[];
     final container = ProviderContainer(

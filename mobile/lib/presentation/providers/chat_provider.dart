@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -6,6 +8,7 @@ import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';
+import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
@@ -107,12 +110,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
 
     // 监听 WebSocket 连接状态
-    _chatRepository.connectionStateStream.listen((connectionState) {
+    _connectionStateSubscription =
+        _chatRepository.connectionStateStream.listen((connectionState) {
+      if (_isDisposed) return;
       state = state.copyWith(wsConnectionState: connectionState);
     });
   }
   final ChatRepository _chatRepository;
   final Ref _ref;
+  StreamSubscription<WsConnectionState>? _connectionStateSubscription;
+  final _Debouncer _streamDebouncer =
+      _Debouncer(const Duration(milliseconds: 50));
+  bool _isDisposed = false;
 
   /// 手动触发重连
   Future<void> reconnect() async {
@@ -121,6 +130,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _connectionStateSubscription?.cancel();
+    _streamDebouncer.cancel();
     _chatRepository.dispose();
     super.dispose();
   }
@@ -240,33 +252,75 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final accumulatedWidgets = <WidgetPayload>[];
     final accumulatedReasoningSteps = <ReasoningStep>[];
     int? reasoningStartTime;
+    String? pendingStreamingContent;
+    String? pendingAiStatus;
+    String? pendingAiStatusDetails;
+    List<ReasoningStep>? pendingReasoningSteps;
+    bool? pendingReasoningActive;
+    int? pendingReasoningStartTime;
+
+    void flushPending({bool immediate = false}) {
+      void applyPending() {
+        if (_isDisposed) return;
+        if (pendingStreamingContent == null &&
+            pendingAiStatus == null &&
+            pendingAiStatusDetails == null &&
+            pendingReasoningSteps == null &&
+            pendingReasoningActive == null &&
+            pendingReasoningStartTime == null) {
+          return;
+        }
+        state = state.copyWith(
+          streamingContent: pendingStreamingContent,
+          aiStatus: pendingAiStatus,
+          aiStatusDetails: pendingAiStatusDetails,
+          reasoningSteps: pendingReasoningSteps,
+          isReasoningActive: pendingReasoningActive,
+          reasoningStartTime: pendingReasoningStartTime,
+        );
+        pendingStreamingContent = null;
+        pendingAiStatus = null;
+        pendingAiStatusDetails = null;
+        pendingReasoningSteps = null;
+        pendingReasoningActive = null;
+        pendingReasoningStartTime = null;
+      }
+
+      if (immediate) {
+        _streamDebouncer.flush(applyPending);
+      } else {
+        _streamDebouncer.run(applyPending);
+      }
+    }
 
     try {
+      final token = await _ref.read(authRepositoryProvider).getAccessToken();
       await for (final event in _chatRepository.chatStream(
         content,
         state.conversationId,
         userId: userId,
         nickname: nickname,
+        token: token,
       )) {
         if (event is TextEvent) {
           // 流式文本片段（delta）
           accumulatedContent += event.content;
-          state = state.copyWith(
-            streamingContent: accumulatedContent,
-          );
+          pendingStreamingContent = accumulatedContent;
+          flushPending();
         } else if (event is StatusUpdateEvent) {
           // AI 状态更新（THINKING, GENERATING 等）
           lastAiStatus = event.state;
-          state = state.copyWith(
-            aiStatus: event.state,
-            aiStatusDetails: event.details,
-          );
+          pendingAiStatus = event.state;
+          pendingAiStatusDetails = event.details;
+          flushPending();
         } else if (event is FullTextEvent) {
           // 完整文本（通常在流结束时）
           accumulatedContent = event.content;
-          state = state.copyWith(streamingContent: accumulatedContent);
+          pendingStreamingContent = accumulatedContent;
+          flushPending(immediate: true);
         } else if (event is ErrorEvent) {
           // 错误事件 - 使用用户友好的错误消息
+          _streamDebouncer.cancel();
           final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
             event.code,
             event.message,
@@ -280,6 +334,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             isSending: false,
             streamingContent: '',
             clearAiStatus: true,
+            clearReasoning: true,
           );
           return; // 提前退出
         } else if (event is WidgetEvent) {
@@ -292,10 +347,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is ToolStartEvent) {
           // 显示"正在使用工具: xxx"
           lastAiStatus = 'EXECUTING_TOOL';
-          state = state.copyWith(
-            aiStatus: 'EXECUTING_TOOL',
-            aiStatusDetails: '正在使用 ${event.toolName}...',
-          );
+          pendingAiStatus = 'EXECUTING_TOOL';
+          pendingAiStatusDetails = '正在使用 ${event.toolName}...';
+          flushPending();
         } else if (event is ToolResultEvent) {
           final widgetType = event.result.widgetType;
           final widgetData = event.result.widgetData;
@@ -321,18 +375,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
           accumulatedReasoningSteps.add(stepWithTime);
 
-          // Update state with new reasoning steps
-          state = state.copyWith(
-            reasoningSteps: List.from(accumulatedReasoningSteps),
-            isReasoningActive: true,
-            reasoningStartTime: reasoningStartTime,
-          );
+          pendingReasoningSteps = List.from(accumulatedReasoningSteps);
+          pendingReasoningActive = true;
+          pendingReasoningStartTime = reasoningStartTime;
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
+          flushPending(immediate: true);
         }
       }
 
+      _streamDebouncer.cancel();
       // 流结束后，将累积的内容转为正式消息
       if (accumulatedContent.isNotEmpty || accumulatedWidgets.isNotEmpty) {
         // Calculate total duration if reasoning steps exist
@@ -373,6 +427,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
 
     } catch (e) {
+      _streamDebouncer.cancel();
       // 捕获未处理的异常，提供友好的错误提示
       final errorMessage = ErrorMessages.getUserFriendlyMessage(
         'UNKNOWN',
@@ -405,3 +460,24 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) => ChatNotifier(ref.watch(chatRepositoryProvider), ref));
+
+class _Debouncer {
+  _Debouncer(this.delay);
+  final Duration delay;
+  Timer? _timer;
+
+  void run(void Function() action) {
+    _timer?.cancel();
+    _timer = Timer(delay, action);
+  }
+
+  void flush(void Function() action) {
+    _timer?.cancel();
+    action();
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
+  }
+}

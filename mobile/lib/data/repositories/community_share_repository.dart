@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 
 final communityShareRepositoryProvider = Provider((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -20,7 +21,7 @@ class CommunityShareRepository {
     String? comment,
   }) async {
     final response = await _apiClient.post(
-      '/api/v1/community/share',
+      ApiEndpoints.communityShare,
       data: {
         'resource_type': resourceType,
         'resource_id': resourceId,

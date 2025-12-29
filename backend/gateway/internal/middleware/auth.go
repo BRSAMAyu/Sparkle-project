@@ -55,6 +55,16 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// Optional query user_id is for backward compatibility but must match token identity
+		queryUserID := c.Query("user_id")
+		if queryUserID != "" && queryUserID != userID {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "user_id mismatch",
+				"code":  "USER_ID_MISMATCH",
+			})
+			return
+		}
+
 		// Extract role information from JWT claims
 		isAdmin := false
 		if adminClaim, exists := claims["is_admin"]; exists {

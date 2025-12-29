@@ -13,6 +13,9 @@ from opentelemetry.instrumentation.grpc import GrpcAioInstrumentorServer
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.services.agent_grpc_service import AgentServiceImpl
+from app.core.cache import cache_service
+from app.db.session import AsyncSessionLocal
+from app.orchestration.orchestrator import ChatOrchestrator
 from app.config import settings
 
 
@@ -45,6 +48,7 @@ class GracefulShutdown:
 
         logger.info("Stopping gRPC server...")
         await self.server.stop(grace=5.0)  # 5 秒优雅关闭
+        await cache_service.close()
         logger.info("gRPC server stopped successfully")
 
 
@@ -65,9 +69,21 @@ async def serve():
         ]
     )
 
+    # Initialize Redis (required for orchestrator)
+    await cache_service.init_redis()
+    if not cache_service.redis:
+        raise RuntimeError("Redis client initialization failed")
+    try:
+        await cache_service.redis.ping()
+    except Exception as e:
+        logger.error(f"Redis unavailable: {e}")
+        raise
+
+    orchestrator = ChatOrchestrator(redis_client=cache_service.redis)
+
     # 注册 AgentService
     agent_service_pb2_grpc.add_AgentServiceServicer_to_server(
-        AgentServiceImpl(), server
+        AgentServiceImpl(orchestrator=orchestrator, db_session_factory=AsyncSessionLocal), server
     )
 
     if settings.DEBUG or settings.GRPC_ENABLE_REFLECTION:

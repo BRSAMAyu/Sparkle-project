@@ -7,6 +7,7 @@ from loguru import logger
 from app.tools.registry import tool_registry
 from app.tools.base import ToolResult
 from app.services.tool_history_service import ToolHistoryService
+from app.db.session import AsyncSessionLocal
 
 
 class ToolExecutor:
@@ -20,7 +21,7 @@ class ToolExecutor:
         tool_name: str,
         arguments: Dict[str, Any],
         user_id: str,
-        db_session: Any,
+        db_session: Optional[Any],
         progress_callback: Optional[Any] = None
     ) -> ToolResult:
         """
@@ -36,6 +37,35 @@ class ToolExecutor:
         Returns:
             ToolResult: 执行结果
         """
+        if db_session is None:
+            async with AsyncSessionLocal() as session:
+                return await self._execute_tool_call_with_session(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    user_id=user_id,
+                    db_session=session,
+                    progress_callback=progress_callback,
+                    owns_session=True
+                )
+
+        return await self._execute_tool_call_with_session(
+            tool_name=tool_name,
+            arguments=arguments,
+            user_id=user_id,
+            db_session=db_session,
+            progress_callback=progress_callback,
+            owns_session=False
+        )
+
+    async def _execute_tool_call_with_session(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        user_id: str,
+        db_session: Any,
+        progress_callback: Optional[Any],
+        owns_session: bool
+    ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
 
         if not tool:
@@ -49,8 +79,10 @@ class ToolExecutor:
             await self._record_tool_execution(
                 db_session, user_id, tool_name, False,
                 error_message=f"未知工具: {tool_name}",
-                error_type="ToolNotFound"
+                error_type="ToolNotFound",
+                use_separate_session=not owns_session
             )
+            await self._commit_if_owned(db_session, owns_session)
             return error_result
 
         # 验证参数
@@ -68,8 +100,10 @@ class ToolExecutor:
                 db_session, user_id, tool_name, False,
                 error_message=f"参数验证失败: {str(e)}",
                 error_type="ValidationError",
-                input_args=arguments
+                input_args=arguments,
+                use_separate_session=not owns_session
             )
+            await self._commit_if_owned(db_session, owns_session)
             return validation_error
 
         # 记录执行开始时间
@@ -95,8 +129,10 @@ class ToolExecutor:
                 error_message=result.error_message,
                 tool_category=getattr(tool, "category", None),
                 input_args=dict(validated_params) if hasattr(validated_params, '__dict__') else arguments,
-                output_summary=result.suggestion or str(result.data)[:200] if result.data else None
+                output_summary=result.suggestion or str(result.data)[:200] if result.data else None,
+                use_separate_session=not owns_session
             )
+            await self._commit_if_owned(db_session, owns_session)
 
             return result
 
@@ -105,6 +141,7 @@ class ToolExecutor:
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             logger.error(f"Tool execution error: {tool_name} - {str(e)}", exc_info=True)
+            await self._safe_rollback(db_session)
 
             # 记录执行异常
             await self._record_tool_execution(
@@ -115,8 +152,10 @@ class ToolExecutor:
                 execution_time_ms=execution_time_ms,
                 error_message=str(e),
                 error_type=type(e).__name__,
-                input_args=arguments
+                input_args=arguments,
+                use_separate_session=not owns_session
             )
+            await self._commit_if_owned(db_session, owns_session)
 
             return ToolResult(
                 success=False,
@@ -136,7 +175,8 @@ class ToolExecutor:
         error_type: Optional[str] = None,
         tool_category: Optional[str] = None,
         input_args: Optional[Dict[str, Any]] = None,
-        output_summary: Optional[str] = None
+        output_summary: Optional[str] = None,
+        use_separate_session: bool = False
     ) -> None:
         """
         记录工具执行到数据库
@@ -153,10 +193,31 @@ class ToolExecutor:
             input_args: 输入参数
             output_summary: 输出摘要
         """
-        try:
-            # 转换user_id为int（如果需要）
-            user_id_int = int(user_id) if isinstance(user_id, str) else user_id
+        # 转换user_id为int（如果需要）
+        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
 
+        if use_separate_session:
+            async with AsyncSessionLocal() as history_session:
+                try:
+                    history_service = ToolHistoryService(history_session)
+                    await history_service.record_tool_execution(
+                        user_id=user_id_int,
+                        tool_name=tool_name,
+                        success=success,
+                        execution_time_ms=execution_time_ms,
+                        error_message=error_message,
+                        error_type=error_type,
+                        tool_category=tool_category,
+                        input_args=input_args,
+                        output_summary=output_summary
+                    )
+                    await history_session.commit()
+                except Exception as e:
+                    await history_session.rollback()
+                    logger.warning(f"Failed to record tool execution history: {e}")
+            return
+
+        try:
             history_service = ToolHistoryService(db_session)
             await history_service.record_tool_execution(
                 user_id=user_id_int,
@@ -169,15 +230,33 @@ class ToolExecutor:
                 input_args=input_args,
                 output_summary=output_summary
             )
-            await db_session.commit()
+            await db_session.flush()
         except Exception as e:
             logger.warning(f"Failed to record tool execution history: {e}")
+            await self._safe_rollback(db_session)
+
+    async def _commit_if_owned(self, db_session: Any, owns_session: bool) -> None:
+        if not owns_session:
+            return
+        try:
+            await db_session.commit()
+        except Exception as e:
+            logger.warning(f"Failed to commit tool execution session: {e}")
+            await self._safe_rollback(db_session)
+
+    async def _safe_rollback(self, db_session: Any) -> None:
+        if not db_session or not hasattr(db_session, "rollback"):
+            return
+        try:
+            await db_session.rollback()
+        except Exception as e:
+            logger.warning(f"Failed to rollback tool execution session: {e}")
     
     async def execute_tool_calls(
         self,
         tool_calls: List[Dict[str, Any]],
         user_id: str,
-        db_session: Any
+        db_session: Optional[Any]
     ) -> List[ToolResult]:
         """
         批量执行工具调用（按顺序）
@@ -198,5 +277,3 @@ class ToolExecutor:
             )
             results.append(result)
         return results
-
-import json

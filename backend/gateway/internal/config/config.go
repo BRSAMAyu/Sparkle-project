@@ -16,6 +16,7 @@ type Config struct {
 	AgentTLSCACertPath string `mapstructure:"AGENT_TLS_CA_CERT"`
 	AgentTLSServerName string `mapstructure:"AGENT_TLS_SERVER_NAME"`
 	AgentTLSInsecure bool `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds int `mapstructure:"GRPC_TIMEOUT_SECONDS"`
 	JWTSecret     string `mapstructure:"JWT_SECRET"`
 	RedisURL      string `mapstructure:"REDIS_URL"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
@@ -120,6 +121,7 @@ func Load() *Config {
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
 	viper.SetDefault("AGENT_TLS_SERVER_NAME", "")
 	viper.SetDefault("AGENT_TLS_INSECURE", false)
+	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 5)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")

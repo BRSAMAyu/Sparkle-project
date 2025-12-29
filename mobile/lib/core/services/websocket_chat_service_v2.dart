@@ -37,6 +37,7 @@ class WebSocketChatServiceV2 {
   // 当前用户和会话
   String? _currentUserId;
   String? _currentSessionId;
+  String? _currentToken;
 
   // 连接状态
   WsConnectionState _connectionState = WsConnectionState.disconnected;
@@ -70,6 +71,7 @@ class WebSocketChatServiceV2 {
     String? sessionId,
     String? nickname,
     Map<String, dynamic>? extraContext,
+    String? token,
   }) {
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
@@ -79,8 +81,8 @@ class WebSocketChatServiceV2 {
         StreamController<ChatStreamEvent>.broadcast();
 
     // 检查是否需要建立连接
-    if (_shouldConnect(userId)) {
-      _establishConnection(userId);
+    if (_shouldConnect(userId, token)) {
+      _establishConnection(userId, token);
     }
 
     // 构建消息
@@ -139,10 +141,15 @@ class WebSocketChatServiceV2 {
   }
 
   /// 判断是否需要建立连接
-  bool _shouldConnect(String userId) {
+  bool _shouldConnect(String userId, String? token) {
     // 用户切换
     if (_currentUserId != null && _currentUserId != userId) {
       debugPrint('👤 User changed, reconnecting...');
+      _closeConnection();
+      return true;
+    }
+    if (token != null && _currentToken != null && _currentToken != token) {
+      debugPrint('🔐 Token changed, reconnecting...');
       _closeConnection();
       return true;
     }
@@ -157,18 +164,23 @@ class WebSocketChatServiceV2 {
   }
 
   /// 建立 WebSocket 连接
-  void _establishConnection(String userId) {
+  void _establishConnection(String userId, String? token) {
     if (_connectionState == WsConnectionState.connecting ||
         _connectionState == WsConnectionState.connected) {
       debugPrint('⚠️  Already connecting/connected');
       return;
     }
 
+    final effectiveToken = token ?? _currentToken;
     _currentUserId = userId;
+    _currentToken = effectiveToken;
     _updateConnectionState(WsConnectionState.connecting);
 
     try {
-      final wsUrl = '$baseUrl/ws/chat?user_id=$userId';
+      final query = effectiveToken != null && effectiveToken.isNotEmpty
+          ? 'token=$effectiveToken&user_id=$userId'
+          : 'user_id=$userId';
+      final wsUrl = '$baseUrl/ws/chat?$query';
       debugPrint('🔌 Connecting to: $wsUrl');
 
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
@@ -290,7 +302,7 @@ class WebSocketChatServiceV2 {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       if (_currentUserId != null) {
-        _establishConnection(_currentUserId!);
+        _establishConnection(_currentUserId!, _currentToken);
       }
     });
   }
@@ -460,7 +472,7 @@ class WebSocketChatServiceV2 {
     _reconnectAttempts = 0;
     _closeConnection();
     await Future.delayed(const Duration(milliseconds: 500));
-    _establishConnection(_currentUserId!);
+    _establishConnection(_currentUserId!, _currentToken);
   }
 
   /// 关闭连接
@@ -477,8 +489,12 @@ class WebSocketChatServiceV2 {
   void dispose() {
     debugPrint('🗑️  Disposing WebSocketChatServiceV2');
     _closeConnection();
-    _messageStreamController?.close();
-    _connectionStateController.close();
+    if (_messageStreamController != null && !_messageStreamController!.isClosed) {
+      _messageStreamController!.close();
+    }
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.close();
+    }
     _pendingMessages.clear();
   }
 }

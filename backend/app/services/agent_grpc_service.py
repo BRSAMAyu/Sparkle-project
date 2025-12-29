@@ -2,19 +2,14 @@
 AgentService gRPC Implementation
 实现 gRPC 服务端，对接现有的 LLM 服务和 RAG 能力
 """
-import asyncio
-import json
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Callable
 from datetime import datetime
 from loguru import logger
 import grpc
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.orchestration.orchestrator import ChatOrchestrator
-from app.db.session import AsyncSessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import User
-from app.config import settings
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -23,10 +18,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
     负责处理流式对话和记忆检索
     """
 
-    def __init__(self):
-        # 初始化 Orchestrator
-        self.orchestrator = ChatOrchestrator()
-        logger.info("AgentServiceImpl initialized with ChatOrchestrator")
+    def __init__(self, orchestrator: ChatOrchestrator, db_session_factory: Callable[[], AsyncSession]):
+        # 初始化 Orchestrator (依赖注入)
+        self.orchestrator = orchestrator
+        self.db_session_factory = db_session_factory
+        logger.info("AgentServiceImpl initialized with injected dependencies")
 
     async def StreamChat(
         self,
@@ -46,10 +42,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             logger.info(f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}")
 
             # Create a dedicated DB session for this stream
-            async with AsyncSessionLocal() as db_session:
-                # Delegate to Orchestrator
-                async for response in self.orchestrator.process_stream(request, db_session=db_session):
-                    yield response
+            async with self.db_session_factory() as db_session:
+                try:
+                    # Delegate to Orchestrator
+                    async for response in self.orchestrator.process_stream(request, db_session=db_session):
+                        yield response
+                    await db_session.commit()
+                except Exception:
+                    await db_session.rollback()
+                    raise
 
             logger.info(f"StreamChat completed for trace={trace_id}")
 
@@ -85,8 +86,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 context.set_details("user_id and query_text are required")
                 return agent_service_pb2.MemoryResult(items=[], total_found=0)
 
-            async with AsyncSessionLocal() as db_session:
-                from app.services.knowledge_service import KnowledgeService
+            async with self.db_session_factory() as db_session:
                 from app.services.galaxy_service import GalaxyService
                 import uuid
                 
