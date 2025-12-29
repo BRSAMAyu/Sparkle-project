@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/presentation/widgets/chat/focus_action_card.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
-import 'package:sparkle/presentation/widgets/knowledge_card.dart';
-import 'package:sparkle/presentation/widgets/plan_card.dart';
-import 'package:sparkle/presentation/widgets/task/task_card.dart';
-import 'package:sparkle/presentation/widgets/task_list_widget.dart';
 
 class ActionCard extends StatefulWidget {
 
@@ -61,11 +53,6 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final directWidget = _buildDirectWidget();
-    if (directWidget != null) {
-      return directWidget;
-    }
-
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
 
     return GestureDetector(
@@ -130,7 +117,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   ),
 
                 Padding(
-                  padding: EdgeInsets.all(DS.spacing16),
+                  padding: const EdgeInsets.all(DS.spacing16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -141,7 +128,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                             builder: (context, child) => Transform.scale(
                                 scale: hasAction ? _iconScaleAnimation.value : 1.0,
                                 child: Container(
-                                  padding: EdgeInsets.all(DS.spacing8),
+                                  padding: const EdgeInsets.all(DS.spacing8),
                                   decoration: BoxDecoration(
                                     gradient: _getActionGradient(widget.action.type),
                                     shape: BoxShape.circle,
@@ -149,7 +136,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                       BoxShadow(
                                         color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
                                         blurRadius: 8,
-                                        offset: Offset(0, 2),
+                                        offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
@@ -161,7 +148,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 ),
                               ),
                           ),
-                          SizedBox(width: DS.spacing12),
+                          const SizedBox(width: DS.spacing12),
                           Expanded(
                             child: Text(
                               _getTitleForAction(widget.action.type),
@@ -173,10 +160,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      SizedBox(height: DS.spacing16),
+                      const SizedBox(height: DS.spacing16),
                       _buildContentForAction(context, widget.action),
                       if (hasAction) ...[
-                        SizedBox(height: DS.spacing16),
+                        const SizedBox(height: DS.spacing16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -186,7 +173,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 onPressed: widget.onDismiss,
                                 size: CustomButtonSize.small,
                               ),
-                            SizedBox(width: DS.spacing8),
+                            const SizedBox(width: DS.spacing8),
                             if (widget.onConfirm != null)
                               CustomButton.primary(
                                 text: '确认',
@@ -207,51 +194,6 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  Widget? _buildDirectWidget() {
-    switch (widget.action.type) {
-      case 'task_card':
-        try {
-          final task = TaskModel.fromJson(_normalizeTaskData(widget.action.data));
-          return TaskCard(task: task, compact: true);
-        } catch (e) {
-          return _buildFallbackCard('任务数据解析失败');
-        }
-      case 'task_list':
-        return TaskListWidget(tasks: widget.action.data['tasks'] as List? ?? []);
-      case 'knowledge_card':
-        return KnowledgeCard(data: widget.action.data);
-      case 'plan_card':
-        return PlanCard(data: widget.action.data);
-      case 'focus_card':
-        return FocusActionCard(data: widget.action.data);
-      default:
-        return null;
-    }
-  }
-
-  Widget _buildFallbackCard(String message) => Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: EdgeInsets.all(DS.md),
-        child: Text(message),
-      ),
-    );
-
-  Map<String, dynamic> _normalizeTaskData(Map<String, dynamic> data) {
-    final normalized = Map<String, dynamic>.from(data);
-    normalized['user_id'] ??= 'unknown';
-    normalized['tags'] ??= <String>[];
-    normalized['difficulty'] ??= 1;
-    normalized['energy_cost'] ??= 1;
-    normalized['priority'] ??= 1;
-    normalized['estimated_minutes'] ??= 25;
-    normalized['created_at'] ??= DateTime.now().toIso8601String();
-    normalized['updated_at'] ??= DateTime.now().toIso8601String();
-    normalized['status'] ??= 'pending';
-    normalized['type'] ??= 'learning';
-    return normalized;
   }
 
   LinearGradient _getActionGradient(String type) {
@@ -319,7 +261,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       children: [
         if (action.data['title'] != null) ...[
           Container(
-            padding: EdgeInsets.all(DS.spacing12),
+            padding: const EdgeInsets.all(DS.spacing12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -342,7 +284,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               ),
             ),
           ),
-          SizedBox(height: DS.spacing12),
+          const SizedBox(height: DS.spacing12),
         ],
         if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
           Wrap(
@@ -351,7 +293,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             children: action.data.entries
                 .where((e) => e.key != 'title')
                 .map((entry) => Container(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing12,
                   vertical: DS.spacing8,
                 ),
@@ -368,7 +310,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       size: DS.iconSizeXs,
                       color: DS.neutral600,
                     ),
-                    SizedBox(width: DS.spacing4),
+                    const SizedBox(width: DS.spacing4),
                     Text(
                       '${_formatParamKey(entry.key)}: ',
                       style: TextStyle(

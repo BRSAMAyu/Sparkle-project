@@ -45,7 +45,7 @@ class GalaxyErrorDialog extends StatelessWidget {
             color: _getErrorColor(),
             size: 24,
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _getTitle(),
@@ -70,7 +70,7 @@ class GalaxyErrorDialog extends StatelessWidget {
             ),
           ),
           if (error.isRetryable) ...[
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               '点击"重试"按钮重新加载',
               style: TextStyle(
@@ -125,11 +125,11 @@ class GalaxyErrorDialog extends StatelessWidget {
   Color _getErrorColor() {
     switch (error.type) {
       case GalaxyErrorType.network:
-        return DS.warning;  // 网络错误用警告色(橙色)
+        return Colors.orange;
       case GalaxyErrorType.circuitBreakerOpen:
-        return DS.error;    // 服务错误用错误色(红色)
+        return Colors.red;
       case GalaxyErrorType.unknown:
-        return DS.textSecondary;  // 未知错误用次要文本色
+        return Colors.grey;
     }
   }
 
@@ -158,7 +158,7 @@ class GalaxyErrorSnackBar {
         children: [
           Icon(
             _getErrorIcon(error.type),
-            color: Colors.white,  // SnackBar上使用白色文字
+            color: Colors.white,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -175,7 +175,7 @@ class GalaxyErrorSnackBar {
       action: onRetry != null && error.isRetryable
           ? SnackBarAction(
               label: '重试',
-              textColor: Colors.white,  // SnackBar上白色按钮
+              textColor: Colors.white,
               onPressed: onRetry,
             )
           : null,
@@ -205,11 +205,11 @@ class GalaxyErrorSnackBar {
   static Color _getErrorColor(GalaxyErrorType type) {
     switch (type) {
       case GalaxyErrorType.network:
-        return DS.warning;  // 网络错误用警告色
+        return Colors.orange.shade700;
       case GalaxyErrorType.circuitBreakerOpen:
-        return DS.error;    // 服务错误用错误色
+        return Colors.red.shade700;
       case GalaxyErrorType.unknown:
-        return DS.textSecondary;  // 未知错误用次要文本色
+        return Colors.grey.shade700;
     }
   }
 }
@@ -236,11 +236,13 @@ class OfflineIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isOffline ? DS.error.withValues(alpha: 0.9) : DS.warning.withValues(alpha: 0.9),
+        color: isOffline
+            ? Colors.red.withValues(alpha: 0.9)
+            : Colors.orange.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: DS.shadowColor.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -251,14 +253,14 @@ class OfflineIndicator extends StatelessWidget {
         children: [
           Icon(
             isOffline ? Icons.wifi_off_rounded : Icons.cloud_queue_rounded,
-            color: DS.textPrimary,  // 使用主要文本色(浅色主题白/深色主题黑)
+            color: Colors.white,
             size: 16,
           ),
           const SizedBox(width: 8),
           Text(
             isOffline ? '离线模式' : '使用缓存数据',
-            style: TextStyle(
-              color: DS.textPrimary,  // 使用主要文本色
+            style: const TextStyle(
+              color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -270,12 +272,12 @@ class OfflineIndicator extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: DS.textPrimary.withValues(alpha: 0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.refresh_rounded,
-                  color: DS.textPrimary,
+                  color: Colors.white,
                   size: 14,
                 ),
               ),
@@ -318,7 +320,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 size: 40,
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             // 标题
             Text(
@@ -329,7 +331,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             // 描述
             Text(
@@ -346,8 +348,8 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
             if (onRetry != null && error.isRetryable)
               ElevatedButton.icon(
                 onPressed: onRetry,
-                icon: Icon(Icons.refresh_rounded, size: 18),
-                label: Text('重试'),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('重试'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: DS.brandPrimary,
                   foregroundColor: DS.textPrimary,
@@ -376,11 +378,11 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
   Color _getErrorColor() {
     switch (error.type) {
       case GalaxyErrorType.network:
-        return DS.warning;  // 网络错误用警告色
+        return Colors.orange;
       case GalaxyErrorType.circuitBreakerOpen:
-        return DS.error;    // 服务错误用错误色
+        return Colors.red;
       case GalaxyErrorType.unknown:
-        return DS.textSecondary;  // 未知错误用次要文本色
+        return Colors.grey;
     }
   }
 

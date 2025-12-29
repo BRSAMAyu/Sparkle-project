@@ -5,14 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
-import 'package:sparkle/presentation/widgets/community/share_resource_sheet.dart';
 
 /// PatternListScreen - Cognitive Prism Details v2.3
 ///
 /// Displays all behavior patterns with deep space theme
 class PatternListScreen extends ConsumerStatefulWidget {
-  const PatternListScreen({this.highlightId, super.key});
-  final String? highlightId;
+  const PatternListScreen({super.key});
 
   @override
   ConsumerState<PatternListScreen> createState() => _PatternListScreenState();
@@ -147,10 +145,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
       itemCount: patterns.length,
       itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: _PatternCard(
-            pattern: patterns[index],
-            isHighlighted: widget.highlightId == patterns[index].id,
-          ),
+          child: _PatternCard(pattern: patterns[index]),
         ),
     );
 }
@@ -158,9 +153,8 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
 /// Pattern Card with glassmorphism style
 class _PatternCard extends StatelessWidget {
 
-  const _PatternCard({required this.pattern, this.isHighlighted = false});
+  const _PatternCard({required this.pattern});
   final BehaviorPatternModel pattern;
-  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
@@ -171,10 +165,7 @@ class _PatternCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: DS.glassBackground,
             borderRadius: DS.borderRadius20,
-            border: Border.all(
-              color: isHighlighted ? DS.prismPurple.withAlpha(200) : DS.glassBorder,
-              width: isHighlighted ? 1.5 : 1,
-            ),
+            border: Border.all(color: DS.glassBorder),
           ),
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -236,19 +227,8 @@ class _PatternCard extends StatelessWidget {
                           color: DS.success,
                           fontWeight: FontWeight.bold,
                         ),
-                        ),
+                      ),
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.share_outlined, size: 18),
-                    color: DS.brandPrimary,
-                    onPressed: () => showShareResourceSheet(
-                      context,
-                      resourceType: 'cognitive_prism_pattern',
-                      resourceId: pattern.id,
-                      title: pattern.patternName,
-                      subtitle: pattern.description ?? pattern.solutionText ?? '',
-                    ),
-                  ),
                 ],
               ),
 

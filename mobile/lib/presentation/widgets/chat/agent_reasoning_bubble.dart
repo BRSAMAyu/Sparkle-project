@@ -111,11 +111,11 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Row(
             children: [
               Icon(Icons.library_books, size: 14, color: widget.agentColor),
-              SizedBox(width: DS.xs),
+              const SizedBox(width: DS.xs),
               Text(
                 '引用来源 (${widget.citations!.length})',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -138,8 +138,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 onTap: () => _showCitationDetails(context, cite),
                 child: Container(
                   width: 160,
-                  margin: EdgeInsets.only(right: 8),
-                  padding: EdgeInsets.all(DS.sm),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.all(DS.sm),
                   decoration: BoxDecoration(
                     color: DS.brandPrimaryConst,
                     borderRadius: BorderRadius.circular(8),
@@ -165,7 +165,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           color: widget.agentColor,
                         ),
                       ),
-                      SizedBox(height: DS.xs),
+                      const SizedBox(height: DS.xs),
                       Expanded(
                         child: Text(
                           cite['content'] ?? '',
@@ -181,7 +181,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             },
           ),
         ),
-        SizedBox(height: DS.md),
+        const SizedBox(height: DS.md),
       ],
     );
   }
@@ -208,7 +208,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             onTap: _toggleExpand,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               child: Row(
                 children: [
                   // 智能体头像
@@ -226,7 +226,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     ),
                   ),
 
-                  SizedBox(width: DS.md),
+                  const SizedBox(width: DS.md),
 
                   // 智能体名称和类型
                   Expanded(
@@ -281,8 +281,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           SizeTransition(
             sizeFactor: _expandAnimation,
             child: Container(
-              margin: EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: EdgeInsets.all(DS.md),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: widget.agentColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
@@ -310,7 +310,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       ),
                     ],
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Text(
                     widget.reasoning,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -363,17 +363,17 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            DS.brandSecondary.shade50,  // 使用设计系统次要色
-            DS.brandSecondary.shade100,
+            DS.brandPrimary.shade50,
+            Colors.purple.shade50,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: DS.brandSecondary.shade200,  // 使用设计系统次要色
+          color: Colors.purple.shade200,
           width: 1.5,
         ),
       ),
@@ -382,9 +382,9 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
         children: [
           // 协作标题
           Container(
-            padding: EdgeInsets.all(DS.md),
+            padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: DS.brandSecondary.shade100.withOpacity(0.5),  // 使用设计系统次要色
+              color: Colors.purple.shade100.withOpacity(0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -394,24 +394,24 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               children: [
                 Icon(
                   Icons.groups,
-                  color: DS.brandSecondary.shade700,  // 使用设计系统次要色
+                  color: Colors.purple.shade700,
                   size: 24,
                 ),
-                SizedBox(width: DS.sm),
+                const SizedBox(width: DS.sm),
                 Expanded(
                   child: Text(
                     '多专家协作回答',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: DS.brandSecondary.shade700,  // 使用设计系统次要色
+                      color: Colors.purple.shade700,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Chip(
                   label: Text('${contributions.length} 位专家'),
-                  backgroundColor: DS.brandSecondary.shade100,  // 使用设计系统次要色
+                  backgroundColor: Colors.purple.shade100,
                   labelStyle: TextStyle(
-                    color: DS.brandSecondary.shade700,  // 使用设计系统次要色
+                    color: Colors.purple.shade700,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -435,13 +435,13 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           // 综合总结（如果有）
           if (summary != null)
             Container(
-              margin: EdgeInsets.all(DS.md),
-              padding: EdgeInsets.all(DS.md),
+              margin: const EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
                 color: DS.brandPrimary.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: DS.brandSecondary.shade200,  // 使用设计系统次要色
+                  color: Colors.purple.shade200,
                 ),
               ),
               child: Column(
@@ -451,20 +451,20 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.summarize,
-                        color: DS.brandSecondary.shade700,  // 使用设计系统次要色
+                        color: Colors.purple.shade700,
                         size: 18,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         '综合建议',
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: DS.brandSecondary.shade700,  // 使用设计系统次要色
+                          color: Colors.purple.shade700,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: DS.sm),
+                  const SizedBox(height: DS.sm),
                   Text(
                     summary!,
                     style: theme.textTheme.bodyMedium,

@@ -5,13 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 import 'package:sparkle/presentation/widgets/common/error_widget.dart';
 import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
-import 'package:sparkle/presentation/widgets/community/share_resource_sheet.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
 
@@ -51,7 +49,7 @@ class _TaskDetailView extends ConsumerWidget {
         Expanded(
           child: CustomScrollView(
             slivers: [
-              _buildSliverAppBar(context, ref),
+              _buildSliverAppBar(context),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(DS.spacing16),
@@ -97,21 +95,9 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
-  Widget _buildSliverAppBar(BuildContext context, WidgetRef ref) => SliverAppBar(
+  Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
       expandedHeight: 200.0,
       pinned: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.share_outlined),
-          onPressed: () => showShareResourceSheet(
-            context,
-            resourceType: 'task',
-            resourceId: task.id,
-            title: task.title,
-            subtitle: task.userNote ?? task.guideContent ?? '',
-          ),
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Hero(
           tag: 'task-${task.id}',

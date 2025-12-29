@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
@@ -25,11 +24,11 @@ class NodePreviewCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 100, left: 20, right: 20),
         width: double.infinity,
-        constraints: BoxConstraints(maxWidth: 400),
+        constraints: const BoxConstraints(maxWidth: 400),
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: DS.brandSecondary.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(16),
@@ -39,7 +38,7 @@ class NodePreviewCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: DS.shadowColor.withValues(alpha: 0.5),  // 使用设计系统阴影色
+                  color: Colors.black.withValues(alpha: 0.5),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -73,7 +72,7 @@ class NodePreviewCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     IconButton(
                       icon: Icon(Icons.close, size: 20, color: DS.brandPrimary),
                       onPressed: onClose,
@@ -82,7 +81,7 @@ class NodePreviewCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 
                 // Title
                 Text(
@@ -136,7 +135,7 @@ class NodePreviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: node.masteryScore / 100,
-                      backgroundColor: DS.neutral200.withValues(alpha: 0.5),  // 使用设计系统背景色
+                      backgroundColor: Colors.black.withValues(alpha: 0.3),
                       valueColor: AlwaysStoppedAnimation<Color>(sectorStyle.primaryColor),
                       minHeight: 6,
                     ),

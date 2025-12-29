@@ -4,12 +4,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
-import 'package:sparkle/presentation/widgets/chat/action_card.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
 import 'package:sparkle/presentation/widgets/galaxy/graphrag_visualizer.dart';
@@ -52,44 +49,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-  void _handleActionConfirm(WidgetRef ref, WidgetPayload action) {
-    // Send action feedback to backend
-    final chatService = ref.read(chatProvider.notifier).chatService;
-    chatService.sendActionFeedback(
-      action: 'confirm',
-      toolResultId: action.id ?? 'unknown',
-      widgetType: action.type,
-    );
-
-    // Show confirmation feedback to user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✅ ${action.type} confirmed'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _handleActionDismiss(WidgetRef ref, WidgetPayload action) {
-    // Send action feedback to backend
-    final chatService = ref.read(chatProvider.notifier).chatService;
-    chatService.sendActionFeedback(
-      action: 'dismiss',
-      toolResultId: action.id ?? 'unknown',
-      widgetType: action.type,
-    );
-
-    // Show dismissal feedback to user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('❌ ${action.type} dismissed'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
@@ -122,14 +81,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(DS.sm),
+              padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
                 gradient: DS.secondaryGradient,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 20),
             ),
-            SizedBox(width: DS.md),
+            const SizedBox(width: DS.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -170,7 +129,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: isDark
             ? DS.deepSpaceGradient
             : LinearGradient(
-                colors: [DS.surfacePrimary, DS.surfaceSecondary],
+                colors: [DS.neutral50, DS.brandPrimary],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -261,18 +220,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (msgIndex < 0) return const SizedBox.shrink();
 
                           final message = messages[messages.length - 1 - msgIndex];
-                          return ChatBubble(
-                            message: message,
-                            onActionConfirm: (action) => _handleActionConfirm(ref, action),
-                            onActionDismiss: (action) => _handleActionDismiss(ref, action),
-                          );
+                          return ChatBubble(message: message);
                         },
                       ),
               ),
               if (chatState.error != null)
                  Container(
                    width: double.infinity,
-                   padding: EdgeInsets.all(DS.sm),
+                   padding: const EdgeInsets.all(DS.sm),
                    color: DS.error.withValues(alpha: 0.1),
                    child: Text(
                      'Error: ${chatState.error}', 
@@ -316,18 +271,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Container(
               width: 40,
               height: 4,
-              margin: EdgeInsets.symmetric(vertical: 12),
+              margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: isDark ? DS.neutral700 : DS.neutral300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: EdgeInsets.all(DS.lg),
+              padding: const EdgeInsets.all(DS.lg),
               child: Row(
                 children: [
                   Icon(Icons.history_rounded, color: DS.primaryBase),
-                  SizedBox(width: DS.md),
+                  const SizedBox(width: DS.md),
                   Text(
                     '历史对话',
                     style: TextStyle(
@@ -364,7 +319,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       
                       return ListTile(
                         leading: Container(
-                          padding: EdgeInsets.all(DS.sm),
+                          padding: const EdgeInsets.all(DS.sm),
                           decoration: BoxDecoration(
                             color: isCurrent ? DS.primaryBase.withValues(alpha: 0.1) : (isDark ? DS.neutral800 : DS.neutral100),
                             shape: BoxShape.circle,
@@ -407,19 +362,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(DS.xxl),
+        padding: const EdgeInsets.all(DS.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: DS.primaryBase.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.auto_awesome, size: 48, color: DS.primaryBase),
             ),
-            SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xl),
             Text(
               '你好，我是你的 AI 导师',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -427,7 +382,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 color: isDark ? DS.brandPrimary : DS.neutral900,
               ),
             ),
-            SizedBox(height: DS.sm),
+            const SizedBox(height: DS.sm),
             Text(
               '今天想做点什么？',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -504,7 +459,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
         child: Container(
           // Ensure minimum 48px touch target
           height: DS.touchTargetMinSize,
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing16,
             vertical: DS.spacing8,
           ),
@@ -531,7 +486,7 @@ class _QuickActionChipState extends State<_QuickActionChip> {
                 size: DS.iconSizeSm,
                 color: widget.color,
               ),
-              SizedBox(width: DS.spacing8),
+              const SizedBox(width: DS.spacing8),
               Text(
                 widget.label,
                 style: TextStyle(
@@ -569,10 +524,10 @@ class _StreamingBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.8,
         ),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? DS.neutral800 : DS.brandPrimary,
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
             bottomRight: Radius.circular(20),
@@ -594,7 +549,7 @@ class _StreamingBubble extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(width: DS.xs),
+            const SizedBox(width: DS.xs),
             // 闪烁的光标
             const _BlinkingCursor(),
           ],
@@ -666,10 +621,10 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? DS.neutral800 : DS.brandPrimary,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -690,7 +645,7 @@ class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerPro
               return Transform.translate(
                 offset: Offset(0, -offset),
                 child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 2),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
