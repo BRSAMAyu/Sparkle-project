@@ -22,6 +22,7 @@ import (
 	"github.com/sparkle/gateway/internal/cqrs/projection"
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/error_book"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/infra/otel"
@@ -84,6 +85,7 @@ func main() {
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(pool) // P0: Add user context service
+	taskCommandService := service.NewTaskCommandService(pool) // P0: Task command service for ActionCard confirmations
 
 	// Connect to Agent Service
 	agentClient, err := agent.NewClient(cfg)
@@ -91,6 +93,13 @@ func main() {
 		log.Fatalf("Unable to connect to agent service: %v", err)
 	}
 	defer agentClient.Close()
+
+	// Connect to Error Book Service
+	errorBookClient, err := error_book.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Unable to connect to error book service: %v", err)
+	}
+	defer errorBookClient.Close()
 
 	// Initialize Handlers
 	wsFactory := handler.NewWebSocketFactory(cfg)
@@ -103,8 +112,10 @@ func main() {
 		billingService,
 		wsFactory,
 		userContextService, // P0: Pass user context service
+		taskCommandService, // P0: Pass task command service
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
+	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService)
 
 	// Auth Service
@@ -199,8 +210,7 @@ func main() {
 
 	// ==================== Task Module (CQRS) ====================
 
-	// Task Command Service (uses Outbox Pattern)
-	_ = service.NewTaskCommandService(pool)
+	// Task Command Service already initialized earlier (line 87) for ChatOrchestrator
 
 	// Task Sync Worker (consumes events from Redis, updates projections)
 	taskSyncWorker := worker.NewTaskSyncWorker(rdb, pool, cqrsMetrics, logger.Log)
@@ -290,6 +300,9 @@ func main() {
 
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
+
+		// Error Book Routes
+		errorBookHandler.RegisterRoutes(api)
 
 		// Community Routes
 		commHandler.RegisterRoutes(api)

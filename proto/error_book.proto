@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package error_book;
+
+option go_package = "github.com/sparkle/gateway/gen/proto/error_book;errorbookv1";
+
+import "google/protobuf/timestamp.proto";
+
+service ErrorBookService {
+  // Create a new error record
+  rpc CreateError(CreateErrorRequest) returns (ErrorRecord);
+  
+  // List errors with filtering
+  rpc ListErrors(ListErrorsRequest) returns (ListErrorsResponse);
+  
+  // Get a single error detail
+  rpc GetError(GetErrorRequest) returns (ErrorRecord);
+  
+  // Update an error record
+  rpc UpdateError(UpdateErrorRequest) returns (ErrorRecord);
+  
+  // Delete an error record
+  rpc DeleteError(DeleteErrorRequest) returns (DeleteErrorResponse);
+  
+  // Trigger re-analysis
+  rpc AnalyzeError(AnalyzeErrorRequest) returns (AnalyzeErrorResponse);
+  
+  // Submit review performance
+  rpc SubmitReview(SubmitReviewRequest) returns (ErrorRecord);
+  
+  // Get review statistics
+  rpc GetReviewStats(GetReviewStatsRequest) returns (ReviewStatsResponse);
+  
+  // Get today's review list
+  rpc GetTodayReviews(GetTodayReviewsRequest) returns (ListErrorsResponse);
+}
+
+// Models
+
+message ErrorRecord {
+  string id = 1;
+  string user_id = 2;
+  string subject_code = 3;
+  string chapter = 4;
+  
+  string question_text = 5;
+  string question_image_url = 6;
+  string user_answer = 7;
+  string correct_answer = 8;
+  
+  // Review Status
+  double mastery_level = 9;
+  int32 review_count = 10;
+  google.protobuf.Timestamp next_review_at = 11;
+  google.protobuf.Timestamp last_reviewed_at = 12;
+  
+  // Analysis & Links
+  ErrorAnalysisResult latest_analysis = 13;
+  repeated KnowledgeLinkBrief knowledge_links = 14;
+  
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message ErrorAnalysisResult {
+  string error_type = 1;
+  string error_type_label = 2;
+  string root_cause = 3;
+  string correct_approach = 4;
+  repeated string similar_traps = 5;
+  repeated string recommended_knowledge = 6;
+  string study_suggestion = 7;
+  string ocr_text = 8;
+}
+
+message KnowledgeLinkBrief {
+  string id = 1;
+  string name = 2;
+  double relevance = 3;
+  bool is_primary = 4;
+}
+
+// Requests & Responses
+
+message CreateErrorRequest {
+  string user_id = 1;
+  string question_text = 2;
+  string question_image_url = 3;
+  string user_answer = 4;
+  string correct_answer = 5;
+  string subject_code = 6;
+  string chapter = 7;
+}
+
+message ListErrorsRequest {
+  string user_id = 1;
+  string subject_code = 2;
+  string chapter = 3;
+  string error_type = 4;
+  optional double mastery_min = 5;
+  optional double mastery_max = 6;
+  optional bool need_review = 7;
+  string keyword = 8;
+  int32 page = 9;
+  int32 page_size = 10;
+}
+
+message ListErrorsResponse {
+  repeated ErrorRecord items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  bool has_next = 5;
+}
+
+message GetErrorRequest {
+  string error_id = 1;
+  string user_id = 2;
+}
+
+message UpdateErrorRequest {
+  string error_id = 1;
+  string user_id = 2;
+  optional string question_text = 3;
+  optional string user_answer = 4;
+  optional string correct_answer = 5;
+  optional string subject_code = 6;
+  optional string chapter = 7;
+  optional string question_image_url = 8;
+}
+
+message DeleteErrorRequest {
+  string error_id = 1;
+  string user_id = 2;
+}
+
+message DeleteErrorResponse {
+  bool success = 1;
+}
+
+message AnalyzeErrorRequest {
+  string error_id = 1;
+  string user_id = 2;
+}
+
+message AnalyzeErrorResponse {
+  string message = 1;
+}
+
+message SubmitReviewRequest {
+  string error_id = 1;
+  string user_id = 2;
+  string performance = 3; // remembered, fuzzy, forgotten
+  int32 time_spent_seconds = 4;
+}
+
+message GetReviewStatsRequest {
+  string user_id = 1;
+}
+
+message ReviewStatsResponse {
+  int64 total_errors = 1;
+  int64 mastered_count = 2;
+  int64 need_review_count = 3;
+  int32 review_streak_days = 4;
+  map<string, int64> subject_distribution = 5;
+}
+
+message GetTodayReviewsRequest {
+  string user_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}

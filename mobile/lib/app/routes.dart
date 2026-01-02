@@ -37,6 +37,10 @@ import 'package:sparkle/presentation/screens/task/task_create_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_detail_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/review_screen.dart';
 
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({
@@ -275,6 +279,55 @@ final routerProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const ChatScreen(),
         ),
+      ),
+
+      // Error Book Routes
+      GoRoute(
+        path: '/errors',
+        name: 'errors',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const ErrorListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/errors/new',
+        name: 'addError',
+        pageBuilder: (context, state) => _buildTransitionPage(
+          state: state,
+          child: const AddErrorScreen(),
+          type: SharedAxisTransitionType.scaled,
+        ),
+      ),
+      GoRoute(
+        path: '/errors/:id',
+        name: 'errorDetail',
+        pageBuilder: (context, state) {
+          final errorId = state.pathParameters['id']!;
+          return _buildTransitionPage(
+            state: state,
+            child: ErrorDetailScreen(errorId: errorId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/review',
+        name: 'review',
+        pageBuilder: (context, state) {
+          final modeCode = state.uri.queryParameters['mode'] ?? 'today';
+          final subjectCode = state.uri.queryParameters['subject'];
+
+          final mode = ReviewMode.values.firstWhere(
+            (m) => m.code == modeCode,
+            orElse: () => ReviewMode.today,
+          );
+
+          return _buildTransitionPage(
+            state: state,
+            child: ReviewScreen(mode: mode, subjectCode: subjectCode),
+            type: SharedAxisTransitionType.scaled,
+          );
+        },
       ),
 
       // Plan Routes
