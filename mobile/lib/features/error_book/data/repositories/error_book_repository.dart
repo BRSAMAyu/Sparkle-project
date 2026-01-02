@@ -40,7 +40,7 @@ class ErrorBookRepository {
           'question_text': questionText,
           'user_answer': userAnswer,
           'correct_answer': correctAnswer,
-          'subject': subject,
+          'subject_code': subject,
           if (chapter != null) 'chapter': chapter,
           if (questionImageUrl != null) 'question_image_url': questionImageUrl,
         },
@@ -124,7 +124,7 @@ class ErrorBookRepository {
         if (questionText != null) 'question_text': questionText,
         if (userAnswer != null) 'user_answer': userAnswer,
         if (correctAnswer != null) 'correct_answer': correctAnswer,
-        if (subject != null) 'subject': subject,
+        if (subject != null) 'subject_code': subject,
         if (chapter != null) 'chapter': chapter,
       };
 

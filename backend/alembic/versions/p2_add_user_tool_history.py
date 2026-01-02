@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = 'p2_add_user_tool_history'
-down_revision = 'p1_add_post_visibility'
+down_revision = 'p1_post_visibility'
 branch_labels = None
 depends_on = None
 

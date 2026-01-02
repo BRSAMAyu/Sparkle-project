@@ -19,6 +19,16 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
     def __init__(self, db_session_factory):
         self.db_session_factory = db_session_factory
 
+    async def _run_analysis_task(self, error_id: UUID, user_id: UUID):
+        """Helper to run analysis in background with dedicated session"""
+        async with self.db_session_factory() as db:
+            service = ErrorBookService(db)
+            try:
+                await service.analyze_and_link(error_id, user_id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Background analysis failed for error {error_id}: {e}")
+
     async def CreateError(self, request, context):
         async with self.db_session_factory() as db:
             service = ErrorBookService(db)
@@ -37,12 +47,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 
                 error = await service.create_error(UUID(request.user_id), data)
                 
-                # Trigger async analysis (We need to handle background task triggering here)
-                # Since gRPC doesn't have BackgroundTasks like FastAPI, we just fire and forget 
-                # or rely on service to spawn it.
-                # In our service `analyze_and_link` is async. We can spawn a task.
+                # Trigger async analysis using dedicated task and session
                 import asyncio
-                asyncio.create_task(service.analyze_and_link(error.id, UUID(request.user_id)))
+                asyncio.create_task(self._run_analysis_task(error.id, UUID(request.user_id)))
                 
                 return self._map_to_proto(error)
             except ValueError as e:
@@ -127,7 +134,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 return error_book_pb2.AnalyzeErrorResponse()
             
             import asyncio
-            asyncio.create_task(service.analyze_and_link(UUID(request.error_id), UUID(request.user_id)))
+            asyncio.create_task(self._run_analysis_task(UUID(request.error_id), UUID(request.user_id)))
             
             return error_book_pb2.AnalyzeErrorResponse(message="Analysis task submitted")
 
