@@ -1,65 +1,64 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
-import 'local_database.dart';
-import '../services/websocket_service.dart';
-import 'conflict_resolver.dart';
+import 'package:uuid/uuid.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/core/offline/conflict_resolver.dart';
 import 'dart:async';
 
 class BusinessException implements Exception {
-  final String message;
   BusinessException(this.message);
+  final String message;
   @override
   String toString() => message;
 }
 
 class UpdateNodeMasteryMessage {
-  final String nodeId;
-  final int mastery;
-  final DateTime timestamp;
   
   UpdateNodeMasteryMessage({
     required this.nodeId, 
     required this.mastery,
     required this.timestamp,
+    required this.requestId,
+    required this.revision,
   });
+  final String nodeId;
+  final int mastery;
+  final DateTime timestamp;
+  final String requestId;
+  final int revision;
   
   Map<String, dynamic> toJson() => {
     'type': 'update_node_mastery',
     'payload': {
       'nodeId': nodeId,
       'mastery': mastery,
-      'version': timestamp.toIso8601String(),
-    }
+      'version': timestamp.toIso8601String(), // Keep for legacy/audit
+      'requestId': requestId,
+      'revision': revision,
+    },
   };
 }
 
 class OfflineSyncQueue {
+
+  OfflineSyncQueue(this._localDb, this._wsService, this._connectivity) {
+    _listenForAcks();
+  }
   final LocalDatabase _localDb;
   final WebSocketService _wsService;
   final Connectivity _connectivity;
   final Logger _logger = Logger();
   final ConflictResolver _conflictResolver = ConflictResolver();
+  final Uuid _uuid = const Uuid();
   
-  final Map<int, Completer<bool>> _ackCompleters = {};
   StreamSubscription? _ackSubscription;
 
-  OfflineSyncQueue(this._localDb, this._wsService, this._connectivity) {
-    _listenForAcks();
-  }
-
   void _listenForAcks() {
-    _ackSubscription = _wsService.stream.listen((message) {
-      if (message is Map && message['type'] == 'ack_node_mastery') {
-        final payload = message['payload'];
-        if (payload != null) {
-           final updateId = payload['updateId'] as int?; // Assume server echoes back our local update ID if we sent it, or use request ID
-           // In a real scenario, we need a way to correlate request and response.
-           // For now, assuming we handle ACKs via a mechanism where we can match them.
-           // If the protocol doesn't support request ID, we might need to rely on nodeId + timestamp.
-        }
-      }
-    });
+    // This global listener is kept for general monitoring or other message types.
+    // Specific ACK handling is done via _waitForAck's temporary listeners or a centralized dispatcher.
+    // For now, we keep this empty or for logging, as _waitForAck attaches its own listener.
   }
   
   void dispose() {
@@ -67,6 +66,8 @@ class OfflineSyncQueue {
   }
 
   Future<void> queueMasteryUpdate(String nodeId, int mastery) async {
+    final requestId = _uuid.v4();
+    
     // 1. Immediately store to local DB (Optimistic Update)
     await _localDb.isar.writeTxn(() async {
       final node = await _localDb.isar.localKnowledgeNodes
@@ -74,9 +75,12 @@ class OfflineSyncQueue {
           .serverIdEqualTo(nodeId)
           .findFirst();
 
+      var currentRevision = 0;
       if (node != null) {
         node.mastery = mastery;
         node.lastUpdated = DateTime.now();
+        node.revision = node.revision + 1; // Increment revision
+        currentRevision = node.revision;
         node.syncStatus = SyncStatus.pending;
         await _localDb.isar.localKnowledgeNodes.put(node);
       }
@@ -90,6 +94,8 @@ class OfflineSyncQueue {
           ..synced = false
           ..createdAt = DateTime.now()
           ..syncStatus = SyncStatus.pending
+          ..requestId = requestId
+          ..revision = currentRevision,
       );
     });
 
@@ -114,14 +120,19 @@ class OfflineSyncQueue {
           await _localDb.isar.pendingUpdates.put(update);
         });
 
-        // Send to server with the original timestamp as version
+        // Ensure requestId exists (for migration of old pending updates)
+        final reqId = update.requestId ?? _uuid.v4();
+
+        // Send to server
         final message = UpdateNodeMasteryMessage(
           nodeId: update.nodeId,
           mastery: update.newMastery,
           timestamp: update.timestamp,
+          requestId: reqId,
+          revision: update.revision,
         );
         
-        final ackFuture = _waitForAck(update.nodeId, update.timestamp);
+        final ackFuture = _waitForAck(reqId);
         
         _wsService.send(message.toJson());
 
@@ -132,6 +143,7 @@ class OfflineSyncQueue {
         await _localDb.isar.writeTxn(() async {
           update.synced = true;
           update.syncStatus = SyncStatus.synced;
+          update.requestId ??= reqId;
           await _localDb.isar.pendingUpdates.put(update);
 
           // Update local node status
@@ -148,36 +160,32 @@ class OfflineSyncQueue {
         
       } catch (e) {
         if (e is TimeoutException) {
-             _logger.w("Sync timed out for update ${update.id}");
+             _logger.w('Sync timed out for update ${update.id}');
              await _localDb.isar.writeTxn(() async {
                 update.syncStatus = SyncStatus.pending; // Revert to pending to retry later
                 await _localDb.isar.pendingUpdates.put(update);
              });
         } else if (e is BusinessException) {
-          // Permanent Error (e.g., stale update)
-          _logger.e("Sync failed permanently for update ${update.id}: $e");
+          // Permanent Error (e.g., stale update / conflict)
+          _logger.e('Sync failed permanently for update ${update.id}: $e');
           
           await _localDb.isar.writeTxn(() async {
             update.synced = true; // Remove from active queue
             update.error = e.message;
-            update.syncStatus = SyncStatus.failed; // Or conflict
+            update.syncStatus = SyncStatus.failed; 
             await _localDb.isar.pendingUpdates.put(update);
           });
 
-          // Trigger conflict resolution if it's a stale update
-          if (e.message.contains("stale") || e.message.contains("conflict")) {
-             // In a real scenario, we would need the server's version of the node here.
-             // Since the error message might not contain the full node data, 
-             // we might need to fetch the latest state or wait for a push update.
-             // For now, we assume the server will push the latest state shortly after rejection,
-             // or we can explicitly request it.
-             // requestNodeSync(update.nodeId); 
+          // Trigger conflict resolution if needed
+          if (e.message.contains('conflict') || e.message.contains('stale')) {
+             // Request latest state from server
+             // requestNodeSync(update.nodeId);
           }
           
-          continue; // Continue to next item
+          continue; 
         } else {
           // Transient Error
-          _logger.i("Transient sync error, pausing queue: $e");
+          _logger.i('Transient sync error, pausing queue: $e');
           await _localDb.isar.writeTxn(() async {
             update.syncStatus = SyncStatus.pending;
             await _localDb.isar.pendingUpdates.put(update);
@@ -188,38 +196,25 @@ class OfflineSyncQueue {
     }
   }
   
-  Future<void> _waitForAck(String nodeId, DateTime timestamp) {
+  Future<void> _waitForAck(String requestId) {
       final completer = Completer<void>();
-      // Determine a key to identify this request. 
-      // In a real app we'd use a unique ID in the message.
-      // Here we rely on nodeId and timestamp.
-      final key = "${nodeId}_${timestamp.millisecondsSinceEpoch}";
-      
-      // We need a way to register this completer so the main listener can complete it.
-      // Since _listenForAcks is generic, let's make it smarter or add a one-off listener.
-      
-      // Ideally, we'd add to a map of pending acks.
-      // For this implementation, let's use a temporary subscription filter.
       
       final subscription = _wsService.stream.listen((message) {
-          if (message is Map && message['type'] == 'ack_update_node_mastery') {
+          if (message is Map && message['type'] == 'ack_node_mastery') {
              final payload = message['payload'];
-             if (payload['nodeId'] == nodeId && 
-                 payload['version'] == timestamp.toIso8601String()) {
+             // Match by request_id
+             if (payload['requestId'] == requestId) {
                  completer.complete();
              }
-          } else if (message is Map && message['type'] == 'error_update_node_mastery') {
+          } else if (message is Map && message['type'] == 'error_node_mastery') {
               final payload = message['payload'];
-               if (payload['nodeId'] == nodeId && 
-                 payload['version'] == timestamp.toIso8601String()) {
+               if (payload['requestId'] == requestId) {
                  completer.completeError(BusinessException((payload['error'] as String?) ?? 'Unknown error'));
              }
           }
       });
       
-      return completer.future.whenComplete(() {
-          subscription.cancel();
-      });
+      return completer.future.whenComplete(subscription.cancel);
   }
   
   // Handle server-side updates (conflict resolution)
@@ -246,6 +241,7 @@ class OfflineSyncQueue {
                    // Server wins, update local and clear pending
                     localNode.mastery = serverNode.mastery;
                     localNode.lastUpdated = serverNode.lastUpdated;
+                    localNode.revision = serverNode.revision; // Sync revision
                     localNode.syncStatus = SyncStatus.synced;
                     await _localDb.isar.localKnowledgeNodes.put(localNode);
                     
@@ -256,30 +252,35 @@ class OfflineSyncQueue {
                         .syncedEqualTo(false)
                         .findAll();
                     
-                    for (var p in pendingUpdates) {
+                    for (final p in pendingUpdates) {
                         p.synced = true;
                         p.syncStatus = SyncStatus.conflict; // Mark as resolved via conflict
                         await _localDb.isar.pendingUpdates.put(p);
                     }
                 } else {
-                   // Local wins, do nothing, let the pending update overwrite server eventually
-                   // Or potentially re-queue to ensure it's sent?
-                   // The pending update is already in the queue.
+                   // Local wins.
+                   // Ideally we should force a push here if our revision is higher,
+                   // but syncPendingUpdates loop will handle it eventually.
                 }
             } else {
                 // No conflict, just update
-                localNode.mastery = serverNode.mastery;
-                localNode.lastUpdated = serverNode.lastUpdated;
-                localNode.syncStatus = SyncStatus.synced;
-                await _localDb.isar.localKnowledgeNodes.put(localNode);
+                // Only update if server revision is newer
+                if (serverNode.revision > localNode.revision) {
+                    localNode.mastery = serverNode.mastery;
+                    localNode.lastUpdated = serverNode.lastUpdated;
+                    localNode.revision = serverNode.revision;
+                    localNode.syncStatus = SyncStatus.synced;
+                    await _localDb.isar.localKnowledgeNodes.put(localNode);
+                }
             }
         } else {
             // New node from server
              final newNode = LocalKnowledgeNode()
                 ..serverId = serverNode.id
-                ..name = "Unknown" // Should be fetched
+                ..name = 'Unknown' // Should be fetched
                 ..mastery = serverNode.mastery
                 ..lastUpdated = serverNode.lastUpdated
+                ..revision = serverNode.revision
                 ..globalSparkCount = 0
                 ..syncStatus = SyncStatus.synced;
              await _localDb.isar.localKnowledgeNodes.put(newNode);

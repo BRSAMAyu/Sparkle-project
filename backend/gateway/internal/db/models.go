@@ -7,6 +7,7 @@ package db
 import (
 	"database/sql/driver"
 	"fmt"
+	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -321,6 +322,8 @@ const (
 	MessagetypeACHIEVEMENT   Messagetype = "ACHIEVEMENT"
 	MessagetypeCHECKIN       Messagetype = "CHECKIN"
 	MessagetypeSYSTEM        Messagetype = "SYSTEM"
+	MessagetypeCAPSULESHARE  Messagetype = "CAPSULE_SHARE"
+	MessagetypePRISMSHARE    Messagetype = "PRISM_SHARE"
 )
 
 func (e *Messagetype) Scan(src interface{}) error {
@@ -583,7 +586,240 @@ type BehaviorPattern struct {
 	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
 }
 
+type BroadcastMessage struct {
+	ID             pgtype.UUID      `json:"id"`
+	SenderID       pgtype.UUID      `json:"sender_id"`
+	Content        string           `json:"content"`
+	ContentData    []byte           `json:"content_data"`
+	TargetGroupIds []byte           `json:"target_group_ids"`
+	DeliveredCount int32            `json:"delivered_count"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	IsDeleted      bool             `json:"is_deleted"`
+	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
+}
+
 type ChatMessage struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2024Q1 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2024Q2 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2024Q3 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2024Q4 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2025Q1 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2025Q2 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2025Q3 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2025Q4 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2026Q1 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessages2026Q2 struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessagesDefault struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessagesLegacy struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	SessionID     pgtype.UUID      `json:"session_id"`
+	MessageID     pgtype.Text      `json:"message_id"`
+	Role          Messagerole      `json:"role"`
+	Content       string           `json:"content"`
+	Actions       []byte           `json:"actions"`
+	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
+	TokensUsed    pgtype.Int4      `json:"tokens_used"`
+	ModelName     pgtype.Text      `json:"model_name"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
+type ChatMessagesOld struct {
 	UserID        pgtype.UUID      `json:"user_id"`
 	TaskID        pgtype.UUID      `json:"task_id"`
 	SessionID     pgtype.UUID      `json:"session_id"`
@@ -646,23 +882,40 @@ type DictionaryEntry struct {
 }
 
 type ErrorRecord struct {
-	UserID          pgtype.UUID      `json:"user_id"`
-	TaskID          pgtype.UUID      `json:"task_id"`
-	SubjectID       pgtype.Int4      `json:"subject_id"`
-	Subject         string           `json:"subject"`
-	Topic           string           `json:"topic"`
-	ErrorType       string           `json:"error_type"`
-	Description     string           `json:"description"`
-	CorrectApproach pgtype.Text      `json:"correct_approach"`
-	ImageUrls       []byte           `json:"image_urls"`
-	Frequency       int32            `json:"frequency"`
-	LastOccurredAt  pgtype.Timestamp `json:"last_occurred_at"`
-	IsResolved      bool             `json:"is_resolved"`
-	ResolvedAt      pgtype.Timestamp `json:"resolved_at"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+	// 题目原文
+	QuestionText pgtype.Text `json:"question_text"`
+	// 题目图片URL（可选）
+	QuestionImageUrl pgtype.Text `json:"question_image_url"`
+	// 用户的错误答案
+	UserAnswer pgtype.Text `json:"user_answer"`
+	// 正确答案
+	CorrectAnswer pgtype.Text `json:"correct_answer"`
+	// 科目
+	SubjectCode string `json:"subject_code"`
+	// 章节（可选）
+	Chapter pgtype.Text `json:"chapter"`
+	// 来源
+	Source pgtype.Text `json:"source"`
+	// 难度1-5
+	Difficulty pgtype.Int4 `json:"difficulty"`
+	// 掌握度0-1
+	MasteryLevel pgtype.Float8 `json:"mastery_level"`
+	// 复习次数
+	ReviewCount pgtype.Int4 `json:"review_count"`
+	// 下次复习时间
+	NextReviewAt pgtype.Timestamptz `json:"next_review_at"`
+	// 上次复习时间
+	LastReviewedAt         pgtype.Timestamptz `json:"last_reviewed_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	IsDeleted              pgtype.Bool        `json:"is_deleted"`
+	EasinessFactor         pgtype.Float8      `json:"easiness_factor"`
+	IntervalDays           pgtype.Float8      `json:"interval_days"`
+	LatestAnalysis         []byte             `json:"latest_analysis"`
+	LinkedKnowledgeNodeIds []pgtype.UUID      `json:"linked_knowledge_node_ids"`
+	SuggestedConcepts      []string           `json:"suggested_concepts"`
 }
 
 type EventOutbox struct {
@@ -718,23 +971,28 @@ type Friendship struct {
 }
 
 type Group struct {
-	Name                 string           `json:"name"`
-	Description          pgtype.Text      `json:"description"`
-	AvatarUrl            pgtype.Text      `json:"avatar_url"`
-	Type                 Grouptype        `json:"type"`
-	FocusTags            []byte           `json:"focus_tags"`
-	Deadline             pgtype.Timestamp `json:"deadline"`
-	SprintGoal           pgtype.Text      `json:"sprint_goal"`
-	MaxMembers           int32            `json:"max_members"`
-	IsPublic             bool             `json:"is_public"`
-	JoinRequiresApproval bool             `json:"join_requires_approval"`
-	TotalFlamePower      int32            `json:"total_flame_power"`
-	TodayCheckinCount    int32            `json:"today_checkin_count"`
-	TotalTasksCompleted  int32            `json:"total_tasks_completed"`
-	ID                   pgtype.UUID      `json:"id"`
-	CreatedAt            pgtype.Timestamp `json:"created_at"`
-	UpdatedAt            pgtype.Timestamp `json:"updated_at"`
-	DeletedAt            pgtype.Timestamp `json:"deleted_at"`
+	Name                  string           `json:"name"`
+	Description           pgtype.Text      `json:"description"`
+	AvatarUrl             pgtype.Text      `json:"avatar_url"`
+	Type                  Grouptype        `json:"type"`
+	FocusTags             []byte           `json:"focus_tags"`
+	Deadline              pgtype.Timestamp `json:"deadline"`
+	SprintGoal            pgtype.Text      `json:"sprint_goal"`
+	MaxMembers            int32            `json:"max_members"`
+	IsPublic              bool             `json:"is_public"`
+	JoinRequiresApproval  bool             `json:"join_requires_approval"`
+	TotalFlamePower       int32            `json:"total_flame_power"`
+	TodayCheckinCount     int32            `json:"today_checkin_count"`
+	TotalTasksCompleted   int32            `json:"total_tasks_completed"`
+	ID                    pgtype.UUID      `json:"id"`
+	CreatedAt             pgtype.Timestamp `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
+	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
+	Announcement          pgtype.Text      `json:"announcement"`
+	AnnouncementUpdatedAt pgtype.Timestamp `json:"announcement_updated_at"`
+	KeywordFilters        []byte           `json:"keyword_filters"`
+	MuteAll               bool             `json:"mute_all"`
+	SlowModeSeconds       int32            `json:"slow_mode_seconds"`
 }
 
 type GroupMember struct {
@@ -753,19 +1011,34 @@ type GroupMember struct {
 	CreatedAt            pgtype.Timestamp `json:"created_at"`
 	UpdatedAt            pgtype.Timestamp `json:"updated_at"`
 	DeletedAt            pgtype.Timestamp `json:"deleted_at"`
+	MuteUntil            pgtype.Timestamp `json:"mute_until"`
+	WarnCount            int32            `json:"warn_count"`
 }
 
 type GroupMessage struct {
-	GroupID     pgtype.UUID      `json:"group_id"`
-	SenderID    pgtype.UUID      `json:"sender_id"`
-	MessageType Messagetype      `json:"message_type"`
-	Content     pgtype.Text      `json:"content"`
-	ContentData []byte           `json:"content_data"`
-	ReplyToID   pgtype.UUID      `json:"reply_to_id"`
-	ID          pgtype.UUID      `json:"id"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
-	DeletedAt   pgtype.Timestamp `json:"deleted_at"`
+	GroupID           pgtype.UUID      `json:"group_id"`
+	SenderID          pgtype.UUID      `json:"sender_id"`
+	MessageType       Messagetype      `json:"message_type"`
+	Content           pgtype.Text      `json:"content"`
+	ContentData       []byte           `json:"content_data"`
+	ReplyToID         pgtype.UUID      `json:"reply_to_id"`
+	ID                pgtype.UUID      `json:"id"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	ThreadRootID      pgtype.UUID      `json:"thread_root_id"`
+	IsRevoked         bool             `json:"is_revoked"`
+	RevokedAt         pgtype.Timestamp `json:"revoked_at"`
+	EditedAt          pgtype.Timestamp `json:"edited_at"`
+	Reactions         []byte           `json:"reactions"`
+	MentionUserIds    []byte           `json:"mention_user_ids"`
+	EncryptedContent  pgtype.Text      `json:"encrypted_content"`
+	ContentSignature  pgtype.Text      `json:"content_signature"`
+	EncryptionVersion pgtype.Int4      `json:"encryption_version"`
+	Topic             pgtype.Text      `json:"topic"`
+	Tags              []byte           `json:"tags"`
+	ForwardedFromID   pgtype.UUID      `json:"forwarded_from_id"`
+	ForwardCount      int32            `json:"forward_count"`
 }
 
 type GroupTask struct {
@@ -824,21 +1097,64 @@ type Job struct {
 }
 
 type KnowledgeNode struct {
-	SubjectID       pgtype.Int4      `json:"subject_id"`
-	ParentID        pgtype.UUID      `json:"parent_id"`
-	Name            string           `json:"name"`
-	NameEn          pgtype.Text      `json:"name_en"`
-	Description     pgtype.Text      `json:"description"`
-	Keywords        []byte           `json:"keywords"`
-	ImportanceLevel int32            `json:"importance_level"`
-	IsSeed          pgtype.Bool      `json:"is_seed"`
-	SourceType      pgtype.Text      `json:"source_type"`
-	SourceTaskID    pgtype.UUID      `json:"source_task_id"`
-	Embedding       interface{}      `json:"embedding"`
-	ID              pgtype.UUID      `json:"id"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	SubjectID        pgtype.Int4      `json:"subject_id"`
+	ParentID         pgtype.UUID      `json:"parent_id"`
+	Name             string           `json:"name"`
+	NameEn           pgtype.Text      `json:"name_en"`
+	Description      pgtype.Text      `json:"description"`
+	Keywords         []byte           `json:"keywords"`
+	ImportanceLevel  int32            `json:"importance_level"`
+	IsSeed           pgtype.Bool      `json:"is_seed"`
+	SourceType       pgtype.Text      `json:"source_type"`
+	SourceTaskID     pgtype.UUID      `json:"source_task_id"`
+	Embedding        interface{}      `json:"embedding"`
+	ID               pgtype.UUID      `json:"id"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
+	PositionX        pgtype.Float8    `json:"position_x"`
+	PositionY        pgtype.Float8    `json:"position_y"`
+	GlobalSparkCount int32            `json:"global_spark_count"`
+}
+
+type MasteryAuditLog struct {
+	ID         int64            `json:"id"`
+	NodeID     pgtype.UUID      `json:"node_id"`
+	UserID     pgtype.UUID      `json:"user_id"`
+	OldMastery int32            `json:"old_mastery"`
+	NewMastery int32            `json:"new_mastery"`
+	Reason     string           `json:"reason"`
+	IpAddress  *netip.Addr      `json:"ip_address"`
+	UserAgent  pgtype.Text      `json:"user_agent"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+type MessageFavorite struct {
+	ID               pgtype.UUID      `json:"id"`
+	UserID           pgtype.UUID      `json:"user_id"`
+	GroupMessageID   pgtype.UUID      `json:"group_message_id"`
+	PrivateMessageID pgtype.UUID      `json:"private_message_id"`
+	Note             pgtype.Text      `json:"note"`
+	Tags             []byte           `json:"tags"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	IsDeleted        bool             `json:"is_deleted"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
+}
+
+type MessageReport struct {
+	ID               pgtype.UUID      `json:"id"`
+	ReporterID       pgtype.UUID      `json:"reporter_id"`
+	GroupMessageID   pgtype.UUID      `json:"group_message_id"`
+	PrivateMessageID pgtype.UUID      `json:"private_message_id"`
+	Reason           string           `json:"reason"`
+	Description      pgtype.Text      `json:"description"`
+	Status           string           `json:"status"`
+	ReviewedBy       pgtype.UUID      `json:"reviewed_by"`
+	ReviewedAt       pgtype.Timestamp `json:"reviewed_at"`
+	ActionTaken      pgtype.Text      `json:"action_taken"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	IsDeleted        bool             `json:"is_deleted"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type NodeExpansionQueue struct {
@@ -882,6 +1198,31 @@ type Notification struct {
 	DeletedAt pgtype.Timestamp `json:"deleted_at"`
 }
 
+type OfflineMessageQueue struct {
+	ID           pgtype.UUID      `json:"id"`
+	UserID       pgtype.UUID      `json:"user_id"`
+	ClientNonce  string           `json:"client_nonce"`
+	MessageType  string           `json:"message_type"`
+	TargetID     pgtype.UUID      `json:"target_id"`
+	Payload      []byte           `json:"payload"`
+	Status       string           `json:"status"`
+	RetryCount   int32            `json:"retry_count"`
+	LastRetryAt  pgtype.Timestamp `json:"last_retry_at"`
+	ErrorMessage pgtype.Text      `json:"error_message"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
+}
+
+type OutboxEvent struct {
+	ID          int64            `json:"id"`
+	AggregateID pgtype.UUID      `json:"aggregate_id"`
+	EventType   string           `json:"event_type"`
+	Payload     []byte           `json:"payload"`
+	Status      pgtype.Text      `json:"status"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+}
+
 type Plan struct {
 	UserID                pgtype.UUID      `json:"user_id"`
 	Name                  string           `json:"name"`
@@ -909,6 +1250,8 @@ type Post struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+	// Controls post visibility: public (default), private (creator only), friends_only (creator + friends)
+	Visibility pgtype.Text `json:"visibility"`
 }
 
 type PostLike struct {
@@ -918,18 +1261,31 @@ type PostLike struct {
 }
 
 type PrivateMessage struct {
-	SenderID    pgtype.UUID      `json:"sender_id"`
-	ReceiverID  pgtype.UUID      `json:"receiver_id"`
-	MessageType Messagetype      `json:"message_type"`
-	Content     pgtype.Text      `json:"content"`
-	ContentData []byte           `json:"content_data"`
-	ReplyToID   pgtype.UUID      `json:"reply_to_id"`
-	IsRead      bool             `json:"is_read"`
-	ReadAt      pgtype.Timestamp `json:"read_at"`
-	ID          pgtype.UUID      `json:"id"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
-	DeletedAt   pgtype.Timestamp `json:"deleted_at"`
+	SenderID          pgtype.UUID      `json:"sender_id"`
+	ReceiverID        pgtype.UUID      `json:"receiver_id"`
+	MessageType       Messagetype      `json:"message_type"`
+	Content           pgtype.Text      `json:"content"`
+	ContentData       []byte           `json:"content_data"`
+	ReplyToID         pgtype.UUID      `json:"reply_to_id"`
+	IsRead            bool             `json:"is_read"`
+	ReadAt            pgtype.Timestamp `json:"read_at"`
+	ID                pgtype.UUID      `json:"id"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	ThreadRootID      pgtype.UUID      `json:"thread_root_id"`
+	IsRevoked         bool             `json:"is_revoked"`
+	RevokedAt         pgtype.Timestamp `json:"revoked_at"`
+	EditedAt          pgtype.Timestamp `json:"edited_at"`
+	Reactions         []byte           `json:"reactions"`
+	MentionUserIds    []byte           `json:"mention_user_ids"`
+	EncryptedContent  pgtype.Text      `json:"encrypted_content"`
+	ContentSignature  pgtype.Text      `json:"content_signature"`
+	EncryptionVersion pgtype.Int4      `json:"encryption_version"`
+	Topic             pgtype.Text      `json:"topic"`
+	Tags              []byte           `json:"tags"`
+	ForwardedFromID   pgtype.UUID      `json:"forwarded_from_id"`
+	ForwardCount      int32            `json:"forward_count"`
 }
 
 type ProcessedEvent struct {
@@ -999,19 +1355,22 @@ type SharedResource struct {
 	CreatedAt           pgtype.Timestamp `json:"created_at"`
 	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
 	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
+	CuriosityCapsuleID  pgtype.UUID      `json:"curiosity_capsule_id"`
+	BehaviorPatternID   pgtype.UUID      `json:"behavior_pattern_id"`
 }
 
 type StudyRecord struct {
-	UserID       pgtype.UUID      `json:"user_id"`
-	NodeID       pgtype.UUID      `json:"node_id"`
-	TaskID       pgtype.UUID      `json:"task_id"`
-	StudyMinutes int32            `json:"study_minutes"`
-	MasteryDelta float64          `json:"mastery_delta"`
-	RecordType   pgtype.Text      `json:"record_type"`
-	ID           pgtype.UUID      `json:"id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
+	UserID         pgtype.UUID      `json:"user_id"`
+	NodeID         pgtype.UUID      `json:"node_id"`
+	TaskID         pgtype.UUID      `json:"task_id"`
+	StudyMinutes   int32            `json:"study_minutes"`
+	MasteryDelta   float64          `json:"mastery_delta"`
+	RecordType     pgtype.Text      `json:"record_type"`
+	ID             pgtype.UUID      `json:"id"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
+	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
+	InitialMastery pgtype.Float8    `json:"initial_mastery"`
 }
 
 type Subject struct {
@@ -1053,21 +1412,6 @@ type Task struct {
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
-}
-
-type TokenUsage struct {
-	UserID           pgtype.UUID      `json:"user_id"`
-	SessionID        string           `json:"session_id"`
-	RequestID        string           `json:"request_id"`
-	PromptTokens     int32            `json:"prompt_tokens"`
-	CompletionTokens int32            `json:"completion_tokens"`
-	TotalTokens      int32            `json:"total_tokens"`
-	Model            string           `json:"model"`
-	Cost             pgtype.Float8    `json:"cost"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
 }
 
 type User struct {
@@ -1117,6 +1461,18 @@ type UserDailyMetric struct {
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
 }
 
+type UserEncryptionKey struct {
+	ID        pgtype.UUID      `json:"id"`
+	UserID    pgtype.UUID      `json:"user_id"`
+	PublicKey string           `json:"public_key"`
+	KeyType   string           `json:"key_type"`
+	DeviceID  pgtype.Text      `json:"device_id"`
+	IsActive  bool             `json:"is_active"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
 type UserNodeStatus struct {
 	UserID            pgtype.UUID      `json:"user_id"`
 	NodeID            pgtype.UUID      `json:"node_id"`
@@ -1134,6 +1490,18 @@ type UserNodeStatus struct {
 	FirstUnlockAt     pgtype.Timestamp `json:"first_unlock_at"`
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+}
+
+type UserToolHistory struct {
+	ID              int32            `json:"id"`
+	UserID          pgtype.UUID      `json:"user_id"`
+	ToolName        string           `json:"tool_name"`
+	Success         bool             `json:"success"`
+	ExecutionTimeMs pgtype.Int4      `json:"execution_time_ms"`
+	ErrorMessage    pgtype.Text      `json:"error_message"`
+	ContextSnapshot []byte           `json:"context_snapshot"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 }
 
 type WordBook struct {

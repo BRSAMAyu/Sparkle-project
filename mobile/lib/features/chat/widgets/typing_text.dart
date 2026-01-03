@@ -11,8 +11,7 @@ import 'package:flutter/material.dart';
 class TypingText extends StatefulWidget {
 
   const TypingText({
-    super.key,
-    required this.text,
+    required this.text, super.key,
     this.style,
     this.maxLines,
     this.overflow,
@@ -28,28 +27,24 @@ class TypingText extends StatefulWidget {
     required String text,
     TextStyle? style,
     VoidCallback? onComplete,
-  }) {
-    return TypingText(
+  }) => TypingText(
       text: text,
       style: style,
       charDelay: const Duration(milliseconds: 15),
       onComplete: onComplete,
     );
-  }
 
   /// 工厂方法：慢速模式（适合重点强调）
   factory TypingText.slow({
     required String text,
     TextStyle? style,
     VoidCallback? onComplete,
-  }) {
-    return TypingText(
+  }) => TypingText(
       text: text,
       style: style,
       charDelay: const Duration(milliseconds: 50),
       onComplete: onComplete,
     );
-  }
   final String text;
   final TextStyle? style;
   final int? maxLines;
@@ -240,8 +235,7 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
 class TypingRichText extends StatefulWidget {
 
   const TypingRichText({
-    super.key,
-    required this.spans,
+    required this.spans, super.key,
     this.charDelay = const Duration(milliseconds: 20),
     this.animate = true,
     this.onComplete,

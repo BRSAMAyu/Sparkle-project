@@ -10,8 +10,7 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 class AnalysisCard extends StatelessWidget {
 
   const AnalysisCard({
-    super.key,
-    required this.analysis,
+    required this.analysis, super.key,
     this.knowledgeLinks = const [],
     this.onKnowledgeTap,
     this.onReAnalyze,
@@ -146,8 +145,8 @@ class AnalysisCard extends StatelessWidget {
                     onPressed: onKnowledgeTap,
                     backgroundColor: link.isPrimary
                         ? theme.colorScheme.primaryContainer
-                        : theme.colorScheme.surfaceVariant,
-                  )).toList(),
+                        : theme.colorScheme.surfaceContainerHighest,
+                  ),).toList(),
               ),
             ],
           ],
@@ -263,7 +262,7 @@ class AnalysisCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              )).toList(),
+              ),).toList(),
           ),
         ),
       ],

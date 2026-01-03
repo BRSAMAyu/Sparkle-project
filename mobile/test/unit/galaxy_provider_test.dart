@@ -9,7 +9,6 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
-import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
 import 'galaxy_provider_test.mocks.dart';
 

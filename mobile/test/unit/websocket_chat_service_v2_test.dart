@@ -141,7 +141,7 @@ void main() {
 
       // 模拟服务内部URL构造逻辑
       const query = 'user_id=$userId';
-      final wsUrl = '$baseUrl/ws/chat?$query';
+      const wsUrl = '$baseUrl/ws/chat?$query';
 
       // 关键安全断言：token不在URL中
       expect(wsUrl, isNot(contains('token=')));

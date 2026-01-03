@@ -43,13 +43,18 @@ const LocalKnowledgeNodeSchema = CollectionSchema(
       name: r'name',
       type: IsarType.string,
     ),
-    r'serverId': PropertySchema(
+    r'revision': PropertySchema(
       id: 5,
+      name: r'revision',
+      type: IsarType.long,
+    ),
+    r'serverId': PropertySchema(
+      id: 6,
       name: r'serverId',
       type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _LocalKnowledgeNodesyncStatusEnumValueMap,
@@ -111,8 +116,9 @@ void _localKnowledgeNodeSerialize(
   writer.writeDateTime(offsets[2], object.lastUpdated);
   writer.writeLong(offsets[3], object.mastery);
   writer.writeString(offsets[4], object.name);
-  writer.writeString(offsets[5], object.serverId);
-  writer.writeByte(offsets[6], object.syncStatus.index);
+  writer.writeLong(offsets[5], object.revision);
+  writer.writeString(offsets[6], object.serverId);
+  writer.writeByte(offsets[7], object.syncStatus.index);
 }
 
 LocalKnowledgeNode _localKnowledgeNodeDeserialize(
@@ -128,9 +134,10 @@ LocalKnowledgeNode _localKnowledgeNodeDeserialize(
   object.lastUpdated = reader.readDateTime(offsets[2]);
   object.mastery = reader.readLong(offsets[3]);
   object.name = reader.readString(offsets[4]);
-  object.serverId = reader.readString(offsets[5]);
+  object.revision = reader.readLong(offsets[5]);
+  object.serverId = reader.readString(offsets[6]);
   object.syncStatus = _LocalKnowledgeNodesyncStatusValueEnumMap[
-          reader.readByteOrNull(offsets[6])] ??
+          reader.readByteOrNull(offsets[7])] ??
       SyncStatus.pending;
   return object;
 }
@@ -153,8 +160,10 @@ P _localKnowledgeNodeDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (_LocalKnowledgeNodesyncStatusValueEnumMap[
               reader.readByteOrNull(offset)] ??
           SyncStatus.pending) as P;
@@ -890,6 +899,62 @@ extension LocalKnowledgeNodeQueryFilter
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      revisionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      revisionGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      revisionLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      revisionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'revision',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
       serverIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1161,6 +1226,20 @@ extension LocalKnowledgeNodeQuerySortBy
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      sortByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      sortByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
       sortByServerId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serverId', Sort.asc);
@@ -1276,6 +1355,20 @@ extension LocalKnowledgeNodeQuerySortThenBy
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      thenByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      thenByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
       thenByServerId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serverId', Sort.asc);
@@ -1342,6 +1435,13 @@ extension LocalKnowledgeNodeQueryWhereDistinct
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QDistinct>
+      distinctByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'revision');
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QDistinct>
       distinctByServerId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'serverId', caseSensitive: caseSensitive);
@@ -1396,6 +1496,12 @@ extension LocalKnowledgeNodeQueryProperty
     });
   }
 
+  QueryBuilder<LocalKnowledgeNode, int, QQueryOperations> revisionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'revision');
+    });
+  }
+
   QueryBuilder<LocalKnowledgeNode, String, QQueryOperations>
       serverIdProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1442,19 +1548,29 @@ const PendingUpdateSchema = CollectionSchema(
       name: r'nodeId',
       type: IsarType.string,
     ),
-    r'syncStatus': PropertySchema(
+    r'requestId': PropertySchema(
       id: 4,
+      name: r'requestId',
+      type: IsarType.string,
+    ),
+    r'revision': PropertySchema(
+      id: 5,
+      name: r'revision',
+      type: IsarType.long,
+    ),
+    r'syncStatus': PropertySchema(
+      id: 6,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _PendingUpdatesyncStatusEnumValueMap,
     ),
     r'synced': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'synced',
       type: IsarType.bool,
     ),
     r'timestamp': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'timestamp',
       type: IsarType.dateTime,
     )
@@ -1500,6 +1616,12 @@ int _pendingUpdateEstimateSize(
     }
   }
   bytesCount += 3 + object.nodeId.length * 3;
+  {
+    final value = object.requestId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -1513,9 +1635,11 @@ void _pendingUpdateSerialize(
   writer.writeString(offsets[1], object.error);
   writer.writeLong(offsets[2], object.newMastery);
   writer.writeString(offsets[3], object.nodeId);
-  writer.writeByte(offsets[4], object.syncStatus.index);
-  writer.writeBool(offsets[5], object.synced);
-  writer.writeDateTime(offsets[6], object.timestamp);
+  writer.writeString(offsets[4], object.requestId);
+  writer.writeLong(offsets[5], object.revision);
+  writer.writeByte(offsets[6], object.syncStatus.index);
+  writer.writeBool(offsets[7], object.synced);
+  writer.writeDateTime(offsets[8], object.timestamp);
 }
 
 PendingUpdate _pendingUpdateDeserialize(
@@ -1530,11 +1654,13 @@ PendingUpdate _pendingUpdateDeserialize(
   object.id = id;
   object.newMastery = reader.readLong(offsets[2]);
   object.nodeId = reader.readString(offsets[3]);
+  object.requestId = reader.readStringOrNull(offsets[4]);
+  object.revision = reader.readLong(offsets[5]);
   object.syncStatus =
-      _PendingUpdatesyncStatusValueEnumMap[reader.readByteOrNull(offsets[4])] ??
+      _PendingUpdatesyncStatusValueEnumMap[reader.readByteOrNull(offsets[6])] ??
           SyncStatus.pending;
-  object.synced = reader.readBool(offsets[5]);
-  object.timestamp = reader.readDateTime(offsets[6]);
+  object.synced = reader.readBool(offsets[7]);
+  object.timestamp = reader.readDateTime(offsets[8]);
   return object;
 }
 
@@ -1554,12 +1680,16 @@ P _pendingUpdateDeserializeProp<P>(
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
       return (_PendingUpdatesyncStatusValueEnumMap[
               reader.readByteOrNull(offset)] ??
           SyncStatus.pending) as P;
-    case 5:
+    case 7:
       return (reader.readBool(offset)) as P;
-    case 6:
+    case 8:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2235,6 +2365,216 @@ extension PendingUpdateQueryFilter
   }
 
   QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'requestId',
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'requestId',
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'requestId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'requestId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'requestId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'requestId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      requestIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'requestId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      revisionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      revisionGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      revisionLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'revision',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
+      revisionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'revision',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterFilterCondition>
       syncStatusEqualTo(SyncStatus value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -2415,6 +2755,32 @@ extension PendingUpdateQuerySortBy
     });
   }
 
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> sortByRequestId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'requestId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy>
+      sortByRequestIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'requestId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> sortByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy>
+      sortByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
+    });
+  }
+
   QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> sortBySyncStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'syncStatus', Sort.asc);
@@ -2518,6 +2884,32 @@ extension PendingUpdateQuerySortThenBy
     });
   }
 
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> thenByRequestId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'requestId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy>
+      thenByRequestIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'requestId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> thenByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy>
+      thenByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
+    });
+  }
+
   QueryBuilder<PendingUpdate, PendingUpdate, QAfterSortBy> thenBySyncStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'syncStatus', Sort.asc);
@@ -2585,6 +2977,19 @@ extension PendingUpdateQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PendingUpdate, PendingUpdate, QDistinct> distinctByRequestId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'requestId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PendingUpdate, PendingUpdate, QDistinct> distinctByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'revision');
+    });
+  }
+
   QueryBuilder<PendingUpdate, PendingUpdate, QDistinct> distinctBySyncStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'syncStatus');
@@ -2633,6 +3038,18 @@ extension PendingUpdateQueryProperty
   QueryBuilder<PendingUpdate, String, QQueryOperations> nodeIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'nodeId');
+    });
+  }
+
+  QueryBuilder<PendingUpdate, String?, QQueryOperations> requestIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'requestId');
+    });
+  }
+
+  QueryBuilder<PendingUpdate, int, QQueryOperations> revisionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'revision');
     });
   }
 

@@ -12,8 +12,7 @@ import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.d
 class ErrorCard extends StatelessWidget {
 
   const ErrorCard({
-    super.key,
-    required this.error,
+    required this.error, super.key,
     this.onTap,
     this.onDelete,
     this.showReviewStatus = true,
@@ -35,7 +34,7 @@ class ErrorCard extends StatelessWidget {
       direction: onDelete != null
           ? DismissDirection.endToStart
           : DismissDirection.none,
-      confirmDismiss: onDelete != null ? (_) async => await showDialog<bool>(
+      confirmDismiss: onDelete != null ? (_) async => showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('确认删除'),
@@ -250,8 +249,7 @@ class ErrorCard extends StatelessWidget {
 class ErrorCardCompact extends StatelessWidget {
 
   const ErrorCardCompact({
-    super.key,
-    required this.error,
+    required this.error, super.key,
     this.onTap,
   });
   final ErrorRecord error;

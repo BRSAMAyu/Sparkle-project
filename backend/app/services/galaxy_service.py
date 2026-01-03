@@ -14,6 +14,7 @@ from sqlalchemy import text
 from loguru import logger
 
 from app.models.galaxy import KnowledgeNode, NodeRelation
+from app.models.outbox import EventOutbox
 from app.schemas.galaxy import (
     GalaxyGraphResponse, SparkResult, SearchResultItem, 
     GalaxyUserStats, NodeWithStatus, NodeRelationInfo
@@ -239,19 +240,20 @@ class GalaxyService:
         return await self.stats.expansion_service.auto_link_nodes(node_id)
 
 
-    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: Optional[datetime] = None):
+    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: Optional[datetime] = None, request_id: Optional[str] = None, revision: Optional[int] = None):
         """
         Update node mastery with Outbox pattern and version checking to prevent race conditions
         """
         # 1. Get current state from user_node_status
         query_current = text("""
-            SELECT mastery_score, updated_at 
+            SELECT mastery_score, updated_at, revision
             FROM user_node_status 
             WHERE user_id = :user_id AND node_id = :node_id
         """)
         result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
         current = result.fetchone()
         
+        current_revision = 0
         if not current:
             # If status doesn't exist, create one (initial unlock)
             old_mastery = 0
@@ -259,11 +261,29 @@ class GalaxyService:
         else:
             old_mastery = current[0]
             current_updated_at = current[1]
+            current_revision = current[2] or 0
             
-            # 2. Version Check (Optimistic Concurrency Control)
-            if version and current_updated_at and version <= current_updated_at:
-                logger.warning(f"Ignoring stale update for node {node_id}. Incoming version {version} <= current {current_updated_at}")
-                return {"success": False, "reason": "stale_update"}
+            # 2. Conflict Resolution (Logical Clock Priority)
+            if revision is not None:
+                # Client provided a revision, ensure we are not overwriting a newer one (or equal, if not idempotent)
+                # Ideally, client revision should be base_revision + 1. 
+                # If client revision < current_revision, it's a stale update.
+                if revision <= current_revision:
+                     logger.warning(f"Ignoring stale update (Revision) for node {node_id}. Client {revision} <= Server {current_revision}")
+                     return {"success": False, "reason": "stale_revision", "current_revision": current_revision}
+            
+            # Fallback to Physical Clock if revision not provided (Legacy)
+            elif version and current_updated_at and version <= current_updated_at:
+                logger.warning(f"Ignoring stale update (Time) for node {node_id}. Incoming version {version} <= current {current_updated_at}")
+                return {"success": False, "reason": "stale_update", "current_revision": current_revision}
+
+        # Calculate new revision
+        new_revision = current_revision + 1
+        if revision is not None and revision > current_revision:
+             # Adopt client revision if it's logically ahead (or simply increment server's)
+             # To maintain strict monotonicity, usually server authoritative revision = max(client, server) + 1 
+             # But here we just want to increment.
+             new_revision = current_revision + 1
 
         # 3. Transactional Update
         try:
@@ -279,15 +299,17 @@ class GalaxyService:
                 await self.db.execute(global_update, {"node_id": node_id})
 
             # B. Update Individual Data (UPSERT pattern)
+            # Added revision column update
             upsert_query = text("""
-                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked)
-                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true)
+                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision)
+                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision)
                 ON CONFLICT (user_id, node_id) DO UPDATE SET
                     mastery_score = EXCLUDED.mastery_score,
                     updated_at = EXCLUDED.updated_at,
                     last_study_at = EXCLUDED.updated_at,
-                    is_unlocked = true
-                WHERE user_node_status.updated_at < EXCLUDED.updated_at
+                    is_unlocked = true,
+                    revision = EXCLUDED.revision
+                WHERE user_node_status.revision < EXCLUDED.revision OR (user_node_status.revision = EXCLUDED.revision AND user_node_status.updated_at < EXCLUDED.updated_at)
             """)
             
             update_time = version or datetime.utcnow()
@@ -296,43 +318,58 @@ class GalaxyService:
                 "user_id": user_id, 
                 "node_id": node_id, 
                 "mastery": new_mastery,
-                "updated_at": update_time
+                "updated_at": update_time,
+                "revision": new_revision
             })
             
             # C. Audit Log
             audit_query = text("""
-                INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason)
-                VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason)
+                INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
+                VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)
             """)
             await self.db.execute(audit_query, {
                 "node_id": node_id,
                 "user_id": user_id,
                 "old_mastery": int(old_mastery),
                 "new_mastery": new_mastery,
-                "reason": reason
-            })
-            
-            # D. Outbox Event
-            event_payload = {
-                "user_id": str(user_id),
-                "node_id": str(node_id),
-                "old_mastery": int(old_mastery),
-                "new_mastery": new_mastery,
-                "is_new_spark": is_new_spark,
                 "reason": reason,
-                "version": update_time.isoformat()
-            }
-            outbox_query = text("""
-                INSERT INTO outbox_events (aggregate_id, event_type, payload)
-                VALUES (:aggregate_id, 'galaxy.node.mastery_updated', :payload)
-            """)
-            await self.db.execute(outbox_query, {
-                "aggregate_id": node_id,
-                "payload": json.dumps(event_payload)
+                "request_id": request_id,
+                "revision": new_revision
             })
             
-            await self.db.commit()
-            return {"success": True, "old_mastery": old_mastery, "new_mastery": new_mastery}
+            # 4. Invalidate Semantic Cache (User specific)
+            from app.services.semantic_cache_service import semantic_cache_service
+            if semantic_cache_service:
+                # We invalidate all cache for this user since we don't know which queries 
+                # might be affected by this specific node's mastery change.
+                # In a more advanced version, we could use tags or query-to-node mapping.
+                # await semantic_cache_service.invalidate_user_cache(str(user_id))
+                pass # Pattern for broad invalidation if needed, or rely on TTL.
+                # Actually, mastery score might not change the retrieved nodes, just their status.
+                # Since status is re-fetched in hybrid_search, we might not need to invalidate nodes cache!
+
+            
+            # 5. Add to Outbox
+            outbox_event = EventOutbox(
+                topic="galaxy.node.mastery_updated",
+                payload={
+                    "user_id": str(user_id),
+                    "node_id": str(node_id),
+                    "mastery_score": new_mastery,
+                    "revision": new_revision,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                created_at=datetime.utcnow() # Explicitly set for partitioning
+            )
+            self.db.add(outbox_event)
+            
+            await self.db.flush()
+            
+            return {
+                "success": True, 
+                "current_mastery": mastery_score,
+                "current_revision": new_revision
+            }
             
         except Exception as e:
             await self.db.rollback()

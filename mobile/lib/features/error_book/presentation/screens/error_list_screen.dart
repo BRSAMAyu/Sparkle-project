@@ -199,7 +199,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   ) => errorListAsync.when(
       data: (response) {
         if (response.items.isEmpty) {
-          return _buildEmptyState(query.needReview == true);
+          return _buildEmptyState(query.needReview ?? false);
         }
 
         return RefreshIndicator(
@@ -347,7 +347,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('删除失败: ${e}'),
+            content: Text('删除失败: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),

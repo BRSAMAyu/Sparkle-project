@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/data/models/compact_knowledge_node.dart';
 
 part 'galaxy_model.g.dart';
 
@@ -186,6 +187,21 @@ class GalaxyNodeModel {
 
   /// 节点半径（基于重要程度）
   double get radius => 3.0 + importance * 2.0;
+
+  /// Convert to CompactKnowledgeNode for rendering
+  CompactKnowledgeNode toCompact(double x, double y) => CompactKnowledgeNode.create(
+      id: id,
+      parentId: parentId,
+      name: name,
+      x: x,
+      y: y,
+      mastery: masteryScore,
+      isUnlocked: isUnlocked,
+      isMastered: masteryScore >= 100,
+      sectorIndex: sector.index,
+      importance: importance,
+      studyCount: studyCount,
+    );
 
   /// 复制并修改
   GalaxyNodeModel copyWith({

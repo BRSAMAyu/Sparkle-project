@@ -81,7 +81,7 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
                 labelStyle: TextStyle(
                   color: _feeling == f ? Colors.black : DS.brandPrimaryConst,
                 ),
-              )
+              ),
             ).toList(),
           ),
           const SizedBox(height: 16),

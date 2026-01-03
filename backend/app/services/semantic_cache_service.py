@@ -12,13 +12,8 @@ from datetime import datetime, timedelta
 from loguru import logger
 import numpy as np
 
-try:
-    from redis import Redis
-    from redis.lock import Lock
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-    logger.warning("Redis not available, semantic cache disabled")
+from redis.asyncio import Redis
+from redis.asyncio.lock import Lock
 
 
 class SemanticCacheService:
@@ -51,21 +46,26 @@ class SemanticCacheService:
         self.LOCK_PREFIX = "semantic_cache:lock:"
 
         # 初始化统计
-        if self.redis and REDIS_AVAILABLE:
-            if not self.redis.exists(self.STATS_KEY):
-                self._init_stats()
+        # 注意：这里不能在 __init__ 中 await，所以统计初始化改为按需触发或单独的 async init 方法
+        # 为了兼容性，我们在第一次写入时检查，或者接受外部传入的 redis_client 已经准备好
+        # 暂时移除 __init__ 中的异步调用，防止 event loop 问题
 
-    def _init_stats(self):
+    async def _init_stats(self):
         """初始化缓存统计"""
-        stats = {
-            "total_hits": 0,
-            "total_misses": 0,
-            "total_sets": 0,
-            "start_time": datetime.utcnow().isoformat()
-        }
-        self.redis.hset(self.STATS_KEY, mapping={
-            k: json.dumps(v) for k, v in stats.items()
-        })
+        if not self.redis:
+            return
+
+        exists = await self.redis.exists(self.STATS_KEY)
+        if not exists:
+            stats = {
+                "total_hits": 0,
+                "total_misses": 0,
+                "total_sets": 0,
+                "start_time": datetime.utcnow().isoformat()
+            }
+            await self.redis.hset(self.STATS_KEY, mapping={
+                k: json.dumps(v) for k, v in stats.items()
+            })
 
     def _generate_cache_key(self, query: str, user_id: Optional[str] = None) -> str:
         """
@@ -108,16 +108,16 @@ class SemanticCacheService:
         Returns:
             缓存的结果，如果未命中则返回 None
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return None
 
         try:
             cache_key = self._generate_cache_key(query, user_id)
-            cached_data = self.redis.get(cache_key)
+            cached_data = await self.redis.get(cache_key)
 
             if cached_data:
                 # 命中
-                self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
+                await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
                 result = json.loads(cached_data)
 
                 logger.debug(
@@ -128,7 +128,7 @@ class SemanticCacheService:
                 return result.get("data")
             else:
                 # 未命中
-                self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
+                await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
                 logger.debug(f"Cache MISS: query='{query[:30]}...'")
                 return None
 
@@ -159,7 +159,7 @@ class SemanticCacheService:
         Returns:
             数据
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return await factory_func(*args, **kwargs)
 
         # 1. 尝试获取缓存
@@ -170,48 +170,41 @@ class SemanticCacheService:
         cache_key = self._generate_cache_key(query, user_id)
         lock_key = self._generate_lock_key(cache_key)
         
-        # 2. 获取分布式锁
-        # 使用 redis-py 的 Lock 对象
+        # 2. 获取分布式锁 (Async)
         try:
             lock = self.redis.lock(
                 lock_key,
                 timeout=self.lock_timeout,
-                blocking_timeout=2.0 # 等待锁的时间
+                blocking_timeout=2.0 
             )
             
-            acquired = lock.acquire(blocking=True)
-            if acquired:
-                try:
-                    # 双重检查 (Double-Checked Locking)
-                    # 在获取锁之后再次检查缓存，可能其他线程/进程已经写入了
-                    data = await self.get(query, user_id)
-                    if data is not None:
-                        return data
-                    
-                    # 3. 生成数据
-                    logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
-                    result = await factory_func(*args, **kwargs)
-                    
-                    # 4. 写入缓存
-                    if result:
-                        await self.set(query, result, user_id, ttl)
-                    
-                    return result
-                finally:
-                     # 释放锁
-                    try:
-                        if lock.locked():
-                            lock.release()
-                    except Exception as e:
-                        logger.error(f"Error releasing lock: {e}")
-            else:
-                # 获取锁失败，说明有并发请求正在生成数据
-                # 稍微等待一下再尝试获取（降级策略）
-                logger.warning(f"Failed to acquire lock for {cache_key}. Waiting...")
-                await asyncio.sleep(0.1) 
-                return await self.get(query, user_id) or await factory_func(*args, **kwargs)
+            # 使用 async context manager 自动处理 acquire/release
+            # acquire 内部默认是阻塞的 (blocking=True)，但它是 async 的，
+            # 所以会释放 event loop，不会阻塞其他协程。
+            async with lock:
+                # 双重检查 (Double-Checked Locking)
+                data = await self.get(query, user_id)
+                if data is not None:
+                    return data
+                
+                # 3. 生成数据
+                logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
+                result = await factory_func(*args, **kwargs)
+                
+                # 4. 写入缓存
+                if result:
+                    await self.set(query, result, user_id, ttl)
+                
+                return result
 
         except Exception as e:
+            # redis.exceptions.LockError 可能会在锁获取超时抛出
+            if "LockError" in str(type(e)):
+                 logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
+                 # 稍微等待一下再尝试获取（降级策略）
+                 await asyncio.sleep(0.1) 
+                 return await self.get(query, user_id) or await factory_func(*args, **kwargs)
+
             logger.error(f"Cache Mutex Error: {e}")
             # 出错时降级为直接调用
             return await factory_func(*args, **kwargs)
@@ -235,7 +228,7 @@ class SemanticCacheService:
         Returns:
             是否成功
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return False
 
         try:
@@ -250,14 +243,14 @@ class SemanticCacheService:
             }
 
             # 序列化并存储
-            self.redis.setex(
+            await self.redis.setex(
                 cache_key,
                 ttl or self.default_ttl,
                 json.dumps(cache_value)
             )
 
             # 更新统计
-            self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
+            await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
 
             logger.debug(
                 f"Cache SET: query='{query[:30]}...', ttl={ttl or self.default_ttl}s"
@@ -280,12 +273,12 @@ class SemanticCacheService:
         Returns:
             是否成功删除
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return False
 
         try:
             cache_key = self._generate_cache_key(query, user_id)
-            deleted = self.redis.delete(cache_key)
+            deleted = await self.redis.delete(cache_key)
             logger.info(f"Cache INVALIDATE: query='{query[:30]}...', deleted={deleted}")
             return deleted > 0
 
@@ -300,15 +293,15 @@ class SemanticCacheService:
         Returns:
             删除的键数量
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return 0
 
         try:
             # 查找所有缓存键
-            keys = self.redis.keys(f"{self.CACHE_PREFIX}*")
+            keys = await self.redis.keys(f"{self.CACHE_PREFIX}*")
 
             if keys:
-                deleted = self.redis.delete(*keys)
+                deleted = await self.redis.delete(*keys)
                 logger.warning(f"Cache CLEAR_ALL: deleted {deleted} keys")
                 return deleted
             else:
@@ -319,18 +312,18 @@ class SemanticCacheService:
             logger.error(f"Cache CLEAR_ALL error: {e}")
             return 0
 
-    def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> Dict[str, Any]:
         """
         获取缓存统计信息
 
         Returns:
             统计数据
         """
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return {"error": "Redis not available"}
 
         try:
-            stats_raw = self.redis.hgetall(self.STATS_KEY)
+            stats_raw = await self.redis.hgetall(self.STATS_KEY)
             stats = {
                 k.decode(): json.loads(v.decode())
                 for k, v in stats_raw.items()
@@ -355,16 +348,62 @@ class SemanticCacheService:
 
     async def get_cache_size(self) -> int:
         """获取当前缓存大小（键数量）"""
-        if not self.redis or not REDIS_AVAILABLE:
+        if not self.redis:
             return 0
 
         try:
-            keys = self.redis.keys(f"{self.CACHE_PREFIX}*")
+            keys = await self.redis.keys(f"{self.CACHE_PREFIX}*")
             return len(keys)
 
         except Exception as e:
             logger.error(f"Cache SIZE error: {e}")
             return 0
+
+    # --- High-level methods for KnowledgeRetrievalService ---
+
+    async def get_cached_result(self, query: str, user_id: Optional[str] = None, threshold: float = 0.9) -> Optional[List[Any]]:
+        """获取缓存的知识节点列表"""
+        # Note: Currently uses exact query match (threshold ignored for now)
+        data = await self.get(query, user_id)
+        if not data or "nodes" not in data:
+            return None
+        
+        # Rehydrate from JSON
+        from app.models.galaxy import KnowledgeNode
+        nodes = []
+        for node_dict in data["nodes"]:
+            # Basic rehydration (just for the fields we need in SearchResultItem)
+            # In a real system, we might want to fetch from DB if we need full SQLAlchemy objects,
+            # but here we return populated models.
+            node = KnowledgeNode()
+            for k, v in node_dict.items():
+                if hasattr(node, k):
+                    setattr(node, k, v)
+            nodes.append(node)
+        return nodes
+
+    async def cache_result(self, query: str, nodes: List[Any], user_id: Optional[str] = None, ttl: Optional[int] = None):
+        """缓存知识节点列表"""
+        # Serialize nodes to dict
+        node_dicts = []
+        for node in nodes:
+            # Simple serialization
+            d = {
+                "id": str(node.id),
+                "name": node.name,
+                "name_en": node.name_en,
+                "description": node.description,
+                "importance_level": node.importance_level,
+                "is_seed": node.is_seed,
+            }
+            # Add subject/parent info if available
+            if node.subject:
+                d["subject"] = {"sector_code": node.subject.sector_code}
+            if node.parent:
+                d["parent"] = {"name": node.parent.name}
+            node_dicts.append(d)
+            
+        await self.set(query, {"nodes": node_dicts}, user_id, ttl)
 
 
 # 便捷函数：创建服务实例
@@ -375,3 +414,7 @@ def create_semantic_cache(redis_client: Redis) -> SemanticCacheService:
         default_ttl=3600,  # 1小时
         max_cache_size=10000
     )
+
+# 全局实例，使用核心缓存模块的 Redis 客户端
+from app.core.cache import cache_service
+semantic_cache_service = SemanticCacheService(redis_client=cache_service.redis)

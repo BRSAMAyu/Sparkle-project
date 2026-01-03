@@ -7,8 +7,7 @@ import 'package:flutter/material.dart';
 class ReviewPerformanceButtons extends StatelessWidget {
 
   const ReviewPerformanceButtons({
-    super.key,
-    required this.onPerformanceSelected,
+    required this.onPerformanceSelected, super.key,
     this.isLoading = false,
   });
   final Function(String performance) onPerformanceSelected;
@@ -144,8 +143,7 @@ class _PerformanceButton extends StatelessWidget {
 class ReviewPerformanceBottomSheet extends StatelessWidget {
 
   const ReviewPerformanceBottomSheet({
-    super.key,
-    required this.onPerformanceSelected,
+    required this.onPerformanceSelected, super.key,
   });
   final Function(String performance) onPerformanceSelected;
 

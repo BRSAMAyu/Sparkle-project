@@ -83,7 +83,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('添加失败: ${e}'),
+                  child: Text('添加失败: $e'),
                 ),
               ],
             ),

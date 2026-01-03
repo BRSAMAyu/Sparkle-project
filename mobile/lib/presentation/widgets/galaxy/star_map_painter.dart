@@ -6,6 +6,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/text_cache.dart';
 import 'package:sparkle/data/models/galaxy_model.dart';
+import 'package:sparkle/data/models/compact_knowledge_node.dart';
+import 'package:sparkle/data/models/compact_edge.dart';
 import 'package:sparkle/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_config.dart';
 
@@ -18,7 +20,7 @@ class ProcessedNode {
     required this.radius,
     required this.position,
   });
-  final GalaxyNodeModel node;
+  final CompactKnowledgeNode node;
   final Color color;
   final double radius;
   final Offset position;
@@ -36,7 +38,7 @@ class ProcessedEdge {
     required this.distance,
     required this.strokeWidth,
   });
-  final GalaxyEdgeModel edge;
+  final CompactEdge edge;
   final Offset start;
   final Offset end;
   final Color startColor;
@@ -115,7 +117,7 @@ class StarMapPainter extends CustomPainter {
 
   StarMapPainter({
     required this.nodes,
-    required this.positions, this.edges = const [],
+    this.edges = const [],
     this.scale = 1.0,
     this.aggregationLevel = AggregationLevel.full,
     this.clusters = const {},
@@ -128,9 +130,8 @@ class StarMapPainter extends CustomPainter {
   }) {
     _preprocessData();
   }
-  final List<GalaxyNodeModel> nodes;
-  final List<GalaxyEdgeModel> edges;
-  final Map<String, Offset> positions;
+  final List<CompactKnowledgeNode> nodes;
+  final List<CompactEdge> edges;
   final double scale;
   final AggregationLevel aggregationLevel;
   final Map<String, ClusterInfo> clusters;
@@ -138,7 +139,7 @@ class StarMapPainter extends CustomPainter {
   final Offset center;   // 宇宙中心点
   final String? selectedNodeId;
   final Set<String> expandedEdgeNodeIds;
-  final Map<String, double> nodeAnimationProgress; // 0.0 to 1.0
+  final Map<int, double> nodeAnimationProgress; // 0.0 to 1.0 (Key: idHash)
   final double selectionPulse; // 0.0 to 1.0 for selection animation
 
   // Cache storage - 使用智能缓存替代简单Map
@@ -148,10 +149,10 @@ class StarMapPainter extends CustomPainter {
   static final SmartCache<int, List<ProcessedEdge>> _edgeCache = SmartCache(
     maxSize: 10,
   );
-  static final SmartCache<int, Map<String, Color>> _colorCacheStorage = SmartCache(
+  static final SmartCache<int, Map<int, Color>> _colorCacheStorage = SmartCache(
     maxSize: 10,
   );
-  static final SmartCache<int, Map<String, Offset>> _positionCacheStorage = SmartCache(
+  static final SmartCache<int, Map<int, Offset>> _positionCacheStorage = SmartCache(
     maxSize: 10,
   );
 
@@ -161,21 +162,20 @@ class StarMapPainter extends CustomPainter {
   // Instance data
   late final List<ProcessedNode> _processedNodes;
   late final List<ProcessedEdge> _processedEdges;
-  late final Map<String, Color> _colorCache;
-  late final Map<String, Offset> _positionCache;
+  late final Map<int, Color> _colorCache;
+  late final Map<int, Offset> _positionCache;
 
   int _generateCacheKey() {
     // Generate a unique key based on the data that affects the processed output
-    // Optimized: Avoid identityHashCode(positions) as the map instance is recreated often.
-    // Instead, sample actual position values which are stable across recreations.
+    // Optimized: Use nodes.length and sample node positions.
     return Object.hash(
       identityHashCode(nodes),
       identityHashCode(edges),
       nodes.length,
       edges.length,
       // Sample positions to detect layout changes without checking the whole map
-      nodes.isNotEmpty ? positions[nodes.first.id] : 0,
-      nodes.length > 10 ? positions[nodes[nodes.length ~/ 2].id] : 0,
+      nodes.isNotEmpty ? nodes.first.position[0] : 0,
+      nodes.length > 10 ? nodes[nodes.length ~/ 2].position[0] : 0,
     );
   }
 
@@ -203,26 +203,30 @@ class StarMapPainter extends CustomPainter {
 
     for (final node in nodes) {
       // 使用星域色系：基于节点的星域、重要程度和掌握度生成颜色
-      _colorCache[node.id] = SectorConfig.getNodeColor(
-        sector: node.sector,
+      // Map sectorIndex to SectorEnum
+      final sector = node.sectorIndex < SectorEnum.values.length 
+          ? SectorEnum.values[node.sectorIndex] 
+          : SectorEnum.voidSector;
+          
+      _colorCache[node.idHash] = SectorConfig.getNodeColor(
+        sector: sector,
         importance: node.importance,
-        masteryScore: node.masteryScore,
+        masteryScore: node.mastery,
       );
-      final pos = positions[node.id];
-      if (pos != null) {
-        _positionCache[node.id] = pos;
-      }
+      
+      _positionCache[node.idHash] = Offset(node.x, node.y);
     }
 
     // Build processed nodes
     // Note: 'nodes' passed here are already filtered by Provider for Visibility & LOD
     _processedNodes = [];
     for (final node in nodes) {
-      final pos = _positionCache[node.id];
+      final pos = _positionCache[node.idHash];
       if (pos == null) continue;
 
-      final color = _colorCache[node.id] ?? DS.brandPrimary;
-      final radius = node.radius;
+      final color = _colorCache[node.idHash] ?? DS.brandPrimary;
+      final radius = 3.0 + node.importance * 2.0; // Replicate logic from GalaxyNodeModel
+      
       _processedNodes.add(ProcessedNode(
         node: node,
         color: color,
@@ -237,13 +241,13 @@ class StarMapPainter extends CustomPainter {
 
     // First, add edges from the edges list
     for (final edge in edges) {
-      final start = _positionCache[edge.sourceId];
-      final end = _positionCache[edge.targetId];
+      final start = _positionCache[edge.sourceHash];
+      final end = _positionCache[edge.targetHash];
 
       if (start == null || end == null) continue;
 
-      final sourceColor = _colorCache[edge.sourceId] ?? DS.brandPrimary;
-      final targetColor = _colorCache[edge.targetId] ?? DS.brandPrimary;
+      final sourceColor = _colorCache[edge.sourceHash] ?? DS.brandPrimary;
+      final targetColor = _colorCache[edge.targetHash] ?? DS.brandPrimary;
       final distance = (end - start).distance;
       final style = _RelationStyle.forType(edge.relationType);
       final strokeWidth = style.baseWidth * (0.5 + edge.strength * 0.5);
@@ -260,29 +264,33 @@ class StarMapPainter extends CustomPainter {
     }
 
     // Also add parent-child connections if not already in edges
-    final edgeKeys = edges.map((e) => '${e.sourceId}-${e.targetId}').toSet();
+    // Since edges are hashed, we need a set of hashes to check existence
+    final edgeKeys = edges.map((e) => Object.hash(e.sourceHash, e.targetHash)).toSet();
+    
     for (final node in nodes) {
-      if (node.parentId != null) {
-        final key = '${node.parentId}-${node.id}';
+      if (node.parentIdHash != null) {
+        // Hash for parent->child
+        final key = Object.hash(node.parentIdHash, node.idHash);
         if (edgeKeys.contains(key)) continue;
 
-        final start = _positionCache[node.parentId];
-        final end = _positionCache[node.id];
+        final start = _positionCache[node.parentIdHash];
+        final end = _positionCache[node.idHash];
 
         if (start == null || end == null) continue;
         
         // Skip if parent is not in visible positions (might be culled)
-        final parentColor = _colorCache[node.parentId] ?? DS.brandPrimary;
-        final childColor = _colorCache[node.id] ?? DS.brandPrimary;
+        final parentColor = _colorCache[node.parentIdHash] ?? DS.brandPrimary;
+        final childColor = _colorCache[node.idHash] ?? DS.brandPrimary;
         final distance = (end - start).distance;
 
         _processedEdges.add(ProcessedEdge(
-          edge: GalaxyEdgeModel(
-            id: 'parent_$key',
-            sourceId: node.parentId!,
-            targetId: node.id,
+          edge: CompactEdge(
+            idHash: Object.hash('parent', node.parentIdHash, node.idHash),
+            sourceHash: node.parentIdHash!,
+            targetHash: node.idHash,
             relationType: EdgeRelationType.parentChild,
             strength: 0.7,
+            bidirectional: false,
           ),
           start: start,
           end: end,
@@ -338,8 +346,9 @@ class StarMapPainter extends CustomPainter {
     }
     
     // Draw selected node highlight if any
-    if (selectedNodeId != null && _positionCache.containsKey(selectedNodeId)) {
-      _drawSelectionHighlight(canvas, _positionCache[selectedNodeId]!);
+    final selectedHash = selectedNodeId?.hashCode;
+    if (selectedHash != null && _positionCache.containsKey(selectedHash)) {
+      _drawSelectionHighlight(canvas, _positionCache[selectedHash]!);
     }
   }
 
@@ -367,12 +376,15 @@ class StarMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    for (final node in nodes) {
-      if (node.parentId == null) {
-        final pos = _positionCache[node.id];
-        if (pos == null) continue;
+    for (final processedNode in _processedNodes) {
+      final node = processedNode.node;
+      if (node.parentIdHash == null) {
+        final pos = processedNode.position;
 
-        final sectorColor = SectorConfig.getColor(node.sector);
+        final sector = node.sectorIndex < SectorEnum.values.length 
+            ? SectorEnum.values[node.sectorIndex] 
+            : SectorEnum.voidSector;
+        final sectorColor = SectorConfig.getColor(sector);
         
         // Gradient from invisible center to colored node
         final gradient = ui.Gradient.linear(
@@ -751,7 +763,7 @@ class StarMapPainter extends CustomPainter {
       }
 
       // Get animation progress (0.0 to 1.0)
-      final animationProgress = nodeAnimationProgress[node.id] ?? 1.0;
+      final animationProgress = nodeAnimationProgress[node.idHash] ?? 1.0;
 
       // Apply bloom animation: scale and opacity
       final animatedRadius = radius * (0.3 + animationProgress * 0.7); // 0.3x to 1.0x
@@ -766,7 +778,7 @@ class StarMapPainter extends CustomPainter {
 
       if (node.isUnlocked) {
         // Calculate mastery-based glow intensity
-        final masteryFactor = node.masteryScore / 100.0;
+        final masteryFactor = node.mastery / 100.0;
         final glowIntensity = 0.3 + masteryFactor * 0.5;
 
         // Outer glow (soft, large) - scaled with animation
@@ -867,14 +879,18 @@ class StarMapPainter extends CustomPainter {
       }
 
       if (shouldDrawLabel) {
-        _drawNodeLabel(canvas, node, pos, color);
+        _drawNodeLabel(canvas, node, pos, color, radius);
       }
     }
   }
 
   /// Draw node label with sector-aware styling using cached text renderer
-  void _drawNodeLabel(Canvas canvas, GalaxyNodeModel node, Offset pos, Color color) {
-    final sectorStyle = SectorConfig.getStyle(node.sector);
+  void _drawNodeLabel(Canvas canvas, CompactKnowledgeNode node, Offset pos, Color color, double radius) {
+    final sector = node.sectorIndex < SectorEnum.values.length 
+        ? SectorEnum.values[node.sectorIndex] 
+        : SectorEnum.voidSector;
+    final sectorStyle = SectorConfig.getStyle(sector);
+    
     final textColor = node.isUnlocked
         ? DS.brandPrimary.withValues(alpha: 0.9)
         : DS.brandPrimary.withValues(alpha: 0.5);
@@ -901,7 +917,7 @@ class StarMapPainter extends CustomPainter {
     _textRenderer.drawText(
       canvas,
       node.name,
-      pos + Offset(0, node.radius + 8),
+      pos + Offset(0, radius + 8),
       style,
     );
   }
@@ -914,8 +930,7 @@ class StarMapPainter extends CustomPainter {
 
     // 2. 数据变化检查（次频繁）- 使用引用比较
     final dataChanged = !identical(oldDelegate.nodes, nodes) ||
-        !identical(oldDelegate.edges, edges) ||
-        !identical(oldDelegate.positions, positions);
+        !identical(oldDelegate.edges, edges);
     if (dataChanged) return true;
 
     // 3. 动画变化检查（特定动画）- 使用阈值比较

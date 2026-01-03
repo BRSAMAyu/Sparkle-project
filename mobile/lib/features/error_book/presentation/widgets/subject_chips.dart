@@ -39,9 +39,8 @@ class Subject {
 class SubjectFilterChips extends StatelessWidget {
 
   const SubjectFilterChips({
-    super.key,
+    required this.onSelected, super.key,
     this.selectedSubject,
-    required this.onSelected,
   });
   final String? selectedSubject;
   final ValueChanged<String?> onSelected;
@@ -72,7 +71,7 @@ class SubjectFilterChips extends StatelessWidget {
               backgroundColor: subject.color.withOpacity(0.1),
               selectedColor: subject.color.withOpacity(0.3),
             ),
-          )),
+          ),),
         ],
       ),
     );
@@ -82,8 +81,7 @@ class SubjectFilterChips extends StatelessWidget {
 class SubjectChip extends StatelessWidget {
 
   const SubjectChip({
-    super.key,
-    required this.subjectCode,
+    required this.subjectCode, super.key,
     this.compact = false,
   });
   final String subjectCode;

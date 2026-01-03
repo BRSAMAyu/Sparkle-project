@@ -1,12 +1,10 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/presentation/providers/chat_provider.dart';
-import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
-import 'package:mockito/annotations.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
 
 // 生成 Mock 类
 // 实际开发中需要运行 flutter pub run build_runner build

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/ai_status_capsule.dart';
 import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
-import 'package:sparkle/core/design/design_system.dart';
 
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）

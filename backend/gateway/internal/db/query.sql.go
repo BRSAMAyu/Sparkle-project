@@ -71,7 +71,7 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 const createPost = `-- name: CreatePost :one
 INSERT INTO posts (user_id, content, image_urls, topic, created_at, updated_at)
 VALUES ($1, $2, $3, $4, NOW(), NOW())
-RETURNING id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at
+RETURNING id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at, visibility
 `
 
 type CreatePostParams struct {
@@ -98,6 +98,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Visibility,
 	)
 	return i, err
 }
@@ -318,11 +319,17 @@ func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMet
 const getChatHistory = `-- name: GetChatHistory :many
 SELECT user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, id, created_at, updated_at, deleted_at FROM chat_messages 
 WHERE session_id = $1 
+AND created_at > $2
 ORDER BY created_at ASC
 `
 
-func (q *Queries) GetChatHistory(ctx context.Context, sessionID pgtype.UUID) ([]ChatMessage, error) {
-	rows, err := q.db.Query(ctx, getChatHistory, sessionID)
+type GetChatHistoryParams struct {
+	SessionID pgtype.UUID      `json:"session_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams) ([]ChatMessage, error) {
+	rows, err := q.db.Query(ctx, getChatHistory, arg.SessionID, arg.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +545,7 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 
 const getKnowledgeNodeByID = `-- name: GetKnowledgeNodeByID :one
 
-SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, embedding, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
+SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, embedding, id, created_at, updated_at, deleted_at, position_x, position_y, global_spark_count FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -563,6 +570,9 @@ func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (Kno
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PositionX,
+		&i.PositionY,
+		&i.GlobalSparkCount,
 	)
 	return i, err
 }
@@ -629,12 +639,17 @@ func (q *Queries) GetOutboxPendingCount(ctx context.Context) (int64, error) {
 }
 
 const getPost = `-- name: GetPost :one
-SELECT id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at FROM posts
-WHERE id = $1 AND deleted_at IS NULL
+SELECT id, user_id, content, image_urls, topic, created_at, updated_at, deleted_at, visibility FROM posts
+WHERE id = $1 AND created_at = $2 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetPost(ctx context.Context, id pgtype.UUID) (Post, error) {
-	row := q.db.QueryRow(ctx, getPost, id)
+type GetPostParams struct {
+	ID        pgtype.UUID      `json:"id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) GetPost(ctx context.Context, arg GetPostParams) (Post, error) {
+	row := q.db.QueryRow(ctx, getPost, arg.ID, arg.CreatedAt)
 	var i Post
 	err := row.Scan(
 		&i.ID,
@@ -645,6 +660,7 @@ func (q *Queries) GetPost(ctx context.Context, id pgtype.UUID) (Post, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Visibility,
 	)
 	return i, err
 }

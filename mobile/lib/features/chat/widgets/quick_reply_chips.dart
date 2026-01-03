@@ -26,8 +26,7 @@ class QuickReply {
 class QuickReplyChips extends StatelessWidget {
 
   const QuickReplyChips({
-    super.key,
-    required this.onTap,
+    required this.onTap, super.key,
     this.enabled = true,
     this.customReplies,
   });
@@ -215,9 +214,7 @@ class _QuickReplyChip extends StatelessWidget {
 class QuickReplyGrid extends StatelessWidget {
 
   const QuickReplyGrid({
-    super.key,
-    required this.onTap,
-    required this.replies,
+    required this.onTap, required this.replies, super.key,
     this.crossAxisCount = 2,
   });
   final Function(String message) onTap;

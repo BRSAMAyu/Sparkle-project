@@ -17,8 +17,10 @@ message UpdateNodeMasteryRequest {
   string user_id = 1;
   string node_id = 2;
   int32 mastery = 3;
-  google.protobuf.Timestamp version = 4;
+  google.protobuf.Timestamp version = 4; // Deprecated: Use revision instead
   string reason = 5;
+  string request_id = 6;
+  int64 revision = 7; // Logical clock for conflict resolution
 }
 
 message UpdateNodeMasteryResponse {
@@ -26,4 +28,6 @@ message UpdateNodeMasteryResponse {
   int32 old_mastery = 2;
   int32 new_mastery = 3;
   string reason = 4;
+  string request_id = 5;
+  int64 current_revision = 6; // The latest revision on server
 }

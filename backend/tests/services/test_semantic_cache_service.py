@@ -8,9 +8,23 @@ from app.services.semantic_cache_service import SemanticCacheService
 @pytest.fixture
 def mock_redis():
     mock = MagicMock()
+    
+    # Async methods need AsyncMock
+    mock.get = AsyncMock()
+    mock.setex = AsyncMock()
+    mock.hincrby = AsyncMock()
+    mock.exists = AsyncMock(return_value=True) # Assume stats exist by default to avoid init call in these tests
+    mock.hset = AsyncMock()
+    mock.delete = AsyncMock()
+    mock.keys = AsyncMock()
+    mock.hgetall = AsyncMock()
+    
     # Mock redis lock
     mock_lock = MagicMock()
-    mock_lock.acquire.return_value = True
+    # Setup async context manager mocks
+    mock_lock.__aenter__ = AsyncMock(return_value=True)
+    mock_lock.__aexit__ = AsyncMock(return_value=None)
+    
     mock.lock.return_value = mock_lock
     return mock
 
@@ -32,7 +46,9 @@ async def test_get_with_lock_miss_acquire_success(mock_redis):
     service = SemanticCacheService(redis_client=mock_redis)
     
     # Mock cache miss initially
-    mock_redis.get.side_effect = [None, None] # First check, Second check (inside lock)
+    # First call: get() -> None (Miss)
+    # Second call (inside double check): get() -> None (Still Miss)
+    mock_redis.get.side_effect = [None, None] 
     
     factory = AsyncMock(return_value="new_data")
     
@@ -44,21 +60,43 @@ async def test_get_with_lock_miss_acquire_success(mock_redis):
     mock_redis.setex.assert_called()
 
 @pytest.mark.asyncio
-async def test_get_with_lock_miss_acquire_fail_then_hit(mock_redis):
+async def test_get_with_lock_miss_double_check_hit(mock_redis):
+    """Test scenario where another process populates cache while we waited for lock"""
     service = SemanticCacheService(redis_client=mock_redis)
     
-    # Mock lock failure
-    mock_lock = MagicMock()
-    mock_lock.acquire.return_value = False # Failed to acquire
-    mock_redis.lock.return_value = mock_lock
+    # First call: get() -> None (Miss)
+    # Second call (inside double check): get() -> Data (Hit!)
+    mock_redis.get.side_effect = [None, b'{"data": "data_from_other", "cached_at": "now"}']
     
-    # Mock cache miss first, then hit (after sleep)
-    mock_redis.get.side_effect = [None, b'{"data": "data_from_other_process"}']
+    factory = AsyncMock(return_value="new_data")
     
-    factory = AsyncMock()
+    result = await service.get_with_lock("test query", factory)
     
-    with patch("asyncio.sleep", AsyncMock()): # Skip sleep
+    assert result == "data_from_other"
+    factory.assert_not_called()
+    mock_redis.lock.assert_called()
+    # Should NOT set cache again
+    mock_redis.setex.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_get_with_lock_lock_error_fallback(mock_redis):
+    """Test fallback when lock acquisition fails (e.g. timeout raises LockError)"""
+    service = SemanticCacheService(redis_client=mock_redis)
+    
+    # Mock LockError during acquisition
+    mock_lock = mock_redis.lock.return_value
+    # Simulate a LockError when entering context
+    from redis.exceptions import LockError
+    mock_lock.__aenter__.side_effect = LockError("Timeout")
+    
+    # Cache miss
+    mock_redis.get.return_value = None
+    
+    factory = AsyncMock(return_value="fallback_data")
+    
+    # We need to mock sleep to avoid waiting in test
+    with patch("asyncio.sleep", AsyncMock()):
         result = await service.get_with_lock("test query", factory)
     
-    assert result == "data_from_other_process"
-    factory.assert_not_called()
+    assert result == "fallback_data"
+    factory.assert_called_once()

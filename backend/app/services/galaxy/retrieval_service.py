@@ -11,6 +11,11 @@ from app.services.embedding_service import embedding_service
 from app.services.rerank_service import rerank_service
 from app.core.redis_search_client import redis_search_client
 from app.schemas.galaxy import SearchResultItem, NodeBase, UserStatusInfo, SectorCode
+try:
+    from app.services.semantic_cache_service import semantic_cache_service
+except ImportError:
+    # Handle circular import or missing dependency during tests
+    semantic_cache_service = None
 
 class KnowledgeRetrievalService:
     def __init__(self, db: AsyncSession):
@@ -27,17 +32,48 @@ class KnowledgeRetrievalService:
         use_reranker: bool = True
     ) -> List[SearchResultItem]:
         """
-        RAG v2.0 Hybrid Search: Redis Vector + Redis BM25 -> RRF -> Rerank
+        RAG v2.0 Hybrid Search with Cache Stampede Protection.
         """
-        # 1. Prepare Queries
-        actual_vector_text = vector_query if vector_query else query
+        if not semantic_cache_service:
+            return await self._execute_hybrid_search(user_id, query, vector_query, subject_id, limit, threshold, use_reranker)
+
+        # Use get_with_lock to prevent redundant heavy retrieval tasks
+        return await semantic_cache_service.get_with_lock(
+            query=query,
+            factory_func=self._execute_hybrid_search,
+            user_id=str(user_id), # Optional: could be global if knowledge is shared
+            # factory_func arguments
+            user_id_uuid=user_id,
+            query_str=query,
+            vector_query=vector_query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+            use_reranker=use_reranker
+        )
+
+    async def _execute_hybrid_search(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        vector_query: Optional[str] = None,
+        subject_id: Optional[int] = None,
+        limit: int = 5,
+        threshold: float = 0.3,
+        use_reranker: bool = True
+    ) -> List[SearchResultItem]:
+        """
+        Internal implementation of hybrid search.
+        """
+        # 2. Prepare Queries
+        actual_vector_text = vector_query if vector_query else query_str
         query_embedding = await embedding_service.get_embedding(actual_vector_text)
         
-        # 2. Parallel Retrieval
+        # 3. Parallel Retrieval
         vector_limit = limit * 10
         keyword_limit = limit * 10
         
-        cleaned_query = " ".join([w for w in query.split() if len(w) > 1]) or "*"
+        cleaned_query = " ".join([w for w in query_str.split() if len(w) > 1]) or "*"
             
         bm25_q = (
             Query(cleaned_query)
@@ -58,17 +94,17 @@ class KnowledgeRetrievalService:
         vec_docs = vector_res.docs if vector_res else []
         kw_docs = keyword_res.docs if keyword_res else []
         
-        # 3. RRF Fusion
+        # 4. RRF Fusion
         fused_results = rerank_service.reciprocal_rank_fusion([vec_docs, kw_docs])
         candidates = [item for item, score in fused_results]
         
-        # 4. Reranking
+        # 5. Reranking
         if use_reranker and candidates:
-            final_chunks = await rerank_service.rerank(query, candidates, top_k=limit)
+            final_chunks = await rerank_service.rerank(query_str, candidates, top_k=limit)
         else:
             final_chunks = candidates[:limit]
             
-        # 5. Fetch Nodes from DB
+        # 6. Fetch Nodes from DB
         parent_ids = list(set([chunk.parent_id for chunk in final_chunks]))
         if not parent_ids:
             return []
@@ -82,9 +118,10 @@ class KnowledgeRetrievalService:
             .where(KnowledgeNode.id.in_(parent_ids))
         )
         result = await self.db.execute(stmt)
-        nodes_map = {str(node.id): node for node in result.scalars().all()}
+        nodes_list = result.scalars().all()
+        nodes_map = {str(node.id): node for node in nodes_list}
         
-        # 6. Assemble Result
+        # 7. Assemble Result
         search_results = []
         seen_parents = set()
         
@@ -96,12 +133,8 @@ class KnowledgeRetrievalService:
             seen_parents.add(pid)
             node = nodes_map[pid]
             
-            # Helper to get user status (can we delegate?)
-            # Since this service has DB access, we can do a quick query or refactor.
-            # To keep it clean, we query here.
-            user_status = await self._get_user_status(user_id, node.id)
-            
-            search_results.append(self._format_search_result(node, user_status, 1.0)) # Score simplified
+            user_status = await self._get_user_status(user_id_uuid, node.id)
+            search_results.append(self._format_search_result(node, user_status, 1.0))
             
         return search_results
 

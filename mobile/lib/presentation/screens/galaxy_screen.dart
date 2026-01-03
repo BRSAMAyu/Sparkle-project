@@ -16,6 +16,8 @@ import 'package:sparkle/presentation/widgets/galaxy/galaxy_search_dialog.dart';
 import 'package:sparkle/presentation/widgets/galaxy/node_preview_card.dart';
 import 'package:sparkle/presentation/widgets/galaxy/parallax_star_background.dart';
 import 'package:sparkle/presentation/widgets/galaxy/sector_background_painter.dart';
+import 'package:sparkle/data/models/compact_knowledge_node.dart';
+import 'package:sparkle/data/models/compact_edge.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/presentation/widgets/galaxy/zoom_controls.dart';
@@ -503,12 +505,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                             );
                             final viewport = Rect.fromPoints(topLeft, bottomRight)
                                 .shift(const Offset(-_canvasCenter, -_canvasCenter));
+
+                            // Convert to compact models for rendering performance
+                            final compactNodes = galaxyState.visibleNodes.map((node) {
+                                final pos = galaxyState.nodePositions[node.id] ?? Offset.zero;
+                                return node.toCompact(pos.dx + _canvasCenter, pos.dy + _canvasCenter);
+                            }).toList();
+
+                            final compactEdges = galaxyState.visibleEdges.map((edge) => 
+                                CompactEdge.fromModel(edge)
+                            ).toList();
+
+                            final compactAnimationProgress = galaxyState.nodeAnimationProgress.map(
+                                (key, value) => MapEntry(key.hashCode, value)
+                            );
+
                             return CustomPaint(
                               painter: StarMapPainter(
-                                // Use filtered lists from provider
-                                nodes: galaxyState.visibleNodes,
-                                edges: galaxyState.visibleEdges,
-                                positions: _centerPositions(galaxyState.nodePositions, _canvasCenter, _canvasCenter),
+                                nodes: compactNodes,
+                                edges: compactEdges,
                                 scale: scale,
                                 aggregationLevel: galaxyState.aggregationLevel,
                                 clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
@@ -516,7 +531,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                                 center: const Offset(_canvasCenter, _canvasCenter),
                                 selectedNodeId: galaxyState.selectedNodeId,
                                 expandedEdgeNodeIds: galaxyState.expandedEdgeNodeIds,
-                                nodeAnimationProgress: galaxyState.nodeAnimationProgress,
+                                nodeAnimationProgress: compactAnimationProgress,
                                 selectionPulse: _selectionPulseController.value,
                               ),
                             );

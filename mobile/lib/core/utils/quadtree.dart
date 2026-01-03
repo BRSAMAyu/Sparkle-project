@@ -19,10 +19,10 @@ class QTRect { // half height
   final double w; // half width
   final double h;
 
-  bool contains(QTPoint point) => (point.x >= x - w &&
+  bool contains(QTPoint point) => point.x >= x - w &&
         point.x <= x + w &&
         point.y >= y - h &&
-        point.y <= y + h);
+        point.y <= y + h;
 
   bool intersects(QTRect range) => !(range.x - range.w > x + w ||
         range.x + range.w < x - w ||
@@ -74,10 +74,10 @@ class QuadTree {
 
   /// Subdivide the tree into 4 quadrants
   void subdivide() {
-    var x = boundary.x;
-    var y = boundary.y;
-    var w = boundary.w / 2;
-    var h = boundary.h / 2;
+    final x = boundary.x;
+    final y = boundary.y;
+    final w = boundary.w / 2;
+    final h = boundary.h / 2;
 
     northwest = QuadTree(QTRect(x - w, y - h, w, h), capacity, depth + 1);
     northeast = QuadTree(QTRect(x + w, y - h, w, h), capacity, depth + 1);

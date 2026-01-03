@@ -23,6 +23,8 @@ class LocalKnowledgeNode {
   late DateTime lastUpdated;
   
   late int globalSparkCount; // New collaborative field
+  
+  int revision = 0; // Logical clock for conflict resolution
 
   @enumerated
   late SyncStatus syncStatus; // pending, synced, conflict
@@ -42,6 +44,9 @@ class PendingUpdate {
   @Index()
   late DateTime createdAt;
   
+  String? requestId; // UUID for ACK matching
+  int revision = 0; // Logical clock at the time of update
+  
   String? error; // To store error messages
   
   @enumerated
@@ -49,14 +54,14 @@ class PendingUpdate {
 }
 
 class LocalDatabase {
-  static final LocalDatabase _instance = LocalDatabase._internal();
-  late Isar isar;
 
   factory LocalDatabase() {
     return _instance;
   }
 
   LocalDatabase._internal();
+  static final LocalDatabase _instance = LocalDatabase._internal();
+  late Isar isar;
 
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();

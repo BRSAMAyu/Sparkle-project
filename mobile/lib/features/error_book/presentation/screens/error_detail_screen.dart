@@ -14,8 +14,7 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 class ErrorDetailScreen extends ConsumerWidget {
 
   const ErrorDetailScreen({
-    super.key,
-    required this.errorId,
+    required this.errorId, super.key,
   });
   final String errorId;
 
@@ -458,7 +457,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              )).toList(),
+              ),).toList(),
           ),
         ],
       ),
@@ -775,7 +774,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('删除失败: ${e}'),
+              content: Text('删除失败: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),

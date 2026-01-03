@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
-import 'package:sparkle/presentation/providers/chat_provider.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/repositories/chat_repository.dart';
-import 'package:mockito/mockito.dart';
+import 'package:sparkle/presentation/providers/chat_provider.dart';
+import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 
 // Mock needed dependencies
 class MockChatNotifier extends ChatNotifier {

@@ -18,6 +18,22 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: public; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+ALTER SCHEMA public OWNER TO postgres;
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: postgres
+--
+
+COMMENT ON SCHEMA public IS '';
+
+
+--
 -- Name: vector; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -129,12 +145,12 @@ CREATE TYPE public.messagetype AS ENUM (
     'TASK_SHARE',
     'PLAN_SHARE',
     'FRAGMENT_SHARE',
-    'CAPSULE_SHARE',
-    'PRISM_SHARE',
     'PROGRESS',
     'ACHIEVEMENT',
     'CHECKIN',
-    'SYSTEM'
+    'SYSTEM',
+    'CAPSULE_SHARE',
+    'PRISM_SHARE'
 );
 
 
@@ -281,7 +297,7 @@ ALTER MATERIALIZED VIEW public.agent_stats_summary OWNER TO postgres;
 --
 
 CREATE TABLE public.alembic_version (
-    version_num character varying(32) NOT NULL
+    version_num character varying(64) NOT NULL
 );
 
 
@@ -311,6 +327,25 @@ CREATE TABLE public.behavior_patterns (
 ALTER TABLE public.behavior_patterns OWNER TO postgres;
 
 --
+-- Name: broadcast_messages; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.broadcast_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    sender_id uuid NOT NULL,
+    content text NOT NULL,
+    content_data json,
+    target_group_ids json NOT NULL,
+    delivered_count integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.broadcast_messages OWNER TO postgres;
+
+--
 -- Name: chat_messages; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -329,10 +364,323 @@ CREATE TABLE public.chat_messages (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone
-);
+)
+PARTITION BY RANGE (created_at);
 
 
 ALTER TABLE public.chat_messages OWNER TO postgres;
+
+--
+-- Name: chat_messages_2024_q1; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2024_q1 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2024_q1 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2024_q2; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2024_q2 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2024_q2 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2024_q3; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2024_q3 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2024_q3 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2024_q4; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2024_q4 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2024_q4 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2025_q1; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2025_q1 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2025_q1 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2025_q2; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2025_q2 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2025_q2 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2025_q3; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2025_q3 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2025_q3 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2025_q4; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2025_q4 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2025_q4 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2026_q1; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2026_q1 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2026_q1 OWNER TO postgres;
+
+--
+-- Name: chat_messages_2026_q2; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_2026_q2 (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_2026_q2 OWNER TO postgres;
+
+--
+-- Name: chat_messages_default; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_default (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_default OWNER TO postgres;
+
+--
+-- Name: chat_messages_legacy; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_legacy (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_legacy OWNER TO postgres;
+
+--
+-- Name: chat_messages_old; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chat_messages_old (
+    user_id uuid NOT NULL,
+    task_id uuid,
+    session_id uuid NOT NULL,
+    message_id character varying(36),
+    role public.messagerole NOT NULL,
+    content text NOT NULL,
+    actions json,
+    parse_degraded boolean,
+    tokens_used integer,
+    model_name character varying(100),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.chat_messages_old OWNER TO postgres;
 
 --
 -- Name: cognitive_fragments; Type: TABLE; Schema: public; Owner: postgres
@@ -405,27 +753,116 @@ ALTER TABLE public.dictionary_entries OWNER TO postgres;
 --
 
 CREATE TABLE public.error_records (
-    user_id uuid NOT NULL,
-    task_id uuid,
-    subject_id integer,
-    subject character varying(100) NOT NULL,
-    topic character varying(255) NOT NULL,
-    error_type character varying(100) NOT NULL,
-    description text NOT NULL,
-    correct_approach text,
-    image_urls json,
-    frequency integer NOT NULL,
-    last_occurred_at timestamp without time zone NOT NULL,
-    is_resolved boolean NOT NULL,
-    resolved_at timestamp without time zone,
     id uuid NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    user_id uuid NOT NULL,
+    question_text text,
+    question_image_url character varying(500),
+    user_answer text,
+    correct_answer text,
+    subject_code character varying(50) NOT NULL,
+    chapter character varying(100),
+    source character varying(50),
+    difficulty integer,
+    mastery_level double precision,
+    review_count integer,
+    next_review_at timestamp with time zone,
+    last_reviewed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    is_deleted boolean,
+    easiness_factor double precision DEFAULT '2.5'::double precision,
+    interval_days double precision DEFAULT '0'::double precision,
+    latest_analysis jsonb,
+    linked_knowledge_node_ids uuid[] DEFAULT '{}'::uuid[],
+    suggested_concepts text[] DEFAULT '{}'::text[]
 );
 
 
 ALTER TABLE public.error_records OWNER TO postgres;
+
+--
+-- Name: COLUMN error_records.question_text; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.question_text IS '题目原文';
+
+
+--
+-- Name: COLUMN error_records.question_image_url; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.question_image_url IS '题目图片URL（可选）';
+
+
+--
+-- Name: COLUMN error_records.user_answer; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.user_answer IS '用户的错误答案';
+
+
+--
+-- Name: COLUMN error_records.correct_answer; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.correct_answer IS '正确答案';
+
+
+--
+-- Name: COLUMN error_records.subject_code; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.subject_code IS '科目';
+
+
+--
+-- Name: COLUMN error_records.chapter; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.chapter IS '章节（可选）';
+
+
+--
+-- Name: COLUMN error_records.source; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.source IS '来源';
+
+
+--
+-- Name: COLUMN error_records.difficulty; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.difficulty IS '难度1-5';
+
+
+--
+-- Name: COLUMN error_records.mastery_level; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.mastery_level IS '掌握度0-1';
+
+
+--
+-- Name: COLUMN error_records.review_count; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.review_count IS '复习次数';
+
+
+--
+-- Name: COLUMN error_records.next_review_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.next_review_at IS '下次复习时间';
+
+
+--
+-- Name: COLUMN error_records.last_reviewed_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.error_records.last_reviewed_at IS '上次复习时间';
+
 
 --
 -- Name: event_outbox; Type: TABLE; Schema: public; Owner: postgres
@@ -526,7 +963,9 @@ CREATE TABLE public.group_members (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    mute_until timestamp without time zone,
+    warn_count integer DEFAULT 0 NOT NULL
 );
 
 
@@ -542,17 +981,24 @@ CREATE TABLE public.group_messages (
     message_type public.messagetype NOT NULL,
     content text,
     content_data json,
-    thread_root_id uuid,
     reply_to_id uuid,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    thread_root_id uuid,
     is_revoked boolean DEFAULT false NOT NULL,
     revoked_at timestamp without time zone,
     edited_at timestamp without time zone,
     reactions json,
     mention_user_ids json,
-    id uuid NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    encrypted_content text,
+    content_signature character varying(512),
+    encryption_version integer,
+    topic character varying(100),
+    tags json,
+    forwarded_from_id uuid,
+    forward_count integer DEFAULT 0 NOT NULL
 );
 
 
@@ -623,7 +1069,12 @@ CREATE TABLE public.groups (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    announcement text,
+    announcement_updated_at timestamp without time zone,
+    keyword_filters json,
+    mute_all boolean DEFAULT false NOT NULL,
+    slow_mode_seconds integer DEFAULT 0 NOT NULL
 );
 
 
@@ -678,7 +1129,7 @@ CREATE TABLE public.knowledge_nodes (
     name character varying(255) NOT NULL,
     name_en character varying(255),
     description text,
-    keywords json,
+    keywords jsonb,
     importance_level integer NOT NULL,
     is_seed boolean,
     source_type character varying(20),
@@ -687,11 +1138,96 @@ CREATE TABLE public.knowledge_nodes (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    position_x double precision,
+    position_y double precision,
+    global_spark_count integer DEFAULT 0 NOT NULL
 );
 
 
 ALTER TABLE public.knowledge_nodes OWNER TO postgres;
+
+--
+-- Name: mastery_audit_log; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.mastery_audit_log (
+    id bigint NOT NULL,
+    node_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    old_mastery integer NOT NULL,
+    new_mastery integer NOT NULL,
+    reason character varying(50) NOT NULL,
+    ip_address inet,
+    user_agent text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.mastery_audit_log OWNER TO postgres;
+
+--
+-- Name: mastery_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.mastery_audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.mastery_audit_log_id_seq OWNER TO postgres;
+
+--
+-- Name: mastery_audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.mastery_audit_log_id_seq OWNED BY public.mastery_audit_log.id;
+
+
+--
+-- Name: message_favorites; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.message_favorites (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    group_message_id uuid,
+    private_message_id uuid,
+    note text,
+    tags json,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.message_favorites OWNER TO postgres;
+
+--
+-- Name: message_reports; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.message_reports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    reporter_id uuid NOT NULL,
+    group_message_id uuid,
+    private_message_id uuid,
+    reason character varying(50) NOT NULL,
+    description text,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    reviewed_by uuid,
+    reviewed_at timestamp without time zone,
+    action_taken character varying(50),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE public.message_reports OWNER TO postgres;
 
 --
 -- Name: node_expansion_queue; Type: TABLE; Schema: public; Owner: postgres
@@ -756,6 +1292,66 @@ CREATE TABLE public.notifications (
 ALTER TABLE public.notifications OWNER TO postgres;
 
 --
+-- Name: offline_message_queue; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.offline_message_queue (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    client_nonce character varying(100) NOT NULL,
+    message_type character varying(50) NOT NULL,
+    target_id uuid NOT NULL,
+    payload json NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    retry_count integer DEFAULT 0 NOT NULL,
+    last_retry_at timestamp without time zone,
+    error_message text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    expires_at timestamp without time zone
+);
+
+
+ALTER TABLE public.offline_message_queue OWNER TO postgres;
+
+--
+-- Name: outbox_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.outbox_events (
+    id bigint NOT NULL,
+    aggregate_id uuid NOT NULL,
+    event_type character varying(100) NOT NULL,
+    payload jsonb NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying,
+    created_at timestamp without time zone DEFAULT now(),
+    published_at timestamp without time zone
+);
+
+
+ALTER TABLE public.outbox_events OWNER TO postgres;
+
+--
+-- Name: outbox_events_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.outbox_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.outbox_events_id_seq OWNER TO postgres;
+
+--
+-- Name: outbox_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.outbox_events_id_seq OWNED BY public.outbox_events.id;
+
+
+--
 -- Name: plans; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -805,11 +1401,20 @@ CREATE TABLE public.posts (
     topic character varying(100),
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    visibility character varying(20) DEFAULT 'public'::character varying,
+    CONSTRAINT posts_visibility_check CHECK (((visibility)::text = ANY ((ARRAY['public'::character varying, 'private'::character varying, 'friends_only'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.posts OWNER TO postgres;
+
+--
+-- Name: COLUMN posts.visibility; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.posts.visibility IS 'Controls post visibility: public (default), private (creator only), friends_only (creator + friends)';
+
 
 --
 -- Name: private_messages; Type: TABLE; Schema: public; Owner: postgres
@@ -821,19 +1426,26 @@ CREATE TABLE public.private_messages (
     message_type public.messagetype NOT NULL,
     content text,
     content_data json,
-    thread_root_id uuid,
     reply_to_id uuid,
-    is_revoked boolean DEFAULT false NOT NULL,
-    revoked_at timestamp without time zone,
-    edited_at timestamp without time zone,
-    reactions json,
-    mention_user_ids json,
     is_read boolean NOT NULL,
     read_at timestamp without time zone,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    thread_root_id uuid,
+    is_revoked boolean DEFAULT false NOT NULL,
+    revoked_at timestamp without time zone,
+    edited_at timestamp without time zone,
+    reactions json,
+    mention_user_ids json,
+    encrypted_content text,
+    content_signature character varying(512),
+    encryption_version integer,
+    topic character varying(100),
+    tags json,
+    forwarded_from_id uuid,
+    forward_count integer DEFAULT 0 NOT NULL
 );
 
 
@@ -937,8 +1549,6 @@ CREATE TABLE public.shared_resources (
     plan_id uuid,
     task_id uuid,
     cognitive_fragment_id uuid,
-    curiosity_capsule_id uuid,
-    behavior_pattern_id uuid,
     permission character varying(20) NOT NULL,
     comment text,
     view_count integer,
@@ -946,7 +1556,9 @@ CREATE TABLE public.shared_resources (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    curiosity_capsule_id uuid,
+    behavior_pattern_id uuid
 );
 
 
@@ -966,7 +1578,8 @@ CREATE TABLE public.study_records (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    initial_mastery double precision
 );
 
 
@@ -1026,7 +1639,7 @@ CREATE TABLE public.tasks (
     plan_id uuid,
     title character varying(255) NOT NULL,
     type public.tasktype NOT NULL,
-    tags json NOT NULL,
+    tags jsonb NOT NULL,
     estimated_minutes integer NOT NULL,
     difficulty integer NOT NULL,
     energy_cost integer NOT NULL,
@@ -1040,8 +1653,6 @@ CREATE TABLE public.tasks (
     due_date date,
     knowledge_node_id uuid,
     auto_expand_enabled boolean,
-    tool_result_id character varying(50),
-    confirmed_at timestamp without time zone,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -1050,28 +1661,6 @@ CREATE TABLE public.tasks (
 
 
 ALTER TABLE public.tasks OWNER TO postgres;
-
---
--- Name: token_usage; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.token_usage (
-    user_id uuid NOT NULL,
-    session_id character varying(100) NOT NULL,
-    request_id character varying(100) NOT NULL,
-    prompt_tokens integer NOT NULL,
-    completion_tokens integer NOT NULL,
-    total_tokens integer NOT NULL,
-    model character varying(100) NOT NULL,
-    cost double precision,
-    id uuid NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
-);
-
-
-ALTER TABLE public.token_usage OWNER TO postgres;
 
 --
 -- Name: user_daily_metrics; Type: TABLE; Schema: public; Owner: postgres
@@ -1099,6 +1688,25 @@ CREATE TABLE public.user_daily_metrics (
 ALTER TABLE public.user_daily_metrics OWNER TO postgres;
 
 --
+-- Name: user_encryption_keys; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_encryption_keys (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    public_key text NOT NULL,
+    key_type character varying(50) DEFAULT 'x25519'::character varying NOT NULL,
+    device_id character varying(100),
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    expires_at timestamp without time zone
+);
+
+
+ALTER TABLE public.user_encryption_keys OWNER TO postgres;
+
+--
 -- Name: user_node_status; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1123,6 +1731,47 @@ CREATE TABLE public.user_node_status (
 
 
 ALTER TABLE public.user_node_status OWNER TO postgres;
+
+--
+-- Name: user_tool_history; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_tool_history (
+    id integer NOT NULL,
+    user_id uuid NOT NULL,
+    tool_name character varying(100) NOT NULL,
+    success boolean NOT NULL,
+    execution_time_ms integer,
+    error_message character varying(500),
+    context_snapshot jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.user_tool_history OWNER TO postgres;
+
+--
+-- Name: user_tool_history_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.user_tool_history_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.user_tool_history_id_seq OWNER TO postgres;
+
+--
+-- Name: user_tool_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.user_tool_history_id_seq OWNED BY public.user_tool_history.id;
+
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
@@ -1186,6 +1835,90 @@ CREATE TABLE public.word_books (
 ALTER TABLE public.word_books OWNER TO postgres;
 
 --
+-- Name: chat_messages_2024_q1; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2024_q1 FOR VALUES FROM ('2024-01-01 00:00:00') TO ('2024-04-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2024_q2; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2024_q2 FOR VALUES FROM ('2024-04-01 00:00:00') TO ('2024-07-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2024_q3; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2024_q3 FOR VALUES FROM ('2024-07-01 00:00:00') TO ('2024-10-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2024_q4; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2024_q4 FOR VALUES FROM ('2024-10-01 00:00:00') TO ('2025-01-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2025_q1; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2025_q1 FOR VALUES FROM ('2025-01-01 00:00:00') TO ('2025-04-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2025_q2; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2025_q2 FOR VALUES FROM ('2025-04-01 00:00:00') TO ('2025-07-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2025_q3; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2025_q3 FOR VALUES FROM ('2025-07-01 00:00:00') TO ('2025-10-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2025_q4; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2025_q4 FOR VALUES FROM ('2025-10-01 00:00:00') TO ('2026-01-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2026_q1; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2026_q1 FOR VALUES FROM ('2026-01-01 00:00:00') TO ('2026-04-01 00:00:00');
+
+
+--
+-- Name: chat_messages_2026_q2; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_2026_q2 FOR VALUES FROM ('2026-04-01 00:00:00') TO ('2026-07-01 00:00:00');
+
+
+--
+-- Name: chat_messages_default; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_default DEFAULT;
+
+
+--
+-- Name: chat_messages_legacy; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages ATTACH PARTITION public.chat_messages_legacy FOR VALUES FROM (MINVALUE) TO ('2024-01-01 00:00:00');
+
+
+--
 -- Name: agent_execution_stats id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1193,10 +1926,31 @@ ALTER TABLE ONLY public.agent_execution_stats ALTER COLUMN id SET DEFAULT nextva
 
 
 --
+-- Name: mastery_audit_log id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mastery_audit_log ALTER COLUMN id SET DEFAULT nextval('public.mastery_audit_log_id_seq'::regclass);
+
+
+--
+-- Name: outbox_events id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.outbox_events ALTER COLUMN id SET DEFAULT nextval('public.outbox_events_id_seq'::regclass);
+
+
+--
 -- Name: subjects id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.subjects ALTER COLUMN id SET DEFAULT nextval('public.subjects_id_seq'::regclass);
+
+
+--
+-- Name: user_tool_history id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_tool_history ALTER COLUMN id SET DEFAULT nextval('public.user_tool_history_id_seq'::regclass);
 
 
 --
@@ -1224,18 +1978,130 @@ ALTER TABLE ONLY public.behavior_patterns
 
 
 --
--- Name: chat_messages chat_messages_message_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: broadcast_messages broadcast_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.broadcast_messages
+    ADD CONSTRAINT broadcast_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: chat_messages chat_messages_partitioned_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.chat_messages
+    ADD CONSTRAINT chat_messages_partitioned_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q1 chat_messages_2024_q1_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2024_q1
+    ADD CONSTRAINT chat_messages_2024_q1_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q2 chat_messages_2024_q2_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2024_q2
+    ADD CONSTRAINT chat_messages_2024_q2_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q3 chat_messages_2024_q3_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2024_q3
+    ADD CONSTRAINT chat_messages_2024_q3_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q4 chat_messages_2024_q4_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2024_q4
+    ADD CONSTRAINT chat_messages_2024_q4_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q1 chat_messages_2025_q1_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2025_q1
+    ADD CONSTRAINT chat_messages_2025_q1_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q2 chat_messages_2025_q2_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2025_q2
+    ADD CONSTRAINT chat_messages_2025_q2_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q3 chat_messages_2025_q3_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2025_q3
+    ADD CONSTRAINT chat_messages_2025_q3_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q4 chat_messages_2025_q4_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2025_q4
+    ADD CONSTRAINT chat_messages_2025_q4_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2026_q1 chat_messages_2026_q1_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2026_q1
+    ADD CONSTRAINT chat_messages_2026_q1_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_2026_q2 chat_messages_2026_q2_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_2026_q2
+    ADD CONSTRAINT chat_messages_2026_q2_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_default chat_messages_default_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_default
+    ADD CONSTRAINT chat_messages_default_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_legacy chat_messages_legacy_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_legacy
+    ADD CONSTRAINT chat_messages_legacy_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: chat_messages_old chat_messages_message_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_old
     ADD CONSTRAINT chat_messages_message_id_key UNIQUE (message_id);
 
 
 --
--- Name: chat_messages chat_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: chat_messages_old chat_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.chat_messages
+ALTER TABLE ONLY public.chat_messages_old
     ADD CONSTRAINT chat_messages_pkey PRIMARY KEY (id);
 
 
@@ -1368,6 +2234,30 @@ ALTER TABLE ONLY public.knowledge_nodes
 
 
 --
+-- Name: mastery_audit_log mastery_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: message_favorites message_favorites_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_favorites
+    ADD CONSTRAINT message_favorites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: message_reports message_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_reports
+    ADD CONSTRAINT message_reports_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: node_expansion_queue node_expansion_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1389,6 +2279,22 @@ ALTER TABLE ONLY public.node_relations
 
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: offline_message_queue offline_message_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.offline_message_queue
+    ADD CONSTRAINT offline_message_queue_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: outbox_events outbox_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.outbox_events
+    ADD CONSTRAINT outbox_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -1496,22 +2402,6 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: token_usage token_usage_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.token_usage
-    ADD CONSTRAINT token_usage_pkey PRIMARY KEY (id);
-
-
---
--- Name: token_usage token_usage_request_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.token_usage
-    ADD CONSTRAINT token_usage_request_id_key UNIQUE (request_id);
-
-
---
 -- Name: event_store unique_event; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1576,11 +2466,27 @@ ALTER TABLE ONLY public.user_daily_metrics
 
 
 --
+-- Name: user_encryption_keys user_encryption_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_encryption_keys
+    ADD CONSTRAINT user_encryption_keys_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_node_status user_node_status_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.user_node_status
     ADD CONSTRAINT user_node_status_pkey PRIMARY KEY (user_id, node_id);
+
+
+--
+-- Name: user_tool_history user_tool_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_tool_history
+    ADD CONSTRAINT user_tool_history_pkey PRIMARY KEY (id);
 
 
 --
@@ -1623,45 +2529,157 @@ CREATE UNIQUE INDEX agent_stats_summary_user_id_agent_type_idx ON public.agent_s
 
 
 --
+-- Name: chat_messages_message_id_created_at_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_message_id_created_at_key ON ONLY public.chat_messages USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q1_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2024_q1_message_id_created_at_idx ON public.chat_messages_2024_q1 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q2_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2024_q2_message_id_created_at_idx ON public.chat_messages_2024_q2 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q3_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2024_q3_message_id_created_at_idx ON public.chat_messages_2024_q3 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2024_q4_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2024_q4_message_id_created_at_idx ON public.chat_messages_2024_q4 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q1_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2025_q1_message_id_created_at_idx ON public.chat_messages_2025_q1 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q2_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2025_q2_message_id_created_at_idx ON public.chat_messages_2025_q2 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q3_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2025_q3_message_id_created_at_idx ON public.chat_messages_2025_q3 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2025_q4_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2025_q4_message_id_created_at_idx ON public.chat_messages_2025_q4 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2026_q1_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2026_q1_message_id_created_at_idx ON public.chat_messages_2026_q1 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_2026_q2_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_2026_q2_message_id_created_at_idx ON public.chat_messages_2026_q2 USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_default_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_default_message_id_created_at_idx ON public.chat_messages_default USING btree (message_id, created_at);
+
+
+--
+-- Name: chat_messages_legacy_message_id_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX chat_messages_legacy_message_id_created_at_idx ON public.chat_messages_legacy USING btree (message_id, created_at);
+
+
+--
+-- Name: idx_audit_log_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_log_created_at ON public.mastery_audit_log USING btree (created_at);
+
+
+--
+-- Name: idx_audit_log_node_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_log_node_id ON public.mastery_audit_log USING btree (node_id);
+
+
+--
+-- Name: idx_audit_log_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_log_user_id ON public.mastery_audit_log USING btree (user_id);
+
+
+--
 -- Name: idx_chat_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_created_at ON public.chat_messages USING btree (created_at);
+CREATE INDEX idx_chat_created_at ON public.chat_messages_old USING btree (created_at);
 
 
 --
 -- Name: idx_chat_messages_session_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_messages_session_created ON public.chat_messages USING btree (session_id, created_at DESC);
+CREATE INDEX idx_chat_messages_session_created ON public.chat_messages_old USING btree (session_id, created_at DESC);
 
 
 --
 -- Name: idx_chat_role; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_role ON public.chat_messages USING btree (role);
+CREATE INDEX idx_chat_role ON public.chat_messages_old USING btree (role);
 
 
 --
 -- Name: idx_chat_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_session_id ON public.chat_messages USING btree (session_id);
+CREATE INDEX idx_chat_session_id ON public.chat_messages_old USING btree (session_id);
 
 
 --
 -- Name: idx_chat_task_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_task_id ON public.chat_messages USING btree (task_id);
+CREATE INDEX idx_chat_task_id ON public.chat_messages_old USING btree (task_id);
 
 
 --
 -- Name: idx_chat_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_chat_user_id ON public.chat_messages USING btree (user_id);
+CREATE INDEX idx_chat_user_id ON public.chat_messages_old USING btree (user_id);
 
 
 --
@@ -1693,52 +2711,38 @@ CREATE INDEX idx_dict_word ON public.dictionary_entries USING btree (word);
 
 
 --
--- Name: idx_error_is_resolved; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_errors_next_review; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_error_is_resolved ON public.error_records USING btree (is_resolved);
-
-
---
--- Name: idx_error_last_occurred; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_error_last_occurred ON public.error_records USING btree (last_occurred_at);
+CREATE INDEX idx_errors_next_review ON public.error_records USING btree (user_id, next_review_at);
 
 
 --
--- Name: idx_error_subject; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_errors_question_fts; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_error_subject ON public.error_records USING btree (subject);
-
-
---
--- Name: idx_error_subject_topic; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_error_subject_topic ON public.error_records USING btree (subject, topic);
+CREATE INDEX idx_errors_question_fts ON public.error_records USING gin (to_tsvector('simple'::regconfig, question_text));
 
 
 --
--- Name: idx_error_task_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_errors_subject_code; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_error_task_id ON public.error_records USING btree (task_id);
-
-
---
--- Name: idx_error_topic; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_error_topic ON public.error_records USING btree (topic);
+CREATE INDEX idx_errors_subject_code ON public.error_records USING btree (subject_code);
 
 
 --
--- Name: idx_error_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_errors_user_review; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_error_user_id ON public.error_records USING btree (user_id);
+CREATE INDEX idx_errors_user_review ON public.error_records USING btree (user_id, next_review_at) WHERE (mastery_level < (1.0)::double precision);
+
+
+--
+-- Name: idx_errors_user_subject; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_errors_user_subject ON public.error_records USING btree (user_id, subject_code);
 
 
 --
@@ -1781,6 +2785,13 @@ CREATE INDEX idx_friendship_status ON public.friendships USING btree (status);
 --
 
 CREATE INDEX idx_friendship_user ON public.friendships USING btree (user_id);
+
+
+--
+-- Name: idx_group_messages_content_fts; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_messages_content_fts ON public.group_messages USING gin (to_tsvector('simple'::regconfig, COALESCE(content, ''::text))) WHERE (is_revoked = false);
 
 
 --
@@ -1854,10 +2865,10 @@ CREATE INDEX idx_member_user ON public.group_members USING btree (user_id);
 
 
 --
--- Name: idx_message_group_time; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_message_favorites_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_message_group_time ON public.group_messages USING btree (group_id, created_at);
+CREATE INDEX idx_message_favorites_user ON public.message_favorites USING btree (user_id);
 
 
 --
@@ -1868,10 +2879,73 @@ CREATE INDEX idx_message_group_thread ON public.group_messages USING btree (grou
 
 
 --
+-- Name: idx_message_group_time; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_message_group_time ON public.group_messages USING btree (group_id, created_at);
+
+
+--
+-- Name: idx_message_reports_group_msg; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_message_reports_group_msg ON public.message_reports USING btree (group_message_id);
+
+
+--
+-- Name: idx_message_reports_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_message_reports_status ON public.message_reports USING btree (status);
+
+
+--
+-- Name: idx_message_topic; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_message_topic ON public.group_messages USING btree (group_id, topic);
+
+
+--
+-- Name: idx_nodes_keywords_gin; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_nodes_keywords_gin ON public.knowledge_nodes USING gin (keywords);
+
+
+--
+-- Name: idx_nodes_position; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_nodes_position ON public.knowledge_nodes USING btree (position_x, position_y);
+
+
+--
+-- Name: idx_offline_queue_nonce; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX idx_offline_queue_nonce ON public.offline_message_queue USING btree (user_id, client_nonce);
+
+
+--
+-- Name: idx_offline_queue_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_offline_queue_user_status ON public.offline_message_queue USING btree (user_id, status);
+
+
+--
 -- Name: idx_outbox_aggregate; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_outbox_aggregate ON public.event_outbox USING btree (aggregate_type, aggregate_id, sequence_number);
+
+
+--
+-- Name: idx_outbox_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_outbox_status ON public.outbox_events USING btree (status) WHERE ((status)::text = 'pending'::text);
 
 
 --
@@ -1931,10 +3005,24 @@ CREATE INDEX idx_posts_user_id ON public.posts USING btree (user_id);
 
 
 --
+-- Name: idx_posts_visibility_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_posts_visibility_created ON public.posts USING btree (visibility, created_at DESC) WHERE ((visibility)::text = 'public'::text);
+
+
+--
 -- Name: idx_private_message_conversation; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_private_message_conversation ON public.private_messages USING btree (sender_id, receiver_id, created_at);
+
+
+--
+-- Name: idx_private_message_receiver_unread; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_private_message_receiver_unread ON public.private_messages USING btree (receiver_id, is_read);
 
 
 --
@@ -1945,10 +3033,10 @@ CREATE INDEX idx_private_message_thread ON public.private_messages USING btree (
 
 
 --
--- Name: idx_private_message_receiver_unread; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_private_messages_content_fts; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_private_message_receiver_unread ON public.private_messages USING btree (receiver_id, is_read);
+CREATE INDEX idx_private_messages_content_fts ON public.private_messages USING gin (to_tsvector('simple'::regconfig, COALESCE(content, ''::text))) WHERE (is_revoked = false);
 
 
 --
@@ -1973,13 +3061,6 @@ CREATE INDEX idx_share_group ON public.shared_resources USING btree (group_id);
 
 
 --
--- Name: idx_share_resource_plan; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_share_resource_plan ON public.shared_resources USING btree (plan_id);
-
-
---
 -- Name: idx_share_resource_capsule; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1991,6 +3072,13 @@ CREATE INDEX idx_share_resource_capsule ON public.shared_resources USING btree (
 --
 
 CREATE INDEX idx_share_resource_pattern ON public.shared_resources USING btree (behavior_pattern_id);
+
+
+--
+-- Name: idx_share_resource_plan; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_resource_plan ON public.shared_resources USING btree (plan_id);
 
 
 --
@@ -2036,6 +3124,13 @@ CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
 
 
 --
+-- Name: idx_tasks_tags_gin; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tasks_tags_gin ON public.tasks USING gin (tags);
+
+
+--
 -- Name: idx_tasks_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -2043,24 +3138,52 @@ CREATE INDEX idx_tasks_user_id ON public.tasks USING btree (user_id);
 
 
 --
--- Name: idx_token_usage_created_at; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_encryption_keys_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_token_usage_created_at ON public.token_usage USING btree (created_at);
-
-
---
--- Name: idx_token_usage_session_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_token_usage_session_id ON public.token_usage USING btree (session_id);
+CREATE INDEX idx_user_encryption_keys_user ON public.user_encryption_keys USING btree (user_id, is_active);
 
 
 --
--- Name: idx_token_usage_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_tool_history_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_token_usage_user_id ON public.token_usage USING btree (user_id);
+CREATE INDEX idx_user_tool_history_created_at ON public.user_tool_history USING btree (created_at);
+
+
+--
+-- Name: idx_user_tool_history_metrics; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_tool_history_metrics ON public.user_tool_history USING btree (user_id, tool_name, success, created_at);
+
+
+--
+-- Name: idx_user_tool_history_success; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_tool_history_success ON public.user_tool_history USING btree (user_id, tool_name, success);
+
+
+--
+-- Name: idx_user_tool_history_tool_name; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_tool_history_tool_name ON public.user_tool_history USING btree (tool_name);
+
+
+--
+-- Name: idx_user_tool_history_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_tool_history_user_created ON public.user_tool_history USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_user_tool_history_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_tool_history_user_id ON public.user_tool_history USING btree (user_id);
 
 
 --
@@ -2137,21 +3260,21 @@ CREATE INDEX ix_behavior_patterns_user_id ON public.behavior_patterns USING btre
 -- Name: ix_chat_messages_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX ix_chat_messages_deleted_at ON public.chat_messages USING btree (deleted_at);
+CREATE INDEX ix_chat_messages_deleted_at ON public.chat_messages_old USING btree (deleted_at);
 
 
 --
 -- Name: ix_chat_messages_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX ix_chat_messages_session_id ON public.chat_messages USING btree (session_id);
+CREATE INDEX ix_chat_messages_session_id ON public.chat_messages_old USING btree (session_id);
 
 
 --
 -- Name: ix_chat_messages_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX ix_chat_messages_user_id ON public.chat_messages USING btree (user_id);
+CREATE INDEX ix_chat_messages_user_id ON public.chat_messages_old USING btree (user_id);
 
 
 --
@@ -2201,41 +3324,6 @@ CREATE INDEX ix_dictionary_entries_deleted_at ON public.dictionary_entries USING
 --
 
 CREATE UNIQUE INDEX ix_dictionary_entries_word ON public.dictionary_entries USING btree (word);
-
-
---
--- Name: ix_error_records_deleted_at; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_error_records_deleted_at ON public.error_records USING btree (deleted_at);
-
-
---
--- Name: ix_error_records_is_resolved; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_error_records_is_resolved ON public.error_records USING btree (is_resolved);
-
-
---
--- Name: ix_error_records_subject; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_error_records_subject ON public.error_records USING btree (subject);
-
-
---
--- Name: ix_error_records_topic; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_error_records_topic ON public.error_records USING btree (topic);
-
-
---
--- Name: ix_error_records_user_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_error_records_user_id ON public.error_records USING btree (user_id);
 
 
 --
@@ -2631,27 +3719,6 @@ CREATE INDEX ix_tasks_user_id ON public.tasks USING btree (user_id);
 
 
 --
--- Name: ix_token_usage_deleted_at; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_token_usage_deleted_at ON public.token_usage USING btree (deleted_at);
-
-
---
--- Name: ix_token_usage_session_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_token_usage_session_id ON public.token_usage USING btree (session_id);
-
-
---
--- Name: ix_token_usage_user_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_token_usage_user_id ON public.token_usage USING btree (user_id);
-
-
---
 -- Name: ix_user_daily_metrics_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -2729,6 +3796,174 @@ CREATE INDEX ix_word_books_word ON public.word_books USING btree (word);
 
 
 --
+-- Name: chat_messages_2024_q1_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2024_q1_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2024_q1_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2024_q1_pkey;
+
+
+--
+-- Name: chat_messages_2024_q2_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2024_q2_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2024_q2_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2024_q2_pkey;
+
+
+--
+-- Name: chat_messages_2024_q3_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2024_q3_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2024_q3_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2024_q3_pkey;
+
+
+--
+-- Name: chat_messages_2024_q4_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2024_q4_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2024_q4_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2024_q4_pkey;
+
+
+--
+-- Name: chat_messages_2025_q1_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2025_q1_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2025_q1_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2025_q1_pkey;
+
+
+--
+-- Name: chat_messages_2025_q2_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2025_q2_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2025_q2_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2025_q2_pkey;
+
+
+--
+-- Name: chat_messages_2025_q3_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2025_q3_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2025_q3_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2025_q3_pkey;
+
+
+--
+-- Name: chat_messages_2025_q4_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2025_q4_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2025_q4_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2025_q4_pkey;
+
+
+--
+-- Name: chat_messages_2026_q1_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2026_q1_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2026_q1_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2026_q1_pkey;
+
+
+--
+-- Name: chat_messages_2026_q2_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_2026_q2_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_2026_q2_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_2026_q2_pkey;
+
+
+--
+-- Name: chat_messages_default_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_default_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_default_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_default_pkey;
+
+
+--
+-- Name: chat_messages_legacy_message_id_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_message_id_created_at_key ATTACH PARTITION public.chat_messages_legacy_message_id_created_at_idx;
+
+
+--
+-- Name: chat_messages_legacy_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_messages_legacy_pkey;
+
+
+--
 -- Name: behavior_patterns behavior_patterns_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2737,10 +3972,26 @@ ALTER TABLE ONLY public.behavior_patterns
 
 
 --
+-- Name: broadcast_messages broadcast_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.broadcast_messages
+    ADD CONSTRAINT broadcast_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: chat_messages chat_messages_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.chat_messages
+ALTER TABLE public.chat_messages
+    ADD CONSTRAINT chat_messages_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id);
+
+
+--
+-- Name: chat_messages_old chat_messages_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_old
     ADD CONSTRAINT chat_messages_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id);
 
 
@@ -2748,7 +3999,15 @@ ALTER TABLE ONLY public.chat_messages
 -- Name: chat_messages chat_messages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.chat_messages
+ALTER TABLE public.chat_messages
+    ADD CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: chat_messages_old chat_messages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chat_messages_old
     ADD CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
@@ -2785,27 +4044,11 @@ ALTER TABLE ONLY public.curiosity_capsules
 
 
 --
--- Name: error_records error_records_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.error_records
-    ADD CONSTRAINT error_records_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id);
-
-
---
--- Name: error_records error_records_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.error_records
-    ADD CONSTRAINT error_records_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id);
-
-
---
 -- Name: error_records error_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.error_records
-    ADD CONSTRAINT error_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT error_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -2865,6 +4108,14 @@ ALTER TABLE ONLY public.group_members
 
 
 --
+-- Name: group_messages group_messages_forwarded_from_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_messages
+    ADD CONSTRAINT group_messages_forwarded_from_id_fkey FOREIGN KEY (forwarded_from_id) REFERENCES public.group_messages(id);
+
+
+--
 -- Name: group_messages group_messages_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2881,19 +4132,19 @@ ALTER TABLE ONLY public.group_messages
 
 
 --
--- Name: group_messages group_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.group_messages
-    ADD CONSTRAINT group_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.group_messages(id);
-
-
---
 -- Name: group_messages group_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.group_messages
     ADD CONSTRAINT group_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id);
+
+
+--
+-- Name: group_messages group_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_messages
+    ADD CONSTRAINT group_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.group_messages(id);
 
 
 --
@@ -2969,6 +4220,78 @@ ALTER TABLE ONLY public.knowledge_nodes
 
 
 --
+-- Name: mastery_audit_log mastery_audit_log_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_node_id_fkey FOREIGN KEY (node_id) REFERENCES public.knowledge_nodes(id);
+
+
+--
+-- Name: mastery_audit_log mastery_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mastery_audit_log
+    ADD CONSTRAINT mastery_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: message_favorites message_favorites_group_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_favorites
+    ADD CONSTRAINT message_favorites_group_message_id_fkey FOREIGN KEY (group_message_id) REFERENCES public.group_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_favorites message_favorites_private_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_favorites
+    ADD CONSTRAINT message_favorites_private_message_id_fkey FOREIGN KEY (private_message_id) REFERENCES public.private_messages(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_favorites message_favorites_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_favorites
+    ADD CONSTRAINT message_favorites_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_reports message_reports_group_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_reports
+    ADD CONSTRAINT message_reports_group_message_id_fkey FOREIGN KEY (group_message_id) REFERENCES public.group_messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: message_reports message_reports_private_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_reports
+    ADD CONSTRAINT message_reports_private_message_id_fkey FOREIGN KEY (private_message_id) REFERENCES public.private_messages(id) ON DELETE SET NULL;
+
+
+--
+-- Name: message_reports message_reports_reporter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_reports
+    ADD CONSTRAINT message_reports_reporter_id_fkey FOREIGN KEY (reporter_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: message_reports message_reports_reviewed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.message_reports
+    ADD CONSTRAINT message_reports_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
 -- Name: node_expansion_queue node_expansion_queue_trigger_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3017,6 +4340,14 @@ ALTER TABLE ONLY public.notifications
 
 
 --
+-- Name: offline_message_queue offline_message_queue_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.offline_message_queue
+    ADD CONSTRAINT offline_message_queue_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: plans plans_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3049,6 +4380,14 @@ ALTER TABLE ONLY public.posts
 
 
 --
+-- Name: private_messages private_messages_forwarded_from_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.private_messages
+    ADD CONSTRAINT private_messages_forwarded_from_id_fkey FOREIGN KEY (forwarded_from_id) REFERENCES public.private_messages(id);
+
+
+--
 -- Name: private_messages private_messages_receiver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3065,19 +4404,19 @@ ALTER TABLE ONLY public.private_messages
 
 
 --
--- Name: private_messages private_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.private_messages
-    ADD CONSTRAINT private_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.private_messages(id);
-
-
---
 -- Name: private_messages private_messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.private_messages
     ADD CONSTRAINT private_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id);
+
+
+--
+-- Name: private_messages private_messages_thread_root_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.private_messages
+    ADD CONSTRAINT private_messages_thread_root_id_fkey FOREIGN KEY (thread_root_id) REFERENCES public.private_messages(id);
 
 
 --
@@ -3097,6 +4436,14 @@ ALTER TABLE ONLY public.push_preferences
 
 
 --
+-- Name: shared_resources shared_resources_behavior_pattern_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shared_resources
+    ADD CONSTRAINT shared_resources_behavior_pattern_id_fkey FOREIGN KEY (behavior_pattern_id) REFERENCES public.behavior_patterns(id);
+
+
+--
 -- Name: shared_resources shared_resources_cognitive_fragment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3110,14 +4457,6 @@ ALTER TABLE ONLY public.shared_resources
 
 ALTER TABLE ONLY public.shared_resources
     ADD CONSTRAINT shared_resources_curiosity_capsule_id_fkey FOREIGN KEY (curiosity_capsule_id) REFERENCES public.curiosity_capsules(id);
-
-
---
--- Name: shared_resources shared_resources_behavior_pattern_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.shared_resources
-    ADD CONSTRAINT shared_resources_behavior_pattern_id_fkey FOREIGN KEY (behavior_pattern_id) REFERENCES public.behavior_patterns(id);
 
 
 --
@@ -3209,19 +4548,19 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: token_usage token_usage_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.token_usage
-    ADD CONSTRAINT token_usage_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
 -- Name: user_daily_metrics user_daily_metrics_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.user_daily_metrics
     ADD CONSTRAINT user_daily_metrics_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: user_encryption_keys user_encryption_keys_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_encryption_keys
+    ADD CONSTRAINT user_encryption_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -3241,6 +4580,14 @@ ALTER TABLE ONLY public.user_node_status
 
 
 --
+-- Name: user_tool_history user_tool_history_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_tool_history
+    ADD CONSTRAINT user_tool_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: word_books word_books_source_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3257,5 +4604,14 @@ ALTER TABLE ONLY public.word_books
 
 
 --
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+
+
+--
 -- PostgreSQL database dump complete
 --
+
+

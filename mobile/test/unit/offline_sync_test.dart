@@ -56,9 +56,7 @@ void main() {
       when(mockIsar.pendingUpdates).thenReturn(mockPendingUpdates);
       
       // Mock writeTxn
-      when(mockIsar.writeTxn(any)).thenAnswer((invocation) async {
-         return (invocation.positionalArguments[0] as Future Function()).call();
-      });
+      when(mockIsar.writeTxn(any)).thenAnswer((invocation) async => (invocation.positionalArguments[0] as Future Function()).call());
 
       // Mock LocalKnowledgeNodes collection and query (for optimistic update)
       final mockLocalKnowledgeNodes = MockIsarCollection<LocalKnowledgeNode>();

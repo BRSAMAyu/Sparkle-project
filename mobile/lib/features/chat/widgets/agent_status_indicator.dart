@@ -32,8 +32,7 @@ enum AgentStatus {
 class AgentStatusIndicator extends StatelessWidget {
 
   const AgentStatusIndicator({
-    super.key,
-    required this.status,
+    required this.status, super.key,
     this.compact = false,
   });
   final AgentStatus status;
@@ -63,7 +62,6 @@ class AgentStatusIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: color.withOpacity(0.3),
-          width: 1,
         ),
       ),
       child: Row(
@@ -270,9 +268,7 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
 class AgentStatusListener extends StatelessWidget {
 
   const AgentStatusListener({
-    super.key,
-    required this.status,
-    required this.child,
+    required this.status, required this.child, super.key,
     this.showIndicator = true,
   });
   final AgentStatus status;

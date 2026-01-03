@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'sync_queue.dart';
+import 'package:sparkle/core/offline/sync_queue.dart';
 
 class NetworkMonitor {
+
+  NetworkMonitor(this._syncQueue);
   final Connectivity _connectivity = Connectivity();
   final OfflineSyncQueue _syncQueue;
 
   StreamSubscription? _subscription;
   Timer? _debounceTimer;
-
-  NetworkMonitor(this._syncQueue);
 
   void startMonitoring() {
     _subscription = _connectivity.onConnectivityChanged.listen((result) {

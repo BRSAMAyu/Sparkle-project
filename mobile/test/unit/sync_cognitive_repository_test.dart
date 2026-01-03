@@ -16,14 +16,14 @@ class MockApiRepository extends Mock implements ApiCognitiveRepository {
         sourceType: 'test',
         content: 'content',
         createdAt: DateTime.now(),
-      )),
+      ),),
       returnValueForMissingStub: Future.value(CognitiveFragmentModel(
          id: 'api_id',
         userId: 'user',
         sourceType: 'test',
         content: 'content',
         createdAt: DateTime.now(),
-      )),
+      ),),
     );
 }
 

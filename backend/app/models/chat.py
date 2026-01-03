@@ -4,6 +4,7 @@ ChatMessage Model - 用户与AI的对话记录
 """
 import enum
 import uuid
+from datetime import datetime
 from sqlalchemy import Column, String, Integer, Text, Enum, ForeignKey, Index, JSON, Boolean, Float
 from sqlalchemy.orm import relationship
 
@@ -39,6 +40,11 @@ class ChatMessage(BaseModel):
 
     __tablename__ = "chat_messages"
 
+    # Partitioning Support: Primary Key must include partition key
+    # Note: We override the fields inherited from BaseModel to include primary_key=True
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, nullable=False)
+    created_at = Column(DateTime, primary_key=True, default=datetime.utcnow, nullable=False)
+
     # 关联关系
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
@@ -46,7 +52,8 @@ class ChatMessage(BaseModel):
     # 会话信息
     session_id = Column(GUID(), nullable=False, index=True, default=uuid.uuid4)
     # 🆕 v2.1: 客户端生成的消息 ID (用于幂等性)
-    message_id = Column(String(36), unique=True, nullable=True)
+    # Note: message_id unique constraint was moved to composite (message_id, created_at) in partitioning
+    message_id = Column(String(36), nullable=True)
 
     # 消息内容
     role = Column(Enum(MessageRole), nullable=False)

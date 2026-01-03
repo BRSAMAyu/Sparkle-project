@@ -72,7 +72,7 @@ class SyncCognitiveRepository implements ICognitiveRepository {
         createdAt: DateTime.now(),
         sentiment: 'neutral',
         tags: ['pending'],
-      )).toList();
+      ),).toList();
 
     // Merge: Deduplicate by ID (API data takes precedence if ID exists in both)
     final merged = <String, CognitiveFragmentModel>{};

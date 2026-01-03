@@ -4,10 +4,10 @@ import 'package:sparkle/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/data/repositories/cognitive_repository.dart';
 import 'package:sparkle/data/repositories/i_cognitive_repository.dart';
 import 'package:sparkle/data/repositories/local_cognitive_repository.dart';
-import 'package:sparkle/data/repositories/mock_cognitive_repository.dart';
-import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
 import 'package:sparkle/data/repositories/local_cognitive_repository.dart';
 import 'package:sparkle/data/repositories/mock_cognitive_repository.dart';
+import 'package:sparkle/data/repositories/mock_cognitive_repository.dart';
+import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
 import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
 
 class CognitiveState {

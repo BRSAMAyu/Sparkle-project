@@ -493,7 +493,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('提交失败: ${e}'),
+            content: Text('提交失败: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
