@@ -20,8 +20,6 @@ FocusSessionRequest _$FocusSessionRequestFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$FocusSessionRequest {
-  @JsonKey(name: 'task_id')
-  String? get taskId => throw _privateConstructorUsedError;
   @JsonKey(name: 'start_time')
   DateTime get startTime => throw _privateConstructorUsedError;
   @JsonKey(name: 'end_time')
@@ -31,6 +29,8 @@ mixin _$FocusSessionRequest {
   @JsonKey(name: 'focus_type')
   String get focusType => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'task_id')
+  String? get taskId => throw _privateConstructorUsedError;
   @JsonKey(name: 'white_noise_type')
   String? get whiteNoiseType => throw _privateConstructorUsedError;
 
@@ -47,12 +47,12 @@ abstract class $FocusSessionRequestCopyWith<$Res> {
       _$FocusSessionRequestCopyWithImpl<$Res, FocusSessionRequest>;
   @useResult
   $Res call(
-      {@JsonKey(name: 'task_id') String? taskId,
-      @JsonKey(name: 'start_time') DateTime startTime,
+      {@JsonKey(name: 'start_time') DateTime startTime,
       @JsonKey(name: 'end_time') DateTime endTime,
       @JsonKey(name: 'duration_minutes') int durationMinutes,
       @JsonKey(name: 'focus_type') String focusType,
       String status,
+      @JsonKey(name: 'task_id') String? taskId,
       @JsonKey(name: 'white_noise_type') String? whiteNoiseType});
 }
 
@@ -69,19 +69,15 @@ class _$FocusSessionRequestCopyWithImpl<$Res, $Val extends FocusSessionRequest>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? taskId = freezed,
     Object? startTime = null,
     Object? endTime = null,
     Object? durationMinutes = null,
     Object? focusType = null,
     Object? status = null,
+    Object? taskId = freezed,
     Object? whiteNoiseType = freezed,
   }) {
     return _then(_value.copyWith(
-      taskId: freezed == taskId
-          ? _value.taskId
-          : taskId // ignore: cast_nullable_to_non_nullable
-              as String?,
       startTime: null == startTime
           ? _value.startTime
           : startTime // ignore: cast_nullable_to_non_nullable
@@ -102,6 +98,10 @@ class _$FocusSessionRequestCopyWithImpl<$Res, $Val extends FocusSessionRequest>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      taskId: freezed == taskId
+          ? _value.taskId
+          : taskId // ignore: cast_nullable_to_non_nullable
+              as String?,
       whiteNoiseType: freezed == whiteNoiseType
           ? _value.whiteNoiseType
           : whiteNoiseType // ignore: cast_nullable_to_non_nullable
@@ -119,12 +119,12 @@ abstract class _$$FocusSessionRequestImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {@JsonKey(name: 'task_id') String? taskId,
-      @JsonKey(name: 'start_time') DateTime startTime,
+      {@JsonKey(name: 'start_time') DateTime startTime,
       @JsonKey(name: 'end_time') DateTime endTime,
       @JsonKey(name: 'duration_minutes') int durationMinutes,
       @JsonKey(name: 'focus_type') String focusType,
       String status,
+      @JsonKey(name: 'task_id') String? taskId,
       @JsonKey(name: 'white_noise_type') String? whiteNoiseType});
 }
 
@@ -139,19 +139,15 @@ class __$$FocusSessionRequestImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? taskId = freezed,
     Object? startTime = null,
     Object? endTime = null,
     Object? durationMinutes = null,
     Object? focusType = null,
     Object? status = null,
+    Object? taskId = freezed,
     Object? whiteNoiseType = freezed,
   }) {
     return _then(_$FocusSessionRequestImpl(
-      taskId: freezed == taskId
-          ? _value.taskId
-          : taskId // ignore: cast_nullable_to_non_nullable
-              as String?,
       startTime: null == startTime
           ? _value.startTime
           : startTime // ignore: cast_nullable_to_non_nullable
@@ -172,6 +168,10 @@ class __$$FocusSessionRequestImplCopyWithImpl<$Res>
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      taskId: freezed == taskId
+          ? _value.taskId
+          : taskId // ignore: cast_nullable_to_non_nullable
+              as String?,
       whiteNoiseType: freezed == whiteNoiseType
           ? _value.whiteNoiseType
           : whiteNoiseType // ignore: cast_nullable_to_non_nullable
@@ -184,20 +184,17 @@ class __$$FocusSessionRequestImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$FocusSessionRequestImpl implements _FocusSessionRequest {
   const _$FocusSessionRequestImpl(
-      {@JsonKey(name: 'task_id') this.taskId,
-      @JsonKey(name: 'start_time') required this.startTime,
+      {@JsonKey(name: 'start_time') required this.startTime,
       @JsonKey(name: 'end_time') required this.endTime,
       @JsonKey(name: 'duration_minutes') required this.durationMinutes,
       @JsonKey(name: 'focus_type') required this.focusType,
       required this.status,
+      @JsonKey(name: 'task_id') this.taskId,
       @JsonKey(name: 'white_noise_type') this.whiteNoiseType});
 
   factory _$FocusSessionRequestImpl.fromJson(Map<String, dynamic> json) =>
       _$$FocusSessionRequestImplFromJson(json);
 
-  @override
-  @JsonKey(name: 'task_id')
-  final String? taskId;
   @override
   @JsonKey(name: 'start_time')
   final DateTime startTime;
@@ -213,12 +210,15 @@ class _$FocusSessionRequestImpl implements _FocusSessionRequest {
   @override
   final String status;
   @override
+  @JsonKey(name: 'task_id')
+  final String? taskId;
+  @override
   @JsonKey(name: 'white_noise_type')
   final String? whiteNoiseType;
 
   @override
   String toString() {
-    return 'FocusSessionRequest(taskId: $taskId, startTime: $startTime, endTime: $endTime, durationMinutes: $durationMinutes, focusType: $focusType, status: $status, whiteNoiseType: $whiteNoiseType)';
+    return 'FocusSessionRequest(startTime: $startTime, endTime: $endTime, durationMinutes: $durationMinutes, focusType: $focusType, status: $status, taskId: $taskId, whiteNoiseType: $whiteNoiseType)';
   }
 
   @override
@@ -226,7 +226,6 @@ class _$FocusSessionRequestImpl implements _FocusSessionRequest {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$FocusSessionRequestImpl &&
-            (identical(other.taskId, taskId) || other.taskId == taskId) &&
             (identical(other.startTime, startTime) ||
                 other.startTime == startTime) &&
             (identical(other.endTime, endTime) || other.endTime == endTime) &&
@@ -235,14 +234,15 @@ class _$FocusSessionRequestImpl implements _FocusSessionRequest {
             (identical(other.focusType, focusType) ||
                 other.focusType == focusType) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.taskId, taskId) || other.taskId == taskId) &&
             (identical(other.whiteNoiseType, whiteNoiseType) ||
                 other.whiteNoiseType == whiteNoiseType));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, taskId, startTime, endTime,
-      durationMinutes, focusType, status, whiteNoiseType);
+  int get hashCode => Object.hash(runtimeType, startTime, endTime,
+      durationMinutes, focusType, status, taskId, whiteNoiseType);
 
   @JsonKey(ignore: true)
   @override
@@ -261,21 +261,18 @@ class _$FocusSessionRequestImpl implements _FocusSessionRequest {
 
 abstract class _FocusSessionRequest implements FocusSessionRequest {
   const factory _FocusSessionRequest(
-          {@JsonKey(name: 'task_id') final String? taskId,
-          @JsonKey(name: 'start_time') required final DateTime startTime,
+          {@JsonKey(name: 'start_time') required final DateTime startTime,
           @JsonKey(name: 'end_time') required final DateTime endTime,
           @JsonKey(name: 'duration_minutes') required final int durationMinutes,
           @JsonKey(name: 'focus_type') required final String focusType,
           required final String status,
+          @JsonKey(name: 'task_id') final String? taskId,
           @JsonKey(name: 'white_noise_type') final String? whiteNoiseType}) =
       _$FocusSessionRequestImpl;
 
   factory _FocusSessionRequest.fromJson(Map<String, dynamic> json) =
       _$FocusSessionRequestImpl.fromJson;
 
-  @override
-  @JsonKey(name: 'task_id')
-  String? get taskId;
   @override
   @JsonKey(name: 'start_time')
   DateTime get startTime;
@@ -290,6 +287,9 @@ abstract class _FocusSessionRequest implements FocusSessionRequest {
   String get focusType;
   @override
   String get status;
+  @override
+  @JsonKey(name: 'task_id')
+  String? get taskId;
   @override
   @JsonKey(name: 'white_noise_type')
   String? get whiteNoiseType;

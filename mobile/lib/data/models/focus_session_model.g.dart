@@ -9,24 +9,24 @@ part of 'focus_session_model.dart';
 _$FocusSessionRequestImpl _$$FocusSessionRequestImplFromJson(
         Map<String, dynamic> json) =>
     _$FocusSessionRequestImpl(
-      taskId: json['task_id'] as String?,
       startTime: DateTime.parse(json['start_time'] as String),
       endTime: DateTime.parse(json['end_time'] as String),
       durationMinutes: (json['duration_minutes'] as num).toInt(),
       focusType: json['focus_type'] as String,
       status: json['status'] as String,
+      taskId: json['task_id'] as String?,
       whiteNoiseType: json['white_noise_type'] as String?,
     );
 
 Map<String, dynamic> _$$FocusSessionRequestImplToJson(
         _$FocusSessionRequestImpl instance) =>
     <String, dynamic>{
-      'task_id': instance.taskId,
       'start_time': instance.startTime.toIso8601String(),
       'end_time': instance.endTime.toIso8601String(),
       'duration_minutes': instance.durationMinutes,
       'focus_type': instance.focusType,
       'status': instance.status,
+      'task_id': instance.taskId,
       'white_noise_type': instance.whiteNoiseType,
     };
 

@@ -10,14 +10,16 @@ _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
     _$ErrorRecordImpl(
       id: json['id'] as String,
       questionText: json['question_text'] as String,
-      questionImageUrl: json['question_image_url'] as String?,
       userAnswer: json['user_answer'] as String,
       correctAnswer: json['correct_answer'] as String,
-      subject: json['subject'] as String,
-      chapter: json['chapter'] as String?,
-      difficulty: (json['difficulty'] as num?)?.toInt(),
+      subject: json['subject_code'] as String,
       masteryLevel: (json['mastery_level'] as num).toDouble(),
       reviewCount: (json['review_count'] as num).toInt(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      questionImageUrl: json['question_image_url'] as String?,
+      chapter: json['chapter'] as String?,
+      difficulty: (json['difficulty'] as num?)?.toInt(),
       nextReviewAt: json['next_review_at'] == null
           ? null
           : DateTime.parse(json['next_review_at'] as String),
@@ -32,28 +34,26 @@ _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => KnowledgeLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
 Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'question_text': instance.questionText,
-      'question_image_url': instance.questionImageUrl,
       'user_answer': instance.userAnswer,
       'correct_answer': instance.correctAnswer,
-      'subject': instance.subject,
-      'chapter': instance.chapter,
-      'difficulty': instance.difficulty,
+      'subject_code': instance.subject,
       'mastery_level': instance.masteryLevel,
       'review_count': instance.reviewCount,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+      'question_image_url': instance.questionImageUrl,
+      'chapter': instance.chapter,
+      'difficulty': instance.difficulty,
       'next_review_at': instance.nextReviewAt?.toIso8601String(),
       'last_reviewed_at': instance.lastReviewedAt?.toIso8601String(),
       'latest_analysis': instance.latestAnalysis,
       'knowledge_links': instance.knowledgeLinks,
-      'created_at': instance.createdAt.toIso8601String(),
-      'updated_at': instance.updatedAt.toIso8601String(),
     };
 
 _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
@@ -62,6 +62,8 @@ _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
       errorTypeLabel: json['error_type_label'] as String,
       rootCause: json['root_cause'] as String,
       correctApproach: json['correct_approach'] as String,
+      studySuggestion: json['study_suggestion'] as String,
+      analyzedAt: DateTime.parse(json['analyzed_at'] as String),
       similarTraps: (json['similar_traps'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -70,8 +72,6 @@ _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      studySuggestion: json['study_suggestion'] as String,
-      analyzedAt: DateTime.parse(json['analyzed_at'] as String),
     );
 
 Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
@@ -80,10 +80,10 @@ Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
       'error_type_label': instance.errorTypeLabel,
       'root_cause': instance.rootCause,
       'correct_approach': instance.correctApproach,
-      'similar_traps': instance.similarTraps,
-      'recommended_knowledge': instance.recommendedKnowledge,
       'study_suggestion': instance.studySuggestion,
       'analyzed_at': instance.analyzedAt.toIso8601String(),
+      'similar_traps': instance.similarTraps,
+      'recommended_knowledge': instance.recommendedKnowledge,
     };
 
 _$KnowledgeLinkImpl _$$KnowledgeLinkImplFromJson(Map<String, dynamic> json) =>

@@ -23,19 +23,24 @@ mixin _$ErrorRecord {
   String get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'question_text')
   String get questionText => throw _privateConstructorUsedError;
-  @JsonKey(name: 'question_image_url')
-  String? get questionImageUrl => throw _privateConstructorUsedError;
   @JsonKey(name: 'user_answer')
   String get userAnswer => throw _privateConstructorUsedError;
   @JsonKey(name: 'correct_answer')
   String get correctAnswer => throw _privateConstructorUsedError;
+  @JsonKey(name: 'subject_code')
   String get subject => throw _privateConstructorUsedError;
-  String? get chapter => throw _privateConstructorUsedError;
-  int? get difficulty => throw _privateConstructorUsedError;
   @JsonKey(name: 'mastery_level')
   double get masteryLevel => throw _privateConstructorUsedError;
   @JsonKey(name: 'review_count')
   int get reviewCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime get updatedAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'question_image_url')
+  String? get questionImageUrl => throw _privateConstructorUsedError;
+  String? get chapter => throw _privateConstructorUsedError;
+  int? get difficulty => throw _privateConstructorUsedError;
   @JsonKey(name: 'next_review_at')
   DateTime? get nextReviewAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'last_reviewed_at')
@@ -44,10 +49,6 @@ mixin _$ErrorRecord {
   ErrorAnalysis? get latestAnalysis => throw _privateConstructorUsedError;
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks => throw _privateConstructorUsedError;
-  @JsonKey(name: 'created_at')
-  DateTime get createdAt => throw _privateConstructorUsedError;
-  @JsonKey(name: 'updated_at')
-  DateTime get updatedAt => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -64,20 +65,20 @@ abstract class $ErrorRecordCopyWith<$Res> {
   $Res call(
       {String id,
       @JsonKey(name: 'question_text') String questionText,
-      @JsonKey(name: 'question_image_url') String? questionImageUrl,
       @JsonKey(name: 'user_answer') String userAnswer,
       @JsonKey(name: 'correct_answer') String correctAnswer,
-      String subject,
-      String? chapter,
-      int? difficulty,
+      @JsonKey(name: 'subject_code') String subject,
       @JsonKey(name: 'mastery_level') double masteryLevel,
       @JsonKey(name: 'review_count') int reviewCount,
+      @JsonKey(name: 'created_at') DateTime createdAt,
+      @JsonKey(name: 'updated_at') DateTime updatedAt,
+      @JsonKey(name: 'question_image_url') String? questionImageUrl,
+      String? chapter,
+      int? difficulty,
       @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
-      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
-      @JsonKey(name: 'created_at') DateTime createdAt,
-      @JsonKey(name: 'updated_at') DateTime updatedAt});
+      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks});
 
   $ErrorAnalysisCopyWith<$Res>? get latestAnalysis;
 }
@@ -97,20 +98,20 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
   $Res call({
     Object? id = null,
     Object? questionText = null,
-    Object? questionImageUrl = freezed,
     Object? userAnswer = null,
     Object? correctAnswer = null,
     Object? subject = null,
-    Object? chapter = freezed,
-    Object? difficulty = freezed,
     Object? masteryLevel = null,
     Object? reviewCount = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
+    Object? questionImageUrl = freezed,
+    Object? chapter = freezed,
+    Object? difficulty = freezed,
     Object? nextReviewAt = freezed,
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
-    Object? createdAt = null,
-    Object? updatedAt = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -121,10 +122,6 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.questionText
           : questionText // ignore: cast_nullable_to_non_nullable
               as String,
-      questionImageUrl: freezed == questionImageUrl
-          ? _value.questionImageUrl
-          : questionImageUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
       userAnswer: null == userAnswer
           ? _value.userAnswer
           : userAnswer // ignore: cast_nullable_to_non_nullable
@@ -137,14 +134,6 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.subject
           : subject // ignore: cast_nullable_to_non_nullable
               as String,
-      chapter: freezed == chapter
-          ? _value.chapter
-          : chapter // ignore: cast_nullable_to_non_nullable
-              as String?,
-      difficulty: freezed == difficulty
-          ? _value.difficulty
-          : difficulty // ignore: cast_nullable_to_non_nullable
-              as int?,
       masteryLevel: null == masteryLevel
           ? _value.masteryLevel
           : masteryLevel // ignore: cast_nullable_to_non_nullable
@@ -153,6 +142,26 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.reviewCount
           : reviewCount // ignore: cast_nullable_to_non_nullable
               as int,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      questionImageUrl: freezed == questionImageUrl
+          ? _value.questionImageUrl
+          : questionImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      chapter: freezed == chapter
+          ? _value.chapter
+          : chapter // ignore: cast_nullable_to_non_nullable
+              as String?,
+      difficulty: freezed == difficulty
+          ? _value.difficulty
+          : difficulty // ignore: cast_nullable_to_non_nullable
+              as int?,
       nextReviewAt: freezed == nextReviewAt
           ? _value.nextReviewAt
           : nextReviewAt // ignore: cast_nullable_to_non_nullable
@@ -169,14 +178,6 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
     ) as $Val);
   }
 
@@ -204,20 +205,20 @@ abstract class _$$ErrorRecordImplCopyWith<$Res>
   $Res call(
       {String id,
       @JsonKey(name: 'question_text') String questionText,
-      @JsonKey(name: 'question_image_url') String? questionImageUrl,
       @JsonKey(name: 'user_answer') String userAnswer,
       @JsonKey(name: 'correct_answer') String correctAnswer,
-      String subject,
-      String? chapter,
-      int? difficulty,
+      @JsonKey(name: 'subject_code') String subject,
       @JsonKey(name: 'mastery_level') double masteryLevel,
       @JsonKey(name: 'review_count') int reviewCount,
+      @JsonKey(name: 'created_at') DateTime createdAt,
+      @JsonKey(name: 'updated_at') DateTime updatedAt,
+      @JsonKey(name: 'question_image_url') String? questionImageUrl,
+      String? chapter,
+      int? difficulty,
       @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
-      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
-      @JsonKey(name: 'created_at') DateTime createdAt,
-      @JsonKey(name: 'updated_at') DateTime updatedAt});
+      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks});
 
   @override
   $ErrorAnalysisCopyWith<$Res>? get latestAnalysis;
@@ -236,20 +237,20 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? questionText = null,
-    Object? questionImageUrl = freezed,
     Object? userAnswer = null,
     Object? correctAnswer = null,
     Object? subject = null,
-    Object? chapter = freezed,
-    Object? difficulty = freezed,
     Object? masteryLevel = null,
     Object? reviewCount = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
+    Object? questionImageUrl = freezed,
+    Object? chapter = freezed,
+    Object? difficulty = freezed,
     Object? nextReviewAt = freezed,
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
-    Object? createdAt = null,
-    Object? updatedAt = null,
   }) {
     return _then(_$ErrorRecordImpl(
       id: null == id
@@ -260,10 +261,6 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value.questionText
           : questionText // ignore: cast_nullable_to_non_nullable
               as String,
-      questionImageUrl: freezed == questionImageUrl
-          ? _value.questionImageUrl
-          : questionImageUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
       userAnswer: null == userAnswer
           ? _value.userAnswer
           : userAnswer // ignore: cast_nullable_to_non_nullable
@@ -276,14 +273,6 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value.subject
           : subject // ignore: cast_nullable_to_non_nullable
               as String,
-      chapter: freezed == chapter
-          ? _value.chapter
-          : chapter // ignore: cast_nullable_to_non_nullable
-              as String?,
-      difficulty: freezed == difficulty
-          ? _value.difficulty
-          : difficulty // ignore: cast_nullable_to_non_nullable
-              as int?,
       masteryLevel: null == masteryLevel
           ? _value.masteryLevel
           : masteryLevel // ignore: cast_nullable_to_non_nullable
@@ -292,6 +281,26 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value.reviewCount
           : reviewCount // ignore: cast_nullable_to_non_nullable
               as int,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      questionImageUrl: freezed == questionImageUrl
+          ? _value.questionImageUrl
+          : questionImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      chapter: freezed == chapter
+          ? _value.chapter
+          : chapter // ignore: cast_nullable_to_non_nullable
+              as String?,
+      difficulty: freezed == difficulty
+          ? _value.difficulty
+          : difficulty // ignore: cast_nullable_to_non_nullable
+              as int?,
       nextReviewAt: freezed == nextReviewAt
           ? _value.nextReviewAt
           : nextReviewAt // ignore: cast_nullable_to_non_nullable
@@ -308,14 +317,6 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value._knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
     ));
   }
 }
@@ -326,21 +327,21 @@ class _$ErrorRecordImpl implements _ErrorRecord {
   const _$ErrorRecordImpl(
       {required this.id,
       @JsonKey(name: 'question_text') required this.questionText,
-      @JsonKey(name: 'question_image_url') this.questionImageUrl,
       @JsonKey(name: 'user_answer') required this.userAnswer,
       @JsonKey(name: 'correct_answer') required this.correctAnswer,
-      required this.subject,
-      this.chapter,
-      this.difficulty,
+      @JsonKey(name: 'subject_code') required this.subject,
       @JsonKey(name: 'mastery_level') required this.masteryLevel,
       @JsonKey(name: 'review_count') required this.reviewCount,
+      @JsonKey(name: 'created_at') required this.createdAt,
+      @JsonKey(name: 'updated_at') required this.updatedAt,
+      @JsonKey(name: 'question_image_url') this.questionImageUrl,
+      this.chapter,
+      this.difficulty,
       @JsonKey(name: 'next_review_at') this.nextReviewAt,
       @JsonKey(name: 'last_reviewed_at') this.lastReviewedAt,
       @JsonKey(name: 'latest_analysis') this.latestAnalysis,
       @JsonKey(name: 'knowledge_links')
-      final List<KnowledgeLink> knowledgeLinks = const [],
-      @JsonKey(name: 'created_at') required this.createdAt,
-      @JsonKey(name: 'updated_at') required this.updatedAt})
+      final List<KnowledgeLink> knowledgeLinks = const []})
       : _knowledgeLinks = knowledgeLinks;
 
   factory _$ErrorRecordImpl.fromJson(Map<String, dynamic> json) =>
@@ -352,26 +353,33 @@ class _$ErrorRecordImpl implements _ErrorRecord {
   @JsonKey(name: 'question_text')
   final String questionText;
   @override
-  @JsonKey(name: 'question_image_url')
-  final String? questionImageUrl;
-  @override
   @JsonKey(name: 'user_answer')
   final String userAnswer;
   @override
   @JsonKey(name: 'correct_answer')
   final String correctAnswer;
   @override
+  @JsonKey(name: 'subject_code')
   final String subject;
-  @override
-  final String? chapter;
-  @override
-  final int? difficulty;
   @override
   @JsonKey(name: 'mastery_level')
   final double masteryLevel;
   @override
   @JsonKey(name: 'review_count')
   final int reviewCount;
+  @override
+  @JsonKey(name: 'created_at')
+  final DateTime createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime updatedAt;
+  @override
+  @JsonKey(name: 'question_image_url')
+  final String? questionImageUrl;
+  @override
+  final String? chapter;
+  @override
+  final int? difficulty;
   @override
   @JsonKey(name: 'next_review_at')
   final DateTime? nextReviewAt;
@@ -391,15 +399,8 @@ class _$ErrorRecordImpl implements _ErrorRecord {
   }
 
   @override
-  @JsonKey(name: 'created_at')
-  final DateTime createdAt;
-  @override
-  @JsonKey(name: 'updated_at')
-  final DateTime updatedAt;
-
-  @override
   String toString() {
-    return 'ErrorRecord(id: $id, questionText: $questionText, questionImageUrl: $questionImageUrl, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, chapter: $chapter, difficulty: $difficulty, masteryLevel: $masteryLevel, reviewCount: $reviewCount, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ErrorRecord(id: $id, questionText: $questionText, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, masteryLevel: $masteryLevel, reviewCount: $reviewCount, createdAt: $createdAt, updatedAt: $updatedAt, questionImageUrl: $questionImageUrl, chapter: $chapter, difficulty: $difficulty, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks)';
   }
 
   @override
@@ -410,20 +411,24 @@ class _$ErrorRecordImpl implements _ErrorRecord {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.questionText, questionText) ||
                 other.questionText == questionText) &&
-            (identical(other.questionImageUrl, questionImageUrl) ||
-                other.questionImageUrl == questionImageUrl) &&
             (identical(other.userAnswer, userAnswer) ||
                 other.userAnswer == userAnswer) &&
             (identical(other.correctAnswer, correctAnswer) ||
                 other.correctAnswer == correctAnswer) &&
             (identical(other.subject, subject) || other.subject == subject) &&
-            (identical(other.chapter, chapter) || other.chapter == chapter) &&
-            (identical(other.difficulty, difficulty) ||
-                other.difficulty == difficulty) &&
             (identical(other.masteryLevel, masteryLevel) ||
                 other.masteryLevel == masteryLevel) &&
             (identical(other.reviewCount, reviewCount) ||
                 other.reviewCount == reviewCount) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
+            (identical(other.questionImageUrl, questionImageUrl) ||
+                other.questionImageUrl == questionImageUrl) &&
+            (identical(other.chapter, chapter) || other.chapter == chapter) &&
+            (identical(other.difficulty, difficulty) ||
+                other.difficulty == difficulty) &&
             (identical(other.nextReviewAt, nextReviewAt) ||
                 other.nextReviewAt == nextReviewAt) &&
             (identical(other.lastReviewedAt, lastReviewedAt) ||
@@ -431,11 +436,7 @@ class _$ErrorRecordImpl implements _ErrorRecord {
             (identical(other.latestAnalysis, latestAnalysis) ||
                 other.latestAnalysis == latestAnalysis) &&
             const DeepCollectionEquality()
-                .equals(other._knowledgeLinks, _knowledgeLinks) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                .equals(other._knowledgeLinks, _knowledgeLinks));
   }
 
   @JsonKey(ignore: true)
@@ -444,20 +445,20 @@ class _$ErrorRecordImpl implements _ErrorRecord {
       runtimeType,
       id,
       questionText,
-      questionImageUrl,
       userAnswer,
       correctAnswer,
       subject,
-      chapter,
-      difficulty,
       masteryLevel,
       reviewCount,
+      createdAt,
+      updatedAt,
+      questionImageUrl,
+      chapter,
+      difficulty,
       nextReviewAt,
       lastReviewedAt,
       latestAnalysis,
-      const DeepCollectionEquality().hash(_knowledgeLinks),
-      createdAt,
-      updatedAt);
+      const DeepCollectionEquality().hash(_knowledgeLinks));
 
   @JsonKey(ignore: true)
   @override
@@ -475,24 +476,23 @@ class _$ErrorRecordImpl implements _ErrorRecord {
 
 abstract class _ErrorRecord implements ErrorRecord {
   const factory _ErrorRecord(
-          {required final String id,
-          @JsonKey(name: 'question_text') required final String questionText,
-          @JsonKey(name: 'question_image_url') final String? questionImageUrl,
-          @JsonKey(name: 'user_answer') required final String userAnswer,
-          @JsonKey(name: 'correct_answer') required final String correctAnswer,
-          required final String subject,
-          final String? chapter,
-          final int? difficulty,
-          @JsonKey(name: 'mastery_level') required final double masteryLevel,
-          @JsonKey(name: 'review_count') required final int reviewCount,
-          @JsonKey(name: 'next_review_at') final DateTime? nextReviewAt,
-          @JsonKey(name: 'last_reviewed_at') final DateTime? lastReviewedAt,
-          @JsonKey(name: 'latest_analysis') final ErrorAnalysis? latestAnalysis,
-          @JsonKey(name: 'knowledge_links')
-          final List<KnowledgeLink> knowledgeLinks,
-          @JsonKey(name: 'created_at') required final DateTime createdAt,
-          @JsonKey(name: 'updated_at') required final DateTime updatedAt}) =
-      _$ErrorRecordImpl;
+      {required final String id,
+      @JsonKey(name: 'question_text') required final String questionText,
+      @JsonKey(name: 'user_answer') required final String userAnswer,
+      @JsonKey(name: 'correct_answer') required final String correctAnswer,
+      @JsonKey(name: 'subject_code') required final String subject,
+      @JsonKey(name: 'mastery_level') required final double masteryLevel,
+      @JsonKey(name: 'review_count') required final int reviewCount,
+      @JsonKey(name: 'created_at') required final DateTime createdAt,
+      @JsonKey(name: 'updated_at') required final DateTime updatedAt,
+      @JsonKey(name: 'question_image_url') final String? questionImageUrl,
+      final String? chapter,
+      final int? difficulty,
+      @JsonKey(name: 'next_review_at') final DateTime? nextReviewAt,
+      @JsonKey(name: 'last_reviewed_at') final DateTime? lastReviewedAt,
+      @JsonKey(name: 'latest_analysis') final ErrorAnalysis? latestAnalysis,
+      @JsonKey(name: 'knowledge_links')
+      final List<KnowledgeLink> knowledgeLinks}) = _$ErrorRecordImpl;
 
   factory _ErrorRecord.fromJson(Map<String, dynamic> json) =
       _$ErrorRecordImpl.fromJson;
@@ -503,26 +503,33 @@ abstract class _ErrorRecord implements ErrorRecord {
   @JsonKey(name: 'question_text')
   String get questionText;
   @override
-  @JsonKey(name: 'question_image_url')
-  String? get questionImageUrl;
-  @override
   @JsonKey(name: 'user_answer')
   String get userAnswer;
   @override
   @JsonKey(name: 'correct_answer')
   String get correctAnswer;
   @override
+  @JsonKey(name: 'subject_code')
   String get subject;
-  @override
-  String? get chapter;
-  @override
-  int? get difficulty;
   @override
   @JsonKey(name: 'mastery_level')
   double get masteryLevel;
   @override
   @JsonKey(name: 'review_count')
   int get reviewCount;
+  @override
+  @JsonKey(name: 'created_at')
+  DateTime get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  DateTime get updatedAt;
+  @override
+  @JsonKey(name: 'question_image_url')
+  String? get questionImageUrl;
+  @override
+  String? get chapter;
+  @override
+  int? get difficulty;
   @override
   @JsonKey(name: 'next_review_at')
   DateTime? get nextReviewAt;
@@ -535,12 +542,6 @@ abstract class _ErrorRecord implements ErrorRecord {
   @override
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks;
-  @override
-  @JsonKey(name: 'created_at')
-  DateTime get createdAt;
-  @override
-  @JsonKey(name: 'updated_at')
-  DateTime get updatedAt;
   @override
   @JsonKey(ignore: true)
   _$$ErrorRecordImplCopyWith<_$ErrorRecordImpl> get copyWith =>
@@ -561,14 +562,14 @@ mixin _$ErrorAnalysis {
   String get rootCause => throw _privateConstructorUsedError;
   @JsonKey(name: 'correct_approach')
   String get correctApproach => throw _privateConstructorUsedError;
-  @JsonKey(name: 'similar_traps')
-  List<String> get similarTraps => throw _privateConstructorUsedError;
-  @JsonKey(name: 'recommended_knowledge')
-  List<String> get recommendedKnowledge => throw _privateConstructorUsedError;
   @JsonKey(name: 'study_suggestion')
   String get studySuggestion => throw _privateConstructorUsedError;
   @JsonKey(name: 'analyzed_at')
   DateTime get analyzedAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'similar_traps')
+  List<String> get similarTraps => throw _privateConstructorUsedError;
+  @JsonKey(name: 'recommended_knowledge')
+  List<String> get recommendedKnowledge => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -587,10 +588,11 @@ abstract class $ErrorAnalysisCopyWith<$Res> {
       @JsonKey(name: 'error_type_label') String errorTypeLabel,
       @JsonKey(name: 'root_cause') String rootCause,
       @JsonKey(name: 'correct_approach') String correctApproach,
-      @JsonKey(name: 'similar_traps') List<String> similarTraps,
-      @JsonKey(name: 'recommended_knowledge') List<String> recommendedKnowledge,
       @JsonKey(name: 'study_suggestion') String studySuggestion,
-      @JsonKey(name: 'analyzed_at') DateTime analyzedAt});
+      @JsonKey(name: 'analyzed_at') DateTime analyzedAt,
+      @JsonKey(name: 'similar_traps') List<String> similarTraps,
+      @JsonKey(name: 'recommended_knowledge')
+      List<String> recommendedKnowledge});
 }
 
 /// @nodoc
@@ -610,10 +612,10 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
     Object? errorTypeLabel = null,
     Object? rootCause = null,
     Object? correctApproach = null,
-    Object? similarTraps = null,
-    Object? recommendedKnowledge = null,
     Object? studySuggestion = null,
     Object? analyzedAt = null,
+    Object? similarTraps = null,
+    Object? recommendedKnowledge = null,
   }) {
     return _then(_value.copyWith(
       errorType: null == errorType
@@ -632,14 +634,6 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
           ? _value.correctApproach
           : correctApproach // ignore: cast_nullable_to_non_nullable
               as String,
-      similarTraps: null == similarTraps
-          ? _value.similarTraps
-          : similarTraps // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      recommendedKnowledge: null == recommendedKnowledge
-          ? _value.recommendedKnowledge
-          : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       studySuggestion: null == studySuggestion
           ? _value.studySuggestion
           : studySuggestion // ignore: cast_nullable_to_non_nullable
@@ -648,6 +642,14 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      similarTraps: null == similarTraps
+          ? _value.similarTraps
+          : similarTraps // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      recommendedKnowledge: null == recommendedKnowledge
+          ? _value.recommendedKnowledge
+          : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ) as $Val);
   }
 }
@@ -665,10 +667,11 @@ abstract class _$$ErrorAnalysisImplCopyWith<$Res>
       @JsonKey(name: 'error_type_label') String errorTypeLabel,
       @JsonKey(name: 'root_cause') String rootCause,
       @JsonKey(name: 'correct_approach') String correctApproach,
-      @JsonKey(name: 'similar_traps') List<String> similarTraps,
-      @JsonKey(name: 'recommended_knowledge') List<String> recommendedKnowledge,
       @JsonKey(name: 'study_suggestion') String studySuggestion,
-      @JsonKey(name: 'analyzed_at') DateTime analyzedAt});
+      @JsonKey(name: 'analyzed_at') DateTime analyzedAt,
+      @JsonKey(name: 'similar_traps') List<String> similarTraps,
+      @JsonKey(name: 'recommended_knowledge')
+      List<String> recommendedKnowledge});
 }
 
 /// @nodoc
@@ -686,10 +689,10 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
     Object? errorTypeLabel = null,
     Object? rootCause = null,
     Object? correctApproach = null,
-    Object? similarTraps = null,
-    Object? recommendedKnowledge = null,
     Object? studySuggestion = null,
     Object? analyzedAt = null,
+    Object? similarTraps = null,
+    Object? recommendedKnowledge = null,
   }) {
     return _then(_$ErrorAnalysisImpl(
       errorType: null == errorType
@@ -708,14 +711,6 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
           ? _value.correctApproach
           : correctApproach // ignore: cast_nullable_to_non_nullable
               as String,
-      similarTraps: null == similarTraps
-          ? _value._similarTraps
-          : similarTraps // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      recommendedKnowledge: null == recommendedKnowledge
-          ? _value._recommendedKnowledge
-          : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       studySuggestion: null == studySuggestion
           ? _value.studySuggestion
           : studySuggestion // ignore: cast_nullable_to_non_nullable
@@ -724,6 +719,14 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
           ? _value.analyzedAt
           : analyzedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      similarTraps: null == similarTraps
+          ? _value._similarTraps
+          : similarTraps // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      recommendedKnowledge: null == recommendedKnowledge
+          ? _value._recommendedKnowledge
+          : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -736,12 +739,12 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
       @JsonKey(name: 'error_type_label') required this.errorTypeLabel,
       @JsonKey(name: 'root_cause') required this.rootCause,
       @JsonKey(name: 'correct_approach') required this.correctApproach,
+      @JsonKey(name: 'study_suggestion') required this.studySuggestion,
+      @JsonKey(name: 'analyzed_at') required this.analyzedAt,
       @JsonKey(name: 'similar_traps')
       final List<String> similarTraps = const [],
       @JsonKey(name: 'recommended_knowledge')
-      final List<String> recommendedKnowledge = const [],
-      @JsonKey(name: 'study_suggestion') required this.studySuggestion,
-      @JsonKey(name: 'analyzed_at') required this.analyzedAt})
+      final List<String> recommendedKnowledge = const []})
       : _similarTraps = similarTraps,
         _recommendedKnowledge = recommendedKnowledge;
 
@@ -760,6 +763,12 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
   @override
   @JsonKey(name: 'correct_approach')
   final String correctApproach;
+  @override
+  @JsonKey(name: 'study_suggestion')
+  final String studySuggestion;
+  @override
+  @JsonKey(name: 'analyzed_at')
+  final DateTime analyzedAt;
   final List<String> _similarTraps;
   @override
   @JsonKey(name: 'similar_traps')
@@ -780,15 +789,8 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
   }
 
   @override
-  @JsonKey(name: 'study_suggestion')
-  final String studySuggestion;
-  @override
-  @JsonKey(name: 'analyzed_at')
-  final DateTime analyzedAt;
-
-  @override
   String toString() {
-    return 'ErrorAnalysis(errorType: $errorType, errorTypeLabel: $errorTypeLabel, rootCause: $rootCause, correctApproach: $correctApproach, similarTraps: $similarTraps, recommendedKnowledge: $recommendedKnowledge, studySuggestion: $studySuggestion, analyzedAt: $analyzedAt)';
+    return 'ErrorAnalysis(errorType: $errorType, errorTypeLabel: $errorTypeLabel, rootCause: $rootCause, correctApproach: $correctApproach, studySuggestion: $studySuggestion, analyzedAt: $analyzedAt, similarTraps: $similarTraps, recommendedKnowledge: $recommendedKnowledge)';
   }
 
   @override
@@ -804,14 +806,14 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
                 other.rootCause == rootCause) &&
             (identical(other.correctApproach, correctApproach) ||
                 other.correctApproach == correctApproach) &&
-            const DeepCollectionEquality()
-                .equals(other._similarTraps, _similarTraps) &&
-            const DeepCollectionEquality()
-                .equals(other._recommendedKnowledge, _recommendedKnowledge) &&
             (identical(other.studySuggestion, studySuggestion) ||
                 other.studySuggestion == studySuggestion) &&
             (identical(other.analyzedAt, analyzedAt) ||
-                other.analyzedAt == analyzedAt));
+                other.analyzedAt == analyzedAt) &&
+            const DeepCollectionEquality()
+                .equals(other._similarTraps, _similarTraps) &&
+            const DeepCollectionEquality()
+                .equals(other._recommendedKnowledge, _recommendedKnowledge));
   }
 
   @JsonKey(ignore: true)
@@ -822,10 +824,10 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
       errorTypeLabel,
       rootCause,
       correctApproach,
-      const DeepCollectionEquality().hash(_similarTraps),
-      const DeepCollectionEquality().hash(_recommendedKnowledge),
       studySuggestion,
-      analyzedAt);
+      analyzedAt,
+      const DeepCollectionEquality().hash(_similarTraps),
+      const DeepCollectionEquality().hash(_recommendedKnowledge));
 
   @JsonKey(ignore: true)
   @override
@@ -847,12 +849,11 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
       @JsonKey(name: 'error_type_label') required final String errorTypeLabel,
       @JsonKey(name: 'root_cause') required final String rootCause,
       @JsonKey(name: 'correct_approach') required final String correctApproach,
+      @JsonKey(name: 'study_suggestion') required final String studySuggestion,
+      @JsonKey(name: 'analyzed_at') required final DateTime analyzedAt,
       @JsonKey(name: 'similar_traps') final List<String> similarTraps,
       @JsonKey(name: 'recommended_knowledge')
-      final List<String> recommendedKnowledge,
-      @JsonKey(name: 'study_suggestion') required final String studySuggestion,
-      @JsonKey(name: 'analyzed_at')
-      required final DateTime analyzedAt}) = _$ErrorAnalysisImpl;
+      final List<String> recommendedKnowledge}) = _$ErrorAnalysisImpl;
 
   factory _ErrorAnalysis.fromJson(Map<String, dynamic> json) =
       _$ErrorAnalysisImpl.fromJson;
@@ -870,17 +871,17 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
   @JsonKey(name: 'correct_approach')
   String get correctApproach;
   @override
-  @JsonKey(name: 'similar_traps')
-  List<String> get similarTraps;
-  @override
-  @JsonKey(name: 'recommended_knowledge')
-  List<String> get recommendedKnowledge;
-  @override
   @JsonKey(name: 'study_suggestion')
   String get studySuggestion;
   @override
   @JsonKey(name: 'analyzed_at')
   DateTime get analyzedAt;
+  @override
+  @JsonKey(name: 'similar_traps')
+  List<String> get similarTraps;
+  @override
+  @JsonKey(name: 'recommended_knowledge')
+  List<String> get recommendedKnowledge;
   @override
   @JsonKey(ignore: true)
   _$$ErrorAnalysisImplCopyWith<_$ErrorAnalysisImpl> get copyWith =>

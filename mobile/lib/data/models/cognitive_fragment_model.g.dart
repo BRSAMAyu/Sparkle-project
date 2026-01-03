@@ -37,12 +37,14 @@ CognitiveFragmentCreate _$CognitiveFragmentCreateFromJson(
     CognitiveFragmentCreate(
       content: json['content'] as String,
       sourceType: json['source_type'] as String,
+      id: json['id'] as String?,
       taskId: json['task_id'] as String?,
     );
 
 Map<String, dynamic> _$CognitiveFragmentCreateToJson(
         CognitiveFragmentCreate instance) =>
     <String, dynamic>{
+      'id': instance.id,
       'content': instance.content,
       'source_type': instance.sourceType,
       'task_id': instance.taskId,

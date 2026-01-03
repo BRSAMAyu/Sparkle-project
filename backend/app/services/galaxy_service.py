@@ -234,6 +234,78 @@ class GalaxyService:
         # But StatsService has it.
         return await self.stats.expansion_service.auto_link_nodes(node_id)
 
+import json
+from sqlalchemy import text
+from app.core.event_bus import event_bus, KnowledgeNodeUpdated
+
+    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str):
+        """
+        Update node mastery with Outbox pattern for reliability
+        """
+        # 1. Get current state (Simple Query)
+        query_current = text("SELECT mastery FROM knowledge_nodes WHERE id = :node_id")
+        result = await self.db.execute(query_current, {"node_id": node_id})
+        current = result.fetchone()
+        
+        old_mastery = current[0] if current else 0
+
+        # 2. Business Logic Validation
+        if old_mastery == 100 and new_mastery < 100:
+             # Example rule: Cannot downgrade from mastered? Or maybe allow it with warning.
+             # For now, let's allow it but log it or just proceed.
+             pass
+
+        # 3. Transactional Update (Data + Audit + Outbox)
+        # Note: self.db is an AsyncSession which manages the transaction
+        try:
+             # A. Update Data
+            update_query = text("UPDATE knowledge_nodes SET mastery = :mastery WHERE id = :node_id")
+            await self.db.execute(update_query, {"mastery": new_mastery, "node_id": node_id})
+            
+            # B. Audit Log
+            audit_query = text("""
+                INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason)
+                VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason)
+            """)
+            await self.db.execute(audit_query, {
+                "node_id": node_id,
+                "user_id": user_id,
+                "old_mastery": old_mastery,
+                "new_mastery": new_mastery,
+                "reason": reason
+            })
+            
+            # C. Outbox Event
+            event_payload = {
+                "user_id": str(user_id),
+                "node_id": str(node_id),
+                "old_mastery": old_mastery,
+                "new_mastery": new_mastery,
+                "reason": reason
+            }
+            outbox_query = text("""
+                INSERT INTO outbox_events (aggregate_id, event_type, payload)
+                VALUES (:aggregate_id, 'galaxy.node.mastery_updated', :payload)
+            """)
+            await self.db.execute(outbox_query, {
+                "aggregate_id": node_id,
+                "payload": json.dumps(event_payload)
+            })
+            
+            await self.db.commit()
+            
+            # D. Best-effort direct publish (Optional optimization to reduce latency)
+            # The Outbox worker is the source of truth, but this helps responsiveness
+            # event = NodeMasteryUpdatedEvent(...)
+            # event_bus.publish(event, 'galaxy.node.mastery_updated')
+            
+            return {"success": True, "old_mastery": old_mastery, "new_mastery": new_mastery}
+            
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Failed to update node mastery: {e}")
+            raise e
+
     # --- Async Background Processing ---
 
     async def _process_node_background(self, node_id: UUID, title: str, summary: str):
@@ -274,3 +346,4 @@ class GalaxyService:
                             
             except Exception as e:
                 logger.error(f"Background processing failed for node {node_id}: {e}")
+

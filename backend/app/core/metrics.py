@@ -61,6 +61,26 @@ ACTIVE_SESSIONS = get_or_create_metric(
     'Total number of active chat sessions'
 )
 
+KNOWLEDGE_NODE_UPDATES = get_or_create_metric(
+    Counter,
+    'sparkle_knowledge_node_updates_total',
+    'Total number of knowledge node updates',
+    ['user_id', 'reason']
+)
+
+RAG_RETRIEVAL_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_rag_retrieval_seconds',
+    'RAG retrieval latency',
+    buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+)
+
+ACTIVE_WEBSOCKET_CONNECTIONS = get_or_create_metric(
+    Gauge,
+    'sparkle_websocket_connections',
+    'Number of active WebSocket connections'
+)
+
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
     def decorator(func):
