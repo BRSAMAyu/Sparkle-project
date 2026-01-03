@@ -3,12 +3,18 @@ Cognitive Prism Models
 认知棱镜相关模型
 """
 import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float
+import enum
+from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float, Enum
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
 from app.models.base import BaseModel, GUID
 
+class AnalysisStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 class CognitiveFragment(BaseModel):
     """
@@ -20,6 +26,10 @@ class CognitiveFragment(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True) # 可选关联任务
     
+    # 状态追踪 (v2.3 Patch)
+    analysis_status = Column(Enum(AnalysisStatus), default=AnalysisStatus.PENDING, nullable=False)
+    error_message = Column(String(500), nullable=True)
+
     # 来源类型: capsule (闪念), interceptor (拦截器), behavior (隐式行为)
     source_type = Column(String(20), nullable=False) 
     

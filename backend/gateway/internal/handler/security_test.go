@@ -116,28 +116,28 @@ func TestSQLInjectionDetection(t *testing.T) {
 	checker := NewSecurityChecker()
 
 	tests := []struct {
-		name      string
-		input     string
+		name        string
+		input       string
 		isInjection bool
 	}{
 		{
-			name:      "SQL OR injection",
-			input:     "1' OR '1'='1",
+			name:        "SQL OR injection",
+			input:       "1' OR '1'='1",
 			isInjection: true,
 		},
 		{
-			name:      "DROP TABLE injection",
-			input:     "'; DROP TABLE users; --",
+			name:        "DROP TABLE injection",
+			input:       "'; DROP TABLE users; --",
 			isInjection: true,
 		},
 		{
-			name:      "Safe input",
-			input:     "user123",
+			name:        "Safe input",
+			input:       "user123",
 			isInjection: false,
 		},
 		{
-			name:      "Email input",
-			input:     "user@example.com",
+			name:        "Email input",
+			input:       "user@example.com",
 			isInjection: false,
 		},
 	}
@@ -154,9 +154,9 @@ func TestXSSDetection(t *testing.T) {
 	checker := NewSecurityChecker()
 
 	tests := []struct {
-		name    string
-		input   string
-		isXSS   bool
+		name  string
+		input string
+		isXSS bool
 	}{
 		{
 			name:  "Script tag XSS",
@@ -192,23 +192,23 @@ func TestCommandInjectionDetection(t *testing.T) {
 	checker := NewSecurityChecker()
 
 	tests := []struct {
-		name       string
-		input      string
+		name        string
+		input       string
 		isInjection bool
 	}{
 		{
-			name:       "Pipe command injection",
-			input:      "data | cat /etc/passwd",
+			name:        "Pipe command injection",
+			input:       "data | cat /etc/passwd",
 			isInjection: true,
 		},
 		{
-			name:       "Backtick command injection",
-			input:      "`whoami`",
+			name:        "Backtick command injection",
+			input:       "`whoami`",
 			isInjection: true,
 		},
 		{
-			name:       "Safe input",
-			input:      "test data",
+			name:        "Safe input",
+			input:       "test data",
 			isInjection: false,
 		},
 	}
@@ -367,24 +367,24 @@ func TestSensitiveDataDetection(t *testing.T) {
 	checker := NewSecurityChecker()
 
 	tests := []struct {
-		name           string
-		output         string
-		hasSensitive   bool
+		name         string
+		output       string
+		hasSensitive bool
 	}{
 		{
-			name:           "No sensitive data",
-			output:         `{"user": "john", "email": "john@example.com"}`,
-			hasSensitive:   false,
+			name:         "No sensitive data",
+			output:       `{"user": "john", "email": "john@example.com"}`,
+			hasSensitive: false,
 		},
 		{
-			name:           "Contains password",
-			output:         `{"user": "john", "password": "secret123"}`,
-			hasSensitive:   true,
+			name:         "Contains password",
+			output:       `{"user": "john", "password": "secret123"}`,
+			hasSensitive: true,
 		},
 		{
-			name:           "Contains API key",
-			output:         `{"api_key": "abc123def456"}`,
-			hasSensitive:   true,
+			name:         "Contains API key",
+			output:       `{"api_key": "abc123def456"}`,
+			hasSensitive: true,
 		},
 	}
 
@@ -400,41 +400,64 @@ func TestSensitiveDataDetection(t *testing.T) {
 // CSRF Protection Tests
 // ============================================================
 
-func TestCSRFTokenValidation(t *testing.T) {
-	sessionTokens := map[string]string{
-		"session-1": "csrf-token-abc",
-		"session-2": "csrf-token-def",
+func TestCSRFProtectionExpanded(t *testing.T) {
+	// 模拟 CSRF Token 验证逻辑
+	validateCSRF := func(sessionToken, requestToken string) bool {
+		return sessionToken == requestToken
 	}
 
-	t.Run("valid_csrf_token", func(t *testing.T) {
-		sessionID := "session-1"
-		providedToken := "csrf-token-abc"
-
-		storedToken := sessionTokens[sessionID]
-		isValid := providedToken == storedToken
-
-		assert.True(t, isValid)
+	t.Run("Valid Token", func(t *testing.T) {
+		assert.True(t, validateCSRF("abc", "abc"))
 	})
 
-	t.Run("invalid_csrf_token", func(t *testing.T) {
-		sessionID := "session-1"
-		providedToken := "wrong-token"
-
-		storedToken := sessionTokens[sessionID]
-		isValid := providedToken == storedToken
-
-		assert.False(t, isValid)
+	t.Run("Invalid Token", func(t *testing.T) {
+		assert.False(t, validateCSRF("abc", "def"))
 	})
 
-	t.Run("missing_csrf_token", func(t *testing.T) {
-		sessionID := "session-1"
-		providedToken := ""
-
-		storedToken := sessionTokens[sessionID]
-		isValid := providedToken == storedToken
-
-		assert.False(t, isValid)
+	t.Run("Missing Token", func(t *testing.T) {
+		assert.False(t, validateCSRF("abc", ""))
 	})
+
+	t.Run("Empty Session Token (Should Fail)", func(t *testing.T) {
+		// If session has no token, request should fail even if empty
+		assert.False(t, validateCSRF("", ""))
+		// Note: implementation specific, but generally empty tokens are unsafe
+	})
+}
+
+func TestSQLInjectionPatternsExpanded(t *testing.T) {
+	checker := NewSecurityChecker()
+
+	vectors := []string{
+		"' OR 1=1 --",
+		"admin' --",
+		"UNION SELECT * FROM users",
+		"WAITFOR DELAY '0:0:5'",
+		"1; DROP TABLE users",
+	}
+
+	for _, v := range vectors {
+		t.Run("Detect "+v, func(t *testing.T) {
+			assert.True(t, checker.IsSQLInjection(v))
+		})
+	}
+}
+
+func TestXSSPatternsExpanded(t *testing.T) {
+	checker := NewSecurityChecker()
+
+	vectors := []string{
+		"<script>alert(1)</script>",
+		"<img src=x onerror=alert(1)>",
+		"javascript:alert(1)",
+		"<body onload=alert(1)>",
+	}
+
+	for _, v := range vectors {
+		t.Run("Detect "+v, func(t *testing.T) {
+			assert.True(t, checker.IsXSSAttempt(v))
+		})
+	}
 }
 
 // ============================================================

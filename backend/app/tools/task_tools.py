@@ -34,7 +34,8 @@ class CreateTaskTool(BaseTool):
         self, 
         params: CreateTaskParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             # Convert string user_id to UUID
@@ -49,7 +50,8 @@ class CreateTaskTool(BaseTool):
                 guide_content=params.description,
                 priority=params.priority,
                 due_date=params.due_date.date() if params.due_date else None,
-                tags=[] # tags not provided in params, defaulting to empty
+                tags=[], # tags not provided in params, defaulting to empty
+                tool_result_id=tool_call_id
             )
             
             task = await TaskService.create(
@@ -99,7 +101,8 @@ class UpdateTaskStatusTool(BaseTool):
         self, 
         params: UpdateTaskStatusParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -159,7 +162,8 @@ class BatchCreateTasksTool(BaseTool):
         self, 
         params: BatchCreateTasksParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -174,7 +178,8 @@ class BatchCreateTasksTool(BaseTool):
                     guide_content=task_params.description,
                     priority=task_params.priority,
                     due_date=task_params.due_date.date() if task_params.due_date else None,
-                    tags=[]
+                    tags=[],
+                    tool_result_id=tool_call_id
                 )
                 
                 task = await TaskService.create(
@@ -222,7 +227,8 @@ class SuggestQuickTaskTool(BaseTool):
         self,
         params: SuggestQuickTaskParams,
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -307,7 +313,8 @@ class BreakdownTaskTool(BaseTool):
         self,
         params: BreakdownTaskParams,
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -336,7 +343,8 @@ class BreakdownTaskTool(BaseTool):
                     estimated_minutes=minutes,
                     guide_content=f"来自任务拆解：{params.title}",
                     priority=2,
-                    tags=[f"parent:{params.title}", "micro"]
+                    tags=[f"parent:{params.title}", "micro"],
+                    tool_result_id=tool_call_id
                 )
 
                 task = await TaskService.create(

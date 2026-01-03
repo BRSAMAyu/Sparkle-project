@@ -10,7 +10,8 @@ import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 ///
 /// Displays all behavior patterns with deep space theme
 class PatternListScreen extends ConsumerStatefulWidget {
-  const PatternListScreen({super.key});
+  const PatternListScreen({this.highlightId, super.key});
+  final String? highlightId;
 
   @override
   ConsumerState<PatternListScreen> createState() => _PatternListScreenState();
@@ -277,6 +278,28 @@ class _PatternCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                
+                const SizedBox(height: DS.md),
+                // Action Button (Phase 6.2)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      // Smart routing based on pattern type could be added here
+                      context.push('/focus'); 
+                    },
+                    icon: Icon(Icons.arrow_forward, size: 16, color: DS.brandPrimary),
+                    label: Text(
+                      '立即行动',
+                      style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: DS.brandPrimary.withOpacity(0.1),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
                   ),
                 ),
               ],

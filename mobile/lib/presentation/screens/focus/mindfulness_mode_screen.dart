@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/presentation/widgets/focus/exit_confirmation_dialog.dart';
 import 'package:sparkle/presentation/widgets/focus/flip_clock.dart';
+import 'package:sparkle/presentation/widgets/focus/reflection_dialog.dart';
 import 'package:sparkle/presentation/widgets/focus/star_background.dart';
 
 /// 正念模式屏幕
@@ -129,8 +131,20 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
     if (confirmed && mounted) {
       _isExiting = true;
-      ref.read(mindfulnessProvider.notifier).stop();
-      context.pop();
+      await ref.read(mindfulnessProvider.notifier).stop();
+      
+      if (mounted) {
+        // Show Reflection Dialog
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const ReflectionDialog(),
+        );
+        
+        if (mounted) {
+          context.pop();
+        }
+      }
     }
   }
 
@@ -158,8 +172,11 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         body: Stack(
           children: [
             // 1. 星空背景
-            const Positioned.fill(
-              child: AnimatedStarBackground(starCount: 120),
+            Positioned.fill(
+              child: AnimatedStarBackground(
+                starCount: PerformanceService.focusStarCount,
+                enableTwinkle: PerformanceService.enableFocusTwinkle,
+              ),
             ),
 
             // 2. 主内容

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// AI 分析结果卡片
 ///
@@ -8,10 +8,6 @@ import '../../data/models/error_record.dart';
 /// 2. 视觉层次：使用图标和颜色区分不同类型的信息
 /// 3. 可操作性：关联知识点可点击跳转
 class AnalysisCard extends StatelessWidget {
-  final ErrorAnalysis analysis;
-  final List<KnowledgeLink> knowledgeLinks;
-  final VoidCallback? onKnowledgeTap;
-  final VoidCallback? onReAnalyze;
 
   const AnalysisCard({
     super.key,
@@ -20,6 +16,10 @@ class AnalysisCard extends StatelessWidget {
     this.onKnowledgeTap,
     this.onReAnalyze,
   });
+  final ErrorAnalysis analysis;
+  final List<KnowledgeLink> knowledgeLinks;
+  final VoidCallback? onKnowledgeTap;
+  final VoidCallback? onReAnalyze;
 
   @override
   Widget build(BuildContext context) {
@@ -134,8 +134,7 @@ class AnalysisCard extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: knowledgeLinks.map((link) {
-                  return ActionChip(
+                children: knowledgeLinks.map((link) => ActionChip(
                     avatar: link.isPrimary
                         ? Icon(
                             Icons.star,
@@ -148,8 +147,7 @@ class AnalysisCard extends StatelessWidget {
                     backgroundColor: link.isPrimary
                         ? theme.colorScheme.primaryContainer
                         : theme.colorScheme.surfaceVariant,
-                  );
-                }).toList(),
+                  )).toList(),
               ),
             ],
           ],
@@ -243,8 +241,7 @@ class AnalysisCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: items.map((item) {
-              return Padding(
+            children: items.map((item) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,8 +263,7 @@ class AnalysisCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              );
-            }).toList(),
+              )).toList(),
           ),
         ),
       ],
@@ -277,13 +273,13 @@ class AnalysisCard extends StatelessWidget {
 
 /// 错因类型标签
 class _ErrorTypeChip extends StatelessWidget {
-  final String errorType;
-  final String label;
 
   const _ErrorTypeChip({
     required this.errorType,
     required this.label,
   });
+  final String errorType;
+  final String label;
 
   @override
   Widget build(BuildContext context) {

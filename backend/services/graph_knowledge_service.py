@@ -14,7 +14,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.age_client import get_age_client
-from app.models.knowledge import KnowledgeNode, NodeRelation
+from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.graph_models import KnowledgeVertex, RelationEdge
 from app.services.knowledge_service import KnowledgeService
 from app.core.cache import cache_service

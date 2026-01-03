@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/subject_chips.dart';
-import '../../data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 
 /// 添加错题页面
 ///
@@ -55,8 +55,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       if (mounted) {
         // 显示成功提示
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
+          const SnackBar(
+            content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
@@ -67,7 +67,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: 3),
           ),
         );
 
@@ -83,7 +83,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('添加失败: ${e.toString()}'),
+                  child: Text('添加失败: ${e}'),
                 ),
               ],
             ),
@@ -159,11 +159,11 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             // 章节（可选）
             TextFormField(
               controller: _chapterController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '章节（可选）',
                 hintText: '例如：第三章 牛顿运动定律',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.folder_outlined),
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.folder_outlined),
                 helperText: '填写后便于按章节筛选复习',
               ),
               textInputAction: TextInputAction.next,

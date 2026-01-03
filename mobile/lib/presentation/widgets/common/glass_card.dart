@@ -2,8 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
+@Deprecated('Use SparkleCard with glass effect parameters. Will be removed in v2.0')
 class GlassCard extends StatefulWidget {
 
   const GlassCard({
@@ -62,78 +65,63 @@ class _GlassCardState extends State<GlassCard> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Default glass color based on theme
-    final defaultColor = widget.color ?? (isDark 
-        ? DS.neutral900.withValues(alpha: widget.opacity)
-        : DS.brandPrimary.withValues(alpha: widget.opacity));
-
-    final borderColor = isDark
-        ? DS.brandPrimary.withValues(alpha: 0.1)
-        : DS.brandPrimary.withValues(alpha: 0.2);
-
-    // Default border radius
-    final defaultBorderRadius = widget.borderRadius ?? DS.borderRadius20;
-
-    // Default shadows - subtly customized for glass effect
-    final defaultShadows = widget.shadows ?? [
-      BoxShadow(
-        color: isDark ? DS.brandPrimary.withValues(alpha: 0.3) : DS.brandPrimary.withValues(alpha: 0.05),
-        blurRadius: 16,
-        offset: const Offset(0, 8),
-      ),
-    ];
-
-    final Widget content = Container(
-      width: widget.width,
-      height: widget.height,
+    // Create SparkleCard with glass effect
+    // Don't pass onTap to SparkleCard when enableTapEffect is true (handled by animation wrapper)
+    final sparkleCard = SparkleCard(
+      padding: widget.padding,
       margin: widget.margin,
-      decoration: BoxDecoration(
-        color: defaultColor,
-        borderRadius: defaultBorderRadius,
-        border: Border.all(color: borderColor),
-        boxShadow: defaultShadows,
-      ),
-      child: ClipRRect(
-        borderRadius: defaultBorderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-          child: Padding(
-            padding: widget.padding,
-            child: widget.child,
-          ),
-        ),
-      ),
+      backgroundColor: _getGlassColor(context),
+      borderColor: _getBorderColor(context),
+      borderRadius: widget.borderRadius,
+      onTap: widget.onTap != null && !widget.enableTapEffect ? () {
+        HapticFeedback.lightImpact();
+        widget.onTap!();
+      } : null,
+      child: widget.child,
     );
 
-    if (widget.onTap != null) {
-      if (widget.enableTapEffect) {
-        return GestureDetector(
-          onTapDown: (_) => _controller.forward(),
-          onTapUp: (_) => _controller.reverse(),
-          onTapCancel: () => _controller.reverse(),
-          onTap: () {
-            HapticFeedback.lightImpact();
-            widget.onTap!();
-          },
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: content,
-          ),
-        );
-      } else {
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            widget.onTap!();
-          },
-          child: content,
-        );
-      }
+    // Wrap with width/height constraints if specified
+    Widget content = sparkleCard;
+    if (widget.width != null || widget.height != null) {
+      content = SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: sparkleCard,
+      );
     }
 
-    return content;
+    // Apply glass blur effect
+    final glassContent = BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
+      child: content,
+    );
+
+    // Add tap animation if enabled
+    if (widget.onTap != null && widget.enableTapEffect) {
+      return _buildAnimatedGlassCard(glassContent);
+    }
+
+    return glassContent;
   }
+
+  Color _getGlassColor(BuildContext context) {
+    final baseColor = widget.color ?? SparkleContextExtension(context).colors.surfacePrimary;
+    return baseColor.withValues(alpha: widget.opacity);
+  }
+
+  Color _getBorderColor(BuildContext context) => SparkleContextExtension(context).colors.neutral200.withValues(alpha: 0.2);
+
+  Widget _buildAnimatedGlassCard(Widget glassContent) => GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap!();
+      },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: glassContent,
+      ),
+    );
 }

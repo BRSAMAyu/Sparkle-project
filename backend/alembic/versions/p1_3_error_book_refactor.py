@@ -57,24 +57,73 @@ def upgrade():
 def downgrade():
     # Reverse of upgrade
     
-    # Drop new indexes
+    # 1. Drop new indexes
     op.drop_index('idx_errors_subject_code', table_name='error_records')
     op.drop_index('idx_errors_user_review', table_name='error_records')
     
-    # Remove new columns
+    # 2. Remove new columns
     op.drop_column('error_records', 'suggested_concepts')
     op.drop_column('error_records', 'linked_knowledge_node_ids')
     op.drop_column('error_records', 'latest_analysis')
     op.drop_column('error_records', 'interval_days')
     op.drop_column('error_records', 'easiness_factor')
     
-    # Revert column changes
+    # 3. Revert column changes
+    # Rename subject_code -> subject
+    op.alter_column('error_records', 'subject_code', new_column_name='subject')
+
+    # Revert nullability
+    # Note: We execute raw SQL to handle potential NULLs before setting NOT NULL
+    op.execute("UPDATE error_records SET correct_answer = '' WHERE correct_answer IS NULL")
     op.alter_column('error_records', 'correct_answer', nullable=False)
+    
+    op.execute("UPDATE error_records SET user_answer = '' WHERE user_answer IS NULL")
     op.alter_column('error_records', 'user_answer', nullable=False)
+    
+    op.execute("UPDATE error_records SET question_text = '' WHERE question_text IS NULL")
     op.alter_column('error_records', 'question_text', nullable=False)
     
-    op.alter_column('error_records', 'subject_code', new_column_name='subject')
+    # 4. Recreate old tables
     
-    # Recreate old tables (simplified for downgrade, assuming no data recovery needed for this dev phase)
-    # ... (Skipping full recreation details for brevity, but strictly should be here)
-    # Ideally, we would recreate the tables as they were in p1_2.
+    # error_analyses
+    op.create_table(
+        'error_analyses',
+        sa.Column('id', UUID(as_uuid=True), primary_key=True),
+        sa.Column('error_id', UUID(as_uuid=True), sa.ForeignKey('error_records.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('analysis_result', JSONB, nullable=False, comment='AI分析结果JSON'),
+        sa.Column('model_used', sa.String(50), comment='使用的LLM模型'),
+        sa.Column('confidence', sa.Float, comment='AI置信度0-1'),
+        sa.Column('processing_time_ms', sa.Integer, comment='处理耗时毫秒'),
+        sa.Column('user_rating', sa.Integer, nullable=True, comment='用户评分1-5'),
+        sa.Column('user_feedback', sa.Text, nullable=True, comment='用户反馈文本'),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+    )
+    op.create_index('idx_analyses_error', 'error_analyses', ['error_id'])
+
+    # error_reviews
+    op.create_table(
+        'error_reviews',
+        sa.Column('id', UUID(as_uuid=True), primary_key=True),
+        sa.Column('error_id', UUID(as_uuid=True), sa.ForeignKey('error_records.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('performance', sa.String(20), nullable=False, comment='复习表现'),
+        sa.Column('time_spent_seconds', sa.Integer, nullable=True, comment='花费时间秒'),
+        sa.Column('review_type', sa.String(20), default='active', comment='active/passive'),
+        sa.Column('reviewed_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+    )
+    op.create_index('idx_reviews_error', 'error_reviews', ['error_id'])
+    op.create_index('idx_reviews_user_time', 'error_reviews', ['user_id', 'reviewed_at'])
+
+    # error_knowledge_links
+    op.create_table(
+        'error_knowledge_links',
+        sa.Column('id', UUID(as_uuid=True), primary_key=True),
+        sa.Column('error_id', UUID(as_uuid=True), sa.ForeignKey('error_records.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('knowledge_node_id', UUID(as_uuid=True), sa.ForeignKey('knowledge_nodes.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('relevance', sa.Float, default=1.0, comment='关联强度0-1'),
+        sa.Column('is_primary', sa.Boolean, default=False, comment='是否为主要关联知识点'),
+        sa.Column('linked_by', sa.String(20), default='ai', comment='关联方式：ai/manual'),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+    )
+    op.create_unique_constraint('uq_error_knowledge', 'error_knowledge_links', ['error_id', 'knowledge_node_id'])
+    op.create_index('idx_ekl_knowledge', 'error_knowledge_links', ['knowledge_node_id'])

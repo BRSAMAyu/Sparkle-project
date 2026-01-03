@@ -2,42 +2,45 @@
 Cognitive Prism Schemas
 认知棱镜相关 Schema
 """
-from typing import List, Optional, Any
-from datetime import datetime
+from typing import List, Optional, Dict
 from uuid import UUID
 from pydantic import BaseModel, Field
+from datetime import datetime
 
-# ==========================================
-# Cognitive Fragment Schemas
-# ==========================================
+from app.models.cognitive import AnalysisStatus
+
+# ========== Request Schemas ========== 
 
 class CognitiveFragmentCreate(BaseModel):
-    """创建碎片请求"""
-    content: str = Field(..., description="内容", min_length=1)
-    source_type: str = Field(..., description="来源类型: capsule, interceptor, behavior")
-    resource_type: str = Field("text", description="资源类型: text, audio, image")
-    resource_url: Optional[str] = Field(None, description="资源URL")
-    task_id: Optional[UUID] = Field(None, description="关联任务ID")
-    context_tags: Optional[dict] = Field(None, description="情境标签")
-    error_tags: Optional[List[str]] = Field(None, description="错误标签")
-    severity: int = Field(1, ge=1, le=5, description="严重程度")
+    id: Optional[UUID] = None # Front-end can provide UUID to avoid duplicates
+    content: str = Field(..., min_length=1)
+    source_type: str = Field(..., description="capsule, interceptor, behavior")
+    
+    # Optional metadata
+    resource_type: str = "text"
+    resource_url: Optional[str] = None
+    context_tags: Optional[Dict] = None
+    error_tags: Optional[List[str]] = None
+    severity: int = Field(1, ge=1, le=5)
+    task_id: Optional[UUID] = None
+
+# ========== Response Schemas ========== 
 
 class CognitiveFragmentResponse(BaseModel):
-    """碎片响应"""
     id: UUID
     user_id: UUID
-    task_id: Optional[UUID]
+    content: str
     source_type: str
     resource_type: str
     resource_url: Optional[str]
-    content: str
-    sentiment: Optional[str]
-    tags: Optional[List[str]]
+    context_tags: Optional[Dict]
     error_tags: Optional[List[str]]
-    context_tags: Optional[dict]
     severity: int
+    sentiment: Optional[str]
+    analysis_status: AnalysisStatus
+    error_message: Optional[str]
+    task_id: Optional[UUID]
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

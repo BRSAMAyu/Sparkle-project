@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -35,6 +36,8 @@ class ChatState { // Timestamp for duration calculation
     this.reasoningSteps = const [],
     this.isReasoningActive = false,
     this.reasoningStartTime,
+    this.lastActionStatus,
+    this.lastActionMessage,
   });
   final bool isLoading;
   final bool isSending;
@@ -55,6 +58,10 @@ class ChatState { // Timestamp for duration calculation
   final List<ReasoningStep> reasoningSteps; // Real-time reasoning steps
   final bool isReasoningActive; // Currently showing reasoning
   final int? reasoningStartTime;
+
+  // New: Action status feedback for UI
+  final String? lastActionStatus;
+  final String? lastActionMessage;
 
   ChatState copyWith({
     bool? isLoading,
@@ -79,6 +86,9 @@ class ChatState { // Timestamp for duration calculation
     bool? isReasoningActive,
     int? reasoningStartTime,
     bool clearReasoning = false,
+    String? lastActionStatus,
+    String? lastActionMessage,
+    bool clearActionFeedback = false,
   }) => ChatState(
       isLoading: isLoading ?? this.isLoading,
       isSending: isSending ?? this.isSending,
@@ -97,6 +107,8 @@ class ChatState { // Timestamp for duration calculation
       reasoningSteps: clearReasoning ? [] : reasoningSteps ?? this.reasoningSteps,
       isReasoningActive: clearReasoning ? false : isReasoningActive ?? this.isReasoningActive,
       reasoningStartTime: clearReasoning ? null : reasoningStartTime ?? this.reasoningStartTime,
+      lastActionStatus: clearActionFeedback ? null : lastActionStatus ?? this.lastActionStatus,
+      lastActionMessage: clearActionFeedback ? null : lastActionMessage ?? this.lastActionMessage,
     );
 }
 
@@ -379,6 +391,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
           pendingReasoningActive = true;
           pendingReasoningStartTime = reasoningStartTime;
           flushPending();
+        } else if (event is ActionStatusEvent) {
+          // ActionCard 状态更新事件
+          _handleActionStatus(event);
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -447,8 +463,97 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void startNewSession() {
     state = state.copyWith(clearConversation: true, messages: []);
     if (DemoDataService.isDemoMode) {
-      // Keep demo history? Or clear? 
+      // Keep demo history? Or clear?
       // Usually "Start New Session" means clear.
+    }
+  }
+
+  /// 确认 ActionCard
+  void confirmAction(WidgetPayload action) {
+    // 从 WidgetPayload 中提取 tool_result_id
+    final toolResultId = action.data['id']?.toString() ?? action.data['tool_result_id']?.toString() ?? '';
+
+    if (toolResultId.isEmpty) {
+      debugPrint('⚠️ Warning: Cannot confirm action - missing tool_result_id');
+      return;
+    }
+
+    // 发送确认反馈到后端
+    _chatRepository.sendActionFeedback(
+      action: 'confirm',
+      toolResultId: toolResultId,
+      widgetType: action.type,
+    );
+
+    debugPrint('✅ Action confirmed: ${action.type} (tool_result_id: $toolResultId)');
+
+    // TODO: 可以添加乐观更新 - 立即在 UI 中标记为已确认
+    // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: true));
+  }
+
+  /// 忽略 ActionCard
+  void dismissAction(WidgetPayload action) {
+    final toolResultId = action.data['id']?.toString() ?? action.data['tool_result_id']?.toString() ?? '';
+
+    if (toolResultId.isEmpty) {
+      debugPrint('⚠️ Warning: Cannot dismiss action - missing tool_result_id');
+      return;
+    }
+
+    // 发送忽略反馈到后端
+    _chatRepository.sendActionFeedback(
+      action: 'dismiss',
+      toolResultId: toolResultId,
+      widgetType: action.type,
+    );
+
+    debugPrint('❌ Action dismissed: ${action.type} (tool_result_id: $toolResultId)');
+
+    // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
+    // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
+  }
+
+  /// 处理 ActionCard 状态更新
+  void _handleActionStatus(ActionStatusEvent event) {
+    debugPrint('📥 Action status received: ${event.status} for ${event.actionId}');
+
+    // 显示用户友好的提示消息
+    final message = event.message ?? _getDefaultStatusMessage(event.status);
+
+    // 更新状态以触发 UI 反馈
+    state = state.copyWith(
+      lastActionStatus: event.status,
+      lastActionMessage: message,
+    );
+
+    // 延迟清除反馈状态
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    debugPrint('💬 Status message: $message');
+
+    // TODO: 更新 UI 中对应 ActionCard 的状态
+    // 例如：标记为已确认、已忽略，或者从列表中移除
+    // state = state.copyWith(messages: _updateMessageActionStatus(event.actionId, event.status));
+  }
+
+  String _getDefaultStatusMessage(String status) {
+    switch (status) {
+      case 'confirmed':
+        return '✅ 已确认';
+      case 'dismissed':
+        return '❌ 已忽略';
+      case 'processing':
+        return '⏳ 处理中...';
+      case 'completed':
+        return '✅ 已完成';
+      case 'failed':
+        return '❌ 操作失败';
+      default:
+        return '📝 状态更新: $status';
     }
   }
 }

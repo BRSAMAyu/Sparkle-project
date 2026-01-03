@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/error_card.dart';
-import '../widgets/subject_chips.dart';
-import '../widgets/analysis_card.dart';
-import '../widgets/review_performance_buttons.dart';
-import '../../data/providers/error_book_provider.dart';
-import '../../data/models/error_record.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// 复习模式枚举
 enum ReviewMode {
@@ -29,14 +29,14 @@ enum ReviewMode {
 /// 3. 进度可见：顶部进度条，底部统计
 /// 4. 智能提示：显示 AI 分析，帮助理解
 class ReviewScreen extends ConsumerStatefulWidget {
-  final ReviewMode mode;
-  final String? subjectCode;
 
   const ReviewScreen({
     super.key,
     this.mode = ReviewMode.today,
     this.subjectCode,
   });
+  final ReviewMode mode;
+  final String? subjectCode;
 
   @override
   ConsumerState<ReviewScreen> createState() => _ReviewScreenState();
@@ -141,7 +141,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '进度: ${current}/${total}',
+                '进度: $current/$total',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -161,7 +161,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: theme.colorScheme.surfaceVariant,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
                 theme.colorScheme.primary,
               ),
@@ -200,7 +200,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: theme.colorScheme.outline.withOpacity(0.2),
@@ -340,8 +340,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
   }
 
-  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) {
-    return Column(
+  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -368,10 +367,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         AnalysisCard(analysis: error.latestAnalysis!),
       ],
     );
-  }
 
-  Widget _buildRevealButton(BuildContext context) {
-    return SafeArea(
+  Widget _buildRevealButton(BuildContext context) => SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -415,7 +412,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ),
       ),
     );
-  }
 
   Widget _buildActionBar(
     BuildContext context,
@@ -497,7 +493,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('提交失败: ${e.toString()}'),
+            content: Text('提交失败: ${e}'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -506,8 +502,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     }
   }
 
-  Widget _buildEmptyState(BuildContext context, {String? customMessage}) {
-    return Center(
+  Widget _buildEmptyState(BuildContext context, {String? customMessage}) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -542,7 +537,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildCompletionState(BuildContext context, List<ErrorRecord> errors) {
     final theme = Theme.of(context);
@@ -592,7 +586,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -733,8 +727,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     }
   }
 
-  Widget _buildErrorState(BuildContext context, String error) {
-    return Center(
+  Widget _buildErrorState(BuildContext context, String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -771,7 +764,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ],
       ),
     );
-  }
 
   Future<void> _confirmExit(BuildContext context) async {
     if (_reviewResults.isEmpty) {
@@ -797,7 +789,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       Navigator.of(context).pop();
     }
   }

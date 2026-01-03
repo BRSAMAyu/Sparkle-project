@@ -28,6 +28,7 @@ type CreateTaskRequest struct {
 	Priority         int32
 	DueDate          *time.Time
 	KnowledgeNodeID  *uuid.UUID
+	ToolResultID     string
 }
 
 // UpdateTaskRequest contains data for updating a task.
@@ -101,9 +102,10 @@ func (s *TaskCommandService) CreateTask(ctx context.Context, req CreateTaskReque
 				estimated_minutes, difficulty, energy_cost,
 				guide_content, status, priority, due_date,
 				knowledge_node_id, auto_expand_enabled,
+				tool_result_id,
 				created_at, updated_at
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, true, NOW(), NOW())
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, true, $13, NOW(), NOW())
 			RETURNING id, user_id, plan_id, title, type, tags,
 			          estimated_minutes, difficulty, energy_cost,
 			          guide_content, status, started_at, completed_at,
@@ -123,6 +125,7 @@ func (s *TaskCommandService) CreateTask(ctx context.Context, req CreateTaskReque
 			req.Priority,
 			dueDate,
 			knowledgeNodeID,
+			pgtype.Text{String: req.ToolResultID, Valid: req.ToolResultID != ""},
 		)
 
 		err := row.Scan(
@@ -425,6 +428,52 @@ func (s *TaskCommandService) UpdateTask(ctx context.Context, req UpdateTaskReque
 			},
 			event.EventMetadata{
 				UserID: req.UserID,
+				Source: "task_command_service",
+			},
+		)
+
+		if err := txCtx.SaveEventToOutbox(ctx, &domainEvent); err != nil {
+			return fmt.Errorf("failed to save event to outbox: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// ConfirmGeneratedTasks confirms a batch of generated tasks.
+func (s *TaskCommandService) ConfirmGeneratedTasks(ctx context.Context, userID uuid.UUID, toolResultID string) error {
+	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		result, err := txCtx.Tx().Exec(ctx, `
+			UPDATE tasks
+			SET status = 'in_progress', confirmed_at = NOW(), updated_at = NOW()
+			WHERE user_id = $1 AND tool_result_id = $2 AND status = 'pending' AND deleted_at IS NULL
+		`,
+			pgtype.UUID{Bytes: userID, Valid: true},
+			pgtype.Text{String: toolResultID, Valid: true},
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to confirm tasks: %w", err)
+		}
+
+		rowsAffected := result.RowsAffected()
+		if rowsAffected == 0 {
+			// Not necessarily an error, might have been confirmed already or no tasks found
+			return nil
+		}
+
+		// Publish event
+		domainEvent := event.NewDomainEvent(
+			"task.confirmed_batch", // Custom event type
+			event.AggregateTask,
+			userID, // Use userID as aggregate ID for batch ops? Or just a random one
+			map[string]interface{}{
+				"user_id":        userID.String(),
+				"tool_result_id": toolResultID,
+				"count":          rowsAffected,
+			},
+			event.EventMetadata{
+				UserID: userID,
 				Source: "task_command_service",
 			},
 		)

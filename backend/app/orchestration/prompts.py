@@ -180,4 +180,13 @@ def format_user_context(context: dict) -> str:
         for plan in context["active_plans"][:3]:
             lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
 
+    # 考试紧迫度
+    if isinstance(context.get("exam_urgency"), dict):
+        urgency = context["exam_urgency"]
+        days_left = urgency.get("days_left")
+        if days_left is not None:
+            lines.append("-" * 20)
+            urgency_label = "紧急" if urgency.get("urgent") else "一般"
+            lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
+
     return "\n".join(lines) if lines else "暂无上下文信息"

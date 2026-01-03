@@ -1040,6 +1040,8 @@ CREATE TABLE public.tasks (
     due_date date,
     knowledge_node_id uuid,
     auto_expand_enabled boolean,
+    tool_result_id character varying(50),
+    confirmed_at timestamp without time zone,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,

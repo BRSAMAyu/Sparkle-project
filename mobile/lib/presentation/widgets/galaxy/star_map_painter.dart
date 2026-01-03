@@ -399,6 +399,17 @@ class StarMapPainter extends CustomPainter {
 
   /// Draw a single edge with relationship-aware styling
   void _drawEdge(Canvas canvas, ProcessedEdge edge) {
+    // [Phase 3.1] Viewport Culling for Edges
+    // Skip if both start and end points are outside the viewport (with margin)
+    if (viewport != null) {
+      final cullingRect = viewport!.inflate(50);
+      final logicalStart = edge.start - center;
+      final logicalEnd = edge.end - center;
+      if (!cullingRect.contains(logicalStart) && !cullingRect.contains(logicalEnd)) {
+        return;
+      }
+    }
+
     final style = _RelationStyle.forType(edge.edge.relationType);
 
     if (style.isDashed) {
@@ -727,6 +738,17 @@ class StarMapPainter extends CustomPainter {
       final pos = processedNode.position;
       final color = processedNode.color;
       final radius = processedNode.radius;
+
+      // [Phase 3.1] Viewport Culling: Skip rendering if node is outside the visible area
+      // We add a small margin (radius * 3) to prevent pop-in on edges
+      if (viewport != null) {
+        final cullingRect = viewport!.inflate(radius * 3);
+        // Correct for the canvas center offset used in positions
+        final logicalPos = pos - center;
+        if (!cullingRect.contains(logicalPos)) {
+          continue;
+        }
+      }
 
       // Get animation progress (0.0 to 1.0)
       final animationProgress = nodeAnimationProgress[node.id] ?? 1.0;

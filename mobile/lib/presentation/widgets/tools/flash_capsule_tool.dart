@@ -54,9 +54,11 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
   }
 
   Future<void> _loadSubjects() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final subjects = await ref.read(errorRepositoryProvider).getSubjects();
+      if (!mounted) return;
       setState(() {
         _subjects = subjects;
         if (subjects.isNotEmpty) {
@@ -66,22 +68,22 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
               (s) => s['name'] == widget.initialSubject,
               orElse: () => subjects.first,
             );
-            _selectedSubjectId = match['id'];
+            _selectedSubjectId = match['id'] as int?;
           } else {
-            _selectedSubjectId = subjects.first['id'];
+            _selectedSubjectId = subjects.first['id'] as int?;
           }
         }
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _submit() async {
     if (_selectedSubjectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('请选择科目'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请选择科目'), backgroundColor: SparkleContextExtension(context).colors.semanticWarning),
       );
       return;
     }
@@ -89,7 +91,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('请输入知识点'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请输入知识点'), backgroundColor: SparkleContextExtension(context).colors.semanticWarning),
       );
       return;
     }
@@ -97,12 +99,12 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('请输入错误描述'), backgroundColor: DS.warning),
+        SnackBar(content: const Text('请输入错误描述'), backgroundColor: SparkleContextExtension(context).colors.semanticWarning),
       );
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    if (mounted) setState(() => _isSubmitting = true);
 
     try {
       await ref.read(errorRepositoryProvider).createError(
@@ -119,18 +121,18 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('已记录错题'),
-            backgroundColor: DS.success,
+            backgroundColor: SparkleContextExtension(context).colors.semanticSuccess,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('记录失败: $e'),
-            backgroundColor: DS.error,
+            backgroundColor: SparkleContextExtension(context).colors.semanticError,
           ),
         );
       }
@@ -226,8 +228,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                               isExpanded: true,
                               hint: const Text('选择科目'),
                               items: _subjects.map((subject) => DropdownMenuItem<int>(
-                                  value: subject['id'],
-                                  child: Text(subject['name'] ?? ''),
+                                  value: subject['id'] as int,
+                                  child: Text(subject['name'] as String? ?? ''),
                                 ),).toList(),
                               onChanged: (value) {
                                 setState(() => _selectedSubjectId = value);

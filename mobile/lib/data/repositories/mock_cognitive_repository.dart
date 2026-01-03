@@ -1,8 +1,8 @@
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/data/models/cognitive_fragment_model.dart';
-import 'package:sparkle/data/repositories/cognitive_repository.dart';
+import 'package:sparkle/data/repositories/i_cognitive_repository.dart';
 
-class MockCognitiveRepository implements CognitiveRepository {
+class MockCognitiveRepository implements ICognitiveRepository {
   @override
   Future<CognitiveFragmentModel> createFragment(CognitiveFragmentCreate data) async {
     await Future.delayed(const Duration(milliseconds: 500));
@@ -96,3 +96,4 @@ class MockCognitiveRepository implements CognitiveRepository {
     ];
   }
 }
+

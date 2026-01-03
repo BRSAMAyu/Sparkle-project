@@ -5,6 +5,7 @@ Knowledge Galaxy Models
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
@@ -32,8 +33,8 @@ class KnowledgeNode(BaseModel):
     # 描述
     description = Column(Text, nullable=True)
     
-    # 关键词 (使用 JSON 存储数组以兼容 SQLite/PG)
-    keywords = Column(JSON, default=list, nullable=True)
+    # 关键词 (使用 JSONB 优化搜索)
+    keywords = Column(JSONB, default=list, nullable=True)
     
     # 重要性等级 (1-5), 决定星星大小
     importance_level = Column(Integer, default=1, nullable=False)
@@ -46,6 +47,10 @@ class KnowledgeNode(BaseModel):
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
     embedding = Column(Vector(1536), nullable=True)
+    
+    # Layout Coordinates (for Viewport Query)
+    position_x = Column(Float, nullable=True, index=True)
+    position_y = Column(Float, nullable=True, index=True)
 
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")

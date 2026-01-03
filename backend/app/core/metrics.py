@@ -1,49 +1,62 @@
-from prometheus_client import Counter, Histogram, Gauge, Summary
+from prometheus_client import Counter, Histogram, Gauge, Summary, REGISTRY
 from functools import wraps
 import time
 
+def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwargs):
+    """Safely get or create a prometheus metric."""
+    if name in REGISTRY._names_to_collectors:
+        return REGISTRY._names_to_collectors[name]
+    return metric_type(name, documentation, labelnames, **kwargs)
+
 # 1. 基础请求指标
-REQUEST_COUNT = Counter(
+REQUEST_COUNT = get_or_create_metric(
+    Counter,
     'sparkle_requests_total',
     'Total number of requests',
     ['module', 'method', 'status']
 )
 
-REQUEST_LATENCY = Histogram(
+REQUEST_LATENCY = get_or_create_metric(
+    Histogram,
     'sparkle_request_latency_seconds',
     'Request latency in seconds',
     ['module', 'method']
 )
 
 # 2. LLM 与 Token 指标
-TOKEN_USAGE = Counter(
+TOKEN_USAGE = get_or_create_metric(
+    Counter,
     'sparkle_tokens_total',
     'Total number of tokens used',
     ['model', 'type']  # type: prompt, completion
 )
 
-LLM_CALL_DURATION = Histogram(
+LLM_CALL_DURATION = get_or_create_metric(
+    Histogram,
     'sparkle_llm_call_duration_seconds',
     'LLM call duration in seconds',
     ['model', 'provider']
 )
 
 # 3. 缓存指标
-CACHE_HIT_COUNT = Counter(
+CACHE_HIT_COUNT = get_or_create_metric(
+    Counter,
     'sparkle_cache_hits_total',
     'Total number of cache hits/misses',
     ['cache_name', 'result']  # result: hit, miss
 )
 
 # 4. 工具执行指标
-TOOL_EXECUTION_COUNT = Counter(
+TOOL_EXECUTION_COUNT = get_or_create_metric(
+    Counter,
     'sparkle_tool_executions_total',
     'Total number of tool executions',
     ['tool_name', 'status']
 )
 
 # 5. 系统指标
-ACTIVE_SESSIONS = Gauge(
+ACTIVE_SESSIONS = get_or_create_metric(
+    Gauge,
     'sparkle_active_sessions_total',
     'Total number of active chat sessions'
 )

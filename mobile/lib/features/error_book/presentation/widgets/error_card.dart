@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/error_record.dart';
-import 'subject_chips.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 错题卡片组件
 ///
@@ -10,10 +10,6 @@ import 'subject_chips.dart';
 /// 2. 交互明确：整卡可点击查看详情，左滑删除
 /// 3. 视觉反馈：掌握度用进度条和颜色体现
 class ErrorCard extends StatelessWidget {
-  final ErrorRecord error;
-  final VoidCallback? onTap;
-  final VoidCallback? onDelete;
-  final bool showReviewStatus;
 
   const ErrorCard({
     super.key,
@@ -22,6 +18,10 @@ class ErrorCard extends StatelessWidget {
     this.onDelete,
     this.showReviewStatus = true,
   });
+  final ErrorRecord error;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
+  final bool showReviewStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +35,7 @@ class ErrorCard extends StatelessWidget {
       direction: onDelete != null
           ? DismissDirection.endToStart
           : DismissDirection.none,
-      confirmDismiss: onDelete != null ? (_) async {
-        return await showDialog<bool>(
+      confirmDismiss: onDelete != null ? (_) async => await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('确认删除'),
@@ -52,8 +51,7 @@ class ErrorCard extends StatelessWidget {
               ),
             ],
           ),
-        );
-      } : null,
+        ) : null,
       onDismissed: (_) => onDelete?.call(),
       background: Container(
         alignment: Alignment.centerRight,
@@ -151,7 +149,7 @@ class ErrorCard extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: error.masteryLevel,
                             minHeight: 6,
-                            backgroundColor: theme.colorScheme.surfaceVariant,
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               _getMasteryColor(error.masteryLevel),
                             ),
@@ -250,14 +248,14 @@ class ErrorCard extends StatelessWidget {
 
 /// 错题简化卡片（用于复习页面）
 class ErrorCardCompact extends StatelessWidget {
-  final ErrorRecord error;
-  final VoidCallback? onTap;
 
   const ErrorCardCompact({
     super.key,
     required this.error,
     this.onTap,
   });
+  final ErrorRecord error;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

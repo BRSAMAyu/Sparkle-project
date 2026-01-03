@@ -239,7 +239,7 @@ class _AnimatedSlideState extends ImplicitlyAnimatedWidgetState<AnimatedSlide> {
     _offsetTween = visitor(
       _offsetTween,
       widget.offset,
-      (dynamic value) => Tween<Offset>(begin: value),
+      (dynamic value) => Tween<Offset>(begin: value as Offset),
     ) as Tween<Offset>?;
   }
 
@@ -281,7 +281,7 @@ class _SparkleAnimatedScaleState extends ImplicitlyAnimatedWidgetState<SparkleAn
     _scaleTween = visitor(
       _scaleTween,
       widget.scale,
-      (dynamic value) => Tween<double>(begin: value),
+      (dynamic value) => Tween<double>(begin: value as double),
     ) as Tween<double>?;
   }
 

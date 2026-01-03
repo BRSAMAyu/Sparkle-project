@@ -32,12 +32,12 @@ class ApiConstants {
 
   // WebSocket URL (Go Gateway)
   static String get wsBaseUrl {
-    final String rawBaseUrl = _wsBaseUrlOverride.isNotEmpty
+    final rawBaseUrl = _wsBaseUrlOverride.isNotEmpty
         ? _wsBaseUrlOverride
         : _baseUrlOverride.isNotEmpty
             ? _toWsUrl(_baseUrlOverride)
             : _defaultWsBaseUrl();
-    final bool isProduction = kReleaseMode;
+    const isProduction = kReleaseMode;
     return _applyWsSchemeForEnvironment(rawBaseUrl, isProduction: isProduction);
   }
   static const String wsChat = '/ws/chat';

@@ -323,7 +323,7 @@ void main() {
             userFlameIntensity: 0.5,
           ),
         );
-        when(mockRepository.sparkNode(any)).thenAnswer((_) async => null);
+        when(mockRepository.sparkNode(any)).thenAnswer((_) async {});
 
         final notifier = container.read(galaxyProvider.notifier);
         await notifier.loadGalaxy();

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/data/repositories/focus_repository.dart';
 
 /// 分心事件类型
 enum InterruptionType {
@@ -75,7 +77,9 @@ class MindfulnessState {
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
-  MindfulnessNotifier() : super(const MindfulnessState());
+  MindfulnessNotifier(this._focusRepository) : super(const MindfulnessState());
+
+  final FocusRepository _focusRepository;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -152,10 +156,36 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   }
 
   /// 停止正念模式
-  void stop() {
+  Future<void> stop() async {
+    // P0.3: Log focus session to backend before stopping
+    if (state.startTime != null && state.isActive) {
+      try {
+        final endTime = DateTime.now();
+        final durationMinutes = (state.elapsedSeconds / 60).floor();
+        final status = state.interruptionCount > 3 ? 'interrupted' : 'completed';
+
+        debugPrint('📤 Logging focus session: ${durationMinutes}min, status=$status');
+
+        final response = await _focusRepository.logFocusSession(
+          startTime: state.startTime!,
+          endTime: endTime,
+          durationMinutes: durationMinutes,
+          taskId: state.currentTask?.id,
+          status: status,
+        );
+
+        debugPrint('✅ Focus session logged: ${response.rewards.flameEarned} flames earned');
+
+        // TODO: Show reward feedback to user
+        // Can emit an event or update state to trigger UI update
+      } catch (e) {
+        // Log error but don't block exit
+        debugPrint('❌ Failed to log focus session: $e');
+      }
+    }
+
     _timer?.cancel();
     _timer = null;
-
     state = const MindfulnessState();
   }
 
@@ -188,4 +218,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 }
 
 /// 正念模式 Provider
-final mindfulnessProvider = StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) => MindfulnessNotifier());
+final mindfulnessProvider = StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
+  final focusRepository = ref.watch(focusRepositoryProvider);
+  return MindfulnessNotifier(focusRepository);
+});

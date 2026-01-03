@@ -136,4 +136,10 @@ class ApiEndpoints {
 
   // Dashboard
   static const String dashboardStatus = '/dashboard/status';
+
+  // Focus Sessions (P0.3)
+  static const String focusSessions = '/focus/sessions';
+  static const String focusStats = '/focus/stats';
+  static const String focusLlmGuide = '/focus/llm/guide';
+  static const String focusLlmBreakdown = '/focus/llm/breakdown';
 }

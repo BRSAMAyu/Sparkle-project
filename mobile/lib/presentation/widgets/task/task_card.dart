@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/task_provider.dart';
 
@@ -37,7 +39,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: DS.durationFast,
+      duration: const Duration(milliseconds: 150),
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -50,14 +52,14 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
     super.dispose();
   }
 
-  LinearGradient _getTypeGradient(BuildContext context, TaskType type) => context.colors.getTaskGradient(type.name);
+  LinearGradient _getTypeGradient(BuildContext context, TaskType type) => context.sparkleColors.getTaskGradient(type.name);
 
   LinearGradient _getBackgroundGradient(BuildContext context, TaskType type) {
-    final taskColor = context.colors.getTaskColor(type.name);
+    final taskColor = context.sparkleColors.getTaskColor(type.name);
     return LinearGradient(
       colors: [
         taskColor.withValues(alpha: 0.05),
-        context.colors.surfaceCard,
+        context.sparkleColors.surfaceSecondary,
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -77,10 +79,14 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
           child: GestureDetector(
             onTapDown: (_) {
               HapticFeedback.lightImpact();
-              _controller.forward();
+              if (mounted) _controller.forward();
             },
-            onTapUp: (_) => _controller.reverse(),
-            onTapCancel: () => _controller.reverse(),
+            onTapUp: (_) {
+              if (mounted) _controller.reverse();
+            },
+            onTapCancel: () {
+              if (mounted) _controller.reverse();
+            },
             onTap: widget.onTap,
             child: RepaintBoundary(
               child: AnimatedBuilder(
@@ -93,24 +99,24 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                   margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: _getBackgroundGradient(context, widget.task.type),
-                    borderRadius: DS.borderRadius12,
-                    boxShadow: DS.shadowSm,
+                    borderRadius: context.radius.mdRadius,
+                    boxShadow: context.sparkleShadows.medium,
                   ),
                   foregroundDecoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        DS.brandPrimary.withValues(alpha: 0),
-                        DS.brandPrimary.withValues(alpha: 0.1), // Subtle shimmer/highlight
-                        DS.brandPrimary.withValues(alpha: 0),
+                        context.sparkleColors.brandPrimary.withValues(alpha: 0),
+                        context.sparkleColors.brandPrimary.withValues(alpha: 0.1),
+                        context.sparkleColors.brandPrimary.withValues(alpha: 0),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: DS.borderRadius12,
+                    borderRadius: context.radius.mdRadius,
                   ),
                   child: ClipRRect(
-                    borderRadius: DS.borderRadius12,
+                    borderRadius: context.radius.mdRadius,
                     child: Stack(
                       children: [
                         IntrinsicHeight(
@@ -127,7 +133,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               // Content
                               Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(DS.spacing12),
+                                  padding: EdgeInsets.all(context.sparkleSpacing.md),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -138,53 +144,61 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             child: Text(
                                               widget.task.title,
                                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                fontWeight: DS.fontWeightBold,
+                                                fontWeight: FontWeight.bold,
                                                 decoration: widget.task.status == TaskStatus.completed
                                                     ? TextDecoration.lineThrough
                                                     : null,
                                                 color: widget.task.status == TaskStatus.completed
-                                                    ? DS.neutral500
-                                                    : DS.neutral900,
+                                                    ? context.sparkleColors.textDisabled
+                                                    : context.sparkleColors.textPrimary,
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           if (!widget.compact) ...[
-                                            const SizedBox(width: DS.spacing8),
-                                            _TaskTypeChip(type: widget.task.type),
+                                            const SizedBox(width: 8),
+                                            TaskPill(
+                                              type: widget.task.type,
+                                              label: _typeLabel(widget.task.type),
+                                              tone: _typeTone(widget.task.type),
+                                            ),
                                             if (widget.task.status == TaskStatus.completed) ...[
-                                              const SizedBox(width: DS.spacing4),
-                                              Icon(Icons.check_circle, color: DS.success, size: 16),
+                                              const SizedBox(width: 4),
+                                              Icon(Icons.check_circle, color: context.sparkleColors.semanticSuccess, size: 16),
                                             ] else if (widget.task.status != TaskStatus.pending) ...[
-                                               const SizedBox(width: DS.spacing4),
-                                              _StatusChip(status: widget.task.status),
+                                               const SizedBox(width: 4),
+                                              TaskPill(
+                                                type: widget.task.type,
+                                                label: toBeginningOfSentenceCase(widget.task.status.name)!,
+                                                tone: _statusTone(widget.task.status),
+                                              ),
                                             ],
                                           ],
                                         ],
                                       ),
-                                      const SizedBox(height: DS.spacing8),
+                                      const SizedBox(height: 8),
                                       Row(
                                         children: [
                                           if (widget.task.dueDate != null) ...[
-                                            Icon(Icons.calendar_today, size: 14, color: DS.neutral600),
-                                            const SizedBox(width: DS.xs),
+                                            Icon(Icons.calendar_today, size: 14, color: context.sparkleColors.textSecondary),
+                                            const SizedBox(width: 4),
                                             Text(
                                               DateFormat.yMd().format(widget.task.dueDate!),
-                                              style: TextStyle(color: DS.neutral700, fontSize: 12),
+                                              style: TextStyle(color: context.sparkleColors.textSecondary, fontSize: 12),
                                             ),
-                                            const SizedBox(width: DS.spacing12),
+                                            const SizedBox(width: 12),
                                           ],
-                                          Icon(Icons.timer_outlined, size: 14, color: DS.neutral600),
-                                          const SizedBox(width: DS.xs),
+                                          Icon(Icons.timer_outlined, size: 14, color: context.sparkleColors.textSecondary),
+                                          const SizedBox(width: 4),
                                           Text(
                                             '${widget.task.estimatedMinutes} min',
-                                            style: TextStyle(color: DS.neutral700, fontSize: 12),
+                                            style: TextStyle(color: context.sparkleColors.textSecondary, fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       if (!widget.compact) ...[
-                                        const SizedBox(height: DS.spacing8),
+                                        const SizedBox(height: 8),
                                         Row(
                                           children: [
                                             _DifficultyStars(difficulty: widget.task.difficulty),
@@ -192,17 +206,17 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             if (widget.onStart != null && widget.task.status != TaskStatus.completed)
                                               _ActionButton(
                                                 icon: Icons.play_arrow_rounded,
-                                                color: DS.primaryBase,
+                                                color: context.sparkleColors.brandPrimary,
                                                 onPressed: () {
                                                   HapticFeedback.selectionClick();
                                                   widget.onStart!();
                                                 },
                                               ),
                                             if (widget.onComplete != null && widget.task.status != TaskStatus.completed) ...[
-                                              const SizedBox(width: DS.spacing8),
+                                              const SizedBox(width: 8),
                                               _ActionButton(
                                                 icon: Icons.check_rounded,
-                                                color: DS.success,
+                                                color: context.sparkleColors.semanticSuccess,
                                                 onPressed: () {
                                                   HapticFeedback.mediumImpact();
                                                   widget.onComplete!();
@@ -226,18 +240,18 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                               child: ColoredBox(
-                                color: DS.error.withValues(alpha: 0.8),
+                                color: context.sparkleColors.semanticError.withValues(alpha: 0.8),
                                 child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.cloud_off, color: DS.brandPrimary, size: 32),
-                                      const SizedBox(height: DS.spacing8),
+                                      Icon(Icons.cloud_off, color: context.sparkleColors.brandPrimary, size: 32),
+                                      const SizedBox(height: 8),
                                       Text(
                                         widget.task.syncError ?? 'Sync Failed',
-                                        style: TextStyle(color: DS.brandPrimary, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: context.sparkleColors.brandPrimary, fontWeight: FontWeight.bold),
                                       ),
-                                      const SizedBox(height: DS.spacing12),
+                                      const SizedBox(height: 12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -245,10 +259,10 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).discardChange(widget.task.id);
                                             },
-                                            style: TextButton.styleFrom(foregroundColor: DS.brandPrimary),
+                                            style: TextButton.styleFrom(foregroundColor: context.sparkleColors.brandPrimary),
                                             child: const Text('Discard'),
                                           ),
-                                          const SizedBox(width: DS.sm),
+                                          const SizedBox(width: 8),
                                           ElevatedButton(
                                             onPressed: () {
                                                ref.read(taskListProvider.notifier).retryCompleteTask(
@@ -258,8 +272,8 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                                               );
                                             },
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: DS.brandPrimary,
-                                              foregroundColor: DS.error,
+                                              backgroundColor: context.sparkleColors.brandPrimary,
+                                              foregroundColor: context.sparkleColors.semanticError,
                                             ),
                                             child: const Text('Retry'),
                                           ),
@@ -282,7 +296,7 @@ class _TaskCardState extends ConsumerState<TaskCard> with SingleTickerProviderSt
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
+                                valueColor: AlwaysStoppedAnimation<Color>(context.sparkleColors.brandPrimary),
                               ),
                             ),
                           ),
@@ -308,7 +322,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
       onTap: onPressed,
-      borderRadius: DS.borderRadius20,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
@@ -328,98 +342,60 @@ class _DifficultyStars extends StatelessWidget {
   Widget build(BuildContext context) => Row(
       children: List.generate(5, (index) => ShaderMask(
           shaderCallback: (bounds) => LinearGradient(
-              colors: [Colors.amber, DS.brandPrimary],
+              colors: [Colors.amber, context.colors.brandPrimary],
             ).createShader(bounds),
           child: Icon(
             index < difficulty ? Icons.star : Icons.star_border,
-            color: DS.brandPrimary, // Color is ignored by shader but needed for structure
+            color: Colors.white,
             size: 16,
           ),
         ),),
     );
 }
 
-class _TaskTypeChip extends StatelessWidget {
-  const _TaskTypeChip({required this.type});
-  final TaskType type;
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    String label;
-    switch (type) {
-      case TaskType.learning:
-        color = DS.brandPrimary;
-        label = 'Learning';
-      case TaskType.training:
-        color = DS.brandPrimary;
-        label = 'Training';
-      case TaskType.errorFix:
-        color = DS.error;
-        label = 'Fix';
-      case TaskType.reflection:
-        color = Colors.purple;
-        label = 'Reflection';
-      case TaskType.social:
-        color = DS.success;
-        label = 'Social';
-      case TaskType.planning:
-        color = Colors.teal;
-        label = 'Plan';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-      ),
-    );
+TaskPillTone _typeTone(TaskType type) {
+  switch (type) {
+    case TaskType.learning:
+      return TaskPillTone.brand;
+    case TaskType.training:
+      return TaskPillTone.brand;
+    case TaskType.errorFix:
+      return TaskPillTone.danger;
+    case TaskType.reflection:
+      return TaskPillTone.info;
+    case TaskType.social:
+      return TaskPillTone.success;
+    case TaskType.planning:
+      return TaskPillTone.neutral;
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-  final TaskStatus status;
+TaskPillTone _statusTone(TaskStatus status) {
+  switch (status) {
+    case TaskStatus.pending:
+      return TaskPillTone.brand;
+    case TaskStatus.inProgress:
+      return TaskPillTone.brand;
+    case TaskStatus.completed:
+      return TaskPillTone.success;
+    case TaskStatus.abandoned:
+      return TaskPillTone.neutral;
+  }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    switch (status) {
-      case TaskStatus.pending:
-        color = DS.brandPrimary;
-      case TaskStatus.inProgress:
-        color = DS.brandPrimary;
-      case TaskStatus.completed:
-        color = DS.success;
-      case TaskStatus.abandoned:
-        color = DS.brandPrimary;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        toBeginningOfSentenceCase(status.name)!,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-      ),
-    );
+String _typeLabel(TaskType type) {
+  switch (type) {
+    case TaskType.learning:
+      return 'Learning';
+    case TaskType.training:
+      return 'Training';
+    case TaskType.errorFix:
+      return 'Fix';
+    case TaskType.reflection:
+      return 'Reflection';
+    case TaskType.social:
+      return 'Social';
+    case TaskType.planning:
+      return 'Plan';
   }
 }

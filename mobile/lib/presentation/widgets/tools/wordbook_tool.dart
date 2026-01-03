@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_system.dart' hide CustomButtonSize;
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
@@ -280,7 +279,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     return ListView.builder(
       itemCount: wordbook.length,
       itemBuilder: (context, index) {
-        final word = wordbook[index];
+        final word = wordbook[index] as Map<String, dynamic>;
         return _WordCard(
           word: (word['word'] as String?) ?? '',
           phonetic: word['phonetic'] as String?,

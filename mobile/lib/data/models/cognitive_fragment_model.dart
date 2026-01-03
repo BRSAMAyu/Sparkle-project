@@ -37,8 +37,10 @@ class CognitiveFragmentCreate {
   CognitiveFragmentCreate({
     required this.content,
     required this.sourceType,
+    this.id,
     this.taskId,
   });
+  final String? id;
   final String content;
   @JsonKey(name: 'source_type')
   final String sourceType;

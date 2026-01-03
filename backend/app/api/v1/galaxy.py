@@ -321,6 +321,105 @@ async def galaxy_events_stream(
 
     return response
 
+# ==========================================
+# Phase 3 & 4 Endpoints
+# ==========================================
+
+from pydantic import BaseModel, Field
+class ViewportRequest(BaseModel):
+    min_x: float
+    max_x: float
+    min_y: float
+    max_y: float
+
+class PositionUpdateItem(BaseModel):
+    id: UUID
+    x: float
+    y: float
+
+class PositionUpdateRequest(BaseModel):
+    updates: list[PositionUpdateItem]
+
+@router.post("/nodes/viewport", response_model=GalaxyGraphResponse)
+async def get_nodes_in_viewport(
+    request: ViewportRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Get nodes within a specific viewport (bounding box).
+    Phase 3.2 Backend Viewport API.
+    """
+    nodes = await galaxy_service.get_nodes_in_bounds(
+        request.min_x, request.max_x, request.min_y, request.max_y
+    )
+    # Convert to GalaxyGraphResponse format (simplified for viewport)
+    # We might need to fetch status for these nodes too.
+    # For efficiency, we just return the nodes and let frontend handle status or fetch status in batch.
+    # But GalaxyGraphResponse expects NodeWithStatus.
+    
+    # Quick fix: fetch status for these nodes
+    # Ideally structure service should return NodeWithStatus if we modify get_nodes_in_bounds to do join.
+    # For MVP of this feature, let's map what we have.
+    
+    # We can reuse get_galaxy_graph logic but restricted by IDs if we had get_nodes_by_ids.
+    # Or just return raw nodes data in a specific response model.
+    # Reusing GalaxyGraphResponse for consistency.
+    
+    # Construct minimal response
+    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo
+    
+    mapped_nodes = []
+    for node in nodes:
+        # TODO: Fetch real status efficiently (bulk query)
+        status = UserNodeStatus(mastery_score=0, is_unlocked=False) 
+        mapped_nodes.append(NodeWithStatus.from_models(node, status))
+        
+    return GalaxyGraphResponse(
+        nodes=mapped_nodes,
+        relations=[], # Do not fetch relations for viewport query to save bandwidth? Or maybe local relations.
+        user_stats=None
+    )
+
+@router.post("/nodes/positions")
+async def update_node_positions(
+    request: PositionUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Persist node positions calculated by frontend layout engine.
+    Phase 3.2 Layout Persistence.
+    """
+    # Convert Pydantic models to dicts
+    updates = [{"id": item.id, "x": item.x, "y": item.y} for item in request.updates]
+    count = await galaxy_service.update_node_positions(updates)
+    return {"status": "success", "updated_count": count}
+
+@router.post("/node/{node_id}/autolink")
+async def trigger_auto_link(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Trigger Auto-Link Worker for a specific node.
+    Phase 4.1 Automation.
+    """
+    links_created = await galaxy_service.auto_link_nodes(node_id)
+    return {"status": "success", "links_created": links_created}
+
+@router.get("/heatmap")
+async def get_heatmap(
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Get Heatmap Data for MiniMap.
+    Phase 4.2 Insight.
+    """
+    return await galaxy_service.get_heatmap_data(UUID(user_id))
+
 
 # 导入必要的 or_ 函数
 from sqlalchemy import or_

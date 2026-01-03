@@ -164,9 +164,11 @@ class AnimatedStarBackground extends StatefulWidget {
     super.key,
     this.fadeInDuration = const Duration(milliseconds: 500),
     this.starCount = 100,
+    this.enableTwinkle = true,
   });
   final Duration fadeInDuration;
   final int starCount;
+  final bool enableTwinkle;
 
   @override
   State<AnimatedStarBackground> createState() => _AnimatedStarBackgroundState();
@@ -200,6 +202,9 @@ class _AnimatedStarBackgroundState extends State<AnimatedStarBackground>
   @override
   Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnimation,
-      child: StarBackground(starCount: widget.starCount),
+      child: StarBackground(
+        starCount: widget.starCount,
+        enableTwinkle: widget.enableTwinkle,
+      ),
     );
 }

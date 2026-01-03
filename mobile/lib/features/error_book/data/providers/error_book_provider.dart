@@ -24,12 +24,6 @@ ErrorBookRepository errorBookRepository(ErrorBookRepositoryRef ref) {
 
 /// 错题列表查询参数
 class ErrorListQuery {
-  final String? subject;
-  final String? chapter;
-  final bool? needReview;
-  final String? keyword;
-  final int page;
-  final int pageSize;
 
   const ErrorListQuery({
     this.subject,
@@ -39,6 +33,12 @@ class ErrorListQuery {
     this.page = 1,
     this.pageSize = 20,
   });
+  final String? subject;
+  final String? chapter;
+  final bool? needReview;
+  final String? keyword;
+  final int page;
+  final int pageSize;
 
   @override
   bool operator ==(Object other) =>
@@ -77,7 +77,7 @@ Future<ErrorListResponse> errorList(
 ) async {
   final repository = ref.watch(errorBookRepositoryProvider);
 
-  return await repository.getErrors(
+  return repository.getErrors(
     subject: query.subject,
     chapter: query.chapter,
     needReview: query.needReview,
@@ -97,7 +97,7 @@ Future<ErrorListResponse> errorList(
 @riverpod
 Future<ErrorRecord> errorDetail(ErrorDetailRef ref, String errorId) async {
   final repository = ref.watch(errorBookRepositoryProvider);
-  return await repository.getError(errorId);
+  return repository.getError(errorId);
 }
 
 // ============================================
@@ -122,7 +122,7 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
 @riverpod
 Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
   final repository = ref.watch(errorBookRepositoryProvider);
-  return await repository.getStats();
+  return repository.getStats();
 }
 
 // ============================================
@@ -131,23 +131,21 @@ Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
 
 /// 错题操作状态
 class ErrorOperationState {
-  final bool isLoading;
-  final String? error;
 
   const ErrorOperationState({
     this.isLoading = false,
     this.error,
   });
+  final bool isLoading;
+  final String? error;
 
   ErrorOperationState copyWith({
     bool? isLoading,
     String? error,
-  }) {
-    return ErrorOperationState(
+  }) => ErrorOperationState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
-  }
 }
 
 /// 错题操作 Notifier
@@ -160,9 +158,7 @@ class ErrorOperationState {
 @riverpod
 class ErrorOperations extends _$ErrorOperations {
   @override
-  ErrorOperationState build() {
-    return const ErrorOperationState();
-  }
+  ErrorOperationState build() => const ErrorOperationState();
 
   /// 创建错题
   ///
@@ -175,7 +171,7 @@ class ErrorOperations extends _$ErrorOperations {
     String? chapter,
     String? questionImageUrl,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final repository = ref.read(errorBookRepositoryProvider);
@@ -212,7 +208,7 @@ class ErrorOperations extends _$ErrorOperations {
     String? subject,
     String? chapter,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final repository = ref.read(errorBookRepositoryProvider);
@@ -242,7 +238,7 @@ class ErrorOperations extends _$ErrorOperations {
 
   /// 删除错题
   Future<void> deleteError(String errorId) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final repository = ref.read(errorBookRepositoryProvider);
@@ -264,7 +260,7 @@ class ErrorOperations extends _$ErrorOperations {
 
   /// 重新分析错题
   Future<void> reAnalyze(String errorId) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final repository = ref.read(errorBookRepositoryProvider);
@@ -291,7 +287,7 @@ class ErrorOperations extends _$ErrorOperations {
     required String performance,
     int? timeSpentSeconds,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     try {
       final repository = ref.read(errorBookRepositoryProvider);
@@ -320,7 +316,7 @@ class ErrorOperations extends _$ErrorOperations {
 
   /// 清除错误状态
   void clearError() {
-    state = state.copyWith(error: null);
+    state = state.copyWith();
   }
 }
 
@@ -330,10 +326,6 @@ class ErrorOperations extends _$ErrorOperations {
 
 /// 错题列表筛选状态
 class ErrorFilterState {
-  final String? selectedSubject;
-  final String? chapterFilter;
-  final bool showOnlyNeedReview;
-  final String searchKeyword;
 
   const ErrorFilterState({
     this.selectedSubject,
@@ -341,24 +333,25 @@ class ErrorFilterState {
     this.showOnlyNeedReview = false,
     this.searchKeyword = '',
   });
+  final String? selectedSubject;
+  final String? chapterFilter;
+  final bool showOnlyNeedReview;
+  final String searchKeyword;
 
   ErrorFilterState copyWith({
     String? selectedSubject,
     String? chapterFilter,
     bool? showOnlyNeedReview,
     String? searchKeyword,
-  }) {
-    return ErrorFilterState(
+  }) => ErrorFilterState(
       selectedSubject: selectedSubject ?? this.selectedSubject,
       chapterFilter: chapterFilter ?? this.chapterFilter,
       showOnlyNeedReview: showOnlyNeedReview ?? this.showOnlyNeedReview,
       searchKeyword: searchKeyword ?? this.searchKeyword,
     );
-  }
 
   /// 转换为查询参数
-  ErrorListQuery toQuery({int page = 1, int pageSize = 20}) {
-    return ErrorListQuery(
+  ErrorListQuery toQuery({int page = 1, int pageSize = 20}) => ErrorListQuery(
       subject: selectedSubject,
       chapter: chapterFilter,
       needReview: showOnlyNeedReview ? true : null,
@@ -366,7 +359,6 @@ class ErrorFilterState {
       page: page,
       pageSize: pageSize,
     );
-  }
 }
 
 /// 错题筛选器 Provider
@@ -375,9 +367,7 @@ class ErrorFilterState {
 @riverpod
 class ErrorFilter extends _$ErrorFilter {
   @override
-  ErrorFilterState build() {
-    return const ErrorFilterState();
-  }
+  ErrorFilterState build() => const ErrorFilterState();
 
   void setSubject(String? subject) {
     state = state.copyWith(selectedSubject: subject);

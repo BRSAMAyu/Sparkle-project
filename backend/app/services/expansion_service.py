@@ -334,6 +334,85 @@ relation_to_trigger 可选值: prerequisite (前置知识), related (相关), ap
             self.db.add(relation)
             await self.db.commit()
 
+    async def auto_link_nodes(self, node_id: UUID, limit: int = 50) -> int:
+        """
+        Phase 4.1: Auto-Link Worker Logic.
+        Optimized to use JSONB GIN indexes and Exact Match B-Tree indexes.
+        Avoids ILIKE '%...%' description scans on the whole table.
+        """
+        target_node = await self.db.get(KnowledgeNode, node_id)
+        if not target_node:
+            return 0
+            
+        links_created = 0
+        
+        # 1. Incoming Links (Reverse Lookup): 
+        # Find other nodes that have 'target_node.name' in their keywords.
+        # This uses the GIN index on keywords: keywords @> '["Name"]'
+        incoming_query = (
+            select(KnowledgeNode)
+            .where(
+                and_(
+                    KnowledgeNode.id != node_id,
+                    KnowledgeNode.keywords.contains([target_node.name])
+                )
+            )
+            .limit(limit)
+        )
+        mentioning_nodes = (await self.db.execute(incoming_query)).scalars().all()
+        
+        for source in mentioning_nodes:
+            # Create link: source -> mentions -> target
+            exists = await self._check_link_exists(source.id, target_node.id)
+            if not exists:
+                link = NodeRelation(
+                    source_node_id=source.id,
+                    target_node_id=target_node.id,
+                    relation_type="mention",
+                    strength=0.5, # Higher strength for explicit tag
+                    created_by="auto_linker"
+                )
+                self.db.add(link)
+                links_created += 1
+        
+        # 2. Outgoing Links (Forward Lookup):
+        # For each keyword in target_node, find nodes with that EXACT name.
+        # This uses the B-Tree index on name.
+        if target_node.keywords:
+            for keyword in target_node.keywords:
+                # Find nodes with exact name match
+                candidates_query = select(KnowledgeNode).where(KnowledgeNode.name == keyword)
+                candidates = (await self.db.execute(candidates_query)).scalars().all()
+                
+                for cand in candidates:
+                    if cand.id != node_id:
+                        exists = await self._check_link_exists(target_node.id, cand.id)
+                        if not exists:
+                            link = NodeRelation(
+                                source_node_id=target_node.id,
+                                target_node_id=cand.id,
+                                relation_type="mention",
+                                strength=0.5,
+                                created_by="auto_linker"
+                            )
+                            self.db.add(link)
+                            links_created += 1
+
+        if links_created > 0:
+            await self.db.commit()
+            
+        return links_created
+
+    async def _check_link_exists(self, u: UUID, v: UUID) -> bool:
+        stmt = select(NodeRelation).where(
+            and_(
+                NodeRelation.source_node_id == u,
+                NodeRelation.target_node_id == v
+            )
+        )
+        res = await self.db.execute(stmt)
+        return res.scalar_one_or_none() is not None
+
 
 # 导入 or_ 函数
 from sqlalchemy import or_

@@ -34,26 +34,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
-  void dispose() {
-    _messagesSubscription?.close();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.minScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+  Widget build(BuildContext context) {
+    // Listen for action status updates to show SnackBar
+    ref.listen(chatProvider.select((state) => state.lastActionStatus), (previous, next) {
+      if (next != null && next != previous) {
+        final message = ref.read(chatProvider).lastActionMessage;
+        if (message != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: next == 'failed' || next == 'error' ? DS.error : DS.primaryBase,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final messages = chatState.messages;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -161,8 +159,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             (chatState.aiStatus != null ? 1 : 0) +
                             (chatState.isReasoningActive ? 1 : 0),
                         itemBuilder: (context, index) {
+                          final isStatusShowing = chatState.aiStatus != null;
+                          final isReasoningShowing = chatState.isReasoningActive;
+                          final isSendingShowing = chatState.isSending;
+
                           // 1. 如果有 AI 状态更新，在最底部显示（reversed 模式下 index 为 0）
-                          if (chatState.aiStatus != null && index == 0) {
+                          if (isStatusShowing && index == 0) {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12.0),
                               child: AiStatusIndicator(
@@ -173,10 +175,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           }
 
                           // 2. 🆕 如果正在显示推理过程，显示 Chain of Thought Bubble
-                          final isStatusShowing = chatState.aiStatus != null;
                           final reasoningIndex = isStatusShowing ? 1 : 0;
-
-                          if (chatState.isReasoningActive && index == reasoningIndex) {
+                          if (isReasoningShowing && index == reasoningIndex) {
                             final durationMs = chatState.reasoningStartTime != null
                                 ? DateTime.now().millisecondsSinceEpoch - chatState.reasoningStartTime!
                                 : null;
@@ -192,9 +192,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           }
 
                           // 3. 如果正在发送/接收，显示流式内容或打字指示器
-                          final streamIndex = isStatusShowing ? (chatState.isReasoningActive ? 2 : 1) : (chatState.isReasoningActive ? 1 : 0);
+                          var streamIndex = 0;
+                          if (isStatusShowing) streamIndex++;
+                          if (isReasoningShowing) streamIndex++;
 
-                          if (chatState.isSending && index == streamIndex) {
+                          if (isSendingShowing && index == streamIndex) {
                             // 如果有流式内容，显示它
                             if (chatState.streamingContent.isNotEmpty) {
                               return Padding(
@@ -204,7 +206,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             }
 
                             // 如果没有流式内容且也没有显示状态指示器，则显示通用打字指示器
-                            if (!isStatusShowing && !chatState.isReasoningActive) {
+                            if (!isStatusShowing && !isReasoningShowing) {
                               return const Padding(
                                 padding: EdgeInsets.only(bottom: 12.0),
                                 child: _TypingIndicator(),
@@ -217,18 +219,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           // 4. 计算正式消息的索引
                           var msgIndex = index;
                           if (isStatusShowing) msgIndex--;
-                          if (chatState.isReasoningActive) msgIndex--;
-                          if (chatState.isSending) msgIndex--;
+                          if (isReasoningShowing) msgIndex--;
+                          if (isSendingShowing) msgIndex--;
 
                           if (msgIndex < 0) return const SizedBox.shrink();
 
-                          final adjustedIndex = messages.length - 1 - msgIndex;
-                          if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
+                          final messageCount = messages.length;
+                          final adjustedIndex = messageCount - 1 - msgIndex;
+                          
+                          if (adjustedIndex < 0 || adjustedIndex >= messageCount) {
                             return const SizedBox.shrink();
                           }
 
                           final message = messages[adjustedIndex];
-                          return ChatBubble(message: message);
+                          return ChatBubble(
+                            message: message,
+                            onActionConfirm: (action) {
+                              ref.read(chatProvider.notifier).confirmAction(action);
+                            },
+                            onActionDismiss: (action) {
+                              ref.read(chatProvider.notifier).dismissAction(action);
+                            },
+                          );
                         },
                       ),
               ),

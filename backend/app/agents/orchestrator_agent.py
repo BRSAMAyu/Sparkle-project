@@ -185,6 +185,7 @@ class MultiAgentWorkflow:
         user_query: str,
         user_id: str,
         session_id: str,
+        tool_call_id: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """

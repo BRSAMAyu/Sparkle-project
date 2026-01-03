@@ -22,12 +22,21 @@ class CreatePlanTool(BaseTool):
     parameters_schema = CreatePlanParams
     requires_confirmation = False
 
-    async def execute(
-        self,
-        params: CreatePlanParams,
-        user_id: str,
-        db_session: Any
-    ) -> ToolResult:
+        async def execute(
+
+            self, 
+
+            params: CreatePlanParams, 
+
+            user_id: str,
+
+            db_session: Any,
+
+            tool_call_id: Optional[str] = None
+
+        ) -> ToolResult:
+
+    
         try:
             user_uuid = UUID(user_id)
             plan_type = ModelPlanType(params.plan_type.value)
@@ -80,23 +89,25 @@ class GenerateTasksForPlanTool(BaseTool):
     requires_confirmation = True  # 需要用户确认才能创建
 
     async def execute(
-        self,
-        params: GenerateTasksForPlanParams,
+        self, 
+        params: GenerateTasksForPlanParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
-        """
-        为计划生成任务的实现
-
-        流程:
-        1. 验证计划存在且属于当前用户
-        2. 调用 LLM 生成结构化任务建议
-        3. 批量创建任务并关联到计划
-        4. 返回卡片化的任务列表
-        """
         try:
             user_uuid = UUID(user_id)
-            plan_id_uuid = UUID(params.plan_id)
+            plan_uuid = UUID(params.plan_id)
+            
+            # Use TaskService to create tasks
+            created_tasks = []
+            # ... (logic to generate tasks from LLM if not already there)
+            # For now, let's assume it generates some sample tasks if none
+            
+            # If we were using LLM here:
+            # tasks_data = await llm_service.generate_tasks(plan_name)
+            # for t in tasks_data:
+            #     task = await TaskService.create(..., tool_result_id=tool_call_id)
 
             # 第一步: 验证计划存在
             plan = await PlanService.get_by_id(db_session, plan_id_uuid)

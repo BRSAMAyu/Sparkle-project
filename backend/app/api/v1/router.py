@@ -29,7 +29,8 @@ from app.api.v1 import (
     graphrag_trace,
     decay_timemachine,
     multi_agent,
-    learning_paths
+    learning_paths,
+    error_book
 )
 
 api_router = APIRouter()
@@ -37,6 +38,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
+api_router.include_router(error_book.router) # Prefix is defined in router itself (/errors)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])

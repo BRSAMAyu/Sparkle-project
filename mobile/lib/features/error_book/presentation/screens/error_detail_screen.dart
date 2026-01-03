@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/subject_chips.dart';
-import '../widgets/analysis_card.dart';
-import '../../data/providers/error_book_provider.dart';
-import '../../data/models/error_record.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// 错题详情页面
 ///
@@ -12,12 +12,12 @@ import '../../data/models/error_record.dart';
 /// 2. 操作便捷：编辑、删除、重新分析、开始复习
 /// 3. 视觉清晰：分段展示，关键信息突出
 class ErrorDetailScreen extends ConsumerWidget {
-  final String errorId;
 
   const ErrorDetailScreen({
     super.key,
     required this.errorId,
   });
+  final String errorId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,10 +43,8 @@ class ErrorDetailScreen extends ConsumerWidget {
                 switch (value) {
                   case 'reanalyze':
                     _reanalyze(context, ref, error);
-                    break;
                   case 'delete':
                     _confirmDelete(context, ref, error);
-                    break;
                 }
               },
               itemBuilder: (context) => [
@@ -90,8 +88,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ErrorRecord error,
-  ) {
-    return SingleChildScrollView(
+  ) => SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +125,6 @@ class ErrorDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildMetadataSection(BuildContext context, ErrorRecord error) {
     final theme = Theme.of(context);
@@ -147,7 +143,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceVariant,
+                    color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -256,7 +252,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: SelectableText(
@@ -387,8 +383,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) {
-    return Padding(
+  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) => Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +416,6 @@ class ErrorDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   Widget _buildKnowledgeSection(BuildContext context, ErrorRecord error) {
     final theme = Theme.of(context);
@@ -451,8 +445,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: error.knowledgeLinks.map((link) {
-              return ActionChip(
+            children: error.knowledgeLinks.map((link) => ActionChip(
                 avatar: const Icon(Icons.timeline, size: 16),
                 label: Text(link.nodeName),
                 tooltip: '跳转到知识星图',
@@ -465,8 +458,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              );
-            }).toList(),
+              )).toList(),
           ),
         ],
       ),
@@ -614,8 +606,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ErrorRecord error,
-  ) {
-    return SafeArea(
+  ) => SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -642,10 +633,8 @@ class ErrorDetailScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) {
-    return Center(
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -682,7 +671,6 @@ class ErrorDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -769,7 +757,7 @@ class ErrorDetailScreen extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       try {
         await ref.read(errorOperationsProvider.notifier).deleteError(error.id);
 
@@ -787,7 +775,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('删除失败: ${e.toString()}'),
+              content: Text('删除失败: ${e}'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),

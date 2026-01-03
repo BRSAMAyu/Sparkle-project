@@ -104,26 +104,26 @@ class MessageInfoAdapter extends TypeAdapter<MessageInfo> {
       ..write(obj.contentData)
       ..writeByte(5)
       ..write(obj.replyToId)
-      ..writeByte(6)
-      ..write(obj.createdAt)
-      ..writeByte(7)
-      ..write(obj.updatedAt)
-      ..writeByte(8)
-      ..write(obj.isRevoked)
-      ..writeByte(9)
-      ..write(obj.readBy)
-      ..writeByte(10)
-      ..write(obj.quotedMessage)
       ..writeByte(11)
       ..write(obj.threadRootId)
       ..writeByte(12)
       ..write(obj.mentionUserIds)
       ..writeByte(13)
       ..write(obj.reactions)
+      ..writeByte(6)
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.updatedAt)
+      ..writeByte(8)
+      ..write(obj.isRevoked)
       ..writeByte(14)
       ..write(obj.revokedAt)
       ..writeByte(15)
-      ..write(obj.editedAt);
+      ..write(obj.editedAt)
+      ..writeByte(9)
+      ..write(obj.readBy)
+      ..writeByte(10)
+      ..write(obj.quotedMessage);
   }
 
   @override
@@ -186,6 +186,12 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       ..write(obj.contentData)
       ..writeByte(6)
       ..write(obj.replyToId)
+      ..writeByte(12)
+      ..write(obj.threadRootId)
+      ..writeByte(13)
+      ..write(obj.mentionUserIds)
+      ..writeByte(14)
+      ..write(obj.reactions)
       ..writeByte(7)
       ..write(obj.isRead)
       ..writeByte(8)
@@ -196,12 +202,6 @@ class PrivateMessageInfoAdapter extends TypeAdapter<PrivateMessageInfo> {
       ..write(obj.updatedAt)
       ..writeByte(11)
       ..write(obj.isRevoked)
-      ..writeByte(12)
-      ..write(obj.threadRootId)
-      ..writeByte(13)
-      ..write(obj.mentionUserIds)
-      ..writeByte(14)
-      ..write(obj.reactions)
       ..writeByte(15)
       ..write(obj.revokedAt)
       ..writeByte(16)
@@ -865,4 +865,429 @@ Map<String, dynamic> _$GroupFlameStatusToJson(GroupFlameStatus instance) =>
       'total_power': instance.totalPower,
       'flames': instance.flames,
       'bonfire_level': instance.bonfireLevel,
+    };
+
+EncryptionKeyInfo _$EncryptionKeyInfoFromJson(Map<String, dynamic> json) =>
+    EncryptionKeyInfo(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      publicKey: json['public_key'] as String,
+      keyType: json['key_type'] as String,
+      isActive: json['is_active'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      deviceId: json['device_id'] as String?,
+      expiresAt: json['expires_at'] == null
+          ? null
+          : DateTime.parse(json['expires_at'] as String),
+    );
+
+Map<String, dynamic> _$EncryptionKeyInfoToJson(EncryptionKeyInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'public_key': instance.publicKey,
+      'key_type': instance.keyType,
+      'device_id': instance.deviceId,
+      'is_active': instance.isActive,
+      'created_at': instance.createdAt.toIso8601String(),
+      'expires_at': instance.expiresAt?.toIso8601String(),
+    };
+
+EncryptionKeyCreate _$EncryptionKeyCreateFromJson(Map<String, dynamic> json) =>
+    EncryptionKeyCreate(
+      publicKey: json['public_key'] as String,
+      keyType: json['key_type'] as String? ?? 'x25519',
+      deviceId: json['device_id'] as String?,
+      expiresAt: json['expires_at'] == null
+          ? null
+          : DateTime.parse(json['expires_at'] as String),
+    );
+
+Map<String, dynamic> _$EncryptionKeyCreateToJson(
+        EncryptionKeyCreate instance) =>
+    <String, dynamic>{
+      'public_key': instance.publicKey,
+      'key_type': instance.keyType,
+      'device_id': instance.deviceId,
+      'expires_at': instance.expiresAt?.toIso8601String(),
+    };
+
+MessageReportInfo _$MessageReportInfoFromJson(Map<String, dynamic> json) =>
+    MessageReportInfo(
+      id: json['id'] as String,
+      reporterId: json['reporter_id'] as String,
+      reason: $enumDecode(_$ReportReasonEnumMap, json['reason']),
+      status: $enumDecode(_$ReportStatusEnumMap, json['status']),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      groupMessageId: json['group_message_id'] as String?,
+      privateMessageId: json['private_message_id'] as String?,
+      description: json['description'] as String?,
+      reviewedBy: json['reviewed_by'] as String?,
+      reviewedAt: json['reviewed_at'] == null
+          ? null
+          : DateTime.parse(json['reviewed_at'] as String),
+      actionTaken:
+          $enumDecodeNullable(_$ModerationActionEnumMap, json['action_taken']),
+      reporter: json['reporter'] == null
+          ? null
+          : UserBrief.fromJson(json['reporter'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$MessageReportInfoToJson(MessageReportInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'reporter_id': instance.reporterId,
+      'group_message_id': instance.groupMessageId,
+      'private_message_id': instance.privateMessageId,
+      'reason': _$ReportReasonEnumMap[instance.reason]!,
+      'description': instance.description,
+      'status': _$ReportStatusEnumMap[instance.status]!,
+      'reviewed_by': instance.reviewedBy,
+      'reviewed_at': instance.reviewedAt?.toIso8601String(),
+      'action_taken': _$ModerationActionEnumMap[instance.actionTaken],
+      'created_at': instance.createdAt.toIso8601String(),
+      'reporter': instance.reporter,
+    };
+
+const _$ReportReasonEnumMap = {
+  ReportReason.spam: 'spam',
+  ReportReason.harassment: 'harassment',
+  ReportReason.violence: 'violence',
+  ReportReason.hateSpeech: 'hate_speech',
+  ReportReason.misinformation: 'misinformation',
+  ReportReason.other: 'other',
+};
+
+const _$ReportStatusEnumMap = {
+  ReportStatus.pending: 'pending',
+  ReportStatus.reviewed: 'reviewed',
+  ReportStatus.dismissed: 'dismissed',
+  ReportStatus.actioned: 'actioned',
+};
+
+const _$ModerationActionEnumMap = {
+  ModerationAction.warn: 'warn',
+  ModerationAction.mute: 'mute',
+  ModerationAction.kick: 'kick',
+  ModerationAction.ban: 'ban',
+};
+
+MessageReportCreate _$MessageReportCreateFromJson(Map<String, dynamic> json) =>
+    MessageReportCreate(
+      reason: $enumDecode(_$ReportReasonEnumMap, json['reason']),
+      groupMessageId: json['group_message_id'] as String?,
+      privateMessageId: json['private_message_id'] as String?,
+      description: json['description'] as String?,
+    );
+
+Map<String, dynamic> _$MessageReportCreateToJson(
+        MessageReportCreate instance) =>
+    <String, dynamic>{
+      'group_message_id': instance.groupMessageId,
+      'private_message_id': instance.privateMessageId,
+      'reason': _$ReportReasonEnumMap[instance.reason]!,
+      'description': instance.description,
+    };
+
+MessageReportReview _$MessageReportReviewFromJson(Map<String, dynamic> json) =>
+    MessageReportReview(
+      status: $enumDecode(_$ReportStatusEnumMap, json['status']),
+      actionTaken:
+          $enumDecodeNullable(_$ModerationActionEnumMap, json['action_taken']),
+    );
+
+Map<String, dynamic> _$MessageReportReviewToJson(
+        MessageReportReview instance) =>
+    <String, dynamic>{
+      'status': _$ReportStatusEnumMap[instance.status]!,
+      'action_taken': _$ModerationActionEnumMap[instance.actionTaken],
+    };
+
+MessageFavoriteInfo _$MessageFavoriteInfoFromJson(Map<String, dynamic> json) =>
+    MessageFavoriteInfo(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      groupMessageId: json['group_message_id'] as String?,
+      privateMessageId: json['private_message_id'] as String?,
+      note: json['note'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      groupMessage: json['group_message'] == null
+          ? null
+          : MessageInfo.fromJson(json['group_message'] as Map<String, dynamic>),
+      privateMessage: json['private_message'] == null
+          ? null
+          : PrivateMessageInfo.fromJson(
+              json['private_message'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$MessageFavoriteInfoToJson(
+        MessageFavoriteInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'group_message_id': instance.groupMessageId,
+      'private_message_id': instance.privateMessageId,
+      'note': instance.note,
+      'tags': instance.tags,
+      'created_at': instance.createdAt.toIso8601String(),
+      'group_message': instance.groupMessage,
+      'private_message': instance.privateMessage,
+    };
+
+MessageFavoriteCreate _$MessageFavoriteCreateFromJson(
+        Map<String, dynamic> json) =>
+    MessageFavoriteCreate(
+      groupMessageId: json['group_message_id'] as String?,
+      privateMessageId: json['private_message_id'] as String?,
+      note: json['note'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$MessageFavoriteCreateToJson(
+        MessageFavoriteCreate instance) =>
+    <String, dynamic>{
+      'group_message_id': instance.groupMessageId,
+      'private_message_id': instance.privateMessageId,
+      'note': instance.note,
+      'tags': instance.tags,
+    };
+
+MessageForwardRequest _$MessageForwardRequestFromJson(
+        Map<String, dynamic> json) =>
+    MessageForwardRequest(
+      sourceGroupMessageId: json['source_group_message_id'] as String?,
+      sourcePrivateMessageId: json['source_private_message_id'] as String?,
+      targetGroupId: json['target_group_id'] as String?,
+      targetUserId: json['target_user_id'] as String?,
+      additionalContent: json['additional_content'] as String?,
+    );
+
+Map<String, dynamic> _$MessageForwardRequestToJson(
+        MessageForwardRequest instance) =>
+    <String, dynamic>{
+      'source_group_message_id': instance.sourceGroupMessageId,
+      'source_private_message_id': instance.sourcePrivateMessageId,
+      'target_group_id': instance.targetGroupId,
+      'target_user_id': instance.targetUserId,
+      'additional_content': instance.additionalContent,
+    };
+
+BroadcastMessageInfo _$BroadcastMessageInfoFromJson(
+        Map<String, dynamic> json) =>
+    BroadcastMessageInfo(
+      id: json['id'] as String,
+      senderId: json['sender_id'] as String,
+      content: json['content'] as String,
+      targetGroupIds: (json['target_group_ids'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      deliveredCount: (json['delivered_count'] as num).toInt(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      contentData: json['content_data'] as Map<String, dynamic>?,
+      sender: json['sender'] == null
+          ? null
+          : UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$BroadcastMessageInfoToJson(
+        BroadcastMessageInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'sender_id': instance.senderId,
+      'content': instance.content,
+      'content_data': instance.contentData,
+      'target_group_ids': instance.targetGroupIds,
+      'delivered_count': instance.deliveredCount,
+      'created_at': instance.createdAt.toIso8601String(),
+      'sender': instance.sender,
+    };
+
+BroadcastMessageCreate _$BroadcastMessageCreateFromJson(
+        Map<String, dynamic> json) =>
+    BroadcastMessageCreate(
+      content: json['content'] as String,
+      targetGroupIds: (json['target_group_ids'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      contentData: json['content_data'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$BroadcastMessageCreateToJson(
+        BroadcastMessageCreate instance) =>
+    <String, dynamic>{
+      'content': instance.content,
+      'content_data': instance.contentData,
+      'target_group_ids': instance.targetGroupIds,
+    };
+
+GroupModerationSettings _$GroupModerationSettingsFromJson(
+        Map<String, dynamic> json) =>
+    GroupModerationSettings(
+      keywordFilters: (json['keyword_filters'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      muteAll: json['mute_all'] as bool?,
+      slowModeSeconds: (json['slow_mode_seconds'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$GroupModerationSettingsToJson(
+        GroupModerationSettings instance) =>
+    <String, dynamic>{
+      'keyword_filters': instance.keywordFilters,
+      'mute_all': instance.muteAll,
+      'slow_mode_seconds': instance.slowModeSeconds,
+    };
+
+GroupAnnouncementUpdate _$GroupAnnouncementUpdateFromJson(
+        Map<String, dynamic> json) =>
+    GroupAnnouncementUpdate(
+      announcement: json['announcement'] as String?,
+    );
+
+Map<String, dynamic> _$GroupAnnouncementUpdateToJson(
+        GroupAnnouncementUpdate instance) =>
+    <String, dynamic>{
+      'announcement': instance.announcement,
+    };
+
+MemberMuteRequest _$MemberMuteRequestFromJson(Map<String, dynamic> json) =>
+    MemberMuteRequest(
+      durationMinutes: (json['duration_minutes'] as num).toInt(),
+      reason: json['reason'] as String?,
+    );
+
+Map<String, dynamic> _$MemberMuteRequestToJson(MemberMuteRequest instance) =>
+    <String, dynamic>{
+      'duration_minutes': instance.durationMinutes,
+      'reason': instance.reason,
+    };
+
+MemberWarnRequest _$MemberWarnRequestFromJson(Map<String, dynamic> json) =>
+    MemberWarnRequest(
+      reason: json['reason'] as String,
+    );
+
+Map<String, dynamic> _$MemberWarnRequestToJson(MemberWarnRequest instance) =>
+    <String, dynamic>{
+      'reason': instance.reason,
+    };
+
+MessageSearchRequest _$MessageSearchRequestFromJson(
+        Map<String, dynamic> json) =>
+    MessageSearchRequest(
+      keyword: json['keyword'] as String?,
+      groupId: json['group_id'] as String?,
+      friendId: json['friend_id'] as String?,
+      senderId: json['sender_id'] as String?,
+      messageTypes: (json['message_types'] as List<dynamic>?)
+          ?.map((e) => $enumDecode(_$MessageTypeEnumMap, e))
+          .toList(),
+      startDate: json['start_date'] == null
+          ? null
+          : DateTime.parse(json['start_date'] as String),
+      endDate: json['end_date'] == null
+          ? null
+          : DateTime.parse(json['end_date'] as String),
+      topic: json['topic'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      useFullText: json['use_full_text'] as bool? ?? false,
+      limit: (json['limit'] as num?)?.toInt() ?? 50,
+      offset: (json['offset'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$MessageSearchRequestToJson(
+        MessageSearchRequest instance) =>
+    <String, dynamic>{
+      'keyword': instance.keyword,
+      'group_id': instance.groupId,
+      'friend_id': instance.friendId,
+      'sender_id': instance.senderId,
+      'message_types':
+          instance.messageTypes?.map((e) => _$MessageTypeEnumMap[e]!).toList(),
+      'start_date': instance.startDate?.toIso8601String(),
+      'end_date': instance.endDate?.toIso8601String(),
+      'topic': instance.topic,
+      'tags': instance.tags,
+      'use_full_text': instance.useFullText,
+      'limit': instance.limit,
+      'offset': instance.offset,
+    };
+
+MessageSearchResult _$MessageSearchResultFromJson(Map<String, dynamic> json) =>
+    MessageSearchResult(
+      totalCount: (json['total_count'] as num).toInt(),
+      groupMessages: (json['group_messages'] as List<dynamic>)
+          .map((e) => MessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      privateMessages: (json['private_messages'] as List<dynamic>)
+          .map((e) => PrivateMessageInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: json['has_more'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$MessageSearchResultToJson(
+        MessageSearchResult instance) =>
+    <String, dynamic>{
+      'total_count': instance.totalCount,
+      'group_messages': instance.groupMessages,
+      'private_messages': instance.privateMessages,
+      'has_more': instance.hasMore,
+    };
+
+OfflineMessageInfo _$OfflineMessageInfoFromJson(Map<String, dynamic> json) =>
+    OfflineMessageInfo(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      clientNonce: json['client_nonce'] as String,
+      messageType: json['message_type'] as String,
+      targetId: json['target_id'] as String,
+      payload: json['payload'] as Map<String, dynamic>,
+      status: $enumDecode(_$OfflineMessageStatusEnumMap, json['status']),
+      retryCount: (json['retry_count'] as num).toInt(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      lastRetryAt: json['last_retry_at'] == null
+          ? null
+          : DateTime.parse(json['last_retry_at'] as String),
+      errorMessage: json['error_message'] as String?,
+      expiresAt: json['expires_at'] == null
+          ? null
+          : DateTime.parse(json['expires_at'] as String),
+    );
+
+Map<String, dynamic> _$OfflineMessageInfoToJson(OfflineMessageInfo instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'client_nonce': instance.clientNonce,
+      'message_type': instance.messageType,
+      'target_id': instance.targetId,
+      'payload': instance.payload,
+      'status': _$OfflineMessageStatusEnumMap[instance.status]!,
+      'retry_count': instance.retryCount,
+      'last_retry_at': instance.lastRetryAt?.toIso8601String(),
+      'error_message': instance.errorMessage,
+      'created_at': instance.createdAt.toIso8601String(),
+      'expires_at': instance.expiresAt?.toIso8601String(),
+    };
+
+const _$OfflineMessageStatusEnumMap = {
+  OfflineMessageStatus.pending: 'pending',
+  OfflineMessageStatus.sent: 'sent',
+  OfflineMessageStatus.failed: 'failed',
+  OfflineMessageStatus.expired: 'expired',
+};
+
+OfflineMessageRetryRequest _$OfflineMessageRetryRequestFromJson(
+        Map<String, dynamic> json) =>
+    OfflineMessageRetryRequest(
+      messageIds: (json['message_ids'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$OfflineMessageRetryRequestToJson(
+        OfflineMessageRetryRequest instance) =>
+    <String, dynamic>{
+      'message_ids': instance.messageIds,
     };

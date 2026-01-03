@@ -5,18 +5,17 @@ import 'package:flutter/material.dart';
 /// 用于复习页面，让用户评价自己对错题的掌握情况
 /// 三个选项：记住了(remembered)、有点模糊(fuzzy)、忘记了(forgotten)
 class ReviewPerformanceButtons extends StatelessWidget {
-  final Function(String performance) onPerformanceSelected;
-  final bool isLoading;
 
   const ReviewPerformanceButtons({
     super.key,
     required this.onPerformanceSelected,
     this.isLoading = false,
   });
+  final Function(String performance) onPerformanceSelected;
+  final bool isLoading;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
@@ -68,17 +67,9 @@ class ReviewPerformanceButtons extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _PerformanceButton extends StatelessWidget {
-  final String performance;
-  final String label;
-  final IconData icon;
-  final Color color;
-  final String description;
-  final bool isLoading;
-  final VoidCallback onTap;
 
   const _PerformanceButton({
     required this.performance,
@@ -89,6 +80,13 @@ class _PerformanceButton extends StatelessWidget {
     required this.isLoading,
     required this.onTap,
   });
+  final String performance;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String description;
+  final bool isLoading;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -144,15 +142,14 @@ class _PerformanceButton extends StatelessWidget {
 ///
 /// 可以作为底部弹窗使用，提供更详细的说明
 class ReviewPerformanceBottomSheet extends StatelessWidget {
-  final Function(String performance) onPerformanceSelected;
 
   const ReviewPerformanceBottomSheet({
     super.key,
     required this.onPerformanceSelected,
   });
+  final Function(String performance) onPerformanceSelected;
 
-  static Future<String?> show(BuildContext context) {
-    return showModalBottomSheet<String>(
+  static Future<String?> show(BuildContext context) => showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -163,7 +160,6 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
         },
       ),
     );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,11 +224,6 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
 }
 
 class _PerformanceOption extends StatelessWidget {
-  final String performance;
-  final String label;
-  final String description;
-  final Color color;
-  final VoidCallback onTap;
 
   const _PerformanceOption({
     required this.performance,
@@ -241,6 +232,11 @@ class _PerformanceOption extends StatelessWidget {
     required this.color,
     required this.onTap,
   });
+  final String performance;
+  final String label;
+  final String description;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {

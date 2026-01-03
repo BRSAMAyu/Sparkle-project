@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/review_screen.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/screens/auth/login_screen.dart';
 import 'package:sparkle/presentation/screens/auth/register_screen.dart';
@@ -37,10 +41,6 @@ import 'package:sparkle/presentation/screens/task/task_create_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_detail_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_execution_screen.dart';
 import 'package:sparkle/presentation/screens/task/task_list_screen.dart';
-import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
-import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
-import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
-import 'package:sparkle/features/error_book/presentation/screens/review_screen.dart';
 
 /// Helper to build pages with transitions
 Page<dynamic> _buildTransitionPage({

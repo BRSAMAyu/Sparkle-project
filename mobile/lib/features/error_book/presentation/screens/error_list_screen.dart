@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/subject_chips.dart';
-import '../widgets/error_card.dart';
-import '../../data/providers/error_book_provider.dart';
-import 'add_error_screen.dart';
-import 'error_detail_screen.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
+import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
 
 /// 错题列表页面
 ///
@@ -102,7 +102,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       body: Column(
         children: [
           // 科目筛选条
-          Container(
+          ColoredBox(
             color: theme.colorScheme.surface,
             child: Column(
               children: [
@@ -130,7 +130,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 _buildErrorList(
                   ref.watch(errorListProvider(
                     query.copyWith(needReview: true),
-                  )),
+                  ),),
                   query.copyWith(needReview: true),
                 ),
               ],
@@ -146,8 +146,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     );
   }
 
-  Widget _buildSearchField() {
-    return TextField(
+  Widget _buildSearchField() => TextField(
       controller: _searchController,
       autofocus: true,
       decoration: const InputDecoration(
@@ -163,10 +162,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         });
       },
     );
-  }
 
-  Widget _buildStatsBadge(AsyncValue<ReviewStats> statsAsync, String type) {
-    return statsAsync.when(
+  Widget _buildStatsBadge(AsyncValue<ReviewStats> statsAsync, String type) => statsAsync.when(
       data: (stats) {
         final count = type == 'total'
             ? stats.totalErrors
@@ -195,13 +192,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
-  }
 
   Widget _buildErrorList(
     AsyncValue<ErrorListResponse> errorListAsync,
     ErrorListQuery query,
-  ) {
-    return errorListAsync.when(
+  ) => errorListAsync.when(
       data: (response) {
         if (response.items.isEmpty) {
           return _buildEmptyState(query.needReview == true);
@@ -228,10 +223,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => _buildErrorState(error.toString(), query),
     );
-  }
 
-  Widget _buildEmptyState(bool isReviewTab) {
-    return Center(
+  Widget _buildEmptyState(bool isReviewTab) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -270,10 +263,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildErrorState(String error, ErrorListQuery query) {
-    return Center(
+  Widget _buildErrorState(String error, ErrorListQuery query) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -310,7 +301,6 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ],
       ),
     );
-  }
 
   Future<void> _navigateToAddError(BuildContext context) async {
     final result = await Navigator.of(context).push<bool>(
@@ -319,7 +309,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       ),
     );
 
-    if (result == true && mounted) {
+    if ((result ?? false) && mounted) {
       // 刷新列表
       ref.invalidate(errorListProvider);
       ref.invalidate(errorStatsProvider);
@@ -357,7 +347,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('删除失败: ${e.toString()}'),
+            content: Text('删除失败: ${e}'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -400,8 +390,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
     String? keyword,
     int? page,
     int? pageSize,
-  }) {
-    return ErrorListQuery(
+  }) => ErrorListQuery(
       subject: subject ?? this.subject,
       chapter: chapter ?? this.chapter,
       needReview: needReview ?? this.needReview,
@@ -409,5 +398,4 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
       page: page ?? this.page,
       pageSize: pageSize ?? this.pageSize,
     );
-  }
 }

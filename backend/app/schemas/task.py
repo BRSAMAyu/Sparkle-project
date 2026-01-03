@@ -22,6 +22,7 @@ class TaskCreate(BaseModel):
     priority: int = Field(default=0, description="Priority")
     due_date: Optional[date] = Field(default=None, description="Due date")
     knowledge_node_id: Optional[UUID] = Field(default=None, description="Knowledge node ID")
+    tool_result_id: Optional[str] = Field(default=None, description="Tool result ID from AI generator")
 
 class TaskUpdate(BaseModel):
     """Update task"""
@@ -76,10 +77,12 @@ class TaskDetail(TaskBase):
     plan_id: Optional[UUID] = Field(description="Related plan ID")
     guide_content: Optional[str] = Field(description="Guide content")
     started_at: Optional[datetime] = Field(description="Started time")
+    confirmed_at: Optional[datetime] = Field(description="Confirmed time")
     completed_at: Optional[datetime] = Field(description="Completed time")
     actual_minutes: Optional[int] = Field(description="Actual minutes")
     user_note: Optional[str] = Field(description="User note")
     knowledge_node_id: Optional[UUID] = Field(description="Knowledge node ID")
+    tool_result_id: Optional[str] = Field(description="Tool result ID")
 
 class TaskSummary(BaseModel):
     """Task summary statistics"""

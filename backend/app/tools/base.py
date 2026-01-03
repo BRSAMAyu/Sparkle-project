@@ -37,7 +37,8 @@ class BaseTool(ABC):
         self, 
         params: BaseModel, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         """
         执行工具逻辑
@@ -46,6 +47,7 @@ class BaseTool(ABC):
             params: 经过验证的参数对象
             user_id: 当前用户 ID
             db_session: 数据库会话
+            tool_call_id: 当前工具调用的唯一 ID
             
         Returns:
             ToolResult: 统一格式的执行结果

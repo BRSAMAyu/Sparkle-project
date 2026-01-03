@@ -9,10 +9,21 @@ import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
 
-  const GroupChatBubble({required this.message, this.onRevoke, this.onQuote, super.key});
+  const GroupChatBubble({
+    required this.message, 
+    this.onRevoke, 
+    this.onQuote, 
+    this.onEdit,
+    this.onReaction,
+    this.onThread,
+    super.key,
+  });
   final MessageInfo message;
   final Function(MessageInfo message)? onRevoke;
   final Function(MessageInfo message)? onQuote;
+  final Function(MessageInfo message, String content)? onEdit;
+  final Function(MessageInfo message, String emoji)? onReaction;
+  final Function(MessageInfo message)? onThread;
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -87,6 +98,26 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble> with SingleTi
                   );
                 },
               ),
+              if (widget.onThread != null)
+                ListTile(
+                  leading: const Icon(Icons.forum_outlined),
+                  title: const Text('串联回复'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onThread!(widget.message);
+                  },
+                ),
+              if (isMe && widget.onEdit != null && widget.message.messageType == MessageType.text)
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded),
+                  title: const Text('编辑'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Trigger edit flow (implementation dependent, but typically shows input)
+                    // For now, we assume onEdit is called with new content from some dialog
+                    // widget.onEdit!(widget.message, newContent);
+                  },
+                ),
               if (canRevoke && widget.onRevoke != null)
                 ListTile(
                   leading: Icon(Icons.undo_rounded, color: DS.error),

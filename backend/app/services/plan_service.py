@@ -6,9 +6,10 @@ from typing import Optional, List
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 
 from app.models.plan import Plan
+from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
 
 
@@ -66,3 +67,47 @@ class PlanService:
         )
         result = await db.execute(query)
         return result.scalars().all()
+
+    @staticmethod
+    async def update_progress(
+        db: AsyncSession, plan_id: UUID, user_id: UUID
+    ) -> Optional[float]:
+        """
+        Calculate and update plan progress based on task completion ratio.
+
+        P0.2: Plan Progress Auto-Update
+        Called automatically when tasks are completed to keep progress in sync.
+
+        Returns:
+            Updated progress value (0.0-1.0), or None if plan not found
+        """
+        # Verify plan exists and belongs to user
+        plan = await PlanService.get_by_id(db, plan_id, user_id)
+        if not plan:
+            return None
+
+        # Count total tasks for this plan
+        total_query = select(func.count(Task.id)).where(Task.plan_id == plan_id)
+        total_result = await db.execute(total_query)
+        total_tasks = total_result.scalar_one()
+
+        # Count completed tasks
+        completed_query = select(func.count(Task.id)).where(
+            and_(Task.plan_id == plan_id, Task.status == TaskStatus.COMPLETED)
+        )
+        completed_result = await db.execute(completed_query)
+        completed_tasks = completed_result.scalar_one()
+
+        # Calculate progress ratio
+        if total_tasks > 0:
+            new_progress = completed_tasks / total_tasks
+        else:
+            new_progress = 0.0
+
+        # Update plan progress
+        plan.progress = new_progress
+        db.add(plan)
+        await db.commit()
+        await db.refresh(plan)
+
+        return new_progress

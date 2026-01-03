@@ -3,6 +3,7 @@ from loguru import logger
 import json
 import uuid
 import asyncio
+import re
 
 from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
 from app.services.llm_service import llm_service
@@ -180,9 +181,42 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
 # Intent Classification & Tool Planning
 # ==========================================
 
+def detect_exam_urgency(text: str) -> Optional[int]:
+    """Return days until exam, or None if no exam urgency detected."""
+    text_lower = text.lower()
+    exam_keywords = ["考试", "考研", "期末", "测验", "quiz", "midterm", "final", "exam", "test", "考"]
+    if not any(keyword in text_lower for keyword in exam_keywords):
+        return None
+
+    exam_pattern = r"(?:考|考试|考研|期末|测验|quiz|midterm|final|exam|test)"
+    patterns = [
+        (rf"(?:明天|明日).{{0,6}}{exam_pattern}", 1),
+        (rf"{exam_pattern}.{{0,6}}(?:明天|明日)", 1),
+        (rf"(?:tomorrow).{{0,6}}{exam_pattern}", 1),
+        (rf"{exam_pattern}.{{0,6}}(?:tomorrow)", 1),
+        (rf"(?:后天).{{0,6}}{exam_pattern}", 2),
+        (rf"{exam_pattern}.{{0,6}}(?:后天)", 2),
+        (rf"(?:下周|下星期|下礼拜|next\s*week).{{0,6}}{exam_pattern}", 7),
+        (rf"{exam_pattern}.{{0,6}}(?:下周|下星期|下礼拜|next\s*week)", 7),
+        (rf"(?:还有|距|离|in\s*)(\d+)\s*(?:天|days?).{{0,6}}{exam_pattern}", lambda m: int(m.group(1))),
+        (rf"(\d+)\s*(?:天|days?).{{0,6}}{exam_pattern}", lambda m: int(m.group(1))),
+    ]
+
+    for pattern, days in patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            return days(match) if callable(days) else days
+
+    return None
+
+
 def _classify_user_intent(message: str) -> Optional[str]:
     """Classify user intent from message for multi-step tool planning."""
     message_lower = message.lower()
+
+    exam_keywords = ["考试", "考研", "期末", "测验", "模拟考", "quiz", "midterm", "final", "exam", "test"]
+    if any(keyword in message_lower for keyword in exam_keywords):
+        return "exam_preparation"
 
     # Intent patterns mapping
     intent_patterns = {
@@ -399,6 +433,18 @@ async def tool_planning_node(state: WorkflowState) -> WorkflowState:
 
     # Store intent for collaboration node decision
     state.context_data["detected_intent"] = intent
+
+    if intent == "exam_preparation":
+        days_left = detect_exam_urgency(user_message)
+        if days_left is not None:
+            urgent = days_left <= 3
+            state.context_data["exam_days_left"] = days_left
+            state.context_data["urgent_exam"] = urgent
+            user_context = state.context_data.get("user_context")
+            if isinstance(user_context, dict):
+                user_context = dict(user_context)
+                user_context["exam_urgency"] = {"days_left": days_left, "urgent": urgent}
+                state.context_data["user_context"] = user_context
 
     # Define tool sequences for different intents
     tool_sequences = {

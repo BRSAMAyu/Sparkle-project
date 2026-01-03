@@ -21,11 +21,37 @@ class CreateKnowledgeNodeTool(BaseTool):
         self, 
         params: CreateKnowledgeNodeParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)
             
+            # 1. [止血方案] 语义查重：避免创建重复的知识点
+            existing_nodes = await galaxy_service.semantic_search_nodes(
+                query=params.title,
+                limit=1,
+                threshold=0.15 # 严格阈值，Cosine Distance < 0.15 表示高度相似
+            )
+            
+            if existing_nodes:
+                node = existing_nodes[0]
+                return ToolResult(
+                    success=True, # 返回成功，但告知用户已关联
+                    tool_name=self.name,
+                    data={"node_id": str(node.id), "is_duplicate": True},
+                    widget_type="knowledge_card",
+                    widget_data={
+                        "id": str(node.id),
+                        "title": node.name,
+                        "summary": node.description,
+                        "tags": node.keywords,
+                        "is_existing": True,
+                        "message": "相似知识点已存在，已为您关联。"
+                    }
+                )
+
+            # 2. 如果无重复，继续创建
             # Handle subject_id conversion (str -> int if possible)
             subject_id_int = None
             if params.subject_id:
@@ -91,7 +117,8 @@ class QueryKnowledgeTool(BaseTool):
         self, 
         params: QueryKnowledgeParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)
@@ -169,9 +196,10 @@ class LinkNodesTool(BaseTool):
     
     async def execute(
         self, 
-        params: LinkNodesParams, 
+        params: LinkKnowledgeNodesParams, 
         user_id: str,
-        db_session: Any
+        db_session: Any,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         try:
             galaxy_service = GalaxyService(db_session)

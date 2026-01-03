@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/presentation/providers/auth_provider.dart';
 
@@ -71,7 +70,13 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
                     _buildContent(context, isMe),
                     const SizedBox(height: 2),
                      if (isMe && widget.message.isRead)
-                      Text(brandPrimary),,,,,,,),
+                      Text(
+                        'Read',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.sparkleColors.textSecondary,
+                        ),
+                      ),
                   ],
                 ),
               ),

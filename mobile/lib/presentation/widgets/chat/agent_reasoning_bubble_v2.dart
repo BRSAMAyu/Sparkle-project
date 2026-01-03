@@ -57,6 +57,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   void _toggleExpand() {
+    if (!mounted) return;
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
@@ -73,21 +74,20 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
     final activeStep = _getActiveStep();
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        color: context.sparkleColors.surfaceTertiary.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.2),
+          color: context.sparkleColors.brandPrimary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: context.sparkleColors.brandPrimary.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -97,26 +97,26 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header - Always visible
-          _buildHeader(theme, activeStep),
+          _buildHeader(context, activeStep),
 
           // Expandable Stream
           SizeTransition(
             sizeFactor: _expandAnimation,
-            child: _buildStepStream(theme),
+            child: _buildStepStream(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(ThemeData theme, ReasoningStep? activeStep) {
+  Widget _buildHeader(BuildContext context, ReasoningStep? activeStep) {
     final isCompleted = !widget.isThinking && widget.steps.every((s) => s.isCompleted);
 
     return InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.all(DS.md),
+        padding: EdgeInsets.all(context.sparkleSpacing.md),
         child: Row(
           children: [
             // Animated Agent Icon
@@ -131,7 +131,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     ? [
                         BoxShadow(
                           color: _getAgentColor(activeStep?.agent ?? AgentType.orchestrator)
-                              .withOpacity(0.4),
+                              .withValues(alpha: 0.4),
                           blurRadius: 8,
                           spreadRadius: 2,
                         ),
@@ -142,14 +142,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
                   _getAgentIcon(activeStep?.agent ?? AgentType.orchestrator),
-                  color: DS.brandPrimaryConst,
+                  color: Colors.white,
                   size: 18,
                   key: ValueKey(activeStep?.agent ?? AgentType.orchestrator),
                 ),
               ),
             ),
 
-            const SizedBox(width: DS.md),
+            SizedBox(width: context.sparkleSpacing.md),
 
             // Status Text
             Expanded(
@@ -158,16 +158,16 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 children: [
                   Text(
                     _getStatusText(activeStep, isCompleted),
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: context.sparkleTypography.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: _getStatusColor(activeStep, isCompleted, theme),
+                      color: _getStatusColor(activeStep, isCompleted, context),
                     ),
                   ),
                   if (widget.totalDurationMs != null && isCompleted)
                     Text(
                       '耗时: ${(widget.totalDurationMs! / 1000).toStringAsFixed(1)}s',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: context.sparkleColors.textSecondary,
                       ),
                     ),
                 ],
@@ -188,14 +188,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
               )
             else if (isCompleted)
-              Icon(Icons.check_circle, color: DS.success, size: 20)
+              Icon(Icons.check_circle, color: context.sparkleColors.semanticSuccess, size: 20)
             else
               AnimatedRotation(
                 turns: _isExpanded ? 0.5 : 0,
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
                   Icons.keyboard_arrow_down,
-                  color: theme.colorScheme.primary,
+                  color: context.sparkleColors.brandPrimary,
                 ),
               ),
           ],
@@ -204,14 +204,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     );
   }
 
-  Widget _buildStepStream(ThemeData theme) => Container(
+  Widget _buildStepStream(BuildContext context) => Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.all(DS.md),
+      padding: EdgeInsets.all(context.sparkleSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: context.sparkleColors.surfacePrimary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.1),
+          color: context.sparkleColors.neutral200.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -223,27 +223,27 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               Icon(
                 Icons.psychology,
                 size: 16,
-                color: theme.colorScheme.primary,
+                color: context.sparkleColors.brandPrimary,
               ),
               const SizedBox(width: 6),
               Text(
                 '思考过程',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.primary,
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: context.sparkleColors.brandPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Text(
                 '${widget.steps.length} steps',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: context.sparkleColors.textSecondary,
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: DS.md),
+          SizedBox(height: context.sparkleSpacing.md),
 
           // Steps List
           ...widget.steps.asMap().entries.map((entry) {
@@ -251,13 +251,13 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             final step = entry.value;
             final isLast = index == widget.steps.length - 1;
 
-            return _buildStepItem(step, isLast, theme);
+            return _buildStepItem(context, step, isLast);
           }),
         ],
       ),
     );
 
-  Widget _buildStepItem(ReasoningStep step, bool isLast, ThemeData theme) => Column(
+  Widget _buildStepItem(BuildContext context, ReasoningStep step, bool isLast) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -268,10 +268,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               width: 20,
               height: 20,
               margin: const EdgeInsets.only(top: 2),
-              child: _buildStepStatusIcon(step.status),
+              child: _buildStepStatusIcon(context, step.status),
             ),
 
-            const SizedBox(width: DS.sm),
+            SizedBox(width: context.sparkleSpacing.sm),
 
             // Step Content
             Expanded(
@@ -281,9 +281,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   // Description
                   Text(
                     step.description,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.w500,
-                      color: theme.colorScheme.onSurface,
+                      color: context.sparkleColors.textPrimary,
                     ),
                   ),
 
@@ -291,17 +291,17 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   if (step.toolOutput != null && step.toolOutput!.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(top: 6),
-                      padding: const EdgeInsets.all(DS.sm),
+                      padding: EdgeInsets.all(context.sparkleSpacing.sm),
                       decoration: BoxDecoration(
-                        color: DS.brandPrimary87,
+                        color: context.sparkleColors.surfaceTertiary,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: SelectableText(
                         step.toolOutput!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 11,
-                          color: DS.successAccent,
+                          color: Colors.green,
                           height: 1.4,
                         ),
                       ),
@@ -323,10 +323,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: DS.brandPrimary.withOpacity(0.1),
+                                color: context.sparkleColors.brandPrimary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: DS.brandPrimary.withOpacity(0.3),
+                                  color: context.sparkleColors.brandPrimary.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
@@ -335,14 +335,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                   Icon(
                                     Icons.book,
                                     size: 12,
-                                    color: DS.brandPrimaryConst,
+                                    color: context.sparkleColors.brandPrimary,
                                   ),
-                                  const SizedBox(width: DS.xs),
+                                  const SizedBox(width: 4),
                                   Text(
                                     '引用: $citation',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: DS.brandPrimaryConst,
+                                      color: context.sparkleColors.brandPrimary,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -359,8 +359,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       margin: const EdgeInsets.only(top: 4),
                       child: Text(
                         '${step.durationMs}ms',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          color: context.sparkleColors.textSecondary,
                           fontSize: 10,
                         ),
                       ),
@@ -376,29 +376,28 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           Container(
             margin: const EdgeInsets.symmetric(vertical: 8),
             height: 1,
-            color: theme.colorScheme.outline.withOpacity(0.1),
+            color: context.sparkleColors.neutral200.withValues(alpha: 0.1),
           ),
       ],
     );
 
-  Widget _buildStepStatusIcon(StepStatus status) {
+  Widget _buildStepStatusIcon(BuildContext context, StepStatus status) {
     switch (status) {
       case StepStatus.completed:
-        return Icon(Icons.check_circle, color: DS.success, size: 16);
+        return Icon(Icons.check_circle, color: context.sparkleColors.semanticSuccess, size: 16);
       case StepStatus.inProgress:
-        return SizedBox(
+        return const SizedBox(
           width: 16,
           height: 16,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(Colors.amber[600]),
           ),
         );
       case StepStatus.failed:
-        return Icon(Icons.error, color: DS.error, size: 16);
+        return Icon(Icons.error, color: context.sparkleColors.semanticError, size: 16);
       case StepStatus.pending:
         return Icon(Icons.radio_button_unchecked,
-            color: DS.brandPrimary400, size: 16,);
+            color: context.sparkleColors.textDisabled, size: 16,);
     }
   }
 
@@ -496,12 +495,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   Color _getStatusColor(
-      ReasoningStep? activeStep, bool isCompleted, ThemeData theme,) {
-    if (isCompleted) return DS.success;
+      ReasoningStep? activeStep, bool isCompleted, BuildContext context,) {
+    if (isCompleted) return context.sparkleColors.semanticSuccess;
     if (widget.isThinking && activeStep != null) {
       return _getAgentColor(activeStep.agent);
     }
-    return theme.colorScheme.onSurfaceVariant;
+    return context.sparkleColors.textSecondary;
   }
 
   ReasoningStep? _getActiveStep() {
@@ -514,6 +513,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   void _showCitationDialog(String citation) {
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -524,7 +524,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             '证明AI确实检索了相关知识，而非凭空想象。',
           ),
           actions: [
-            SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
           ],
         ),
     );

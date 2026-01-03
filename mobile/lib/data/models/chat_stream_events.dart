@@ -98,3 +98,20 @@ class CitationEvent extends ChatStreamEvent {
   CitationEvent({required this.citations});
   final List<Map<String, dynamic>> citations;
 }
+
+/// ActionCard 状态事件
+class ActionStatusEvent extends ChatStreamEvent {
+
+  ActionStatusEvent({
+    required this.actionId,
+    required this.status,
+    this.message,
+    this.widgetType,
+    this.timestamp,
+  });
+  final String actionId;
+  final String status; // 'confirmed', 'dismissed'
+  final String? message;
+  final String? widgetType;
+  final int? timestamp;
+}

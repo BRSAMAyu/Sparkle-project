@@ -33,7 +33,7 @@ class CheckSystemStatusTool(BaseTool):
     parameters_schema = CheckSystemStatusParams
     requires_confirmation = False
 
-    async def execute(self, params: CheckSystemStatusParams, user_id: str, db_session: Any) -> ToolResult:
+    async def execute(self, params: CheckSystemStatusParams, user_id: str, db_session: Any, tool_call_id: Optional[str] = None) -> ToolResult:
         metrics = {}
         prometheus_url = "http://sparkle_prometheus:9090"
 
@@ -106,7 +106,7 @@ class QueryErrorLogsTool(BaseTool):
     parameters_schema = QueryErrorLogsParams
     requires_confirmation = False
 
-    async def execute(self, params: QueryErrorLogsParams, user_id: str, db_session: Any) -> ToolResult:
+    async def execute(self, params: QueryErrorLogsParams, user_id: str, db_session: Any, tool_call_id: Optional[str] = None) -> ToolResult:
         loki_url = "http://sparkle_loki:3100"
         # Query: {container=~"sparkle.+"} |= "error"
         # Adjust based on Promtail config labels

@@ -22,7 +22,8 @@ class ToolExecutor:
         arguments: Dict[str, Any],
         user_id: str,
         db_session: Optional[Any],
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        tool_call_id: Optional[str] = None
     ) -> ToolResult:
         """
         执行单个工具调用并记录执行历史
@@ -33,6 +34,7 @@ class ToolExecutor:
             user_id: 用户 ID
             db_session: 数据库会话
             progress_callback: 进度回调
+            tool_call_id: 工具调用 ID
 
         Returns:
             ToolResult: 执行结果
@@ -45,6 +47,7 @@ class ToolExecutor:
                     user_id=user_id,
                     db_session=session,
                     progress_callback=progress_callback,
+                    tool_call_id=tool_call_id,
                     owns_session=True
                 )
 
@@ -54,6 +57,7 @@ class ToolExecutor:
             user_id=user_id,
             db_session=db_session,
             progress_callback=progress_callback,
+            tool_call_id=tool_call_id,
             owns_session=False
         )
 
@@ -64,6 +68,7 @@ class ToolExecutor:
         user_id: str,
         db_session: Any,
         progress_callback: Optional[Any],
+        tool_call_id: Optional[str],
         owns_session: bool
     ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
@@ -112,9 +117,9 @@ class ToolExecutor:
         try:
             # 执行工具
             if getattr(tool, "is_long_running", False) and progress_callback:
-                result = await tool.execute(validated_params, user_id, db_session, progress_callback=progress_callback)
+                result = await tool.execute(validated_params, user_id, db_session, tool_call_id=tool_call_id, progress_callback=progress_callback)
             else:
-                result = await tool.execute(validated_params, user_id, db_session)
+                result = await tool.execute(validated_params, user_id, db_session, tool_call_id=tool_call_id)
 
             # 计算执行时间
             execution_time_ms = int((time.time() - start_time) * 1000)
@@ -273,7 +278,8 @@ class ToolExecutor:
                 tool_name=call["function"]["name"],
                 arguments=call["function"]["arguments"] if isinstance(call["function"]["arguments"], dict) else json.loads(call["function"]["arguments"]),
                 user_id=user_id,
-                db_session=db_session
+                db_session=db_session,
+                tool_call_id=call.get("id")
             )
             results.append(result)
         return results

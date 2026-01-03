@@ -7,15 +7,28 @@ import 'package:sparkle/presentation/providers/capsule_provider.dart';
 
 class CuriosityCapsuleCard extends ConsumerWidget {
 
-  const CuriosityCapsuleCard({required this.capsule, super.key});
+  const CuriosityCapsuleCard({
+    required this.capsule, 
+    this.highlighted = false,
+    this.initiallyExpanded = false,
+    super.key,
+  });
   final CuriosityCapsuleModel capsule;
+  final bool highlighted;
+  final bool initiallyExpanded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius16),
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: DS.borderRadius16,
+        side: highlighted 
+            ? BorderSide(color: context.sparkleColors.brandPrimary, width: 2) 
+            : BorderSide.none,
+      ),
+      elevation: highlighted ? 4 : 2,
       child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
         tilePadding: const EdgeInsets.all(DS.lg),
         leading: Container(
           padding: const EdgeInsets.all(DS.sm),
@@ -23,7 +36,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             gradient: DS.secondaryGradient,
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.lightbulb_outline, color: DS.brandPrimary),
+          child: Icon(Icons.lightbulb_outline, color: context.sparkleColors.brandPrimary),
         ),
         title: Text(
           capsule.title,
@@ -31,7 +44,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
         ),
         subtitle: capsule.isRead 
             ? null 
-            : Text('New!', style: TextStyle(color: DS.primaryBase, fontWeight: FontWeight.bold)),
+            : Text('New!', style: TextStyle(color: context.sparkleColors.brandPrimary, fontWeight: FontWeight.bold)),
         onExpansionChanged: (expanded) {
           if (expanded && !capsule.isRead) {
             ref.read(capsuleProvider.notifier).markAsRead(capsule.id);
@@ -48,7 +61,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                 if (capsule.relatedSubject != null)
                   Chip(
                     label: Text(capsule.relatedSubject!),
-                    backgroundColor: context.colors.surfaceElevated,
+                    backgroundColor: context.sparkleColors.surfaceTertiary,
                   ),
               ],
             ),

@@ -30,10 +30,14 @@ final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref
   }
 
   final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
-  final wsUrl = '$baseUrl/community/ws/connect?token=$token';
+  // 安全修复：token不再放在URL中，改用headers
+  final wsUrl = '$baseUrl/community/ws/connect';
+  final headers = <String, dynamic>{
+    'Authorization': 'Bearer $token',
+  };
 
   try {
-    wsService.connect(wsUrl);
+    wsService.connect(wsUrl, headers: headers);
   } catch (e) {
     debugPrint('WS Connect Error: $e');
     return const Stream.empty();
@@ -335,10 +339,14 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     if (token == null) return;
 
     final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
-    final wsUrl = '$baseUrl/community/groups/$_groupId/ws?token=$token';
+    // 安全修复：token不再放在URL中，改用headers
+    final wsUrl = '$baseUrl/community/groups/$_groupId/ws';
+    final headers = <String, dynamic>{
+      'Authorization': 'Bearer $token',
+    };
 
     try {
-      _wsService.connect(wsUrl);
+      _wsService.connect(wsUrl, headers: headers);
       _wsService.stream.listen((data) {
         if (data is String) {
           try {
@@ -728,6 +736,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
   final String _friendId;
   final ChatCacheService _cacheService = ChatCacheService();
   final Ref _ref;
+  String? _currentUserId;
 
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;

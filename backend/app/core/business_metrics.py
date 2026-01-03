@@ -1,101 +1,123 @@
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Histogram, Gauge, REGISTRY
 from functools import wraps
 import time
 from typing import List, Dict, Optional, Any
 
+def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwargs):
+    """Safely get or create a prometheus metric."""
+    if name in REGISTRY._names_to_collectors:
+        return REGISTRY._names_to_collectors[name]
+    return metric_type(name, documentation, labelnames, **kwargs)
+
 # ========== Routing Metrics ==========
-ROUTING_DECISIONS = Counter(
+ROUTING_DECISIONS = get_or_create_metric(
+    Counter,
     'sparkle_routing_decisions_total',
     'Total routing decisions by method',
     ['source', 'target', 'method']
 )
 
-ROUTING_SUCCESS = Counter(
+ROUTING_SUCCESS = get_or_create_metric(
+    Counter,
     'sparkle_routing_success_total',
     'Successful routing executions',
     ['source', 'target']
 )
 
-ROUTING_FAILURE = Counter(
+ROUTING_FAILURE = get_or_create_metric(
+    Counter,
     'sparkle_routing_failure_total',
     'Failed routing executions',
     ['source', 'target', 'reason']
 )
 
-ROUTING_LATENCY = Histogram(
+ROUTING_LATENCY = get_or_create_metric(
+    Histogram,
     'sparkle_routing_latency_seconds',
     'Routing decision latency',
     ['method']
 )
 
-ROUTING_CONFIDENCE = Histogram(
+ROUTING_CONFIDENCE = get_or_create_metric(
+    Histogram,
     'sparkle_routing_confidence',
     'Routing confidence distribution',
     ['method']
 )
 
 # ========== Learning Metrics ==========
-LEARNING_UPDATES = Counter(
+LEARNING_UPDATES = get_or_create_metric(
+    Counter,
     'sparkle_learning_updates_total',
     'Bayesian learning updates',
     ['source', 'target', 'outcome']
 )
 
-PROBABILITY_DISTRIBUTION = Gauge(
+PROBABILITY_DISTRIBUTION = get_or_create_metric(
+    Gauge,
     'sparkle_route_probability',
     'Current probability of route',
     ['source', 'target']
 )
 
-LEARNER_STATE_SIZE = Gauge(
+LEARNER_STATE_SIZE = get_or_create_metric(
+    Gauge,
     'sparkle_learner_state_size',
     'Number of routes in learner',
     ['user_id']
 )
 
 # ========== Collaboration Metrics ==========
-COLLABORATION_SUCCESS = Counter(
+COLLABORATION_SUCCESS = get_or_create_metric(
+    Counter,
     'sparkle_collaboration_success_total',
     'Successful multi-agent collaborations',
     ['workflow_type', 'agents_used', 'outcome']
 )
 
-COLLABORATION_LATENCY = Histogram(
+COLLABORATION_LATENCY = get_or_create_metric(
+    Histogram,
     'sparkle_collaboration_latency_seconds',
     'Full collaboration workflow latency',
     ['workflow_type']
 )
 
-AGENT_INTERACTION_COUNT = Counter(
+AGENT_INTERACTION_COUNT = get_or_create_metric(
+    Counter,
     'sparkle_agent_interactions_total',
     'Number of agent-to-agent interactions',
     ['from_agent', 'to_agent', 'type']
 )
 
 # ========== System Health Metrics ==========
-ACTIVE_LEARNERS = Gauge(
+ACTIVE_LEARNERS = get_or_create_metric(
+    Gauge,
     'sparkle_active_learners_total',
     'Number of active Bayesian learners'
 )
 
-ACTIVE_SESSIONS = Gauge(
+ACTIVE_SESSIONS = get_or_create_metric(
+    Gauge,
     'sparkle_active_sessions_total',
     'Number of active chat sessions'
 )
 
-CACHE_EFFECTIVENESS = Counter(
+CACHE_EFFECTIVENESS = get_or_create_metric(
+    Counter,
     'sparkle_cache_effectiveness',
     'Cache hit/miss for routing',
     ['cache_type', 'result']
 )
 
-GRAPH_COMPLEXITY = Gauge(
+GRAPH_COMPLEXITY = get_or_create_metric(
+    Gauge,
     'sparkle_graph_complexity',
     'Graph complexity (nodes + edges)',
     ['graph_name']
 )
 
-STATE_SIZE = Gauge(
+STATE_SIZE = get_or_create_metric(
+    Gauge,
     'sparkle_state_size_bytes',
     'Size of the workflow state in bytes',
     ['session_id']

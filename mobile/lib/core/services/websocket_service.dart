@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -10,6 +11,7 @@ class WebSocketService {
   WebSocketChannel? _channel;
   bool _isConnected = false;
   String? _url;
+  Map<String, dynamic>? _customHeaders;
   
   // Reconnection logic
   Timer? _reconnectTimer;
@@ -24,10 +26,11 @@ class WebSocketService {
 
   void connect(String url, {Map<String, dynamic>? headers}) {
     _url = url;
+    _customHeaders = headers; // 存储headers供内部使用
     _isManualDisconnect = false;
     _reconnectAttempts = 0;
     _cancelReconnectTimer();
-    
+
     _connectInternal();
   }
 
@@ -37,8 +40,12 @@ class WebSocketService {
     try {
       final uri = Uri.parse(_url!);
       debugPrint('Connecting to WebSocket: $uri (Attempt: $_reconnectAttempts)');
-      
-      _channel = WebSocketChannel.connect(uri);
+
+      // 使用headers参数（如果提供）- 使用IOWebSocketChannel支持headers
+      _channel = IOWebSocketChannel.connect(
+        uri,
+        headers: _customHeaders,
+      );
       _isConnected = true;
       
       _channel!.stream.listen(
@@ -46,7 +53,7 @@ class WebSocketService {
           _controller.add(data);
           _reconnectAttempts = 0; // Reset on success
         },
-        onError: (error) {
+        onError: (Object error) {
           debugPrint('WebSocket stream error: $error');
           _isConnected = false;
           _scheduleReconnect();

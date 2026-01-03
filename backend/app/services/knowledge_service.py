@@ -63,7 +63,7 @@ class KnowledgeService:
                 return ""
             
             # Format as context string
-            context_lines = ["Relevant Knowledge Base:"]
+            context_lines = ["Relevant Knowledge Base (Graph Augmented):"]
             for item in results:
                 node = item.node
                 status = item.user_status
@@ -75,9 +75,22 @@ class KnowledgeService:
                     else:
                         status_str = "Locked"
                 
+                # Basic Node Info
                 line = f"- [{node.name}]: {node.description or 'No description'} (Status: {status_str})"
                 if node.parent_name:
                     line += f" (Parent: {node.parent_name})"
+                
+                # [Graph RAG] Fetch Neighbors
+                try:
+                    neighbors = await self.galaxy_service.get_node_neighbors(node.id, limit=5)
+                    if neighbors:
+                        # Limit to top 3 related nodes to save tokens
+                        top_neighbors = neighbors[:3]
+                        neighbor_names = [n.name for n in top_neighbors]
+                        line += f" [Related: {', '.join(neighbor_names)}]"
+                except Exception as e:
+                    logger.warning(f"Failed to fetch neighbors for {node.id}: {e}")
+
                 context_lines.append(line)
             
             return "\n".join(context_lines)

@@ -157,6 +157,20 @@ class LLMResponseParser:
                 ],
                 "message": "制定计划"
             },
+            "exam_preparation": {
+                "actions": [
+                    "考试", "备考", "复习", "准备", "冲刺",
+                    "exam", "prepare", "review"
+                ],
+                "objects": [
+                    "考研", "期末", "测验", "quiz", "midterm", "final"
+                ],
+                "urgency_keywords": [
+                    "明天", "后天", "下周", "即将", "马上",
+                    "tomorrow", "soon"
+                ],
+                "message": "考试冲刺准备"
+            },
             "fake_success": {
                 "phrases": [
                     "已为您", "成功创建", "已经创建", "帮你创建了",
@@ -187,5 +201,15 @@ class LLMResponseParser:
                     f"AI 识别到{intent['message']}意图，但未能生成正确的 JSON 格式。"
                     f"请尝试更明确的指令（如：'创建一个背单词任务'）。"
                 )
+
+        exam_intent = intent_map["exam_preparation"]
+        has_exam = any(a in text_lower for a in exam_intent["actions"]) or any(o in text_lower for o in exam_intent["objects"])
+        has_urgency = any(k in text_lower for k in exam_intent["urgency_keywords"])
+        if has_exam:
+            urgency_hint = "（检测到紧急时间）" if has_urgency else ""
+            return (
+                f"AI 识别到{exam_intent['message']}{urgency_hint}意图，但未能生成正确的 JSON 格式。"
+                f"请尝试更明确的指令（如：'帮我创建一个3天冲刺复习计划'）。"
+            )
 
         return None

@@ -3,7 +3,7 @@ User Tool History Model - 用户工具执行历史记录
 用于追踪工具执行的成功率、性能指标和偏好学习
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index, ForeignKey, Float, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import JSON
 from sqlalchemy.orm import relationship
@@ -52,8 +52,8 @@ class UserToolHistory(Base):
     was_helpful = Column(Boolean, nullable=True)  # Derived from downstream actions
 
     # Temporal info
-    created_at = Column(DateTime(timezone=True), server_default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(DateTime(timezone=True), server_default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Indexes for efficient querying
     __table_args__ = (

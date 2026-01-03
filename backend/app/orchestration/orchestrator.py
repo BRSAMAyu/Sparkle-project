@@ -111,7 +111,7 @@ class ChatOrchestrator:
     def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None):
         if redis_client is None:
             logger.error("ChatOrchestrator requires Redis, but no redis_client was provided")
-            raise RuntimeError("Redis client is required for ChatOrchestrator")
+            raise ValueError("Redis client is required for ChatOrchestrator")
         self.db_session = db_session
         self.redis = redis_client
 
@@ -383,6 +383,42 @@ class ChatOrchestrator:
             logger.error(f"Failed to prune conversation history: {e}")
             return {"messages": [], "summary": None}
 
+    def _log_context_injection(self, user_id: str, context: Optional[Dict[str, Any]]) -> None:
+        """Log context injection details for observability."""
+        if not context or not isinstance(context, dict):
+            logger.info("Context injection for user {}: empty", user_id)
+            return
+
+        next_actions = context.get("next_actions") or context.get("pending_tasks") or []
+        active_plans = context.get("active_plans") or []
+
+        tasks_count = len(next_actions) if isinstance(next_actions, list) else 0
+        plans_count = len(active_plans) if isinstance(active_plans, list) else 0
+
+        last_activity = None
+        user_ctx = context.get("user_context")
+        if isinstance(user_ctx, dict):
+            last_activity = user_ctx.get("last_activity_time") or user_ctx.get("last_login")
+
+        if not last_activity and isinstance(context.get("analytics_summary"), dict):
+            last_activity = context["analytics_summary"].get("last_login") or context["analytics_summary"].get("last_activity_time")
+
+        logger.info(
+            "Context injection for user {}: {} tasks, {} plans, last_activity={}",
+            user_id,
+            tasks_count,
+            plans_count,
+            last_activity
+        )
+
+    async def _get_tools_schema(self) -> List[Dict[str, Any]]:
+        """Get tools from dynamic registry"""
+        try:
+            return dynamic_tool_registry.get_openai_tools_schema()
+        except Exception as e:
+            logger.error(f"Failed to get tools schema: {e}")
+            return []
+
     async def _get_tools_schema(self) -> List[Dict[str, Any]]:
         """Get tools from dynamic registry"""
         try:
@@ -504,6 +540,8 @@ class ChatOrchestrator:
                 # If no DB session but have gRPC context, use it
                 user_context_payload = grpc_context
                 logger.info("Using gRPC context without local DB context")
+
+            self._log_context_injection(user_id, user_context_payload)
 
             if self.context_pruner:
                 conversation_context = await self._build_conversation_context(session_id, user_id)

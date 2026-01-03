@@ -14,12 +14,21 @@ class SuggestFocusSessionTool(BaseTool):
     parameters_schema = SuggestFocusSessionParams
     requires_confirmation = False
 
-    async def execute(
-        self,
-        params: SuggestFocusSessionParams,
-        user_id: str,
-        db_session: Any
-    ) -> ToolResult:
+        async def execute(
+
+            self, 
+
+            params: SuggestFocusSessionParams, 
+
+            user_id: str,
+
+            db_session: Any,
+
+            tool_call_id: Optional[str] = None
+
+        ) -> ToolResult:
+
+    
         try:
             task_data = None
             title = params.task_title or "专注冲刺"

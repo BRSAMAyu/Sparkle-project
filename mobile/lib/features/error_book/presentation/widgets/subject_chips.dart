@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 
 /// 科目定义
 class Subject {
-  final String code;
-  final String label;
-  final IconData icon;
-  final Color color;
 
   const Subject({
     required this.code,
@@ -13,6 +9,10 @@ class Subject {
     required this.icon,
     required this.color,
   });
+  final String code;
+  final String label;
+  final IconData icon;
+  final Color color;
 
   static const List<Subject> all = [
     Subject(code: 'math', label: '数学', icon: Icons.calculate, color: Color(0xFF2196F3)),
@@ -37,18 +37,17 @@ class Subject {
 ///
 /// 用于错题列表页的科目筛选
 class SubjectFilterChips extends StatelessWidget {
-  final String? selectedSubject;
-  final ValueChanged<String?> onSelected;
 
   const SubjectFilterChips({
     super.key,
     this.selectedSubject,
     required this.onSelected,
   });
+  final String? selectedSubject;
+  final ValueChanged<String?> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
+  Widget build(BuildContext context) => SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -77,19 +76,18 @@ class SubjectFilterChips extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// 科目标签（只读显示）
 class SubjectChip extends StatelessWidget {
-  final String subjectCode;
-  final bool compact;
 
   const SubjectChip({
     super.key,
     required this.subjectCode,
     this.compact = false,
   });
+  final String subjectCode;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {

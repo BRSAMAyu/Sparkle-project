@@ -117,6 +117,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return UnknownEvent(data: data);
 
+      case 'action_status':
+        final actionId = data['action_id'] as String?;
+        final status = data['status'] as String?;
+        if (actionId != null && status != null) {
+          return ActionStatusEvent(
+            actionId: actionId,
+            status: status,
+            message: data['message'] as String?,
+            widgetType: data['widget_type'] as String?,
+            timestamp: data['timestamp'] as int?,
+          );
+        }
+        return UnknownEvent(data: data);
+
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {
@@ -626,12 +640,21 @@ class WebSocketChatServiceV2 {
 
   /// 释放资源
   void dispose() {
+    if (_disposed) return;
     _log('🗑️  Disposing WebSocketChatServiceV2');
     _disposed = true;
+    _connGen++; // Invalidate any pending connection attempts
+    
     _socketSubscription?.cancel();
     _socketSubscription = null;
-    _reconnectTimer?.cancel(); // TODO-A7: Ensure timer cancel
+    
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    
+    _stopHeartbeat();
+    
     _closeConnection();
+    
     if (_messageStreamController != null &&
         !_messageStreamController!.isClosed) {
       _messageStreamController!.close();

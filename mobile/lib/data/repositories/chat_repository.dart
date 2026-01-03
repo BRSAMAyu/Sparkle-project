@@ -106,6 +106,19 @@ class ChatRepository {
     );
   }
 
+  /// 发送 ActionCard 确认/忽略反馈
+  void sendActionFeedback({
+    required String action,
+    required String toolResultId,
+    required String widgetType,
+  }) {
+    _wsService.sendActionFeedback(
+      action: action,
+      toolResultId: toolResultId,
+      widgetType: widgetType,
+    );
+  }
+
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(String message, String? conversationId) {

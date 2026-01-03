@@ -59,7 +59,7 @@ class TaskDecompositionWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    ) -> CollaborationResult:
+    , tool_call_id: Optional[str] = None) -> CollaborationResult:
         """
         执行任务分解协作
 
@@ -253,7 +253,7 @@ class ProgressiveExplorationWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    ) -> CollaborationResult:
+    , tool_call_id: Optional[str] = None) -> CollaborationResult:
         """
         执行渐进式深度探索
 
@@ -438,7 +438,7 @@ class ErrorDiagnosisWorkflow:
         self,
         query: str,
         context: EnhancedAgentContext
-    ) -> CollaborationResult:
+    , tool_call_id: Optional[str] = None) -> CollaborationResult:
         """
         执行错题诊断
 

@@ -26,15 +26,15 @@ class _SchedulePreferencesScreenState extends ConsumerState<SchedulePreferencesS
       if (prefs['commute'] != null) {
         final commute = prefs['commute'] as List;
         if (commute.length == 2) {
-          _commuteStartController.text = commute[0];
-          _commuteEndController.text = commute[1];
+          _commuteStartController.text = commute[0] as String;
+          _commuteEndController.text = commute[1] as String;
         }
       }
       if (prefs['lunch'] != null) {
         final lunch = prefs['lunch'] as List;
         if (lunch.length == 2) {
-          _lunchStartController.text = lunch[0];
-          _lunchEndController.text = lunch[1];
+          _lunchStartController.text = lunch[0] as String;
+          _lunchEndController.text = lunch[1] as String;
         }
       }
     }

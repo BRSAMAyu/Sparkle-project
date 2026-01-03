@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 /// 知识卡片组件
 /// 用于在聊天中显示 AI 生成的知识节点
@@ -22,7 +23,7 @@ class KnowledgeCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
-      child: InkWell(
+      child: SparklePressable(
         onTap: () {
           // 导航到知识星图页面，如果有节点ID则聚焦到该节点
           if (nodeId != null) {
@@ -33,18 +34,18 @@ class KnowledgeCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: EdgeInsets.all(context.space.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: DS.sm),
+                  Icon(Icons.lightbulb_outline, color: context.colors.brandPrimary),
+                  SizedBox(width: context.space.sm),
                   Expanded(
                     child: Text(
                       title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: context.typo.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -54,28 +55,28 @@ class KnowledgeCard extends StatelessWidget {
               ),
               
               if (summary != null && summary.isNotEmpty) ...[
-                const SizedBox(height: DS.sm),
+                SizedBox(height: context.space.sm),
                 Text(
                   summary,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: context.typo.bodyMedium,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
 
               if (tags.isNotEmpty) ...[
-                const SizedBox(height: DS.sm),
+                SizedBox(height: context.space.sm),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 4.0,
                   children: tags.map((tag) => Chip(
-                    label: Text(tag, style: Theme.of(context).textTheme.labelSmall),
+                    label: Text(tag, style: context.typo.labelSmall),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   ),).toList(),
                 ),
               ],
-              const SizedBox(height: DS.md),
+              SizedBox(height: context.space.md),
               Align(
                 alignment: Alignment.bottomRight,
                 child: TextButton.icon(
@@ -99,16 +100,16 @@ class KnowledgeCard extends StatelessWidget {
     String label;
 
     if (masteryLevel >= 80) {
-      color = DS.success;
+      color = context.sparkleColors.semanticSuccess;
       label = '已掌握';
     } else if (masteryLevel >= 50) {
-      color = DS.brandPrimary;
+      color = context.sparkleColors.brandPrimary;
       label = '熟练中';
     } else if (masteryLevel > 0) {
-      color = DS.brandPrimary;
+      color = context.sparkleColors.brandPrimary;
       label = '初涉';
     } else {
-      color = DS.brandPrimary;
+      color = context.sparkleColors.brandPrimary;
       label = '未学习';
     }
 
