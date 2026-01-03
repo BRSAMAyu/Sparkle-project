@@ -9,20 +9,13 @@ class ErrorRecord with _$ErrorRecord {
   const factory ErrorRecord({
     required String id,
     @JsonKey(name: 'question_text') required String questionText,
-    @JsonKey(name: 'question_image_url') String? questionImageUrl,
-    @JsonKey(name: 'user_answer') required String userAnswer,
-    @JsonKey(name: 'correct_answer') required String correctAnswer,
-    required String subject,
+    @JsonKey(name: 'user_answer') required String userAnswer, @JsonKey(name: 'correct_answer') required String correctAnswer, @JsonKey(name: 'subject_code') required String subject, @JsonKey(name: 'mastery_level') required double masteryLevel, @JsonKey(name: 'review_count') required int reviewCount, @JsonKey(name: 'created_at') required DateTime createdAt, @JsonKey(name: 'updated_at') required DateTime updatedAt, @JsonKey(name: 'question_image_url') String? questionImageUrl,
     String? chapter,
     int? difficulty,
-    @JsonKey(name: 'mastery_level') required double masteryLevel,
-    @JsonKey(name: 'review_count') required int reviewCount,
     @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
     @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
     @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
     @JsonKey(name: 'knowledge_links') @Default([]) List<KnowledgeLink> knowledgeLinks,
-    @JsonKey(name: 'created_at') required DateTime createdAt,
-    @JsonKey(name: 'updated_at') required DateTime updatedAt,
   }) = _ErrorRecord;
 
   factory ErrorRecord.fromJson(Map<String, dynamic> json) =>
@@ -37,10 +30,8 @@ class ErrorAnalysis with _$ErrorAnalysis {
     @JsonKey(name: 'error_type_label') required String errorTypeLabel,
     @JsonKey(name: 'root_cause') required String rootCause,
     @JsonKey(name: 'correct_approach') required String correctApproach,
-    @JsonKey(name: 'similar_traps') @Default([]) List<String> similarTraps,
+    @JsonKey(name: 'study_suggestion') required String studySuggestion, @JsonKey(name: 'analyzed_at') required DateTime analyzedAt, @JsonKey(name: 'similar_traps') @Default([]) List<String> similarTraps,
     @JsonKey(name: 'recommended_knowledge') @Default([]) List<String> recommendedKnowledge,
-    @JsonKey(name: 'study_suggestion') required String studySuggestion,
-    @JsonKey(name: 'analyzed_at') required DateTime analyzedAt,
   }) = _ErrorAnalysis;
 
   factory ErrorAnalysis.fromJson(Map<String, dynamic> json) =>

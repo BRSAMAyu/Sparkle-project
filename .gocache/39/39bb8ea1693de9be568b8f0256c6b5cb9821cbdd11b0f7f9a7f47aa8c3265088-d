@@ -1,6 +1,0 @@
-./auth.go
-./chaos.go
-./chat_orchestrator.go
-./group_chat.go
-./health.go
-./websocket_factory.go

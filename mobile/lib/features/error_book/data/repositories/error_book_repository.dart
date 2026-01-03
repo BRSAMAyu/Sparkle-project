@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import '../models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// 错题档案 Repository
 ///
@@ -9,10 +9,10 @@ import '../models/error_record.dart';
 /// - 异常统一处理：转换 HTTP 异常为业务异常
 /// - 可测试性：通过依赖注入 Dio 实例便于 mock
 class ErrorBookRepository {
-  final Dio _dio;
-  static const String _basePath = '/api/v1/errors';
 
   ErrorBookRepository(this._dio);
+  final Dio _dio;
+  static const String _basePath = '/api/v1/errors';
 
   /// 创建错题
   ///
@@ -75,7 +75,7 @@ class ErrorBookRepository {
       final queryParams = <String, dynamic>{
         'page': page,
         'page_size': pageSize,
-        if (subject != null) 'subject': subject,
+        if (subject != null) 'subject_code': subject,
         if (chapter != null) 'chapter': chapter,
         if (needReview != null) 'need_review': needReview,
         if (keyword != null) 'keyword': keyword,

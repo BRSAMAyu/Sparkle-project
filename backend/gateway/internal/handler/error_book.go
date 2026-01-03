@@ -60,7 +60,7 @@ func (h *ErrorBookHandler) ListErrors(c *gin.Context) {
     
     req := &errorbookv1.ListErrorsRequest{
         UserId:      userID,
-        SubjectCode: c.Query("subject"),
+        SubjectCode: c.Query("subject_code"),
         Chapter:     c.Query("chapter"),
         ErrorType:   c.Query("error_type"),
         Keyword:     c.Query("keyword"),

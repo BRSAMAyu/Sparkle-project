@@ -1,9 +1,0 @@
-./apple_auth.go
-./billing.go
-./chat_history.go
-./community_command.go
-./community_query.go
-./galaxy_command.go
-./quota.go
-./semantic_cache.go
-./task_command.go
