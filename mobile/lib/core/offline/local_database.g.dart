@@ -23,28 +23,33 @@ const LocalKnowledgeNodeSchema = CollectionSchema(
       name: r'error',
       type: IsarType.string,
     ),
-    r'lastUpdated': PropertySchema(
+    r'globalSparkCount': PropertySchema(
       id: 1,
+      name: r'globalSparkCount',
+      type: IsarType.long,
+    ),
+    r'lastUpdated': PropertySchema(
+      id: 2,
       name: r'lastUpdated',
       type: IsarType.dateTime,
     ),
     r'mastery': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'mastery',
       type: IsarType.long,
     ),
     r'name': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'name',
       type: IsarType.string,
     ),
     r'serverId': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'serverId',
       type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _LocalKnowledgeNodesyncStatusEnumValueMap,
@@ -102,11 +107,12 @@ void _localKnowledgeNodeSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.error);
-  writer.writeDateTime(offsets[1], object.lastUpdated);
-  writer.writeLong(offsets[2], object.mastery);
-  writer.writeString(offsets[3], object.name);
-  writer.writeString(offsets[4], object.serverId);
-  writer.writeByte(offsets[5], object.syncStatus.index);
+  writer.writeLong(offsets[1], object.globalSparkCount);
+  writer.writeDateTime(offsets[2], object.lastUpdated);
+  writer.writeLong(offsets[3], object.mastery);
+  writer.writeString(offsets[4], object.name);
+  writer.writeString(offsets[5], object.serverId);
+  writer.writeByte(offsets[6], object.syncStatus.index);
 }
 
 LocalKnowledgeNode _localKnowledgeNodeDeserialize(
@@ -117,13 +123,14 @@ LocalKnowledgeNode _localKnowledgeNodeDeserialize(
 ) {
   final object = LocalKnowledgeNode();
   object.error = reader.readStringOrNull(offsets[0]);
+  object.globalSparkCount = reader.readLong(offsets[1]);
   object.id = id;
-  object.lastUpdated = reader.readDateTime(offsets[1]);
-  object.mastery = reader.readLong(offsets[2]);
-  object.name = reader.readString(offsets[3]);
-  object.serverId = reader.readString(offsets[4]);
+  object.lastUpdated = reader.readDateTime(offsets[2]);
+  object.mastery = reader.readLong(offsets[3]);
+  object.name = reader.readString(offsets[4]);
+  object.serverId = reader.readString(offsets[5]);
   object.syncStatus = _LocalKnowledgeNodesyncStatusValueEnumMap[
-          reader.readByteOrNull(offsets[5])] ??
+          reader.readByteOrNull(offsets[6])] ??
       SyncStatus.pending;
   return object;
 }
@@ -138,14 +145,16 @@ P _localKnowledgeNodeDeserializeProp<P>(
     case 0:
       return (reader.readStringOrNull(offset)) as P;
     case 1:
-      return (reader.readDateTime(offset)) as P;
-    case 2:
       return (reader.readLong(offset)) as P;
+    case 2:
+      return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (_LocalKnowledgeNodesyncStatusValueEnumMap[
               reader.readByteOrNull(offset)] ??
           SyncStatus.pending) as P;
@@ -159,12 +168,14 @@ const _LocalKnowledgeNodesyncStatusEnumValueMap = {
   'synced': 1,
   'conflict': 2,
   'failed': 3,
+  'waitingAck': 4,
 };
 const _LocalKnowledgeNodesyncStatusValueEnumMap = {
   0: SyncStatus.pending,
   1: SyncStatus.synced,
   2: SyncStatus.conflict,
   3: SyncStatus.failed,
+  4: SyncStatus.waitingAck,
 };
 
 Id _localKnowledgeNodeGetId(LocalKnowledgeNode object) {
@@ -514,6 +525,62 @@ extension LocalKnowledgeNodeQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'error',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      globalSparkCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'globalSparkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      globalSparkCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'globalSparkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      globalSparkCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'globalSparkCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterFilterCondition>
+      globalSparkCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'globalSparkCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -1038,6 +1105,20 @@ extension LocalKnowledgeNodeQuerySortBy
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      sortByGlobalSparkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'globalSparkCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      sortByGlobalSparkCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'globalSparkCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
       sortByLastUpdated() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastUpdated', Sort.asc);
@@ -1121,6 +1202,20 @@ extension LocalKnowledgeNodeQuerySortThenBy
       thenByErrorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'error', Sort.desc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      thenByGlobalSparkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'globalSparkCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QAfterSortBy>
+      thenByGlobalSparkCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'globalSparkCount', Sort.desc);
     });
   }
 
@@ -1219,6 +1314,13 @@ extension LocalKnowledgeNodeQueryWhereDistinct
   }
 
   QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QDistinct>
+      distinctByGlobalSparkCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'globalSparkCount');
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, LocalKnowledgeNode, QDistinct>
       distinctByLastUpdated() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastUpdated');
@@ -1265,6 +1367,13 @@ extension LocalKnowledgeNodeQueryProperty
   QueryBuilder<LocalKnowledgeNode, String?, QQueryOperations> errorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'error');
+    });
+  }
+
+  QueryBuilder<LocalKnowledgeNode, int, QQueryOperations>
+      globalSparkCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'globalSparkCount');
     });
   }
 
@@ -1462,12 +1571,14 @@ const _PendingUpdatesyncStatusEnumValueMap = {
   'synced': 1,
   'conflict': 2,
   'failed': 3,
+  'waitingAck': 4,
 };
 const _PendingUpdatesyncStatusValueEnumMap = {
   0: SyncStatus.pending,
   1: SyncStatus.synced,
   2: SyncStatus.conflict,
   3: SyncStatus.failed,
+  4: SyncStatus.waitingAck,
 };
 
 Id _pendingUpdateGetId(PendingUpdate object) {

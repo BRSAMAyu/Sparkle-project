@@ -43,6 +43,38 @@ async def get_decay_service(db: AsyncSession = Depends(get_db)) -> DecayService:
     return DecayService(db)
 
 
+class MasterySyncRequest(BaseModel):
+    node_id: UUID
+    mastery: int = Field(..., ge=0, le=100)
+    version: datetime
+    reason: str = "offline_sync"
+
+@router.post("/sync/mastery")
+async def sync_node_mastery(
+    request: MasterySyncRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Synchronize node mastery from mobile client (via Gateway).
+    Supports optimistic concurrency using the version (timestamp) field.
+    """
+    result = await galaxy_service.update_node_mastery(
+        user_id=UUID(user_id),
+        node_id=request.node_id,
+        new_mastery=request.mastery,
+        reason=request.reason,
+        version=request.version
+    )
+    
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("reason", "conflict")
+        )
+        
+    return result
+
 # ==========================================
 # API 端点
 # ==========================================

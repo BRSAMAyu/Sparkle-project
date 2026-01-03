@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/agent"
@@ -25,6 +26,7 @@ import (
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/error_book"
+	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/infra/otel"
@@ -33,6 +35,8 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/sparkle/gateway/internal/worker"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -96,6 +100,15 @@ func main() {
 	}
 	defer agentClient.Close()
 
+	// Connect to Galaxy Service (gRPC)
+	galaxyClient, err := galaxy.NewClient(cfg)
+	if err != nil {
+		log.Printf("Warning: Unable to connect to galaxy service: %v", err)
+	}
+	if galaxyClient != nil {
+		defer galaxyClient.Close()
+	}
+
 	// Connect to Error Book Service
 	errorBookClient, err := error_book.NewClient(cfg)
 	if err != nil {
@@ -107,6 +120,7 @@ func main() {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
+		galaxyClient,
 		queries,
 		chatHistoryService,
 		quotaService,
@@ -293,6 +307,9 @@ func main() {
 
 	// Setup Router
 	r := gin.Default()
+
+	// Prometheus Metrics Endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Apply OTel Middleware
 	r.Use(otelgin.Middleware("sparkle-gateway"))
@@ -587,6 +604,9 @@ func main() {
 		req.URL.Scheme = targetURL.Scheme
 		req.URL.Host = targetURL.Host
 		req.Host = targetURL.Host
+		
+		// Inject OTel Trace Context into headers for full-link tracing
+		otel.GetTextMapPropagator().Inject(req.Context(), propagation.HeaderCarrier(req.Header))
 	}
 
 	// Forward all other requests to Python Backend

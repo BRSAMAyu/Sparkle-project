@@ -7,19 +7,25 @@ class NetworkMonitor {
   final OfflineSyncQueue _syncQueue;
 
   StreamSubscription? _subscription;
+  Timer? _debounceTimer;
 
   NetworkMonitor(this._syncQueue);
 
   void startMonitoring() {
     _subscription = _connectivity.onConnectivityChanged.listen((result) {
-      if (!result.contains(ConnectivityResult.none)) {
-        // Network restored, trigger sync
-        _syncQueue.syncPendingUpdates();
-      }
+      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+      
+      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+          if (!result.contains(ConnectivityResult.none)) {
+            // Network restored, trigger sync
+            _syncQueue.syncPendingUpdates();
+          }
+      });
     });
   }
 
   void stopMonitoring() {
+    _debounceTimer?.cancel();
     _subscription?.cancel();
   }
 }

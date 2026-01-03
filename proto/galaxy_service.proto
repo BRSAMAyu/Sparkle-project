@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package galaxy.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/galaxy/v1;galaxyv1";
+
+import "google/protobuf/timestamp.proto";
+
+// GalaxyService defines the interface for Knowledge Galaxy operations.
+service GalaxyService {
+  // UpdateNodeMastery updates the mastery level of a node for a user.
+  // This is used for syncing offline progress and updating global spark counts.
+  rpc UpdateNodeMastery(UpdateNodeMasteryRequest) returns (UpdateNodeMasteryResponse);
+}
+
+message UpdateNodeMasteryRequest {
+  string user_id = 1;
+  string node_id = 2;
+  int32 mastery = 3;
+  google.protobuf.Timestamp version = 4;
+  string reason = 5;
+}
+
+message UpdateNodeMasteryResponse {
+  bool success = 1;
+  int32 old_mastery = 2;
+  int32 new_mastery = 3;
+  string reason = 4;
+}

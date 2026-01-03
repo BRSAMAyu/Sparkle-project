@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -61,6 +63,7 @@ var sanitizer = bluemonday.UGCPolicy()
 
 type ChatOrchestrator struct {
 	agentClient    *agent.Client
+	galaxyClient   *galaxy.Client
 	queries        *db.Queries
 	chatHistory    *service.ChatHistoryService
 	quota          *service.QuotaService
@@ -71,17 +74,18 @@ type ChatOrchestrator struct {
 	taskCommand    *service.TaskCommandService
 }
 
-func NewChatOrchestrator(ac *agent.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService) *ChatOrchestrator {
 	return &ChatOrchestrator{
-		agentClient: ac,
-		queries:     q,
-		chatHistory: ch,
-		quota:       qs,
-		semantic:    sc,
-		billing:     bc,
-		wsFactory:   wsFactory,
-		userContext: uc,
-		taskCommand: tc,
+		agentClient:  ac,
+		galaxyClient: gc,
+		queries:      q,
+		chatHistory:  ch,
+		quota:        qs,
+		semantic:     sc,
+		billing:      bc,
+		wsFactory:    wsFactory,
+		userContext:  uc,
+		taskCommand:  tc,
 	}
 }
 
@@ -149,6 +153,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 			case "focus_completed":
 				h.handleFocusCompleted(msgMap, userID)
+				return false
+			
+			case "update_node_mastery":
+				h.handleUpdateNodeMastery(conn, msgMap, userID)
 				return false
 
 			case "message", "":
@@ -633,4 +641,64 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 	// TODO: Update focus session status to completed
 	// TODO: Update associated task statuses to completed
 	// TODO: Record metrics for focus session
+}
+
+// handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK
+func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
+	payload, ok := msgMap["payload"].(map[string]interface{})
+	if !ok {
+		log.Printf("Invalid update_node_mastery: missing payload")
+		return
+	}
+
+	nodeID := payload["nodeId"].(string)
+	mastery := int32(payload["mastery"].(float64))
+	versionStr := payload["version"].(string)
+	version, _ := time.Parse(time.RFC3339, versionStr)
+
+	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", userID, nodeID, mastery, versionStr)
+
+	// Call Python Backend via gRPC
+	if h.galaxyClient == nil {
+		log.Printf("Galaxy gRPC client not initialized")
+		h.sendError(conn, "update_node_mastery", nodeID, versionStr, "Internal service error")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.galaxyClient.UpdateNodeMastery(ctx, userID, nodeID, mastery, version, "offline_sync")
+	
+	if err != nil {
+		log.Printf("gRPC mastery update failed: %v", err)
+		h.sendError(conn, "update_node_mastery", nodeID, versionStr, "Sync service unavailable")
+		return
+	}
+
+	if resp.Success {
+		// Send ACK back to client
+		conn.WriteJSON(map[string]interface{}{
+			"type": "ack_update_node_mastery",
+			"payload": map[string]interface{}{
+				"nodeId":  nodeID,
+				"version": versionStr,
+				"status":  "success",
+			},
+		})
+		log.Printf("✅ Mastery update ACKed via gRPC for node %s", nodeID)
+	} else {
+		h.sendError(conn, "update_node_mastery", nodeID, versionStr, resp.Reason)
+	}
+}
+
+func (h *ChatOrchestrator) sendError(conn *websocket.Conn, opType, nodeID, version, message string) {
+	conn.WriteJSON(map[string]interface{}{
+		"type": fmt.Sprintf("error_%s", opType),
+		"payload": map[string]interface{}{
+			"nodeId":  nodeID,
+			"version": version,
+			"error":   message,
+		},
+	})
 }

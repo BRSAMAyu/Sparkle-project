@@ -64,18 +64,31 @@ proto-gen-legacy:
 	@echo "🚀 Generating Protobuf Code (Legacy)..."
 	@echo "  → Go..."
 	mkdir -p backend/gateway/gen/agent/v1
+	mkdir -p backend/gateway/gen/galaxy/v1
 	protoc --proto_path=proto \
 	       --go_out=backend/gateway/gen/agent/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/agent/v1 --go-grpc_opt=paths=source_relative \
 	       proto/agent_service.proto
+	protoc --proto_path=proto \
+	       --go_out=backend/gateway/gen/galaxy/v1 --go_opt=paths=source_relative \
+	       --go-grpc_out=backend/gateway/gen/galaxy/v1 --go-grpc_opt=paths=source_relative \
+	       proto/galaxy_service.proto
 	@echo "  → Python..."
 	mkdir -p backend/app/gen/agent/v1
+	mkdir -p backend/app/gen/galaxy/v1
 	python -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/agent/v1 \
 	       --grpc_python_out=backend/app/gen/agent/v1 \
 	       --pyi_out=backend/app/gen/agent/v1 \
 	       proto/agent_service.proto
+	python -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen/galaxy/v1 \
+	       --grpc_python_at=backend/app/gen/galaxy/v1 \
+	       --grpc_python_out=backend/app/gen/galaxy/v1 \
+	       --pyi_out=backend/app/gen/galaxy/v1 \
+	       proto/galaxy_service.proto
 	@echo "✅ Protobuf code generated successfully!"
 
 # Python gRPC 服务相关命令

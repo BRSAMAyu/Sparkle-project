@@ -8,6 +8,7 @@ enum SyncStatus {
   synced,
   conflict,
   failed,
+  waitingAck,
 }
 
 @collection

@@ -69,6 +69,7 @@ dependencies:
   flutter_animate: ^4.5.0
   timeago: ^3.6.1
   http: ^1.2.0
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

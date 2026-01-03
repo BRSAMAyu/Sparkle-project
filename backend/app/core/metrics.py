@@ -28,7 +28,7 @@ TOKEN_USAGE = get_or_create_metric(
     Counter,
     'sparkle_tokens_total',
     'Total number of tokens used',
-    ['model', 'type']  # type: prompt, completion
+    ['model', 'type']  # Removed user_id to prevent cardinality explosion
 )
 
 LLM_CALL_DURATION = get_or_create_metric(
@@ -65,7 +65,7 @@ KNOWLEDGE_NODE_UPDATES = get_or_create_metric(
     Counter,
     'sparkle_knowledge_node_updates_total',
     'Total number of knowledge node updates',
-    ['user_id', 'reason']
+    ['reason']  # Removed user_id
 )
 
 RAG_RETRIEVAL_LATENCY = get_or_create_metric(
@@ -92,34 +92,21 @@ def track_latency(module, method):
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
+            from opentelemetry import trace
             start_time = time.time()
+            span = trace.get_current_span()
+            trace_id = format(span.get_span_context().trace_id, '032x') if span else "n/a"
+            
             try:
                 result = await func(*args, **kwargs)
                 REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
                 return result
             except Exception as e:
+                # Log with TraceID for correlation
+                from loguru import logger
+                logger.error(f"[TraceID: {trace_id}] Error in {module}.{method}: {e}")
                 REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
                 raise
             finally:
                 latency = time.time() - start_time
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
-        
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            start_time = time.time()
-            try:
-                result = func(*args, **kwargs)
-                REQUEST_COUNT.labels(module=module, method=method, status='success').inc()
-                return result
-            except Exception as e:
-                REQUEST_COUNT.labels(module=module, method=method, status='error').inc()
-                raise
-            finally:
-                latency = time.time() - start_time
-                REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
-        
-        import inspect
-        if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
-    return decorator
