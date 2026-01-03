@@ -20,6 +20,8 @@ class LocalKnowledgeNode {
   late String name;
   late int mastery;
   late DateTime lastUpdated;
+  
+  late int globalSparkCount; // New collaborative field
 
   @enumerated
   late SyncStatus syncStatus; // pending, synced, conflict

@@ -81,6 +81,12 @@ ACTIVE_WEBSOCKET_CONNECTIONS = get_or_create_metric(
     'Number of active WebSocket connections'
 )
 
+OUTBOX_PENDING_EVENTS = get_or_create_metric(
+    Gauge,
+    'sparkle_outbox_pending_events',
+    'Number of pending events in the outbox table'
+)
+
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
     def decorator(func):

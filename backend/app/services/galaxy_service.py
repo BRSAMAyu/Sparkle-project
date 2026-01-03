@@ -238,31 +238,67 @@ import json
 from sqlalchemy import text
 from app.core.event_bus import event_bus, KnowledgeNodeUpdated
 
-    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str):
+    async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: Optional[datetime] = None):
         """
-        Update node mastery with Outbox pattern for reliability
+        Update node mastery with Outbox pattern and version checking to prevent race conditions
         """
-        # 1. Get current state (Simple Query)
-        query_current = text("SELECT mastery FROM knowledge_nodes WHERE id = :node_id")
-        result = await self.db.execute(query_current, {"node_id": node_id})
+        # 1. Get current state from user_node_status
+        query_current = text("""
+            SELECT mastery_score, updated_at 
+            FROM user_node_status 
+            WHERE user_id = :user_id AND node_id = :node_id
+        """)
+        result = await self.db.execute(query_current, {"user_id": user_id, "node_id": node_id})
         current = result.fetchone()
         
-        old_mastery = current[0] if current else 0
-
-        # 2. Business Logic Validation
-        if old_mastery == 100 and new_mastery < 100:
-             # Example rule: Cannot downgrade from mastered? Or maybe allow it with warning.
-             # For now, let's allow it but log it or just proceed.
-             pass
-
-        # 3. Transactional Update (Data + Audit + Outbox)
-        # Note: self.db is an AsyncSession which manages the transaction
-        try:
-             # A. Update Data
-            update_query = text("UPDATE knowledge_nodes SET mastery = :mastery WHERE id = :node_id")
-            await self.db.execute(update_query, {"mastery": new_mastery, "node_id": node_id})
+        if not current:
+            # If status doesn't exist, create one (initial unlock)
+            old_mastery = 0
+            # We skip version check for new entries or use a very old one
+        else:
+            old_mastery = current[0]
+            current_updated_at = current[1]
             
-            # B. Audit Log
+            # 2. Version Check (Optimistic Concurrency Control)
+            if version and current_updated_at and version <= current_updated_at:
+                logger.warning(f"Ignoring stale update for node {node_id}. Incoming version {version} <= current {current_updated_at}")
+                return {"success": False, "reason": "stale_update"}
+
+        # 3. Transactional Update
+        try:
+            # A. Update Global Stats (Collaborative Sparking)
+            # Increment global count if this is the first time the user unlocks it
+            is_new_spark = (old_mastery == 0 and new_mastery > 0)
+            if is_new_spark:
+                global_update = text("""
+                    UPDATE knowledge_nodes 
+                    SET global_spark_count = global_spark_count + 1 
+                    WHERE id = :node_id
+                """)
+                await self.db.execute(global_update, {"node_id": node_id})
+
+            # B. Update Individual Data (UPSERT pattern)
+            upsert_query = text("""
+                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked)
+                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true)
+                ON CONFLICT (user_id, node_id) DO UPDATE SET
+                    mastery_score = EXCLUDED.mastery_score,
+                    updated_at = EXCLUDED.updated_at,
+                    last_study_at = EXCLUDED.updated_at,
+                    is_unlocked = true
+                WHERE user_node_status.updated_at < EXCLUDED.updated_at
+            """)
+            
+            update_time = version or datetime.utcnow()
+            
+            await self.db.execute(upsert_query, {
+                "user_id": user_id, 
+                "node_id": node_id, 
+                "mastery": new_mastery,
+                "updated_at": update_time
+            })
+            
+            # C. Audit Log
             audit_query = text("""
                 INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason)
                 VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason)
@@ -270,18 +306,20 @@ from app.core.event_bus import event_bus, KnowledgeNodeUpdated
             await self.db.execute(audit_query, {
                 "node_id": node_id,
                 "user_id": user_id,
-                "old_mastery": old_mastery,
+                "old_mastery": int(old_mastery),
                 "new_mastery": new_mastery,
                 "reason": reason
             })
             
-            # C. Outbox Event
+            # D. Outbox Event
             event_payload = {
                 "user_id": str(user_id),
                 "node_id": str(node_id),
-                "old_mastery": old_mastery,
+                "old_mastery": int(old_mastery),
                 "new_mastery": new_mastery,
-                "reason": reason
+                "is_new_spark": is_new_spark,
+                "reason": reason,
+                "version": update_time.isoformat()
             }
             outbox_query = text("""
                 INSERT INTO outbox_events (aggregate_id, event_type, payload)
@@ -293,12 +331,6 @@ from app.core.event_bus import event_bus, KnowledgeNodeUpdated
             })
             
             await self.db.commit()
-            
-            # D. Best-effort direct publish (Optional optimization to reduce latency)
-            # The Outbox worker is the source of truth, but this helps responsiveness
-            # event = NodeMasteryUpdatedEvent(...)
-            # event_bus.publish(event, 'galaxy.node.mastery_updated')
-            
             return {"success": True, "old_mastery": old_mastery, "new_mastery": new_mastery}
             
         except Exception as e:

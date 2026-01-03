@@ -23,6 +23,7 @@ type Config struct {
 	BackendURL    string `mapstructure:"BACKEND_URL"`
 	AppleClientID string `mapstructure:"APPLE_CLIENT_ID"`
 	AdminSecret   string `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL   string `mapstructure:"RABBITMQ_URL"`
 
 	// P3: WebSocket security configuration
 	Environment     string   `mapstructure:"ENVIRONMENT"`          // dev, staging, production
@@ -127,6 +128,7 @@ func Load() *Config {
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
+	viper.SetDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 
 	// P3: Security defaults
 	viper.SetDefault("ENVIRONMENT", "dev")

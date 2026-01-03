@@ -14,14 +14,20 @@ class BusinessException implements Exception {
 class UpdateNodeMasteryMessage {
   final String nodeId;
   final int mastery;
+  final DateTime timestamp;
   
-  UpdateNodeMasteryMessage({required this.nodeId, required this.mastery});
+  UpdateNodeMasteryMessage({
+    required this.nodeId, 
+    required this.mastery,
+    required this.timestamp,
+  });
   
   Map<String, dynamic> toJson() => {
     'type': 'update_node_mastery',
     'payload': {
       'nodeId': nodeId,
       'mastery': mastery,
+      'version': timestamp.toIso8601String(),
     }
   };
 }
@@ -76,11 +82,11 @@ class OfflineSyncQueue {
 
     for (final update in pending) {
       try {
-        // Send to server
-        // Assuming _wsService.send takes a map or object it can serialize
+        // Send to server with the original timestamp as version
         await _wsService.send(UpdateNodeMasteryMessage(
           nodeId: update.nodeId,
-          mastery: update.newMastery
+          mastery: update.newMastery,
+          timestamp: update.timestamp,
         ).toJson());
 
         // Mark as synced

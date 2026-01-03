@@ -52,6 +52,9 @@ class KnowledgeNode(BaseModel):
     position_x = Column(Float, nullable=True, index=True)
     position_y = Column(Float, nullable=True, index=True)
 
+    # Collaborative Data
+    global_spark_count = Column(Integer, default=0, nullable=False)
+
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")
     parent = relationship("KnowledgeNode", remote_side="KnowledgeNode.id", backref="children")

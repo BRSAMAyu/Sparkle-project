@@ -52,6 +52,7 @@ class NodeBase(BaseModel):
     sector_code: SectorCode
     is_seed: bool
     parent_name: Optional[str] = None # Added for context
+    global_spark_count: int = 0
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,6 +123,7 @@ class NodeWithStatus(NodeBase):
             importance_level=node.importance_level,
             sector_code=sector_code,
             is_seed=node.is_seed,
+            global_spark_count=node.global_spark_count,
             user_status=user_status,
             position_angle=position_angle,
             position_radius=100.0 + node.importance_level * 30.0  # 简化计算

@@ -9,6 +9,7 @@ import (
 
 	"github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"go.uber.org/zap"
 )
 
@@ -25,9 +26,10 @@ type OutboxRelay struct {
 	rabbitMQ *amqp.Connection
 	channel  *amqp.Channel
 	logger   *zap.Logger
+	metrics  *metrics.CQRSMetrics
 }
 
-func NewOutboxRelay(db *sql.DB, rabbitMQURL string, logger *zap.Logger) (*OutboxRelay, error) {
+func NewOutboxRelay(db *sql.DB, rabbitMQURL string, logger *zap.Logger, m *metrics.CQRSMetrics) (*OutboxRelay, error) {
 	conn, err := amqp.Dial(rabbitMQURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
@@ -57,13 +59,18 @@ func NewOutboxRelay(db *sql.DB, rabbitMQURL string, logger *zap.Logger) (*Outbox
 		rabbitMQ: conn,
 		channel:  ch,
 		logger:   logger,
+		metrics:  m,
 	}, nil
 }
 
 func (r *OutboxRelay) Start(ctx context.Context) {
 	r.logger.Info("Starting Outbox Relay")
 	ticker := time.NewTicker(100 * time.Millisecond)
+	cleanupTicker := time.NewTicker(1 * time.Hour)
+	metricsTicker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
+	defer cleanupTicker.Stop()
+	defer metricsTicker.Stop()
 
 	for {
 		select {
@@ -75,8 +82,47 @@ func (r *OutboxRelay) Start(ctx context.Context) {
 			if err := r.processEvents(ctx); err != nil {
 				r.logger.Error("Failed to process outbox events", zap.Error(err))
 			}
+		case <-cleanupTicker.C:
+			if err := r.cleanupEvents(ctx); err != nil {
+				r.logger.Error("Failed to cleanup outbox events", zap.Error(err))
+			}
+		case <-metricsTicker.C:
+			r.reportMetrics(ctx)
 		}
 	}
+}
+
+func (r *OutboxRelay) reportMetrics(ctx context.Context) {
+	count, err := r.GetPendingCount(ctx)
+	if err != nil {
+		r.logger.Error("Failed to get pending count for metrics", zap.Error(err))
+		return
+	}
+	if r.metrics != nil {
+		r.metrics.SetOutboxPending(float64(count))
+	}
+}
+
+func (r *OutboxRelay) cleanupEvents(ctx context.Context) error {
+	r.logger.Info("Cleaning up old outbox events")
+	query := `
+		DELETE FROM outbox_events
+		WHERE status = 'published'
+		AND published_at < NOW() - INTERVAL '7 days'
+	`
+	result, err := r.db.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup old events: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	r.logger.Info("Cleaned up old outbox events", zap.Int64("rows_affected", rows))
+	return nil
+}
+
+func (r *OutboxRelay) GetPendingCount(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM outbox_events WHERE status = 'pending'").Scan(&count)
+	return count, err
 }
 
 func (r *OutboxRelay) processEvents(ctx context.Context) error {
