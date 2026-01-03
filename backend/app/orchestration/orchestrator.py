@@ -34,6 +34,8 @@ from app.core.business_metrics import COLLABORATION_SUCCESS, COLLABORATION_LATEN
 from app.orchestration.statechart_engine import WorkflowState, StateGraph
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
+from app.core.task_manager import task_manager
+from app.core.celery_app import schedule_long_task
 
 # FSM States
 STATE_INIT = "INIT"
@@ -578,9 +580,13 @@ class ChatOrchestrator:
                 "conversation_context": conversation_context,
             })
 
-            # Launch Graph Execution in Background
+            # Launch Graph Execution in Background (Managed)
             logger.info("🚀 Launching StateGraph Execution")
-            graph_task = asyncio.create_task(self.graph.invoke(state))
+            graph_task = await task_manager.spawn(
+                self.graph.invoke(state),
+                task_name="orchestrator_graph",
+                user_id=str(user_id)
+            )
             
             # Stream from queue
             while not graph_task.done() or not queue.empty():
@@ -689,8 +695,8 @@ class ChatOrchestrator:
                         model="gpt-4"
                     )
 
-                    # Record usage (async)
-                    asyncio.create_task(
+                    # Record usage (async - managed)
+                    await task_manager.spawn(
                         self.token_tracker.record_usage(
                             user_id=user_id,
                             session_id=session_id,
@@ -699,7 +705,9 @@ class ChatOrchestrator:
                             completion_tokens=total_completion_tokens,
                             model="gpt-4",
                             cost=estimated_cost
-                        )
+                        ),
+                        task_name="token_usage_record",
+                        user_id=str(user_id)
                     )
 
                     logger.info(

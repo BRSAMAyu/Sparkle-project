@@ -107,21 +107,85 @@ integration-test:
 	@echo "⚠️  Make sure Python gRPC server and Go Gateway are running!"
 	cd backend && python test_websocket_client.py
 
-# 启动完整开发环境
+# Celery 任务队列相关命令
+celery-up:
+	@echo "🚀 Starting Celery Task Queue System..."
+	@echo "   Checking prerequisites..."
+	@if ! docker image ls | grep -q "sparkle_backend"; then \
+		echo "❌ Backend image not found. Building..."; \
+		cd backend && docker build -t sparkle_backend .; \
+	fi
+	@echo "   Starting services..."
+	@docker run -d --name sparkle_celery_worker --network sparkle-flutter_default \
+		-e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
+		-e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:change-me@sparkle_redis:6379/1 \
+		-e CELERY_RESULT_BACKEND=redis://:change-me@sparkle_redis:6379/2 \
+		-v $$(pwd)/backend:/app \
+		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2 2>/dev/null || echo "Worker may already be running"
+	@docker run -d --name sparkle_celery_beat --network sparkle-flutter_default \
+		-e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
+		-e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:change-me@sparkle_redis:6379/1 \
+		-v $$(pwd)/backend:/app \
+		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
+	@docker run -d --name sparkle_flower --network sparkle-flutter_default -p 5555:5555 \
+		mher/flower:1.2.0 celery --broker=redis://:change-me@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"
+	@echo "✅ Celery services started!"
+	@echo "   Worker: docker logs -f sparkle_celery_worker"
+	@echo "   Beat: docker logs -f sparkle_celery_beat"
+	@echo "   Flower: http://localhost:5555"
+
+celery-logs-worker:
+	@echo "📊 Celery Worker Logs..."
+	@docker logs -f sparkle_celery_worker 2>/dev/null || echo "Worker not running"
+
+celery-logs-beat:
+	@echo "📊 Celery Beat Logs..."
+	@docker logs -f sparkle_celery_beat 2>/dev/null || echo "Beat not running"
+
+celery-flower:
+	@echo "🌐 Opening Flower Dashboard..."
+	@open http://localhost:5555 2>/dev/null || echo "Open http://localhost:5555 in your browser"
+
+celery-restart:
+	@echo "🔄 Restarting Celery services..."
+	@docker stop sparkle_celery_worker sparkle_celery_beat 2>/dev/null || true
+	@docker rm sparkle_celery_worker sparkle_celery_beat 2>/dev/null || true
+	@make celery-up
+
+celery-flush:
+	@echo "🗑️  Flushing Celery queues..."
+	@docker exec sparkle_redis redis-cli -n 1 FLUSHDB 2>/dev/null || echo "Redis not running"
+
+celery-status:
+	@echo "📊 Celery Services Status..."
+	@docker ps --filter "name=sparkle_celery" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "No Celery services running"
+
+celery-stop:
+	@echo "🛑 Stopping Celery services..."
+	@docker stop sparkle_celery_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
+	@docker rm sparkle_celery_worker sparkle_celery_beat sparkle_flower 2>/dev/null || true
+	@echo "✅ Celery services stopped"
+
+# 启动完整开发环境 (包含 Celery)
 dev-all:
 	@make _check_macos_env
 	@echo "🚀 Starting Full Development Environment..."
-	@echo "1️⃣  Starting Database..."
-	make dev-up
+	@echo "1️⃣  Starting Database & Redis..."
+	@make dev-up
 	@echo ""
-	@echo "2️⃣  Starting Python gRPC Server..."
-	@echo "   Run in a separate terminal: make grpc-server"
+	@echo "✅ Step 1 Complete! Infrastructure is ready."
 	@echo ""
-	@echo "3️⃣  Starting Go Gateway..."
-	@echo "   Run in a separate terminal: make gateway-run"
+	@echo "Next steps (run in separate terminals):"
+	@echo "  2️⃣  make celery-up      # Start Celery task queue"
+	@echo "  3️⃣  make grpc-server    # Start Python gRPC server"
+	@echo "  4️⃣  make gateway-run    # Start Go Gateway"
 	@echo ""
-	@echo "✅ Development infrastructure ready!"
-	@echo "   - Database: localhost:5432"
-	@echo "   - Python gRPC: localhost:50051"
-	@echo "   - Go Gateway: localhost:8080"
-	@echo "   - WebSocket: ws://localhost:8080/ws/chat"
+	@echo "📊 Monitoring:"
+	@echo "   - Flower: http://localhost:5555"
+	@echo "   - Redis CLI: docker exec -it sparkle_redis redis-cli"
+	@echo ""
+	@echo "🔧 Quick Commands:"
+	@echo "   make celery-status     # Check Celery services"
+	@echo "   make celery-logs-worker # View worker logs"

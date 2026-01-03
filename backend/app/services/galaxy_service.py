@@ -49,11 +49,25 @@ class GalaxyService:
         node = await self.structure.create_node(
             user_id, title, summary, subject_id, tags, parent_node_id
         )
-        
-        # 2. Async Background Processing (Fire & Forget)
-        # Note: We pass the node ID to avoid detached instance issues
-        asyncio.create_task(self._process_node_background(node.id, title, summary))
-        
+
+        # 2. Async Background Processing (Managed)
+        from app.core.task_manager import task_manager
+        from app.core.celery_app import schedule_long_task
+
+        # 方案1: 使用 TaskManager (快速任务, < 10秒)
+        await task_manager.spawn(
+            self._process_node_background(node.id, title, summary),
+            task_name="node_embedding",
+            user_id=str(user_id)
+        )
+
+        # 方案2: 使用 Celery (长时任务, 需要持久化) - 可选
+        # schedule_long_task(
+        #     "generate_node_embedding",
+        #     args=(str(node.id), title, summary, str(user_id)),
+        #     queue="high_priority"
+        # )
+
         return node
 
     async def create_edge(

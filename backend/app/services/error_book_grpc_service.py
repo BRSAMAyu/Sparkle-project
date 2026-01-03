@@ -13,9 +13,11 @@ from app.schemas.error_book import (
     ReviewAction, ReviewPerformanceEnum, SubjectEnum, ErrorTypeEnum
 )
 from app.db.session import AsyncSessionLocal
+from app.core.task_manager import task_manager
+from app.core.celery_app import schedule_long_task
 
 class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
-    
+
     def __init__(self, db_session_factory):
         self.db_session_factory = db_session_factory
 
@@ -44,13 +46,23 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                     subject=SubjectEnum(request.subject_code),
                     chapter=request.chapter if request.chapter else None
                 )
-                
+
                 error = await service.create_error(UUID(request.user_id), data)
-                
-                # Trigger async analysis using dedicated task and session
-                import asyncio
-                asyncio.create_task(self._run_analysis_task(error.id, UUID(request.user_id)))
-                
+
+                # 方案1: 使用 TaskManager (快速任务, < 10秒)
+                await task_manager.spawn(
+                    self._run_analysis_task(error.id, UUID(request.user_id)),
+                    task_name="error_analysis",
+                    user_id=request.user_id
+                )
+
+                # 方案2: 使用 Celery (长时任务, > 10秒) - 可选
+                # schedule_long_task(
+                #     "analyze_error_batch",
+                #     args=([str(error.id)], request.user_id),
+                #     queue="default"
+                # )
+
                 return self._map_to_proto(error)
             except ValueError as e:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)

@@ -34,7 +34,7 @@ services:
           memory: 4G
 
   sparkle_backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sparkle_backend
@@ -44,6 +44,8 @@ services:
       - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
     depends_on:
       sparkle_db:
         condition: service_healthy
@@ -51,6 +53,61 @@ services:
         condition: service_started
       tempo:
         condition: service_started
+
+  # ==================== Celery Task Queue ====================
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    container_name: sparkle_celery_beat
+    command: celery -A app.core.celery_app beat -l info
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  flower:
+    image: mher/flower:1.2.0
+    container_name: sparkle_flower
+    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower.db
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    environment:
+      - FLOWER_PURGE_OFFLINE_WORKERS=10
+    volumes:
+      - ./flower_data:/flower_data
 
   sparkle_gateway:
     build: 
