@@ -5,9 +5,12 @@ Refactored to delegate to specialized services:
 - GalaxyStatsService: Spark, Stats, Prediction
 """
 import asyncio
+import json
+from datetime import datetime
 from uuid import UUID
 from typing import Optional, List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from loguru import logger
 
 from app.models.galaxy import KnowledgeNode, NodeRelation
@@ -20,6 +23,7 @@ from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.embedding_service import embedding_service
 from app.core.cache import cached
+from app.core.event_bus import event_bus, KnowledgeNodeUpdated
 
 class GalaxyService:
     def __init__(self, db: AsyncSession):
@@ -52,7 +56,7 @@ class GalaxyService:
 
         # 2. Async Background Processing (Managed)
         from app.core.task_manager import task_manager
-        from app.core.celery_app import schedule_long_task
+        # from app.core.celery_app import schedule_long_task
 
         # 方案1: 使用 TaskManager (快速任务, < 10秒)
         await task_manager.spawn(
@@ -234,9 +238,6 @@ class GalaxyService:
         # But StatsService has it.
         return await self.stats.expansion_service.auto_link_nodes(node_id)
 
-import json
-from sqlalchemy import text
-from app.core.event_bus import event_bus, KnowledgeNodeUpdated
 
     async def update_node_mastery(self, user_id: UUID, node_id: UUID, new_mastery: int, reason: str, version: Optional[datetime] = None):
         """
@@ -378,4 +379,3 @@ from app.core.event_bus import event_bus, KnowledgeNodeUpdated
                             
             except Exception as e:
                 logger.error(f"Background processing failed for node {node_id}: {e}")
-

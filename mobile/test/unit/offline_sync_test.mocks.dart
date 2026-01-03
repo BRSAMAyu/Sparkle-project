@@ -1064,3 +1064,247 @@ class MockIsarCollection<OBJ> extends _i1.Mock
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
 }
+
+/// A class which mocks [Query].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockQuery<T> extends _i1.Mock implements _i2.Query<T> {
+  MockQuery() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i2.Isar get isar => (super.noSuchMethod(
+        Invocation.getter(#isar),
+        returnValue: _FakeIsar_0(
+          this,
+          Invocation.getter(#isar),
+        ),
+      ) as _i2.Isar);
+
+  @override
+  _i3.Future<T?> findFirst() => (super.noSuchMethod(
+        Invocation.method(
+          #findFirst,
+          [],
+        ),
+        returnValue: _i3.Future<T?>.value(),
+      ) as _i3.Future<T?>);
+
+  @override
+  _i3.Future<List<T>> findAll() => (super.noSuchMethod(
+        Invocation.method(
+          #findAll,
+          [],
+        ),
+        returnValue: _i3.Future<List<T>>.value(<T>[]),
+      ) as _i3.Future<List<T>>);
+
+  @override
+  List<T> findAllSync() => (super.noSuchMethod(
+        Invocation.method(
+          #findAllSync,
+          [],
+        ),
+        returnValue: <T>[],
+      ) as List<T>);
+
+  @override
+  _i3.Future<R?> aggregate<R>(_i2.AggregationOp? op) => (super.noSuchMethod(
+        Invocation.method(
+          #aggregate,
+          [op],
+        ),
+        returnValue: _i3.Future<R?>.value(),
+      ) as _i3.Future<R?>);
+
+  @override
+  R? aggregateSync<R>(_i2.AggregationOp? op) =>
+      (super.noSuchMethod(Invocation.method(
+        #aggregateSync,
+        [op],
+      )) as R?);
+
+  @override
+  _i3.Future<int> count() => (super.noSuchMethod(
+        Invocation.method(
+          #count,
+          [],
+        ),
+        returnValue: _i3.Future<int>.value(0),
+      ) as _i3.Future<int>);
+
+  @override
+  int countSync() => (super.noSuchMethod(
+        Invocation.method(
+          #countSync,
+          [],
+        ),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  _i3.Future<bool> isEmpty() => (super.noSuchMethod(
+        Invocation.method(
+          #isEmpty,
+          [],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  bool isEmptySync() => (super.noSuchMethod(
+        Invocation.method(
+          #isEmptySync,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i3.Future<bool> isNotEmpty() => (super.noSuchMethod(
+        Invocation.method(
+          #isNotEmpty,
+          [],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  bool isNotEmptySync() => (super.noSuchMethod(
+        Invocation.method(
+          #isNotEmptySync,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i3.Future<bool> deleteFirst() => (super.noSuchMethod(
+        Invocation.method(
+          #deleteFirst,
+          [],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
+
+  @override
+  bool deleteFirstSync() => (super.noSuchMethod(
+        Invocation.method(
+          #deleteFirstSync,
+          [],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i3.Future<int> deleteAll() => (super.noSuchMethod(
+        Invocation.method(
+          #deleteAll,
+          [],
+        ),
+        returnValue: _i3.Future<int>.value(0),
+      ) as _i3.Future<int>);
+
+  @override
+  int deleteAllSync() => (super.noSuchMethod(
+        Invocation.method(
+          #deleteAllSync,
+          [],
+        ),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  _i3.Stream<List<T>> watch({bool? fireImmediately = false}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #watch,
+          [],
+          {#fireImmediately: fireImmediately},
+        ),
+        returnValue: _i3.Stream<List<T>>.empty(),
+      ) as _i3.Stream<List<T>>);
+
+  @override
+  _i3.Stream<void> watchLazy({bool? fireImmediately = false}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #watchLazy,
+          [],
+          {#fireImmediately: fireImmediately},
+        ),
+        returnValue: _i3.Stream<void>.empty(),
+      ) as _i3.Stream<void>);
+
+  @override
+  _i3.Future<R> exportJsonRaw<R>(R Function(_i9.Uint8List)? callback) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #exportJsonRaw,
+          [callback],
+        ),
+        returnValue: _i8.ifNotNull(
+              _i8.dummyValueOrNull<R>(
+                this,
+                Invocation.method(
+                  #exportJsonRaw,
+                  [callback],
+                ),
+              ),
+              (R v) => _i3.Future<R>.value(v),
+            ) ??
+            _FakeFuture_1<R>(
+              this,
+              Invocation.method(
+                #exportJsonRaw,
+                [callback],
+              ),
+            ),
+      ) as _i3.Future<R>);
+
+  @override
+  R exportJsonRawSync<R>(R Function(_i9.Uint8List)? callback) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #exportJsonRawSync,
+          [callback],
+        ),
+        returnValue: _i8.dummyValue<R>(
+          this,
+          Invocation.method(
+            #exportJsonRawSync,
+            [callback],
+          ),
+        ),
+      ) as R);
+
+  @override
+  _i3.Future<List<Map<String, dynamic>>> exportJson() => (super.noSuchMethod(
+        Invocation.method(
+          #exportJson,
+          [],
+        ),
+        returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i3.Future<List<Map<String, dynamic>>>);
+
+  @override
+  List<Map<String, dynamic>> exportJsonSync() => (super.noSuchMethod(
+        Invocation.method(
+          #exportJsonSync,
+          [],
+        ),
+        returnValue: <Map<String, dynamic>>[],
+      ) as List<Map<String, dynamic>>);
+}
+
+/// A class which mocks [QueryBuilder].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockQueryBuilder<OBJ, R, S> extends _i1.Mock
+    implements _i2.QueryBuilder<OBJ, R, S> {
+  MockQueryBuilder() {
+    _i1.throwOnMissingStub(this);
+  }
+}

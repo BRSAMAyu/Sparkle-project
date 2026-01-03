@@ -1,60 +1,62 @@
-from typing import List, Any
-from datetime import date
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import os
+import uuid
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
-from app.services.analytics_service import AnalyticsService
-from app.schemas.analytics import DailyMetricResponse, UserAnalyticsSummary
+from app.services.analytics.weekly_synthesis_service import WeeklySynthesisService
+from app.services.llm_service import llm_service
 
 router = APIRouter()
 
-@router.get("/daily", response_model=List[DailyMetricResponse])
-async def get_daily_metrics(
-    start_date: date,
-    end_date: date,
+@router.post("/reports/generate", response_model=Dict[str, Any])
+async def generate_weekly_report(
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> Any:
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Get daily metrics for the current user within a date range.
+    Trigger on-demand generation of the weekly learning report.
+    Returns the JSON data immediately and schedules PDF generation.
     """
-    service = AnalyticsService(db)
-    
-    # Check if we need to calculate today's metrics on the fly
-    today = date.today()
-    if end_date >= today:
-        await service.calculate_daily_metrics(current_user.id, today)
-        
-    # Query metrics
-    # Note: We should probably move this query to the service as well, but for now it's simple enough
-    from sqlalchemy import select, and_
-    from app.models.analytics import UserDailyMetric
-    
-    query = select(UserDailyMetric).where(
-        and_(
-            UserDailyMetric.user_id == current_user.id,
-            UserDailyMetric.date >= start_date,
-            UserDailyMetric.date <= end_date
-        )
-    ).order_by(UserDailyMetric.date)
-    
-    result = await db.execute(query)
-    metrics = result.scalars().all()
-    return metrics
+    # Initialize service
+    service = WeeklySynthesisService(db, llm_service)
 
-@router.get("/summary", response_model=UserAnalyticsSummary)
-async def get_analytics_summary(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> Any:
+    try:
+        report_data = await service.generate_report(str(current_user.id))
+        
+        # Generate PDF filename
+        filename = f"weekly_report_{current_user.id}_{report_data['week_of']}.pdf"
+        output_path = os.path.join("/tmp", filename) # Temp location for MVP
+        
+        # Schedule PDF generation
+        background_tasks.add_task(service.generate_pdf, report_data, output_path)
+        
+        return {
+            "message": "Report generation started",
+            "data": report_data,
+            "download_url": f"/api/v1/analytics/reports/download/{filename}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/reports/download/{filename}")
+async def download_report(
+    filename: str,
+    current_user: User = Depends(get_current_user)
+):
     """
-    Get a text summary of user analytics (useful for debugging LLM context).
+    Download a generated PDF report.
     """
-    service = AnalyticsService(db)
-    # Ensure today's stats are up to date
-    await service.calculate_daily_metrics(current_user.id, date.today())
-    
-    summary = await service.get_user_profile_summary(current_user.id)
-    return UserAnalyticsSummary(summary=summary)
+    # Security check: filename should contain user_id to prevent accessing others' reports
+    if str(current_user.id) not in filename:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    file_path = os.path.join("/tmp", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    return FileResponse(file_path, media_type="application/pdf", filename=filename)

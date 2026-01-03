@@ -654,7 +654,31 @@ func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap 
 	nodeID := payload["nodeId"].(string)
 	mastery := int32(payload["mastery"].(float64))
 	versionStr := payload["version"].(string)
-	version, _ := time.Parse(time.RFC3339, versionStr)
+	
+	// Support flexible ISO8601 parsing (Dart toIso8601String format)
+	var version time.Time
+	var err error
+	
+	// Try multiple formats to be safe
+	formats := []string{
+		time.RFC3339Nano,
+		"2006-01-02T15:04:05.999999999Z",
+		"2006-01-02T15:04:05.999999",
+		time.RFC3339,
+	}
+	
+	for _, f := range formats {
+		version, err = time.Parse(f, versionStr)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		log.Printf("Invalid version format: %s", versionStr)
+		h.sendError(conn, "update_node_mastery", nodeID, versionStr, "Invalid timestamp format")
+		return
+	}
 
 	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", userID, nodeID, mastery, versionStr)
 

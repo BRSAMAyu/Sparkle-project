@@ -146,6 +146,7 @@ class StudyRecord(BaseModel):
 
     study_minutes = Column(Integer, nullable=False)
     mastery_delta = Column(Float, nullable=False)
+    initial_mastery = Column(Float, nullable=True) # 学习前的掌握度
     
     # record_type: task_complete, review, exploration
     record_type = Column(String(20), default='task_complete')

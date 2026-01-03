@@ -6,6 +6,7 @@ Redis Semantic Cache Service - 语义缓存服务
 
 import json
 import hashlib
+import asyncio
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from loguru import logger
@@ -13,6 +14,7 @@ import numpy as np
 
 try:
     from redis import Redis
+    from redis.lock import Lock
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -28,6 +30,7 @@ class SemanticCacheService:
     - TTL 管理（根据内容类型设置不同过期时间）
     - 缓存命中率统计
     - LRU 驱逐策略
+    - 互斥锁防止缓存击穿 (Cache Stampede Protection)
     """
 
     def __init__(
@@ -35,14 +38,17 @@ class SemanticCacheService:
         redis_client: Optional[Redis] = None,
         default_ttl: int = 3600,  # 1小时
         max_cache_size: int = 10000,
+        lock_timeout: float = 5.0,  # 锁超时时间
     ):
         self.redis = redis_client
         self.default_ttl = default_ttl
         self.max_cache_size = max_cache_size
+        self.lock_timeout = lock_timeout
 
         # 缓存键前缀
         self.CACHE_PREFIX = "semantic_cache:"
         self.STATS_KEY = "semantic_cache:stats"
+        self.LOCK_PREFIX = "semantic_cache:lock:"
 
         # 初始化统计
         if self.redis and REDIS_AVAILABLE:
@@ -79,6 +85,10 @@ class SemanticCacheService:
         hash_key = hashlib.sha256(cache_input.encode()).hexdigest()
 
         return f"{self.CACHE_PREFIX}{hash_key}"
+    
+    def _generate_lock_key(self, cache_key: str) -> str:
+        """生成锁键"""
+        return f"{self.LOCK_PREFIX}{cache_key}"
 
     async def get(
         self,
@@ -88,6 +98,7 @@ class SemanticCacheService:
     ) -> Optional[Dict[str, Any]]:
         """
         从缓存获取查询结果
+        包含缓存击穿保护 (Mutex Lock)
 
         Args:
             query: 查询文本
@@ -124,6 +135,86 @@ class SemanticCacheService:
         except Exception as e:
             logger.error(f"Cache GET error: {e}")
             return None
+
+    async def get_with_lock(
+        self,
+        query: str,
+        factory_func,
+        user_id: Optional[str] = None,
+        ttl: Optional[int] = None,
+        *args,
+        **kwargs
+    ) -> Optional[Dict[str, Any]]:
+        """
+        获取缓存，如果未命中则使用 factory_func 生成并缓存
+        使用互斥锁防止缓存击穿 (Cache Stampede)
+
+        Args:
+            query: 查询字符串
+            factory_func: 如果缓存未命中，用于生成数据的异步函数
+            user_id: 用户 ID
+            ttl: 过期时间
+            *args, **kwargs: 传递给 factory_func 的参数
+
+        Returns:
+            数据
+        """
+        if not self.redis or not REDIS_AVAILABLE:
+            return await factory_func(*args, **kwargs)
+
+        # 1. 尝试获取缓存
+        data = await self.get(query, user_id)
+        if data is not None:
+            return data
+
+        cache_key = self._generate_cache_key(query, user_id)
+        lock_key = self._generate_lock_key(cache_key)
+        
+        # 2. 获取分布式锁
+        # 使用 redis-py 的 Lock 对象
+        try:
+            lock = self.redis.lock(
+                lock_key,
+                timeout=self.lock_timeout,
+                blocking_timeout=2.0 # 等待锁的时间
+            )
+            
+            acquired = lock.acquire(blocking=True)
+            if acquired:
+                try:
+                    # 双重检查 (Double-Checked Locking)
+                    # 在获取锁之后再次检查缓存，可能其他线程/进程已经写入了
+                    data = await self.get(query, user_id)
+                    if data is not None:
+                        return data
+                    
+                    # 3. 生成数据
+                    logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
+                    result = await factory_func(*args, **kwargs)
+                    
+                    # 4. 写入缓存
+                    if result:
+                        await self.set(query, result, user_id, ttl)
+                    
+                    return result
+                finally:
+                     # 释放锁
+                    try:
+                        if lock.locked():
+                            lock.release()
+                    except Exception as e:
+                        logger.error(f"Error releasing lock: {e}")
+            else:
+                # 获取锁失败，说明有并发请求正在生成数据
+                # 稍微等待一下再尝试获取（降级策略）
+                logger.warning(f"Failed to acquire lock for {cache_key}. Waiting...")
+                await asyncio.sleep(0.1) 
+                return await self.get(query, user_id) or await factory_func(*args, **kwargs)
+
+        except Exception as e:
+            logger.error(f"Cache Mutex Error: {e}")
+            # 出错时降级为直接调用
+            return await factory_func(*args, **kwargs)
 
     async def set(
         self,

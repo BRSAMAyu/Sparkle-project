@@ -166,14 +166,14 @@ def upgrade():
         CREATE INDEX idx_group_messages_content_fts
         ON group_messages
         USING GIN (to_tsvector('simple', COALESCE(content, '')))
-        WHERE is_deleted = false AND is_revoked = false
+        WHERE is_revoked = false
     """)
 
     op.execute("""
         CREATE INDEX idx_private_messages_content_fts
         ON private_messages
         USING GIN (to_tsvector('simple', COALESCE(content, '')))
-        WHERE is_deleted = false AND is_revoked = false
+        WHERE is_revoked = false
     """)
 
 

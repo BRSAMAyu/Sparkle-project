@@ -12,8 +12,10 @@ from grpc_reflection.v1alpha import reflection
 from opentelemetry.instrumentation.grpc import GrpcAioInstrumentorServer
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
+from app.gen.galaxy.v1 import galaxy_service_pb2, galaxy_service_pb2_grpc
 from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
 from app.services.agent_grpc_service import AgentServiceImpl
+from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
 from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
 from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
@@ -93,14 +95,24 @@ async def serve():
         ErrorBookGrpcServiceImpl(db_session_factory=AsyncSessionLocal), server
     )
 
+    # Register GalaxyService (P1: Architecture Resilience)
+    if galaxy_service_pb2_grpc:
+        galaxy_service_pb2_grpc.add_GalaxyServiceServicer_to_server(
+            GalaxyGrpcServiceImpl(db_session_factory=AsyncSessionLocal), server
+        )
+        logger.info("Registered GalaxyService (gRPC)")
+
     if settings.DEBUG or settings.GRPC_ENABLE_REFLECTION:
         # 启用 gRPC 反射（用于调试，生产环境可关闭）
-        SERVICE_NAMES = (
+        services = [
             agent_service_pb2.DESCRIPTOR.services_by_name['AgentService'].full_name,
             error_book_pb2.DESCRIPTOR.services_by_name['ErrorBookService'].full_name,
             reflection.SERVICE_NAME,
-        )
-        reflection.enable_server_reflection(SERVICE_NAMES, server)
+        ]
+        if galaxy_service_pb2:
+            services.append(galaxy_service_pb2.DESCRIPTOR.services_by_name['GalaxyService'].full_name)
+            
+        reflection.enable_server_reflection(tuple(services), server)
 
     # 监听端口
     listen_addr = f'[::]:{getattr(settings, "GRPC_PORT", 50051)}'

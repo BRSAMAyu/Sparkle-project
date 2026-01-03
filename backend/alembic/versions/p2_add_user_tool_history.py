@@ -7,6 +7,7 @@ Create Date: 2025-01-15 10:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+import app.models.base
 
 revision = 'p2_add_user_tool_history'
 down_revision = 'p1_post_visibility'
@@ -20,7 +21,7 @@ def upgrade():
     op.create_table(
         'user_tool_history',
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), nullable=False),
+        sa.Column('user_id', app.models.base.GUID(), sa.ForeignKey('users.id'), nullable=False),
         sa.Column('tool_name', sa.String(100), nullable=False),
         sa.Column('success', sa.Boolean, nullable=False),
         sa.Column('execution_time_ms', sa.Integer, nullable=True),
