@@ -38,21 +38,27 @@ class GalaxyGrpcServiceImpl:
                     node_id=UUID(request.node_id),
                     new_mastery=request.mastery,
                     reason=request.reason,
-                    version=version
+                    version=version,
+                    request_id=request.request_id,
+                    revision=request.revision
                 )
                 
                 if not result.get("success"):
-                    context.set_code(grpc.StatusCode.ALREADY_EXISTS)
-                    context.set_details(result.get("reason", "conflict"))
+                    # For gRPC, we can return status code but also the current revision for the client to sync
+                    # Use custom response fields
                     return galaxy_service_pb2.UpdateNodeMasteryResponse(
                         success=False,
-                        reason=result.get("reason", "conflict")
+                        reason=result.get("reason", "conflict"),
+                        request_id=request.request_id,
+                        current_revision=result.get("current_revision", 0)
                     )
 
                 return galaxy_service_pb2.UpdateNodeMasteryResponse(
                     success=True,
                     old_mastery=int(result.get("old_mastery", 0)),
-                    new_mastery=int(result.get("new_mastery", 0))
+                    new_mastery=int(result.get("new_mastery", 0)),
+                    request_id=request.request_id,
+                    current_revision=result.get("current_revision", 0)
                 )
                 
             except Exception as e:

@@ -116,6 +116,9 @@ class UserNodeStatus(Base):
     decay_paused = Column(Boolean, default=False)
     next_review_at = Column(DateTime, nullable=True, index=True)
     
+    # Logical clock for conflict resolution
+    revision = Column(Integer, default=0, nullable=False)
+    
     # 元数据
     first_unlock_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

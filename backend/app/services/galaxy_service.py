@@ -367,7 +367,8 @@ class GalaxyService:
             
             return {
                 "success": True, 
-                "current_mastery": mastery_score,
+                "old_mastery": int(old_mastery),
+                "new_mastery": new_mastery,
                 "current_revision": new_revision
             }
             

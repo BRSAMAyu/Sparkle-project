@@ -505,33 +505,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen> with TickerProvider
                             );
                             final viewport = Rect.fromPoints(topLeft, bottomRight)
                                 .shift(const Offset(-_canvasCenter, -_canvasCenter));
-
-                            // Convert to compact models for rendering performance
+                            
+                            // Convert to Compact models with centered positions for rendering
                             final compactNodes = galaxyState.visibleNodes.map((node) {
-                                final pos = galaxyState.nodePositions[node.id] ?? Offset.zero;
-                                return node.toCompact(pos.dx + _canvasCenter, pos.dy + _canvasCenter);
+                              final pos = galaxyState.nodePositions[node.id] ?? Offset.zero;
+                              return node.toCompact(pos.dx + _canvasCenter, pos.dy + _canvasCenter);
                             }).toList();
 
-                            final compactEdges = galaxyState.visibleEdges.map((edge) => 
-                                CompactEdge.fromModel(edge)
-                            ).toList();
-
-                            final compactAnimationProgress = galaxyState.nodeAnimationProgress.map(
-                                (key, value) => MapEntry(key.hashCode, value)
-                            );
+                            final selectedHash = galaxyState.selectedNodeId?.hashCode;
+                            final expandedHashes = galaxyState.expandedEdgeNodeIds.map((id) => id.hashCode).toSet();
+                            final animationHashes = galaxyState.nodeAnimationProgress.map((id, val) => MapEntry(id.hashCode, val));
 
                             return CustomPaint(
                               painter: StarMapPainter(
                                 nodes: compactNodes,
-                                edges: compactEdges,
+                                edges: galaxyState.visibleEdges,
                                 scale: scale,
                                 aggregationLevel: galaxyState.aggregationLevel,
                                 clusters: _centerClusters(galaxyState.clusters, _canvasCenter, _canvasCenter),
                                 viewport: viewport,
                                 center: const Offset(_canvasCenter, _canvasCenter),
-                                selectedNodeId: galaxyState.selectedNodeId,
-                                expandedEdgeNodeIds: galaxyState.expandedEdgeNodeIds,
-                                nodeAnimationProgress: compactAnimationProgress,
+                                selectedNodeIdHash: selectedHash,
+                                expandedEdgeNodeIdHashes: expandedHashes,
+                                nodeAnimationProgress: animationHashes,
                                 selectionPulse: _selectionPulseController.value,
                               ),
                             );
