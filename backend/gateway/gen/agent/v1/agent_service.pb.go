@@ -238,9 +238,13 @@ type ChatRequest struct {
 	// Configuration for this specific request.
 	Config *ChatConfig `protobuf:"bytes,8,opt,name=config,proto3" json:"config,omitempty"`
 	// Unique identifier for this specific request/message (Trace ID).
-	RequestId     string `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RequestId string `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Optional: document IDs to scope RAG retrieval to specific files.
+	FileIds []string `protobuf:"bytes,10,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
+	// Optional: include document references in streaming responses.
+	IncludeReferences bool `protobuf:"varint,11,opt,name=include_references,json=includeReferences,proto3" json:"include_references,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ChatRequest) Reset() {
@@ -345,6 +349,20 @@ func (x *ChatRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *ChatRequest) GetFileIds() []string {
+	if x != nil {
+		return x.FileIds
+	}
+	return nil
+}
+
+func (x *ChatRequest) GetIncludeReferences() bool {
+	if x != nil {
+		return x.IncludeReferences
+	}
+	return false
 }
 
 type isChatRequest_Input interface {
@@ -952,6 +970,10 @@ type Citation struct {
 	SourceType    string                 `protobuf:"bytes,4,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
 	Url           string                 `protobuf:"bytes,5,opt,name=url,proto3" json:"url,omitempty"`
 	Score         float32                `protobuf:"fixed32,6,opt,name=score,proto3" json:"score,omitempty"`
+	FileId        string                 `protobuf:"bytes,7,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
+	PageNumber    int32                  `protobuf:"varint,8,opt,name=page_number,json=pageNumber,proto3" json:"page_number,omitempty"`
+	ChunkIndex    int32                  `protobuf:"varint,9,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
+	SectionTitle  string                 `protobuf:"bytes,10,opt,name=section_title,json=sectionTitle,proto3" json:"section_title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1026,6 +1048,34 @@ func (x *Citation) GetScore() float32 {
 		return x.Score
 	}
 	return 0
+}
+
+func (x *Citation) GetFileId() string {
+	if x != nil {
+		return x.FileId
+	}
+	return ""
+}
+
+func (x *Citation) GetPageNumber() int32 {
+	if x != nil {
+		return x.PageNumber
+	}
+	return 0
+}
+
+func (x *Citation) GetChunkIndex() int32 {
+	if x != nil {
+		return x.ChunkIndex
+	}
+	return 0
+}
+
+func (x *Citation) GetSectionTitle() string {
+	if x != nil {
+		return x.SectionTitle
+	}
+	return ""
 }
 
 type ToolCall struct {
@@ -1680,7 +1730,7 @@ var File_agent_service_proto protoreflect.FileDescriptor
 
 const file_agent_service_proto_rawDesc = "" +
 	"\n" +
-	"\x13agent_service.proto\x12\bagent.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\x99\x03\n" +
+	"\x13agent_service.proto\x12\bagent.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xe3\x03\n" +
 	"\vChatRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -1693,7 +1743,10 @@ const file_agent_service_proto_rawDesc = "" +
 	"\ahistory\x18\x06 \x03(\v2\x15.agent.v1.ChatMessageR\ahistory\x12,\n" +
 	"\x06config\x18\b \x01(\v2\x14.agent.v1.ChatConfigR\x06config\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\t \x01(\tR\trequestIdB\a\n" +
+	"request_id\x18\t \x01(\tR\trequestId\x12\x19\n" +
+	"\bfile_ids\x18\n" +
+	" \x03(\tR\afileIds\x12-\n" +
+	"\x12include_references\x18\v \x01(\bR\x11includeReferencesB\a\n" +
 	"\x05input\"\xa7\x02\n" +
 	"\vUserProfile\x12\x1a\n" +
 	"\bnickname\x18\x01 \x01(\tR\bnickname\x12\x1a\n" +
@@ -1751,7 +1804,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReasonB\t\n" +
 	"\acontent\"A\n" +
 	"\rCitationBlock\x120\n" +
-	"\tcitations\x18\x01 \x03(\v2\x12.agent.v1.CitationR\tcitations\"\x93\x01\n" +
+	"\tcitations\x18\x01 \x03(\v2\x12.agent.v1.CitationR\tcitations\"\x93\x02\n" +
 	"\bCitation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
@@ -1759,7 +1812,14 @@ const file_agent_service_proto_rawDesc = "" +
 	"\vsource_type\x18\x04 \x01(\tR\n" +
 	"sourceType\x12\x10\n" +
 	"\x03url\x18\x05 \x01(\tR\x03url\x12\x14\n" +
-	"\x05score\x18\x06 \x01(\x02R\x05score\"L\n" +
+	"\x05score\x18\x06 \x01(\x02R\x05score\x12\x17\n" +
+	"\afile_id\x18\a \x01(\tR\x06fileId\x12\x1f\n" +
+	"\vpage_number\x18\b \x01(\x05R\n" +
+	"pageNumber\x12\x1f\n" +
+	"\vchunk_index\x18\t \x01(\x05R\n" +
+	"chunkIndex\x12#\n" +
+	"\rsection_title\x18\n" +
+	" \x01(\tR\fsectionTitle\"L\n" +
 	"\bToolCall\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +

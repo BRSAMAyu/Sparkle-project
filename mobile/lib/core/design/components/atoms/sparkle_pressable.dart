@@ -50,7 +50,9 @@ class SparklePressable extends StatelessWidget {
             splashColor: context.colors.brandPrimary.withValues(alpha: 0.12),
             highlightColor: context.colors.brandPrimary.withValues(alpha: 0.06),
             child: Padding(
-              padding: padding ?? context.space.edge(horizontal: context.space.sm, vertical: context.space.xs),
+              padding: padding ??
+                  context.space.edge(
+                      horizontal: context.space.sm, vertical: context.space.xs,),
               child: child,
             ),
           ),

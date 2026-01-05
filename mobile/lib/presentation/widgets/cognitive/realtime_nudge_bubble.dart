@@ -8,7 +8,8 @@ class RealtimeNudgeBubble extends ConsumerStatefulWidget {
   const RealtimeNudgeBubble({super.key});
 
   @override
-  ConsumerState<RealtimeNudgeBubble> createState() => _RealtimeNudgeBubbleState();
+  ConsumerState<RealtimeNudgeBubble> createState() =>
+      _RealtimeNudgeBubbleState();
 }
 
 class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
@@ -31,12 +32,15 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
 
     // Get the latest pattern with a solution text
     final patternsWithSolution = cognitiveState.patterns.where(
-      (pattern) => pattern.solutionText != null && pattern.solutionText!.isNotEmpty,
+      (pattern) =>
+          pattern.solutionText != null && pattern.solutionText!.isNotEmpty,
     );
-    final latestPatternWithSolution = patternsWithSolution.isNotEmpty ? patternsWithSolution.first : null;
+    final latestPatternWithSolution =
+        patternsWithSolution.isNotEmpty ? patternsWithSolution.first : null;
 
     if (cognitiveState.isLoading || latestPatternWithSolution == null) {
-      return const SizedBox.shrink(); // Don't show if loading or no relevant patterns
+      return const SizedBox
+          .shrink(); // Don't show if loading or no relevant patterns
     }
 
     return GestureDetector(
@@ -69,7 +73,8 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
               ),
             ),
             const SizedBox(width: DS.spacing8),
-            Icon(Icons.arrow_forward_ios_rounded, color: DS.neutral400, size: 16),
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: DS.neutral400, size: 16,),
           ],
         ),
       ),

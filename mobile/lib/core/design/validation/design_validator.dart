@@ -35,7 +35,8 @@ class DesignValidator {
   }
 
   /// 验证触控目标大小 (WCAG 2.1: 48x48px)
-  static bool validateTouchTarget(Size size) => size.width >= 48 && size.height >= 48;
+  static bool validateTouchTarget(Size size) =>
+      size.width >= 48 && size.height >= 48;
 
   /// 验证圆角半径 (4的倍数)
   static bool validateBorderRadius(double radius) => radius % 4 == 0;
@@ -57,16 +58,16 @@ class DesignValidator {
 
   /// 计算相对亮度 (WCAG公式)
   static double _relativeLuminance(Color color) {
-    final r = _srgbToLinear(color.red / 255.0);
-    final g = _srgbToLinear(color.green / 255.0);
-    final b = _srgbToLinear(color.blue / 255.0);
+    final r = _srgbToLinear(color.r);
+    final g = _srgbToLinear(color.g);
+    final b = _srgbToLinear(color.b);
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
   /// sRGB转线性RGB
   static double _srgbToLinear(double value) => value <= 0.03928
-        ? value / 12.92
-        : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
+      ? value / 12.92
+      : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
 
   /// 生成验证报告
   static ValidationReport generateReport({
@@ -80,65 +81,84 @@ class DesignValidator {
 
     // 验证颜色
     for (final color in colors) {
-      if (!validateOpacity(color.opacity)) {
-        violations.add(Violation(
-          type: ViolationType.color,
-          message: '颜色透明度超出范围: ${color.opacity}',
-          severity: Severity.medium,
-        ),);
+      if (!validateOpacity(color.a)) {
+        violations.add(
+          Violation(
+            type: ViolationType.color,
+            message: '颜色透明度超出范围: ${color.a}',
+            severity: Severity.medium,
+          ),
+        );
       }
     }
 
     // 验证间距
     for (final spacing in spacings) {
       if (!validateSpacing(spacing)) {
-        violations.add(Violation(
-          type: ViolationType.spacing,
-          message: '间距不是4的倍数: $spacing',
-          severity: Severity.low,
-        ),);
+        violations.add(
+          Violation(
+            type: ViolationType.spacing,
+            message: '间距不是4的倍数: $spacing',
+            severity: Severity.low,
+          ),
+        );
       }
     }
 
     // 验证字体大小
     for (final size in fontSizes) {
       if (!validateFontSize(size)) {
-        violations.add(Violation(
-          type: ViolationType.typography,
-          message: '字体大小超出范围: $size',
-          severity: Severity.medium,
-        ),);
+        violations.add(
+          Violation(
+            type: ViolationType.typography,
+            message: '字体大小超出范围: $size',
+            severity: Severity.medium,
+          ),
+        );
       }
     }
 
     // 验证动画时长
     for (final duration in durations) {
       if (!validateAnimationDuration(duration)) {
-        violations.add(Violation(
-          type: ViolationType.animation,
-          message: '动画时长超出范围: ${duration.inMilliseconds}ms',
-          severity: Severity.low,
-        ),);
+        violations.add(
+          Violation(
+            type: ViolationType.animation,
+            message: '动画时长超出范围: ${duration.inMilliseconds}ms',
+            severity: Severity.low,
+          ),
+        );
       }
     }
 
     // 验证触控目标
     for (final size in touchTargets) {
       if (!validateTouchTarget(size)) {
-        violations.add(Violation(
-          type: ViolationType.accessibility,
-          message: '触控目标太小: ${size.width}x${size.height}',
-          severity: Severity.high,
-        ),);
+        violations.add(
+          Violation(
+            type: ViolationType.accessibility,
+            message: '触控目标太小: ${size.width}x${size.height}',
+            severity: Severity.high,
+          ),
+        );
       }
     }
 
     return ValidationReport(
-      totalChecks: colors.length + spacings.length + fontSizes.length +
-                  durations.length + touchTargets.length,
+      totalChecks: colors.length +
+          spacings.length +
+          fontSizes.length +
+          durations.length +
+          touchTargets.length,
       violations: violations,
-      score: _calculateScore(violations.length, colors.length + spacings.length +
-                  fontSizes.length + durations.length + touchTargets.length,),
+      score: _calculateScore(
+        violations.length,
+        colors.length +
+            spacings.length +
+            fontSizes.length +
+            durations.length +
+            touchTargets.length,
+      ),
     );
   }
 
@@ -168,7 +188,6 @@ enum Severity {
 
 @immutable
 class Violation {
-
   const Violation({
     required this.type,
     required this.message,
@@ -197,7 +216,6 @@ class Violation {
 
 @immutable
 class ValidationReport {
-
   const ValidationReport({
     required this.totalChecks,
     required this.violations,
@@ -208,9 +226,14 @@ class ValidationReport {
   final double score;
 
   bool get isValid => violations.isEmpty;
-  int get errorCount => violations.where((v) => v.severity == Severity.high || v.severity == Severity.critical).length;
-  int get warningCount => violations.where((v) => v.severity == Severity.medium).length;
-  int get infoCount => violations.where((v) => v.severity == Severity.low).length;
+  int get errorCount => violations
+      .where(
+          (v) => v.severity == Severity.high || v.severity == Severity.critical,)
+      .length;
+  int get warningCount =>
+      violations.where((v) => v.severity == Severity.medium).length;
+  int get infoCount =>
+      violations.where((v) => v.severity == Severity.low).length;
 
   String toMarkdown() => '''
 # 设计系统验证报告
@@ -241,23 +264,27 @@ ${_generateRecommendations()}
     }
 
     if (violations.any((v) => v.type == ViolationType.color)) {
-      recommendations.add('- 使用 AppDesignTokens 中定义的颜色');
-      recommendations.add('- 验证颜色对比度是否符合 WCAG 标准');
+      recommendations
+        ..add('- 使用 AppDesignTokens 中定义的颜色')
+        ..add('- 验证颜色对比度是否符合 WCAG 标准');
     }
 
     if (violations.any((v) => v.type == ViolationType.spacing)) {
-      recommendations.add('- 使用 4pt 网格系统进行间距布局');
-      recommendations.add('- 避免硬编码间距值');
+      recommendations
+        ..add('- 使用 4pt 网格系统进行间距布局')
+        ..add('- 避免硬编码间距值');
     }
 
     if (violations.any((v) => v.type == ViolationType.typography)) {
-      recommendations.add('- 使用设计系统中的排版令牌');
-      recommendations.add('- 保持字体大小在 12-72px 范围内');
+      recommendations
+        ..add('- 使用设计系统中的排版令牌')
+        ..add('- 保持字体大小在 12-72px 范围内');
     }
 
     if (violations.any((v) => v.type == ViolationType.animation)) {
-      recommendations.add('- 使用标准动画时长 (150-600ms)');
-      recommendations.add('- 避免过快或过慢的动画');
+      recommendations
+        ..add('- 使用标准动画时长 (150-600ms)')
+        ..add('- 避免过快或过慢的动画');
     }
 
     if (recommendations.isEmpty) {
@@ -284,37 +311,45 @@ extension WidgetValidation on Widget {
 
 /// 设计系统检查器
 class DesignSystemChecker {
-  static Future<ValidationReport> checkCurrentContext(BuildContext context) async {
+  static Future<ValidationReport> checkCurrentContext(
+      BuildContext context,) async {
     final violations = <Violation>[];
 
     // 检查媒体查询
-    final media = MediaQuery.of(context);
-    if (media.textScaleFactor > 1.5) {
-      violations.add(Violation(
-        type: ViolationType.typography,
-        message: '文本缩放比例过高: ${media.textScaleFactor}',
-        severity: Severity.medium,
-      ),);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaleFactor = textScaler.scale(1.0);
+    if (scaleFactor > 1.5) {
+      violations.add(
+        Violation(
+          type: ViolationType.typography,
+          message: '文本缩放比例过高: $scaleFactor',
+          severity: Severity.medium,
+        ),
+      );
     }
 
     // 检查安全区域
-    final padding = media.padding;
+    final padding = MediaQuery.paddingOf(context);
     if (padding.top < 0 || padding.bottom < 0) {
-      violations.add(const Violation(
-        type: ViolationType.layout,
-        message: '安全区域边距异常',
-        severity: Severity.high,
-      ),);
+      violations.add(
+        const Violation(
+          type: ViolationType.layout,
+          message: '安全区域边距异常',
+          severity: Severity.high,
+        ),
+      );
     }
 
     // 检查屏幕尺寸
-    final size = media.size;
+    final size = MediaQuery.sizeOf(context);
     if (size.width < 320 || size.height < 480) {
-      violations.add(Violation(
-        type: ViolationType.layout,
-        message: '屏幕尺寸过小: ${size.width}x${size.height}',
-        severity: Severity.medium,
-      ),);
+      violations.add(
+        Violation(
+          type: ViolationType.layout,
+          message: '屏幕尺寸过小: ${size.width}x${size.height}',
+          severity: Severity.medium,
+        ),
+      );
     }
 
     return ValidationReport(

@@ -28,7 +28,8 @@ class SparkleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = borderRadius ?? context.radius.mdRadius;
     final color = backgroundColor ?? context.colors.surfaceSecondary;
-    final borderSide = BorderSide(color: borderColor ?? context.colors.borderDefault);
+    final borderSide =
+        BorderSide(color: borderColor ?? context.colors.borderDefault);
     final content = Padding(
       padding: padding ?? context.space.edge(all: context.space.md),
       child: child,
@@ -46,8 +47,10 @@ class SparkleCard extends StatelessWidget {
             : InkWell(
                 onTap: onTap,
                 borderRadius: radius,
-                splashColor: context.colors.brandPrimary.withValues(alpha: 0.12),
-                highlightColor: context.colors.brandPrimary.withValues(alpha: 0.06),
+                splashColor:
+                    context.colors.brandPrimary.withValues(alpha: 0.12),
+                highlightColor:
+                    context.colors.brandPrimary.withValues(alpha: 0.06),
                 child: content,
               ),
       ),

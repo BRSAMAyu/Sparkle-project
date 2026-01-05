@@ -4,23 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/performance_service.dart';
-import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/presentation/widgets/focus/exit_confirmation_dialog.dart';
 import 'package:sparkle/presentation/widgets/focus/flip_clock.dart';
 import 'package:sparkle/presentation/widgets/focus/reflection_dialog.dart';
 import 'package:sparkle/presentation/widgets/focus/star_background.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 正念模式屏幕
 class MindfulnessModeScreen extends ConsumerStatefulWidget {
-
   const MindfulnessModeScreen({
-    required this.task, super.key,
+    required this.task,
+    super.key,
   });
   final TaskModel task;
 
   @override
-  ConsumerState<MindfulnessModeScreen> createState() => _MindfulnessModeScreenState();
+  ConsumerState<MindfulnessModeScreen> createState() =>
+      _MindfulnessModeScreenState();
 }
 
 class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
@@ -88,8 +89,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     if (state == AppLifecycleState.paused) {
       // 用户切换离开应用
       ref.read(mindfulnessProvider.notifier).recordInterruption(
-        InterruptionType.appSwitch,
-      );
+            InterruptionType.appSwitch,
+          );
     } else if (state == AppLifecycleState.resumed) {
       // 用户返回应用，显示提醒
       _showInterruptionWarning();
@@ -132,7 +133,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     if (confirmed && mounted) {
       _isExiting = true;
       await ref.read(mindfulnessProvider.notifier).stop();
-      
+
       if (mounted) {
         // Show Reflection Dialog
         await showDialog(
@@ -140,7 +141,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           barrierDismissible: false,
           builder: (context) => const ReflectionDialog(),
         );
-        
+
         if (mounted) {
           context.pop();
         }
@@ -236,183 +237,184 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
   }
 
   Widget _buildStatusBar(MindfulnessState state) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // 分心计数
-          if (state.interruptionCount > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: DS.warning.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.visibility_off_rounded,
-                    color: DS.warning,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '分心 ${state.interruptionCount} 次',
-                    style: TextStyle(
-                      color: DS.warning,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const SizedBox(width: 80),
-
-          // 正念模式标题
-          Row(
-            children: [
-              Icon(
-                Icons.self_improvement_rounded,
-                color: DS.brandPrimary.withValues(alpha: 0.7),
-                size: 20,
-              ),
-              const SizedBox(width: DS.sm),
-              Text(
-                '正念模式',
-                style: TextStyle(
-                  color: DS.brandPrimary.withValues(alpha: 0.7),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 分心计数
+            if (state.interruptionCount > 0)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: DS.warning.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-            ],
-          ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.visibility_off_rounded,
+                      color: DS.warning,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '分心 ${state.interruptionCount} 次',
+                      style: TextStyle(
+                        color: DS.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const SizedBox(width: 80),
 
-          // 暂停按钮
-          IconButton(
-            icon: Icon(
-              state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-              color: DS.brandPrimary.withValues(alpha: 0.7),
+            // 正念模式标题
+            Row(
+              children: [
+                Icon(
+                  Icons.self_improvement_rounded,
+                  color: DS.brandPrimary.withValues(alpha: 0.7),
+                  size: 20,
+                ),
+                const SizedBox(width: DS.sm),
+                Text(
+                  '正念模式',
+                  style: TextStyle(
+                    color: DS.brandPrimary.withValues(alpha: 0.7),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            onPressed: () {
-              if (state.isPaused) {
-                ref.read(mindfulnessProvider.notifier).resume();
-              } else {
-                ref.read(mindfulnessProvider.notifier).pause();
-              }
-            },
-          ),
-        ],
-      ),
-    );
+
+            // 暂停按钮
+            IconButton(
+              icon: Icon(
+                state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                color: DS.brandPrimary.withValues(alpha: 0.7),
+              ),
+              onPressed: () {
+                if (state.isPaused) {
+                  ref.read(mindfulnessProvider.notifier).resume();
+                } else {
+                  ref.read(mindfulnessProvider.notifier).pause();
+                }
+              },
+            ),
+          ],
+        ),
+      );
 
   Widget _buildTaskCard() => Container(
-      margin: const EdgeInsets.symmetric(horizontal: 40),
-      padding: const EdgeInsets.all(DS.xl),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: DS.brandPrimary.withValues(alpha: 0.15),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: DS.brandPrimary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 任务标题
-          Text(
-            widget.task.title,
-            style: TextStyle(
-              color: DS.brandPrimaryConst,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          const SizedBox(height: DS.md),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              gradient: DS.primaryGradient,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              widget.task.type.name.toUpperCase(),
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-  Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.9, end: 1.1),
-      duration: const Duration(milliseconds: 1500),
-      curve: Curves.easeInOut,
-      builder: (context, scale, child) => Transform.scale(
-          scale: scale,
-          child: child,
-        ),
-      onEnd: () {
-        // 循环动画
-        if (mounted) {
-          setState(() {});
-        }
-      },
-      child: Container(
-        width: 60,
-        height: 60,
+        margin: const EdgeInsets.symmetric(horizontal: 40),
+        padding: const EdgeInsets.all(DS.xl),
         decoration: BoxDecoration(
-          gradient: DS.flameGradient,
-          shape: BoxShape.circle,
+          color: DS.brandPrimary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: DS.brandPrimary.withValues(alpha: 0.15),
+          ),
           boxShadow: [
             BoxShadow(
-              color: DS.flameCore.withValues(alpha: 0.6),
+              color: DS.brandPrimary.withValues(alpha: 0.3),
               blurRadius: 20,
               spreadRadius: 5,
             ),
           ],
         ),
-        child: Icon(
-          Icons.local_fire_department_rounded,
-          color: DS.brandPrimaryConst,
-          size: 32,
-        ),
-      ),
-    );
-
-  Widget _buildExitButton() => Padding(
-      padding: const EdgeInsets.all(DS.xl),
-      child: TextButton(
-        onPressed: _handleExit,
-        style: TextButton.styleFrom(
-          foregroundColor: DS.brandPrimary.withValues(alpha: 0.5),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        ),
-        child: const Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.exit_to_app_rounded, size: 18),
-            SizedBox(width: DS.sm),
-            Text('退出正念模式'),
+            // 任务标题
+            Text(
+              widget.task.title,
+              style: TextStyle(
+                color: DS.brandPrimaryConst,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: DS.md),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                gradient: DS.primaryGradient,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                widget.task.type.name.toUpperCase(),
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    );
+      );
+
+  Widget _buildFlameAnimation() => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.9, end: 1.1),
+        duration: const Duration(milliseconds: 1500),
+        curve: Curves.easeInOut,
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: child,
+        ),
+        onEnd: () {
+          // 循环动画
+          if (mounted) {
+            setState(() {});
+          }
+        },
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            gradient: DS.flameGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: DS.flameCore.withValues(alpha: 0.6),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.local_fire_department_rounded,
+            color: DS.brandPrimaryConst,
+            size: 32,
+          ),
+        ),
+      );
+
+  Widget _buildExitButton() => Padding(
+        padding: const EdgeInsets.all(DS.xl),
+        child: TextButton(
+          onPressed: _handleExit,
+          style: TextButton.styleFrom(
+            foregroundColor: DS.brandPrimary.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.exit_to_app_rounded, size: 18),
+              SizedBox(width: DS.sm),
+              Text('退出正念模式'),
+            ],
+          ),
+        ),
+      );
 }

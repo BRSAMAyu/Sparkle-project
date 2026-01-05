@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 添加错题页面
 ///
@@ -61,7 +61,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Text('错题已添加，AI 正在分析中...'              ),
+                  child: Text('错题已添加，AI 正在分析中...'),
                 ),
               ],
             ),
@@ -281,10 +281,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.3),
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
         ),
       ),
       child: Row(

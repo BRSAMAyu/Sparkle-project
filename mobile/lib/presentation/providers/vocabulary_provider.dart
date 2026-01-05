@@ -3,7 +3,6 @@ import 'package:sparkle/data/repositories/vocabulary_repository.dart';
 
 /// 生词本状态
 class VocabularyState {
-
   const VocabularyState({
     this.lookupResult,
     this.wordbook = const [],
@@ -34,21 +33,21 @@ class VocabularyState {
     String? error,
     bool clearLookup = false,
     bool clearError = false,
-  }) => VocabularyState(
-      lookupResult: clearLookup ? null : (lookupResult ?? this.lookupResult),
-      wordbook: wordbook ?? this.wordbook,
-      reviewList: reviewList ?? this.reviewList,
-      associations: associations ?? this.associations,
-      exampleSentence: exampleSentence ?? this.exampleSentence,
-      isLoading: isLoading ?? this.isLoading,
-      isLookingUp: isLookingUp ?? this.isLookingUp,
-      error: clearError ? null : (error ?? this.error),
-    );
+  }) =>
+      VocabularyState(
+        lookupResult: clearLookup ? null : (lookupResult ?? this.lookupResult),
+        wordbook: wordbook ?? this.wordbook,
+        reviewList: reviewList ?? this.reviewList,
+        associations: associations ?? this.associations,
+        exampleSentence: exampleSentence ?? this.exampleSentence,
+        isLoading: isLoading ?? this.isLoading,
+        isLookingUp: isLookingUp ?? this.isLookingUp,
+        error: clearError ? null : (error ?? this.error),
+      );
 }
 
 /// 生词本状态管理器
 class VocabularyNotifier extends StateNotifier<VocabularyState> {
-
   VocabularyNotifier(this._repository) : super(const VocabularyState());
   final VocabularyRepository _repository;
 
@@ -154,7 +153,8 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     if (word.trim().isEmpty) return;
 
     try {
-      final sentence = await _repository.generateSentence(word, context: context);
+      final sentence =
+          await _repository.generateSentence(word, context: context);
       state = state.copyWith(exampleSentence: sentence);
     } catch (e) {
       // 非关键功能，静默失败
@@ -177,4 +177,6 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
 }
 
 /// 生词本 Provider
-final vocabularyProvider = StateNotifierProvider<VocabularyNotifier, VocabularyState>((ref) => VocabularyNotifier(ref.watch(vocabularyRepositoryProvider)));
+final vocabularyProvider =
+    StateNotifierProvider<VocabularyNotifier, VocabularyState>(
+        (ref) => VocabularyNotifier(ref.watch(vocabularyRepositoryProvider)),);

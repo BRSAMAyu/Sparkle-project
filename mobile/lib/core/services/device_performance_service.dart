@@ -138,8 +138,10 @@ class DevicePerformanceService {
     }
 
     // Check physical device characteristics
-    final devicePixelRatio = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
-    final physicalSize = ui.PlatformDispatcher.instance.views.first.physicalSize;
+    final devicePixelRatio =
+        ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final physicalSize =
+        ui.PlatformDispatcher.instance.views.first.physicalSize;
     final totalPixels = physicalSize.width * physicalSize.height;
 
     // iOS devices are generally well-optimized

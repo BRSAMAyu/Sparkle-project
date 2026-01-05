@@ -4,13 +4,15 @@ part 'behavior_pattern_model.g.dart';
 
 @JsonSerializable()
 class BehaviorPatternModel {
-
   BehaviorPatternModel({
     required this.id,
     required this.userId,
     required this.patternName,
     required this.patternType,
-    required this.isArchived, required this.createdAt, required this.updatedAt, this.description,
+    required this.isArchived,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.solutionText,
     this.evidenceIds,
   });

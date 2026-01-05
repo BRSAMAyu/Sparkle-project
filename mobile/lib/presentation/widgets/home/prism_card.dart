@@ -72,27 +72,29 @@ class _PrismCardState extends ConsumerState<PrismCard>
                   child: AnimatedBuilder(
                     animation: _breathingAnimation,
                     builder: (context, child) => Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              DS.prismPurple.withValues(alpha: _breathingAnimation.value),
-                              Colors.transparent,
-                            ],
-                          ),
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            DS.prismPurple
+                                .withValues(alpha: _breathingAnimation.value),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
+                    ),
                   ),
                 ),
-                
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.diamond_outlined, color: DS.brandPrimaryConst, size: 18),
+                        Icon(Icons.diamond_outlined,
+                            color: DS.brandPrimaryConst, size: 18,),
                         const SizedBox(width: DS.sm),
                         Text(
                           '认知棱镜',
@@ -120,7 +122,8 @@ class _PrismCardState extends ConsumerState<PrismCard>
                         spacing: 8,
                         children: [
                           _buildTag('#$weeklyPattern'),
-                          if (dashboardState.weather.type == 'rainy') _buildTag('#焦虑波峰'),
+                          if (dashboardState.weather.type == 'rainy')
+                            _buildTag('#焦虑波峰'),
                         ],
                       ),
                       const SizedBox(height: DS.xs),
@@ -151,19 +154,19 @@ class _PrismCardState extends ConsumerState<PrismCard>
   }
 
   Widget _buildTag(String text) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: DS.brandPrimary.withAlpha(30)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: DS.brandPrimaryConst,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withAlpha(20),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: DS.brandPrimary.withAlpha(30)),
         ),
-      ),
-    );
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: DS.brandPrimaryConst,
+          ),
+        ),
+      );
 }

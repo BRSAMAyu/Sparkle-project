@@ -12,7 +12,8 @@ import 'package:sparkle/presentation/widgets/community/community_widgets.dart';
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
 
 // Provider for focus mode
-final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>((ref) => FocusModeNotifier());
+final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>(
+    (ref) => FocusModeNotifier(),);
 
 class FocusModeNotifier extends StateNotifier<bool> {
   FocusModeNotifier() : super(false) {
@@ -37,17 +38,20 @@ class CommunityMainScreen extends ConsumerStatefulWidget {
   const CommunityMainScreen({super.key});
 
   @override
-  ConsumerState<CommunityMainScreen> createState() => _CommunityMainScreenState();
+  ConsumerState<CommunityMainScreen> createState() =>
+      _CommunityMainScreenState();
 }
 
-class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with SingleTickerProviderStateMixin {
+class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     final savedIndex = ref.read(communityTabIndexProvider);
-    _tabController = TabController(length: 2, vsync: this, initialIndex: savedIndex);
+    _tabController =
+        TabController(length: 2, vsync: this, initialIndex: savedIndex);
     _tabController.addListener(_onTabChanged);
     _loadSavedTab();
   }
@@ -86,13 +90,16 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            const Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         actions: [
           // Focus mode indicator and toggle
           IconButton(
             icon: Icon(
-              focusMode ? Icons.do_not_disturb_on : Icons.do_not_disturb_off_outlined,
+              focusMode
+                  ? Icons.do_not_disturb_on
+                  : Icons.do_not_disturb_off_outlined,
               color: focusMode ? DS.warning : null,
             ),
             tooltip: focusMode ? '专注模式开启中' : '开启专注模式',
@@ -107,7 +114,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen> with 
             },
           ),
           IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.person_add_outlined), onPressed: () {}),
+          IconButton(
+              icon: const Icon(Icons.person_add_outlined), onPressed: () {},),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -156,12 +164,15 @@ class _FriendsListTab extends ConsumerWidget {
           itemBuilder: (context, index) {
             final f = friends[index];
             return InkWell(
-              onTap: () => context.push('/community/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}'),
+              onTap: () => context.push(
+                  '/community/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    StatusAvatar(status: f.friend.status, url: f.friend.avatarUrl),
+                    StatusAvatar(
+                        status: f.friend.status, url: f.friend.avatarUrl,),
                     const SizedBox(width: DS.md),
                     Expanded(
                       child: Column(
@@ -169,7 +180,8 @@ class _FriendsListTab extends ConsumerWidget {
                         children: [
                           Text(
                             f.friend.displayName,
-                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w500, fontSize: 16,),
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -186,7 +198,9 @@ class _FriendsListTab extends ConsumerWidget {
                               ),
                               const SizedBox(width: DS.xs),
                               Text(
-                                f.friend.status == UserStatus.online ? '在线' : '离线',
+                                f.friend.status == UserStatus.online
+                                    ? '在线'
+                                    : '离线',
                                 style: TextStyle(
                                   color: f.friend.status == UserStatus.online
                                       ? DS.success
@@ -197,7 +211,8 @@ class _FriendsListTab extends ConsumerWidget {
                               const SizedBox(width: DS.sm),
                               Text(
                                 'Lv.${f.friend.flameLevel}',
-                                style: TextStyle(color: DS.neutral500, fontSize: 12),
+                                style: TextStyle(
+                                    color: DS.neutral500, fontSize: 12,),
                               ),
                             ],
                           ),
@@ -261,17 +276,25 @@ class _GroupsListTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(g.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(g.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16,),),
                             const SizedBox(height: DS.xs),
                             Row(
                               children: [
-                                Icon(Icons.people, size: 14, color: DS.neutral500),
+                                Icon(Icons.people,
+                                    size: 14, color: DS.neutral500,),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.memberCount} 成员', style: TextStyle(color: DS.neutral500, fontSize: 12)),
+                                Text('${g.memberCount} 成员',
+                                    style: TextStyle(
+                                        color: DS.neutral500, fontSize: 12,),),
                                 const SizedBox(width: DS.md),
-                                Icon(Icons.local_fire_department, size: 14, color: DS.brandPrimary),
+                                Icon(Icons.local_fire_department,
+                                    size: 14, color: DS.brandPrimary,),
                                 const SizedBox(width: DS.xs),
-                                Text('${g.totalFlamePower}', style: TextStyle(color: DS.neutral500, fontSize: 12)),
+                                Text('${g.totalFlamePower}',
+                                    style: TextStyle(
+                                        color: DS.neutral500, fontSize: 12,),),
                               ],
                             ),
                           ],

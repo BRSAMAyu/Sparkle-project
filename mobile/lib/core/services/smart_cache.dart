@@ -176,7 +176,8 @@ class CacheStats {
 /// 带有大小估算的智能缓存
 class SizedSmartCache<K, V> extends SmartCache<K, V> {
   SizedSmartCache({
-    required this.sizeEstimator, super.maxSize = 50,
+    required this.sizeEstimator,
+    super.maxSize = 50,
     super.maxAge = const Duration(minutes: 5),
     super.onEvicted,
     this.maxMemoryBytes = 100 * 1024 * 1024, // 100MB
@@ -197,7 +198,8 @@ class SizedSmartCache<K, V> extends SmartCache<K, V> {
     }
 
     // 清理直到有足够空间
-    while (_currentMemoryBytes + valueSize > maxMemoryBytes && _cache.isNotEmpty) {
+    while (
+        _currentMemoryBytes + valueSize > maxMemoryBytes && _cache.isNotEmpty) {
       final oldestKey = _cache.keys.first;
       final oldEntry = _cache[oldestKey];
       if (oldEntry != null) {

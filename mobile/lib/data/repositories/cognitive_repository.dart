@@ -11,40 +11,45 @@ import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
 
 class ApiCognitiveRepository implements ICognitiveRepository {
   ApiCognitiveRepository(this._apiClient);
-  
+
   final ApiClient _apiClient;
 
   @override
-  Future<CognitiveFragmentModel> createFragment(CognitiveFragmentCreate data) async {
+  Future<CognitiveFragmentModel> createFragment(
+      CognitiveFragmentCreate data,) async {
     try {
       final response = await _apiClient.post(
         ApiEndpoints.cognitiveFragments,
         data: data.toJson(),
       );
-      
-      final responseData = response.data is Map && response.data.containsKey('data') 
-          ? response.data['data'] 
-          : response.data;
-          
-      return CognitiveFragmentModel.fromJson(responseData);
+
+      final rData = response.data;
+      final responseData = rData is Map && rData.containsKey('data')
+          ? rData['data']
+          : rData;
+
+      return CognitiveFragmentModel.fromJson(responseData as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw Exception(e.response?.data?['detail'] ?? 'Failed to create fragment');
+      throw Exception(
+          (e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to create fragment',);
     }
   }
 
   @override
-  Future<List<CognitiveFragmentModel>> getFragments({int limit = 20, int skip = 0}) async {
+  Future<List<CognitiveFragmentModel>> getFragments(
+      {int limit = 20, int skip = 0,}) async {
     try {
       final response = await _apiClient.get(
         ApiEndpoints.cognitiveFragments,
         queryParameters: {'limit': limit, 'skip': skip},
       );
-      final List<dynamic> list = response.data is Map && response.data.containsKey('data') 
-          ? response.data['data'] 
-          : response.data;
-      return list.map((e) => CognitiveFragmentModel.fromJson(e)).toList();
+      final rData = response.data;
+      final List<dynamic> list = rData is Map && rData.containsKey('data')
+          ? rData['data']
+          : rData;
+      return list.map((e) => CognitiveFragmentModel.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
-      throw Exception(e.response?.data?['detail'] ?? 'Failed to get fragments');
+      throw Exception((e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to get fragments');
     }
   }
 
@@ -52,12 +57,14 @@ class ApiCognitiveRepository implements ICognitiveRepository {
   Future<List<BehaviorPatternModel>> getBehaviorPatterns() async {
     try {
       final response = await _apiClient.get(ApiEndpoints.cognitivePatterns);
-      final List<dynamic> list = response.data is Map && response.data.containsKey('data') 
-          ? response.data['data'] 
-          : response.data;
-      return list.map((e) => BehaviorPatternModel.fromJson(e)).toList();
+      final rData = response.data;
+      final List<dynamic> list = rData is Map && rData.containsKey('data')
+          ? rData['data']
+          : rData;
+      return list.map((e) => BehaviorPatternModel.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
-      throw Exception(e.response?.data?['detail'] ?? 'Failed to get behavior patterns');
+      throw Exception(
+          (e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to get behavior patterns',);
     }
   }
 }
@@ -65,8 +72,8 @@ class ApiCognitiveRepository implements ICognitiveRepository {
 final cognitiveRepositoryProvider = Provider<ICognitiveRepository>((ref) {
   // Toggle between Mock and Real API
   // In production, this should be controlled by environment variables or build flags
-  const useMock = false; 
-  
+  const useMock = false;
+
   if (useMock) {
     return MockCognitiveRepository();
   }
@@ -74,6 +81,6 @@ final cognitiveRepositoryProvider = Provider<ICognitiveRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   final apiRepo = ApiCognitiveRepository(apiClient);
   final localRepo = LocalCognitiveRepository();
-  
+
   return SyncCognitiveRepository(apiRepo, localRepo);
 });

@@ -21,14 +21,14 @@ class LocalKnowledgeNode {
   late String name;
   late int mastery;
   late DateTime lastUpdated;
-  
+
   late int globalSparkCount; // New collaborative field
-  
+
   int revision = 0; // Logical clock for conflict resolution
 
   @enumerated
   late SyncStatus syncStatus; // pending, synced, conflict
-  
+
   String? error; // To store error messages
 }
 
@@ -43,21 +43,30 @@ class PendingUpdate {
 
   @Index()
   late DateTime createdAt;
-  
+
   String? requestId; // UUID for ACK matching
   int revision = 0; // Logical clock at the time of update
-  
+
   String? error; // To store error messages
-  
+
   @enumerated
   SyncStatus syncStatus = SyncStatus.pending;
 }
 
-class LocalDatabase {
+@collection
+class LocalCRDTSnapshot {
+  Id id = Isar.autoIncrement;
 
-  factory LocalDatabase() {
-    return _instance;
-  }
+  @Index(unique: true)
+  late String galaxyId;
+
+  late List<int> updateData;
+  late DateTime timestamp;
+  late bool synced;
+}
+
+class LocalDatabase {
+  factory LocalDatabase() => _instance;
 
   LocalDatabase._internal();
   static final LocalDatabase _instance = LocalDatabase._internal();
@@ -66,7 +75,7 @@ class LocalDatabase {
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
     isar = await Isar.open(
-      [LocalKnowledgeNodeSchema, PendingUpdateSchema],
+      [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema],
       directory: dir.path,
     );
   }

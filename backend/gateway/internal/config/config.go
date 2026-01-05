@@ -9,26 +9,42 @@ import (
 )
 
 type Config struct {
-	Port          string `mapstructure:"PORT"`
-	DatabaseURL   string `mapstructure:"DATABASE_URL"`
-	AgentAddress  string `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled bool   `mapstructure:"AGENT_TLS_ENABLED"`
+	Port               string `mapstructure:"PORT"`
+	DatabaseURL        string `mapstructure:"DATABASE_URL"`
+	AgentAddress       string `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled    bool   `mapstructure:"AGENT_TLS_ENABLED"`
 	AgentTLSCACertPath string `mapstructure:"AGENT_TLS_CA_CERT"`
 	AgentTLSServerName string `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure bool `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds int `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret     string `mapstructure:"JWT_SECRET"`
-	RedisURL      string `mapstructure:"REDIS_URL"`
-	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
-	BackendURL    string `mapstructure:"BACKEND_URL"`
-	AppleClientID string `mapstructure:"APPLE_CLIENT_ID"`
-	AdminSecret   string `mapstructure:"ADMIN_SECRET"`
-	RabbitMQURL   string `mapstructure:"RABBITMQ_URL"`
+	AgentTLSInsecure   bool   `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds int    `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret          string `mapstructure:"JWT_SECRET"`
+	RedisURL           string `mapstructure:"REDIS_URL"`
+	RedisPassword      string `mapstructure:"REDIS_PASSWORD"`
+	BackendURL         string `mapstructure:"BACKEND_URL"`
+	AppleClientID      string `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret        string `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL        string `mapstructure:"RABBITMQ_URL"`
+	InternalAPIKey     string `mapstructure:"INTERNAL_API_KEY"`
+
+	// File storage (MinIO/S3)
+	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
+	MinioAccessKey        string `mapstructure:"MINIO_ACCESS_KEY"`
+	MinioSecretKey        string `mapstructure:"MINIO_SECRET_KEY"`
+	MinioBucket           string `mapstructure:"MINIO_BUCKET"`
+	MinioRegion           string `mapstructure:"MINIO_REGION"`
+	MinioUseSSL           bool   `mapstructure:"MINIO_USE_SSL"`
+	MinioAutoCreateBucket bool   `mapstructure:"MINIO_AUTO_CREATE_BUCKET"`
+
+	FileMaxUploadSize         int64 `mapstructure:"FILE_MAX_UPLOAD_SIZE"`
+	FilePresignExpiresSeconds int   `mapstructure:"FILE_PRESIGN_EXPIRES_SECONDS"`
+	FileGCIntervalMinutes     int   `mapstructure:"FILE_GC_INTERVAL_MINUTES"`
+	FileGCGraceHours          int   `mapstructure:"FILE_GC_GRACE_HOURS"`
+	FileGCBatchSize           int   `mapstructure:"FILE_GC_BATCH_SIZE"`
 
 	// P3: WebSocket security configuration
-	Environment     string   `mapstructure:"ENVIRONMENT"`          // dev, staging, production
-	AllowedOrigins  []string `mapstructure:"ALLOWED_ORIGINS"`      // Comma-separated list of allowed origins
-	CORSEnabled     bool     `mapstructure:"CORS_ENABLED"`         // Enable CORS for WebSocket
+	Environment    string   `mapstructure:"ENVIRONMENT"`     // dev, staging, production
+	AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"` // Comma-separated list of allowed origins
+	CORSEnabled    bool     `mapstructure:"CORS_ENABLED"`    // Enable CORS for WebSocket
 }
 
 // IsDevelopment returns true if running in development mode
@@ -129,6 +145,22 @@ func Load() *Config {
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	viper.SetDefault("INTERNAL_API_KEY", "")
+
+	// File storage defaults
+	viper.SetDefault("MINIO_ENDPOINT", "localhost:9000")
+	viper.SetDefault("MINIO_ACCESS_KEY", "minioadmin")
+	viper.SetDefault("MINIO_SECRET_KEY", "minioadmin")
+	viper.SetDefault("MINIO_BUCKET", "sparkle-files")
+	viper.SetDefault("MINIO_REGION", "")
+	viper.SetDefault("MINIO_USE_SSL", false)
+	viper.SetDefault("MINIO_AUTO_CREATE_BUCKET", true)
+
+	viper.SetDefault("FILE_MAX_UPLOAD_SIZE", int64(52428800))
+	viper.SetDefault("FILE_PRESIGN_EXPIRES_SECONDS", 420)
+	viper.SetDefault("FILE_GC_INTERVAL_MINUTES", 60)
+	viper.SetDefault("FILE_GC_GRACE_HOURS", 24)
+	viper.SetDefault("FILE_GC_BATCH_SIZE", 200)
 
 	// P3: Security defaults
 	viper.SetDefault("ENVIRONMENT", "dev")

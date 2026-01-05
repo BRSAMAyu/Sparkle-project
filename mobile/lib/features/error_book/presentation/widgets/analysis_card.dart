@@ -8,9 +8,9 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 /// 2. 视觉层次：使用图标和颜色区分不同类型的信息
 /// 3. 可操作性：关联知识点可点击跳转
 class AnalysisCard extends StatelessWidget {
-
   const AnalysisCard({
-    required this.analysis, super.key,
+    required this.analysis,
+    super.key,
     this.knowledgeLinks = const [],
     this.onKnowledgeTap,
     this.onReAnalyze,
@@ -133,20 +133,24 @@ class AnalysisCard extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: knowledgeLinks.map((link) => ActionChip(
-                    avatar: link.isPrimary
-                        ? Icon(
-                            Icons.star,
-                            size: 16,
-                            color: theme.colorScheme.primary,
-                          )
-                        : null,
-                    label: Text(link.nodeName),
-                    onPressed: onKnowledgeTap,
-                    backgroundColor: link.isPrimary
-                        ? theme.colorScheme.primaryContainer
-                        : theme.colorScheme.surfaceContainerHighest,
-                  ),).toList(),
+                children: knowledgeLinks
+                    .map(
+                      (link) => ActionChip(
+                        avatar: link.isPrimary
+                            ? Icon(
+                                Icons.star,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              )
+                            : null,
+                        label: Text(link.nodeName),
+                        onPressed: onKnowledgeTap,
+                        backgroundColor: link.isPrimary
+                            ? theme.colorScheme.primaryContainer
+                            : theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ],
@@ -185,10 +189,10 @@ class AnalysisCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.05),
+            color: iconColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: iconColor.withOpacity(0.2),
+              color: iconColor.withValues(alpha: 0.2),
             ),
           ),
           child: Text(
@@ -232,37 +236,41 @@ class AnalysisCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.05),
+            color: iconColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: iconColor.withOpacity(0.2),
+              color: iconColor.withValues(alpha: 0.2),
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '• ',
-                      style: TextStyle(
-                        color: iconColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          height: 1.5,
+            children: items
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '• ',
+                          style: TextStyle(
+                            color: iconColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),).toList(),
+                  ),
+                )
+                .toList(),
           ),
         ),
       ],
@@ -272,7 +280,6 @@ class AnalysisCard extends StatelessWidget {
 
 /// 错因类型标签
 class _ErrorTypeChip extends StatelessWidget {
-
   const _ErrorTypeChip({
     required this.errorType,
     required this.label,
@@ -287,7 +294,7 @@ class _ErrorTypeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),

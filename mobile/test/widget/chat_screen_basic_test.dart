@@ -166,8 +166,7 @@ void main() {
         expect(buttonPressed, true);
       });
 
-      testWidgets('Input field clears after send',
-          (WidgetTester tester) async {
+      testWidgets('Input field clears after send', (WidgetTester tester) async {
         final textController = TextEditingController();
         var sendPressed = false;
 
@@ -222,8 +221,8 @@ void main() {
                 body: ListView.builder(
                   itemCount: messages.length,
                   itemBuilder: (context, index) => ListTile(
-                      title: Text(messages[index]),
-                    ),
+                    title: Text(messages[index]),
+                  ),
                 ),
               ),
             ),
@@ -267,8 +266,7 @@ void main() {
         expect(find.text('Message with 中文 and emoji 😀'), findsOneWidget);
       });
 
-      testWidgets('Long messages wrap correctly',
-          (WidgetTester tester) async {
+      testWidgets('Long messages wrap correctly', (WidgetTester tester) async {
         const longMessage =
             'This is a very long message that should wrap to multiple lines when displayed in the chat interface';
 
@@ -307,16 +305,16 @@ void main() {
                   controller: scrollController,
                   itemCount: messages.length,
                   itemBuilder: (context, index) => ListTile(
-                      title: Text(messages[index]),
-                    ),
+                    title: Text(messages[index]),
+                  ),
                 ),
               ),
             ),
           ),
         );
 
-        // Should be able to scroll to bottom
-        expect(scrollController.hasClients, false);
+        // ListView attaches after first pump.
+        expect(scrollController.hasClients, true);
       });
 
       testWidgets('Long message list scrolls', (WidgetTester tester) async {
@@ -330,8 +328,8 @@ void main() {
                   controller: scrollController,
                   itemCount: 100,
                   itemBuilder: (context, index) => ListTile(
-                      title: Text('Message $index'),
-                    ),
+                    title: Text('Message $index'),
+                  ),
                 ),
               ),
             ),
@@ -351,8 +349,8 @@ void main() {
       testWidgets('Chat layout adapts to different widths',
           (WidgetTester tester) async {
         // Set small width
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+        tester.view.physicalSize = const Size(400, 800);
+        addTearDown(tester.view.resetPhysicalSize);
 
         await tester.pumpWidget(
           ProviderScope(
@@ -553,8 +551,8 @@ void main() {
                 body: ListView.builder(
                   itemCount: 1000,
                   itemBuilder: (context, index) => ListTile(
-                      title: Text('Message $index'),
-                    ),
+                    title: Text('Message $index'),
+                  ),
                 ),
               ),
             ),
@@ -669,9 +667,11 @@ void main() {
         );
 
         await tester.tap(find.text('Message'));
+        await tester.pump(const Duration(milliseconds: 50));
         await tester.tap(find.text('Message'));
+        await tester.pumpAndSettle();
 
-        expect(tapCount, greaterThanOrEqualTo(0));
+        expect(tapCount, 1);
       });
     });
   });

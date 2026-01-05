@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/data/models/task_model.dart' show TaskType;
+import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
 
-export 'package:sparkle/data/models/task_model.dart' show TaskType;
+export 'package:sparkle/shared/entities/task_model.dart' show TaskType;
 
 /// Single source of truth for task colors.
 ///
@@ -17,17 +17,27 @@ class TaskColors {
   Color getColor(TaskType type) {
     switch (type) {
       case TaskType.learning:
-        return _isDark ? _RawTaskColors.learningDark : _RawTaskColors.learningLight;
+        return _isDark
+            ? _RawTaskColors.learningDark
+            : _RawTaskColors.learningLight;
       case TaskType.training:
-        return _isDark ? _RawTaskColors.trainingDark : _RawTaskColors.trainingLight;
+        return _isDark
+            ? _RawTaskColors.trainingDark
+            : _RawTaskColors.trainingLight;
       case TaskType.errorFix:
-        return _isDark ? _RawTaskColors.errorFixDark : _RawTaskColors.errorFixLight;
+        return _isDark
+            ? _RawTaskColors.errorFixDark
+            : _RawTaskColors.errorFixLight;
       case TaskType.reflection:
-        return _isDark ? _RawTaskColors.reflectionDark : _RawTaskColors.reflectionLight;
+        return _isDark
+            ? _RawTaskColors.reflectionDark
+            : _RawTaskColors.reflectionLight;
       case TaskType.social:
         return _RawTaskColors.social;
       case TaskType.planning:
-        return _isDark ? _RawTaskColors.planningDark : _RawTaskColors.planningLight;
+        return _isDark
+            ? _RawTaskColors.planningDark
+            : _RawTaskColors.planningLight;
     }
   }
 

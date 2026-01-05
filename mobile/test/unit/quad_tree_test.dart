@@ -36,10 +36,12 @@ void main() {
     test('subdivides when capacity is exceeded', () {
       // 插入超过容量的节点
       for (var i = 0; i < 10; i++) {
-        tree.insert(SimpleQuadTreeItem(
-          id: 'item$i',
-          position: Offset(i * 50.0, i * 50.0),
-        ),);
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'item$i',
+            position: Offset(i * 50.0, i * 50.0),
+          ),
+        );
       }
 
       expect(tree.isDivided, isTrue);
@@ -51,10 +53,12 @@ void main() {
         // 在网格位置插入节点
         for (var x = -500; x <= 500; x += 100) {
           for (var y = -500; y <= 500; y += 100) {
-            tree.insert(SimpleQuadTreeItem(
-              id: 'item_${x}_$y',
-              position: Offset(x.toDouble(), y.toDouble()),
-            ),);
+            tree.insert(
+              SimpleQuadTreeItem(
+                id: 'item_${x}_$y',
+                position: Offset(x.toDouble(), y.toDouble()),
+              ),
+            );
           }
         }
       });
@@ -99,13 +103,15 @@ void main() {
         for (var i = 0; i < 20; i++) {
           final angle = i * 3.14159 * 2 / 20;
           final radius = 100 + (i % 3) * 50;
-          tree.insert(SimpleQuadTreeItem(
-            id: 'item$i',
-            position: Offset(
-              radius * _cos(angle),
-              radius * _sin(angle),
+          tree.insert(
+            SimpleQuadTreeItem(
+              id: 'item$i',
+              position: Offset(
+                radius * _cos(angle),
+                radius * _sin(angle),
+              ),
             ),
-          ),);
+          );
         }
       });
 
@@ -128,22 +134,30 @@ void main() {
     group('findNearestNeighbors', () {
       setUp(() {
         // 插入已知位置的节点
-        tree.insert(SimpleQuadTreeItem(
-          id: 'a',
-          position: const Offset(0, 0),
-        ),);
-        tree.insert(SimpleQuadTreeItem(
-          id: 'b',
-          position: const Offset(10, 0),
-        ),);
-        tree.insert(SimpleQuadTreeItem(
-          id: 'c',
-          position: const Offset(20, 0),
-        ),);
-        tree.insert(SimpleQuadTreeItem(
-          id: 'd',
-          position: const Offset(100, 0),
-        ),);
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'a',
+            position: const Offset(0, 0),
+          ),
+        );
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'b',
+            position: const Offset(10, 0),
+          ),
+        );
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'c',
+            position: const Offset(20, 0),
+          ),
+        );
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'd',
+            position: const Offset(100, 0),
+          ),
+        );
       });
 
       test('returns k nearest neighbors', () {
@@ -191,10 +205,12 @@ void main() {
 
     test('clears all items', () {
       for (var i = 0; i < 10; i++) {
-        tree.insert(SimpleQuadTreeItem(
-          id: 'item$i',
-          position: Offset(i * 50.0, i * 50.0),
-        ),);
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'item$i',
+            position: Offset(i * 50.0, i * 50.0),
+          ),
+        );
       }
 
       expect(tree.totalItemCount, equals(10));
@@ -207,10 +223,12 @@ void main() {
 
     test('getAllItems returns all items', () {
       for (var i = 0; i < 10; i++) {
-        tree.insert(SimpleQuadTreeItem(
-          id: 'item$i',
-          position: Offset(i * 50.0, i * 50.0),
-        ),);
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'item$i',
+            position: Offset(i * 50.0, i * 50.0),
+          ),
+        );
       }
 
       final allItems = tree.getAllItems();
@@ -220,10 +238,12 @@ void main() {
 
     test('getStats returns correct statistics', () {
       for (var i = 0; i < 20; i++) {
-        tree.insert(SimpleQuadTreeItem(
-          id: 'item$i',
-          position: Offset(i * 50.0, i * 50.0),
-        ),);
+        tree.insert(
+          SimpleQuadTreeItem(
+            id: 'item$i',
+            position: Offset(i * 50.0, i * 50.0),
+          ),
+        );
       }
 
       final stats = tree.getStats();

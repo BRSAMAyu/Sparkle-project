@@ -3,7 +3,8 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// FocusFloatingDock - 专注模式悬浮窗
 /// 支持边缘吸附、自动隐藏、点击展开菜单
-class FocusFloatingDock extends StatefulWidget { // Left, Right, Top, Bottom
+class FocusFloatingDock extends StatefulWidget {
+  // Left, Right, Top, Bottom
 
   const FocusFloatingDock({
     super.key,
@@ -19,11 +20,12 @@ class FocusFloatingDock extends StatefulWidget { // Left, Right, Top, Bottom
   State<FocusFloatingDock> createState() => _FocusFloatingDockState();
 }
 
-class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTickerProviderStateMixin {
+class _FocusFloatingDockState extends State<FocusFloatingDock>
+    with SingleTickerProviderStateMixin {
   Offset _position = const Offset(0, 300);
   bool _isExpanded = false;
   bool _isHiding = false;
-  
+
   late AnimationController _controller;
 
   @override
@@ -33,7 +35,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    
+
     // Auto-hide after 3 seconds of inactivity
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted && !_isExpanded) {
@@ -97,10 +99,11 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
           height: _isExpanded ? 160 : 60,
           decoration: BoxDecoration(
             color: DS.primaryBase.withValues(alpha: 0.95),
-            borderRadius: _isHiding 
+            borderRadius: _isHiding
                 ? BorderRadius.horizontal(
                     left: isRightSide ? const Radius.circular(30) : Radius.zero,
-                    right: !isRightSide ? const Radius.circular(30) : Radius.zero,
+                    right:
+                        !isRightSide ? const Radius.circular(30) : Radius.zero,
                   )
                 : BorderRadius.circular(30),
             boxShadow: [
@@ -111,79 +114,81 @@ class _FocusFloatingDockState extends State<FocusFloatingDock> with SingleTicker
               ),
             ],
           ),
-          child: _isHiding 
-            ? InkWell(
-                onTap: () {
-                  setState(() => _isHiding = false);
-                },
-                child: const SizedBox.expand(),
-              ) 
-            : _isExpanded 
-                ? _buildExpandedMenu()
-                : _buildCollapsedIcon(),
+          child: _isHiding
+              ? InkWell(
+                  onTap: () {
+                    setState(() => _isHiding = false);
+                  },
+                  child: const SizedBox.expand(),
+                )
+              : _isExpanded
+                  ? _buildExpandedMenu()
+                  : _buildCollapsedIcon(),
         ),
       ),
     );
   }
 
   Widget _buildCollapsedIcon() => InkWell(
-      onTap: _toggleExpand,
-      borderRadius: BorderRadius.circular(30),
-      child: Center(
-        child: Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 30),
-      ),
-    );
+        onTap: _toggleExpand,
+        borderRadius: BorderRadius.circular(30),
+        child: Center(
+          child:
+              Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 30),
+        ),
+      );
 
   Widget _buildExpandedMenu() => Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // Collapse Button
-        InkWell(
-          onTap: _toggleExpand,
-          child: Icon(Icons.close, color: DS.brandPrimaryConst, size: 24),
-        ),
-        
-        // Menu Items
-        _buildMenuItem(
-          icon: Icons.self_improvement,
-          label: '正念模式',
-          onTap: () {
-            _toggleExpand();
-            widget.onMindfulnessTap?.call();
-          },
-        ),
-        _buildMenuItem(
-          icon: Icons.grid_view,
-          label: '工具箱',
-          onTap: () {
-            _toggleExpand();
-            widget.onToolsTap?.call();
-          },
-        ),
-      ],
-    );
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Collapse Button
+          InkWell(
+            onTap: _toggleExpand,
+            child: Icon(Icons.close, color: DS.brandPrimaryConst, size: 24),
+          ),
+
+          // Menu Items
+          _buildMenuItem(
+            icon: Icons.self_improvement,
+            label: '正念模式',
+            onTap: () {
+              _toggleExpand();
+              widget.onMindfulnessTap?.call();
+            },
+          ),
+          _buildMenuItem(
+            icon: Icons.grid_view,
+            label: '工具箱',
+            onTap: () {
+              _toggleExpand();
+              widget.onToolsTap?.call();
+            },
+          ),
+        ],
+      );
 
   Widget _buildMenuItem({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-  }) => InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Icon(icon, color: DS.brandPrimaryConst, size: 20),
-            const SizedBox(width: DS.md),
-            Text(
-              label,
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontWeight: FontWeight.w500,
+  }) =>
+      InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(icon, color: DS.brandPrimaryConst, size: 20),
+              const SizedBox(width: DS.md),
+              Text(
+                label,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

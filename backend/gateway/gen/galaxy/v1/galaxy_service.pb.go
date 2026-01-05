@@ -22,6 +22,186 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CollaborativeGalaxyUpdate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GalaxyId      string                 `protobuf:"bytes,1,opt,name=galaxy_id,json=galaxyId,proto3" json:"galaxy_id,omitempty"`
+	YjsUpdate     []byte                 `protobuf:"bytes,2,opt,name=yjs_update,json=yjsUpdate,proto3" json:"yjs_update,omitempty"` // Yjs binary update
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CollaborativeGalaxyUpdate) Reset() {
+	*x = CollaborativeGalaxyUpdate{}
+	mi := &file_galaxy_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CollaborativeGalaxyUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CollaborativeGalaxyUpdate) ProtoMessage() {}
+
+func (x *CollaborativeGalaxyUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_galaxy_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CollaborativeGalaxyUpdate.ProtoReflect.Descriptor instead.
+func (*CollaborativeGalaxyUpdate) Descriptor() ([]byte, []int) {
+	return file_galaxy_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CollaborativeGalaxyUpdate) GetGalaxyId() string {
+	if x != nil {
+		return x.GalaxyId
+	}
+	return ""
+}
+
+func (x *CollaborativeGalaxyUpdate) GetYjsUpdate() []byte {
+	if x != nil {
+		return x.YjsUpdate
+	}
+	return nil
+}
+
+func (x *CollaborativeGalaxyUpdate) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CollaborativeGalaxyUpdate) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+type SyncCollaborativeGalaxyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GalaxyId      string                 `protobuf:"bytes,1,opt,name=galaxy_id,json=galaxyId,proto3" json:"galaxy_id,omitempty"`
+	PartialUpdate []byte                 `protobuf:"bytes,2,opt,name=partial_update,json=partialUpdate,proto3" json:"partial_update,omitempty"` // The update from client
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncCollaborativeGalaxyRequest) Reset() {
+	*x = SyncCollaborativeGalaxyRequest{}
+	mi := &file_galaxy_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncCollaborativeGalaxyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncCollaborativeGalaxyRequest) ProtoMessage() {}
+
+func (x *SyncCollaborativeGalaxyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_galaxy_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncCollaborativeGalaxyRequest.ProtoReflect.Descriptor instead.
+func (*SyncCollaborativeGalaxyRequest) Descriptor() ([]byte, []int) {
+	return file_galaxy_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *SyncCollaborativeGalaxyRequest) GetGalaxyId() string {
+	if x != nil {
+		return x.GalaxyId
+	}
+	return ""
+}
+
+func (x *SyncCollaborativeGalaxyRequest) GetPartialUpdate() []byte {
+	if x != nil {
+		return x.PartialUpdate
+	}
+	return nil
+}
+
+func (x *SyncCollaborativeGalaxyRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type SyncCollaborativeGalaxyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	ServerUpdate  []byte                 `protobuf:"bytes,2,opt,name=server_update,json=serverUpdate,proto3" json:"server_update,omitempty"` // The update from server to client
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncCollaborativeGalaxyResponse) Reset() {
+	*x = SyncCollaborativeGalaxyResponse{}
+	mi := &file_galaxy_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncCollaborativeGalaxyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncCollaborativeGalaxyResponse) ProtoMessage() {}
+
+func (x *SyncCollaborativeGalaxyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_galaxy_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncCollaborativeGalaxyResponse.ProtoReflect.Descriptor instead.
+func (*SyncCollaborativeGalaxyResponse) Descriptor() ([]byte, []int) {
+	return file_galaxy_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SyncCollaborativeGalaxyResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *SyncCollaborativeGalaxyResponse) GetServerUpdate() []byte {
+	if x != nil {
+		return x.ServerUpdate
+	}
+	return nil
+}
+
 type UpdateNodeMasteryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -37,7 +217,7 @@ type UpdateNodeMasteryRequest struct {
 
 func (x *UpdateNodeMasteryRequest) Reset() {
 	*x = UpdateNodeMasteryRequest{}
-	mi := &file_galaxy_service_proto_msgTypes[0]
+	mi := &file_galaxy_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -49,7 +229,7 @@ func (x *UpdateNodeMasteryRequest) String() string {
 func (*UpdateNodeMasteryRequest) ProtoMessage() {}
 
 func (x *UpdateNodeMasteryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_galaxy_service_proto_msgTypes[0]
+	mi := &file_galaxy_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -62,7 +242,7 @@ func (x *UpdateNodeMasteryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateNodeMasteryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateNodeMasteryRequest) Descriptor() ([]byte, []int) {
-	return file_galaxy_service_proto_rawDescGZIP(), []int{0}
+	return file_galaxy_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UpdateNodeMasteryRequest) GetUserId() string {
@@ -128,7 +308,7 @@ type UpdateNodeMasteryResponse struct {
 
 func (x *UpdateNodeMasteryResponse) Reset() {
 	*x = UpdateNodeMasteryResponse{}
-	mi := &file_galaxy_service_proto_msgTypes[1]
+	mi := &file_galaxy_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -140,7 +320,7 @@ func (x *UpdateNodeMasteryResponse) String() string {
 func (*UpdateNodeMasteryResponse) ProtoMessage() {}
 
 func (x *UpdateNodeMasteryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_galaxy_service_proto_msgTypes[1]
+	mi := &file_galaxy_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -153,7 +333,7 @@ func (x *UpdateNodeMasteryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateNodeMasteryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateNodeMasteryResponse) Descriptor() ([]byte, []int) {
-	return file_galaxy_service_proto_rawDescGZIP(), []int{1}
+	return file_galaxy_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *UpdateNodeMasteryResponse) GetSuccess() bool {
@@ -202,7 +382,20 @@ var File_galaxy_service_proto protoreflect.FileDescriptor
 
 const file_galaxy_service_proto_rawDesc = "" +
 	"\n" +
-	"\x14galaxy_service.proto\x12\tgalaxy.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xef\x01\n" +
+	"\x14galaxy_service.proto\x12\tgalaxy.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x01\n" +
+	"\x19CollaborativeGalaxyUpdate\x12\x1b\n" +
+	"\tgalaxy_id\x18\x01 \x01(\tR\bgalaxyId\x12\x1d\n" +
+	"\n" +
+	"yjs_update\x18\x02 \x01(\fR\tyjsUpdate\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1c\n" +
+	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\"}\n" +
+	"\x1eSyncCollaborativeGalaxyRequest\x12\x1b\n" +
+	"\tgalaxy_id\x18\x01 \x01(\tR\bgalaxyId\x12%\n" +
+	"\x0epartial_update\x18\x02 \x01(\fR\rpartialUpdate\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\"`\n" +
+	"\x1fSyncCollaborativeGalaxyResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12#\n" +
+	"\rserver_update\x18\x02 \x01(\fR\fserverUpdate\"\xef\x01\n" +
 	"\x18UpdateNodeMasteryRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x17\n" +
 	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12\x18\n" +
@@ -221,9 +414,10 @@ const file_galaxy_service_proto_rawDesc = "" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x05 \x01(\tR\trequestId\x12)\n" +
-	"\x10current_revision\x18\x06 \x01(\x03R\x0fcurrentRevision2o\n" +
+	"\x10current_revision\x18\x06 \x01(\x03R\x0fcurrentRevision2\xe1\x01\n" +
 	"\rGalaxyService\x12^\n" +
-	"\x11UpdateNodeMastery\x12#.galaxy.v1.UpdateNodeMasteryRequest\x1a$.galaxy.v1.UpdateNodeMasteryResponseB3Z1github.com/sparkle/gateway/gen/galaxy/v1;galaxyv1b\x06proto3"
+	"\x11UpdateNodeMastery\x12#.galaxy.v1.UpdateNodeMasteryRequest\x1a$.galaxy.v1.UpdateNodeMasteryResponse\x12p\n" +
+	"\x17SyncCollaborativeGalaxy\x12).galaxy.v1.SyncCollaborativeGalaxyRequest\x1a*.galaxy.v1.SyncCollaborativeGalaxyResponseB3Z1github.com/sparkle/gateway/gen/galaxy/v1;galaxyv1b\x06proto3"
 
 var (
 	file_galaxy_service_proto_rawDescOnce sync.Once
@@ -237,18 +431,23 @@ func file_galaxy_service_proto_rawDescGZIP() []byte {
 	return file_galaxy_service_proto_rawDescData
 }
 
-var file_galaxy_service_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_galaxy_service_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_galaxy_service_proto_goTypes = []any{
-	(*UpdateNodeMasteryRequest)(nil),  // 0: galaxy.v1.UpdateNodeMasteryRequest
-	(*UpdateNodeMasteryResponse)(nil), // 1: galaxy.v1.UpdateNodeMasteryResponse
-	(*timestamppb.Timestamp)(nil),     // 2: google.protobuf.Timestamp
+	(*CollaborativeGalaxyUpdate)(nil),       // 0: galaxy.v1.CollaborativeGalaxyUpdate
+	(*SyncCollaborativeGalaxyRequest)(nil),  // 1: galaxy.v1.SyncCollaborativeGalaxyRequest
+	(*SyncCollaborativeGalaxyResponse)(nil), // 2: galaxy.v1.SyncCollaborativeGalaxyResponse
+	(*UpdateNodeMasteryRequest)(nil),        // 3: galaxy.v1.UpdateNodeMasteryRequest
+	(*UpdateNodeMasteryResponse)(nil),       // 4: galaxy.v1.UpdateNodeMasteryResponse
+	(*timestamppb.Timestamp)(nil),           // 5: google.protobuf.Timestamp
 }
 var file_galaxy_service_proto_depIdxs = []int32{
-	2, // 0: galaxy.v1.UpdateNodeMasteryRequest.version:type_name -> google.protobuf.Timestamp
-	0, // 1: galaxy.v1.GalaxyService.UpdateNodeMastery:input_type -> galaxy.v1.UpdateNodeMasteryRequest
-	1, // 2: galaxy.v1.GalaxyService.UpdateNodeMastery:output_type -> galaxy.v1.UpdateNodeMasteryResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	5, // 0: galaxy.v1.UpdateNodeMasteryRequest.version:type_name -> google.protobuf.Timestamp
+	3, // 1: galaxy.v1.GalaxyService.UpdateNodeMastery:input_type -> galaxy.v1.UpdateNodeMasteryRequest
+	1, // 2: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:input_type -> galaxy.v1.SyncCollaborativeGalaxyRequest
+	4, // 3: galaxy.v1.GalaxyService.UpdateNodeMastery:output_type -> galaxy.v1.UpdateNodeMasteryResponse
+	2, // 4: galaxy.v1.GalaxyService.SyncCollaborativeGalaxy:output_type -> galaxy.v1.SyncCollaborativeGalaxyResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -265,7 +464,7 @@ func file_galaxy_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_galaxy_service_proto_rawDesc), len(file_galaxy_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

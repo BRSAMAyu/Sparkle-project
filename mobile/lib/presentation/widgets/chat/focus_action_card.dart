@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class FocusActionCard extends StatelessWidget {
   const FocusActionCard({required this.data, super.key});
@@ -34,15 +34,16 @@ class FocusActionCard extends StatelessWidget {
                     gradient: DS.secondaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.timer_rounded, color: DS.brandPrimaryConst, size: 18),
+                  child: Icon(Icons.timer_rounded,
+                      color: DS.brandPrimaryConst, size: 18,),
                 ),
                 const SizedBox(width: DS.md),
                 Expanded(
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
+                          fontWeight: DS.fontWeightBold,
+                        ),
                   ),
                 ),
                 _buildDurationChip(context, duration),
@@ -53,8 +54,8 @@ class FocusActionCard extends StatelessWidget {
               Text(
                 reason,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.neutral600,
-                ),
+                      color: DS.neutral600,
+                    ),
               ),
             ],
             const SizedBox(height: DS.md),
@@ -75,20 +76,21 @@ class FocusActionCard extends StatelessWidget {
   }
 
   Widget _buildDurationChip(BuildContext context, int minutes) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing4),
-      decoration: BoxDecoration(
-        color: DS.secondaryBase.withValues(alpha: 0.1),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.secondaryBase.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        '${minutes}m',
-        style: TextStyle(
-          color: DS.secondaryBase,
-          fontSize: DS.fontSizeXs,
+        padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing8, vertical: DS.spacing4,),
+        decoration: BoxDecoration(
+          color: DS.secondaryBase.withValues(alpha: 0.1),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.secondaryBase.withValues(alpha: 0.2)),
         ),
-      ),
-    );
+        child: Text(
+          '${minutes}m',
+          style: TextStyle(
+            color: DS.secondaryBase,
+            fontSize: DS.fontSizeXs,
+          ),
+        ),
+      );
 
   TaskModel _buildTaskModel(String title, int duration) {
     final taskData = data['task'] as Map<String, dynamic>?;
@@ -112,7 +114,8 @@ class FocusActionCard extends StatelessWidget {
     );
   }
 
-  Map<String, dynamic> _normalizeTaskData(Map<String, dynamic> data, int duration) {
+  Map<String, dynamic> _normalizeTaskData(
+      Map<String, dynamic> data, int duration,) {
     final normalized = Map<String, dynamic>.from(data);
     normalized['user_id'] ??= 'focus_user';
     normalized['tags'] ??= <String>[];

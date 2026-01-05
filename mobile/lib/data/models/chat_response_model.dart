@@ -4,7 +4,6 @@ part 'chat_response_model.g.dart';
 
 @JsonSerializable()
 class ChatResponseModel {
-
   ChatResponseModel({
     required this.message,
     required this.conversationId,
@@ -13,7 +12,8 @@ class ChatResponseModel {
     this.hasErrors = false,
   });
 
-  factory ChatResponseModel.fromJson(Map<String, dynamic> json) => _$ChatResponseModelFromJson(json);
+  factory ChatResponseModel.fromJson(Map<String, dynamic> json) =>
+      _$ChatResponseModelFromJson(json);
   final String message;
   @JsonKey(name: 'conversation_id')
   final String conversationId;

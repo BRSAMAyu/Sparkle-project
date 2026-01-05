@@ -11,7 +11,6 @@ import 'package:sparkle/presentation/widgets/chat/agent_avatar_switcher.dart';
 /// - Top 5最常用Agent卡片
 /// - 性能指标趋势图
 class AgentStatsDashboard extends StatelessWidget {
-
   const AgentStatsDashboard({
     required this.statsData,
     super.key,
@@ -78,39 +77,40 @@ class AgentStatsDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) => Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            theme,
-            title: '总执行次数',
-            value: '${overall['total_executions'] ?? 0}',
-            icon: Icons.sync_alt,
-            color: DS.brandPrimaryConst,
+  Widget _buildOverallStats(ThemeData theme, Map<String, dynamic> overall) =>
+      Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              theme,
+              title: '总执行次数',
+              value: '${overall['total_executions'] ?? 0}',
+              icon: Icons.sync_alt,
+              color: DS.brandPrimaryConst,
+            ),
           ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _buildStatCard(
-            theme,
-            title: '平均耗时',
-            value: '${overall['avg_duration_ms'] ?? 0}ms',
-            icon: Icons.timer,
-            color: DS.brandPrimaryConst,
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _buildStatCard(
+              theme,
+              title: '平均耗时',
+              value: '${overall['avg_duration_ms'] ?? 0}ms',
+              icon: Icons.timer,
+              color: DS.brandPrimaryConst,
+            ),
           ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _buildStatCard(
-            theme,
-            title: '会话数',
-            value: '${overall['total_sessions'] ?? 0}',
-            icon: Icons.chat_bubble_outline,
-            color: DS.success,
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _buildStatCard(
+              theme,
+              title: '会话数',
+              value: '${overall['total_sessions'] ?? 0}',
+              icon: Icons.chat_bubble_outline,
+              color: DS.success,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildStatCard(
     ThemeData theme, {
@@ -118,65 +118,67 @@ class AgentStatsDashboard extends StatelessWidget {
     required String value,
     required IconData icon,
     required Color color,
-  }) => Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: DS.sm),
-          Text(
-            value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: DS.xs),
-          Text(
-            title,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-
-  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) => SizedBox(
-      height: 250,
-      child: PieChart(
-        PieChartData(
-          sections: byAgent.take(6).map((agent) {
-            final agentType = _parseAgentType(agent['agent_type'] as String);
-            final config = AgentConfig.forType(agentType);
-            final count = agent['count'] as int;
-
-            return PieChartSectionData(
-              value: count.toDouble(),
-              title: '${agent['count']}次',
-              color: config.color,
-              radius: 100,
-              titleStyle: TextStyle(
-                fontSize: 12,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: DS.sm),
+            Text(
+              value,
+              style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: DS.brandPrimaryConst,
+                color: color,
               ),
-            );
-          }).toList(),
-          sectionsSpace: 2,
-          centerSpaceRadius: 40,
-          borderData: FlBorderData(show: false),
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              title,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-      ),
-    );
+      );
+
+  Widget _buildUsagePieChart(ThemeData theme, List<dynamic> byAgent) =>
+      SizedBox(
+        height: 250,
+        child: PieChart(
+          PieChartData(
+            sections: byAgent.take(6).map((agent) {
+              final agentType = _parseAgentType(agent['agent_type'] as String);
+              final config = AgentConfig.forType(agentType);
+              final count = agent['count'] as int;
+
+              return PieChartSectionData(
+                value: count.toDouble(),
+                title: '${agent['count']}次',
+                color: config.color,
+                radius: 100,
+                titleStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: DS.brandPrimaryConst,
+                ),
+              );
+            }).toList(),
+            sectionsSpace: 2,
+            centerSpaceRadius: 40,
+            borderData: FlBorderData(show: false),
+          ),
+        ),
+      );
 
   Widget _buildAgentCard(ThemeData theme, dynamic agentData) {
     final agentType = _parseAgentType(agentData['agent_type'] as String);
@@ -311,7 +313,6 @@ class AgentStatsDashboard extends StatelessWidget {
 
 /// Agent性能趋势图
 class AgentPerformanceChart extends StatelessWidget {
-
   const AgentPerformanceChart({
     required this.performanceData,
     super.key,
@@ -348,9 +349,9 @@ class AgentPerformanceChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 30,
                       getTitlesWidget: (value, meta) => Text(
-                          value.toInt().toString(),
-                          style: const TextStyle(fontSize: 10),
-                        ),
+                        value.toInt().toString(),
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ),
                   ),
                   leftTitles: AxisTitles(
@@ -358,17 +359,13 @@ class AgentPerformanceChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) => Text(
-                          '${value.toInt()}ms',
-                          style: const TextStyle(fontSize: 10),
-                        ),
+                        '${value.toInt()}ms',
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ),
                   ),
-                  topTitles: const AxisTitles(
-                    
-                  ),
-                  rightTitles: const AxisTitles(
-                    
-                  ),
+                  topTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
                 ),
                 borderData: FlBorderData(show: true),
                 lineBarsData: [
@@ -376,10 +373,12 @@ class AgentPerformanceChart extends StatelessWidget {
                     spots: performanceData
                         .asMap()
                         .entries
-                        .map((e) => FlSpot(
-                              e.key.toDouble(),
-                              (e.value['avg_duration_ms'] as num).toDouble(),
-                            ),)
+                        .map(
+                          (e) => FlSpot(
+                            e.key.toDouble(),
+                            (e.value['avg_duration_ms'] as num).toDouble(),
+                          ),
+                        )
                         .toList(),
                     isCurved: true,
                     color: DS.brandPrimaryConst,

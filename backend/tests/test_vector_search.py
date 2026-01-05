@@ -1,9 +1,9 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
-from app.models.knowledge import KnowledgeNode
+from app.models.galaxy import KnowledgeNode
 
 @pytest.mark.asyncio
 async def test_semantic_search_nodes():

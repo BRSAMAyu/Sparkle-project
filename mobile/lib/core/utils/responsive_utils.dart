@@ -9,23 +9,26 @@ class ResponsiveUtils {
   ResponsiveUtils._();
 
   /// Returns true if the screen width is mobile scale
-  static bool isMobile(BuildContext context) => MediaQuery.of(context).size.width < DS.breakpointTablet;
+  static bool isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < DS.breakpointTablet;
 
   /// Returns true if the screen width is tablet scale
   static bool isTablet(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    return width >= DS.breakpointTablet && 
-           width < DS.breakpointDesktop;
+    return width >= DS.breakpointTablet && width < DS.breakpointDesktop;
   }
 
   /// Returns true if the screen width is desktop scale
-  static bool isDesktop(BuildContext context) => MediaQuery.of(context).size.width >= DS.breakpointDesktop;
+  static bool isDesktop(BuildContext context) =>
+      MediaQuery.of(context).size.width >= DS.breakpointDesktop;
 
   /// Returns the current screen width
-  static double screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
+  static double screenWidth(BuildContext context) =>
+      MediaQuery.of(context).size.width;
 
   /// Returns the current screen height
-  static double screenHeight(BuildContext context) => MediaQuery.of(context).size.height;
+  static double screenHeight(BuildContext context) =>
+      MediaQuery.of(context).size.height;
 
   /// Returns true if the current platform is mobile (iOS or Android)
   static bool get isMobilePlatform {
@@ -43,7 +46,8 @@ class ResponsiveUtils {
   static bool get isWeb => kIsWeb;
 
   /// Dynamically scales a value based on screen width relative to a base width (e.g., 375 for mobile)
-  static double scale(BuildContext context, double value, {double baseWidth = 375}) {
+  static double scale(BuildContext context, double value,
+      {double baseWidth = 375,}) {
     if (isDesktop(context)) return value; // Don't over-scale on desktop
     return value * (screenWidth(context) / baseWidth);
   }

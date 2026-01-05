@@ -1,8 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/data/models/task_model.dart';
 import 'package:sparkle/data/repositories/focus_repository.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
 enum InterruptionType {
@@ -14,7 +15,6 @@ enum InterruptionType {
 
 /// 分心事件记录
 class InterruptionEvent {
-
   const InterruptionEvent({
     required this.timestamp,
     required this.type,
@@ -27,7 +27,6 @@ class InterruptionEvent {
 
 /// 正念模式状态
 class MindfulnessState {
-
   const MindfulnessState({
     this.isActive = false,
     this.startTime,
@@ -61,22 +60,22 @@ class MindfulnessState {
     bool? isPaused,
     bool clearTask = false,
     bool clearStartTime = false,
-  }) => MindfulnessState(
-      isActive: isActive ?? this.isActive,
-      startTime: clearStartTime ? null : (startTime ?? this.startTime),
-      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
-      interruptionCount: interruptionCount ?? this.interruptionCount,
-      interruptions: interruptions ?? this.interruptions,
-      isDNDEnabled: isDNDEnabled ?? this.isDNDEnabled,
-      currentTask: clearTask ? null : (currentTask ?? this.currentTask),
-      exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
-      isPaused: isPaused ?? this.isPaused,
-    );
+  }) =>
+      MindfulnessState(
+        isActive: isActive ?? this.isActive,
+        startTime: clearStartTime ? null : (startTime ?? this.startTime),
+        elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+        interruptionCount: interruptionCount ?? this.interruptionCount,
+        interruptions: interruptions ?? this.interruptions,
+        isDNDEnabled: isDNDEnabled ?? this.isDNDEnabled,
+        currentTask: clearTask ? null : (currentTask ?? this.currentTask),
+        exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
+        isPaused: isPaused ?? this.isPaused,
+      );
 }
 
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
-
   MindfulnessNotifier(this._focusRepository) : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
@@ -141,7 +140,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   /// 继续退出确认
   void continueExitConfirmation() {
     if (state.exitConfirmationStep < 3) {
-      state = state.copyWith(exitConfirmationStep: state.exitConfirmationStep + 1);
+      state =
+          state.copyWith(exitConfirmationStep: state.exitConfirmationStep + 1);
     }
   }
 
@@ -162,9 +162,11 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
       try {
         final endTime = DateTime.now();
         final durationMinutes = (state.elapsedSeconds / 60).floor();
-        final status = state.interruptionCount > 3 ? 'interrupted' : 'completed';
+        final status =
+            state.interruptionCount > 3 ? 'interrupted' : 'completed';
 
-        debugPrint('📤 Logging focus session: ${durationMinutes}min, status=$status');
+        debugPrint(
+            '📤 Logging focus session: ${durationMinutes}min, status=$status',);
 
         final response = await _focusRepository.logFocusSession(
           startTime: state.startTime!,
@@ -174,7 +176,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           status: status,
         );
 
-        debugPrint('✅ Focus session logged: ${response.rewards.flameEarned} flames earned');
+        debugPrint(
+            '✅ Focus session logged: ${response.rewards.flameEarned} flames earned',);
 
         // TODO: Show reward feedback to user
         // Can emit an event or update state to trigger UI update
@@ -218,7 +221,8 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 }
 
 /// 正念模式 Provider
-final mindfulnessProvider = StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
+final mindfulnessProvider =
+    StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
   final focusRepository = ref.watch(focusRepositoryProvider);
   return MindfulnessNotifier(focusRepository);
 });

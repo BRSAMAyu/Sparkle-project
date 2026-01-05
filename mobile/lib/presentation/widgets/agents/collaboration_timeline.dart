@@ -6,9 +6,10 @@ import 'package:sparkle/core/design/design_system.dart';
 ///
 /// 展示多个 AI Agent 协作处理任务的完整流程
 class AgentCollaborationTimeline extends StatefulWidget {
-
   const AgentCollaborationTimeline({
-    required this.steps, required this.workflowType, super.key,
+    required this.steps,
+    required this.workflowType,
+    super.key,
     this.executionTime = 0.0,
   });
   final List<AgentTimelineStep> steps;
@@ -20,8 +21,7 @@ class AgentCollaborationTimeline extends StatefulWidget {
       _AgentCollaborationTimelineState();
 }
 
-class _AgentCollaborationTimelineState
-    extends State<AgentCollaborationTimeline>
+class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -42,280 +42,278 @@ class _AgentCollaborationTimelineState
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            DS.brandPrimary.shade50,
-            Colors.purple.shade50,
+        padding: const EdgeInsets.all(DS.lg),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.brandPrimary.shade50,
+              Colors.purple.shade50,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: DS.brandPrimary.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: DS.brandPrimary.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: DS.lg),
-          _buildTimeline(),
-        ],
-      ),
-    );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: DS.lg),
+            _buildTimeline(),
+          ],
+        ),
+      );
 
   Widget _buildHeader() => Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
-            color: Colors.purple.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.timeline,
-            color: Colors.purple.shade700,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '多专家协作时间线',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple.shade700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _getWorkflowDisplayName(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.purple.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Chip(
-          label: Text('${widget.executionTime.toStringAsFixed(1)}s'),
-          backgroundColor: DS.success.shade100,
-          labelStyle: TextStyle(
-            color: DS.success.shade700,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-
-  Widget _buildTimeline() => Column(
-      children: widget.steps.asMap().entries.map((entry) {
-        final index = entry.key;
-        final step = entry.value;
-        final isLast = index == widget.steps.length - 1;
-
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final progress = (_controller.value * widget.steps.length - index)
-                .clamp(0.0, 1.0);
-
-            return Opacity(
-              opacity: progress,
-              child: Transform.translate(
-                offset: Offset(0, (1 - progress) * 20),
-                child: child,
-              ),
-            );
-          },
-          child: _buildTimelineItem(step, isLast),
-        );
-      }).toList(),
-    );
-
-  Widget _buildTimelineItem(AgentTimelineStep step, bool isLast) => Container(
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 时间轴节点
-          _buildTimelineNode(step),
-          const SizedBox(width: DS.md),
-          // 内容卡片
-          Expanded(child: _buildStepCard(step)),
-        ],
-      ),
-    );
-
-  Widget _buildTimelineNode(AgentTimelineStep step) => Column(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: step.agentColor,
-            border: Border.all(color: DS.brandPrimaryConst, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: step.agentColor.withOpacity(0.4),
-                blurRadius: 8,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Icon(
-            step.agentIcon,
-            color: DS.brandPrimaryConst,
-            size: 20,
-          ),
-        )
-            .animate(onPlay: (controller) => controller.repeat())
-            .shimmer(
-              duration: 2.seconds,
-              color: DS.brandPrimary.withOpacity(0.3),
-            ),
-        if (!isLast)
           Container(
-            width: 2,
-            height: 40,
+            padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  step.agentColor,
-                  step.agentColor.withOpacity(0.3),
-                ],
-              ),
+              color: Colors.purple.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.timeline,
+              color: Colors.purple.shade700,
+              size: 20,
             ),
           ),
-      ],
-    );
-
-  Widget _buildStepCard(AgentTimelineStep step) => Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: step.agentColor.withOpacity(0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: DS.brandPrimary.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                step.agentName,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: step.agentColor,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: DS.sm),
-              if (step.timestamp != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: step.agentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${step.timestamp!.toStringAsFixed(2)}s',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: step.agentColor.withOpacity(0.8),
-                      fontWeight: FontWeight.w600,
-                    ),
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '多专家协作时间线',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple.shade700,
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            step.action,
-            style: TextStyle(
-              fontSize: 13,
-              color: DS.brandPrimary.shade700,
-              height: 1.4,
+                const SizedBox(height: 2),
+                Text(
+                  _getWorkflowDisplayName(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.purple.shade600,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (step.outputSummary != null) ...[
-            const SizedBox(height: DS.sm),
-            _buildExpandableDetails(step),
-          ],
-        ],
-      ),
-    );
-
-  Widget _buildExpandableDetails(AgentTimelineStep step) => ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(top: 8),
-      title: Row(
-        children: [
-          Icon(
-            Icons.visibility_outlined,
-            size: 14,
-            color: step.agentColor,
-          ),
-          const SizedBox(width: DS.xs),
-          Text(
-            '查看详情',
-            style: TextStyle(
-              fontSize: 12,
-              color: step.agentColor,
+          Chip(
+            label: Text('${widget.executionTime.toStringAsFixed(1)}s'),
+            backgroundColor: DS.success.shade100,
+            labelStyle: TextStyle(
+              color: DS.success.shade700,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: step.agentColor.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: step.agentColor.withOpacity(0.2),
-            ),
-          ),
-          child: Text(
-            step.outputSummary!,
-            style: TextStyle(
-              fontSize: 12,
-              color: DS.brandPrimary.shade700,
-              fontStyle: FontStyle.italic,
-              height: 1.4,
-            ),
-          ),
+      );
+
+  Widget _buildTimeline() => Column(
+        children: widget.steps.asMap().entries.map((entry) {
+          final index = entry.key;
+          final step = entry.value;
+          final isLast = index == widget.steps.length - 1;
+
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final progress = (_controller.value * widget.steps.length - index)
+                  .clamp(0.0, 1.0);
+
+              return Opacity(
+                opacity: progress,
+                child: Transform.translate(
+                  offset: Offset(0, (1 - progress) * 20),
+                  child: child,
+                ),
+              );
+            },
+            child: _buildTimelineItem(step, isLast),
+          );
+        }).toList(),
+      );
+
+  Widget _buildTimelineItem(AgentTimelineStep step, bool isLast) => Container(
+        margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 时间轴节点
+            _buildTimelineNode(step),
+            const SizedBox(width: DS.md),
+            // 内容卡片
+            Expanded(child: _buildStepCard(step)),
+          ],
         ),
-      ],
-    );
+      );
+
+  Widget _buildTimelineNode(AgentTimelineStep step) => Column(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: step.agentColor,
+              border: Border.all(color: DS.brandPrimaryConst, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: step.agentColor.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Icon(
+              step.agentIcon,
+              color: DS.brandPrimaryConst,
+              size: 20,
+            ),
+          ).animate(onPlay: (controller) => controller.repeat()).shimmer(
+                duration: 2.seconds,
+                color: DS.brandPrimary.withValues(alpha: 0.3),
+              ),
+          if (!isLast)
+            Container(
+              width: 2,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    step.agentColor,
+                    step.agentColor.withValues(alpha: 0.3),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+
+  Widget _buildStepCard(AgentTimelineStep step) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: step.agentColor.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: DS.brandPrimary.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  step.agentName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: step.agentColor,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                if (step.timestamp != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: step.agentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${step.timestamp!.toStringAsFixed(2)}s',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: step.agentColor.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              step.action,
+              style: TextStyle(
+                fontSize: 13,
+                color: DS.brandPrimary.shade700,
+                height: 1.4,
+              ),
+            ),
+            if (step.outputSummary != null) ...[
+              const SizedBox(height: DS.sm),
+              _buildExpandableDetails(step),
+            ],
+          ],
+        ),
+      );
+
+  Widget _buildExpandableDetails(AgentTimelineStep step) => ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(top: 8),
+        title: Row(
+          children: [
+            Icon(
+              Icons.visibility_outlined,
+              size: 14,
+              color: step.agentColor,
+            ),
+            const SizedBox(width: DS.xs),
+            Text(
+              '查看详情',
+              style: TextStyle(
+                fontSize: 12,
+                color: step.agentColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: step.agentColor.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: step.agentColor.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Text(
+              step.outputSummary!,
+              style: TextStyle(
+                fontSize: 12,
+                color: DS.brandPrimary.shade700,
+                fontStyle: FontStyle.italic,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      );
 
   String _getWorkflowDisplayName() {
     switch (widget.workflowType) {
@@ -335,7 +333,6 @@ class _AgentCollaborationTimelineState
 
 /// Agent 时间线步骤数据模型
 class AgentTimelineStep {
-
   AgentTimelineStep({
     required this.agentName,
     required this.action,
@@ -345,14 +342,15 @@ class AgentTimelineStep {
     this.outputSummary,
   });
 
-  factory AgentTimelineStep.fromJson(Map<String, dynamic> json) => AgentTimelineStep(
-      agentName: json['agent'] as String,
-      action: json['action'] as String,
-      agentIcon: _getAgentIcon(json['agent'] as String),
-      agentColor: _getAgentColor(json['agent'] as String),
-      timestamp: (json['timestamp'] as num?)?.toDouble(),
-      outputSummary: json['output_summary'] as String?,
-    );
+  factory AgentTimelineStep.fromJson(Map<String, dynamic> json) =>
+      AgentTimelineStep(
+        agentName: json['agent'] as String,
+        action: json['action'] as String,
+        agentIcon: _getAgentIcon(json['agent'] as String),
+        agentColor: _getAgentColor(json['agent'] as String),
+        timestamp: (json['timestamp'] as num?)?.toDouble(),
+        outputSummary: json['output_summary'] as String?,
+      );
   final String agentName;
   final String action;
   final IconData agentIcon;

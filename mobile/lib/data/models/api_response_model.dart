@@ -4,7 +4,6 @@ part 'api_response_model.g.dart';
 
 @JsonSerializable(genericArgumentFactories: true)
 class ApiResponse<T> {
-
   ApiResponse({
     required this.success,
     this.data,
@@ -12,7 +11,8 @@ class ApiResponse<T> {
     this.error,
   });
 
-  factory ApiResponse.fromJson(Map<String, dynamic> json, T Function(Object? json) fromJsonT) =>
+  factory ApiResponse.fromJson(
+          Map<String, dynamic> json, T Function(Object? json) fromJsonT,) =>
       _$ApiResponseFromJson(json, fromJsonT);
   final bool success;
   final T? data;
@@ -25,7 +25,6 @@ class ApiResponse<T> {
 
 @JsonSerializable(genericArgumentFactories: true)
 class PaginatedResponse<T> {
-
   PaginatedResponse({
     required this.total,
     required this.page,
@@ -33,7 +32,8 @@ class PaginatedResponse<T> {
     required this.items,
   });
 
-  factory PaginatedResponse.fromJson(Map<String, dynamic> json, T Function(Object? json) fromJsonT) =>
+  factory PaginatedResponse.fromJson(
+          Map<String, dynamic> json, T Function(Object? json) fromJsonT,) =>
       _$PaginatedResponseFromJson(json, fromJsonT);
   final int total;
   final int page;
@@ -46,7 +46,6 @@ class PaginatedResponse<T> {
 
 @JsonSerializable()
 class TokenResponse {
-
   TokenResponse({
     required this.accessToken,
     required this.refreshToken,
@@ -54,7 +53,8 @@ class TokenResponse {
     required this.expiresIn,
   });
 
-  factory TokenResponse.fromJson(Map<String, dynamic> json) => _$TokenResponseFromJson(json);
+  factory TokenResponse.fromJson(Map<String, dynamic> json) =>
+      _$TokenResponseFromJson(json);
   @JsonKey(name: 'access_token')
   final String accessToken;
   @JsonKey(name: 'refresh_token')
@@ -68,14 +68,14 @@ class TokenResponse {
 
 @JsonSerializable()
 class ErrorResponse {
-
   ErrorResponse({
     required this.code,
     required this.message,
     this.details,
   });
 
-  factory ErrorResponse.fromJson(Map<String, dynamic> json) => _$ErrorResponseFromJson(json);
+  factory ErrorResponse.fromJson(Map<String, dynamic> json) =>
+      _$ErrorResponseFromJson(json);
   final String code;
   final String message;
   final Map<String, dynamic>? details;

@@ -13,7 +13,6 @@ import 'package:sparkle/core/design/design_system.dart';
 ///
 /// 用于 Onboarding 流程，帮助用户理解系统工作原理
 class ArchitectureAnimation extends StatefulWidget {
-
   const ArchitectureAnimation({
     this.onComplete,
     this.autoPlay = true,
@@ -86,81 +85,84 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
 
   @override
   Widget build(BuildContext context) => Container(
-      height: 500,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            DS.deepSpaceStart,
-            DS.deepSpaceEnd,
-          ],
+        height: 500,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.deepSpaceStart,
+              DS.deepSpaceEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
         ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Stack(
-        children: [
-          // Background stars
-          _buildStarField(),
+        child: Stack(
+          children: [
+            // Background stars
+            _buildStarField(),
 
-          // Architecture diagram
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _ArchitecturePainter(
-                currentStep: _currentStep,
-                fadeValue: _fadeAnimation.value,
-                pulseValue: _pulseController.value,
-              ),
-            ),
-          ),
-
-          // Step indicator
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: _buildStepIndicator(),
-          ),
-
-          // Description overlay
-          if (_currentStep < _totalSteps)
-            Positioned(
-              top: 20,
-              left: 20,
-              right: 20,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, -0.5),
-                    end: Offset.zero,
-                  ).animate(_slideAnimation),
-                  child: _buildStepDescription(),
+            // Architecture diagram
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ArchitecturePainter(
+                  currentStep: _currentStep,
+                  fadeValue: _fadeAnimation.value,
+                  pulseValue: _pulseController.value,
                 ),
               ),
             ),
-        ],
-      ),
-    );
+
+            // Step indicator
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: _buildStepIndicator(),
+            ),
+
+            // Description overlay
+            if (_currentStep < _totalSteps)
+              Positioned(
+                top: 20,
+                left: 20,
+                right: 20,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, -0.5),
+                      end: Offset.zero,
+                    ).animate(_slideAnimation),
+                    child: _buildStepDescription(),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 
   Widget _buildStarField() => CustomPaint(
-      painter: _StarFieldPainter(),
-    );
+        painter: _StarFieldPainter(),
+      );
 
   Widget _buildStepIndicator() => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_totalSteps, (index) => Container(
-          width: index == _currentStep ? 24 : 8,
-          height: 8,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: index <= _currentStep
-                ? DS.brandPrimary
-                : DS.brandPrimary.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(4),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          _totalSteps,
+          (index) => Container(
+            width: index == _currentStep ? 24 : 8,
+            height: 8,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: index <= _currentStep
+                  ? DS.brandPrimary
+                  : DS.brandPrimary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-        ),),
-    );
+        ),
+      );
 
   Widget _buildStepDescription() {
     final steps = [
@@ -245,7 +247,6 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
 }
 
 class _ArchitecturePainter extends CustomPainter {
-
   _ArchitecturePainter({
     required this.currentStep,
     required this.fadeValue,
@@ -267,13 +268,16 @@ class _ArchitecturePainter extends CustomPainter {
 
     // Draw connections
     if (currentStep >= 1) {
-      _drawConnection(canvas, mobilePos, gatewayPos, currentStep >= 1 ? fadeValue : 0);
+      _drawConnection(
+          canvas, mobilePos, gatewayPos, currentStep >= 1 ? fadeValue : 0,);
     }
     if (currentStep >= 2) {
-      _drawConnection(canvas, gatewayPos, agentPos, currentStep >= 2 ? fadeValue : 0);
+      _drawConnection(
+          canvas, gatewayPos, agentPos, currentStep >= 2 ? fadeValue : 0,);
     }
     if (currentStep >= 3) {
-      _drawConnection(canvas, agentPos, dbPos, currentStep >= 3 ? fadeValue : 0);
+      _drawConnection(
+          canvas, agentPos, dbPos, currentStep >= 3 ? fadeValue : 0,);
     }
 
     // Draw data flow particles
@@ -285,25 +289,55 @@ class _ArchitecturePainter extends CustomPainter {
 
     // Draw layers
     if (currentStep >= 0) {
-      _drawLayer(canvas, mobilePos, 'Flutter\nMobile', Icons.phone_android.codePoint,
-          currentStep >= 0 ? fadeValue : 0, DS.brandPrimary.shade400,);
+      _drawLayer(
+        canvas,
+        mobilePos,
+        'Flutter\nMobile',
+        Icons.phone_android.codePoint,
+        currentStep >= 0 ? fadeValue : 0,
+        DS.brandPrimary.shade400,
+      );
     }
     if (currentStep >= 1) {
-      _drawLayer(canvas, gatewayPos, 'Go\nGateway', Icons.swap_horiz.codePoint,
-          currentStep >= 1 ? fadeValue : 0, DS.success.shade400,);
+      _drawLayer(
+        canvas,
+        gatewayPos,
+        'Go\nGateway',
+        Icons.swap_horiz.codePoint,
+        currentStep >= 1 ? fadeValue : 0,
+        DS.success.shade400,
+      );
     }
     if (currentStep >= 2) {
-      _drawLayer(canvas, agentPos, 'Python\nAgent', Icons.psychology.codePoint,
-          currentStep >= 2 ? fadeValue : 0, Colors.purple.shade400,);
+      _drawLayer(
+        canvas,
+        agentPos,
+        'Python\nAgent',
+        Icons.psychology.codePoint,
+        currentStep >= 2 ? fadeValue : 0,
+        Colors.purple.shade400,
+      );
     }
     if (currentStep >= 3) {
-      _drawLayer(canvas, dbPos, 'PostgreSQL\n+ Redis', Icons.storage.codePoint,
-          currentStep >= 3 ? fadeValue : 0, DS.brandPrimary.shade400,);
+      _drawLayer(
+        canvas,
+        dbPos,
+        'PostgreSQL\n+ Redis',
+        Icons.storage.codePoint,
+        currentStep >= 3 ? fadeValue : 0,
+        DS.brandPrimary.shade400,
+      );
     }
   }
 
-  void _drawLayer(Canvas canvas, Offset position, String label, int iconCode,
-      double opacity, Color color,) {
+  void _drawLayer(
+    Canvas canvas,
+    Offset position,
+    String label,
+    int iconCode,
+    double opacity,
+    Color color,
+  ) {
     final paint = Paint()
       ..color = color.withValues(alpha: opacity * 0.3)
       ..style = PaintingStyle.fill;
@@ -344,7 +378,8 @@ class _ArchitecturePainter extends CustomPainter {
     );
   }
 
-  void _drawConnection(Canvas canvas, Offset start, Offset end, double opacity) {
+  void _drawConnection(
+      Canvas canvas, Offset start, Offset end, double opacity,) {
     final paint = Paint()
       ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
       ..strokeWidth = 2

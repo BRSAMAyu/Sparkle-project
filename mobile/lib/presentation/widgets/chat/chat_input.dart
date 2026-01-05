@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/features/document/views/document_cleaner_sheet.dart';
+import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
+import 'package:sparkle/presentation/widgets/file/file_picker_with_presigned.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
-
   const ChatInput({
     super.key,
     this.enabled = true,
@@ -13,12 +15,16 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onSend,
     this.quotedMessage,
     this.onCancelQuote,
+    this.onFileUploaded,
+    this.fileUploadGroupId,
   });
   final bool enabled;
   final String? hintText;
   final Function(String text, {String? replyToId})? onSend;
   final PrivateMessageInfo? quotedMessage;
   final VoidCallback? onCancelQuote;
+  final void Function(StoredFile file)? onFileUploaded;
+  final String? fileUploadGroupId;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -29,6 +35,41 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final FocusNode _focusNode = FocusNode();
   bool _isSending = false;
   bool _isButtonPressed = false;
+
+  void _showAttachmentSheet() {
+    if (widget.onFileUploaded != null) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => FilePickerWithPresignedUpload(
+          groupId: widget.fileUploadGroupId,
+          onUploaded: (file) {
+            Navigator.pop(context);
+            widget.onFileUploaded?.call(file);
+          },
+          onError: (message) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          ),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DocumentCleanerSheet(
+        onResult: (result) {
+          setState(() {
+            _controller.text = result;
+          });
+          _focusNode.requestFocus();
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -76,7 +117,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final canSend = widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
+    final canSend =
+        widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
     final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -87,12 +129,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         children: [
           // Quote Preview
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-          
+
           Padding(
             padding: const EdgeInsets.all(DS.spacing8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                // --- Attachment Button ---
+                IconButton(
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: isDark ? DS.neutral400 : DS.neutral600,
+                  ),
+                  onPressed: widget.enabled ? _showAttachmentSheet : null,
+                  padding: const EdgeInsets.only(bottom: 8),
+                ),
+
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -107,7 +159,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       focusNode: _focusNode,
                       maxLines: 5,
                       minLines: 1,
-                      textInputAction: enterToSend ? TextInputAction.send : TextInputAction.newline,
+                      textInputAction: enterToSend
+                          ? TextInputAction.send
+                          : TextInputAction.newline,
                       decoration: InputDecoration(
                         hintText: widget.hintText ?? 'Type a message...',
                         hintStyle: TextStyle(
@@ -120,7 +174,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         border: InputBorder.none,
                         isDense: true,
                       ),
-                      onSubmitted: canSend && enterToSend ? (_) => _handleSend() : null,
+                      onSubmitted:
+                          canSend && enterToSend ? (_) => _handleSend() : null,
                     ),
                   ),
                 ),
@@ -140,28 +195,35 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       height: 48,
                       decoration: BoxDecoration(
                         gradient: canSend ? DS.primaryGradient : null,
-                        color: canSend ? null : (isDark ? DS.neutral800 : DS.neutral200),
+                        color: canSend
+                            ? null
+                            : (isDark ? DS.neutral800 : DS.neutral200),
                         shape: BoxShape.circle,
-                        boxShadow: canSend 
-                          ? [
-                              BoxShadow(
-                                color: DS.brandPrimary.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ] 
-                          : null,
+                        boxShadow: canSend
+                            ? [
+                                BoxShadow(
+                                  color: DS.brandPrimary.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Center(
                         child: _isSending
                             ? SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: DS.brandPrimary),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: DS.brandPrimary,),
                               )
                             : Icon(
                                 Icons.arrow_upward_rounded,
-                                color: canSend ? DS.brandPrimary : (isDark ? DS.brandPrimary30 : DS.brandPrimary38),
+                                color: canSend
+                                    ? DS.brandPrimary
+                                    : (isDark
+                                        ? DS.brandPrimary30
+                                        : DS.brandPrimary38),
                                 size: 24,
                               ),
                       ),
@@ -177,56 +239,58 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   Widget _buildQuotePreview(bool isDark) => Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? DS.neutral800 : DS.brandPrimary200,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: DS.brandPrimary, width: 4),
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? DS.neutral800 : DS.brandPrimary200,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(color: DS.brandPrimary, width: 4),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '引用 ${widget.quotedMessage!.sender.displayName}',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.brandPrimary,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '引用 ${widget.quotedMessage!.sender.displayName}',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.brandPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: DS.spacing4),
-                Text(
-                  widget.quotedMessage!.content ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    widget.quotedMessage!.content ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: isDark ? DS.neutral400 : DS.neutral600,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: DS.touchTargetMinSize,
+              height: DS.touchTargetMinSize,
+              child: IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.neutral600,
                 ),
-              ],
+                onPressed: widget.onCancelQuote,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ),
-          ),
-          SizedBox(
-            width: DS.touchTargetMinSize,
-            height: DS.touchTargetMinSize,
-            child: IconButton(
-              icon: Icon(Icons.close_rounded,
-                size: DS.iconSizeSm,
-                color: DS.neutral600,),
-              onPressed: widget.onCancelQuote,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }

@@ -7,48 +7,48 @@ class StatisticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: DS.borderRadius16,
-        boxShadow: DS.shadowSm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst,
+          borderRadius: DS.borderRadius16,
+          boxShadow: DS.shadowSm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.show_chart_rounded,
+                    color: DS.primaryBase,
+                    size: 16,
+                  ),
                 ),
-                child: Icon(
-                  Icons.show_chart_rounded,
-                  color: DS.primaryBase,
-                  size: 16,
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  '本周成长趋势',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeBase,
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral900,
+                  ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Text(
-                '本周成长趋势',
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.neutral900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing16),
-          const SizedBox(
-            height: 120,
-            child: _WeeklyTrendChart(),
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+            const SizedBox(
+              height: 120,
+              child: _WeeklyTrendChart(),
+            ),
+          ],
+        ),
+      );
 }
 
 class _WeeklyTrendChart extends StatelessWidget {
@@ -79,7 +79,15 @@ class _WeeklyTrendChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                  const days = [
+                    'Mon',
+                    'Tue',
+                    'Wed',
+                    'Thu',
+                    'Fri',
+                    'Sat',
+                    'Sun',
+                  ];
                   if (value.toInt() >= 0 && value.toInt() < days.length) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -108,12 +116,13 @@ class _WeeklyTrendChart extends StatelessWidget {
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
-                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                    radius: 4,
-                    color: DS.brandPrimaryConst,
-                    strokeWidth: 2,
-                    strokeColor: DS.primaryBase,
-                  ),
+                getDotPainter: (spot, percent, barData, index) =>
+                    FlDotCirclePainter(
+                  radius: 4,
+                  color: DS.brandPrimaryConst,
+                  strokeWidth: 2,
+                  strokeColor: DS.primaryBase,
+                ),
               ),
               belowBarData: BarAreaData(
                 show: true,

@@ -5,7 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String kEnterToSendKey = 'settings_enter_to_send';
 
 /// Provider to manage the 'Enter to Send' preference
-final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>((ref) => EnterToSendNotifier());
+final enterToSendProvider = StateNotifierProvider<EnterToSendNotifier, bool>(
+    (ref) => EnterToSendNotifier(),);
 
 class EnterToSendNotifier extends StateNotifier<bool> {
   EnterToSendNotifier() : super(false) {
@@ -29,7 +30,7 @@ class EnterToSendNotifier extends StateNotifier<bool> {
   /// Update and persist the setting
   Future<void> setEnabled(bool enabled) async {
     if (state == enabled) return;
-    
+
     state = enabled;
     try {
       final prefs = await SharedPreferences.getInstance();

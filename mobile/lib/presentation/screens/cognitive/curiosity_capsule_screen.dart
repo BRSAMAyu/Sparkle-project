@@ -22,13 +22,15 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         data: (capsules) => capsules.isEmpty
             ? _buildEmptyState()
             : RefreshIndicator(
-                onRefresh: () => ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
+                onRefresh: () =>
+                    ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: capsules.length,
                   itemBuilder: (context, index) {
                     final capsule = capsules[index];
-                    final isHighlight = highlightId != null && capsule.id == highlightId;
+                    final isHighlight =
+                        highlightId != null && capsule.id == highlightId;
                     return CuriosityCapsuleCard(
                       capsule: capsule,
                       highlighted: isHighlight,
@@ -44,21 +46,22 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.lightbulb_outline, size: 64, color: DS.brandPrimary.withValues(alpha: 0.3)),
-          const SizedBox(height: DS.lg),
-          Text(
-            '今天还没有新的好奇心胶囊',
-            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            '继续学习，激发更多灵感吧！',
-            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
-          ),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lightbulb_outline,
+                size: 64, color: DS.brandPrimary.withValues(alpha: 0.3),),
+            const SizedBox(height: DS.lg),
+            Text(
+              '今天还没有新的好奇心胶囊',
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              '继续学习，激发更多灵感吧！',
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 14),
+            ),
+          ],
+        ),
+      );
 }

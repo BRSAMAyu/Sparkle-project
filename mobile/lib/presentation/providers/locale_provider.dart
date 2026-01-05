@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String kLocaleKey = 'app_locale';
 
 /// Provider to manage the application's Locale
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) => LocaleNotifier());
+final localeProvider =
+    StateNotifierProvider<LocaleNotifier, Locale>((ref) => LocaleNotifier());
 
 class LocaleNotifier extends StateNotifier<Locale> {
   LocaleNotifier() : super(const Locale('zh')) {
@@ -30,7 +31,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
   /// Change and persist the locale
   Future<void> setLocale(Locale locale) async {
     if (state == locale) return;
-    
+
     state = locale;
     try {
       final prefs = await SharedPreferences.getInstance();

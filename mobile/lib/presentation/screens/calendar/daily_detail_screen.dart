@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
+import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
-
   const DailyDetailScreen({required this.date, super.key});
   final DateTime date;
 
@@ -17,7 +17,7 @@ class DailyDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final calendarNotifier = ref.watch(calendarProvider.notifier);
     final events = calendarNotifier.getEventsForDay(date);
-    
+
     // Filter tasks for this date locally (mock logic as we load all tasks)
     final allTasks = ref.watch(taskListProvider).tasks;
     final dayTasks = allTasks.where((task) {
@@ -46,11 +46,11 @@ class DailyDetailScreen extends ConsumerWidget {
             // 1. Date Header & Lunar
             _buildDateHeader(context, date, lunarData),
             const SizedBox(height: 20),
-            
+
             // 2. Metrics Grid (Flame, Focus, Energy)
             _buildMetricsGrid(context, dashboardState),
             const SizedBox(height: 20),
-            
+
             // 3. Cognitive Prism Snapshot
             _buildPrismSnapshot(context, dashboardState),
             const SizedBox(height: 20),
@@ -71,88 +71,109 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDateHeader(BuildContext context, DateTime date, LunarData lunar) => Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [DS.primaryBase.withAlpha(150), DS.primaryBase.withAlpha(50)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Text(
-            '${date.day}',
-            style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: DS.brandPrimary),
-          ),
-          const SizedBox(width: DS.lg),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                DateFormat('EEEE', 'zh_CN').format(date),
-                style: TextStyle(fontSize: 18, color: DS.brandPrimaryConst, fontWeight: FontWeight.w500),
-              ),
-              Text(
-                '${lunar.lunarMonth}${lunar.lunarDay} ${lunar.term} ${lunar.festivals.join(" ")}',
-                style: TextStyle(fontSize: 14, color: DS.brandPrimary70),
-              ),
+  Widget _buildDateHeader(
+          BuildContext context, DateTime date, LunarData lunar,) =>
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              DS.primaryBase.withAlpha(150),
+              DS.primaryBase.withAlpha(50),
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-    );
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Text(
+              '${date.day}',
+              style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: DS.brandPrimary,),
+            ),
+            const SizedBox(width: DS.lg),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('EEEE', 'zh_CN').format(date),
+                  style: TextStyle(
+                      fontSize: 18,
+                      color: DS.brandPrimaryConst,
+                      fontWeight: FontWeight.w500,),
+                ),
+                Text(
+                  '${lunar.lunarMonth}${lunar.lunarDay} ${lunar.term} ${lunar.festivals.join(" ")}',
+                  style: TextStyle(fontSize: 14, color: DS.brandPrimary70),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildMetricsGrid(BuildContext context, DashboardState state) => Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            label: '火花强度',
-            value: '${state.flame.level}',
-            icon: Icons.local_fire_department,
-            color: DS.warningAccent,
-          ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _buildMetricCard(
-            label: '专注时长',
-            value: '${state.flame.todayFocusMinutes}m',
-            icon: Icons.timer,
-            color: DS.brandPrimaryAccent,
-          ),
-        ),
-        const SizedBox(width: DS.md),
-        Expanded(
-          child: _buildMetricCard(
-            label: '完成任务',
-            value: '${state.flame.tasksCompleted}',
-            icon: Icons.task_alt,
-            color: DS.successAccent,
-          ),
-        ),
-      ],
-    );
-
-  Widget _buildMetricCard({required String label, required String value, required IconData icon, required Color color}) => Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withAlpha(15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DS.brandPrimary.withAlpha(20)),
-      ),
-      child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: DS.sm),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: DS.brandPrimary)),
-          const SizedBox(height: DS.xs),
-          Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary54)),
+          Expanded(
+            child: _buildMetricCard(
+              label: '火花强度',
+              value: '${state.flame.level}',
+              icon: Icons.local_fire_department,
+              color: DS.warningAccent,
+            ),
+          ),
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _buildMetricCard(
+              label: '专注时长',
+              value: '${state.flame.todayFocusMinutes}m',
+              icon: Icons.timer,
+              color: DS.brandPrimaryAccent,
+            ),
+          ),
+          const SizedBox(width: DS.md),
+          Expanded(
+            child: _buildMetricCard(
+              label: '完成任务',
+              value: '${state.flame.tasksCompleted}',
+              icon: Icons.task_alt,
+              color: DS.successAccent,
+            ),
+          ),
         ],
-      ),
-    );
+      );
+
+  Widget _buildMetricCard(
+          {required String label,
+          required String value,
+          required IconData icon,
+          required Color color,}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withAlpha(15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.brandPrimary.withAlpha(20)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: DS.sm),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: DS.brandPrimary,),),
+            const SizedBox(height: DS.xs),
+            Text(label,
+                style: TextStyle(fontSize: 12, color: DS.brandPrimary54),),
+          ],
+        ),
+      );
 
   Widget _buildPrismSnapshot(BuildContext context, DashboardState state) {
     if (state.cognitive.status == 'empty') return const SizedBox();
@@ -171,7 +192,10 @@ class DailyDetailScreen extends ConsumerWidget {
             children: [
               Icon(Icons.diamond_outlined, color: DS.prismPurple, size: 20),
               const SizedBox(width: DS.smConst),
-              Text('当日认知棱镜', style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold)),
+              Text('当日认知棱镜',
+                  style: TextStyle(
+                      color: DS.brandPrimaryConst,
+                      fontWeight: FontWeight.bold,),),
             ],
           ),
           const SizedBox(height: DS.md),
@@ -191,15 +215,22 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) => Row(
-      children: [
-        Icon(icon, size: 18, color: DS.primaryBase),
-        const SizedBox(width: DS.sm),
-        Text(title, style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
+  Widget _buildSectionTitle(
+          BuildContext context, String title, IconData icon,) =>
+      Row(
+        children: [
+          Icon(icon, size: 18, color: DS.primaryBase),
+          const SizedBox(width: DS.sm),
+          Text(title,
+              style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,),),
+        ],
+      );
 
-  Widget _buildEventList(BuildContext context, List<CalendarEventModel> events) {
+  Widget _buildEventList(
+      BuildContext context, List<CalendarEventModel> events,) {
     if (events.isEmpty) {
       return _buildEmptyState('暂无日程');
     }
@@ -215,7 +246,8 @@ class DailyDetailScreen extends ConsumerWidget {
           decoration: BoxDecoration(
             color: DS.brandPrimary10Const,
             borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: Color(event.colorValue), width: 3)),
+            border: Border(
+                left: BorderSide(color: Color(event.colorValue), width: 3),),
           ),
           child: Row(
             children: [
@@ -223,17 +255,23 @@ class DailyDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(event.title, style: TextStyle(color: DS.brandPrimaryConst, fontWeight: FontWeight.bold)),
+                    Text(event.title,
+                        style: TextStyle(
+                            color: DS.brandPrimaryConst,
+                            fontWeight: FontWeight.bold,),),
                     const SizedBox(height: DS.xs),
                     Text(
-                      event.isAllDay ? '全天' : '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
+                      event.isAllDay
+                          ? '全天'
+                          : '${DateFormat('HH:mm').format(event.startTime)} - ${DateFormat('HH:mm').format(event.endTime)}',
                       style: TextStyle(color: DS.brandPrimary54, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               if (event.location != null && event.location!.isNotEmpty)
-                 Icon(Icons.location_on, color: DS.brandPrimary38Const, size: 16),
+                Icon(Icons.location_on,
+                    color: DS.brandPrimary38Const, size: 16,),
             ],
           ),
         );
@@ -256,14 +294,22 @@ class DailyDetailScreen extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
-            color: SparkleContextExtension(context).colors.brandPrimary.withValues(alpha: 0.1),
+            color: SparkleContextExtension(context)
+                .colors
+                .brandPrimary
+                .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Icon(
                 isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                color: isCompleted ? SparkleContextExtension(context).colors.semanticSuccess : SparkleContextExtension(context).colors.brandPrimary.withValues(alpha: 0.38),
+                color: isCompleted
+                    ? SparkleContextExtension(context).colors.semanticSuccess
+                    : SparkleContextExtension(context)
+                        .colors
+                        .brandPrimary
+                        .withValues(alpha: 0.38),
                 size: 20,
               ),
               const SizedBox(width: DS.md),
@@ -271,13 +317,23 @@ class DailyDetailScreen extends ConsumerWidget {
                 child: Text(
                   task.title as String,
                   style: TextStyle(
-                    color: isCompleted ? SparkleContextExtension(context).colors.brandPrimary.withValues(alpha: 0.38) : SparkleContextExtension(context).colors.brandPrimary,
+                    color: isCompleted
+                        ? SparkleContextExtension(context)
+                            .colors
+                            .brandPrimary
+                            .withValues(alpha: 0.38)
+                        : SparkleContextExtension(context).colors.brandPrimary,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
               if ((task.priority as int) > 2)
-                 Icon(Icons.flag, color: SparkleContextExtension(context).colors.semanticError.withValues(alpha: 0.2), size: 16),
+                Icon(Icons.flag,
+                    color: SparkleContextExtension(context)
+                        .colors
+                        .semanticError
+                        .withValues(alpha: 0.2),
+                    size: 16,),
             ],
           ),
         );
@@ -286,15 +342,17 @@ class DailyDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(String text) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withAlpha(5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DS.brandPrimary.withAlpha(10)), // Dashed border needs CustomPainter
-      ),
-      child: Center(
-        child: Text(text, style: TextStyle(color: DS.brandPrimary38)),
-      ),
-    );
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withAlpha(5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: DS.brandPrimary
+                  .withAlpha(10),), // Dashed border needs CustomPainter
+        ),
+        child: Center(
+          child: Text(text, style: TextStyle(color: DS.brandPrimary38)),
+        ),
+      );
 }

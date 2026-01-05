@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 
 class VocabularyRepository {
-
   VocabularyRepository(this._apiClient);
   final ApiClient _apiClient;
 
@@ -24,10 +23,13 @@ class VocabularyRepository {
   }
 
   Future<void> recordReview(String wordId, bool success) async {
-    await _apiClient.post('/vocabulary/wordbook/review', data: {
-      'word_id': wordId,
-      'success': success,
-    },);
+    await _apiClient.post(
+      '/vocabulary/wordbook/review',
+      data: {
+        'word_id': wordId,
+        'success': success,
+      },
+    );
   }
 
   // LLM Methods
@@ -51,4 +53,5 @@ class VocabularyRepository {
   }
 }
 
-final vocabularyRepositoryProvider = Provider<VocabularyRepository>((ref) => VocabularyRepository(ref.watch(apiClientProvider)));
+final vocabularyRepositoryProvider = Provider<VocabularyRepository>(
+    (ref) => VocabularyRepository(ref.watch(apiClientProvider)),);

@@ -59,6 +59,7 @@ class MessageType(str, enum.Enum):
     FRAGMENT_SHARE = "fragment_share" # 分享认知碎片
     CAPSULE_SHARE = "capsule_share"  # 分享好奇心胶囊
     PRISM_SHARE = "prism_share"      # 分享认知棱镜模式
+    FILE_SHARE = "file_share"        # 分享文件
     PROGRESS = "progress"            # 进度更新
     ACHIEVEMENT = "achievement"      # 成就达成
     CHECKIN = "checkin"              # 打卡
@@ -212,6 +213,12 @@ class Group(BaseModel):
     )
     tasks = relationship(
         "GroupTask",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+    files = relationship(
+        "GroupFile",
         back_populates="group",
         cascade="all, delete-orphan",
         lazy="dynamic"

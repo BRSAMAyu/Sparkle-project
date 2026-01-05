@@ -2,9 +2,13 @@
 import unittest
 import uuid
 from datetime import datetime, timedelta
+import pytest
 from app.models.chat import ChatMessage, MessageRole
 from app.core.database import SessionLocal
 from sqlalchemy import text
+
+if SessionLocal is None:
+    pytest.skip("DATABASE_URL not configured for sync tests", allow_module_level=True)
 
 class TestPartitioning(unittest.TestCase):
     def setUp(self):

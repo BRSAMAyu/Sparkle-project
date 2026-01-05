@@ -45,9 +45,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                       ),
                   ],
                 ),
-                
                 const Spacer(),
-                
                 Text(
                   cognitive.weeklyPattern ?? '探索未知',
                   style: TextStyle(
@@ -58,9 +56,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                
                 const SizedBox(height: DS.xs),
-                
                 Text(
                   '好奇心胶囊',
                   style: TextStyle(

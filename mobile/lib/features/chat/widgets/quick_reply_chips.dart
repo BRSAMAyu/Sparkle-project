@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 /// 快捷回复选项数据类
 class QuickReply {
-
   const QuickReply({
     required this.id,
     required this.label,
@@ -24,9 +23,9 @@ class QuickReply {
 /// 2. 引导探索：帮助新用户了解 AI 能做什么
 /// 3. 情境化：根据当前状态显示不同的快捷回复
 class QuickReplyChips extends StatelessWidget {
-
   const QuickReplyChips({
-    required this.onTap, super.key,
+    required this.onTap,
+    super.key,
     this.enabled = true,
     this.customReplies,
   });
@@ -153,7 +152,6 @@ class QuickReplyChips extends StatelessWidget {
 
 /// 快捷回复单个按钮
 class _QuickReplyChip extends StatelessWidget {
-
   const _QuickReplyChip({
     required this.reply,
     required this.enabled,
@@ -169,7 +167,7 @@ class _QuickReplyChip extends StatelessWidget {
     final color = reply.color ?? theme.colorScheme.primary;
 
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -179,7 +177,7 @@ class _QuickReplyChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -212,9 +210,10 @@ class _QuickReplyChip extends StatelessWidget {
 ///
 /// 适合需要展示更多选项的场景
 class QuickReplyGrid extends StatelessWidget {
-
   const QuickReplyGrid({
-    required this.onTap, required this.replies, super.key,
+    required this.onTap,
+    required this.replies,
+    super.key,
     this.crossAxisCount = 2,
   });
   final Function(String message) onTap;
@@ -223,28 +222,27 @@ class QuickReplyGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 2.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: replies.length,
-      itemBuilder: (context, index) {
-        final reply = replies[index];
-        return _QuickReplyCard(
-          reply: reply,
-          onTap: () => onTap(reply.message),
-        );
-      },
-    );
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: 2.5,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: replies.length,
+        itemBuilder: (context, index) {
+          final reply = replies[index];
+          return _QuickReplyCard(
+            reply: reply,
+            onTap: () => onTap(reply.message),
+          );
+        },
+      );
 }
 
 class _QuickReplyCard extends StatelessWidget {
-
   const _QuickReplyCard({
     required this.reply,
     required this.onTap,
@@ -266,8 +264,8 @@ class _QuickReplyCard extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                color.withOpacity(0.1),
-                color.withOpacity(0.05),
+                color.withValues(alpha: 0.1),
+                color.withValues(alpha: 0.05),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,

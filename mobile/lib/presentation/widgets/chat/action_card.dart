@@ -6,9 +6,8 @@ import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 class ActionCard extends StatefulWidget {
-
   const ActionCard({
-    required this.action, 
+    required this.action,
     super.key,
     this.onConfirm,
     this.onDismiss,
@@ -33,7 +32,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    
+
     _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
@@ -92,23 +91,23 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       tween: Tween(begin: -2.0, end: 2.0),
                       duration: const Duration(seconds: 3),
                       builder: (context, value, child) => Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.transparent,
-                                DS.brandPrimary.withValues(alpha: 0.1),
-                                Colors.transparent,
-                              ],
-                              stops: [
-                                (value - 0.3).clamp(0.0, 1.0),
-                                value.clamp(0.0, 1.0),
-                                (value + 0.3).clamp(0.0, 1.0),
-                              ],
-                            ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.transparent,
+                              DS.brandPrimary.withValues(alpha: 0.1),
+                              Colors.transparent,
+                            ],
+                            stops: [
+                              (value - 0.3).clamp(0.0, 1.0),
+                              value.clamp(0.0, 1.0),
+                              (value + 0.3).clamp(0.0, 1.0),
+                            ],
                           ),
                         ),
+                      ),
                       onEnd: () {
                         // Restart animation
                         if (mounted) setState(() {});
@@ -126,36 +125,42 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           AnimatedBuilder(
                             animation: _iconScaleAnimation,
                             builder: (context, child) => Transform.scale(
-                                scale: hasAction ? _iconScaleAnimation.value : 1.0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(DS.spacing8),
-                                  decoration: BoxDecoration(
-                                    gradient: _getActionGradient(widget.action.type),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _getActionColor(widget.action.type).withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    _getActionIcon(widget.action.type),
-                                    color: DS.brandPrimaryConst,
-                                    size: DS.iconSizeSm,
-                                  ),
+                              scale:
+                                  hasAction ? _iconScaleAnimation.value : 1.0,
+                              child: Container(
+                                padding: const EdgeInsets.all(DS.spacing8),
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      _getActionGradient(widget.action.type),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _getActionColor(widget.action.type)
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _getActionIcon(widget.action.type),
+                                  color: DS.brandPrimaryConst,
+                                  size: DS.iconSizeSm,
                                 ),
                               ),
+                            ),
                           ),
                           const SizedBox(width: DS.spacing12),
                           Expanded(
                             child: Text(
                               _getTitleForAction(widget.action.type),
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: DS.fontWeightBold,
-                                color: DS.neutral900,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: DS.fontWeightBold,
+                                    color: DS.neutral900,
+                                  ),
                             ),
                           ),
                         ],
@@ -180,7 +185,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                 icon: Icons.check_rounded,
                                 onPressed: widget.onConfirm,
                                 size: CustomButtonSize.small,
-                                customGradient: _getActionGradient(widget.action.type),
+                                customGradient:
+                                    _getActionGradient(widget.action.type),
                               ),
                           ],
                         ),
@@ -256,82 +262,86 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildContentForAction(BuildContext context, WidgetPayload action) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (action.data['title'] != null) ...[
-          Container(
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _getActionColor(action.type).withValues(alpha: 0.1),
-                  _getActionColor(action.type).withValues(alpha: 0.05),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: DS.borderRadius12,
-              border: Border.all(
-                color: _getActionColor(action.type).withValues(alpha: 0.2),
-              ),
-            ),
-            child: Text(
-              action.data['title'],
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: DS.fontWeightSemibold,
-                color: DS.neutral900,
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.spacing12),
-        ],
-        if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
-          Wrap(
-            spacing: DS.spacing8,
-            runSpacing: DS.spacing8,
-            children: action.data.entries
-                .where((e) => e.key != 'title')
-                .map((entry) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
-                  vertical: DS.spacing8,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.neutral100,
-                  borderRadius: DS.borderRadius8,
-                  border: Border.all(color: DS.neutral200),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _getParamIcon(entry.key),
-                      size: DS.iconSizeXs,
-                      color: DS.neutral600,
-                    ),
-                    const SizedBox(width: DS.spacing4),
-                    Text(
-                      '${_formatParamKey(entry.key)}: ',
-                      style: TextStyle(
-                        color: DS.neutral600,
-                        fontSize: DS.fontSizeSm,
-                      ),
-                    ),
-                    Text(
-                      entry.value.toString(),
-                      style: TextStyle(
-                        fontWeight: DS.fontWeightSemibold,
-                        fontSize: DS.fontSizeSm,
-                        color: DS.neutral900,
-                      ),
-                    ),
+  Widget _buildContentForAction(BuildContext context, WidgetPayload action) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (action.data['title'] != null) ...[
+            Container(
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _getActionColor(action.type).withValues(alpha: 0.1),
+                    _getActionColor(action.type).withValues(alpha: 0.05),
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ),).toList(),
-          ),
-      ],
-    );
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: _getActionColor(action.type).withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
+                action.data['title'] as String,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: DS.fontWeightSemibold,
+                      color: DS.neutral900,
+                    ),
+              ),
+            ),
+            const SizedBox(height: DS.spacing12),
+          ],
+          if (action.data.entries.where((e) => e.key != 'title').isNotEmpty)
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: action.data.entries
+                  .where((e) => e.key != 'title')
+                  .map(
+                    (entry) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing12,
+                        vertical: DS.spacing8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.neutral100,
+                        borderRadius: DS.borderRadius8,
+                        border: Border.all(color: DS.neutral200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getParamIcon(entry.key),
+                            size: DS.iconSizeXs,
+                            color: DS.neutral600,
+                          ),
+                          const SizedBox(width: DS.spacing4),
+                          Text(
+                            '${_formatParamKey(entry.key)}: ',
+                            style: TextStyle(
+                              color: DS.neutral600,
+                              fontSize: DS.fontSizeSm,
+                            ),
+                          ),
+                          Text(
+                            entry.value.toString(),
+                            style: TextStyle(
+                              fontWeight: DS.fontWeightSemibold,
+                              fontSize: DS.fontSizeSm,
+                              color: DS.neutral900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
+      );
 
   IconData _getParamIcon(String key) {
     switch (key.toLowerCase()) {

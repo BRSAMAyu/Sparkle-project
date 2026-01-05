@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
 import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 错题列表页面
 ///
@@ -128,9 +129,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
                 // 待复习错题
                 _buildErrorList(
-                  ref.watch(errorListProvider(
-                    query.copyWith(needReview: true),
-                  ),),
+                  ref.watch(
+                    errorListProvider(
+                      query.copyWith(needReview: true),
+                    ),
+                  ),
                   query.copyWith(needReview: true),
                 ),
               ],
@@ -147,160 +150,159 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Widget _buildSearchField() => TextField(
-      controller: _searchController,
-      autofocus: true,
-      decoration: const InputDecoration(
-        hintText: '搜索题目内容...',
-        border: InputBorder.none,
-      ),
-      onChanged: (value) {
-        // 防抖搜索
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (value == _searchController.text) {
-            ref.read(errorFilterProvider.notifier).setSearchKeyword(value);
-          }
-        });
-      },
-    );
+        controller: _searchController,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: '搜索题目内容...',
+          border: InputBorder.none,
+        ),
+        onChanged: (value) {
+          // 防抖搜索
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (value == _searchController.text) {
+              ref.read(errorFilterProvider.notifier).setSearchKeyword(value);
+            }
+          });
+        },
+      );
 
-  Widget _buildStatsBadge(AsyncValue<ReviewStats> statsAsync, String type) => statsAsync.when(
-      data: (stats) {
-        final count = type == 'total'
-            ? stats.totalErrors
-            : stats.needReviewCount;
+  Widget _buildStatsBadge(AsyncValue<ReviewStats> statsAsync, String type) =>
+      statsAsync.when(
+        data: (stats) {
+          final count =
+              type == 'total' ? stats.totalErrors : stats.needReviewCount;
 
-        if (count == 0) return const SizedBox.shrink();
+          if (count == 0) return const SizedBox.shrink();
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: type == 'needReview'
-                ? Colors.red
-                : Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            count.toString(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: type == 'needReview'
+                  ? Colors.red
+                  : Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(10),
             ),
-          ),
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+      );
 
   Widget _buildErrorList(
     AsyncValue<ErrorListResponse> errorListAsync,
     ErrorListQuery query,
-  ) => errorListAsync.when(
-      data: (response) {
-        if (response.items.isEmpty) {
-          return _buildEmptyState(query.needReview ?? false);
-        }
+  ) =>
+      errorListAsync.when(
+        data: (response) {
+          if (response.items.isEmpty) {
+            return _buildEmptyState(query.needReview ?? false);
+          }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(errorListProvider(query));
-          },
-          child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
-            itemCount: response.items.length,
-            itemBuilder: (context, index) {
-              final error = response.items[index];
-              return ErrorCard(
-                error: error,
-                onTap: () => _navigateToDetail(context, error.id),
-                onDelete: () => _deleteError(error.id),
-              );
-            },
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorState(error.toString(), query),
-    );
-
-  Widget _buildEmptyState(bool isReviewTab) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
-            size: 80,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isReviewTab ? '暂无需要复习的错题' : '还没有错题记录',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isReviewTab
-                ? '做得很好！继续保持'
-                : '点击右下角 + 按钮添加错题',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-          if (!isReviewTab) ...[
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => _navigateToAddError(context),
-              icon: const Icon(Icons.add),
-              label: const Text('添加第一道错题'),
-            ),
-          ],
-        ],
-      ),
-    );
-
-  Widget _buildErrorState(String error, ErrorListQuery query) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 80,
-            color: Colors.red,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '加载失败',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
+          return RefreshIndicator(
+            onRefresh: () async {
               ref.invalidate(errorListProvider(query));
             },
-            icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 80),
+              itemCount: response.items.length,
+              itemBuilder: (context, index) {
+                final error = response.items[index];
+                return ErrorCard(
+                  error: error,
+                  onTap: () => _navigateToDetail(context, error.id),
+                  onDelete: () => _deleteError(error.id),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _buildErrorState(error.toString(), query),
+      );
+
+  Widget _buildEmptyState(bool isReviewTab) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isReviewTab ? '暂无需要复习的错题' : '还没有错题记录',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isReviewTab ? '做得很好！继续保持' : '点击右下角 + 按钮添加错题',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if (!isReviewTab) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => _navigateToAddError(context),
+                icon: const Icon(Icons.add),
+                label: const Text('添加第一道错题'),
+              ),
+            ],
+          ],
+        ),
+      );
+
+  Widget _buildErrorState(String error, ErrorListQuery query) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 80,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '加载失败',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.invalidate(errorListProvider(query));
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('重试'),
+            ),
+          ],
+        ),
+      );
 
   Future<void> _navigateToAddError(BuildContext context) async {
     final result = await Navigator.of(context).push<bool>(
@@ -390,12 +392,13 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
     String? keyword,
     int? page,
     int? pageSize,
-  }) => ErrorListQuery(
-      subject: subject ?? this.subject,
-      chapter: chapter ?? this.chapter,
-      needReview: needReview ?? this.needReview,
-      keyword: keyword ?? this.keyword,
-      page: page ?? this.page,
-      pageSize: pageSize ?? this.pageSize,
-    );
+  }) =>
+      ErrorListQuery(
+        subject: subject ?? this.subject,
+        chapter: chapter ?? this.chapter,
+        needReview: needReview ?? this.needReview,
+        keyword: keyword ?? this.keyword,
+        page: page ?? this.page,
+        pageSize: pageSize ?? this.pageSize,
+      );
 }

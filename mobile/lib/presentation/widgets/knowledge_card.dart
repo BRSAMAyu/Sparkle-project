@@ -6,9 +6,9 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 /// 知识卡片组件
 /// 用于在聊天中显示 AI 生成的知识节点
 class KnowledgeCard extends StatelessWidget {
-
   const KnowledgeCard({
-    required this.data, super.key,
+    required this.data,
+    super.key,
   });
   final Map<String, dynamic> data;
 
@@ -40,7 +40,8 @@ class KnowledgeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, color: context.colors.brandPrimary),
+                  Icon(Icons.lightbulb_outline,
+                      color: context.colors.brandPrimary,),
                   SizedBox(width: context.space.sm),
                   Expanded(
                     child: Text(
@@ -53,7 +54,6 @@ class KnowledgeCard extends StatelessWidget {
                   _buildMasteryChip(context, masteryLevel),
                 ],
               ),
-              
               if (summary != null && summary.isNotEmpty) ...[
                 SizedBox(height: context.space.sm),
                 Text(
@@ -63,17 +63,21 @@ class KnowledgeCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-
               if (tags.isNotEmpty) ...[
                 SizedBox(height: context.space.sm),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 4.0,
-                  children: tags.map((tag) => Chip(
-                    label: Text(tag, style: context.typo.labelSmall),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),).toList(),
+                  children: tags
+                      .map(
+                        (tag) => Chip(
+                          label: Text(tag, style: context.typo.labelSmall),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
               SizedBox(height: context.space.md),
@@ -100,16 +104,16 @@ class KnowledgeCard extends StatelessWidget {
     String label;
 
     if (masteryLevel >= 80) {
-      color = context.sparkleColors.semanticSuccess;
+      color = context.colors.semanticSuccess;
       label = '已掌握';
     } else if (masteryLevel >= 50) {
-      color = context.sparkleColors.brandPrimary;
+      color = context.colors.brandPrimary;
       label = '熟练中';
     } else if (masteryLevel > 0) {
-      color = context.sparkleColors.brandPrimary;
+      color = context.colors.brandPrimary;
       label = '初涉';
     } else {
-      color = context.sparkleColors.brandPrimary;
+      color = context.colors.brandPrimary;
       label = '未学习';
     }
 

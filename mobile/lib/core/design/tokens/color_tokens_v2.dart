@@ -18,28 +18,42 @@ class SparkleColors {
   Color get ctaAccent => _RawColors.sparkOrange;
 
   // Surfaces
-  Color get surfacePrimary => _isDark ? _RawColors.neutral900 : _RawColors.white;
-  Color get surfaceSecondary => _isDark ? _RawColors.neutral800 : _RawColors.neutral200;
-  Color get surfaceTertiary => _isDark ? _RawColors.neutral700 : _RawColors.neutral300;
+  Color get surfacePrimary =>
+      _isDark ? _RawColors.neutral900 : _RawColors.white;
+  Color get surfaceSecondary =>
+      _isDark ? _RawColors.neutral800 : _RawColors.neutral200;
+  Color get surfaceTertiary =>
+      _isDark ? _RawColors.neutral700 : _RawColors.neutral300;
 
   // Text
   Color get textPrimary => _isDark ? _RawColors.white : _RawColors.neutral900;
-  Color get textSecondary => _isDark ? _RawColors.neutral300 : _RawColors.neutral600;
+  Color get textSecondary =>
+      _isDark ? _RawColors.neutral300 : _RawColors.neutral600;
   Color get textMuted => textSecondary.withValues(alpha: 0.7);
 
   // Borders / dividers
-  Color get borderDefault => _isDark ? _RawColors.neutral700 : _RawColors.neutral300;
+  Color get borderDefault =>
+      _isDark ? _RawColors.neutral700 : _RawColors.neutral300;
   Color get divider => borderDefault;
+
+  // Semantic colors
+  Color get semanticSuccess => _isDark
+      ? _RawColors.semanticSuccessDark
+      : _RawColors.semanticSuccessLight;
+  Color get semanticWarning => _RawColors.semanticWarning;
+  Color get semanticError => _RawColors.semanticError;
 
   // Task colors
   Color get taskSocial => _RawColors.taskSocial;
 
   // Gradients
   LinearGradient get brandGradient => LinearGradient(
-      colors: _isDark ? _RawColors.brandGradientDark : _RawColors.brandGradientLight,
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
+        colors: _isDark
+            ? _RawColors.brandGradientDark
+            : _RawColors.brandGradientLight,
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   // User chat bubble gradient must be cold brand gradient (no orange).
   LinearGradient get userChatBubbleGradient => brandGradient;
@@ -64,6 +78,10 @@ class _RawColors {
 
   static const Color sparkOrange = Color(0xFFFF6B35);
   static const Color taskSocial = Color(0xFFFFB703);
+  static const Color semanticSuccessLight = Color(0xFF2E7D32);
+  static const Color semanticSuccessDark = Color(0xFF66BB6A);
+  static const Color semanticWarning = Color(0xFFFFA000);
+  static const Color semanticError = Color(0xFFE53935);
 
   static const List<Color> brandGradientLight = [
     brandCyan,

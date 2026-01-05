@@ -9,22 +9,22 @@ class SpacingSystem {
   static const double grid = 8.0;
 
   // 标准间距 (8pt网格)
-  static const double xs   = grid * 0.5;   // 4pt
-  static const double sm   = grid * 1;     // 8pt
-  static const double md   = grid * 1.5;   // 12pt
-  static const double lg   = grid * 2;     // 16pt
-  static const double xl   = grid * 3;     // 24pt
-  static const double xxl  = grid * 4;     // 32pt
-  static const double xxxl = grid * 6;     // 48pt
-  static const double huge = grid * 8;     // 64pt
+  static const double xs = grid * 0.5; // 4pt
+  static const double sm = grid * 1; // 8pt
+  static const double md = grid * 1.5; // 12pt
+  static const double lg = grid * 2; // 16pt
+  static const double xl = grid * 3; // 24pt
+  static const double xxl = grid * 4; // 32pt
+  static const double xxxl = grid * 6; // 48pt
+  static const double huge = grid * 8; // 64pt
 
   // 边距
-  static const EdgeInsets edgeXs   = EdgeInsets.all(xs);
-  static const EdgeInsets edgeSm   = EdgeInsets.all(sm);
-  static const EdgeInsets edgeMd   = EdgeInsets.all(md);
-  static const EdgeInsets edgeLg   = EdgeInsets.all(lg);
-  static const EdgeInsets edgeXl   = EdgeInsets.all(xl);
-  static const EdgeInsets edgeXxl  = EdgeInsets.all(xxl);
+  static const EdgeInsets edgeXs = EdgeInsets.all(xs);
+  static const EdgeInsets edgeSm = EdgeInsets.all(sm);
+  static const EdgeInsets edgeMd = EdgeInsets.all(md);
+  static const EdgeInsets edgeLg = EdgeInsets.all(lg);
+  static const EdgeInsets edgeXl = EdgeInsets.all(xl);
+  static const EdgeInsets edgeXxl = EdgeInsets.all(xxl);
   static const EdgeInsets edgeXxxl = EdgeInsets.all(xxxl);
 
   // 水平/垂直间距
@@ -99,17 +99,16 @@ class SpacingSystem {
   static double density(BuildContext context, double base) {
     final width = MediaQuery.of(context).size.width;
 
-    if (width < 480) return base * 0.875;  // 紧凑
-    if (width < 768) return base;          // 正常
+    if (width < 480) return base * 0.875; // 紧凑
+    if (width < 768) return base; // 正常
     if (width < 1024) return base * 1.125; // 舒适
-    return base * 1.25;                    // 宽松
+    return base * 1.25; // 宽松
   }
 }
 
 /// 间距令牌 - 语义化命名
 @immutable
 class SpacingToken {
-
   const SpacingToken(this.name, this.value);
   final String name;
   final double value;
@@ -123,16 +122,19 @@ class SpacingToken {
   SpacingTokenVariant variant({
     required double tablet,
     required double desktop,
-  }) => SpacingTokenVariant(
-      mobile: value,
-      tablet: tablet,
-      desktop: desktop,
-    );
+  }) =>
+      SpacingTokenVariant(
+        mobile: value,
+        tablet: tablet,
+        desktop: desktop,
+      );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SpacingToken && runtimeType == other.runtimeType && value == other.value;
+      other is SpacingToken &&
+          runtimeType == other.runtimeType &&
+          value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -141,7 +143,6 @@ class SpacingToken {
 /// 响应式间距变体
 @immutable
 class SpacingTokenVariant {
-
   const SpacingTokenVariant({
     required this.mobile,
     required this.tablet,

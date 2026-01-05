@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 from .base import BaseTool, ToolCategory, ToolResult
 from .schemas import CreateKnowledgeNodeParams, LinkNodesParams, QueryKnowledgeParams
@@ -196,7 +196,7 @@ class LinkNodesTool(BaseTool):
     
     async def execute(
         self, 
-        params: LinkKnowledgeNodesParams, 
+        params: LinkNodesParams, 
         user_id: str,
         db_session: Any,
         tool_call_id: Optional[str] = None

@@ -80,10 +80,16 @@ class TestGraphRAGRetriever:
     async def test_retrieve(self, retriever, mock_knowledge_service):
         """测试整体检索流程"""
         # 模拟各步骤
-        with patch.object(retriever, 'extract_entities', return_value=["entity"]),
-             patch.object(retriever, 'vector_search', return_value=[{"id": "1", "name": "node1", "description": "desc1"}]),
-             patch.object(retriever, 'graph_search', return_value=([], [])),
-             patch.object(retriever, 'get_user_interests', return_value=[]):
+        with (
+            patch.object(retriever, "extract_entities", return_value=["entity"]),
+            patch.object(
+                retriever,
+                "vector_search",
+                return_value=[{"id": "1", "name": "node1", "description": "desc1"}],
+            ),
+            patch.object(retriever, "graph_search", return_value=([], [])),
+            patch.object(retriever, "get_user_interests", return_value=[]),
+        ):
 
             result = await retriever.retrieve(
                 query="test query",

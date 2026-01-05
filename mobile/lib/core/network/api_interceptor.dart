@@ -2,14 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
-import 'package:sparkle/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/auth.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);
 final loggingInterceptorProvider = Provider((ref) => LoggingInterceptor());
-final retryInterceptorProvider = Provider.family<RetryInterceptor, Dio>((ref, dio) => RetryInterceptor(dio: dio));
+final retryInterceptorProvider = Provider.family<RetryInterceptor, Dio>(
+  (ref, dio) => RetryInterceptor(dio: dio),
+);
 
 class RetryInterceptor extends Interceptor {
-
   RetryInterceptor({
     required this.dio,
     this.maxRetries = 3,
@@ -20,20 +21,22 @@ class RetryInterceptor extends Interceptor {
   final List<int> retryableStatuses;
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (retryableStatuses.contains(err.response?.statusCode) && 
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    if (retryableStatuses.contains(err.response?.statusCode) &&
         _shouldRetry(err)) {
-      
       final retries = err.requestOptions.extra['retries'] as int? ?? 0;
       if (retries < maxRetries) {
         err.requestOptions.extra['retries'] = retries + 1;
-        
+
         // Exponential backoff
         final delay = Duration(milliseconds: 500 * (1 << retries));
-        await Future.delayed(delay);
+        await Future<void>.delayed(delay);
 
         try {
-          final response = await dio.fetch(err.requestOptions);
+          final response = await dio.fetch<dynamic>(err.requestOptions);
           return handler.resolve(response);
         } catch (e) {
           // If retry fails, continue to next error handler
@@ -47,12 +50,14 @@ class RetryInterceptor extends Interceptor {
 }
 
 class AuthInterceptor extends Interceptor {
-
   AuthInterceptor(this._ref);
   final Ref _ref;
 
   @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     final token = await _ref.read(authRepositoryProvider).getToken();
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -61,11 +66,16 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     final path = err.requestOptions.path;
     // Prevent infinite loop: Don't attempt to refresh token if the failed request
     // is itself an auth request (login, register, refresh, etc.)
-    if (path.contains('/auth') || path.contains('login') || path.contains('refresh')) {
+    if (path.contains('/auth') ||
+        path.contains('login') ||
+        path.contains('refresh')) {
       return super.onError(err, handler);
     }
 
@@ -75,10 +85,11 @@ class AuthInterceptor extends Interceptor {
         final newToken = await authRepo.refreshToken();
         // Clone the request and retry
         final dio = Dio();
-        err.requestOptions.headers['Authorization'] = 'Bearer ${newToken.accessToken}';
-        final response = await dio.fetch(err.requestOptions);
+        err.requestOptions.headers['Authorization'] =
+            'Bearer ${newToken.accessToken}';
+        final response = await dio.fetch<dynamic>(err.requestOptions);
         return handler.resolve(response);
-            } catch (e) {
+      } catch (e) {
         // Refresh token failed, logout user
         _ref.read(authRepositoryProvider).logout();
         return super.onError(err, handler);
@@ -109,9 +120,13 @@ class LoggingInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     if (kDebugMode) {
-      _logger.i('Response: ${response.statusCode} ${response.requestOptions.uri}');
+      _logger
+          .i('Response: ${response.statusCode} ${response.requestOptions.uri}');
       if (response.data != null) {
         _logger.d('Response Data: ${response.data}');
       }
@@ -122,7 +137,10 @@ class LoggingInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (kDebugMode) {
-      _logger.e('Error: ${err.response?.statusCode} ${err.requestOptions.uri}', error: err);
+      _logger.e(
+        'Error: ${err.response?.statusCode} ${err.requestOptions.uri}',
+        error: err,
+      );
     }
     super.onError(err, handler);
   }

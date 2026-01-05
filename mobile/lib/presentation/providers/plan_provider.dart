@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/plan_model.dart';
 import 'package:sparkle/data/repositories/plan_repository.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/task.dart';
 
 // 1. PlanListState Class
 class PlanListState {
-
   PlanListState({
     this.isLoading = false,
     this.plans = const [],
@@ -23,17 +22,17 @@ class PlanListState {
     List<PlanModel>? activePlans,
     String? error,
     bool clearError = false,
-  }) => PlanListState(
-      isLoading: isLoading ?? this.isLoading,
-      plans: plans ?? this.plans,
-      activePlans: activePlans ?? this.activePlans,
-      error: clearError ? null : error ?? this.error,
-    );
+  }) =>
+      PlanListState(
+        isLoading: isLoading ?? this.isLoading,
+        plans: plans ?? this.plans,
+        activePlans: activePlans ?? this.activePlans,
+        error: clearError ? null : error ?? this.error,
+      );
 }
 
 // 2. PlanNotifier Class
 class PlanNotifier extends StateNotifier<PlanListState> {
-
   PlanNotifier(this._planRepository, this._ref) : super(PlanListState()) {
     loadPlans();
     loadActivePlans();
@@ -122,9 +121,11 @@ class PlanNotifier extends StateNotifier<PlanListState> {
 
 // 3. Providers
 
-final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>((ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref));
+final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>(
+    (ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref),);
 
-final planDetailProvider = FutureProvider.family<PlanModel, String>((ref, id) async {
+final planDetailProvider =
+    FutureProvider.family<PlanModel, String>((ref, id) async {
   final planRepo = ref.watch(planRepositoryProvider);
   return planRepo.getPlan(id);
 });

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
 /// 设计系统合规检查工具
@@ -9,7 +10,6 @@ import 'package:path/path.dart' as path;
 /// 2. 硬编码间距值
 /// 3. 未使用设计系统组件
 class DesignSystemLinter {
-
   DesignSystemLinter(this.projectRoot);
   final String projectRoot;
   final List<String> _violations = [];
@@ -110,8 +110,8 @@ class DesignSystemLinter {
     // 检查常见的硬编码颜色模式
     final patterns = [
       RegExp(r'Color\(0x[0-9A-F]{8}\)'), // Color(0xFF6B35)
-      RegExp(r'Colors\.\w+'),           // DS.brandPrimary, DS.brandPrimary
-      RegExp(r'Color\.\w+'),      // const Color.white
+      RegExp(r'Colors\.\w+'), // DS.brandPrimary, DS.brandPrimary
+      RegExp(r'Color\.\w+'), // const Color.white
     ];
 
     for (final pattern in patterns) {
@@ -136,7 +136,8 @@ class DesignSystemLinter {
     if (line.trim().startsWith('//')) return false;
 
     // 检查硬编码间距数值
-    final spacingPattern = RegExp(r'(EdgeInsets|SizedBox|padding|margin).*[^DS\.\s](4|8|12|16|24|32|48|64)');
+    final spacingPattern = RegExp(
+        r'(EdgeInsets|SizedBox|padding|margin).*[^DS\.\s](4|8|12|16|24|32|48|64)',);
     if (spacingPattern.hasMatch(line)) {
       // 排除设计系统使用
       if (line.contains('DS.') ||
@@ -181,24 +182,29 @@ class DesignSystemLinter {
   String generateReport(List<String> violations) {
     final buffer = StringBuffer();
 
-    buffer.writeln('=' * 80);
-    buffer.writeln('设计系统合规检查报告');
-    buffer.writeln('=' * 80);
-    buffer.writeln('检查时间: ${DateTime.now()}');
-    buffer.writeln('项目根目录: $projectRoot');
-    buffer.writeln('违规数量: ${violations.length}');
-    buffer.writeln();
+    buffer
+      ..writeln('=' * 80)
+      ..writeln('设计系统合规检查报告')
+      ..writeln('=' * 80)
+      ..writeln('检查时间: ${DateTime.now()}')
+      ..writeln('项目根目录: $projectRoot')
+      ..writeln('违规数量: ${violations.length}')
+      ..writeln();
 
     if (violations.isEmpty) {
       buffer.writeln('✅ 恭喜！未发现设计系统违规。');
     } else {
-      buffer.writeln('⚠️ 发现以下设计系统违规：');
-      buffer.writeln();
+      buffer
+        ..writeln('⚠️ 发现以下设计系统违规：')
+        ..writeln();
 
       // 按违规类型分组
-      final colorViolations = violations.where((v) => v.contains('硬编码颜色')).toList();
-      final spacingViolations = violations.where((v) => v.contains('硬编码间距')).toList();
-      final buttonViolations = violations.where((v) => v.contains('使用Material按钮')).toList();
+      final colorViolations =
+          violations.where((v) => v.contains('硬编码颜色')).toList();
+      final spacingViolations =
+          violations.where((v) => v.contains('硬编码间距')).toList();
+      final buttonViolations =
+          violations.where((v) => v.contains('使用Material按钮')).toList();
 
       if (colorViolations.isNotEmpty) {
         buffer.writeln('🔴 硬编码颜色违规 (${colorViolations.length}处):');
@@ -233,10 +239,11 @@ class DesignSystemLinter {
         buffer.writeln();
       }
 
-      buffer.writeln('💡 修复建议：');
-      buffer.writeln('  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等');
-      buffer.writeln('  2. 硬编码间距 → 使用 DS.lg, DS.xl 等');
-      buffer.writeln('  3. Material按钮 → 使用 SparkleButton.primary() 等');
+      buffer
+        ..writeln('💡 修复建议：')
+        ..writeln('  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等')
+        ..writeln('  2. 硬编码间距 → 使用 DS.lg, DS.xl 等')
+        ..writeln('  3. Material按钮 → 使用 SparkleButton.primary() 等');
     }
 
     buffer.writeln('=' * 80);
@@ -250,12 +257,12 @@ class DesignSystemLinter {
     final violations = await linter.runAllChecks();
     final report = linter.generateReport(violations);
 
-    print(report);
+    debugPrint(report);
 
     // 保存报告到文件
     final reportFile = File(path.join(projectRoot, 'design_system_report.txt'));
     await reportFile.writeAsString(report);
-    print('报告已保存到: ${reportFile.path}');
+    debugPrint('报告已保存到: ${reportFile.path}');
   }
 }
 
@@ -263,9 +270,9 @@ class DesignSystemLinter {
 void main(List<String> args) async {
   final projectRoot = args.isNotEmpty ? args[0] : Directory.current.path;
 
-  print('开始设计系统合规检查...');
-  print('项目目录: $projectRoot');
-  print('');
+  debugPrint('开始设计系统合规检查...');
+  debugPrint('项目目录: $projectRoot');
+  debugPrint('');
 
   await DesignSystemLinter.runAndPrint(projectRoot);
 }

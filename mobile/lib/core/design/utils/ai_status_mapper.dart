@@ -74,8 +74,10 @@ class AiStatusMapper {
   }
 
   /// Convert tone to background color with alpha using design tokens.
-  static Color toneToBackgroundColor(AiStatusTone tone, BuildContext context) => toneToColor(tone, context).withValues(alpha: 0.1);
+  static Color toneToBackgroundColor(AiStatusTone tone, BuildContext context) =>
+      toneToColor(tone, context).withValues(alpha: 0.1);
 
   /// Convert tone to border color with alpha using design tokens.
-  static Color toneToBorderColor(AiStatusTone tone, BuildContext context) => toneToColor(tone, context).withValues(alpha: 0.3);
+  static Color toneToBorderColor(AiStatusTone tone, BuildContext context) =>
+      toneToColor(tone, context).withValues(alpha: 0.3);
 }

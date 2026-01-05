@@ -4,7 +4,6 @@ part 'notification_model.g.dart';
 
 @JsonSerializable()
 class NotificationModel {
-
   NotificationModel({
     required this.id,
     required this.userId,
@@ -12,7 +11,8 @@ class NotificationModel {
     required this.content,
     required this.type,
     required this.isRead,
-    required this.createdAt, this.readAt,
+    required this.createdAt,
+    this.readAt,
     this.data,
   });
 

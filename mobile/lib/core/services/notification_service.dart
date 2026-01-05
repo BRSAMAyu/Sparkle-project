@@ -12,7 +12,6 @@ import 'package:timezone/timezone.dart' as tz;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
-
   NotificationService() {
     _initialize();
   }
@@ -25,19 +24,19 @@ class NotificationService {
     // Assuming Asia/Shanghai for default, but should ideally get from device
     // tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
 
-    const initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher'); // Verify icon name
+    const initializationSettingsAndroid = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',); // Verify icon name
 
     // TODO: Add iOS settings
-    const initializationSettings =
-        InitializationSettings(
+    const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
     );
 
     await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
-      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse:
+          _onBackgroundNotificationResponse,
     );
 
     // Create Channel
@@ -52,13 +51,13 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
-        
+
     // Request permissions (Android 13+)
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-        
+
     _logger.i('NotificationService initialized');
   }
 
@@ -70,8 +69,9 @@ class NotificationService {
   }
 
   void _onNotificationResponse(NotificationResponse details) {
-    _logger.i('Notification action: ${details.actionId}, payload: ${details.payload}');
-    
+    _logger.i(
+        'Notification action: ${details.actionId}, payload: ${details.payload}',);
+
     if (details.payload != null) {
       try {
         final decodedPayload = jsonDecode(details.payload!);
@@ -80,17 +80,18 @@ class NotificationService {
             : <String, dynamic>{};
 
         if (details.actionId == 'START_NOW') {
-           // Navigate to Task Execution
-           // Since we are inside a callback, we might need the context or router
-           // We use the global navigatorKey context if available
-           if (navigatorKey.currentContext != null) {
-              final context = navigatorKey.currentContext!;
-              // Parse taskId from payload
-              final taskId = payload['taskId'] as String?;
-              if (taskId != null) {
-                unawaited(GoRouter.of(context).pushNamed('taskExecution', pathParameters: {'id': taskId}));
-              }
-           }
+          // Navigate to Task Execution
+          // Since we are inside a callback, we might need the context or router
+          // We use the global navigatorKey context if available
+          if (navigatorKey.currentContext != null) {
+            final context = navigatorKey.currentContext!;
+            // Parse taskId from payload
+            final taskId = payload['taskId'] as String?;
+            if (taskId != null) {
+              unawaited(GoRouter.of(context)
+                  .pushNamed('taskExecution', pathParameters: {'id': taskId}),);
+            }
+          }
         } else if (details.actionId == 'SNOOZE') {
           // Handle Snooze API call
           _handleSnooze(payload);
@@ -103,7 +104,7 @@ class NotificationService {
       }
     }
   }
-  
+
   void _handleSnooze(Map<String, dynamic> payload) {
     // TODO: Call API to snooze
     _logger.i('Snoozing notification: $payload');
@@ -119,8 +120,7 @@ class NotificationService {
     required String body,
     required Map<String, dynamic> payload,
   }) async {
-    const androidDetails =
-        AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'sparkle_smart_push',
       'Smart Push Notifications',
       channelDescription: 'Notifications for Sparkle Smart Push',
@@ -144,8 +144,7 @@ class NotificationService {
       ],
     );
 
-    const notificationDetails =
-        NotificationDetails(android: androidDetails);
+    const notificationDetails = NotificationDetails(android: androidDetails);
 
     await _notificationsPlugin.show(
       DateTime.now().millisecond, // unique ID
@@ -164,8 +163,7 @@ class NotificationService {
     required Map<String, dynamic> payload,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
-    const androidDetails =
-        AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'sparkle_calendar_reminders',
       'Calendar Reminders',
       channelDescription: 'Reminders for Calendar Events',
@@ -173,13 +171,14 @@ class NotificationService {
       priority: Priority.high,
     );
 
-    const notificationDetails =
-        NotificationDetails(android: androidDetails);
+    const notificationDetails = NotificationDetails(android: androidDetails);
 
     // Ensure we are scheduling in the future (unless it's a recurring event, logic might differ but for simple schedule, yes)
     // For recurring, zonedSchedule handles it if matchDateTimeComponents is set
-    if (matchDateTimeComponents == null && scheduledDate.isBefore(DateTime.now())) {
-      _logger.w('Attempted to schedule notification in the past: $scheduledDate');
+    if (matchDateTimeComponents == null &&
+        scheduledDate.isBefore(DateTime.now())) {
+      _logger
+          .w('Attempted to schedule notification in the past: $scheduledDate');
       return;
     }
 
@@ -195,8 +194,9 @@ class NotificationService {
       payload: jsonEncode(payload),
       matchDateTimeComponents: matchDateTimeComponents,
     );
-    
-    _logger.i('Scheduled notification $id for $scheduledDate with match: $matchDateTimeComponents');
+
+    _logger.i(
+        'Scheduled notification $id for $scheduledDate with match: $matchDateTimeComponents',);
   }
 
   Future<void> cancelNotification(int id) async {
@@ -205,4 +205,5 @@ class NotificationService {
   }
 }
 
-final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
+final notificationServiceProvider =
+    Provider<NotificationService>((ref) => NotificationService());

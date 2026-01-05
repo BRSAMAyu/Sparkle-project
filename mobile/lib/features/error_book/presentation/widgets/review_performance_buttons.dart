@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 /// 用于复习页面，让用户评价自己对错题的掌握情况
 /// 三个选项：记住了(remembered)、有点模糊(fuzzy)、忘记了(forgotten)
 class ReviewPerformanceButtons extends StatelessWidget {
-
   const ReviewPerformanceButtons({
-    required this.onPerformanceSelected, super.key,
+    required this.onPerformanceSelected,
+    super.key,
     this.isLoading = false,
   });
   final Function(String performance) onPerformanceSelected;
@@ -15,61 +15,60 @@ class ReviewPerformanceButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          '你对这道题的掌握情况？',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '你对这道题的掌握情况？',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _PerformanceButton(
+                  performance: 'forgotten',
+                  label: '忘记了',
+                  icon: Icons.close,
+                  color: Colors.red,
+                  description: '下次会提前复习',
+                  isLoading: isLoading,
+                  onTap: () => onPerformanceSelected('forgotten'),
+                ),
               ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _PerformanceButton(
-                performance: 'forgotten',
-                label: '忘记了',
-                icon: Icons.close,
-                color: Colors.red,
-                description: '下次会提前复习',
-                isLoading: isLoading,
-                onTap: () => onPerformanceSelected('forgotten'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _PerformanceButton(
+                  performance: 'fuzzy',
+                  label: '有点模糊',
+                  icon: Icons.remove,
+                  color: Colors.orange,
+                  description: '保持复习间隔',
+                  isLoading: isLoading,
+                  onTap: () => onPerformanceSelected('fuzzy'),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _PerformanceButton(
-                performance: 'fuzzy',
-                label: '有点模糊',
-                icon: Icons.remove,
-                color: Colors.orange,
-                description: '保持复习间隔',
-                isLoading: isLoading,
-                onTap: () => onPerformanceSelected('fuzzy'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _PerformanceButton(
+                  performance: 'remembered',
+                  label: '记住了',
+                  icon: Icons.check,
+                  color: Colors.green,
+                  description: '延长复习间隔',
+                  isLoading: isLoading,
+                  onTap: () => onPerformanceSelected('remembered'),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _PerformanceButton(
-                performance: 'remembered',
-                label: '记住了',
-                icon: Icons.check,
-                color: Colors.green,
-                description: '延长复习间隔',
-                isLoading: isLoading,
-                onTap: () => onPerformanceSelected('remembered'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+            ],
+          ),
+        ],
+      );
 }
 
 class _PerformanceButton extends StatelessWidget {
-
   const _PerformanceButton({
     required this.performance,
     required this.label,
@@ -92,7 +91,7 @@ class _PerformanceButton extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: isLoading ? null : onTap,
@@ -100,7 +99,7 @@ class _PerformanceButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -123,7 +122,7 @@ class _PerformanceButton extends StatelessWidget {
               Text(
                 description,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -141,23 +140,24 @@ class _PerformanceButton extends StatelessWidget {
 ///
 /// 可以作为底部弹窗使用，提供更详细的说明
 class ReviewPerformanceBottomSheet extends StatelessWidget {
-
   const ReviewPerformanceBottomSheet({
-    required this.onPerformanceSelected, super.key,
+    required this.onPerformanceSelected,
+    super.key,
   });
   final Function(String performance) onPerformanceSelected;
 
-  static Future<String?> show(BuildContext context) => showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => ReviewPerformanceBottomSheet(
-        onPerformanceSelected: (performance) {
-          Navigator.of(context).pop(performance);
-        },
-      ),
-    );
+  static Future<String?> show(BuildContext context) =>
+      showModalBottomSheet<String>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => ReviewPerformanceBottomSheet(
+          onPerformanceSelected: (performance) {
+            Navigator.of(context).pop(performance);
+          },
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +222,6 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
 }
 
 class _PerformanceOption extends StatelessWidget {
-
   const _PerformanceOption({
     required this.performance,
     required this.label,
@@ -241,7 +240,7 @@ class _PerformanceOption extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -249,7 +248,7 @@ class _PerformanceOption extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -258,7 +257,7 @@ class _PerformanceOption extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

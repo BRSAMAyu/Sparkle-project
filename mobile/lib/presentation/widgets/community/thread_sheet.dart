@@ -8,7 +8,8 @@ import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
 import 'package:sparkle/presentation/widgets/community/group_chat_bubble.dart';
 
 class ThreadSheet extends ConsumerStatefulWidget {
-  const ThreadSheet({required this.groupId, required this.rootMessage, super.key});
+  const ThreadSheet(
+      {required this.groupId, required this.rootMessage, super.key,});
 
   final String groupId;
   final MessageInfo rootMessage;
@@ -29,7 +30,9 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
 
   Future<void> _loadThread() async {
     setState(() => _loading = true);
-    final messages = await ref.read(groupChatProvider(widget.groupId).notifier).getThreadMessages(
+    final messages = await ref
+        .read(groupChatProvider(widget.groupId).notifier)
+        .getThreadMessages(
           widget.rootMessage.id,
         );
     if (!mounted) return;
@@ -49,44 +52,54 @@ class _ThreadSheetState extends ConsumerState<ThreadSheet> {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.only(top: DS.lg),
-        child: Column(
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.only(top: DS.lg),
+          child: Column(
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
-            ),
-            const SizedBox(height: DS.sm),
-            Text('线程讨论', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: DS.md),
-            Expanded(
-              child: _loading
-                  ? const Center(child: LoadingIndicator())
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: DS.lg),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[index];
-                        return GroupChatBubble(
-                          message: message,
-                          onRevoke: (msg) => ref.read(groupChatProvider(widget.groupId).notifier).revokeMessage(msg.id),
-                          onEdit: (msg, content) => ref.read(groupChatProvider(widget.groupId).notifier).editMessage(msg.id, content),
-                          onReaction: (msg, emoji) => ref.read(groupChatProvider(widget.groupId).notifier).toggleReaction(msg.id, emoji),
-                        );
-                      },
-                    ),
-            ),
-            ChatInput(
-              hintText: '回复线程...',
-              onSend: (text, {replyToId}) => _sendReply(text),
-            ),
-          ],
+              const SizedBox(height: DS.sm),
+              Text('线程讨论', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: DS.md),
+              Expanded(
+                child: _loading
+                    ? const Center(child: LoadingIndicator())
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          return GroupChatBubble(
+                            message: message,
+                            groupId: widget.groupId,
+                            onRevoke: (msg) => ref
+                                .read(
+                                    groupChatProvider(widget.groupId).notifier,)
+                                .revokeMessage(msg.id),
+                            onEdit: (msg, content) => ref
+                                .read(
+                                    groupChatProvider(widget.groupId).notifier,)
+                                .editMessage(msg.id, content),
+                            onReaction: (msg, emoji) => ref
+                                .read(
+                                    groupChatProvider(widget.groupId).notifier,)
+                                .toggleReaction(msg.id, emoji),
+                          );
+                        },
+                      ),
+              ),
+              ChatInput(
+                hintText: '回复线程...',
+                onSend: (text, {replyToId}) => _sendReply(text),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 }

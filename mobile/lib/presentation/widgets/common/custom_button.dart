@@ -20,7 +20,6 @@ enum CustomButtonSize {
 ///
 /// 支持多种变体、尺寸和状态，具有精致的视觉效果和流畅的动画
 class CustomButton extends StatefulWidget {
-
   const CustomButton({
     super.key,
     this.text,
@@ -39,72 +38,85 @@ class CustomButton extends StatefulWidget {
 
   /// 主要按钮工厂构造函数
   factory CustomButton.primary({
-    required String text, required VoidCallback? onPressed, Key? key,
+    required String text,
+    required VoidCallback? onPressed,
+    Key? key,
     IconData? icon,
     CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isFullWidth = false,
     LinearGradient? customGradient,
-  }) => CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      size: size,
-      isLoading: isLoading,
-      isFullWidth: isFullWidth,
-      customGradient: customGradient,
-    );
+  }) =>
+      CustomButton(
+        key: key,
+        text: text,
+        icon: icon,
+        onPressed: onPressed,
+        size: size,
+        isLoading: isLoading,
+        isFullWidth: isFullWidth,
+        customGradient: customGradient,
+      );
 
   /// 次要按钮工厂构造函数
   factory CustomButton.secondary({
-    required String text, required VoidCallback? onPressed, Key? key,
+    required String text,
+    required VoidCallback? onPressed,
+    Key? key,
     IconData? icon,
     CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isFullWidth = false,
-  }) => CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.secondary,
-      size: size,
-      isLoading: isLoading,
-      isFullWidth: isFullWidth,
-    );
+  }) =>
+      CustomButton(
+        key: key,
+        text: text,
+        icon: icon,
+        onPressed: onPressed,
+        variant: ButtonVariant.secondary,
+        size: size,
+        isLoading: isLoading,
+        isFullWidth: isFullWidth,
+      );
 
   /// 文字按钮工厂构造函数
   factory CustomButton.text({
-    required String text, required VoidCallback? onPressed, Key? key,
+    required String text,
+    required VoidCallback? onPressed,
+    Key? key,
     IconData? icon,
     CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
-  }) => CustomButton(
-      key: key,
-      text: text,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.text,
-      size: size,
-      isLoading: isLoading,
-    );
+  }) =>
+      CustomButton(
+        key: key,
+        text: text,
+        icon: icon,
+        onPressed: onPressed,
+        variant: ButtonVariant.text,
+        size: size,
+        isLoading: isLoading,
+      );
 
   /// 图标按钮工厂构造函数
   factory CustomButton.icon({
-    required IconData icon, required VoidCallback? onPressed, Key? key,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    Key? key,
     CustomButtonSize size = CustomButtonSize.medium,
     bool isLoading = false,
     bool isCircular = true,
-  }) => CustomButton(
-      key: key,
-      icon: icon,
-      onPressed: onPressed,
-      variant: ButtonVariant.icon,
-      size: size,
-      isLoading: isLoading,
-      isCircular: isCircular,
-    );
+  }) =>
+      CustomButton(
+        key: key,
+        icon: icon,
+        onPressed: onPressed,
+        variant: ButtonVariant.icon,
+        size: size,
+        isLoading: isLoading,
+        isCircular: isCircular,
+      );
+
   /// 按钮文本
   final String? text;
 
@@ -273,63 +285,54 @@ class _CustomButtonState extends State<CustomButton>
     );
   }
 
-  Widget _buildSecondaryButton(BuildContext context, bool isDisabled) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        border: Border.all(
-          color: isDisabled
-              ? DS.neutral300
-              : DS.primaryBase,
-          width: 2.0,
+  Widget _buildSecondaryButton(BuildContext context, bool isDisabled) =>
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          border: Border.all(
+            color: isDisabled ? DS.neutral300 : DS.primaryBase,
+            width: 2.0,
+          ),
+          borderRadius: DS.borderRadius12,
         ),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Material(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isDisabled ? null : widget.onPressed,
+            borderRadius: DS.borderRadius12,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.size == CustomButtonSize.small
+                    ? DS.spacing16
+                    : DS.spacing24,
+              ),
+              child: _buildButtonRow(
+                iconColor: isDisabled ? DS.neutral400 : DS.primaryBase,
+                textColor: isDisabled ? DS.neutral400 : DS.primaryBase,
+                isDisabled: isDisabled,
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildTextButton(BuildContext context, bool isDisabled) => Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
-          borderRadius: DS.borderRadius12,
+          borderRadius: DS.borderRadius8,
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.size == CustomButtonSize.small
-                  ? DS.spacing16
-                  : DS.spacing24,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
             ),
             child: _buildButtonRow(
-              iconColor: isDisabled
-                  ? DS.neutral400
-                  : DS.primaryBase,
-              textColor: isDisabled
-                  ? DS.neutral400
-                  : DS.primaryBase,
+              iconColor: isDisabled ? DS.neutral400 : DS.primaryBase,
+              textColor: isDisabled ? DS.neutral400 : DS.primaryBase,
               isDisabled: isDisabled,
             ),
           ),
         ),
-      ),
-    );
-
-  Widget _buildTextButton(BuildContext context, bool isDisabled) => Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isDisabled ? null : widget.onPressed,
-        borderRadius: DS.borderRadius8,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-          ),
-          child: _buildButtonRow(
-            iconColor: isDisabled
-                ? DS.neutral400
-                : DS.primaryBase,
-            textColor: isDisabled
-                ? DS.neutral400
-                : DS.primaryBase,
-            isDisabled: isDisabled,
-          ),
-        ),
-      ),
-    );
+      );
 
   Widget _buildIconButton(BuildContext context, bool isDisabled) {
     final buttonSize = _getButtonHeight();
@@ -340,18 +343,16 @@ class _CustomButtonState extends State<CustomButton>
       decoration: BoxDecoration(
         gradient: isDisabled ? null : DS.primaryGradient,
         color: isDisabled ? DS.neutral300 : null,
-        borderRadius: widget.isCircular
-            ? DS.borderRadiusFull
-            : DS.borderRadius12,
+        borderRadius:
+            widget.isCircular ? DS.borderRadiusFull : DS.borderRadius12,
         boxShadow: isDisabled ? null : DS.shadowSm,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : widget.onPressed,
-          borderRadius: widget.isCircular
-              ? DS.borderRadiusFull
-              : DS.borderRadius12,
+          borderRadius:
+              widget.isCircular ? DS.borderRadiusFull : DS.borderRadius12,
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
@@ -359,7 +360,8 @@ class _CustomButtonState extends State<CustomButton>
                     height: _getIconSize() * 0.8,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(DS.brandPrimary),
                     ),
                   )
                 : Icon(

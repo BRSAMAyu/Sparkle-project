@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GalaxyService_UpdateNodeMastery_FullMethodName = "/galaxy.v1.GalaxyService/UpdateNodeMastery"
+	GalaxyService_UpdateNodeMastery_FullMethodName       = "/galaxy.v1.GalaxyService/UpdateNodeMastery"
+	GalaxyService_SyncCollaborativeGalaxy_FullMethodName = "/galaxy.v1.GalaxyService/SyncCollaborativeGalaxy"
 )
 
 // GalaxyServiceClient is the client API for GalaxyService service.
@@ -29,8 +30,9 @@ const (
 // GalaxyService defines the interface for Knowledge Galaxy operations.
 type GalaxyServiceClient interface {
 	// UpdateNodeMastery updates the mastery level of a node for a user.
-	// This is used for syncing offline progress and updating global spark counts.
 	UpdateNodeMastery(ctx context.Context, in *UpdateNodeMasteryRequest, opts ...grpc.CallOption) (*UpdateNodeMasteryResponse, error)
+	// SyncCollaborativeGalaxy syncs CRDT updates for a collaborative galaxy.
+	SyncCollaborativeGalaxy(ctx context.Context, in *SyncCollaborativeGalaxyRequest, opts ...grpc.CallOption) (*SyncCollaborativeGalaxyResponse, error)
 }
 
 type galaxyServiceClient struct {
@@ -51,6 +53,16 @@ func (c *galaxyServiceClient) UpdateNodeMastery(ctx context.Context, in *UpdateN
 	return out, nil
 }
 
+func (c *galaxyServiceClient) SyncCollaborativeGalaxy(ctx context.Context, in *SyncCollaborativeGalaxyRequest, opts ...grpc.CallOption) (*SyncCollaborativeGalaxyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncCollaborativeGalaxyResponse)
+	err := c.cc.Invoke(ctx, GalaxyService_SyncCollaborativeGalaxy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GalaxyServiceServer is the server API for GalaxyService service.
 // All implementations must embed UnimplementedGalaxyServiceServer
 // for forward compatibility.
@@ -58,8 +70,9 @@ func (c *galaxyServiceClient) UpdateNodeMastery(ctx context.Context, in *UpdateN
 // GalaxyService defines the interface for Knowledge Galaxy operations.
 type GalaxyServiceServer interface {
 	// UpdateNodeMastery updates the mastery level of a node for a user.
-	// This is used for syncing offline progress and updating global spark counts.
 	UpdateNodeMastery(context.Context, *UpdateNodeMasteryRequest) (*UpdateNodeMasteryResponse, error)
+	// SyncCollaborativeGalaxy syncs CRDT updates for a collaborative galaxy.
+	SyncCollaborativeGalaxy(context.Context, *SyncCollaborativeGalaxyRequest) (*SyncCollaborativeGalaxyResponse, error)
 	mustEmbedUnimplementedGalaxyServiceServer()
 }
 
@@ -72,6 +85,9 @@ type UnimplementedGalaxyServiceServer struct{}
 
 func (UnimplementedGalaxyServiceServer) UpdateNodeMastery(context.Context, *UpdateNodeMasteryRequest) (*UpdateNodeMasteryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateNodeMastery not implemented")
+}
+func (UnimplementedGalaxyServiceServer) SyncCollaborativeGalaxy(context.Context, *SyncCollaborativeGalaxyRequest) (*SyncCollaborativeGalaxyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SyncCollaborativeGalaxy not implemented")
 }
 func (UnimplementedGalaxyServiceServer) mustEmbedUnimplementedGalaxyServiceServer() {}
 func (UnimplementedGalaxyServiceServer) testEmbeddedByValue()                       {}
@@ -112,6 +128,24 @@ func _GalaxyService_UpdateNodeMastery_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GalaxyService_SyncCollaborativeGalaxy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncCollaborativeGalaxyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GalaxyServiceServer).SyncCollaborativeGalaxy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GalaxyService_SyncCollaborativeGalaxy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GalaxyServiceServer).SyncCollaborativeGalaxy(ctx, req.(*SyncCollaborativeGalaxyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GalaxyService_ServiceDesc is the grpc.ServiceDesc for GalaxyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +156,10 @@ var GalaxyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateNodeMastery",
 			Handler:    _GalaxyService_UpdateNodeMastery_Handler,
+		},
+		{
+			MethodName: "SyncCollaborativeGalaxy",
+			Handler:    _GalaxyService_SyncCollaborativeGalaxy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

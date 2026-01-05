@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 part 'plan_model.g.dart';
 
@@ -10,20 +10,26 @@ enum PlanType {
 
 @JsonSerializable()
 class PlanModel {
-
   PlanModel({
     required this.id,
     required this.userId,
     required this.name,
     required this.type,
-    required this.dailyAvailableMinutes, required this.masteryLevel, required this.progress, required this.isActive, required this.createdAt, required this.updatedAt, this.description,
+    required this.dailyAvailableMinutes,
+    required this.masteryLevel,
+    required this.progress,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.targetDate,
     this.subject,
     this.totalEstimatedHours,
     this.tasks,
   });
 
-  factory PlanModel.fromJson(Map<String, dynamic> json) => _$PlanModelFromJson(json);
+  factory PlanModel.fromJson(Map<String, dynamic> json) =>
+      _$PlanModelFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String userId;
@@ -52,16 +58,17 @@ class PlanModel {
 
 @JsonSerializable()
 class PlanCreate {
-
   PlanCreate({
     required this.name,
     required this.type,
-    required this.dailyAvailableMinutes, this.description,
+    required this.dailyAvailableMinutes,
+    this.description,
     this.targetDate,
     this.subject,
   });
 
-  factory PlanCreate.fromJson(Map<String, dynamic> json) => _$PlanCreateFromJson(json);
+  factory PlanCreate.fromJson(Map<String, dynamic> json) =>
+      _$PlanCreateFromJson(json);
   final String name;
   final PlanType type;
   final String? description;
@@ -75,7 +82,6 @@ class PlanCreate {
 
 @JsonSerializable()
 class PlanUpdate {
-
   PlanUpdate({
     this.name,
     this.description,
@@ -83,7 +89,8 @@ class PlanUpdate {
     this.isActive,
   });
 
-  factory PlanUpdate.fromJson(Map<String, dynamic> json) => _$PlanUpdateFromJson(json);
+  factory PlanUpdate.fromJson(Map<String, dynamic> json) =>
+      _$PlanUpdateFromJson(json);
   final String? name;
   final String? description;
   @JsonKey(name: 'daily_available_minutes')
@@ -95,7 +102,6 @@ class PlanUpdate {
 
 @JsonSerializable()
 class PlanProgress {
-
   PlanProgress({
     required this.planId,
     required this.progress,
@@ -103,7 +109,8 @@ class PlanProgress {
     required this.totalTasks,
   });
 
-  factory PlanProgress.fromJson(Map<String, dynamic> json) => _$PlanProgressFromJson(json);
+  factory PlanProgress.fromJson(Map<String, dynamic> json) =>
+      _$PlanProgressFromJson(json);
   @JsonKey(name: 'plan_id')
   final String planId;
   final double progress;

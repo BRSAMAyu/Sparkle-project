@@ -85,7 +85,6 @@ proto-gen-legacy:
 	python -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/galaxy/v1 \
-	       --grpc_python_at=backend/app/gen/galaxy/v1 \
 	       --grpc_python_out=backend/app/gen/galaxy/v1 \
 	       --pyi_out=backend/app/gen/galaxy/v1 \
 	       proto/galaxy_service.proto

@@ -6,7 +6,7 @@
 
 import asyncio
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from loguru import logger
 
 from app.core.age_client import get_age_client, init_age

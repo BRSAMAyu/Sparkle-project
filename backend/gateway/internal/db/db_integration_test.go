@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -126,12 +125,11 @@ func TestTransactionNesting(t *testing.T) {
 	require.NoError(t, err)
 
 	// Savepoint (pseudo-nesting in PostgreSQL)
-	sp, err := tx1.SavePoint(ctx, "sp1")
+	_, err = tx1.Exec(ctx, "SAVEPOINT sp1")
 	assert.NoError(t, err)
-	assert.NotNil(t, sp)
 
 	// Rollback to savepoint
-	err = tx1.RollbackToSavePoint(ctx, sp)
+	_, err = tx1.Exec(ctx, "ROLLBACK TO SAVEPOINT sp1")
 	assert.NoError(t, err)
 
 	// Commit outer transaction
@@ -434,9 +432,9 @@ func TestConnectionState(t *testing.T) {
 // ============================================================
 
 type MockDBTX struct {
-	execCalled      bool
-	queryCalled     bool
-	queryRowCalled  bool
+	execCalled     bool
+	queryCalled    bool
+	queryRowCalled bool
 }
 
 func (m *MockDBTX) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {

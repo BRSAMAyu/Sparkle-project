@@ -5,9 +5,10 @@ import 'package:sparkle/domain/models/learning_path_node.dart';
 import 'package:sparkle/presentation/providers/learning_path_provider.dart';
 
 class LearningPathDialog extends ConsumerWidget {
-
   const LearningPathDialog({
-    required this.targetNodeId, required this.targetNodeName, super.key,
+    required this.targetNodeId,
+    required this.targetNodeName,
+    super.key,
   });
   final String targetNodeId;
   final String targetNodeName;
@@ -46,7 +47,9 @@ class LearningPathDialog extends ConsumerWidget {
             child: pathAsync.when(
               data: (path) {
                 if (path.isEmpty) {
-                  return const Center(child: Text('No prerequisites found. You can start learning!'));
+                  return const Center(
+                      child: Text(
+                          'No prerequisites found. You can start learning!',),);
                 }
                 return ListView.builder(
                   itemCount: path.length,
@@ -66,7 +69,8 @@ class LearningPathDialog extends ConsumerWidget {
     );
   }
 
-  Widget _buildTimelineItem(BuildContext context, LearningPathNode node, bool isLast) {
+  Widget _buildTimelineItem(
+      BuildContext context, LearningPathNode node, bool isLast,) {
     Color statusColor;
     IconData statusIcon;
 
@@ -92,7 +96,7 @@ class LearningPathDialog extends ConsumerWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: statusColor.withOpacity(0.2),
+                  color: statusColor.withValues(alpha: 0.2),
                 ),
                 padding: const EdgeInsets.all(DS.sm),
                 child: Icon(statusIcon, color: statusColor, size: 20),
@@ -101,7 +105,7 @@ class LearningPathDialog extends ConsumerWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: DS.brandPrimary.withOpacity(0.3),
+                    color: DS.brandPrimary.withValues(alpha: 0.3),
                     margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 ),
@@ -118,7 +122,9 @@ class LearningPathDialog extends ConsumerWidget {
                     node.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: node.isTarget ? Theme.of(context).primaryColor : null,
+                          color: node.isTarget
+                              ? Theme.of(context).primaryColor
+                              : null,
                         ),
                   ),
                   const SizedBox(height: DS.xs),

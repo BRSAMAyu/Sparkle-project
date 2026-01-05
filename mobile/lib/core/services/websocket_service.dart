@@ -12,7 +12,7 @@ class WebSocketService {
   bool _isConnected = false;
   String? _url;
   Map<String, dynamic>? _customHeaders;
-  
+
   // Reconnection logic
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
@@ -20,7 +20,8 @@ class WebSocketService {
   static const int _maxReconnectAttempts = 10;
   static const int _baseReconnectDelayMs = 1000;
 
-  final StreamController<dynamic> _controller = StreamController<dynamic>.broadcast();
+  final StreamController<dynamic> _controller =
+      StreamController<dynamic>.broadcast();
   Stream<dynamic> get stream => _controller.stream;
   bool get isConnected => _isConnected;
 
@@ -39,7 +40,8 @@ class WebSocketService {
 
     try {
       final uri = Uri.parse(_url!);
-      debugPrint('Connecting to WebSocket: $uri (Attempt: $_reconnectAttempts)');
+      debugPrint(
+          'Connecting to WebSocket: $uri (Attempt: $_reconnectAttempts)',);
 
       // 使用headers参数（如果提供）- 使用IOWebSocketChannel支持headers
       _channel = IOWebSocketChannel.connect(
@@ -47,7 +49,7 @@ class WebSocketService {
         headers: _customHeaders,
       );
       _isConnected = true;
-      
+
       _channel!.stream.listen(
         (data) {
           _controller.add(data);
@@ -74,7 +76,7 @@ class WebSocketService {
 
   void _scheduleReconnect() {
     if (_isManualDisconnect) return;
-    
+
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       debugPrint('WebSocket max reconnect attempts reached');
       return;
@@ -82,7 +84,7 @@ class WebSocketService {
 
     final delay = _baseReconnectDelayMs * pow(2, _reconnectAttempts);
     debugPrint('Scheduling reconnect in ${delay}ms');
-    
+
     _reconnectTimer = Timer(Duration(milliseconds: delay.toInt()), () {
       _reconnectAttempts++;
       _connectInternal();
@@ -97,7 +99,7 @@ class WebSocketService {
   void disconnect() {
     _isManualDisconnect = true;
     _cancelReconnectTimer();
-    
+
     if (_channel != null) {
       debugPrint('Disconnecting WebSocket');
       _channel!.sink.close(status.normalClosure);

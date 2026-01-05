@@ -1,16 +1,16 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sparkle/data/models/galaxy_model.dart';
-import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 part 'knowledge_detail_model.g.dart';
 
 /// Knowledge node detail response from API
 @JsonSerializable()
 class KnowledgeDetailResponse {
-
   KnowledgeDetailResponse({
     required this.node,
-    required this.userStats, this.relations = const [],
+    required this.userStats,
+    this.relations = const [],
     this.relatedTasks = const [],
     this.relatedPlans = const [],
   });
@@ -29,7 +29,6 @@ class KnowledgeDetailResponse {
 /// Detailed knowledge node information
 @JsonSerializable()
 class KnowledgeNodeDetail {
-
   KnowledgeNodeDetail({
     required this.id,
     required this.name,
@@ -97,7 +96,6 @@ class KnowledgeNodeDetail {
 /// Node relation (edge in the knowledge graph)
 @JsonSerializable()
 class NodeRelation {
-
   NodeRelation({
     required this.id,
     required this.sourceNodeId,
@@ -147,7 +145,6 @@ class NodeRelation {
 /// Related plan brief info
 @JsonSerializable()
 class RelatedPlan {
-
   RelatedPlan({
     required this.id,
     required this.title,
@@ -172,7 +169,6 @@ class RelatedPlan {
 /// User's stats for this knowledge node
 @JsonSerializable()
 class KnowledgeUserStats {
-
   KnowledgeUserStats({
     this.masteryScore = 0,
     this.totalStudyMinutes = 0,

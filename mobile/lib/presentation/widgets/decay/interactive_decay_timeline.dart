@@ -12,12 +12,14 @@ import 'package:sparkle/core/design/design_system.dart';
 /// - "What If" 按钮模拟复习干预效果
 /// - 触觉反馈增强交互体验
 class InteractiveDecayTimeline extends StatefulWidget {
-
   const InteractiveDecayTimeline({
-    required this.onDaysChanged, required this.onSimulateIntervention, super.key,
+    required this.onDaysChanged,
+    required this.onSimulateIntervention,
+    super.key,
     this.selectedNodeIds = const [],
     this.initialDays = 30,
   });
+
   /// 衰减预测数据更新回调
   final Function(int daysAhead) onDaysChanged;
 
@@ -123,13 +125,13 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
           end: Alignment.bottomRight,
           colors: [
             theme.colorScheme.surface,
-            theme.colorScheme.surface.withOpacity(0.8),
+            theme.colorScheme.surface.withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: DS.brandPrimary.withOpacity(0.1),
+            color: DS.brandPrimary.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -179,62 +181,60 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
   }
 
   Widget _buildTimeChip(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '未来 ${_currentDays.round()} 天',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(20),
         ),
-      ),
-    );
+        child: Text(
+          '未来 ${_currentDays.round()} 天',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      );
 
   Widget _buildTimelineSlider(ThemeData theme) => Column(
-      children: [
-        // 自定义滑块
-        SliderTheme(
-          data: SliderThemeData(
-            activeTrackColor: _getTrackColor(_currentDays),
-            inactiveTrackColor: theme.colorScheme.surfaceContainerHighest,
-            thumbColor: _getTrackColor(_currentDays),
-            overlayColor: _getTrackColor(_currentDays).withOpacity(0.2),
-            thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 12,
+        children: [
+          // 自定义滑块
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: _getTrackColor(_currentDays),
+              inactiveTrackColor: theme.colorScheme.surfaceContainerHighest,
+              thumbColor: _getTrackColor(_currentDays),
+              overlayColor: _getTrackColor(_currentDays).withValues(alpha: 0.2),
+              thumbShape: const RoundSliderThumbShape(
+                enabledThumbRadius: 12,
+              ),
+              overlayShape: const RoundSliderOverlayShape(),
+              trackHeight: 6,
             ),
-            overlayShape: const RoundSliderOverlayShape(
-              
+            child: Slider(
+              value: _currentDays,
+              max: 90,
+              divisions: 18, // 每5天一个刻度
+              label: '${_currentDays.round()} 天后',
+              onChanged: _onSliderChanged,
             ),
-            trackHeight: 6,
           ),
-          child: Slider(
-            value: _currentDays,
-            max: 90,
-            divisions: 18, // 每5天一个刻度
-            label: '${_currentDays.round()} 天后',
-            onChanged: _onSliderChanged,
-          ),
-        ),
 
-        // 刻度标签
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildTickLabel('今天', theme),
-              _buildTickLabel('30天', theme),
-              _buildTickLabel('60天', theme),
-              _buildTickLabel('90天', theme),
-            ],
+          // 刻度标签
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildTickLabel('今天', theme),
+                _buildTickLabel('30天', theme),
+                _buildTickLabel('60天', theme),
+                _buildTickLabel('90天', theme),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Color _getTrackColor(double days) {
     if (days <= 15) {
@@ -247,38 +247,38 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
   }
 
   Widget _buildTickLabel(String label, ThemeData theme) => Text(
-      label,
-      style: theme.textTheme.bodySmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-      ),
-    );
+        label,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
 
   Widget _buildStatusIndicators(ThemeData theme) => Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildStatusItem(
-          icon: Icons.wb_sunny,
-          label: '健康',
-          color: DS.success,
-          description: '>60%',
-          theme: theme,
-        ),
-        _buildStatusItem(
-          icon: Icons.wb_cloudy,
-          label: '衰减中',
-          color: DS.brandPrimaryConst,
-          description: '20-60%',
-          theme: theme,
-        ),
-        _buildStatusItem(
-          icon: Icons.warning_amber,
-          label: '危险',
-          color: DS.error,
-          description: '<20%',
-          theme: theme,
-        ),
-      ],
-    );
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatusItem(
+            icon: Icons.wb_sunny,
+            label: '健康',
+            color: DS.success,
+            description: '>60%',
+            theme: theme,
+          ),
+          _buildStatusItem(
+            icon: Icons.wb_cloudy,
+            label: '衰减中',
+            color: DS.brandPrimaryConst,
+            description: '20-60%',
+            theme: theme,
+          ),
+          _buildStatusItem(
+            icon: Icons.warning_amber,
+            label: '危险',
+            color: DS.error,
+            description: '<20%',
+            theme: theme,
+          ),
+        ],
+      );
 
   Widget _buildStatusItem({
     required IconData icon,
@@ -286,73 +286,75 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
     required Color color,
     required String description,
     required ThemeData theme,
-  }) => Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: DS.xs),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
+  }) =>
+      Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: DS.xs),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        Text(
-          description,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontSize: 10,
+          Text(
+            description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 10,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
   Widget _buildInterventionButton(ThemeData theme) => SizedBox(
-      width: double.infinity,
-      child: AnimatedBuilder(
-        animation: _interventionController,
-        builder: (context, child) {
-          final scale = 1.0 + _interventionController.value * 0.1;
+        width: double.infinity,
+        child: AnimatedBuilder(
+          animation: _interventionController,
+          builder: (context, child) {
+            final scale = 1.0 + _interventionController.value * 0.1;
 
-          return Transform.scale(
-            scale: scale,
-            child: ElevatedButton.icon(
-              onPressed: _isSimulating ? null : _onSimulateReview,
-              icon: _isSimulating
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    )
-                  : const Icon(Icons.auto_fix_high),
-              label: Text(
-                _isSimulating
-                    ? '模拟中...'
-                    : '如果现在复习？ (${widget.selectedNodeIds.length} 个节点)',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
+            return Transform.scale(
+              scale: scale,
+              child: ElevatedButton.icon(
+                onPressed: _isSimulating ? null : _onSimulateReview,
+                icon: _isSimulating
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.auto_fix_high),
+                label: Text(
+                  _isSimulating
+                      ? '模拟中...'
+                      : '如果现在复习？ (${widget.selectedNodeIds.length} 个节点)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: _isSimulating ? 0 : 2,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: _isSimulating ? 0 : 2,
-              ),
-            ),
-          );
-        },
-      ),
-    );
+            );
+          },
+        ),
+      );
 }
 
 /// 时间线可视化 Painter（可选，用于更复杂的可视化）
-class DecayTimelinePainter extends CustomPainter { // day -> average_mastery
+class DecayTimelinePainter extends CustomPainter {
+  // day -> average_mastery
 
   DecayTimelinePainter({
     required this.currentDays,
@@ -366,7 +368,7 @@ class DecayTimelinePainter extends CustomPainter { // day -> average_mastery
     if (decayCurve.isEmpty) return;
 
     final paint = Paint()
-      ..color = DS.brandPrimary.withOpacity(0.5)
+      ..color = DS.brandPrimary.withValues(alpha: 0.5)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -403,6 +405,7 @@ class DecayTimelinePainter extends CustomPainter { // day -> average_mastery
   }
 
   @override
-  bool shouldRepaint(DecayTimelinePainter oldDelegate) => oldDelegate.currentDays != currentDays ||
-        oldDelegate.decayCurve != decayCurve;
+  bool shouldRepaint(DecayTimelinePainter oldDelegate) =>
+      oldDelegate.currentDays != currentDays ||
+      oldDelegate.decayCurve != decayCurve;
 }

@@ -22,21 +22,13 @@ class CreatePlanTool(BaseTool):
     parameters_schema = CreatePlanParams
     requires_confirmation = False
 
-        async def execute(
-
-            self, 
-
-            params: CreatePlanParams, 
-
-            user_id: str,
-
-            db_session: Any,
-
-            tool_call_id: Optional[str] = None
-
-        ) -> ToolResult:
-
-    
+    async def execute(
+        self,
+        params: CreatePlanParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: Optional[str] = None
+    ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
             plan_type = ModelPlanType(params.plan_type.value)
@@ -110,7 +102,7 @@ class GenerateTasksForPlanTool(BaseTool):
             #     task = await TaskService.create(..., tool_result_id=tool_call_id)
 
             # 第一步: 验证计划存在
-            plan = await PlanService.get_by_id(db_session, plan_id_uuid)
+            plan = await PlanService.get_by_id(db_session, plan_uuid)
             if not plan or plan.user_id != user_uuid:
                 return ToolResult(
                     success=False,

@@ -24,7 +24,7 @@ class WeatherHeader extends ConsumerWidget {
 
           // Weather effects (Particles)
           _buildWeatherEffects(dashboardState.weather.type),
-          
+
           // Corner overlay for weather status
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
@@ -130,12 +130,12 @@ class WeatherHeader extends ConsumerWidget {
   }
 
   Widget _buildWeatherEffects(String type) => Positioned.fill(
-      child: IgnorePointer(
-        child: CustomPaint(
-          painter: _WeatherParticlePainter(type),
+        child: IgnorePointer(
+          child: CustomPaint(
+            painter: _WeatherParticlePainter(type),
+          ),
         ),
-      ),
-    );
+      );
 }
 
 class _StarField extends StatelessWidget {
@@ -143,9 +143,9 @@ class _StarField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-      size: MediaQuery.of(context).size,
-      painter: _StarPainter(),
-    );
+        size: MediaQuery.of(context).size,
+        painter: _StarPainter(),
+      );
 }
 
 class _StarPainter extends CustomPainter {
@@ -202,8 +202,10 @@ class _WeatherParticlePainter extends CustomPainter {
         }
       case 'cloudy':
         paint.style = PaintingStyle.fill;
-        canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.1), 60, paint);
-        canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.3), 80, paint);
+        canvas.drawCircle(
+            Offset(size.width * 0.2, size.height * 0.1), 60, paint,);
+        canvas.drawCircle(
+            Offset(size.width * 0.8, size.height * 0.3), 80, paint,);
       case 'rainy':
         paint.style = PaintingStyle.fill;
         paint.color = DS.brandPrimary.withValues(alpha: 0.1);
@@ -217,7 +219,8 @@ class _WeatherParticlePainter extends CustomPainter {
         paint.strokeWidth = 1.5;
         paint.color = DS.brandPrimary.withValues(alpha: 0.2);
         for (var i = 0; i < 3; i++) {
-          final start = Offset(size.width * (0.3 + i * 0.2), size.height * (0.1 + i * 0.1));
+          final start = Offset(
+              size.width * (0.3 + i * 0.2), size.height * (0.1 + i * 0.1),);
           canvas.drawLine(start, Offset(start.dx + 40, start.dy + 30), paint);
         }
     }

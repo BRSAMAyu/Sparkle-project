@@ -238,6 +238,8 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         return MessageType.capsuleShare;
       case 9:
         return MessageType.prismShare;
+      case 10:
+        return MessageType.fileShare;
       case 2:
         return MessageType.progress;
       case 3:
@@ -271,6 +273,9 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         break;
       case MessageType.prismShare:
         writer.writeByte(9);
+        break;
+      case MessageType.fileShare:
+        writer.writeByte(10);
         break;
       case MessageType.progress:
         writer.writeByte(2);
@@ -618,6 +623,7 @@ const _$MessageTypeEnumMap = {
   MessageType.fragmentShare: 'fragment_share',
   MessageType.capsuleShare: 'capsule_share',
   MessageType.prismShare: 'prism_share',
+  MessageType.fileShare: 'file_share',
   MessageType.progress: 'progress',
   MessageType.achievement: 'achievement',
   MessageType.checkin: 'checkin',

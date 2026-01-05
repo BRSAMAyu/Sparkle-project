@@ -21,7 +21,9 @@ class LocalCognitiveRepository {
   Future<List<Map<String, dynamic>>> getQueueRaw() async {
     await _ensureBoxOpen();
     final box = Hive.box<String>(_boxName);
-    return box.values.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+    return box.values
+        .map((e) => jsonDecode(e) as Map<String, dynamic>)
+        .toList();
   }
 
   Future<void> removeFromQueue(int index) async {
@@ -29,7 +31,7 @@ class LocalCognitiveRepository {
     final box = Hive.box<String>(_boxName);
     await box.deleteAt(index);
   }
-  
+
   Future<void> clearQueue() async {
     await _ensureBoxOpen();
     final box = Hive.box<String>(_boxName);

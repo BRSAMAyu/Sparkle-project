@@ -14,7 +14,13 @@ except ImportError:
     galaxy_service_pb2_grpc = None
 
 from app.services.galaxy_service import GalaxyService
+from app.services.galaxy.collaborative_service import CollaborativeGalaxyService
+from app.services.galaxy.crdt_persistence import CRDTPersistenceManager
+from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
+
+# Memory cache for active YDocs to avoid reloading from DB every time
+_active_collaborative_sessions = {}
 
 class GalaxyGrpcServiceImpl:
     def __init__(self, db_session_factory):
@@ -66,3 +72,55 @@ class GalaxyGrpcServiceImpl:
                 context.set_code(grpc.StatusCode.INTERNAL)
                 context.set_details(str(e))
                 return galaxy_service_pb2.UpdateNodeMasteryResponse(success=False, reason=str(e))
+
+    async def SyncCollaborativeGalaxy(self, request, context):
+        """
+        gRPC implementation of SyncCollaborativeGalaxy.
+        Syncs CRDT updates between client and server.
+        """
+        galaxy_id = request.galaxy_id
+        user_id = request.user_id
+        partial_update = request.partial_update
+
+        async with self.db_session_factory() as db:
+            persistence_manager = CRDTPersistenceManager(cache_service.redis, db)
+            
+            # 1. Get or create collaborative session
+            if galaxy_id in _active_collaborative_sessions:
+                collab_service = _active_collaborative_sessions[galaxy_id]
+            else:
+                # Restore from persistence (Redis or DB)
+                ydoc = await persistence_manager.restore(galaxy_id)
+                collab_service = CollaborativeGalaxyService(galaxy_id)
+                collab_service.ydoc = ydoc
+                _active_collaborative_sessions[galaxy_id] = collab_service
+
+            try:
+                # 2. Apply client update
+                if partial_update:
+                    collab_service.apply_update(partial_update)
+                    
+                    # Log the operation
+                    await persistence_manager.log_operation(
+                        galaxy_id=galaxy_id,
+                        user_id=user_id,
+                        op_type="crdt_sync",
+                        op_data={"update_size": len(partial_update)}
+                    )
+
+                # 3. Persist to Redis (L2 Cache)
+                await persistence_manager.persist_snapshot(galaxy_id, collab_service.ydoc)
+
+                # 4. Get server update
+                server_update = collab_service.get_update()
+
+                return galaxy_service_pb2.SyncCollaborativeGalaxyResponse(
+                    success=True,
+                    server_update=server_update
+                )
+
+            except Exception as e:
+                logger.error(f"gRPC SyncCollaborativeGalaxy failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.SyncCollaborativeGalaxyResponse(success=False)

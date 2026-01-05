@@ -38,6 +38,7 @@ class MessageTypeEnum(str, Enum):
     FRAGMENT_SHARE = "fragment_share"
     CAPSULE_SHARE = "capsule_share"
     PRISM_SHARE = "prism_share"
+    FILE_SHARE = "file_share"
     PROGRESS = "progress"
     ACHIEVEMENT = "achievement"
     CHECKIN = "checkin"
@@ -234,6 +235,15 @@ class MessageSend(BaseModel):
             raise ValueError('文本消息必须有内容')
         return v
 
+    @field_validator('content_data')
+    @classmethod
+    def validate_content_data(cls, v, info):
+        msg_type = info.data.get('message_type')
+        if msg_type == MessageTypeEnum.FILE_SHARE:
+            if not isinstance(v, dict) or not v.get('file_id'):
+                raise ValueError('文件消息必须包含 file_id')
+        return v
+
 
 class MessageInfo(BaseSchema):
     """消息信息"""
@@ -262,6 +272,53 @@ class MessageReactionUpdate(BaseModel):
     """更新消息表情反应"""
     emoji: str = Field(min_length=1, max_length=12, description="表情")
     action: ReactionActionEnum = Field(default=ReactionActionEnum.ADD, description="添加/移除")
+
+
+# ============ 群文件 Schemas ============
+
+class GroupFilePermissions(BaseModel):
+    """群文件权限设置"""
+    view_role: GroupRoleEnum = Field(default=GroupRoleEnum.MEMBER, description="可查看的最低角色")
+    download_role: GroupRoleEnum = Field(default=GroupRoleEnum.MEMBER, description="可下载的最低角色")
+    manage_role: GroupRoleEnum = Field(default=GroupRoleEnum.ADMIN, description="可管理的最低角色")
+
+
+class GroupFileShareRequest(BaseModel):
+    """分享文件到群组"""
+    category: Optional[str] = Field(default=None, max_length=64, description="分类")
+    tags: Optional[List[str]] = Field(default=None, description="标签")
+    permissions: Optional[GroupFilePermissions] = Field(default=None, description="权限设置")
+    send_message: bool = Field(default=True, description="是否发送文件分享消息")
+
+
+class GroupFilePermissionUpdate(BaseModel):
+    """更新群文件权限"""
+    permissions: GroupFilePermissions = Field(description="权限设置")
+
+
+class GroupFileInfo(BaseSchema):
+    """群文件信息"""
+    group_id: UUID = Field(description="群组ID")
+    file_id: UUID = Field(description="文件ID")
+    shared_by: Optional[UserBrief] = Field(description="分享者")
+    category: Optional[str] = Field(description="分类")
+    tags: List[str] = Field(default_factory=list, description="标签")
+    view_role: GroupRoleEnum = Field(description="查看权限")
+    download_role: GroupRoleEnum = Field(description="下载权限")
+    manage_role: GroupRoleEnum = Field(description="管理权限")
+    file_name: str = Field(description="文件名")
+    mime_type: str = Field(description="MIME类型")
+    file_size: int = Field(description="文件大小")
+    status: str = Field(description="处理状态")
+    visibility: str = Field(description="可见性")
+    can_download: bool = Field(description="当前用户是否可下载")
+    can_manage: bool = Field(description="当前用户是否可管理")
+
+
+class GroupFileCategoryStat(BaseModel):
+    """群文件分类统计"""
+    category: Optional[str] = Field(description="分类")
+    count: int = Field(description="数量")
 
 
 # ============ 群任务 Schemas ============
@@ -403,6 +460,15 @@ class PrivateMessageSend(BaseModel):
         msg_type = info.data.get('message_type')
         if msg_type == MessageTypeEnum.TEXT and not v:
             raise ValueError('文本消息必须有内容')
+        return v
+
+    @field_validator('content_data')
+    @classmethod
+    def validate_content_data(cls, v, info):
+        msg_type = info.data.get('message_type')
+        if msg_type == MessageTypeEnum.FILE_SHARE:
+            if not isinstance(v, dict) or not v.get('file_id'):
+                raise ValueError('文件消息必须包含 file_id')
         return v
 
 

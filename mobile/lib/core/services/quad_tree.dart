@@ -193,7 +193,8 @@ class QuadTree<T extends QuadTreeItem> {
   }
 
   /// 查找最近的k个邻居
-  List<T> findNearestNeighbors(Offset point, int k, {double maxDistance = double.infinity}) {
+  List<T> findNearestNeighbors(Offset point, int k,
+      {double maxDistance = double.infinity,}) {
     final candidates = <_DistanceItem<T>>[];
 
     // 递归收集候选项
@@ -206,7 +207,8 @@ class QuadTree<T extends QuadTreeItem> {
     return candidates.take(k).map((e) => e.item).toList();
   }
 
-  void _collectCandidates(Offset point, double maxDistance, List<_DistanceItem<T>> candidates) {
+  void _collectCandidates(
+      Offset point, double maxDistance, List<_DistanceItem<T>> candidates,) {
     // 检查边界是否可能包含更近的点
     final closestPointInBounds = _closestPointInRect(point, bounds);
     if ((closestPointInBounds - point).distance > maxDistance) {
@@ -299,9 +301,18 @@ class QuadTree<T extends QuadTreeItem> {
       final swStats = _southwest!.getStats();
       final seStats = _southeast!.getStats();
 
-      nodeCount += nwStats.nodeCount + neStats.nodeCount + swStats.nodeCount + seStats.nodeCount;
-      leafCount += nwStats.leafCount + neStats.leafCount + swStats.leafCount + seStats.leafCount;
-      totalItems += nwStats.totalItems + neStats.totalItems + swStats.totalItems + seStats.totalItems;
+      nodeCount += nwStats.nodeCount +
+          neStats.nodeCount +
+          swStats.nodeCount +
+          seStats.nodeCount;
+      leafCount += nwStats.leafCount +
+          neStats.leafCount +
+          swStats.leafCount +
+          seStats.leafCount;
+      totalItems += nwStats.totalItems +
+          neStats.totalItems +
+          swStats.totalItems +
+          seStats.totalItems;
       maxItemsPerNode = [
         maxItemsPerNode,
         nwStats.maxItemsPerNode,

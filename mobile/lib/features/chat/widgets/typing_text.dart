@@ -9,9 +9,9 @@ import 'package:flutter/material.dart';
 /// 3. 可中断：支持跳过动画直接显示全文
 /// 4. 完成回调：动画结束时通知父组件
 class TypingText extends StatefulWidget {
-
   const TypingText({
-    required this.text, super.key,
+    required this.text,
+    super.key,
     this.style,
     this.maxLines,
     this.overflow,
@@ -27,24 +27,26 @@ class TypingText extends StatefulWidget {
     required String text,
     TextStyle? style,
     VoidCallback? onComplete,
-  }) => TypingText(
-      text: text,
-      style: style,
-      charDelay: const Duration(milliseconds: 15),
-      onComplete: onComplete,
-    );
+  }) =>
+      TypingText(
+        text: text,
+        style: style,
+        charDelay: const Duration(milliseconds: 15),
+        onComplete: onComplete,
+      );
 
   /// 工厂方法：慢速模式（适合重点强调）
   factory TypingText.slow({
     required String text,
     TextStyle? style,
     VoidCallback? onComplete,
-  }) => TypingText(
-      text: text,
-      style: style,
-      charDelay: const Duration(milliseconds: 50),
-      onComplete: onComplete,
-    );
+  }) =>
+      TypingText(
+        text: text,
+        style: style,
+        charDelay: const Duration(milliseconds: 50),
+        onComplete: onComplete,
+      );
   final String text;
   final TextStyle? style;
   final int? maxLines;
@@ -156,36 +158,35 @@ class _TypingTextState extends State<TypingText> {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      // 点击文本区域可跳过动画（可选功能）
-      onTap: widget.animate && !_isCompleted ? _skipAnimation : null,
-      child: Text.rich(
-        TextSpan(
-          text: _displayedText,
-          style: widget.style,
-          children: [
-            // 显示闪烁光标（仅在打字时）
-            if (widget.showCursor && !_isCompleted)
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: _BlinkingCursor(
-                  color: widget.style?.color ??
-                      Theme.of(context).colorScheme.onSurface,
+        // 点击文本区域可跳过动画（可选功能）
+        onTap: widget.animate && !_isCompleted ? _skipAnimation : null,
+        child: Text.rich(
+          TextSpan(
+            text: _displayedText,
+            style: widget.style,
+            children: [
+              // 显示闪烁光标（仅在打字时）
+              if (widget.showCursor && !_isCompleted)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: _BlinkingCursor(
+                    color: widget.style?.color ??
+                        Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
+          maxLines: widget.maxLines,
+          overflow: widget.overflow,
+          textAlign: widget.textAlign,
         ),
-        maxLines: widget.maxLines,
-        overflow: widget.overflow,
-        textAlign: widget.textAlign,
-      ),
-    );
+      );
 }
 
 /// 闪烁光标
 ///
 /// 使用 AnimatedOpacity 实现平滑的淡入淡出效果
 class _BlinkingCursor extends StatefulWidget {
-
   const _BlinkingCursor({
     required this.color,
   });
@@ -216,26 +217,26 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-      opacity: _controller,
-      child: Container(
-        width: 2,
-        height: 16,
-        margin: const EdgeInsets.only(left: 2),
-        decoration: BoxDecoration(
-          color: widget.color,
-          borderRadius: BorderRadius.circular(1),
+        opacity: _controller,
+        child: Container(
+          width: 2,
+          height: 16,
+          margin: const EdgeInsets.only(left: 2),
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: BorderRadius.circular(1),
+          ),
         ),
-      ),
-    );
+      );
 }
 
 /// 打字机效果文本字段（支持富文本）
 ///
 /// 可以分段显示不同样式的文本
 class TypingRichText extends StatefulWidget {
-
   const TypingRichText({
-    required this.spans, super.key,
+    required this.spans,
+    super.key,
     this.charDelay = const Duration(milliseconds: 20),
     this.animate = true,
     this.onComplete,

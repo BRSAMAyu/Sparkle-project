@@ -355,9 +355,9 @@ class TestLLMOutputValidator:
         text = "<div onclick='alert(1)'>Hello</div>"
         escaped = validator.sanitize_html(text)
 
-        assert "<" in escaped
-        assert ">" in escaped
-        assert "onclick" not in escaped or """ in escaped
+        assert "&lt;" in escaped
+        assert "&gt;" in escaped
+        assert "onclick" in escaped
 
     def test_html_escape_preserves_code_blocks(self, validator):
         """测试 HTML 转义保留代码块"""

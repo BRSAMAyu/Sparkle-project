@@ -4,11 +4,11 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// 加载状态枚举
 enum LoadingState {
-  idle,     // 空闲
-  loading,  // 加载中
-  success,  // 成功
-  error,    // 错误
-  empty,    // 空数据
+  idle, // 空闲
+  loading, // 加载中
+  success, // 成功
+  error, // 错误
+  empty, // 空数据
 }
 
 /// 加载状态管理器
@@ -92,14 +92,16 @@ class LoadingStateManager<T> {
     T? data,
     String? error,
     Object? errorObject,
-  }) => LoadingStateManager<T>()
-      ..state = state ?? this.state
-      ..data = data ?? this.data
-      ..error = error ?? this.error
-      ..errorObject = errorObject ?? this.errorObject;
+  }) =>
+      LoadingStateManager<T>()
+        ..state = state ?? this.state
+        ..data = data ?? this.data
+        ..error = error ?? this.error
+        ..errorObject = errorObject ?? this.errorObject;
 
   @override
-  String toString() => 'LoadingStateManager(state: $state, hasData: ${data != null}, error: $error)';
+  String toString() =>
+      'LoadingStateManager(state: $state, hasData: ${data != null}, error: $error)';
 }
 
 /// 便捷扩展方法
@@ -132,30 +134,30 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
   }
 
   Widget _defaultLoadingWidget() => const Center(
-      child: CircularProgressIndicator(),
-    );
+        child: CircularProgressIndicator(),
+      );
 
   Widget _defaultErrorWidget(String error) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 48, color: DS.error),
-          const SizedBox(height: DS.lg),
-          Text('加载失败: $error', textAlign: TextAlign.center),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: DS.error),
+            const SizedBox(height: DS.lg),
+            Text('加载失败: $error', textAlign: TextAlign.center),
+          ],
+        ),
+      );
 
   Widget _defaultEmptyWidget() => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inbox_outlined, size: 48, color: DS.brandPrimary),
-          const SizedBox(height: DS.lg),
-          const Text('暂无数据'),
-        ],
-      ),
-    );
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 48, color: DS.brandPrimary),
+            const SizedBox(height: DS.lg),
+            const Text('暂无数据'),
+          ],
+        ),
+      );
 }
 
 /// 用于Riverpod的状态包装器

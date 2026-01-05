@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/auth.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
-
   const PrivateChatBubble({required this.message, super.key});
   final PrivateMessageInfo message;
 
@@ -13,7 +12,8 @@ class PrivateChatBubble extends ConsumerStatefulWidget {
   ConsumerState<PrivateChatBubble> createState() => _PrivateChatBubbleState();
 }
 
-class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with SingleTickerProviderStateMixin {
+class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -56,7 +56,8 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
           child: Row(
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
@@ -65,11 +66,12 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
               ],
               Flexible(
                 child: Column(
-                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     _buildContent(context, isMe),
                     const SizedBox(height: 2),
-                     if (isMe && widget.message.isRead)
+                    if (isMe && widget.message.isRead)
                       Text(
                         'Read',
                         style: TextStyle(
@@ -101,46 +103,54 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble> with Sing
   }
 
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
-      padding: const EdgeInsets.all(DS.md),
-      decoration: BoxDecoration(
-        color: isMe ? DS.primaryBase : DS.brandPrimary,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: isMe ? DS.primaryBase : DS.brandPrimary,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft:
+                isMe ? const Radius.circular(16) : const Radius.circular(4),
+            bottomRight:
+                isMe ? const Radius.circular(4) : const Radius.circular(16),
+          ),
+          boxShadow: isMe
+              ? [
+                  BoxShadow(
+                      color: DS.primaryBase.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),),
+                ]
+              : DS.shadowSm,
+          border: isMe ? null : Border.all(color: DS.neutral100),
         ),
-        boxShadow: isMe 
-            ? [BoxShadow(color: DS.primaryBase.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] 
-            : DS.shadowSm,
-        border: isMe ? null : Border.all(color: DS.neutral100),
-      ),
-      child: Text(
-        widget.message.content ?? '',
-        style: TextStyle(
-          color: isMe ? DS.brandPrimary : DS.neutral900,
-          fontSize: 16,
-          height: 1.4,
+        child: Text(
+          widget.message.content ?? '',
+          style: TextStyle(
+            color: isMe ? DS.brandPrimary : DS.neutral900,
+            fontSize: 16,
+            height: 1.4,
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildAvatar(UserBrief user) => DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: DS.brandPrimary, width: 2),
-        boxShadow: DS.shadowSm,
-      ),
-      child: CircleAvatar(
-        radius: 16,
-        backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-        backgroundColor: DS.neutral200,
-        child: user.avatarUrl == null
-            ? Text(
-                user.displayName.substring(0, 1).toUpperCase(),
-                style: TextStyle(fontSize: 12, color: DS.neutral600),
-              )
-            : null,
-      ),
-    );
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: DS.brandPrimary, width: 2),
+          boxShadow: DS.shadowSm,
+        ),
+        child: CircleAvatar(
+          radius: 16,
+          backgroundImage:
+              user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+          backgroundColor: DS.neutral200,
+          child: user.avatarUrl == null
+              ? Text(
+                  user.displayName.substring(0, 1).toUpperCase(),
+                  style: TextStyle(fontSize: 12, color: DS.neutral600),
+                )
+              : null,
+        ),
+      );
 }

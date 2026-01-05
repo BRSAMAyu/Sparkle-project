@@ -26,22 +26,25 @@ class AppColors {
   static Color get darkDivider => DS.neutral600;
 
   // Semantic colors for both themes
-  static Color surfaceBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
-        ? DS.brandPrimary
-        : DS.neutral800;
+  static Color surfaceBright(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+          ? DS.brandPrimary
+          : DS.neutral800;
 
-  static Color textOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
-        ? DS.neutral900
-        : DS.brandPrimary;
+  static Color textOnBright(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+          ? DS.neutral900
+          : DS.brandPrimary;
 
   static Color textOnDark(BuildContext context) {
     // For dark backgrounds, always use light text for maximum contrast
     return DS.brandPrimary;
   }
 
-  static Color iconOnBright(BuildContext context) => Theme.of(context).brightness == Brightness.light
-        ? DS.neutral800
-        : DS.neutral100;
+  static Color iconOnBright(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+          ? DS.neutral800
+          : DS.neutral100;
 
   static Color iconOnDark(BuildContext context) {
     // For dark backgrounds, always use light icons for maximum contrast
@@ -51,7 +54,6 @@ class AppColors {
 
 /// Theme Extension for custom properties
 class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
-
   const AppThemeExtension({
     required this.primaryGradient,
     required this.secondaryGradient,
@@ -72,13 +74,14 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     LinearGradient? cardGradient,
     List<BoxShadow>? cardShadow,
     List<BoxShadow>? elevatedShadow,
-  }) => AppThemeExtension(
-      primaryGradient: primaryGradient ?? this.primaryGradient,
-      secondaryGradient: secondaryGradient ?? this.secondaryGradient,
-      cardGradient: cardGradient ?? this.cardGradient,
-      cardShadow: cardShadow ?? this.cardShadow,
-      elevatedShadow: elevatedShadow ?? this.elevatedShadow,
-    );
+  }) =>
+      AppThemeExtension(
+        primaryGradient: primaryGradient ?? this.primaryGradient,
+        secondaryGradient: secondaryGradient ?? this.secondaryGradient,
+        cardGradient: cardGradient ?? this.cardGradient,
+        cardShadow: cardShadow ?? this.cardShadow,
+        elevatedShadow: elevatedShadow ?? this.elevatedShadow,
+      );
 
   @override
   AppThemeExtension lerp(ThemeExtension<AppThemeExtension>? other, double t) {
@@ -86,8 +89,10 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       return this;
     }
     return AppThemeExtension(
-      primaryGradient: LinearGradient.lerp(primaryGradient, other.primaryGradient, t)!,
-      secondaryGradient: LinearGradient.lerp(secondaryGradient, other.secondaryGradient, t)!,
+      primaryGradient:
+          LinearGradient.lerp(primaryGradient, other.primaryGradient, t)!,
+      secondaryGradient:
+          LinearGradient.lerp(secondaryGradient, other.secondaryGradient, t)!,
       cardGradient: LinearGradient.lerp(cardGradient, other.cardGradient, t)!,
       cardShadow: t < 0.5 ? cardShadow : other.cardShadow,
       elevatedShadow: t < 0.5 ? elevatedShadow : other.elevatedShadow,
@@ -98,451 +103,452 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 class AppThemes {
   /// Light theme with design tokens
   static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    primaryColor: AppColors.primary,
-    scaffoldBackgroundColor: AppColors.lightBackground,
+        useMaterial3: true,
+        brightness: Brightness.light,
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.lightBackground,
 
-    // Color scheme
-    colorScheme: ColorScheme.light(
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      surface: AppColors.lightCard,
-      onPrimary: DS.brandPrimary,
-      onSecondary: DS.brandPrimary,
-      onSurface: AppColors.lightText,
-      error: DS.error,
-      onError: DS.brandPrimary,
-    ),
-
-    // Extensions
-    extensions: <ThemeExtension<dynamic>>[
-      AppThemeExtension(
-        primaryGradient: DS.primaryGradient,
-        secondaryGradient: DS.secondaryGradient,
-        cardGradient: DS.cardGradientNeutral,
-        cardShadow: DS.shadowMd,
-        elevatedShadow: DS.shadowLg,
-      ),
-      SparkleColors.light,
-    ],
-
-    // Card theme with precise shadows
-    cardTheme: CardThemeData(
-      elevation: 0, // We use custom shadows
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DS.radius12),
-      ),
-      color: AppColors.lightCard,
-      shadowColor: DS.brandPrimary.withValues(alpha: 0.1),
-    ),
-
-    // Elevated button theme with gradient support
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: DS.brandPrimary,
-        elevation: 0, // Flat by default, add shadow manually if needed
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DS.radius8),
+        // Color scheme
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.lightCard,
+          onPrimary: DS.brandPrimary,
+          onSecondary: DS.brandPrimary,
+          onSurface: AppColors.lightText,
+          error: DS.error,
+          onError: DS.brandPrimary,
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing24,
-          vertical: DS.spacing12,
+
+        // Extensions
+        extensions: <ThemeExtension<dynamic>>[
+          AppThemeExtension(
+            primaryGradient: DS.primaryGradient,
+            secondaryGradient: DS.secondaryGradient,
+            cardGradient: DS.cardGradientNeutral,
+            cardShadow: DS.shadowMd,
+            elevatedShadow: DS.shadowLg,
+          ),
+          SparkleColors.light,
+        ],
+
+        // Card theme with precise shadows
+        cardTheme: CardThemeData(
+          elevation: 0, // We use custom shadows
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DS.radius12),
+          ),
+          color: AppColors.lightCard,
+          shadowColor: DS.brandPrimary.withValues(alpha: 0.1),
         ),
-        textStyle: const TextStyle(
-          fontSize: DS.fontSizeBase,
-          fontWeight: DS.fontWeightSemibold,
+
+        // Elevated button theme with gradient support
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: DS.brandPrimary,
+            elevation: 0, // Flat by default, add shadow manually if needed
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DS.radius8),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing24,
+              vertical: DS.spacing12,
+            ),
+            textStyle: const TextStyle(
+              fontSize: DS.fontSizeBase,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
         ),
-      ),
-    ),
 
-    // Text button theme
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
+        // Text button theme
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing8,
+            ),
+          ),
         ),
-      ),
-    ),
 
-    // Outlined button theme
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.primary, width: 1.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DS.radius8),
+        // Outlined button theme
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: BorderSide(color: AppColors.primary, width: 1.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DS.radius8),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing24,
+              vertical: DS.spacing12,
+            ),
+          ),
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing24,
-          vertical: DS.spacing12,
+
+        // Input decoration theme
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: DS.neutral300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: DS.neutral300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
+          ),
+          filled: true,
+          fillColor: DS.neutral50,
+          contentPadding: const EdgeInsets.all(DS.spacing16),
         ),
-      ),
-    ),
 
-    // Input decoration theme
-    inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: DS.neutral300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: DS.neutral300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: AppColors.primary, width: 2),
-      ),
-      filled: true,
-      fillColor: DS.neutral50,
-      contentPadding: const EdgeInsets.all(DS.spacing16),
-    ),
+        // Chip theme
+        chipTheme: ChipThemeData(
+          backgroundColor: DS.neutral100,
+          selectedColor: AppColors.primary,
+          labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing4,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DS.radius16),
+          ),
+        ),
 
-    // Chip theme
-    chipTheme: ChipThemeData(
-      backgroundColor: DS.neutral100,
-      selectedColor: AppColors.primary,
-      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing4,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DS.radius16),
-      ),
-    ),
+        // Bottom navigation bar theme
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: DS.neutral500,
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+          backgroundColor: AppColors.lightCard,
+        ),
 
-    // Bottom navigation bar theme
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: DS.neutral500,
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      backgroundColor: AppColors.lightCard,
-    ),
+        // App bar theme
+        appBarTheme: AppBarTheme(
+          centerTitle: false,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: AppColors.lightText,
+          titleTextStyle: const TextStyle(
+            fontSize: DS.fontSizeLg,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFF212121),
+          ),
+        ),
 
-    // App bar theme
-    appBarTheme: AppBarTheme(
-      centerTitle: false,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      foregroundColor: AppColors.lightText,
-      titleTextStyle: const TextStyle(
-        fontSize: DS.fontSizeLg,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFF212121),
-      ),
-    ),
-
-    // Text theme
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: DS.fontSize6xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFF212121),
-      ),
-      displayMedium: TextStyle(
-        fontSize: DS.fontSize5xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFF212121),
-      ),
-      displaySmall: TextStyle(
-        fontSize: DS.fontSize4xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFF212121),
-      ),
-      headlineLarge: TextStyle(
-        fontSize: DS.fontSize3xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFF212121),
-      ),
-      headlineMedium: TextStyle(
-        fontSize: DS.fontSize2xl,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFF212121),
-      ),
-      headlineSmall: TextStyle(
-        fontSize: DS.fontSizeXl,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFF212121),
-      ),
-      titleLarge: TextStyle(
-        fontSize: DS.fontSizeLg,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFF212121),
-      ),
-      titleMedium: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFF212121),
-      ),
-      titleSmall: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFF212121),
-      ),
-      bodyLarge: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFF212121),
-      ),
-      bodyMedium: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFF212121),
-      ),
-      bodySmall: TextStyle(
-        fontSize: DS.fontSizeXs,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFF212121),
-      ),
-      labelLarge: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFF212121),
-      ),
-      labelMedium: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFF212121),
-      ),
-      labelSmall: TextStyle(
-        fontSize: DS.fontSizeXs,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFF212121),
-      ),
-    ),
-  );
+        // Text theme
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            fontSize: DS.fontSize6xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFF212121),
+          ),
+          displayMedium: TextStyle(
+            fontSize: DS.fontSize5xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFF212121),
+          ),
+          displaySmall: TextStyle(
+            fontSize: DS.fontSize4xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFF212121),
+          ),
+          headlineLarge: TextStyle(
+            fontSize: DS.fontSize3xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFF212121),
+          ),
+          headlineMedium: TextStyle(
+            fontSize: DS.fontSize2xl,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFF212121),
+          ),
+          headlineSmall: TextStyle(
+            fontSize: DS.fontSizeXl,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFF212121),
+          ),
+          titleLarge: TextStyle(
+            fontSize: DS.fontSizeLg,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFF212121),
+          ),
+          titleMedium: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFF212121),
+          ),
+          titleSmall: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFF212121),
+          ),
+          bodyLarge: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFF212121),
+          ),
+          bodyMedium: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFF212121),
+          ),
+          bodySmall: TextStyle(
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFF212121),
+          ),
+          labelLarge: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFF212121),
+          ),
+          labelMedium: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFF212121),
+          ),
+          labelSmall: TextStyle(
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFF212121),
+          ),
+        ),
+      );
 
   /// Dark theme with design tokens
   static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    primaryColor: AppColors.primary,
-    scaffoldBackgroundColor: AppColors.darkBackground,
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.darkBackground,
 
-    // Color scheme - use brighter secondary for dark mode
-    colorScheme: ColorScheme.dark(
-      primary: AppColors.primary,
-      secondary: DS.secondaryBaseDark,
-      surface: AppColors.darkCard,
-      onPrimary: DS.brandPrimary,
-      onSecondary: DS.brandPrimary,
-      onSurface: AppColors.darkText,
-      error: DS.error,
-      onError: DS.brandPrimary,
-    ),
-
-    // Extensions - use brighter secondary gradient for dark mode
-    extensions: <ThemeExtension<dynamic>>[
-      AppThemeExtension(
-        primaryGradient: DS.primaryGradient,
-        secondaryGradient: DS.secondaryGradientDark,
-        cardGradient: LinearGradient( // Darker gradient for dark mode
-          colors: [DS.neutral800, DS.neutral700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        // Color scheme - use brighter secondary for dark mode
+        colorScheme: ColorScheme.dark(
+          primary: AppColors.primary,
+          secondary: DS.secondaryBaseDark,
+          surface: AppColors.darkCard,
+          onPrimary: DS.brandPrimary,
+          onSecondary: DS.brandPrimary,
+          onSurface: AppColors.darkText,
+          error: DS.error,
+          onError: DS.brandPrimary,
         ),
-        cardShadow: DS.shadowMd,
-        elevatedShadow: DS.shadowLg,
-      ),
-      SparkleColors.dark,
-    ],
 
-    // Card theme
-    cardTheme: CardThemeData(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DS.radius12),
-      ),
-      color: AppColors.darkCard,
-      shadowColor: DS.brandPrimary.withValues(alpha: 0.3),
-    ),
+        // Extensions - use brighter secondary gradient for dark mode
+        extensions: <ThemeExtension<dynamic>>[
+          AppThemeExtension(
+            primaryGradient: DS.primaryGradient,
+            secondaryGradient: DS.secondaryGradientDark,
+            cardGradient: LinearGradient(
+              // Darker gradient for dark mode
+              colors: [DS.neutral800, DS.neutral700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            cardShadow: DS.shadowMd,
+            elevatedShadow: DS.shadowLg,
+          ),
+          SparkleColors.dark,
+        ],
 
-    // Elevated button theme
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: DS.brandPrimary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DS.radius8),
+        // Card theme
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DS.radius12),
+          ),
+          color: AppColors.darkCard,
+          shadowColor: DS.brandPrimary.withValues(alpha: 0.3),
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing24,
-          vertical: DS.spacing12,
+
+        // Elevated button theme
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: DS.brandPrimary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DS.radius8),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing24,
+              vertical: DS.spacing12,
+            ),
+            textStyle: const TextStyle(
+              fontSize: DS.fontSizeBase,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
         ),
-        textStyle: const TextStyle(
-          fontSize: DS.fontSizeBase,
-          fontWeight: DS.fontWeightSemibold,
+
+        // Text button theme
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing16,
+              vertical: DS.spacing8,
+            ),
+          ),
         ),
-      ),
-    ),
 
-    // Text button theme
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
+        // Outlined button theme
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: BorderSide(color: AppColors.primary, width: 1.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DS.radius8),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing24,
+              vertical: DS.spacing12,
+            ),
+          ),
         ),
-      ),
-    ),
 
-    // Outlined button theme
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.primary, width: 1.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DS.radius8),
+        // Input decoration theme
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: DS.neutral700),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: DS.neutral700),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DS.radius8),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
+          ),
+          filled: true,
+          fillColor: DS.neutral800,
+          contentPadding: const EdgeInsets.all(DS.spacing16),
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing24,
-          vertical: DS.spacing12,
+
+        // Chip theme
+        chipTheme: ChipThemeData(
+          backgroundColor: DS.neutral800,
+          selectedColor: AppColors.primary,
+          labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing4,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DS.radius16),
+          ),
         ),
-      ),
-    ),
 
-    // Input decoration theme
-    inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: DS.neutral700),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: DS.neutral700),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(DS.radius8),
-        borderSide: BorderSide(color: AppColors.primary, width: 2),
-      ),
-      filled: true,
-      fillColor: DS.neutral800,
-      contentPadding: const EdgeInsets.all(DS.spacing16),
-    ),
+        // Bottom navigation bar theme
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: DS.neutral500,
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+          backgroundColor: AppColors.darkCard,
+        ),
 
-    // Chip theme
-    chipTheme: ChipThemeData(
-      backgroundColor: DS.neutral800,
-      selectedColor: AppColors.primary,
-      labelStyle: const TextStyle(fontSize: DS.fontSizeSm),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing12,
-        vertical: DS.spacing4,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DS.radius16),
-      ),
-    ),
+        // App bar theme
+        appBarTheme: const AppBarTheme(
+          centerTitle: false,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Color(0xFFE0E0E0),
+          titleTextStyle: TextStyle(
+            fontSize: DS.fontSizeLg,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFFE0E0E0),
+          ),
+        ),
 
-    // Bottom navigation bar theme
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: DS.neutral500,
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      backgroundColor: AppColors.darkCard,
-    ),
-
-    // App bar theme
-    appBarTheme: const AppBarTheme(
-      centerTitle: false,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Color(0xFFE0E0E0),
-      titleTextStyle: TextStyle(
-        fontSize: DS.fontSizeLg,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFFE0E0E0),
-      ),
-    ),
-
-    // Text theme
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: DS.fontSize6xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFFE0E0E0),
-      ),
-      displayMedium: TextStyle(
-        fontSize: DS.fontSize5xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFFE0E0E0),
-      ),
-      displaySmall: TextStyle(
-        fontSize: DS.fontSize4xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFFE0E0E0),
-      ),
-      headlineLarge: TextStyle(
-        fontSize: DS.fontSize3xl,
-        fontWeight: DS.fontWeightBold,
-        color: Color(0xFFE0E0E0),
-      ),
-      headlineMedium: TextStyle(
-        fontSize: DS.fontSize2xl,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFFE0E0E0),
-      ),
-      headlineSmall: TextStyle(
-        fontSize: DS.fontSizeXl,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFFE0E0E0),
-      ),
-      titleLarge: TextStyle(
-        fontSize: DS.fontSizeLg,
-        fontWeight: DS.fontWeightSemibold,
-        color: Color(0xFFE0E0E0),
-      ),
-      titleMedium: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFFE0E0E0),
-      ),
-      titleSmall: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFFE0E0E0),
-      ),
-      bodyLarge: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFFE0E0E0),
-      ),
-      bodyMedium: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFFE0E0E0),
-      ),
-      bodySmall: TextStyle(
-        fontSize: DS.fontSizeXs,
-        fontWeight: DS.fontWeightRegular,
-        color: Color(0xFFE0E0E0),
-      ),
-      labelLarge: TextStyle(
-        fontSize: DS.fontSizeBase,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFFE0E0E0),
-      ),
-      labelMedium: TextStyle(
-        fontSize: DS.fontSizeSm,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFFE0E0E0),
-      ),
-      labelSmall: TextStyle(
-        fontSize: DS.fontSizeXs,
-        fontWeight: DS.fontWeightMedium,
-        color: Color(0xFFE0E0E0),
-      ),
-    ),
-  );
+        // Text theme
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            fontSize: DS.fontSize6xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFFE0E0E0),
+          ),
+          displayMedium: TextStyle(
+            fontSize: DS.fontSize5xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFFE0E0E0),
+          ),
+          displaySmall: TextStyle(
+            fontSize: DS.fontSize4xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFFE0E0E0),
+          ),
+          headlineLarge: TextStyle(
+            fontSize: DS.fontSize3xl,
+            fontWeight: DS.fontWeightBold,
+            color: Color(0xFFE0E0E0),
+          ),
+          headlineMedium: TextStyle(
+            fontSize: DS.fontSize2xl,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFFE0E0E0),
+          ),
+          headlineSmall: TextStyle(
+            fontSize: DS.fontSizeXl,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFFE0E0E0),
+          ),
+          titleLarge: TextStyle(
+            fontSize: DS.fontSizeLg,
+            fontWeight: DS.fontWeightSemibold,
+            color: Color(0xFFE0E0E0),
+          ),
+          titleMedium: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFFE0E0E0),
+          ),
+          titleSmall: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFFE0E0E0),
+          ),
+          bodyLarge: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFFE0E0E0),
+          ),
+          bodyMedium: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFFE0E0E0),
+          ),
+          bodySmall: TextStyle(
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightRegular,
+            color: Color(0xFFE0E0E0),
+          ),
+          labelLarge: TextStyle(
+            fontSize: DS.fontSizeBase,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFFE0E0E0),
+          ),
+          labelMedium: TextStyle(
+            fontSize: DS.fontSizeSm,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFFE0E0E0),
+          ),
+          labelSmall: TextStyle(
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightMedium,
+            color: Color(0xFFE0E0E0),
+          ),
+        ),
+      );
 }
 
 /// Helper extension to access custom theme properties
@@ -553,7 +559,6 @@ extension ThemeExtensionHelper on ThemeData {
 /// Sparkle 应用专用颜色扩展 - 支持深色/浅色模式
 @immutable
 class SparkleColors extends ThemeExtension<SparkleColors> {
-
   const SparkleColors({
     required this.taskLearning,
     required this.taskTraining,
@@ -602,55 +607,55 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
 
   /// 浅色主题配色
   static SparkleColors get light => SparkleColors(
-    // 任务类型 - 使用饱和度适中的颜色
-    taskLearning: const Color(0xFF64B5F6),
-    taskTraining: const Color(0xFFFF9800),
-    taskErrorFix: const Color(0xFFEF5350),
-    taskReflection: const Color(0xFF9C27B0),
-    taskSocial: const Color(0xFF81C784),
-    taskPlanning: const Color(0xFF009688),
-    // 计划类型
-    planSprint: const Color(0xFFE53935),
-    planGrowth: const Color(0xFF43A047),
-    // 表面颜色
-    surfaceCard: const Color(0xFFFFFFFF),
-    surfaceElevated: const Color(0xFFFAFAFA),
-    surfaceGlass: const Color(0xF0FFFFFF),
-    // 文本颜色
-    textPrimary: DS.neutral900,
-    textSecondary: DS.neutral700,
-    textTertiary: DS.neutral500,
-    textOnPrimary: const Color(0xFFFFFFFF),
-    // 边框和分割线
-    border: DS.neutral300,
-    divider: DS.neutral200,
-  );
+        // 任务类型 - 使用饱和度适中的颜色
+        taskLearning: const Color(0xFF64B5F6),
+        taskTraining: const Color(0xFFFF9800),
+        taskErrorFix: const Color(0xFFEF5350),
+        taskReflection: const Color(0xFF9C27B0),
+        taskSocial: const Color(0xFF81C784),
+        taskPlanning: const Color(0xFF009688),
+        // 计划类型
+        planSprint: const Color(0xFFE53935),
+        planGrowth: const Color(0xFF43A047),
+        // 表面颜色
+        surfaceCard: const Color(0xFFFFFFFF),
+        surfaceElevated: const Color(0xFFFAFAFA),
+        surfaceGlass: const Color(0xF0FFFFFF),
+        // 文本颜色
+        textPrimary: DS.neutral900,
+        textSecondary: DS.neutral700,
+        textTertiary: DS.neutral500,
+        textOnPrimary: const Color(0xFFFFFFFF),
+        // 边框和分割线
+        border: DS.neutral300,
+        divider: DS.neutral200,
+      );
 
   /// 深色主题配色
   static SparkleColors get dark => SparkleColors(
-    // 任务类型 - 使用更亮的颜色以提高对比度
-    taskLearning: const Color(0xFF64B5F6),
-    taskTraining: const Color(0xFFFFB74D),
-    taskErrorFix: const Color(0xFFEF5350),
-    taskReflection: const Color(0xFFBA68C8),
-    taskSocial: const Color(0xFF81C784),
-    taskPlanning: const Color(0xFF4DB6AC),
-    // 计划类型
-    planSprint: const Color(0xFFFF5252),
-    planGrowth: const Color(0xFF66BB6A),
-    // 表面颜色
-    surfaceCard: DS.neutral800,
-    surfaceElevated: DS.neutral700,
-    surfaceGlass: const Color(0xF0424242),
-    // 文本颜色
-    textPrimary: DS.neutral50,
-    textSecondary: DS.neutral300,
-    textTertiary: DS.neutral500,
-    textOnPrimary: const Color(0xFFFFFFFF),
-    // 边框和分割线
-    border: DS.neutral700,
-    divider: DS.neutral600,
-  );
+        // 任务类型 - 使用更亮的颜色以提高对比度
+        taskLearning: const Color(0xFF64B5F6),
+        taskTraining: const Color(0xFFFFB74D),
+        taskErrorFix: const Color(0xFFEF5350),
+        taskReflection: const Color(0xFFBA68C8),
+        taskSocial: const Color(0xFF81C784),
+        taskPlanning: const Color(0xFF4DB6AC),
+        // 计划类型
+        planSprint: const Color(0xFFFF5252),
+        planGrowth: const Color(0xFF66BB6A),
+        // 表面颜色
+        surfaceCard: DS.neutral800,
+        surfaceElevated: DS.neutral700,
+        surfaceGlass: const Color(0xF0424242),
+        // 文本颜色
+        textPrimary: DS.neutral50,
+        textSecondary: DS.neutral300,
+        textTertiary: DS.neutral500,
+        textOnPrimary: const Color(0xFFFFFFFF),
+        // 边框和分割线
+        border: DS.neutral700,
+        divider: DS.neutral600,
+      );
 
   @override
   SparkleColors copyWith({
@@ -671,25 +676,26 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     Color? textOnPrimary,
     Color? border,
     Color? divider,
-  }) => SparkleColors(
-      taskLearning: taskLearning ?? this.taskLearning,
-      taskTraining: taskTraining ?? this.taskTraining,
-      taskErrorFix: taskErrorFix ?? this.taskErrorFix,
-      taskReflection: taskReflection ?? this.taskReflection,
-      taskSocial: taskSocial ?? this.taskSocial,
-      taskPlanning: taskPlanning ?? this.taskPlanning,
-      planSprint: planSprint ?? this.planSprint,
-      planGrowth: planGrowth ?? this.planGrowth,
-      surfaceCard: surfaceCard ?? this.surfaceCard,
-      surfaceElevated: surfaceElevated ?? this.surfaceElevated,
-      surfaceGlass: surfaceGlass ?? this.surfaceGlass,
-      textPrimary: textPrimary ?? this.textPrimary,
-      textSecondary: textSecondary ?? this.textSecondary,
-      textTertiary: textTertiary ?? this.textTertiary,
-      textOnPrimary: textOnPrimary ?? this.textOnPrimary,
-      border: border ?? this.border,
-      divider: divider ?? this.divider,
-    );
+  }) =>
+      SparkleColors(
+        taskLearning: taskLearning ?? this.taskLearning,
+        taskTraining: taskTraining ?? this.taskTraining,
+        taskErrorFix: taskErrorFix ?? this.taskErrorFix,
+        taskReflection: taskReflection ?? this.taskReflection,
+        taskSocial: taskSocial ?? this.taskSocial,
+        taskPlanning: taskPlanning ?? this.taskPlanning,
+        planSprint: planSprint ?? this.planSprint,
+        planGrowth: planGrowth ?? this.planGrowth,
+        surfaceCard: surfaceCard ?? this.surfaceCard,
+        surfaceElevated: surfaceElevated ?? this.surfaceElevated,
+        surfaceGlass: surfaceGlass ?? this.surfaceGlass,
+        textPrimary: textPrimary ?? this.textPrimary,
+        textSecondary: textSecondary ?? this.textSecondary,
+        textTertiary: textTertiary ?? this.textTertiary,
+        textOnPrimary: textOnPrimary ?? this.textOnPrimary,
+        border: border ?? this.border,
+        divider: divider ?? this.divider,
+      );
 
   @override
   SparkleColors lerp(ThemeExtension<SparkleColors>? other, double t) {

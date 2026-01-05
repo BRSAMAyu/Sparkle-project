@@ -4,7 +4,6 @@ part 'curiosity_capsule_model.g.dart';
 
 @JsonSerializable()
 class CuriosityCapsuleModel {
-
   CuriosityCapsuleModel({
     required this.id,
     required this.title,
@@ -14,7 +13,8 @@ class CuriosityCapsuleModel {
     this.relatedSubject,
   });
 
-  factory CuriosityCapsuleModel.fromJson(Map<String, dynamic> json) => _$CuriosityCapsuleModelFromJson(json);
+  factory CuriosityCapsuleModel.fromJson(Map<String, dynamic> json) =>
+      _$CuriosityCapsuleModelFromJson(json);
   final String id;
   final String title;
   final String content;

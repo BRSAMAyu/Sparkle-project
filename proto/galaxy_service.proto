@@ -9,8 +9,28 @@ import "google/protobuf/timestamp.proto";
 // GalaxyService defines the interface for Knowledge Galaxy operations.
 service GalaxyService {
   // UpdateNodeMastery updates the mastery level of a node for a user.
-  // This is used for syncing offline progress and updating global spark counts.
   rpc UpdateNodeMastery(UpdateNodeMasteryRequest) returns (UpdateNodeMasteryResponse);
+
+  // SyncCollaborativeGalaxy syncs CRDT updates for a collaborative galaxy.
+  rpc SyncCollaborativeGalaxy(SyncCollaborativeGalaxyRequest) returns (SyncCollaborativeGalaxyResponse);
+}
+
+message CollaborativeGalaxyUpdate {
+  string galaxy_id = 1;
+  bytes yjs_update = 2; // Yjs binary update
+  string user_id = 3;
+  int64 timestamp = 4;
+}
+
+message SyncCollaborativeGalaxyRequest {
+  string galaxy_id = 1;
+  bytes partial_update = 2; // The update from client
+  string user_id = 3;
+}
+
+message SyncCollaborativeGalaxyResponse {
+  bool success = 1;
+  bytes server_update = 2; // The update from server to client
 }
 
 message UpdateNodeMasteryRequest {

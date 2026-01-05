@@ -56,6 +56,12 @@ message ChatRequest {
 
   // Unique identifier for this specific request/message (Trace ID).
   string request_id = 9;
+
+  // Optional: document IDs to scope RAG retrieval to specific files.
+  repeated string file_ids = 10;
+
+  // Optional: include document references in streaming responses.
+  bool include_references = 11;
 }
 
 // UserProfile defines key user attributes for personalization.
@@ -155,6 +161,10 @@ message Citation {
     string source_type = 4; 
     string url = 5; 
     float score = 6;
+    string file_id = 7;
+    int32 page_number = 8;
+    int32 chunk_index = 9;
+    string section_title = 10;
 }
 
 enum FinishReason {

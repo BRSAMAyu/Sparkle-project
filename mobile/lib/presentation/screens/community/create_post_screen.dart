@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,7 +60,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           );
       // Feature: Save location data separately if provided
       if (_selectedLocation != null) {
-        print('位置信息: $_selectedLocation');
+        if (kDebugMode) {
+          debugPrint('位置信息: $_selectedLocation');
+        }
       }
       if (mounted) context.pop();
     } catch (e) {
@@ -75,85 +78,87 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('New Post'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: TextButton(
-              onPressed: _isPosting ? null : _submit,
-              style: TextButton.styleFrom(
-                backgroundColor: DS.brandPrimary.withOpacity(0.1),
-                foregroundColor: DS.brandPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: _isPosting
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(color: DS.brandPrimaryConst, strokeWidth: 2),
-                    )
-                  : const Text('Post', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(DS.lg),
-        child: Column(
-          children: [
-            TextField(
-              controller: _contentController,
-              autofocus: true,
-              maxLines: 8,
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
-              decoration: InputDecoration(
-                hintText: "What's on your mind?",
-                hintStyle: TextStyle(color: DS.brandPrimary.withOpacity(0.3)),
-                border: InputBorder.none,
-              ),
-            ),
-            Divider(color: DS.brandPrimary.withOpacity(0.24)),
-            TextField(
-              controller: _topicController,
-              style: TextStyle(color: DS.brandSecondary),
-              decoration: InputDecoration(
-                prefixText: '# ',
-                hintText: 'Topic (optional)',
-                hintStyle: TextStyle(color: DS.brandPrimary.withOpacity(0.3)),
-                border: InputBorder.none,
-              ),
-            ),
-            const Spacer(),
-            // Toolbar (Placeholder)
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.image_outlined,
-                    color: _selectedImage != null
-                        ? DS.brandPrimary
-                        : DS.brandPrimary,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('New Post'),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: TextButton(
+                onPressed: _isPosting ? null : _submit,
+                style: TextButton.styleFrom(
+                  backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                  foregroundColor: DS.brandPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  onPressed: _pickImage,
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.location_on_outlined,
-                    color: _selectedLocation != null
-                        ? DS.brandPrimary
-                        : DS.brandPrimary,
-                  ),
-                  onPressed: _pickLocation,
-                ),
-              ],
+                child: _isPosting
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            color: DS.brandPrimaryConst, strokeWidth: 2,),
+                      )
+                    : const Text('Post',
+                        style: TextStyle(fontWeight: FontWeight.bold),),
+              ),
             ),
           ],
         ),
-      ),
-    );
+        body: Padding(
+          padding: const EdgeInsets.all(DS.lg),
+          child: Column(
+            children: [
+              TextField(
+                controller: _contentController,
+                autofocus: true,
+                maxLines: 8,
+                style: TextStyle(color: DS.brandPrimaryConst, fontSize: 16),
+                decoration: InputDecoration(
+                  hintText: "What's on your mind?",
+                  hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.3)),
+                  border: InputBorder.none,
+                ),
+              ),
+              Divider(color: DS.brandPrimary.withValues(alpha: 0.24)),
+              TextField(
+                controller: _topicController,
+                style: TextStyle(color: DS.brandSecondary),
+                decoration: InputDecoration(
+                  prefixText: '# ',
+                  hintText: 'Topic (optional)',
+                  hintStyle: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.3)),
+                  border: InputBorder.none,
+                ),
+              ),
+              const Spacer(),
+              // Toolbar (Placeholder)
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.image_outlined,
+                      color: _selectedImage != null
+                          ? DS.brandPrimary
+                          : DS.brandPrimary,
+                    ),
+                    onPressed: _pickImage,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.location_on_outlined,
+                      color: _selectedLocation != null
+                          ? DS.brandPrimary
+                          : DS.brandPrimary,
+                    ),
+                    onPressed: _pickLocation,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
 }

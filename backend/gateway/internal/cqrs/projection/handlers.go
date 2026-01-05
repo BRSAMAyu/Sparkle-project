@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -96,7 +97,16 @@ func (h *CommunityProjectionHandler) handlePostCreated(ctx context.Context, evt 
 		return fmt.Errorf("invalid post_id: %w", err)
 	}
 
-	post, err := h.queries.GetPost(ctx, pgtype.UUID{Bytes: postID, Valid: true})
+	createdAt := evt.Timestamp
+	if raw, ok := evt.Payload["created_at"]; ok {
+		if ts, err := parseEventTime(raw); err == nil {
+			createdAt = ts
+		}
+	}
+	post, err := h.queries.GetPost(ctx, db.GetPostParams{
+		ID:        pgtype.UUID{Bytes: postID, Valid: true},
+		CreatedAt: pgtype.Timestamp{Time: createdAt, Valid: true},
+	})
 	if err != nil {
 		return fmt.Errorf("fetch post: %w", err)
 	}
@@ -145,6 +155,19 @@ func (h *CommunityProjectionHandler) handlePostCreated(ctx context.Context, evt 
 	}
 
 	return nil
+}
+
+func parseEventTime(value interface{}) (time.Time, error) {
+	switch v := value.(type) {
+	case string:
+		return time.Parse(time.RFC3339Nano, v)
+	case time.Time:
+		return v, nil
+	case float64:
+		return time.Unix(int64(v), 0).UTC(), nil
+	default:
+		return time.Time{}, fmt.Errorf("unsupported time type")
+	}
 }
 
 func (h *CommunityProjectionHandler) handlePostLiked(ctx context.Context, evt cqrsEvent.DomainEvent) error {
@@ -329,17 +352,17 @@ func (h *TaskProjectionHandler) handleTaskCreated(ctx context.Context, evt cqrsE
 
 	// Build view
 	view := map[string]interface{}{
-		"task_id":            taskIDStr,
-		"user_id":            userIDStr,
-		"title":              task.Title,
-		"type":               string(task.Type),
-		"status":             string(task.Status),
-		"estimated_minutes":  task.EstimatedMinutes,
-		"difficulty":         task.Difficulty,
-		"priority":           task.Priority,
-		"created_at":         task.CreatedAt.Time,
-		"started_at":         nil,
-		"completed_at":       nil,
+		"task_id":           taskIDStr,
+		"user_id":           userIDStr,
+		"title":             task.Title,
+		"type":              string(task.Type),
+		"status":            string(task.Status),
+		"estimated_minutes": task.EstimatedMinutes,
+		"difficulty":        task.Difficulty,
+		"priority":          task.Priority,
+		"created_at":        task.CreatedAt.Time,
+		"started_at":        nil,
+		"completed_at":      nil,
 	}
 
 	viewJSON, err := json.Marshal(view)
@@ -789,10 +812,10 @@ func (h *GalaxyProjectionHandler) handleRelationCreated(ctx context.Context, evt
 	}
 
 	relation := map[string]interface{}{
-		"source_id":      sourceIDStr,
-		"target_id":      targetIDStr,
-		"relation_type":  relationType,
-		"created_at":     evt.Timestamp,
+		"source_id":     sourceIDStr,
+		"target_id":     targetIDStr,
+		"relation_type": relationType,
+		"created_at":    evt.Timestamp,
 	}
 
 	relationJSON, err := json.Marshal(relation)

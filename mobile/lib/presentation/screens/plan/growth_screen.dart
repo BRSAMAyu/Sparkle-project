@@ -11,14 +11,17 @@ class GrowthScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planState = ref.watch(planListProvider);
-    final growthPlans = planState.plans.where((p) => p.type == PlanType.growth).toList();
+    final growthPlans =
+        planState.plans.where((p) => p.type == PlanType.growth).toList();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Growth Plans'),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(planListProvider.notifier).loadPlans(type: PlanType.growth),
+        onRefresh: () => ref
+            .read(planListProvider.notifier)
+            .loadPlans(type: PlanType.growth),
         child: _buildBody(context, planState, growthPlans),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -31,7 +34,8 @@ class GrowthScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, PlanListState state, List<PlanModel> plans) {
+  Widget _buildBody(
+      BuildContext context, PlanListState state, List<PlanModel> plans,) {
     if (state.isLoading && plans.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -56,58 +60,66 @@ class _GrowthPlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 8),
         child: InkWell(
-        onTap: () {
-          context.push('/plans/${plan.id}');
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: DS.xs),
-              if (plan.description != null) Text(plan.description!, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: DS.lg),
-              _buildStatRow(
-                context,
-                'Mastery',
-                '${(plan.masteryLevel * 100).toStringAsFixed(0)}%',
-                plan.masteryLevel,
-                Colors.purple,
-              ),
-              const SizedBox(height: DS.sm),
-              _buildStatRow(
-                context,
-                'Progress',
-                '${(plan.progress * 100).toStringAsFixed(0)}%',
-                plan.progress,
-                DS.brandPrimary,
-              ),
-            ],
+          onTap: () {
+            context.push('/plans/${plan.id}');
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: DS.xs),
+                if (plan.description != null)
+                  Text(plan.description!,
+                      style: Theme.of(context).textTheme.bodyMedium,),
+                const SizedBox(height: DS.lg),
+                _buildStatRow(
+                  context,
+                  'Mastery',
+                  '${(plan.masteryLevel * 100).toStringAsFixed(0)}%',
+                  plan.masteryLevel,
+                  Colors.purple,
+                ),
+                const SizedBox(height: DS.sm),
+                _buildStatRow(
+                  context,
+                  'Progress',
+                  '${(plan.progress * 100).toStringAsFixed(0)}%',
+                  plan.progress,
+                  DS.brandPrimary,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-  Widget _buildStatRow(BuildContext context, String label, String valueText, double progressValue, Color color) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.bodyLarge),
-            Text(valueText, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        const SizedBox(height: DS.xs),
-        LinearProgressIndicator(
-          value: progressValue,
-          backgroundColor: color.withValues(alpha: 0.2),
-          color: color,
-        ),
-      ],
-    );
+  Widget _buildStatRow(BuildContext context, String label, String valueText,
+          double progressValue, Color color,) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.bodyLarge),
+              Text(valueText,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),),
+            ],
+          ),
+          const SizedBox(height: DS.xs),
+          LinearProgressIndicator(
+            value: progressValue,
+            backgroundColor: color.withValues(alpha: 0.2),
+            color: color,
+          ),
+        ],
+      );
 }

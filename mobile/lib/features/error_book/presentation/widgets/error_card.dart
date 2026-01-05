@@ -10,9 +10,9 @@ import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.d
 /// 2. 交互明确：整卡可点击查看详情，左滑删除
 /// 3. 视觉反馈：掌握度用进度条和颜色体现
 class ErrorCard extends StatelessWidget {
-
   const ErrorCard({
-    required this.error, super.key,
+    required this.error,
+    super.key,
     this.onTap,
     this.onDelete,
     this.showReviewStatus = true,
@@ -26,31 +26,34 @@ class ErrorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final now = DateTime.now();
-    final needReview = error.nextReviewAt != null &&
-        error.nextReviewAt!.isBefore(now);
+    final needReview =
+        error.nextReviewAt != null && error.nextReviewAt!.isBefore(now);
 
     return Dismissible(
       key: Key(error.id),
       direction: onDelete != null
           ? DismissDirection.endToStart
           : DismissDirection.none,
-      confirmDismiss: onDelete != null ? (_) async => showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('删除', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ) : null,
+      confirmDismiss: onDelete != null
+          ? (_) async => showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('确认删除'),
+                  content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('取消'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child:
+                          const Text('删除', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              )
+          : null,
       onDismissed: (_) => onDelete?.call(),
       background: Container(
         alignment: Alignment.centerRight,
@@ -92,10 +95,10 @@ class ErrorCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withOpacity(0.1),
+                          color: theme.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: theme.colorScheme.error.withOpacity(0.3),
+                            color: theme.colorScheme.error.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -148,7 +151,8 @@ class ErrorCard extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: error.masteryLevel,
                             minHeight: 6,
-                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               _getMasteryColor(error.masteryLevel),
                             ),
@@ -247,9 +251,9 @@ class ErrorCard extends StatelessWidget {
 
 /// 错题简化卡片（用于复习页面）
 class ErrorCardCompact extends StatelessWidget {
-
   const ErrorCardCompact({
-    required this.error, super.key,
+    required this.error,
+    super.key,
     this.onTap,
   });
   final ErrorRecord error;

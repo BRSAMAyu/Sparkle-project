@@ -131,7 +131,8 @@ void main() {
         const baseDelay = 1000; // milliseconds
 
         for (var attempt = 0; attempt < maxRetries; attempt++) {
-          final delay = baseDelay * (1 << attempt); // 1000, 2000, 4000, 8000, 16000
+          final delay =
+              baseDelay * (1 << attempt); // 1000, 2000, 4000, 8000, 16000
           expect(delay, greaterThan(0));
           expect(delay, lessThanOrEqualTo(baseDelay * (1 << (maxRetries - 1))));
         }
@@ -257,8 +258,9 @@ void main() {
           },
         };
 
-        expect(messageWithMetadata['payload'], isNotNull);
-        expect(messageWithMetadata['payload']['metadata'], isNotNull);
+        final payload = messageWithMetadata['payload'] as Map<String, Object?>;
+        expect(payload, isNotNull);
+        expect(payload['metadata'], isNotNull);
       });
 
       test('binary data handling', () {

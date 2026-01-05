@@ -1,7 +1,8 @@
 /// 错误消息映射工具类
 class ErrorMessages {
   /// 将技术性错误代码映射为用户友好的消息
-  static String getUserFriendlyMessage(String errorCode, String? technicalMessage) {
+  static String getUserFriendlyMessage(
+      String errorCode, String? technicalMessage,) {
     switch (errorCode.toUpperCase()) {
       // 连接相关错误
       case 'CONNECTION_ERROR':

@@ -118,6 +118,41 @@ def analyze_error_batch(self, error_ids: list, user_id: str):
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
 
 
+@celery_app.task(bind=True, max_retries=2, name="process_stored_file")
+def process_stored_file(
+    self,
+    file_id: str,
+    user_id: str,
+    download_url: str,
+    file_name: str,
+    mime_type: str,
+    thumbnail_upload_url: str = None,
+):
+    """
+    Process uploaded file: chunking, embeddings, optional thumbnail.
+    """
+    import asyncio
+    from uuid import UUID
+    from app.db.session import AsyncSessionLocal
+    from app.services.file_processing_orchestrator import FileProcessingOrchestrator
+
+    async def _process():
+        async with AsyncSessionLocal() as session:
+            orchestrator = FileProcessingOrchestrator(session)
+            return await orchestrator.process_file(
+                file_id=UUID(file_id),
+                user_id=UUID(user_id),
+                download_url=download_url,
+                file_name=file_name,
+                mime_type=mime_type,
+                thumbnail_upload_url=thumbnail_upload_url,
+            )
+
+    try:
+        return asyncio.run(_process())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+
 @celery_app.task(bind=True, max_retries=2, name="record_token_usage")
 def record_token_usage(self, user_id: str, session_id: str, request_id: str,
                       prompt_tokens: int, completion_tokens: int, model: str, cost: float):

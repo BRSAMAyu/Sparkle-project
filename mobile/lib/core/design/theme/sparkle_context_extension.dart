@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/tokens/color_tokens_v2.dart';
-import 'package:sparkle/core/design/tokens_v2/theme_manager.dart' show SparkleSpacing, SparkleTypography;
+import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
+    show SparkleSpacing, SparkleTypography;
 
 /// BuildContext helpers for Sparkle design tokens.
 extension SparkleContextExtension on BuildContext {
   SparkleThemeExtension get sparkle {
     final extension = Theme.of(this).extension<SparkleThemeExtension>();
-    assert(extension != null, 'SparkleThemeExtension is not registered on ThemeData.');
+    assert(extension != null,
+        'SparkleThemeExtension is not registered on ThemeData.',);
     return extension!;
   }
 

@@ -4,13 +4,89 @@ Knowledge Galaxy Models
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON, LargeBinary, BigInteger
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
 from app.models.base import BaseModel, GUID
+
+
+class CollaborativeGalaxy(BaseModel):
+    """
+    协作星图表 (Collaborative Galaxies)
+    支持多用户共享和协作编辑的主题星图
+    """
+    __tablename__ = "collaborative_galaxies"
+
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    
+    # 可见性: private, shared, public
+    visibility = Column(String(20), default="private", nullable=False)
+    
+    # 关联学科 (可选)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
+
+    # 关系
+    creator = relationship("User", foreign_keys=[created_by])
+    subject = relationship("Subject")
+    permissions = relationship("GalaxyUserPermission", back_populates="galaxy", cascade="all, delete-orphan")
+
+
+class GalaxyUserPermission(Base):
+    """
+    协作星图用户权限表
+    """
+    __tablename__ = "galaxy_user_permissions"
+
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    
+    # 权限等级: owner, editor, viewer, contrib
+    permission_level = Column(String(20), nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # 关系
+    galaxy = relationship("CollaborativeGalaxy", back_populates="permissions")
+    user = relationship("User")
+
+
+class CRDTSnapshot(Base):
+    """
+    CRDT 状态快照表
+    存储 Yjs 文档的二进制状态
+    """
+    __tablename__ = "crdt_snapshots"
+
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    state_data = Column(LargeBinary, nullable=False)  # Yjs 二进制更新
+    operation_count = Column(Integer, default=0)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class CRDTOperationLog(Base):
+    """
+    协作操作日志表
+    用于审计和冲突回溯
+    """
+    __tablename__ = "crdt_operation_log"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    
+    # 操作类型: add_node, update_mastery, delete_node, etc.
+    operation_type = Column(String(50))
+    operation_data = Column(JSONB)
+    
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class KnowledgeNode(BaseModel):

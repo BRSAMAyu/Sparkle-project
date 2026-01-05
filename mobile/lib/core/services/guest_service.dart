@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 
 /// 访客服务 - 管理访客 ID 的持久化
 class GuestService {
-
   GuestService(this._prefs) {
     // 初始化时从本地存储加载
     _cachedGuestId = _prefs.getString(_guestIdKey);

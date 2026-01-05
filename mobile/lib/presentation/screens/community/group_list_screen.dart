@@ -52,7 +52,8 @@ class GroupListScreen extends ConsumerWidget {
             );
           }
           return RefreshIndicator(
-            onRefresh: () async => ref.read(myGroupsProvider.notifier).refresh(),
+            onRefresh: () async =>
+                ref.read(myGroupsProvider.notifier).refresh(),
             child: ListView.separated(
               padding: const EdgeInsets.all(DS.spacing16),
               itemCount: groups.length,
@@ -83,7 +84,6 @@ class GroupListScreen extends ConsumerWidget {
 }
 
 class _AnimatedGroupTile extends StatefulWidget {
-
   const _AnimatedGroupTile({required this.group, required this.index});
   final GroupListItem group;
   final int index;
@@ -92,7 +92,8 @@ class _AnimatedGroupTile extends StatefulWidget {
   State<_AnimatedGroupTile> createState() => _AnimatedGroupTileState();
 }
 
-class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTickerProviderStateMixin {
+class _AnimatedGroupTileState extends State<_AnimatedGroupTile>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -104,7 +105,7 @@ class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTicke
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    
+
     // Stagger effect based on index
     final delay = Duration(milliseconds: widget.index * 50);
     Future.delayed(delay, () {
@@ -115,7 +116,8 @@ class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTicke
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
@@ -128,23 +130,22 @@ class _AnimatedGroupTileState extends State<_AnimatedGroupTile> with SingleTicke
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: _GroupListTile(group: widget.group),
-      ),
-    );
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: _GroupListTile(group: widget.group),
+        ),
+      );
 }
 
 class _GroupListTile extends StatelessWidget {
-
   const _GroupListTile({required this.group});
   final GroupListItem group;
 
   @override
   Widget build(BuildContext context) {
     final isSprint = group.isSprint;
-    
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.brandPrimaryConst,
@@ -174,26 +175,35 @@ class _GroupListTile extends StatelessWidget {
                     height: 56,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: isSprint 
-                          ? LinearGradient(colors: [DS.brandPrimary.shade100, DS.brandPrimary.shade50])
-                          : LinearGradient(colors: [DS.brandPrimary.shade100, DS.brandPrimary.shade50]),
+                      gradient: isSprint
+                          ? LinearGradient(colors: [
+                              DS.brandPrimary.shade100,
+                              DS.brandPrimary.shade50,
+                            ],)
+                          : LinearGradient(colors: [
+                              DS.brandPrimary.shade100,
+                              DS.brandPrimary.shade50,
+                            ],),
                       boxShadow: [
-                         BoxShadow(
-                           color: (isSprint ? DS.brandPrimary : DS.brandPrimary).withValues(alpha: 0.2),
-                           blurRadius: 8,
-                           offset: const Offset(0, 4),
-                         ),
+                        BoxShadow(
+                          color: (isSprint ? DS.brandPrimary : DS.brandPrimary)
+                              .withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
                     child: Icon(
-                       isSprint ? Icons.timer_outlined : Icons.school_outlined,
-                       color: isSprint ? Colors.deepOrange : DS.brandPrimary.shade700,
-                       size: 28,
+                      isSprint ? Icons.timer_outlined : Icons.school_outlined,
+                      color: isSprint
+                          ? Colors.deepOrange
+                          : DS.brandPrimary.shade700,
+                      size: 28,
                     ),
                   ),
                 ),
                 const SizedBox(width: DS.spacing16),
-                
+
                 // Content
                 Expanded(
                   child: Column(
@@ -204,7 +214,10 @@ class _GroupListTile extends StatelessWidget {
                           Expanded(
                             child: Text(
                               group.name,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: DS.neutral900,
                                   ),
@@ -213,29 +226,30 @@ class _GroupListTile extends StatelessWidget {
                             ),
                           ),
                           if (isSprint && group.daysRemaining != null)
-                             Container(
-                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                               decoration: BoxDecoration(
-                                 color: DS.error.shade50,
-                                 borderRadius: BorderRadius.circular(8),
-                               ),
-                               child: Text(
-                                 '${group.daysRemaining}d left',
-                                 style: TextStyle(
-                                   color: DS.error.shade700,
-                                   fontSize: 10,
-                                   fontWeight: FontWeight.bold,
-                                 ),
-                               ),
-                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2,),
+                              decoration: BoxDecoration(
+                                color: DS.error.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${group.daysRemaining}d left',
+                                style: TextStyle(
+                                  color: DS.error.shade700,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           _buildInfoBadge(
-                            context, 
-                            Icons.local_fire_department_rounded, 
+                            context,
+                            Icons.local_fire_department_rounded,
                             '${group.totalFlamePower}',
                             DS.brandPrimary,
                           ),
@@ -261,19 +275,21 @@ class _GroupListTile extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoBadge(BuildContext context, IconData icon, String text, Color color) => Row(
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: DS.xs),
-        Text(
-          text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: DS.neutral600,
-            fontWeight: FontWeight.w500,
+  Widget _buildInfoBadge(
+          BuildContext context, IconData icon, String text, Color color,) =>
+      Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: DS.xs),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 class _GroupListLoading extends StatelessWidget {
@@ -281,10 +297,11 @@ class _GroupListLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.separated(
-      padding: const EdgeInsets.all(DS.spacing16),
-      itemCount: 6,
-      separatorBuilder: (context, index) => const SizedBox(height: DS.spacing12),
-      itemBuilder: (context, index) => Shimmer.fromColors(
+        padding: const EdgeInsets.all(DS.spacing16),
+        itemCount: 6,
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: DS.spacing12),
+        itemBuilder: (context, index) => Shimmer.fromColors(
           baseColor: DS.neutral200,
           highlightColor: DS.neutral100,
           child: Container(
@@ -295,5 +312,5 @@ class _GroupListLoading extends StatelessWidget {
             ),
           ),
         ),
-    );
+      );
 }

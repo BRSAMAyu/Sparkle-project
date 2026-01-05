@@ -3,13 +3,15 @@ import 'package:flutter/foundation.dart';
 /// API Constants
 class ApiConstants {
   static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
-  static const String _wsBaseUrlOverride = String.fromEnvironment('WS_BASE_URL');
+  static const String _wsBaseUrlOverride =
+      String.fromEnvironment('WS_BASE_URL');
 
   // Base URL (HTTP)
   static String get baseUrl {
     if (_baseUrlOverride.isNotEmpty) {
       if (kReleaseMode && _baseUrlOverride.startsWith('http:')) {
-        debugPrint('⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.');
+        debugPrint(
+            '⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.',);
       }
       return _baseUrlOverride;
     }
@@ -17,7 +19,8 @@ class ApiConstants {
     // Default fallback logic
     if (kIsWeb) {
       if (kReleaseMode) {
-        debugPrint('⚠️ WARNING: Flutter Web in release mode may require HTTPS for many features.');
+        debugPrint(
+            '⚠️ WARNING: Flutter Web in release mode may require HTTPS for many features.',);
       }
       return 'http://localhost:8080';
     }
@@ -26,7 +29,7 @@ class ApiConstants {
     }
     return 'http://localhost:8080';
   }
-  
+
   static const String apiVersion = 'v1';
   static const String apiBasePath = '/api/$apiVersion';
 
@@ -40,6 +43,7 @@ class ApiConstants {
     const isProduction = kReleaseMode;
     return _applyWsSchemeForEnvironment(rawBaseUrl, isProduction: isProduction);
   }
+
   static const String wsChat = '/ws/chat';
 
   // Endpoints
@@ -78,7 +82,8 @@ class ApiConstants {
     if (isProduction) {
       // 仅警告，不强制修改协议，避免破坏用户显式配置
       if (uri.scheme == 'ws') {
-        debugPrint('⚠️ WARNING: Using insecure WebSocket (ws://) in RELEASE mode. '
+        debugPrint(
+            '⚠️ WARNING: Using insecure WebSocket (ws://) in RELEASE mode. '
             'Consider using secure WebSocket (wss://) for production.');
       } else if (uri.scheme == 'http') {
         debugPrint('⚠️ WARNING: Using insecure HTTP (http://) in RELEASE mode. '

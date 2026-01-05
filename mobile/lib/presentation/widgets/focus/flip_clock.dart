@@ -5,9 +5,9 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// 翻页时钟组件 - 星空渐变风格
 class FlipClock extends StatelessWidget {
-
   const FlipClock({
-    required this.seconds, super.key,
+    required this.seconds,
+    super.key,
     this.showHours = false,
   });
   final int seconds;
@@ -40,7 +40,6 @@ class FlipClock extends StatelessWidget {
 
 /// 单个翻转数字
 class _FlipDigit extends StatefulWidget {
-
   const _FlipDigit({required this.digit});
   final int digit;
 
@@ -71,18 +70,22 @@ class _FlipDigitState extends State<_FlipDigit>
     _topFlipAnimation = Tween<double>(
       begin: 0,
       end: pi / 2,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0, 0.5, curve: Curves.easeIn),
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0, 0.5, curve: Curves.easeIn),
+      ),
+    );
 
     _bottomFlipAnimation = Tween<double>(
       begin: -pi / 2,
       end: 0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+      ),
+    );
   }
 
   @override
@@ -106,27 +109,27 @@ class _FlipDigitState extends State<_FlipDigit>
 
   @override
   Widget build(BuildContext context) => Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      child: Stack(
-        children: [
-          // 静态下半部分（当前数字）
-          _buildHalf(
-            digit: _currentDigit,
-            isTop: false,
-            rotationX: 0,
-          ),
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        child: Stack(
+          children: [
+            // 静态下半部分（当前数字）
+            _buildHalf(
+              digit: _currentDigit,
+              isTop: false,
+              rotationX: 0,
+            ),
 
-          // 静态上半部分（下一个数字）
-          _buildHalf(
-            digit: _nextDigit,
-            isTop: true,
-            rotationX: 0,
-          ),
+            // 静态上半部分（下一个数字）
+            _buildHalf(
+              digit: _nextDigit,
+              isTop: true,
+              rotationX: 0,
+            ),
 
-          // 动画上半部分翻转（当前数字向下翻）
-          AnimatedBuilder(
-            animation: _topFlipAnimation,
-            builder: (context, _) => Transform(
+            // 动画上半部分翻转（当前数字向下翻）
+            AnimatedBuilder(
+              animation: _topFlipAnimation,
+              builder: (context, _) => Transform(
                 alignment: Alignment.bottomCenter,
                 transform: Matrix4.identity()
                   ..setEntry(3, 2, 0.001)
@@ -137,12 +140,12 @@ class _FlipDigitState extends State<_FlipDigit>
                   rotationX: _topFlipAnimation.value,
                 ),
               ),
-          ),
+            ),
 
-          // 动画下半部分翻转（下一个数字从上翻下来）
-          AnimatedBuilder(
-            animation: _bottomFlipAnimation,
-            builder: (context, _) => Transform(
+            // 动画下半部分翻转（下一个数字从上翻下来）
+            AnimatedBuilder(
+              animation: _bottomFlipAnimation,
+              builder: (context, _) => Transform(
                 alignment: Alignment.topCenter,
                 transform: Matrix4.identity()
                   ..setEntry(3, 2, 0.001)
@@ -153,36 +156,37 @@ class _FlipDigitState extends State<_FlipDigit>
                   rotationX: _bottomFlipAnimation.value,
                 ),
               ),
-          ),
-        ],
-      ),
-    );
+            ),
+          ],
+        ),
+      );
 
   Widget _buildHalf({
     required int digit,
     required bool isTop,
     required double rotationX,
-  }) => ClipRect(
-      child: Align(
-        alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
-        heightFactor: 0.5,
-        child: Container(
-          width: 50,
-          height: 80,
-          decoration: BoxDecoration(
-            color: DS.deepSpaceSurface,
-            borderRadius: BorderRadius.vertical(
-              top: isTop ? const Radius.circular(8) : Radius.zero,
-              bottom: isTop ? Radius.zero : const Radius.circular(8),
+  }) =>
+      ClipRect(
+        child: Align(
+          alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+          heightFactor: 0.5,
+          child: Container(
+            width: 50,
+            height: 80,
+            decoration: BoxDecoration(
+              color: DS.deepSpaceSurface,
+              borderRadius: BorderRadius.vertical(
+                top: isTop ? const Radius.circular(8) : Radius.zero,
+                bottom: isTop ? Radius.zero : const Radius.circular(8),
+              ),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.1),
+                width: 0.5,
+              ),
             ),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.1),
-              width: 0.5,
-            ),
-          ),
-          child: Center(
-            child: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
+            child: Center(
+              child: ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
@@ -190,21 +194,21 @@ class _FlipDigitState extends State<_FlipDigit>
                     DS.secondaryLight,
                   ],
                 ).createShader(bounds),
-              child: Text(
-                '$digit',
-                style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.bold,
-                  color: DS.brandPrimaryConst,
-                  fontFamily: 'monospace',
-                  height: 1.0,
+                child: Text(
+                  '$digit',
+                  style: TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
+                    color: DS.brandPrimaryConst,
+                    fontFamily: 'monospace',
+                    height: 1.0,
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 /// 冒号分隔符
@@ -226,7 +230,8 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.3).animate(_controller);
+    _opacityAnimation =
+        Tween<double>(begin: 1.0, end: 0.3).animate(_controller);
     _controller.repeat(reverse: true);
   }
 
@@ -238,8 +243,8 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _opacityAnimation,
-      builder: (context, _) => Padding(
+        animation: _opacityAnimation,
+        builder: (context, _) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -250,35 +255,35 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
             ],
           ),
         ),
-    );
+      );
 
   Widget _buildDot(double opacity) => Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            DS.primaryBase.withValues(alpha: opacity),
-            DS.secondaryLight.withValues(alpha: opacity),
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [
+              DS.primaryBase.withValues(alpha: opacity),
+              DS.secondaryLight.withValues(alpha: opacity),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: DS.primaryBase.withValues(alpha: opacity * 0.5),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
           ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: DS.primaryBase.withValues(alpha: opacity * 0.5),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-    );
+      );
 }
 
 /// 简化版时钟（无翻转动画）
 class SimpleFlipClock extends StatelessWidget {
-
   const SimpleFlipClock({
-    required this.seconds, super.key,
+    required this.seconds,
+    super.key,
     this.showHours = false,
     this.fontSize = 64,
   });
@@ -302,13 +307,13 @@ class SimpleFlipClock extends StatelessWidget {
 
     return ShaderMask(
       shaderCallback: (bounds) => LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            DS.primaryBase,
-            DS.secondaryLight,
-          ],
-        ).createShader(bounds),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          DS.primaryBase,
+          DS.secondaryLight,
+        ],
+      ).createShader(bounds),
       child: Text(
         timeString,
         style: TextStyle(

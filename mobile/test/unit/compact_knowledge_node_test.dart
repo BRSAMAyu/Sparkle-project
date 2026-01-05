@@ -6,6 +6,7 @@ void main() {
     test('should correctly pack and unpack values', () {
       final node = CompactKnowledgeNode.create(
         id: '123',
+        name: 'Node',
         x: 10.5,
         y: 20.0,
         mastery: 85,
@@ -28,6 +29,7 @@ void main() {
     test('should clamp mastery value between 0 and 100', () {
       final node = CompactKnowledgeNode.create(
         id: '123',
+        name: 'Node',
         x: 0,
         y: 0,
         mastery: 150,
@@ -38,9 +40,10 @@ void main() {
       );
 
       expect(node.mastery, 100);
-      
+
       final nodeNegative = CompactKnowledgeNode.create(
         id: '123',
+        name: 'Node',
         x: 0,
         y: 0,
         mastery: -50,
@@ -56,6 +59,7 @@ void main() {
     test('should handle bitwise operations correctly for flags', () {
       final node = CompactKnowledgeNode.create(
         id: '123',
+        name: 'Node',
         x: 0,
         y: 0,
         mastery: 50,
@@ -74,6 +78,7 @@ void main() {
     test('copyWith should only update specified fields', () {
       final node = CompactKnowledgeNode.create(
         id: '123',
+        name: 'Node',
         x: 10,
         y: 10,
         mastery: 50,

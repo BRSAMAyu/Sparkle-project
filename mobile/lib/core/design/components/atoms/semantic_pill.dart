@@ -74,7 +74,8 @@ class SemanticPill extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(PillTone tone, BuildContext context) => _getTextColor(tone, context);
+  Color _getIconColor(PillTone tone, BuildContext context) =>
+      _getTextColor(tone, context);
 
   @override
   Widget build(BuildContext context) {
@@ -92,12 +93,14 @@ class SemanticPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: dense ? 14 : 16, color: _getIconColor(tone, context)),
+            Icon(icon,
+                size: dense ? 14 : 16, color: _getIconColor(tone, context),),
             SizedBox(width: context.space.xs),
           ],
           Text(
             label,
-            style: context.typo.labelSmall.copyWith(color: _getTextColor(tone, context)),
+            style: context.typo.labelSmall
+                .copyWith(color: _getTextColor(tone, context)),
           ),
         ],
       ),

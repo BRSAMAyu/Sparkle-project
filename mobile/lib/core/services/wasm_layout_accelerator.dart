@@ -33,7 +33,8 @@ class WasmLayoutAccelerator {
       // 尝试加载WASM模块
       _isWasmAvailable = await _loadWasmModule();
       _isInitialized = true;
-      debugPrint('WasmLayoutAccelerator initialized: WASM available = $_isWasmAvailable');
+      debugPrint(
+          'WasmLayoutAccelerator initialized: WASM available = $_isWasmAvailable',);
     } catch (e) {
       debugPrint('Failed to initialize WASM: $e');
       _isWasmAvailable = false;
@@ -117,12 +118,16 @@ class WasmLayoutAccelerator {
     LayoutConfig config = const LayoutConfig(),
   }) async {
     // 转换为LayoutNode格式
-    final nodes = currentPositions.entries.map((e) => LayoutNode(
-      id: e.key,
-      x: e.value.dx,
-      y: e.value.dy,
-      fixed: !movedNodeIds.contains(e.key),
-    ),).toList();
+    final nodes = currentPositions.entries
+        .map(
+          (e) => LayoutNode(
+            id: e.key,
+            x: e.value.dx,
+            y: e.value.dy,
+            fixed: !movedNodeIds.contains(e.key),
+          ),
+        )
+        .toList();
 
     // 进行有限次数的迭代
     final updatedConfig = LayoutConfig(
@@ -141,7 +146,8 @@ class WasmLayoutAccelerator {
   }
 
   /// 计算节点间的力
-  static Offset _calculateRepulsion(Offset pos1, Offset pos2, double strength, double minDistance) {
+  static Offset _calculateRepulsion(
+      Offset pos1, Offset pos2, double strength, double minDistance,) {
     final dx = pos1.dx - pos2.dx;
     final dy = pos1.dy - pos2.dy;
     var distance = math.sqrt(dx * dx + dy * dy);
@@ -153,7 +159,8 @@ class WasmLayoutAccelerator {
   }
 
   /// 计算弹簧吸引力
-  static Offset _calculateAttraction(Offset pos1, Offset pos2, double strength, double idealLength) {
+  static Offset _calculateAttraction(
+      Offset pos1, Offset pos2, double strength, double idealLength,) {
     final dx = pos2.dx - pos1.dx;
     final dy = pos2.dy - pos1.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
@@ -383,19 +390,25 @@ class LayoutStats {
   final bool usedWasm;
 
   @override
-  String toString() => 'LayoutStats(iterations: $iterations, time: ${totalTime.inMilliseconds}ms, '
-        'avgMove: ${avgMoveDistance.toStringAsFixed(2)}, maxMove: ${maxMoveDistance.toStringAsFixed(2)}, '
-        'wasm: $usedWasm)';
+  String toString() =>
+      'LayoutStats(iterations: $iterations, time: ${totalTime.inMilliseconds}ms, '
+      'avgMove: ${avgMoveDistance.toStringAsFixed(2)}, maxMove: ${maxMoveDistance.toStringAsFixed(2)}, '
+      'wasm: $usedWasm)';
 }
 
 /// WASM布局加速器扩展 - 提供便捷的转换方法
 extension WasmLayoutAcceleratorX on WasmLayoutAccelerator {
   /// 从Galaxy模型转换
-  List<LayoutNode> nodesFromPositions(Map<String, Offset> positions) => positions.entries.map((e) => LayoutNode(
-      id: e.key,
-      x: e.value.dx,
-      y: e.value.dy,
-    ),).toList();
+  List<LayoutNode> nodesFromPositions(Map<String, Offset> positions) =>
+      positions.entries
+          .map(
+            (e) => LayoutNode(
+              id: e.key,
+              x: e.value.dx,
+              y: e.value.dy,
+            ),
+          )
+          .toList();
 
   /// 计算布局并返回统计
   Future<(Map<String, Offset>, LayoutStats)> calculateWithStats({

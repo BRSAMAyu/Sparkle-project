@@ -38,6 +38,12 @@ class KnowledgeService:
             logger.warning(f"HyDE generation failed, falling back to original query: {e}")
             return query
 
+    async def generate_hypothetical_answer(self, query: str) -> str:
+        """
+        Public wrapper for HyDE generation.
+        """
+        return await self._generate_hypothetical_answer(query)
+
     async def retrieve_context(self, user_id: UUID, query: str, limit: int = 5) -> str:
         """
         Retrieve relevant knowledge context for the LLM using Hybrid Search (RAG v2.0).

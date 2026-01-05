@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/data/repositories/capsule_repository.dart';
 
-class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleModel>>> {
-
+class CapsuleNotifier
+    extends StateNotifier<AsyncValue<List<CuriosityCapsuleModel>>> {
   CapsuleNotifier(this._repository) : super(const AsyncValue.loading()) {
     fetchTodayCapsules();
   }
@@ -24,15 +24,20 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
       // Optimistic update
       state.whenData((capsules) {
         state = AsyncValue.data(
-          capsules.map((c) => c.id == id ? 
-            CuriosityCapsuleModel(
-              id: c.id, 
-              title: c.title, 
-              content: c.content, 
-              isRead: true, 
-              createdAt: c.createdAt, 
-              relatedSubject: c.relatedSubject,
-            ) : c,).toList(),
+          capsules
+              .map(
+                (c) => c.id == id
+                    ? CuriosityCapsuleModel(
+                        id: c.id,
+                        title: c.title,
+                        content: c.content,
+                        isRead: true,
+                        createdAt: c.createdAt,
+                        relatedSubject: c.relatedSubject,
+                      )
+                    : c,
+              )
+              .toList(),
         );
       });
     } catch (e) {
@@ -41,4 +46,6 @@ class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleMode
   }
 }
 
-final capsuleProvider = StateNotifierProvider<CapsuleNotifier, AsyncValue<List<CuriosityCapsuleModel>>>((ref) => CapsuleNotifier(ref.watch(capsuleRepositoryProvider)));
+final capsuleProvider = StateNotifierProvider<CapsuleNotifier,
+        AsyncValue<List<CuriosityCapsuleModel>>>(
+    (ref) => CapsuleNotifier(ref.watch(capsuleRepositoryProvider)),);

@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from uuid import UUID
 from typing import List, Optional
 from sqlalchemy import select
@@ -6,6 +7,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.commands.search.query import Query
 
+from app.models.document_chunks import DocumentChunk
+from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.embedding_service import embedding_service
 from app.services.rerank_service import rerank_service
@@ -138,6 +141,51 @@ class KnowledgeRetrievalService:
             
         return search_results
 
+    async def document_vector_search(
+        self,
+        user_id: UUID,
+        query: str,
+        file_ids: List[UUID],
+        vector_query: Optional[str] = None,
+        limit: int = 5,
+        threshold: float = 0.3
+    ) -> List["DocumentChunkResult"]:
+        """
+        Vector search over document chunks with forced file scope.
+        """
+        if not query or not file_ids:
+            return []
+
+        actual_vector_text = vector_query if vector_query else query
+        query_embedding = await embedding_service.get_embedding(actual_vector_text)
+
+        stmt = (
+            select(
+                DocumentChunk,
+                StoredFile.file_name,
+                DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
+            )
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .where(DocumentChunk.user_id == user_id)
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.embedding.isnot(None))
+            .order_by("distance")
+            .limit(limit * 5)
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        results: List[DocumentChunkResult] = []
+        for chunk, file_name, distance in rows:
+            if distance is None:
+                continue
+            if distance <= threshold:
+                score = max(0.0, 1.0 - float(distance))
+                results.append(DocumentChunkResult(chunk=chunk, file_name=file_name, score=score))
+
+        return results[:limit]
+
     async def semantic_search_nodes(
         self,
         query: str,
@@ -173,6 +221,13 @@ class KnowledgeRetrievalService:
         matches = result.all()
         
         return [node for node, distance in matches if distance <= threshold]
+
+
+@dataclass
+class DocumentChunkResult:
+    chunk: DocumentChunk
+    file_name: str
+    score: float
 
     async def keyword_search(
          self,

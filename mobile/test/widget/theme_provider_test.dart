@@ -5,6 +5,10 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/presentation/providers/theme_provider.dart';
 
 void main() {
+  Future<void> pumpWithApp(WidgetTester tester, Widget child) async {
+    await tester.pumpWidget(MaterialApp(home: child));
+  }
+
   group('Theme Provider Tests', () {
     // ============================================================
     // Theme Mode Conversion Tests
@@ -65,7 +69,8 @@ void main() {
           (WidgetTester tester) async {
         var providerWorked = false;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -85,15 +90,14 @@ void main() {
         ThemeManager? firstInstance;
         ThemeManager? secondInstance;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
-                if (firstInstance == null) {
-                  firstInstance = ref.watch(themeManagerProvider);
-                } else {
-                  secondInstance = ref.watch(themeManagerProvider);
-                }
+                final manager = ref.watch(themeManagerProvider);
+                firstInstance ??= manager;
+                secondInstance ??= manager;
                 return const Scaffold();
               },
             ),
@@ -113,7 +117,8 @@ void main() {
           (WidgetTester tester) async {
         AppThemeMode? capturedMode;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -131,7 +136,8 @@ void main() {
           (WidgetTester tester) async {
         var updateCount = 0;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -151,7 +157,8 @@ void main() {
 
         // Update provider
         // Note: StateProvider should trigger rebuild
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -180,7 +187,8 @@ void main() {
           (WidgetTester tester) async {
         BrandPreset? capturedPreset;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -199,7 +207,8 @@ void main() {
           (WidgetTester tester) async {
         BrandPreset? capturedPreset;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -228,7 +237,8 @@ void main() {
           (WidgetTester tester) async {
         bool? capturedValue;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -240,14 +250,15 @@ void main() {
         );
 
         expect(capturedValue, isNotNull);
-        expect(capturedValue, isBool);
+        expect(capturedValue, isA<bool>());
       });
 
       testWidgets('highContrastProvider is boolean',
           (WidgetTester tester) async {
         bool? capturedValue;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -273,7 +284,8 @@ void main() {
         BrandPreset? preset;
         bool? highContrast;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -293,7 +305,8 @@ void main() {
 
       testWidgets('Theme manager and state providers independent',
           (WidgetTester tester) async {
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -327,7 +340,8 @@ void main() {
     group('Widget Theme Integration', () {
       testWidgets('Scaffold with theme from provider',
           (WidgetTester tester) async {
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -353,14 +367,15 @@ void main() {
 
       testWidgets('Text renders with correct brightness',
           (WidgetTester tester) async {
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: MaterialApp(
               home: Scaffold(
                 body: Consumer(
                   builder: (context, ref, child) {
-                    final isDark = ref.watch(themeModeProvider) ==
-                        AppThemeMode.dark;
+                    final isDark =
+                        ref.watch(themeModeProvider) == AppThemeMode.dark;
 
                     return Text(
                       isDark ? 'Dark Mode' : 'Light Mode',
@@ -419,16 +434,14 @@ void main() {
         AppThemeMode? firstValue;
         AppThemeMode? secondValue;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
                 final mode = ref.watch(themeModeProvider);
-                if (firstValue == null) {
-                  firstValue = mode;
-                } else {
-                  secondValue = mode;
-                }
+                firstValue ??= mode;
+                secondValue = mode;
                 return const Scaffold();
               },
             ),
@@ -445,7 +458,8 @@ void main() {
         AppThemeMode? mode1;
         AppThemeMode? mode2;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Scaffold(
               body: Consumer(
@@ -478,7 +492,8 @@ void main() {
           (WidgetTester tester) async {
         final stopwatch = Stopwatch()..start();
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -498,11 +513,11 @@ void main() {
         expect(stopwatch.elapsedMilliseconds, lessThan(1000));
       });
 
-      testWidgets('Provider updates efficiently',
-          (WidgetTester tester) async {
+      testWidgets('Provider updates efficiently', (WidgetTester tester) async {
         var buildCount = 0;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -516,7 +531,8 @@ void main() {
 
         final initialCount = buildCount;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -542,7 +558,8 @@ void main() {
           (WidgetTester tester) async {
         var initialized = false;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Consumer(
               builder: (context, ref, child) {
@@ -561,7 +578,8 @@ void main() {
           (WidgetTester tester) async {
         AppThemeMode? capturedMode;
 
-        await tester.pumpWidget(
+        await pumpWithApp(
+          tester,
           ProviderScope(
             child: Scaffold(
               body: Center(

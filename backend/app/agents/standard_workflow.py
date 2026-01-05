@@ -7,7 +7,8 @@ import re
 
 from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
 from app.services.llm_service import llm_service
-from app.services.galaxy_service import GalaxyService
+from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+from app.services.knowledge_service import KnowledgeService
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.gen.agent.v1 import agent_service_pb2
@@ -35,10 +36,103 @@ async def context_builder_node(state: WorkflowState) -> WorkflowState:
 async def retrieval_node(state: WorkflowState) -> WorkflowState:
     """RAG Retrieval."""
     query = state.messages[-1]["content"] if state.messages else ""
-    # In real impl: GalaxyService.hybrid_search(query)
-    
-    # Placeholder
-    state.context_data["knowledge"] = "" 
+    db_session = state.context_data.get("db_session")
+    user_id = state.context_data.get("user_id")
+    file_ids = state.context_data.get("file_ids") or []
+    include_references = bool(state.context_data.get("include_references"))
+
+    if not db_session or not user_id or not query:
+        state.context_data["knowledge_context"] = ""
+        state.context_data["document_context"] = ""
+        return state
+
+    try:
+        user_uuid = uuid.UUID(str(user_id))
+    except ValueError:
+        state.context_data["knowledge_context"] = ""
+        state.context_data["document_context"] = ""
+        return state
+
+    knowledge_context = ""
+    try:
+        ks = KnowledgeService(db_session)
+        knowledge_context = await ks.retrieve_context(user_id=user_uuid, query=query, limit=5)
+    except Exception as e:
+        logger.warning(f"Knowledge retrieval failed: {e}")
+
+    document_context = ""
+    citations = []
+    if file_ids:
+        file_uuid_list = []
+        for fid in file_ids:
+            try:
+                file_uuid_list.append(uuid.UUID(str(fid)))
+            except ValueError:
+                continue
+
+        if file_uuid_list:
+            try:
+                ks = KnowledgeService(db_session)
+                hyde_query = await ks.generate_hypothetical_answer(query)
+                retrieval = KnowledgeRetrievalService(db_session)
+                doc_results = await retrieval.document_vector_search(
+                    user_id=user_uuid,
+                    query=query,
+                    file_ids=file_uuid_list,
+                    vector_query=hyde_query,
+                    limit=5,
+                    threshold=0.4
+                )
+
+                if doc_results:
+                    lines = ["Relevant Documents:"]
+                    for item in doc_results:
+                        chunk = item.chunk
+                        snippet = chunk.content.strip()
+                        if len(snippet) > 400:
+                            snippet = snippet[:400] + "..."
+
+                        label_parts = [item.file_name]
+                        if chunk.section_title:
+                            label_parts.append(chunk.section_title)
+                        if chunk.page_number is not None:
+                            label_parts.append(f"p{chunk.page_number}")
+                        label_parts.append(f"#{chunk.chunk_index}")
+                        label = " | ".join(label_parts)
+                        lines.append(f"- [{label}] {snippet}")
+
+                        if include_references:
+                            title = item.file_name
+                            if chunk.section_title:
+                                title = f"{item.file_name} - {chunk.section_title}"
+
+                            citations.append(agent_service_pb2.Citation(
+                                id=str(chunk.id),
+                                title=title,
+                                content=snippet,
+                                source_type="document",
+                                url="",
+                                score=item.score,
+                                file_id=str(chunk.file_id),
+                                page_number=chunk.page_number or 0,
+                                chunk_index=chunk.chunk_index,
+                                section_title=chunk.section_title or ""
+                            ))
+
+                    document_context = "\n".join(lines)
+            except Exception as e:
+                logger.warning(f"Document retrieval failed: {e}")
+
+    state.context_data["knowledge_context"] = knowledge_context
+    state.context_data["document_context"] = document_context
+
+    if include_references and citations:
+        stream_callback = state.context_data.get("stream_callback")
+        if stream_callback:
+            await stream_callback(agent_service_pb2.ChatResponse(
+                citations=agent_service_pb2.CitationBlock(citations=citations)
+            ))
+
     return state
 
 async def generation_node(state: WorkflowState) -> WorkflowState:
@@ -58,6 +152,14 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
         user_context,
         conversation_history=conversation_context
     )
+
+    knowledge_context = state.context_data.get("knowledge_context") or ""
+    if knowledge_context:
+        system_prompt += f"\n\n## Retrieved Knowledge\n{knowledge_context}"
+
+    document_context = state.context_data.get("document_context") or ""
+    if document_context:
+        system_prompt += f"\n\n## Retrieved Documents\n{document_context}"
     
     user_message = state.messages[-1]["content"] or ""
     tools = state.context_data.get("tools_schema", [])

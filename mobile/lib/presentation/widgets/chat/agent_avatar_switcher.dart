@@ -32,7 +32,8 @@ AgentType agentTypeFromProto(int protoValue) {
 }
 
 /// Agent视觉配置
-class AgentConfig { // 动画隐喻描述
+class AgentConfig {
+  // 动画隐喻描述
 
   const AgentConfig({
     required this.icon,
@@ -152,7 +153,6 @@ class AgentConfig { // 动画隐喻描述
 /// 使用AnimatedSwitcher实现图标的无缝溶解切换，
 /// 包含旋转、缩放和淡入淡出的组合动画
 class AgentAvatarSwitcher extends StatelessWidget {
-
   const AgentAvatarSwitcher({
     required this.agentType,
     super.key,
@@ -228,7 +228,6 @@ class AgentAvatarSwitcher extends StatelessWidget {
 
 /// 脉冲动画图标 - 用于Orchestrator思考时的呼吸效果
 class _PulsingIcon extends StatefulWidget {
-
   const _PulsingIcon({
     required this.icon,
     required this.color,
@@ -272,20 +271,19 @@ class _PulsingIconState extends State<_PulsingIcon>
 
   @override
   Widget build(BuildContext context) => ScaleTransition(
-      scale: _scaleAnimation,
-      child: Icon(
-        widget.icon,
-        color: widget.color,
-        size: 16,
-      ),
-    );
+        scale: _scaleAnimation,
+        child: Icon(
+          widget.icon,
+          color: widget.color,
+          size: 16,
+        ),
+      );
 }
 
 /// Agent状态指示器 - 带动画的完整状态显示
 ///
 /// 包含Agent头像、名称和当前状态描述
 class AgentStatusIndicator extends StatelessWidget {
-
   const AgentStatusIndicator({
     required this.agentType,
     required this.statusText,
@@ -316,7 +314,8 @@ class AgentStatusIndicator extends StatelessWidget {
           AgentAvatarSwitcher(
             agentType: agentType,
             size: 24,
-            showPulseAnimation: isThinking && agentType == AgentType.orchestrator,
+            showPulseAnimation:
+                isThinking && agentType == AgentType.orchestrator,
           ),
           const SizedBox(width: DS.sm),
           Flexible(

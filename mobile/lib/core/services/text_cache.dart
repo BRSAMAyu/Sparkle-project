@@ -156,9 +156,7 @@ class BatchTextRenderer {
   BatchTextRenderer({
     this.cacheEnabled = true,
     this.maxCacheSize = 200,
-  }) : _cache = cacheEnabled
-            ? TextImageCache(maxSize: maxCacheSize)
-            : null;
+  }) : _cache = cacheEnabled ? TextImageCache(maxSize: maxCacheSize) : null;
 
   final bool cacheEnabled;
   final int maxCacheSize;
@@ -225,7 +223,8 @@ class BatchTextRenderer {
   }
 
   /// 获取文本尺寸
-  Size getTextSize(String text, TextStyle style, {double maxWidth = double.infinity}) {
+  Size getTextSize(String text, TextStyle style,
+      {double maxWidth = double.infinity,}) {
     final painter = getTextPainter(text, style, maxWidth: maxWidth);
     return Size(painter.width, painter.height);
   }

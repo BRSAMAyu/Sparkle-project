@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 
 import 'package:sparkle/data/models/chat_message_model.dart';
@@ -32,7 +34,9 @@ void main() {
 
   final step1FromJson = ReasoningStep.fromJson(stepJson);
   print('\n✓ Deserialized: $step1FromJson');
-  print('  - Match: ${step1.id == step1FromJson.id && step1.agent == step1FromJson.agent}');
+  print(
+    '  - Match: ${step1.id == step1FromJson.id && step1.agent == step1FromJson.agent}',
+  );
 
   // Test 2: Completed step with tool output and citations
   print('\n\n2. Testing Completed Step with Tool Output:');

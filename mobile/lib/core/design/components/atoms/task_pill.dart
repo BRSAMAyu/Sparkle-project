@@ -69,7 +69,8 @@ class TaskPill extends StatelessWidget {
       }
     } else {
       // Use task type-based colors
-      final taskColors = TaskColors(brightness: SparkleContext(context).sparkleColors.brightness);
+      final taskColors = TaskColors(
+          brightness: SparkleContext(context).sparkleColors.brightness,);
       background = taskColors.getTint(type);
       border = taskColors.getBorder(type);
       textColor = taskColors.getLabel(type);

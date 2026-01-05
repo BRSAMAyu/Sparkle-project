@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
-import 'package:sparkle/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
 
 /// Provider family for fetching knowledge node details
-final knowledgeDetailProvider = FutureProvider.family<KnowledgeDetailResponse, String>(
+final knowledgeDetailProvider =
+    FutureProvider.family<KnowledgeDetailResponse, String>(
   (ref, nodeId) async {
     final repository = ref.watch(galaxyRepositoryProvider);
     return repository.getNodeDetail(nodeId);

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -25,7 +24,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
 
 // chatInputPool reuses input message structs
@@ -37,10 +35,12 @@ var chatInputPool = sync.Pool{
 
 // chatInput represents a WebSocket chat message input
 type chatInput struct {
-	Message   string `json:"message"`
-	SessionID string `json:"session_id"`
-	Nickname  string `json:"nickname,omitempty"`
-	ExtraContext map[string]interface{} `json:"extra_context,omitempty"`
+	Message           string                 `json:"message"`
+	SessionID         string                 `json:"session_id"`
+	Nickname          string                 `json:"nickname,omitempty"`
+	FileIds           []string               `json:"file_ids,omitempty"`
+	IncludeReferences bool                   `json:"include_references,omitempty"`
+	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
 }
 
 // Reset clears the input for reuse
@@ -48,6 +48,8 @@ func (c *chatInput) Reset() {
 	c.Message = ""
 	c.SessionID = ""
 	c.Nickname = ""
+	c.FileIds = nil
+	c.IncludeReferences = false
 	c.ExtraContext = nil
 }
 
@@ -62,16 +64,16 @@ var stringBuilderPool = sync.Pool{
 var sanitizer = bluemonday.UGCPolicy()
 
 type ChatOrchestrator struct {
-	agentClient    *agent.Client
-	galaxyClient   *galaxy.Client
-	queries        *db.Queries
-	chatHistory    *service.ChatHistoryService
-	quota          *service.QuotaService
-	semantic       *service.SemanticCacheService
-	billing        *service.CostCalculator
-	wsFactory      *WebSocketFactory
-	userContext    *service.UserContextService
-	taskCommand    *service.TaskCommandService
+	agentClient  *agent.Client
+	galaxyClient *galaxy.Client
+	queries      *db.Queries
+	chatHistory  *service.ChatHistoryService
+	quota        *service.QuotaService
+	semantic     *service.SemanticCacheService
+	billing      *service.CostCalculator
+	wsFactory    *WebSocketFactory
+	userContext  *service.UserContextService
+	taskCommand  *service.TaskCommandService
 }
 
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService) *ChatOrchestrator {
@@ -154,7 +156,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 			case "focus_completed":
 				h.handleFocusCompleted(msgMap, userID)
 				return false
-			
+
 			case "update_node_mastery":
 				h.handleUpdateNodeMastery(conn, msgMap, userID)
 				return false
@@ -266,6 +268,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				Input: &agentv1.ChatRequest_Message{
 					Message: input.Message,
 				},
+				FileIds:           input.FileIds,
+				IncludeReferences: input.IncludeReferences,
 				UserProfile: &agentv1.UserProfile{
 					Nickname:     input.Nickname,
 					Timezone:     "Asia/Shanghai",
@@ -424,12 +428,16 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		citations := make([]map[string]interface{}, len(content.Citations.Citations))
 		for i, c := range content.Citations.Citations {
 			citations[i] = map[string]interface{}{
-				"id":          c.Id,
-				"title":       c.Title,
-				"content":     c.Content,
-				"source_type": c.SourceType,
-				"score":       c.Score,
-				"url":         c.Url,
+				"id":            c.Id,
+				"title":         c.Title,
+				"content":       c.Content,
+				"source_type":   c.SourceType,
+				"score":         c.Score,
+				"url":           c.Url,
+				"file_id":       c.FileId,
+				"page_number":   c.PageNumber,
+				"chunk_index":   c.ChunkIndex,
+				"section_title": c.SectionTitle,
 			}
 		}
 		result["citations"] = citations
@@ -445,9 +453,9 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			widgetData = tool.WidgetData.AsMap()
 		}
 		result["tool_result"] = map[string]interface{}{
-			"tool_name":    tool.ToolName,
-			"success":      tool.Success,
-			"data":         data,
+			"tool_name":     tool.ToolName,
+			"success":       tool.Success,
+			"data":          data,
 			"error_message": tool.ErrorMessage,
 			"suggestion":    tool.Suggestion,
 			"widget_type":   tool.WidgetType,
@@ -543,7 +551,7 @@ func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map
 			// TODO: In future, could mark tasks as rejected in DB
 			// For now, just send status update
 			h.sendActionStatus(conn, toolResultID, "dismissed", map[string]interface{}{
-				"message": "任务已忽略",
+				"message":     "任务已忽略",
 				"widget_type": widgetType,
 			})
 		}
@@ -554,14 +562,14 @@ func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map
 			log.Printf("Plan creation confirmed for user %s", userID)
 
 			h.sendActionStatus(conn, toolResultID, "confirmed", map[string]interface{}{
-				"message": "计划已确认",
+				"message":     "计划已确认",
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
 			log.Printf("Plan creation dismissed by user %s", userID)
 
 			h.sendActionStatus(conn, toolResultID, "dismissed", map[string]interface{}{
-				"message": "计划已忽略",
+				"message":     "计划已忽略",
 				"widget_type": widgetType,
 			})
 		}
@@ -572,14 +580,14 @@ func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map
 			log.Printf("Focus session start confirmed for user %s", userID)
 
 			h.sendActionStatus(conn, toolResultID, "confirmed", map[string]interface{}{
-				"message": "专注已开始",
+				"message":     "专注已开始",
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
 			log.Printf("Focus session dismissed by user %s", userID)
 
 			h.sendActionStatus(conn, toolResultID, "dismissed", map[string]interface{}{
-				"message": "专注已取消",
+				"message":     "专注已取消",
 				"widget_type": widgetType,
 			})
 		}
@@ -654,11 +662,11 @@ func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap 
 	nodeID := payload["nodeId"].(string)
 	mastery := int32(payload["mastery"].(float64))
 	versionStr := payload["version"].(string)
-	
+
 	// Support flexible ISO8601 parsing (Dart toIso8601String format)
 	var version time.Time
 	var err error
-	
+
 	// Try multiple formats to be safe
 	formats := []string{
 		time.RFC3339Nano,
@@ -666,7 +674,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap 
 		"2006-01-02T15:04:05.999999",
 		time.RFC3339,
 	}
-	
+
 	for _, f := range formats {
 		version, err = time.Parse(f, versionStr)
 		if err == nil {
@@ -693,7 +701,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMastery(conn *websocket.Conn, msgMap 
 	defer cancel()
 
 	resp, err := h.galaxyClient.UpdateNodeMastery(ctx, userID, nodeID, mastery, version, "offline_sync")
-	
+
 	if err != nil {
 		log.Printf("gRPC mastery update failed: %v", err)
 		h.sendError(conn, "update_node_mastery", nodeID, versionStr, "Sync service unavailable")

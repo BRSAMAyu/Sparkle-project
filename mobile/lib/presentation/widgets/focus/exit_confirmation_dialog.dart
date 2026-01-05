@@ -8,9 +8,11 @@ enum ExitStep { first, second, third }
 
 /// 三重确认退出对话框
 class ExitConfirmationDialog extends StatefulWidget {
-
   const ExitConfirmationDialog({
-    required this.elapsedMinutes, required this.onConfirmExit, required this.onCancel, super.key,
+    required this.elapsedMinutes,
+    required this.onConfirmExit,
+    required this.onCancel,
+    super.key,
   });
   final int elapsedMinutes;
   final VoidCallback onConfirmExit;
@@ -36,10 +38,12 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOut,
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOut,
+      ),
+    );
     _slideController.forward();
   }
 
@@ -67,105 +71,105 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
 
   @override
   Widget build(BuildContext context) => SlideTransition(
-      position: _slideAnimation,
-      child: Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(DS.xl),
-        child: Container(
-          padding: const EdgeInsets.all(DS.xl),
-          decoration: BoxDecoration(
-            color: DS.deepSpaceSurface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.1),
+        position: _slideAnimation,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(DS.xl),
+          child: Container(
+            padding: const EdgeInsets.all(DS.xl),
+            decoration: BoxDecoration(
+              color: DS.deepSpaceSurface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: DS.brandPrimary.withValues(alpha: 0.5),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: DS.brandPrimary.withValues(alpha: 0.5),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Progress Indicator
-              _buildProgressIndicator(),
-              const SizedBox(height: DS.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress Indicator
+                _buildProgressIndicator(),
+                const SizedBox(height: DS.xl),
 
-              // Icon
-              _buildIcon(),
-              const SizedBox(height: DS.lg),
+                // Icon
+                _buildIcon(),
+                const SizedBox(height: DS.lg),
 
-              // Title
-              Text(
-                _getTitle(),
-                style: TextStyle(
-                  color: DS.brandPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.md),
-
-              // Message
-              Text(
-                _getMessage(),
-                style: TextStyle(
-                  color: DS.brandPrimary.withValues(alpha: 0.7),
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.xl),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton.secondary(
-                      text: _getCancelText(),
-                      onPressed: _cancel,
-                    ),
+                // Title
+                Text(
+                  _getTitle(),
+                  style: TextStyle(
+                    color: DS.brandPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: DS.lg),
-                  Expanded(
-                    child: CustomButton.primary(
-                      text: _getConfirmText(),
-                      onPressed: _nextStep,
-                      customGradient: _currentStep == ExitStep.third
-                          ? DS.errorGradient
-                          : null,
-                    ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.md),
+
+                // Message
+                Text(
+                  _getMessage(),
+                  style: TextStyle(
+                    color: DS.brandPrimary.withValues(alpha: 0.7),
+                    fontSize: 14,
+                    height: 1.5,
                   ),
-                ],
-              ),
-            ],
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.xl),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton.secondary(
+                        text: _getCancelText(),
+                        onPressed: _cancel,
+                      ),
+                    ),
+                    const SizedBox(width: DS.lg),
+                    Expanded(
+                      child: CustomButton.primary(
+                        text: _getConfirmText(),
+                        onPressed: _nextStep,
+                        customGradient: _currentStep == ExitStep.third
+                            ? DS.errorGradient
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
   Widget _buildProgressIndicator() => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        final isActive = index <= _currentStep.index;
-        return Container(
-          width: 24,
-          height: 4,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: isActive
-                ? DS.primaryBase
-                : DS.brandPrimary.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        );
-      }),
-    );
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          final isActive = index <= _currentStep.index;
+          return Container(
+            width: 24,
+            height: 4,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? DS.primaryBase
+                  : DS.brandPrimary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      );
 
   Widget _buildIcon() {
     IconData icon;

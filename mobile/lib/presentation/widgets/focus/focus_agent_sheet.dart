@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/data/models/task_model.dart';
+import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
-import 'package:sparkle/presentation/providers/task_chat_provider.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
 import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class FocusAgentSheet extends ConsumerWidget {
   const FocusAgentSheet({required this.task, super.key});
@@ -43,14 +43,17 @@ class FocusAgentSheet extends ConsumerWidget {
                   gradient: DS.secondaryGradient,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.auto_awesome, color: DS.brandPrimaryConst, size: 18),
+                child: Icon(Icons.auto_awesome,
+                    color: DS.brandPrimaryConst, size: 18,),
               ),
               const SizedBox(width: DS.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('AI专注教练', style: TextStyle(fontWeight: DS.fontWeightBold, fontSize: 16)),
+                    const Text('AI专注教练',
+                        style: TextStyle(
+                            fontWeight: DS.fontWeightBold, fontSize: 16,),),
                     Text(
                       '任务：${task.title} · 已专注$elapsedMinutes分钟',
                       style: TextStyle(color: DS.neutral500, fontSize: 12),
@@ -144,7 +147,8 @@ class _QuickPromptChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ActionChip(
-        label: Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
+        label:
+            Text(label, style: TextStyle(fontSize: 12, color: DS.brandPrimary)),
         backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
         onPressed: onTap,
       );

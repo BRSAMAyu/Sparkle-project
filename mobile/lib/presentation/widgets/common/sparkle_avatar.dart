@@ -4,10 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/features/user/user.dart';
 
 class SparkleAvatar extends StatelessWidget {
-
   const SparkleAvatar({
     super.key,
     this.url,
@@ -26,8 +25,8 @@ class SparkleAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    final effectiveBackgroundColor = backgroundColor ?? 
+
+    final effectiveBackgroundColor = backgroundColor ??
         (isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade200);
 
     Widget avatar;
@@ -39,7 +38,8 @@ class SparkleAvatar extends StatelessWidget {
         backgroundColor: effectiveBackgroundColor,
         backgroundImage: FileImage(File(url!)),
       );
-    } else if (url!.toLowerCase().contains('/svg') || url!.toLowerCase().endsWith('.svg')) {
+    } else if (url!.toLowerCase().contains('/svg') ||
+        url!.toLowerCase().endsWith('.svg')) {
       avatar = Container(
         width: radius * 2,
         height: radius * 2,
@@ -50,8 +50,10 @@ class SparkleAvatar extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: SvgPicture.network(
           url!,
-          placeholderBuilder: (context) => _buildFallback(effectiveBackgroundColor),
-          errorBuilder: (context, error, stackTrace) => _buildFallback(effectiveBackgroundColor),
+          placeholderBuilder: (context) =>
+              _buildFallback(effectiveBackgroundColor),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildFallback(effectiveBackgroundColor),
         ),
       );
     } else {
@@ -63,7 +65,8 @@ class SparkleAvatar extends StatelessWidget {
           backgroundImage: imageProvider,
         ),
         placeholder: (context, url) => _buildFallback(effectiveBackgroundColor),
-        errorWidget: (context, url, error) => _buildFallback(effectiveBackgroundColor),
+        errorWidget: (context, url, error) =>
+            _buildFallback(effectiveBackgroundColor),
       );
     }
 
@@ -88,7 +91,8 @@ class SparkleAvatar extends StatelessWidget {
                     height: radius * 0.6,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
                     ),
                   ),
                   if (radius > 25) ...[
@@ -114,17 +118,17 @@ class SparkleAvatar extends StatelessWidget {
   }
 
   Widget _buildFallback(Color bgColor) => CircleAvatar(
-      radius: radius,
-      backgroundColor: bgColor,
-      child: Text(
-        (fallbackText != null && fallbackText!.isNotEmpty) 
-            ? fallbackText![0].toUpperCase() 
-            : '?',
-        style: TextStyle(
-          color: DS.brandPrimary.shade600,
-          fontSize: radius * 0.8,
-          fontWeight: FontWeight.bold,
+        radius: radius,
+        backgroundColor: bgColor,
+        child: Text(
+          (fallbackText != null && fallbackText!.isNotEmpty)
+              ? fallbackText![0].toUpperCase()
+              : '?',
+          style: TextStyle(
+            color: DS.brandPrimary.shade600,
+            fontSize: radius * 0.8,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-    );
+      );
 }

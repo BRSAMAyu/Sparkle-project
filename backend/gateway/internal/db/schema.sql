@@ -150,7 +150,8 @@ CREATE TYPE public.messagetype AS ENUM (
     'CHECKIN',
     'SYSTEM',
     'CAPSULE_SHARE',
-    'PRISM_SHARE'
+    'PRISM_SHARE',
+    'FILE_SHARE'
 );
 
 
@@ -4604,6 +4605,151 @@ ALTER TABLE ONLY public.word_books
 
 
 --
+-- Name: stored_files; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.stored_files (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    file_name character varying(255) NOT NULL,
+    mime_type character varying(150) NOT NULL,
+    file_size bigint NOT NULL,
+    bucket character varying(128) NOT NULL,
+    object_key character varying(512) NOT NULL,
+    status character varying(32) DEFAULT 'uploading'::character varying NOT NULL,
+    visibility character varying(32) DEFAULT 'private'::character varying NOT NULL,
+    error_message character varying(255),
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone,
+    CONSTRAINT stored_files_pkey PRIMARY KEY (id)
+);
+
+
+ALTER TABLE public.stored_files OWNER TO postgres;
+
+
+--
+-- Name: idx_stored_files_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stored_files_created_at ON public.stored_files USING btree (created_at);
+
+
+--
+-- Name: idx_stored_files_object_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX idx_stored_files_object_key ON public.stored_files USING btree (object_key);
+
+
+--
+-- Name: idx_stored_files_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stored_files_status ON public.stored_files USING btree (status);
+
+
+--
+-- Name: idx_stored_files_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stored_files_user_id ON public.stored_files USING btree (user_id);
+
+
+--
+-- Name: stored_files stored_files_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.stored_files
+    ADD CONSTRAINT stored_files_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: group_files; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.group_files (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    group_id uuid NOT NULL,
+    file_id uuid NOT NULL,
+    shared_by_id uuid NOT NULL,
+    category character varying(64),
+    tags json NOT NULL,
+    view_role public.grouprole NOT NULL,
+    download_role public.grouprole NOT NULL,
+    manage_role public.grouprole NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone,
+    CONSTRAINT group_files_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_group_files_group_file UNIQUE (group_id, file_id)
+);
+
+
+ALTER TABLE public.group_files OWNER TO postgres;
+
+
+--
+-- Name: idx_group_files_category; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_category ON public.group_files USING btree (category);
+
+
+--
+-- Name: idx_group_files_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_deleted_at ON public.group_files USING btree (deleted_at);
+
+
+--
+-- Name: idx_group_files_file; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_file ON public.group_files USING btree (file_id);
+
+
+--
+-- Name: idx_group_files_group; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_group ON public.group_files USING btree (group_id);
+
+
+--
+-- Name: idx_group_files_shared_by; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_shared_by ON public.group_files USING btree (shared_by_id);
+
+
+--
+-- Name: group_files group_files_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_files
+    ADD CONSTRAINT group_files_file_id_fkey FOREIGN KEY (file_id) REFERENCES public.stored_files(id) ON DELETE CASCADE;
+
+
+--
+-- Name: group_files group_files_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_files
+    ADD CONSTRAINT group_files_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: group_files group_files_shared_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.group_files
+    ADD CONSTRAINT group_files_shared_by_id_fkey FOREIGN KEY (shared_by_id) REFERENCES public.users(id);
+
+
+--
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
 --
 
@@ -4613,5 +4759,3 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 --
 -- PostgreSQL database dump complete
 --
-
-

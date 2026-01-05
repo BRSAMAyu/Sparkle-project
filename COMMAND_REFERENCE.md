@@ -110,6 +110,12 @@ cd backend && python tests/integration/final_validation.py --performance
 cd backend && python tests/integration/final_validation.py --integration
 ```
 
+### File Pipeline Smoke Test (Stage 0)
+```bash
+# Requires GATEWAY_URL/DATABASE_URL and MinIO health endpoint (or --skip-minio-check)
+python scripts/smoke_file_pipeline.py --file /path/to/test.pdf
+```
+
 ---
 
 ## 📊 Monitoring & Debugging

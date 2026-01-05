@@ -44,7 +44,8 @@ class FocusRepository {
 
       debugPrint('📥 Focus session logged: ${response.data}');
 
-      return FocusSessionResponse.fromJson(response.data as Map<String, dynamic>);
+      return FocusSessionResponse.fromJson(
+          response.data as Map<String, dynamic>,);
     } on DioException catch (e) {
       debugPrint('❌ Failed to log focus session: ${e.message}');
       debugPrint('Response: ${e.response?.data}');

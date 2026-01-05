@@ -1,10 +1,10 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// 布局类型枚举
 enum LayoutType {
-  mobile,  // 手机：< 768px
-  tablet,  // 平板：768px - 1024px
+  mobile, // 手机：< 768px
+  tablet, // 平板：768px - 1024px
   desktop, // 桌面：>= 1024px
 }
 
@@ -31,9 +31,12 @@ extension LayoutTypeExtension on BuildContext {
 /// - 平板：左侧NavigationRail
 /// - 桌面：展开式NavigationDrawer（侧边栏）
 class ResponsiveScaffold extends StatelessWidget {
-
   const ResponsiveScaffold({
-    required this.body, required this.destinations, required this.currentIndex, required this.onDestinationSelected, super.key,
+    required this.body,
+    required this.destinations,
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    super.key,
     this.floatingActionButton,
     this.appBar,
     this.title,
@@ -62,102 +65,106 @@ class ResponsiveScaffold extends StatelessWidget {
 
   /// 移动端布局：底部导航栏
   Widget _buildMobileLayout(BuildContext context) => Scaffold(
-      appBar: appBar,
-      body: body,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: onDestinationSelected,
-        destinations: destinations,
-      ),
-      floatingActionButton: floatingActionButton,
-    );
+        appBar: appBar,
+        body: body,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: currentIndex,
+          onDestinationSelected: onDestinationSelected,
+          destinations: destinations,
+        ),
+        floatingActionButton: floatingActionButton,
+      );
 
   /// 平板布局：侧边NavigationRail
   Widget _buildTabletLayout(BuildContext context) => Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: currentIndex,
-            onDestinationSelected: onDestinationSelected,
-            labelType: NavigationRailLabelType.all,
-            destinations: destinations
-                .map((d) => NavigationRailDestination(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: currentIndex,
+              onDestinationSelected: onDestinationSelected,
+              labelType: NavigationRailLabelType.all,
+              destinations: destinations
+                  .map(
+                    (d) => NavigationRailDestination(
                       icon: d.icon,
                       selectedIcon: d.selectedIcon ?? d.icon,
                       label: Text(d.label),
-                    ),)
-                .toList(),
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: Scaffold(
-              appBar: appBar,
-              body: body,
-              floatingActionButton: floatingActionButton,
+                    ),
+                  )
+                  .toList(),
             ),
-          ),
-        ],
-      ),
-    );
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(
+              child: Scaffold(
+                appBar: appBar,
+                body: body,
+                floatingActionButton: floatingActionButton,
+              ),
+            ),
+          ],
+        ),
+      );
 
   /// 桌面布局：展开式侧边栏NavigationDrawer
   Widget _buildDesktopLayout(BuildContext context) => Scaffold(
-      body: Row(
-        children: [
-          SizedBox(
-            width: 280,
-            child: NavigationDrawer(
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              children: [
-                // Logo和标题
-                Padding(
-                  padding: const EdgeInsets.all(DS.spacing24),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        color: DS.primaryBase,
-                        size: 32,
-                      ),
-                      const SizedBox(width: DS.spacing12),
-                      Text(
-                        title ?? 'Sparkle',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    ],
+        body: Row(
+          children: [
+            SizedBox(
+              width: 280,
+              child: NavigationDrawer(
+                selectedIndex: currentIndex,
+                onDestinationSelected: onDestinationSelected,
+                children: [
+                  // Logo和标题
+                  Padding(
+                    padding: const EdgeInsets.all(DS.spacing24),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.local_fire_department,
+                          color: DS.primaryBase,
+                          size: 32,
+                        ),
+                        const SizedBox(width: DS.spacing12),
+                        Text(
+                          title ?? 'Sparkle',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Divider(),
-                // 导航项
-                ...destinations.map((d) => NavigationDrawerDestination(
+                  const Divider(),
+                  // 导航项
+                  ...destinations.map(
+                    (d) => NavigationDrawerDestination(
                       icon: d.icon,
                       selectedIcon: d.selectedIcon ?? d.icon,
                       label: Text(d.label),
-                    ),),
-              ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: Scaffold(
-              appBar: appBar,
-              body: body,
-              floatingActionButton: floatingActionButton,
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(
+              child: Scaffold(
+                appBar: appBar,
+                body: body,
+                floatingActionButton: floatingActionButton,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 }
 
 /// 内容宽度约束包装器
 ///
 /// 根据屏幕尺寸自动限制内容最大宽度，提升大屏幕阅读体验
 class ContentConstraint extends StatelessWidget {
-
   const ContentConstraint({
-    required this.child, super.key,
+    required this.child,
+    super.key,
     this.padding,
     this.enabled = true,
   });
@@ -190,8 +197,8 @@ class ContentConstraint extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding: padding ??
-              EdgeInsets.symmetric(horizontal: horizontalPadding),
+          padding:
+              padding ?? EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: child,
         ),
       ),
@@ -206,9 +213,9 @@ class ContentConstraint extends StatelessWidget {
 /// - 平板：2列
 /// - 手机：1列
 class ResponsiveGrid extends StatelessWidget {
-
   const ResponsiveGrid({
-    required this.children, super.key,
+    required this.children,
+    super.key,
     this.spacing = DS.spacing16,
     this.childAspectRatio,
   });
@@ -237,7 +244,8 @@ class ResponsiveGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
-        childAspectRatio: childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
+        childAspectRatio:
+            childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
       ),
       itemCount: children.length,
       itemBuilder: (context, index) => children[index],
@@ -247,9 +255,9 @@ class ResponsiveGrid extends StatelessWidget {
 
 /// 响应式列布局（Sliver版本，用于CustomScrollView）
 class ResponsiveSliverGrid extends StatelessWidget {
-
   const ResponsiveSliverGrid({
-    required this.children, super.key,
+    required this.children,
+    super.key,
     this.spacing = DS.spacing16,
     this.childAspectRatio,
   });
@@ -276,7 +284,8 @@ class ResponsiveSliverGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
-        childAspectRatio: childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
+        childAspectRatio:
+            childAspectRatio ?? (layoutType == LayoutType.mobile ? 1.2 : 1.5),
       ),
       delegate: SliverChildBuilderDelegate(
         (context, index) => children[index],
@@ -291,9 +300,10 @@ class ResponsiveSliverGrid extends StatelessWidget {
 /// 桌面/平板：左右双栏（主内容+侧边栏）
 /// 手机：单栏（只显示主内容）
 class ResponsiveTwoColumn extends StatelessWidget {
-
   const ResponsiveTwoColumn({
-    required this.main, required this.sidebar, super.key,
+    required this.main,
+    required this.sidebar,
+    super.key,
     this.sidebarWidth = 320,
   });
   final Widget main;

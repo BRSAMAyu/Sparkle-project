@@ -24,7 +24,6 @@ ErrorBookRepository errorBookRepository(ErrorBookRepositoryRef ref) {
 
 /// 错题列表查询参数
 class ErrorListQuery {
-
   const ErrorListQuery({
     this.subject,
     this.chapter,
@@ -131,7 +130,6 @@ Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
 
 /// 错题操作状态
 class ErrorOperationState {
-
   const ErrorOperationState({
     this.isLoading = false,
     this.error,
@@ -142,10 +140,11 @@ class ErrorOperationState {
   ErrorOperationState copyWith({
     bool? isLoading,
     String? error,
-  }) => ErrorOperationState(
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
+  }) =>
+      ErrorOperationState(
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+      );
 }
 
 /// 错题操作 Notifier
@@ -326,7 +325,6 @@ class ErrorOperations extends _$ErrorOperations {
 
 /// 错题列表筛选状态
 class ErrorFilterState {
-
   const ErrorFilterState({
     this.selectedSubject,
     this.chapterFilter,
@@ -343,22 +341,23 @@ class ErrorFilterState {
     String? chapterFilter,
     bool? showOnlyNeedReview,
     String? searchKeyword,
-  }) => ErrorFilterState(
-      selectedSubject: selectedSubject ?? this.selectedSubject,
-      chapterFilter: chapterFilter ?? this.chapterFilter,
-      showOnlyNeedReview: showOnlyNeedReview ?? this.showOnlyNeedReview,
-      searchKeyword: searchKeyword ?? this.searchKeyword,
-    );
+  }) =>
+      ErrorFilterState(
+        selectedSubject: selectedSubject ?? this.selectedSubject,
+        chapterFilter: chapterFilter ?? this.chapterFilter,
+        showOnlyNeedReview: showOnlyNeedReview ?? this.showOnlyNeedReview,
+        searchKeyword: searchKeyword ?? this.searchKeyword,
+      );
 
   /// 转换为查询参数
   ErrorListQuery toQuery({int page = 1, int pageSize = 20}) => ErrorListQuery(
-      subject: selectedSubject,
-      chapter: chapterFilter,
-      needReview: showOnlyNeedReview ? true : null,
-      keyword: searchKeyword.isEmpty ? null : searchKeyword,
-      page: page,
-      pageSize: pageSize,
-    );
+        subject: selectedSubject,
+        chapter: chapterFilter,
+        needReview: showOnlyNeedReview ? true : null,
+        keyword: searchKeyword.isEmpty ? null : searchKeyword,
+        page: page,
+        pageSize: pageSize,
+      );
 }
 
 /// 错题筛选器 Provider

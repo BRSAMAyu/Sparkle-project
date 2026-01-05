@@ -47,9 +47,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     if (_currentReviewIndex < reviewList.length) {
       final word = reviewList[_currentReviewIndex];
       await ref.read(vocabularyProvider.notifier).recordReview(
-        word['id'].toString(),
-        success,
-      );
+            word['id'].toString(),
+            success,
+          );
       HapticFeedback.lightImpact();
     }
 
@@ -118,20 +118,22 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   color: DS.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.menu_book_rounded, color: DS.success, size: 24),
+                child:
+                    Icon(Icons.menu_book_rounded, color: DS.success, size: 24),
               ),
               const SizedBox(width: DS.md),
               Text(
                 '生词本',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                ),
+                      fontWeight: DS.fontWeightBold,
+                    ),
               ),
               const Spacer(),
               // Review count badge
               if (state.reviewList.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: DS.warning,
                     borderRadius: BorderRadius.circular(20),
@@ -386,9 +388,10 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   children: [
                     Text(
                       (word['word'] as String?) ?? '',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: DS.fontWeightBold,
+                              ),
                     ),
                     if (word['phonetic'] != null) ...[
                       const SizedBox(height: DS.sm),
@@ -472,10 +475,10 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
 
 /// 单词卡片组件
 class _WordCard extends StatelessWidget {
-
   const _WordCard({
     required this.word,
-    required this.definition, this.phonetic,
+    required this.definition,
+    this.phonetic,
     this.dueText,
     this.masteryLevel,
     this.onTap,
@@ -489,106 +492,105 @@ class _WordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: DS.neutral200),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          word,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (phonetic != null) ...[
-                          const SizedBox(width: DS.sm),
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: DS.neutral200),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
                           Text(
-                            phonetic!,
-                            style: TextStyle(
-                              color: DS.neutral500,
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
+                            word,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (phonetic != null) ...[
+                            const SizedBox(width: DS.sm),
+                            Text(
+                              phonetic!,
+                              style: TextStyle(
+                                color: DS.neutral500,
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
+                      const SizedBox(height: DS.xs),
+                      Text(
+                        definition,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: DS.neutral600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (dueText != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: dueText == '已到期'
+                          ? DS.error.withValues(alpha: 0.1)
+                          : DS.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: DS.xs),
-                    Text(
-                      definition,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    child: Text(
+                      dueText!,
                       style: TextStyle(
-                        color: DS.neutral600,
-                        fontSize: 14,
+                        color: dueText == '已到期' ? DS.error : DS.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              if (dueText != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: dueText == '已到期'
-                        ? DS.error.withValues(alpha: 0.1)
-                        : DS.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    dueText!,
-                    style: TextStyle(
-                      color: dueText == '已到期'
-                          ? DS.error
-                          : DS.warning,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              if (masteryLevel != null)
-                _MasteryIndicator(level: masteryLevel!),
-            ],
+                if (masteryLevel != null)
+                  _MasteryIndicator(level: masteryLevel!),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 /// 掌握程度指示器
 class _MasteryIndicator extends StatelessWidget {
-
   const _MasteryIndicator({required this.level});
   final int level;
 
   @override
   Widget build(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(7, (index) => Container(
-          width: 4,
-          height: 16,
-          margin: const EdgeInsets.only(left: 2),
-          decoration: BoxDecoration(
-            color: index < level
-                ? DS.success
-                : DS.neutral200,
-            borderRadius: BorderRadius.circular(2),
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          7,
+          (index) => Container(
+            width: 4,
+            height: 16,
+            margin: const EdgeInsets.only(left: 2),
+            decoration: BoxDecoration(
+              color: index < level ? DS.success : DS.neutral200,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ),),
-    );
+        ),
+      );
 }

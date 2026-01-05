@@ -27,6 +27,9 @@ from app.models.analytics import UserDailyMetric
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.focus import FocusSession, FocusType, FocusStatus
 from app.models.vocabulary import WordBook, DictionaryEntry
+from app.models.file_storage import StoredFile
+from app.models.document_chunks import DocumentChunk
+from app.models.group_files import GroupFile
 
 __all__ = [
     "BaseModel",
@@ -79,4 +82,7 @@ __all__ = [
     # Vocabulary
     "WordBook",
     "DictionaryEntry",
+    "StoredFile",
+    "DocumentChunk",
+    "GroupFile",
 ]

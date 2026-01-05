@@ -4,7 +4,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 
 class PatternCard extends StatelessWidget {
-
   const PatternCard({required this.pattern, super.key});
   final BehaviorPatternModel pattern;
 

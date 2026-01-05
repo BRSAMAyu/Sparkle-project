@@ -18,9 +18,9 @@ enum AgentStatus {
   final IconData icon;
 
   static AgentStatus fromCode(String code) => AgentStatus.values.firstWhere(
-      (status) => status.code == code,
-      orElse: () => AgentStatus.idle,
-    );
+        (status) => status.code == code,
+        orElse: () => AgentStatus.idle,
+      );
 }
 
 /// Agent 状态指示器
@@ -30,9 +30,9 @@ enum AgentStatus {
 /// 2. 动画流畅：旋转动画表示正在处理
 /// 3. 颜色区分：不同状态用不同颜色
 class AgentStatusIndicator extends StatelessWidget {
-
   const AgentStatusIndicator({
-    required this.status, super.key,
+    required this.status,
+    super.key,
     this.compact = false,
   });
   final AgentStatus status;
@@ -56,54 +56,54 @@ class AgentStatusIndicator extends StatelessWidget {
   }
 
   Widget _buildFullIndicator(ThemeData theme, Color color) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _AnimatedIcon(
-            icon: status.icon,
-            color: color,
-            size: 16,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            status.label,
-            style: theme.textTheme.labelMedium?.copyWith(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AnimatedIcon(
+              icon: status.icon,
               color: color,
-              fontWeight: FontWeight.w500,
+              size: 16,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 6),
+            Text(
+              status.label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildCompactIndicator(ThemeData theme, Color color) => Tooltip(
-      message: status.label,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1.5,
+        message: status.label,
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: _AnimatedIcon(
+            icon: status.icon,
+            color: color,
+            size: 14,
           ),
         ),
-        child: _AnimatedIcon(
-          icon: status.icon,
-          color: color,
-          size: 14,
-        ),
-      ),
-    );
+      );
 
   Color _getStatusColor(AgentStatus status, ThemeData theme) {
     switch (status) {
@@ -127,7 +127,6 @@ class AgentStatusIndicator extends StatelessWidget {
 ///
 /// 根据状态决定是否显示旋转动画
 class _AnimatedIcon extends StatefulWidget {
-
   const _AnimatedIcon({
     required this.icon,
     required this.color,
@@ -162,20 +161,19 @@ class _AnimatedIconState extends State<_AnimatedIcon>
 
   @override
   Widget build(BuildContext context) => RotationTransition(
-      turns: _controller,
-      child: Icon(
-        widget.icon,
-        size: widget.size,
-        color: widget.color,
-      ),
-    );
+        turns: _controller,
+        child: Icon(
+          widget.icon,
+          size: widget.size,
+          color: widget.color,
+        ),
+      );
 }
 
 /// Agent 状态流式指示器（用于聊天气泡）
 ///
 /// 在 AI 回复前显示，表示 AI 正在处理
 class AgentTypingIndicator extends StatefulWidget {
-
   const AgentTypingIndicator({
     super.key,
     this.statusText,
@@ -212,7 +210,7 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -238,37 +236,39 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
   }
 
   Widget _buildDot(int index) => AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final value = (_controller.value + index * 0.33) % 1.0;
-        final opacity = (1 - (value - 0.5).abs() * 2).clamp(0.3, 1.0);
-        final scale = 0.6 + (1 - (value - 0.5).abs() * 2).clamp(0.0, 1.0) * 0.4;
+        animation: _controller,
+        builder: (context, child) {
+          final value = (_controller.value + index * 0.33) % 1.0;
+          final opacity = (1 - (value - 0.5).abs() * 2).clamp(0.3, 1.0);
+          final scale =
+              0.6 + (1 - (value - 0.5).abs() * 2).clamp(0.0, 1.0) * 0.4;
 
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: opacity,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                shape: BoxShape.circle,
+          return Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: opacity,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
 }
 
 /// Agent 状态变化监听器
 ///
 /// 包装在聊天界面外层，监听状态变化并显示指示器
 class AgentStatusListener extends StatelessWidget {
-
   const AgentStatusListener({
-    required this.status, required this.child, super.key,
+    required this.status,
+    required this.child,
+    super.key,
     this.showIndicator = true,
   });
   final AgentStatus status;
@@ -277,13 +277,13 @@ class AgentStatusListener extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-      children: [
-        if (showIndicator && status != AgentStatus.idle)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: AgentStatusIndicator(status: status),
-          ),
-        Expanded(child: child),
-      ],
-    );
+        children: [
+          if (showIndicator && status != AgentStatus.idle)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AgentStatusIndicator(status: status),
+            ),
+          Expanded(child: child),
+        ],
+      );
 }

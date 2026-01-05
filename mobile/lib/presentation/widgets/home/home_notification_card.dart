@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/message_notification_service.dart';
+import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/presentation/providers/notification_provider.dart';
 
 class HomeNotificationCard extends ConsumerWidget {
@@ -30,7 +30,7 @@ class HomeNotificationCard extends ConsumerWidget {
         }
 
         final latest = notifications.first;
-        
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: GestureDetector(
@@ -40,7 +40,8 @@ class HomeNotificationCard extends ConsumerWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: DS.glassBackground,
                     borderRadius: BorderRadius.circular(16),
@@ -51,7 +52,8 @@ class HomeNotificationCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(DS.sm),
                         decoration: BoxDecoration(
-                          color: _getIconColor(latest.type).withValues(alpha: 0.2),
+                          color:
+                              _getIconColor(latest.type).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -91,7 +93,8 @@ class HomeNotificationCard extends ConsumerWidget {
                       ),
                       if (notifications.length > 1)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2,),
                           decoration: BoxDecoration(
                             color: DS.error,
                             borderRadius: BorderRadius.circular(10),
@@ -150,83 +153,86 @@ class HomeNotificationCard extends ConsumerWidget {
     }
   }
 
-  Widget _buildCommunityNotificationCard(BuildContext context, int unreadCount) => GestureDetector(
-      onTap: () => context.push('/community'),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: DS.glassBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: DS.glassBorder),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.sm),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.forum_outlined,
-                    color: Colors.purple,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '社交消息',
-                        style: TextStyle(
-                          color: DS.brandPrimaryConst,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '你有 $unreadCount 条未读消息',
-                        style: TextStyle(
-                          color: DS.brandPrimary.withValues(alpha: 0.7),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DS.error,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    unreadCount > 99 ? '99+' : '$unreadCount',
-                    style: TextStyle(
-                      color: DS.brandPrimaryConst,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+  Widget _buildCommunityNotificationCard(
+          BuildContext context, int unreadCount,) =>
+      GestureDetector(
+        onTap: () => context.push('/community'),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: DS.glassBackground,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: DS.glassBorder),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.sm),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.forum_outlined,
+                      color: Colors.purple,
+                      size: 16,
                     ),
                   ),
-                ),
-                const SizedBox(width: DS.sm),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: DS.brandPrimary.withValues(alpha: 0.3),
-                  size: 18,
-                ),
-              ],
+                  const SizedBox(width: DS.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '社交消息',
+                          style: TextStyle(
+                            color: DS.brandPrimaryConst,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '你有 $unreadCount 条未读消息',
+                          style: TextStyle(
+                            color: DS.brandPrimary.withValues(alpha: 0.7),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: DS.error,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: DS.brandPrimary.withValues(alpha: 0.3),
+                    size: 18,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 }

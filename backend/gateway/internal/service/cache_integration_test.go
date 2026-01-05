@@ -9,7 +9,6 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // ============================================================
@@ -465,10 +464,9 @@ func TestRedisList(t *testing.T) {
 	}
 
 	// Pop from list
-	result, err := tr.client.LPop(ctx, key, 1).Result()
+	result, err := tr.client.LPop(ctx, key).Result()
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(result))
-	assert.Equal(t, "message:0", result[0])
+	assert.Equal(t, "message:0", result)
 }
 
 // ============================================================
@@ -631,7 +629,7 @@ func (m *MockRedisClient) Set(ctx context.Context, key string, value interface{}
 }
 
 func (m *MockRedisClient) Get(ctx context.Context, key string) *redis.StringCmd {
-	val, ok := m.data.Load(key)
+	_, ok := m.data.Load(key)
 	if !ok {
 		// Would return redis.Nil error
 		return nil

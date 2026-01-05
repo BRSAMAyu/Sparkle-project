@@ -7,15 +7,17 @@ import 'package:sparkle/core/design/design_system.dart';
 /// 用于可视化用户的火焰等级和亮度
 /// 包含圆环进度条、火焰图标和脉冲动画
 class FlameIndicator extends StatefulWidget {
-
   const FlameIndicator({
-    required this.level, required this.brightness, super.key,
+    required this.level,
+    required this.brightness,
+    super.key,
     this.size = 120.0,
     this.showLabel = true,
     this.animate = true,
     this.customGradient,
     this.onTap,
   });
+
   /// 火焰等级 (0-100)
   final int level;
 
@@ -129,14 +131,14 @@ class _FlameIndicatorState extends State<FlameIndicator>
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: widget.onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 火焰指示器主体
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) => Transform.scale(
+        onTap: widget.onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 火焰指示器主体
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) => Transform.scale(
                 scale: widget.animate ? _pulseAnimation.value : 1.0,
                 child: SizedBox(
                   width: widget.size,
@@ -175,19 +177,19 @@ class _FlameIndicatorState extends State<FlameIndicator>
                   ),
                 ),
               ),
-          ),
-          // 标签
-          if (widget.showLabel) ...[
-            const SizedBox(height: DS.spacing12),
-            _buildLabel(),
+            ),
+            // 标签
+            if (widget.showLabel) ...[
+              const SizedBox(height: DS.spacing12),
+              _buildLabel(),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 
   Widget _buildFlameIcon() => AnimatedBuilder(
-      animation: _rotationController,
-      builder: (context, child) => Transform.rotate(
+        animation: _rotationController,
+        builder: (context, child) => Transform.rotate(
           angle: widget.animate
               ? _rotationController.value * 2 * math.pi * 0.1
               : 0.0,
@@ -212,46 +214,45 @@ class _FlameIndicatorState extends State<FlameIndicator>
             ),
           ),
         ),
-    );
+      );
 
   Widget _buildLabel() => Column(
-      children: [
-        // 等级
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.whatshot_rounded,
-              size: DS.iconSizeSm,
-              color: _getFlameColor(),
-            ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              'Lv.${widget.level}',
-              style: TextStyle(
-                fontSize: DS.fontSizeLg,
-                fontWeight: DS.fontWeightBold,
-                color: DS.neutral900,
+        children: [
+          // 等级
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.whatshot_rounded,
+                size: DS.iconSizeSm,
+                color: _getFlameColor(),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.spacing4),
-        // 亮度
-        Text(
-          '亮度 ${widget.brightness}%',
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            color: DS.neutral600,
+              const SizedBox(width: DS.spacing4),
+              Text(
+                'Lv.${widget.level}',
+                style: TextStyle(
+                  fontSize: DS.fontSizeLg,
+                  fontWeight: DS.fontWeightBold,
+                  color: DS.neutral900,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing4),
+          // 亮度
+          Text(
+            '亮度 ${widget.brightness}%',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: DS.neutral600,
+            ),
+          ),
+        ],
+      );
 }
 
 /// 圆环进度条绘制器
 class _CircularProgressPainter extends CustomPainter {
-
   _CircularProgressPainter({
     required this.progress,
     required this.gradient,
@@ -315,19 +316,21 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CircularProgressPainter oldDelegate) => oldDelegate.progress != progress ||
-        oldDelegate.gradient != gradient ||
-        oldDelegate.backgroundColor != backgroundColor ||
-        oldDelegate.strokeWidth != strokeWidth;
+  bool shouldRepaint(_CircularProgressPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.gradient != gradient ||
+      oldDelegate.backgroundColor != backgroundColor ||
+      oldDelegate.strokeWidth != strokeWidth;
 }
 
 /// 紧凑型火焰指示器
 ///
 /// 用于在小空间中显示火焰状态
 class CompactFlameIndicator extends StatelessWidget {
-
   const CompactFlameIndicator({
-    required this.level, required this.brightness, super.key,
+    required this.level,
+    required this.brightness,
+    super.key,
     this.onTap,
   });
   final int level;
@@ -348,51 +351,51 @@ class CompactFlameIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: _getFlameColor().withValues(alpha: 0.1),
-          borderRadius: DS.borderRadius12,
-          border: Border.all(
-            color: _getFlameColor().withValues(alpha: 0.3),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: _getFlameColor().withValues(alpha: 0.1),
+            borderRadius: DS.borderRadius12,
+            border: Border.all(
+              color: _getFlameColor().withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.local_fire_department_rounded,
+                size: DS.iconSizeSm,
+                color: _getFlameColor(),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Lv.$level',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.neutral900,
+                    ),
+                  ),
+                  Text(
+                    '$brightness%',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.neutral600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_fire_department_rounded,
-              size: DS.iconSizeSm,
-              color: _getFlameColor(),
-            ),
-            const SizedBox(width: DS.spacing8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Lv.$level',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.neutral900,
-                  ),
-                ),
-                Text(
-                  '$brightness%',
-                  style: TextStyle(
-                    fontSize: DS.fontSizeXs,
-                    color: DS.neutral600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+      );
 }

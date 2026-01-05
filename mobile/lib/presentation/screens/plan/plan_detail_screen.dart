@@ -63,7 +63,8 @@ class _PlanDetailView extends StatelessWidget {
       children: [
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
             child: Column(
@@ -73,9 +74,11 @@ class _PlanDetailView extends StatelessWidget {
                   plan.name,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                if (plan.description != null && plan.description!.isNotEmpty) ...[
+                if (plan.description != null &&
+                    plan.description!.isNotEmpty) ...[
                   const SizedBox(height: DS.sm),
-                  Text(plan.description!, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(plan.description!,
+                      style: Theme.of(context).textTheme.bodyMedium,),
                 ],
                 const SizedBox(height: DS.lg),
                 LinearProgressIndicator(

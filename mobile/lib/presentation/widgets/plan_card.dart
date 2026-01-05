@@ -7,9 +7,9 @@ import 'package:sparkle/core/design/motion.dart';
 /// 计划卡片组件
 /// 用于在聊天中显示 AI 生成的计划
 class PlanCard extends StatefulWidget {
-
   const PlanCard({
-    required this.data, super.key,
+    required this.data,
+    super.key,
   });
   final Map<String, dynamic> data;
 
@@ -17,7 +17,8 @@ class PlanCard extends StatefulWidget {
   State<PlanCard> createState() => _PlanCardState();
 }
 
-class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin {
+class _PlanCardState extends State<PlanCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -64,7 +65,8 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
           margin: const EdgeInsets.symmetric(vertical: 8),
           elevation: 2,
           // Remove InkWell as we handle taps on GestureDetector
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(DS.lg),
             child: Column(
@@ -77,15 +79,15 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                     Expanded(
                       child: Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ),
                     _buildPlanTypeChip(context, planType),
                   ],
                 ),
-                
                 if (description != null && description.isNotEmpty) ...[
                   const SizedBox(height: DS.sm),
                   Text(
@@ -95,30 +97,35 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-
                 const SizedBox(height: DS.md),
                 Row(
                   children: [
                     if (targetDate != null) ...[
-                      Icon(Icons.calendar_today,
+                      Icon(
+                        Icons.calendar_today,
                         size: DS.iconSizeSm,
-                        color: Theme.of(context).hintColor,),
+                        color: Theme.of(context).hintColor,
+                      ),
                       const SizedBox(width: DS.spacing4),
                       Text('目标日期: $targetDate'),
                       const SizedBox(width: DS.spacing16),
                     ],
                     if (mastery != null) ...[
-                      Icon(Icons.grade,
+                      Icon(
+                        Icons.grade,
                         size: DS.iconSizeSm,
-                        color: Theme.of(context).hintColor,),
+                        color: Theme.of(context).hintColor,
+                      ),
                       const SizedBox(width: DS.spacing4),
                       Text('目标掌握度: ${(mastery * 100).toInt()}%'),
                     ],
                     const Spacer(),
                     // Just a visual indicator now - not interactive so smaller is acceptable
-                    Icon(Icons.arrow_forward_ios,
+                    Icon(
+                      Icons.arrow_forward_ios,
                       size: DS.iconSizeXs,
-                      color: DS.neutral400,),
+                      color: DS.neutral400,
+                    ),
                   ],
                 ),
               ],
@@ -160,7 +167,11 @@ class _PlanCardState extends State<PlanCard> with SingleTickerProviderStateMixin
 
   Widget _buildPlanTypeChip(BuildContext context, String type) {
     final color = context.colors.getPlanColor(type);
-    final label = type == 'sprint' ? '冲刺计划' : type == 'growth' ? '成长计划' : type;
+    final label = type == 'sprint'
+        ? '冲刺计划'
+        : type == 'growth'
+            ? '成长计划'
+            : type;
 
     return Container(
       padding: const EdgeInsets.symmetric(

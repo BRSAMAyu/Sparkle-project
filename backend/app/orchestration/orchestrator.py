@@ -578,6 +578,8 @@ class ChatOrchestrator:
                 "redis_client": self.redis,
                 "user_context": user_context_payload,
                 "conversation_context": conversation_context,
+                "file_ids": list(request.file_ids),
+                "include_references": bool(request.include_references),
             })
 
             # Launch Graph Execution in Background (Managed)

@@ -8,7 +8,8 @@ abstract class ICognitiveRepository {
   Future<CognitiveFragmentModel> createFragment(CognitiveFragmentCreate data);
 
   /// Get list of fragments
-  Future<List<CognitiveFragmentModel>> getFragments({int limit = 20, int skip = 0});
+  Future<List<CognitiveFragmentModel>> getFragments(
+      {int limit = 20, int skip = 0,});
 
   /// Get behavior patterns
   Future<List<BehaviorPatternModel>> getBehaviorPatterns();

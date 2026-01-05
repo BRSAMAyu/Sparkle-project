@@ -4,11 +4,13 @@ part 'cognitive_fragment_model.g.dart';
 
 @JsonSerializable()
 class CognitiveFragmentModel {
-
   CognitiveFragmentModel({
     required this.id,
     required this.userId,
-    required this.sourceType, required this.content, required this.createdAt, this.taskId,
+    required this.sourceType,
+    required this.content,
+    required this.createdAt,
+    this.taskId,
     this.sentiment,
     this.tags,
   });
@@ -33,7 +35,6 @@ class CognitiveFragmentModel {
 
 @JsonSerializable()
 class CognitiveFragmentCreate {
-
   CognitiveFragmentCreate({
     required this.content,
     required this.sourceType,

@@ -7,12 +7,13 @@ import 'package:sparkle/core/design/design_system.dart';
 ///
 /// 显示多个协作智能体的头像，带有动画转换效果
 class AgentAvatarStack extends StatefulWidget {
-
   const AgentAvatarStack({
-    required this.activeAgents, super.key,
+    required this.activeAgents,
+    super.key,
     this.size = 40,
     this.animate = true,
   });
+
   /// 当前活跃的智能体
   final List<AgentInfo> activeAgents;
 
@@ -96,9 +97,8 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
             builder: (context, child) {
               // 最后一个头像有脉冲效果（表示当前活跃）
               final isActive = i == widget.activeAgents.length - 1;
-              final scale = isActive
-                  ? 1.0 + _transitionController.value * 0.1
-                  : 1.0;
+              final scale =
+                  isActive ? 1.0 + _transitionController.value * 0.1 : 1.0;
 
               return Transform.scale(
                 scale: scale,
@@ -115,36 +115,35 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
   }
 
   Widget _buildAvatar(AgentInfo agent) => Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: agent.color,
-        border: Border.all(
-          color: DS.brandPrimaryConst,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: agent.color.withOpacity(0.5),
-            blurRadius: 8,
-            spreadRadius: 1,
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: agent.color,
+          border: Border.all(
+            color: DS.brandPrimaryConst,
+            width: 2,
           ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          agent.icon,
-          color: DS.brandPrimaryConst,
-          size: widget.size * 0.5,
+          boxShadow: [
+            BoxShadow(
+              color: agent.color.withValues(alpha: 0.5),
+              blurRadius: 8,
+              spreadRadius: 1,
+            ),
+          ],
         ),
-      ),
-    );
+        child: Center(
+          child: Icon(
+            agent.icon,
+            color: DS.brandPrimaryConst,
+            size: widget.size * 0.5,
+          ),
+        ),
+      );
 }
 
 /// 智能体信息
 class AgentInfo {
-
   AgentInfo({
     required this.type,
     required this.name,
@@ -202,11 +201,13 @@ class AgentInfo {
 ///
 /// 显示智能体之间的"接力"动画
 class AgentHandoffAnimation extends StatefulWidget {
-
   const AgentHandoffAnimation({
-    required this.fromAgent, required this.toAgent, super.key,
+    required this.fromAgent,
+    required this.toAgent,
+    super.key,
     this.onComplete,
   });
+
   /// 发起智能体
   final AgentInfo fromAgent;
 
@@ -252,8 +253,8 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _curveAnimation,
-      builder: (context, child) => CustomPaint(
+        animation: _curveAnimation,
+        builder: (context, child) => CustomPaint(
           size: const Size(200, 100),
           painter: _HandoffPainter(
             progress: _curveAnimation.value,
@@ -261,12 +262,11 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
             toColor: widget.toAgent.color,
           ),
         ),
-    );
+      );
 }
 
 /// 接力动画绘制器
 class _HandoffPainter extends CustomPainter {
-
   _HandoffPainter({
     required this.progress,
     required this.fromColor,
@@ -284,7 +284,7 @@ class _HandoffPainter extends CustomPainter {
 
     // 绘制连接线
     final linePaint = Paint()
-      ..color = Color.lerp(fromColor, toColor, progress)!.withOpacity(0.5)
+      ..color = Color.lerp(fromColor, toColor, progress)!.withValues(alpha: 0.5)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
@@ -301,8 +301,7 @@ class _HandoffPainter extends CustomPainter {
 
     // 绘制移动的点（表示信息传递）
     final currentX = startX + (endX - startX) * progress;
-    final currentY = centerY -
-        30 * math.sin(progress * math.pi); // 曲线运动
+    final currentY = centerY - 30 * math.sin(progress * math.pi); // 曲线运动
 
     final dotPaint = Paint()
       ..color = Color.lerp(fromColor, toColor, progress)!
@@ -312,5 +311,6 @@ class _HandoffPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HandoffPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(_HandoffPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }

@@ -41,6 +41,9 @@ enum MessageType {
   @JsonValue('prism_share')
   @HiveField(9)
   prismShare,
+  @JsonValue('file_share')
+  @HiveField(10)
+  fileShare,
   @JsonValue('progress')
   @HiveField(2)
   progress,
@@ -134,7 +137,6 @@ enum UserStatus {
 @JsonSerializable()
 @HiveType(typeId: 12)
 class UserBrief {
-
   UserBrief({
     required this.id,
     required this.username,
@@ -173,7 +175,6 @@ class UserBrief {
 
 @JsonSerializable()
 class FriendshipInfo {
-
   FriendshipInfo({
     required this.id,
     required this.friend,
@@ -202,7 +203,6 @@ class FriendshipInfo {
 
 @JsonSerializable()
 class FriendRecommendation {
-
   FriendRecommendation({
     required this.user,
     required this.matchScore,
@@ -223,7 +223,6 @@ class FriendRecommendation {
 
 @JsonSerializable()
 class GroupInfo {
-
   GroupInfo({
     required this.id,
     required this.name,
@@ -290,7 +289,6 @@ class GroupInfo {
 
 @JsonSerializable()
 class GroupListItem {
-
   GroupListItem({
     required this.id,
     required this.name,
@@ -326,7 +324,6 @@ class GroupListItem {
 
 @JsonSerializable()
 class GroupCreate {
-
   GroupCreate({
     required this.name,
     required this.type,
@@ -362,7 +359,6 @@ class GroupCreate {
 
 @JsonSerializable()
 class GroupMemberInfo {
-
   GroupMemberInfo({
     required this.user,
     required this.role,
@@ -395,7 +391,6 @@ class GroupMemberInfo {
 @JsonSerializable()
 @HiveType(typeId: 13)
 class MessageInfo {
-
   MessageInfo({
     required this.id,
     required this.messageType,
@@ -469,7 +464,8 @@ class MessageInfo {
   final MessageInfo? quotedMessage;
 
   // Avatar URLs for read-by users (populated by service layer)
-  @JsonKey(name: 'read_by_avatars', includeFromJson: false, includeToJson: false)
+  @JsonKey(
+      name: 'read_by_avatars', includeFromJson: false, includeToJson: false,)
   final List<UserBrief>? readByUsers;
   Map<String, dynamic> toJson() => _$MessageInfoToJson(this);
 
@@ -483,7 +479,6 @@ class MessageInfo {
 @JsonSerializable()
 @HiveType(typeId: 14)
 class PrivateMessageInfo {
-
   PrivateMessageInfo({
     required this.id,
     required this.sender,
@@ -556,13 +551,13 @@ class PrivateMessageInfo {
   @JsonKey(name: 'edited_at')
   @HiveField(16)
   final DateTime? editedAt;
-  
+
   // Client-side transient status
   @JsonKey(includeFromJson: false, includeToJson: false)
   final bool isSending;
   @JsonKey(includeFromJson: false, includeToJson: false)
   final bool hasError;
-  
+
   // Quote support
   @JsonKey(name: 'quoted_message')
   final PrivateMessageInfo? quotedMessage;
@@ -589,35 +584,35 @@ class PrivateMessageInfo {
     DateTime? revokedAt,
     DateTime? editedAt,
     PrivateMessageInfo? quotedMessage,
-  }) => PrivateMessageInfo(
-      id: id ?? this.id,
-      sender: sender ?? this.sender,
-      receiver: receiver ?? this.receiver,
-      messageType: messageType ?? this.messageType,
-      content: content ?? this.content,
-      contentData: contentData ?? this.contentData,
-      replyToId: replyToId ?? this.replyToId,
-      threadRootId: threadRootId ?? this.threadRootId,
-      mentionUserIds: mentionUserIds ?? this.mentionUserIds,
-      reactions: reactions ?? this.reactions,
-      isRead: isRead ?? this.isRead,
-      readAt: readAt ?? this.readAt,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      isSending: isSending ?? this.isSending,
-      hasError: hasError ?? this.hasError,
-      isRevoked: isRevoked ?? this.isRevoked,
-      revokedAt: revokedAt ?? this.revokedAt,
-      editedAt: editedAt ?? this.editedAt,
-      quotedMessage: quotedMessage ?? this.quotedMessage,
-    );
+  }) =>
+      PrivateMessageInfo(
+        id: id ?? this.id,
+        sender: sender ?? this.sender,
+        receiver: receiver ?? this.receiver,
+        messageType: messageType ?? this.messageType,
+        content: content ?? this.content,
+        contentData: contentData ?? this.contentData,
+        replyToId: replyToId ?? this.replyToId,
+        threadRootId: threadRootId ?? this.threadRootId,
+        mentionUserIds: mentionUserIds ?? this.mentionUserIds,
+        reactions: reactions ?? this.reactions,
+        isRead: isRead ?? this.isRead,
+        readAt: readAt ?? this.readAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        isSending: isSending ?? this.isSending,
+        hasError: hasError ?? this.hasError,
+        isRevoked: isRevoked ?? this.isRevoked,
+        revokedAt: revokedAt ?? this.revokedAt,
+        editedAt: editedAt ?? this.editedAt,
+        quotedMessage: quotedMessage ?? this.quotedMessage,
+      );
 
   bool get isEdited => editedAt != null;
 }
 
 @JsonSerializable()
 class PrivateMessageSend {
-
   PrivateMessageSend({
     required this.targetUserId,
     this.messageType = MessageType.text,
@@ -650,7 +645,6 @@ class PrivateMessageSend {
 
 @JsonSerializable()
 class MessageSend {
-
   MessageSend({
     this.messageType = MessageType.text,
     this.content,
@@ -682,7 +676,6 @@ class MessageSend {
 
 @JsonSerializable()
 class GroupTaskInfo {
-
   GroupTaskInfo({
     required this.id,
     required this.title,
@@ -732,7 +725,6 @@ class GroupTaskInfo {
 
 @JsonSerializable()
 class GroupTaskCreate {
-
   GroupTaskCreate({
     required this.title,
     this.description,
@@ -759,7 +751,6 @@ class GroupTaskCreate {
 
 @JsonSerializable()
 class CheckinRequest {
-
   CheckinRequest({
     required this.groupId,
     required this.todayDurationMinutes,
@@ -778,7 +769,6 @@ class CheckinRequest {
 
 @JsonSerializable()
 class CheckinResponse {
-
   CheckinResponse({
     required this.success,
     required this.newStreak,
@@ -805,7 +795,6 @@ class CheckinResponse {
 
 @JsonSerializable()
 class FlameStatus {
-
   FlameStatus({
     required this.userId,
     required this.flamePower,
@@ -834,7 +823,6 @@ class FlameStatus {
 
 @JsonSerializable()
 class GroupFlameStatus {
-
   GroupFlameStatus({
     required this.groupId,
     required this.totalPower,
@@ -858,7 +846,6 @@ class GroupFlameStatus {
 
 @JsonSerializable()
 class EncryptionKeyInfo {
-
   EncryptionKeyInfo({
     required this.id,
     required this.userId,
@@ -892,7 +879,6 @@ class EncryptionKeyInfo {
 
 @JsonSerializable()
 class EncryptionKeyCreate {
-
   EncryptionKeyCreate({
     required this.publicKey,
     this.keyType = 'x25519',
@@ -917,7 +903,6 @@ class EncryptionKeyCreate {
 
 @JsonSerializable()
 class MessageReportInfo {
-
   MessageReportInfo({
     required this.id,
     required this.reporterId,
@@ -959,7 +944,6 @@ class MessageReportInfo {
 
 @JsonSerializable()
 class MessageReportCreate {
-
   MessageReportCreate({
     required this.reason,
     this.groupMessageId,
@@ -980,7 +964,6 @@ class MessageReportCreate {
 
 @JsonSerializable()
 class MessageReportReview {
-
   MessageReportReview({
     required this.status,
     this.actionTaken,
@@ -998,7 +981,6 @@ class MessageReportReview {
 
 @JsonSerializable()
 class MessageFavoriteInfo {
-
   MessageFavoriteInfo({
     required this.id,
     required this.userId,
@@ -1033,7 +1015,6 @@ class MessageFavoriteInfo {
 
 @JsonSerializable()
 class MessageFavoriteCreate {
-
   MessageFavoriteCreate({
     this.groupMessageId,
     this.privateMessageId,
@@ -1056,7 +1037,6 @@ class MessageFavoriteCreate {
 
 @JsonSerializable()
 class MessageForwardRequest {
-
   MessageForwardRequest({
     this.sourceGroupMessageId,
     this.sourcePrivateMessageId,
@@ -1084,7 +1064,6 @@ class MessageForwardRequest {
 
 @JsonSerializable()
 class BroadcastMessageInfo {
-
   BroadcastMessageInfo({
     required this.id,
     required this.senderId,
@@ -1116,7 +1095,6 @@ class BroadcastMessageInfo {
 
 @JsonSerializable()
 class BroadcastMessageCreate {
-
   BroadcastMessageCreate({
     required this.content,
     required this.targetGroupIds,
@@ -1137,7 +1115,6 @@ class BroadcastMessageCreate {
 
 @JsonSerializable()
 class GroupModerationSettings {
-
   GroupModerationSettings({
     this.keywordFilters,
     this.muteAll,
@@ -1157,7 +1134,6 @@ class GroupModerationSettings {
 
 @JsonSerializable()
 class GroupAnnouncementUpdate {
-
   GroupAnnouncementUpdate({
     this.announcement,
   });
@@ -1170,7 +1146,6 @@ class GroupAnnouncementUpdate {
 
 @JsonSerializable()
 class MemberMuteRequest {
-
   MemberMuteRequest({
     required this.durationMinutes,
     this.reason,
@@ -1186,7 +1161,6 @@ class MemberMuteRequest {
 
 @JsonSerializable()
 class MemberWarnRequest {
-
   MemberWarnRequest({
     required this.reason,
   });
@@ -1201,7 +1175,6 @@ class MemberWarnRequest {
 
 @JsonSerializable()
 class MessageSearchRequest {
-
   MessageSearchRequest({
     this.keyword,
     this.groupId,
@@ -1243,7 +1216,6 @@ class MessageSearchRequest {
 
 @JsonSerializable()
 class MessageSearchResult {
-
   MessageSearchResult({
     required this.totalCount,
     required this.groupMessages,
@@ -1268,7 +1240,6 @@ class MessageSearchResult {
 
 @JsonSerializable()
 class OfflineMessageInfo {
-
   OfflineMessageInfo({
     required this.id,
     required this.userId,
@@ -1312,7 +1283,6 @@ class OfflineMessageInfo {
 
 @JsonSerializable()
 class OfflineMessageRetryRequest {
-
   OfflineMessageRetryRequest({
     required this.messageIds,
   });

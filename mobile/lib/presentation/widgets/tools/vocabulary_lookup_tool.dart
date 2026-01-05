@@ -6,13 +6,15 @@ import 'package:sparkle/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';
 
 /// 查词工具 - 快速词典查询
-class VocabularyLookupTool extends ConsumerStatefulWidget { // 当前任务ID，用于关联生词
+class VocabularyLookupTool extends ConsumerStatefulWidget {
+  // 当前任务ID，用于关联生词
 
   const VocabularyLookupTool({super.key, this.taskId});
   final String? taskId;
 
   @override
-  ConsumerState<VocabularyLookupTool> createState() => _VocabularyLookupToolState();
+  ConsumerState<VocabularyLookupTool> createState() =>
+      _VocabularyLookupToolState();
 }
 
 class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
@@ -60,11 +62,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     }
 
     final success = await ref.read(vocabularyProvider.notifier).addToWordbook(
-      word: word,
-      definition: definition,
-      phonetic: result['phonetic'] as String?,
-      taskId: widget.taskId,
-    );
+          word: word,
+          definition: definition,
+          phonetic: result['phonetic'] as String?,
+          taskId: widget.taskId,
+        );
 
     if (success && mounted) {
       HapticFeedback.mediumImpact();
@@ -117,14 +119,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   color: Colors.cyan.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.search_rounded, color: Colors.cyan, size: 24),
+                child: const Icon(Icons.search_rounded,
+                    color: Colors.cyan, size: 24,),
               ),
               const SizedBox(width: DS.md),
               Text(
                 '查词',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                ),
+                      fontWeight: DS.fontWeightBold,
+                    ),
               ),
             ],
           ),
@@ -147,10 +150,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.cyan, width: 2),
+                      borderSide:
+                          const BorderSide(color: Colors.cyan, width: 2),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    prefixIcon: Icon(Icons.translate_rounded, color: DS.neutral400),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14,),
+                    prefixIcon:
+                        Icon(Icons.translate_rounded, color: DS.neutral400),
                   ),
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _lookup(),
@@ -276,9 +282,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                 Text(
                   word,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: DS.fontWeightBold,
-                    color: DS.neutral900,
-                  ),
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.neutral900,
+                      ),
                 ),
                 if (phonetic != null) ...[
                   const SizedBox(width: DS.md),
@@ -330,7 +336,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             ],
 
             // Examples
-            if (examples != null && (examples is List && examples.isNotEmpty)) ...[
+            if (examples != null &&
+                (examples is List && examples.isNotEmpty)) ...[
               const SizedBox(height: DS.lg),
               Text(
                 '例句',
@@ -359,20 +366,22 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: state.associations.map((assoc) =>
-                  ActionChip(
-                    label: Text(assoc),
-                    onPressed: () {
-                      _controller.text = assoc;
-                      _lookup();
-                    },
-                    backgroundColor: DS.neutral100,
-                    labelStyle: TextStyle(
-                      color: DS.neutral700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ).toList(),
+                children: state.associations
+                    .map(
+                      (assoc) => ActionChip(
+                        label: Text(assoc),
+                        onPressed: () {
+                          _controller.text = assoc;
+                          _lookup();
+                        },
+                        backgroundColor: DS.neutral100,
+                        labelStyle: TextStyle(
+                          color: DS.neutral700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ],
@@ -383,30 +392,36 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
   List<Widget> _buildDefinitions(dynamic definitions) {
     if (definitions is List) {
-      return definitions.asMap().entries.map((entry) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${entry.key + 1}. ',
-                style: TextStyle(
-                  color: DS.neutral500,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  entry.value.toString(),
-                  style: TextStyle(
-                    color: DS.neutral700,
-                    height: 1.4,
+      return definitions
+          .asMap()
+          .entries
+          .map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${entry.key + 1}. ',
+                    style: TextStyle(
+                      color: DS.neutral500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: Text(
+                      entry.value.toString(),
+                      style: TextStyle(
+                        color: DS.neutral700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),).toList();
+            ),
+          )
+          .toList();
     } else {
       return [
         Text(
@@ -422,30 +437,35 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
   List<Widget> _buildExamples(dynamic examples) {
     if (examples is List) {
-      return examples.take(3).map((example) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.format_quote_rounded,
-                size: 16,
-                color: DS.neutral400,
-              ),
-              const SizedBox(width: DS.sm),
-              Expanded(
-                child: Text(
-                  example.toString(),
-                  style: TextStyle(
-                    color: DS.neutral600,
-                    fontStyle: FontStyle.italic,
-                    height: 1.4,
+      return examples
+          .take(3)
+          .map(
+            (example) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.format_quote_rounded,
+                    size: 16,
+                    color: DS.neutral400,
                   ),
-                ),
+                  const SizedBox(width: DS.sm),
+                  Expanded(
+                    child: Text(
+                      example.toString(),
+                      style: TextStyle(
+                        color: DS.neutral600,
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),).toList();
+            ),
+          )
+          .toList();
     }
     return [];
   }

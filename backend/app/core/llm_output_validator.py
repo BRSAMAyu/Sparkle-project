@@ -14,7 +14,7 @@ LLM 输出验证与过滤模块
 
 import re
 import logging
-from typing import Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)

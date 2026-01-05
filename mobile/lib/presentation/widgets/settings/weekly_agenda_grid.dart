@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 enum AgendaType {
-  busy,      // 1 繁忙
+  busy, // 1 繁忙
   fragmented, // 2 碎片
-  relax      // 3 放松
+  relax // 3 放松
 }
 
 class WeeklyAgendaGrid extends StatefulWidget {
-
   const WeeklyAgendaGrid({
-    required this.onChanged, super.key,
+    required this.onChanged,
+    super.key,
     this.initialData,
   });
   final Map<String, dynamic>? initialData;
@@ -84,17 +84,26 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
               onTap: () => setState(() => _selectedType = type),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _getColor(type).withValues(alpha: isSelected ? 1.0 : 0.5),
+                  color:
+                      _getColor(type).withValues(alpha: isSelected ? 1.0 : 0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected ? (isDark ? DS.brandPrimary : DS.brandPrimary54) : Colors.transparent,
+                    color: isSelected
+                        ? (isDark ? DS.brandPrimary : DS.brandPrimary54)
+                        : Colors.transparent,
                     width: 2,
                   ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(color: _getColor(type).withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
-                  ] : null,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                              color: _getColor(type).withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),),
+                        ]
+                      : null,
                 ),
                 child: Text(
                   _getLabel(type),
@@ -120,19 +129,21 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
 
             return Column(
               children: [
-                 // Header (Days)
+                // Header (Days)
                 Row(
                   children: [
                     const SizedBox(width: timeLabelWidth),
-                    ...['一', '二', '三', '四', '五', '六', '日'].map((day) =>
-                      Expanded(
+                    ...['一', '二', '三', '四', '五', '六', '日'].map(
+                      (day) => Expanded(
                         child: Center(
                           child: Text(
                             day,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
+                              color: isDark
+                                  ? DS.brandPrimary70
+                                  : DS.brandPrimary.shade700,
                             ),
                           ),
                         ),
@@ -150,8 +161,9 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                     SizedBox(
                       width: timeLabelWidth,
                       child: Column(
-                        children: List.generate(24, (hour) =>
-                          Container(
+                        children: List.generate(
+                          24,
+                          (hour) => Container(
                             height: cellHeight,
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 6),
@@ -159,7 +171,9 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                               hour.toString().padLeft(2, '0'),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600,
+                                color: isDark
+                                    ? DS.brandPrimary54
+                                    : DS.brandPrimary.shade600,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -167,19 +181,23 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                         ),
                       ),
                     ),
-                    
+
                     // The Grid Area
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: GestureDetector(
-                          onPanStart: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                          onPanUpdate: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
-                          onTapDown: (details) => _handleInput(details.localPosition, cellWidth, cellHeight),
+                          onPanStart: (details) => _handleInput(
+                              details.localPosition, cellWidth, cellHeight,),
+                          onPanUpdate: (details) => _handleInput(
+                              details.localPosition, cellWidth, cellHeight,),
+                          onTapDown: (details) => _handleInput(
+                              details.localPosition, cellWidth, cellHeight,),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: List.generate(24, (hour) =>
-                              Row(
+                            children: List.generate(
+                              24,
+                              (hour) => Row(
                                 children: List.generate(7, (day) {
                                   final index = hour * 7 + day;
                                   return Expanded(
@@ -188,8 +206,16 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                                       decoration: BoxDecoration(
                                         color: _getColor(_gridState[index]),
                                         border: Border(
-                                          right: BorderSide(color: isDark ? DS.brandPrimary10 : DS.brandPrimary.shade200, width: 0.5),
-                                          bottom: BorderSide(color: isDark ? DS.brandPrimary10 : DS.brandPrimary.shade200, width: 0.5),
+                                          right: BorderSide(
+                                              color: isDark
+                                                  ? DS.brandPrimary10
+                                                  : DS.brandPrimary.shade200,
+                                              width: 0.5,),
+                                          bottom: BorderSide(
+                                              color: isDark
+                                                  ? DS.brandPrimary10
+                                                  : DS.brandPrimary.shade200,
+                                              width: 0.5,),
                                         ),
                                       ),
                                     ),
@@ -215,10 +241,10 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
     // Clamp coordinates to valid range to prevent index out of bounds
     // We add a small epsilon to width/height to ensure we can reach the last cell easily
     // but floor() handles it.
-    
+
     final x = localPosition.dx;
     final y = localPosition.dy;
-    
+
     // Ignore if out of bounds (though GestureDetector is constrained, panUpdate might go out)
     if (x < 0 || y < 0) return;
 

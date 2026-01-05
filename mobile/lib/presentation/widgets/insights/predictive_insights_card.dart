@@ -9,7 +9,6 @@ import 'package:sparkle/core/design/design_system.dart';
 /// - difficulty: 难度预测
 /// - risk: 流失风险预警
 class PredictiveInsightsCard extends StatelessWidget {
-
   const PredictiveInsightsCard({
     required this.type,
     required this.data,
@@ -22,17 +21,17 @@ class PredictiveInsightsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.lg),
-          child: _buildContent(context),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: _buildContent(context),
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildContent(BuildContext context) {
     switch (type) {
@@ -67,7 +66,8 @@ class PredictiveInsightsCard extends StatelessWidget {
                 color: DS.brandPrimary.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.trending_up, color: DS.brandPrimary.shade600, size: 24),
+              child: Icon(Icons.trending_up,
+                  color: DS.brandPrimary.shade600, size: 24,),
             ),
             const SizedBox(width: DS.md),
             Expanded(
@@ -106,7 +106,8 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.access_time, color: DS.brandPrimary.shade700, size: 20),
+                Icon(Icons.access_time,
+                    color: DS.brandPrimary.shade700, size: 20,),
                 const SizedBox(width: DS.sm),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +151,8 @@ class PredictiveInsightsCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(DS.sm),
               decoration: BoxDecoration(
-                color: _getDifficultyColor(difficultyScore).withValues(alpha: 0.1),
+                color:
+                    _getDifficultyColor(difficultyScore).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -214,7 +216,8 @@ class PredictiveInsightsCard extends StatelessWidget {
                 value: difficultyScore,
                 minHeight: 8,
                 backgroundColor: DS.brandPrimary.shade200,
-                valueColor: AlwaysStoppedAnimation(_getDifficultyColor(difficultyScore)),
+                valueColor: AlwaysStoppedAnimation(
+                    _getDifficultyColor(difficultyScore),),
               ),
             ),
           ],
@@ -224,9 +227,11 @@ class PredictiveInsightsCard extends StatelessWidget {
         // Estimated Time
         Row(
           children: [
-            Icon(Icons.schedule,
+            Icon(
+              Icons.schedule,
               color: DS.neutral500,
-              size: DS.iconSizeXs,),
+              size: DS.iconSizeXs,
+            ),
             const SizedBox(width: DS.spacing8),
             Text(
               '预计学习时长: ${estimatedHours.toStringAsFixed(1)} 小时',
@@ -246,9 +251,11 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber,
+                Icon(
+                  Icons.warning_amber,
                   color: DS.warning,
-                  size: DS.iconSizeXs,),
+                  size: DS.iconSizeXs,
+                ),
                 const SizedBox(width: DS.spacing8),
                 Text(
                   '建议先学习 $missingCount 个前置知识',
@@ -346,26 +353,30 @@ class PredictiveInsightsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: DS.spacing8),
-          ...suggestions.take(2).map((suggestion) => Padding(
-                padding: const EdgeInsets.only(bottom: DS.spacing4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb_outline,
-                      color: DS.accent,
-                      size: DS.iconSizeXs,),
-                    const SizedBox(width: DS.spacing8),
-                    Expanded(
-                      child: Text(
-                        suggestion.toString(),
-                        style: const TextStyle(
-                          fontSize: DS.fontSizeXs,
+          ...suggestions.take(2).map(
+                (suggestion) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.spacing4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: DS.accent,
+                        size: DS.iconSizeXs,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          suggestion.toString(),
+                          style: const TextStyle(
+                            fontSize: DS.fontSizeXs,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),),
+              ),
         ],
       ],
     );
@@ -373,81 +384,86 @@ class PredictiveInsightsCard extends StatelessWidget {
 
   // Helper Widgets
   Widget _buildConfidenceBadge(double confidence) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: confidence > 0.7 ? DS.success.shade50 : DS.brandPrimary.shade50,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            confidence > 0.7 ? Icons.verified : Icons.info_outline,
-            size: 12,
-            color: confidence > 0.7 ? DS.success.shade700 : DS.brandPrimary.shade700,
-          ),
-          const SizedBox(width: DS.xs),
-          Text(
-            '${(confidence * 100).toInt()}%',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: confidence > 0.7 ? DS.success.shade700 : DS.brandPrimary.shade700,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color:
+              confidence > 0.7 ? DS.success.shade50 : DS.brandPrimary.shade50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              confidence > 0.7 ? Icons.verified : Icons.info_outline,
+              size: 12,
+              color: confidence > 0.7
+                  ? DS.success.shade700
+                  : DS.brandPrimary.shade700,
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: DS.xs),
+            Text(
+              '${(confidence * 100).toInt()}%',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: confidence > 0.7
+                    ? DS.success.shade700
+                    : DS.brandPrimary.shade700,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildDifficultyBadge(double score) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getDifficultyColor(score).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        _getDifficultyLabel(score),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: _getDifficultyColor(score),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _getDifficultyColor(score).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-    );
+        child: Text(
+          _getDifficultyLabel(score),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: _getDifficultyColor(score),
+          ),
+        ),
+      );
 
   Widget _buildRiskLevelBadge(String level) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getRiskColor(level).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        _getRiskLevelText(level),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: _getRiskColor(level),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _getRiskColor(level).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-    );
+        child: Text(
+          _getRiskLevelText(level),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: _getRiskColor(level),
+          ),
+        ),
+      );
 
   Widget _buildRiskIndicator(String risk) => Container(
-      padding: const EdgeInsets.all(DS.sm),
-      decoration: BoxDecoration(
-        color: _getRiskColor(risk).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
-          const SizedBox(width: DS.sm),
-          Text(
-            '流失风险: ${_getRiskLevelText(risk)}',
-            style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
-          ),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.all(DS.sm),
+        decoration: BoxDecoration(
+          color: _getRiskColor(risk).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
+            const SizedBox(width: DS.sm),
+            Text(
+              '流失风险: ${_getRiskLevelText(risk)}',
+              style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
+            ),
+          ],
+        ),
+      );
 
   // Helper Methods
   String _formatDateTime(DateTime dt) {

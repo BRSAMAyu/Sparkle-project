@@ -33,8 +33,10 @@ class ThemeManager extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
 
-    _mode = AppThemeMode.values[prefs.getInt('theme_mode') ?? AppThemeMode.system.index];
-    _brandPreset = BrandPreset.values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
+    _mode = AppThemeMode
+        .values[prefs.getInt('theme_mode') ?? AppThemeMode.system.index];
+    _brandPreset = BrandPreset
+        .values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
     _highContrast = prefs.getBool('high_contrast') ?? false;
 
     _initialized = true;
@@ -64,7 +66,8 @@ class ThemeManager extends ChangeNotifier {
 
   /// 切换深色/浅色模式
   Future<void> toggleDarkMode() async {
-    final newMode = _mode == AppThemeMode.dark ? AppThemeMode.light : AppThemeMode.dark;
+    final newMode =
+        _mode == AppThemeMode.dark ? AppThemeMode.light : AppThemeMode.dark;
     await setAppThemeMode(newMode);
   }
 
@@ -87,7 +90,8 @@ class ThemeManager extends ChangeNotifier {
       case AppThemeMode.dark:
         brightness = Brightness.dark;
       case AppThemeMode.system:
-        brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        brightness =
+            WidgetsBinding.instance.platformDispatcher.platformBrightness;
     }
 
     final baseTheme = brightness == Brightness.light
@@ -136,12 +140,12 @@ class ThemeManager extends ChangeNotifier {
 }
 
 enum AppThemeMode { system, light, dark }
+
 enum BrandPreset { sparkle, ocean, forest }
 
 /// 主题数据容器
 @immutable
 class SparkleThemeData {
-
   const SparkleThemeData({
     required this.colors,
     required this.typography,
@@ -183,19 +187,19 @@ class SparkleThemeData {
     SparkleSpacing? spacing,
     SparkleAnimations? animations,
     SparkleShadows? shadows,
-  }) => SparkleThemeData(
-      colors: colors ?? this.colors,
-      typography: typography ?? this.typography,
-      spacing: spacing ?? this.spacing,
-      animations: animations ?? this.animations,
-      shadows: shadows ?? this.shadows,
-    );
+  }) =>
+      SparkleThemeData(
+        colors: colors ?? this.colors,
+        typography: typography ?? this.typography,
+        spacing: spacing ?? this.spacing,
+        animations: animations ?? this.animations,
+        shadows: shadows ?? this.shadows,
+      );
 }
 
 /// 颜色系统
 @immutable
 class SparkleColors {
-
   const SparkleColors({
     required this.brandPrimary,
     required this.brandSecondary,
@@ -430,41 +434,42 @@ class SparkleColors {
     Color? neutral400,
     Color? neutral500,
     Color? neutral600,
-  }) => SparkleColors(
-      brandPrimary: brandPrimary ?? this.brandPrimary,
-      brandSecondary: brandSecondary ?? this.brandSecondary,
-      semanticSuccess: semanticSuccess ?? this.semanticSuccess,
-      semanticWarning: semanticWarning ?? this.semanticWarning,
-      semanticError: semanticError ?? this.semanticError,
-      semanticInfo: semanticInfo ?? this.semanticInfo,
-      surfacePrimary: surfacePrimary ?? this.surfacePrimary,
-      surfaceSecondary: surfaceSecondary ?? this.surfaceSecondary,
-      surfaceTertiary: surfaceTertiary ?? this.surfaceTertiary,
-      textPrimary: textPrimary ?? this.textPrimary,
-      textSecondary: textSecondary ?? this.textSecondary,
-      textDisabled: textDisabled ?? this.textDisabled,
-      brightness: brightness,
-      taskLearning: taskLearning ?? this.taskLearning,
-      taskTraining: taskTraining ?? this.taskTraining,
-      taskErrorFix: taskErrorFix ?? this.taskErrorFix,
-      taskReflection: taskReflection ?? this.taskReflection,
-      taskSocial: taskSocial ?? this.taskSocial,
-      taskPlanning: taskPlanning ?? this.taskPlanning,
-      planSprint: planSprint ?? this.planSprint,
-      planGrowth: planGrowth ?? this.planGrowth,
-      statusOnline: statusOnline ?? this.statusOnline,
-      statusOffline: statusOffline ?? this.statusOffline,
-      statusInvisible: statusInvisible ?? this.statusInvisible,
-      neutral200: neutral200 ?? this.neutral200,
-      neutral300: neutral300 ?? this.neutral300,
-      neutral400: neutral400 ?? this.neutral400,
-      neutral500: neutral500 ?? this.neutral500,
-      neutral600: neutral600 ?? this.neutral600,
-    );
+  }) =>
+      SparkleColors(
+        brandPrimary: brandPrimary ?? this.brandPrimary,
+        brandSecondary: brandSecondary ?? this.brandSecondary,
+        semanticSuccess: semanticSuccess ?? this.semanticSuccess,
+        semanticWarning: semanticWarning ?? this.semanticWarning,
+        semanticError: semanticError ?? this.semanticError,
+        semanticInfo: semanticInfo ?? this.semanticInfo,
+        surfacePrimary: surfacePrimary ?? this.surfacePrimary,
+        surfaceSecondary: surfaceSecondary ?? this.surfaceSecondary,
+        surfaceTertiary: surfaceTertiary ?? this.surfaceTertiary,
+        textPrimary: textPrimary ?? this.textPrimary,
+        textSecondary: textSecondary ?? this.textSecondary,
+        textDisabled: textDisabled ?? this.textDisabled,
+        brightness: brightness,
+        taskLearning: taskLearning ?? this.taskLearning,
+        taskTraining: taskTraining ?? this.taskTraining,
+        taskErrorFix: taskErrorFix ?? this.taskErrorFix,
+        taskReflection: taskReflection ?? this.taskReflection,
+        taskSocial: taskSocial ?? this.taskSocial,
+        taskPlanning: taskPlanning ?? this.taskPlanning,
+        planSprint: planSprint ?? this.planSprint,
+        planGrowth: planGrowth ?? this.planGrowth,
+        statusOnline: statusOnline ?? this.statusOnline,
+        statusOffline: statusOffline ?? this.statusOffline,
+        statusInvisible: statusInvisible ?? this.statusInvisible,
+        neutral200: neutral200 ?? this.neutral200,
+        neutral300: neutral300 ?? this.neutral300,
+        neutral400: neutral400 ?? this.neutral400,
+        neutral500: neutral500 ?? this.neutral500,
+        neutral600: neutral600 ?? this.neutral600,
+      );
 
   SparkleColors toHighContrast(bool enabled) => brightness == Brightness.light
-        ? SparkleColors.light(highContrast: enabled)
-        : SparkleColors.dark(highContrast: enabled);
+      ? SparkleColors.light(highContrast: enabled)
+      : SparkleColors.dark(highContrast: enabled);
 
   /// Get task color by type
   Color getTaskColor(String taskType) {
@@ -526,7 +531,6 @@ class SparkleColors {
 /// 排版系统
 @immutable
 class SparkleTypography {
-
   const SparkleTypography({
     required this.displayLarge,
     required this.headingLarge,
@@ -539,15 +543,47 @@ class SparkleTypography {
   });
 
   factory SparkleTypography.standard() => const SparkleTypography(
-      displayLarge: TextStyle(fontSize: 48.8, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.02),
-      headingLarge: TextStyle(fontSize: 31.25, fontWeight: FontWeight.w700, height: 1.2, letterSpacing: -0.01),
-      headingMedium: TextStyle(fontSize: 25.0, fontWeight: FontWeight.w600, height: 1.3, letterSpacing: 0),
-      titleLarge: TextStyle(fontSize: 20.0, fontWeight: FontWeight.w600, height: 1.5, letterSpacing: 0),
-      bodyLarge: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400, height: 1.5, letterSpacing: 0),
-      bodyMedium: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w400, height: 1.5, letterSpacing: 0),
-      labelLarge: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500, height: 1.2, letterSpacing: 0.01),
-      labelSmall: TextStyle(fontSize: 12.8, fontWeight: FontWeight.w500, height: 1.2, letterSpacing: 0.01),
-    );
+        displayLarge: TextStyle(
+            fontSize: 48.8,
+            fontWeight: FontWeight.w800,
+            height: 1.2,
+            letterSpacing: -0.02,),
+        headingLarge: TextStyle(
+            fontSize: 31.25,
+            fontWeight: FontWeight.w700,
+            height: 1.2,
+            letterSpacing: -0.01,),
+        headingMedium: TextStyle(
+            fontSize: 25.0,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            letterSpacing: 0,),
+        titleLarge: TextStyle(
+            fontSize: 20.0,
+            fontWeight: FontWeight.w600,
+            height: 1.5,
+            letterSpacing: 0,),
+        bodyLarge: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.w400,
+            height: 1.5,
+            letterSpacing: 0,),
+        bodyMedium: TextStyle(
+            fontSize: 14.0,
+            fontWeight: FontWeight.w400,
+            height: 1.5,
+            letterSpacing: 0,),
+        labelLarge: TextStyle(
+            fontSize: 14.0,
+            fontWeight: FontWeight.w500,
+            height: 1.2,
+            letterSpacing: 0.01,),
+        labelSmall: TextStyle(
+            fontSize: 12.8,
+            fontWeight: FontWeight.w500,
+            height: 1.2,
+            letterSpacing: 0.01,),
+      );
   final TextStyle displayLarge;
   final TextStyle headingLarge;
   final TextStyle headingMedium;
@@ -561,7 +597,6 @@ class SparkleTypography {
 /// 间距系统
 @immutable
 class SparkleSpacing {
-
   const SparkleSpacing();
   final double xs = 4.0;
   final double sm = 8.0;
@@ -583,7 +618,6 @@ class SparkleSpacing {
 /// 动画系统
 @immutable
 class SparkleAnimations {
-
   const SparkleAnimations();
   final Duration quick = const Duration(milliseconds: 150);
   final Duration normal = const Duration(milliseconds: 250);
@@ -593,7 +627,6 @@ class SparkleAnimations {
 /// 阴影系统
 @immutable
 class SparkleShadows {
-
   const SparkleShadows({
     required this.small,
     required this.medium,
@@ -601,52 +634,52 @@ class SparkleShadows {
   });
 
   factory SparkleShadows.light({Color? brandPrimary}) => SparkleShadows(
-      small: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.05),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-      medium: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-      large: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF6B35)).withOpacity(0.10),
-          blurRadius: 16,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    );
+        small: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        medium: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        large: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF6B35)).withValues(alpha: 0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      );
 
   factory SparkleShadows.dark({Color? brandPrimary}) => SparkleShadows(
-      small: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.2),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-      medium: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.3),
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-      large: [
-        BoxShadow(
-          color: (brandPrimary ?? const Color(0xFFFF8C5A)).withOpacity(0.4),
-          blurRadius: 16,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    );
+        small: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        medium: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        large: [
+          BoxShadow(
+            color: (brandPrimary ?? const Color(0xFFFF8C5A)).withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      );
   final List<BoxShadow> small;
   final List<BoxShadow> medium;
   final List<BoxShadow> large;

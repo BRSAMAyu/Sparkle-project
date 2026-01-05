@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/repositories/omnibar_repository.dart';
+import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
 
 /// OmniBar - Project Cockpit Floating Dock
 class OmniBar extends ConsumerStatefulWidget {
@@ -17,7 +17,8 @@ class OmniBar extends ConsumerStatefulWidget {
   ConsumerState<OmniBar> createState() => _OmniBarState();
 }
 
-class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStateMixin {
+class _OmniBarState extends ConsumerState<OmniBar>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
@@ -44,11 +45,18 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
     final text = _controller.text.toLowerCase();
     String? newIntent;
     // Bilingual support for keywords
-    if (text.contains('提醒') || text.contains('做') || text.contains('任务') || 
-        text.contains('task') || text.contains('remind') || text.contains('todo')) {
+    if (text.contains('提醒') ||
+        text.contains('做') ||
+        text.contains('任务') ||
+        text.contains('task') ||
+        text.contains('remind') ||
+        text.contains('todo')) {
       newIntent = 'TASK';
-    } else if (text.contains('烦') || text.contains('想') || text.contains('！') ||
-               text.contains('feel') || text.contains('think')) {
+    } else if (text.contains('烦') ||
+        text.contains('想') ||
+        text.contains('！') ||
+        text.contains('feel') ||
+        text.contains('think')) {
       newIntent = 'CAPSULE';
     } else if (text.length > 10) {
       newIntent = 'CHAT';
@@ -100,7 +108,8 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
   Future<void> _handleResult(Map<String, dynamic> result) async {
     final type = result['action_type'] as String?;
     switch (type) {
-      case 'CHAT': context.push('/chat');
+      case 'CHAT':
+        context.push('/chat');
       case 'TASK':
         await ref.read(taskListProvider.notifier).refreshTasks();
         await ref.read(dashboardProvider.notifier).refresh();
@@ -112,17 +121,21 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
 
   Color _getIntentColor() {
     switch (_intentType) {
-      case 'TASK': return DS.successAccent;
-      case 'CAPSULE': return Colors.purpleAccent;
-      case 'CHAT': return DS.brandPrimaryAccent;
-      default: return DS.textSecondary.withValues(alpha: 0.15);
+      case 'TASK':
+        return DS.successAccent;
+      case 'CAPSULE':
+        return Colors.purpleAccent;
+      case 'CHAT':
+        return DS.brandPrimaryAccent;
+      default:
+        return DS.textSecondary.withValues(alpha: 0.15);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
-    
+
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
@@ -159,7 +172,7 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                     hintStyle: TextStyle(
                       color: _isListening
                           ? DS.primaryBase
-                          : DS.textSecondary.withAlpha(80), 
+                          : DS.textSecondary.withAlpha(80),
                       fontSize: 14,
                     ),
                     border: InputBorder.none,
@@ -167,9 +180,12 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
                 ),
               ),
               if (_isLoading)
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),)
               else if (_controller.text.isEmpty && !_isListening)
-                 IconButton(
+                IconButton(
                   icon: Icon(Icons.mic, color: DS.primaryBase),
                   onPressed: _toggleListening,
                   tooltip: '语音输入',
@@ -177,12 +193,16 @@ class _OmniBarState extends ConsumerState<OmniBar> with SingleTickerProviderStat
               else
                 IconButton(
                   icon: Icon(
-                    _isListening 
-                        ? Icons.stop_circle_outlined 
-                        : (_intentType == 'CHAT' ? Icons.auto_awesome : Icons.arrow_upward_rounded),
+                    _isListening
+                        ? Icons.stop_circle_outlined
+                        : (_intentType == 'CHAT'
+                            ? Icons.auto_awesome
+                            : Icons.arrow_upward_rounded),
                     color: _isListening
                         ? DS.errorAccent
-                        : (_intentType != null ? color : DS.textSecondary.withValues(alpha: 0.7)),
+                        : (_intentType != null
+                            ? color
+                            : DS.textSecondary.withValues(alpha: 0.7)),
                     size: 20,
                   ),
                   onPressed: _isListening ? _toggleListening : _submit,

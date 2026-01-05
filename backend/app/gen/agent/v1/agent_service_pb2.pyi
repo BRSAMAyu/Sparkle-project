@@ -52,7 +52,7 @@ WRITING: AgentType
 REASONING: AgentType
 
 class ChatRequest(_message.Message):
-    __slots__ = ("user_id", "session_id", "message", "tool_result", "user_profile", "extra_context", "history", "config", "request_id")
+    __slots__ = ("user_id", "session_id", "message", "tool_result", "user_profile", "extra_context", "history", "config", "request_id", "file_ids", "include_references")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
@@ -62,6 +62,8 @@ class ChatRequest(_message.Message):
     HISTORY_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_IDS_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_REFERENCES_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     session_id: str
     message: str
@@ -71,7 +73,9 @@ class ChatRequest(_message.Message):
     history: _containers.RepeatedCompositeFieldContainer[ChatMessage]
     config: ChatConfig
     request_id: str
-    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., message: _Optional[str] = ..., tool_result: _Optional[_Union[ToolResult, _Mapping]] = ..., user_profile: _Optional[_Union[UserProfile, _Mapping]] = ..., extra_context: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., history: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., config: _Optional[_Union[ChatConfig, _Mapping]] = ..., request_id: _Optional[str] = ...) -> None: ...
+    file_ids: _containers.RepeatedScalarFieldContainer[str]
+    include_references: bool
+    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., message: _Optional[str] = ..., tool_result: _Optional[_Union[ToolResult, _Mapping]] = ..., user_profile: _Optional[_Union[UserProfile, _Mapping]] = ..., extra_context: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., history: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ..., config: _Optional[_Union[ChatConfig, _Mapping]] = ..., request_id: _Optional[str] = ..., file_ids: _Optional[_Iterable[str]] = ..., include_references: bool = ...) -> None: ...
 
 class UserProfile(_message.Message):
     __slots__ = ("nickname", "timezone", "language", "is_pro", "preferences", "extra_context")
@@ -178,20 +182,28 @@ class CitationBlock(_message.Message):
     def __init__(self, citations: _Optional[_Iterable[_Union[Citation, _Mapping]]] = ...) -> None: ...
 
 class Citation(_message.Message):
-    __slots__ = ("id", "title", "content", "source_type", "url", "score")
+    __slots__ = ("id", "title", "content", "source_type", "url", "score", "file_id", "page_number", "chunk_index", "section_title")
     ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     SOURCE_TYPE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     SCORE_FIELD_NUMBER: _ClassVar[int]
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    PAGE_NUMBER_FIELD_NUMBER: _ClassVar[int]
+    CHUNK_INDEX_FIELD_NUMBER: _ClassVar[int]
+    SECTION_TITLE_FIELD_NUMBER: _ClassVar[int]
     id: str
     title: str
     content: str
     source_type: str
     url: str
     score: float
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., source_type: _Optional[str] = ..., url: _Optional[str] = ..., score: _Optional[float] = ...) -> None: ...
+    file_id: str
+    page_number: int
+    chunk_index: int
+    section_title: str
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., content: _Optional[str] = ..., source_type: _Optional[str] = ..., url: _Optional[str] = ..., score: _Optional[float] = ..., file_id: _Optional[str] = ..., page_number: _Optional[int] = ..., chunk_index: _Optional[int] = ..., section_title: _Optional[str] = ...) -> None: ...
 
 class ToolCall(_message.Message):
     __slots__ = ("id", "name", "arguments")

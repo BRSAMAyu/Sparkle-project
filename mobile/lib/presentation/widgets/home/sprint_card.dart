@@ -13,7 +13,6 @@ import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 /// - Days remaining
 /// - Sprint name
 class SprintCard extends ConsumerWidget {
-
   const SprintCard({super.key, this.onTap});
   final VoidCallback? onTap;
 
@@ -130,45 +129,42 @@ class SprintCard extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(DS.sm),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withAlpha(20),
-            borderRadius: BorderRadius.circular(10),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.sm),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.flash_on_rounded,
+              color: DS.brandPrimary54,
+              size: 20,
+            ),
           ),
-          child: Icon(
-            Icons.flash_on_rounded,
-            color: DS.brandPrimary54,
-            size: 20,
+          const Spacer(),
+          Text(
+            '无冲刺计划',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: DS.brandPrimary70,
+            ),
           ),
-        ),
-
-        const Spacer(),
-
-        Text(
-          '无冲刺计划',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: DS.brandPrimary70,
+          const SizedBox(height: DS.xs),
+          Text(
+            '点击创建',
+            style: TextStyle(
+              fontSize: 11,
+              color: DS.brandPrimary.withAlpha(120),
+            ),
           ),
-        ),
-        const SizedBox(height: DS.xs),
-        Text(
-          '点击创建',
-          style: TextStyle(
-            fontSize: 11,
-            color: DS.brandPrimary.withAlpha(120),
-          ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 class _CircularProgressPainter extends CustomPainter {
-
   _CircularProgressPainter({
     required this.progress,
     required this.isUrgent,
@@ -206,5 +202,6 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) => oldDelegate.progress != progress || oldDelegate.isUrgent != isUrgent;
+  bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.isUrgent != isUrgent;
 }

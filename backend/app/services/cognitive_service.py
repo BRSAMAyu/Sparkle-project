@@ -235,4 +235,18 @@ class CognitiveService:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_user_patterns(self, user_id: UUID, min_confidence: float = 0.5) -> List[BehaviorPattern]:
+        """
+        Fetch active behavioral patterns for the user.
+        Used by ExamOracle to adjust prediction strategies.
+        """
+        stmt = (
+            select(BehaviorPattern)
+            .where(BehaviorPattern.user_id == user_id)
+            .where(BehaviorPattern.confidence_score >= min_confidence)
+            .order_by(desc(BehaviorPattern.confidence_score))
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     

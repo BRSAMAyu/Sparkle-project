@@ -1,9 +1,7 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 
 /// A simple point data structure for QuadTree
 class QTPoint {
-
   QTPoint(this.x, this.y, this.data);
   final double x;
   final double y;
@@ -11,7 +9,8 @@ class QTPoint {
 }
 
 /// A boundary region for QuadTree
-class QTRect { // half height
+class QTRect {
+  // half height
 
   QTRect(this.x, this.y, this.w, this.h);
   final double x; // center x
@@ -19,29 +18,29 @@ class QTRect { // half height
   final double w; // half width
   final double h;
 
-  bool contains(QTPoint point) => point.x >= x - w &&
-        point.x <= x + w &&
-        point.y >= y - h &&
-        point.y <= y + h;
+  bool contains(QTPoint point) =>
+      point.x >= x - w &&
+      point.x <= x + w &&
+      point.y >= y - h &&
+      point.y <= y + h;
 
   bool intersects(QTRect range) => !(range.x - range.w > x + w ||
-        range.x + range.w < x - w ||
-        range.y - range.h > y + h ||
-        range.y + range.h < y - h);
+      range.x + range.w < x - w ||
+      range.y - range.h > y + h ||
+      range.y + range.h < y - h);
 }
 
 /// QuadTree implementation for spatial indexing
 class QuadTree {
-
   QuadTree(this.boundary, this.capacity, [this.depth = 0]);
   static const int MAX_DEPTH = 10; // Prevent infinite recursion
-  
+
   final QTRect boundary;
   final int capacity;
   final int depth;
   final List<QTPoint> points = [];
   bool divided = false;
-  
+
   QuadTree? northwest;
   QuadTree? northeast;
   QuadTree? southwest;
@@ -67,7 +66,7 @@ class QuadTree {
       if (northeast!.insert(point)) return true;
       if (southwest!.insert(point)) return true;
       if (southeast!.insert(point)) return true;
-      
+
       return false; // Should not happen
     }
   }
@@ -83,7 +82,7 @@ class QuadTree {
     northeast = QuadTree(QTRect(x + w, y - h, w, h), capacity, depth + 1);
     southwest = QuadTree(QTRect(x - w, y + h, w, h), capacity, depth + 1);
     southeast = QuadTree(QTRect(x + w, y + h, w, h), capacity, depth + 1);
-    
+
     divided = true;
   }
 
@@ -110,27 +109,27 @@ class QuadTree {
 
     return found;
   }
-  
+
   /// Find closest point to target within maxDistance
   QTPoint? queryClosest(double x, double y, double maxDistance) {
     // Optimization: First query a range
     final range = QTRect(x, y, maxDistance, maxDistance);
     final candidates = query(range);
-    
+
     QTPoint? closest;
     var minDstSq = maxDistance * maxDistance;
-    
+
     for (final p in candidates) {
-      final dstSq = pow(p.x - x, 2) + pow(p.y - y, 2);
+      final dstSq = (pow(p.x - x, 2) + pow(p.y - y, 2)).toDouble();
       if (dstSq <= minDstSq) {
         minDstSq = dstSq;
         closest = p;
       }
     }
-    
+
     return closest;
   }
-  
+
   /// Clear the tree
   void clear() {
     points.clear();

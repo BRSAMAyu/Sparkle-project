@@ -45,7 +45,8 @@ class ShareResourceSheet extends ConsumerStatefulWidget {
   ConsumerState<ShareResourceSheet> createState() => _ShareResourceSheetState();
 }
 
-class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet> with SingleTickerProviderStateMixin {
+class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _commentController = TextEditingController();
 
@@ -152,34 +153,35 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet> with Si
   }
 
   Widget _buildResourcePreview() => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.md),
-      decoration: BoxDecoration(
-        color: DS.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DS.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          if (widget.subtitle != null && widget.subtitle!.isNotEmpty) ...[
-            const SizedBox(height: 4),
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: DS.neutral200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              widget.subtitle!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: DS.textSecondary, fontSize: 12),
+              widget.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+            if (widget.subtitle != null && widget.subtitle!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                widget.subtitle!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: DS.textSecondary, fontSize: 12),
+              ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 
-  Widget _buildFriendsList(AsyncValue<List<FriendshipInfo>> state) => state.when(
+  Widget _buildFriendsList(AsyncValue<List<FriendshipInfo>> state) =>
+      state.when(
         data: (friends) => friends.isEmpty
             ? _buildEmpty('暂无好友')
             : ListView.separated(

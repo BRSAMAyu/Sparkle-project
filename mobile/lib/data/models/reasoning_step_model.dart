@@ -20,40 +20,40 @@ enum StepStatus {
 /// 智能体类型枚举 (与protobuf AgentType保持同步)
 enum AgentType {
   @JsonValue('orchestrator')
-  orchestrator,  // 协调者
+  orchestrator, // 协调者
 
   @JsonValue('math')
-  math,          // 数学专家
+  math, // 数学专家
 
   @JsonValue('code')
-  code,          // 代码专家
+  code, // 代码专家
 
   @JsonValue('writing')
-  writing,       // 写作专家
+  writing, // 写作专家
 
   @JsonValue('science')
-  science,       // 科学专家（保留用于兼容性）
+  science, // 科学专家（保留用于兼容性）
 
   @JsonValue('knowledge')
-  knowledge,     // 知识检索专家
+  knowledge, // 知识检索专家
 
   @JsonValue('search')
-  search,        // 搜索专家（保留用于兼容性）
+  search, // 搜索专家（保留用于兼容性）
 
   @JsonValue('data_analysis')
-  dataAnalysis,  // 数据分析专家
+  dataAnalysis, // 数据分析专家
 
   @JsonValue('translation')
-  translation,   // 翻译专家
+  translation, // 翻译专家
 
   @JsonValue('image')
-  image,         // 图像处理专家
+  image, // 图像处理专家
 
   @JsonValue('audio')
-  audio,         // 音频处理专家
+  audio, // 音频处理专家
 
   @JsonValue('reasoning')
-  reasoning,     // 逻辑推理专家
+  reasoning, // 逻辑推理专家
 }
 
 /// 推理步骤模型
@@ -61,7 +61,6 @@ enum AgentType {
 /// 代表AI思考过程中的一个步骤，用于前端可视化展示
 @JsonSerializable()
 class ReasoningStep {
-
   const ReasoningStep({
     required this.id,
     required this.description,
@@ -76,6 +75,7 @@ class ReasoningStep {
 
   factory ReasoningStep.fromJson(Map<String, dynamic> json) =>
       _$ReasoningStepFromJson(json);
+
   /// 唯一标识符
   final String id;
 
@@ -134,25 +134,26 @@ class ReasoningStep {
     DateTime? createdAt,
     DateTime? completedAt,
     Map<String, dynamic>? metadata,
-  }) => ReasoningStep(
-      id: id ?? this.id,
-      description: description ?? this.description,
-      agent: agent ?? this.agent,
-      status: status ?? this.status,
-      toolOutput: toolOutput ?? this.toolOutput,
-      citations: citations ?? this.citations,
-      createdAt: createdAt ?? this.createdAt,
-      completedAt: completedAt ?? this.completedAt,
-      metadata: metadata ?? this.metadata,
-    );
+  }) =>
+      ReasoningStep(
+        id: id ?? this.id,
+        description: description ?? this.description,
+        agent: agent ?? this.agent,
+        status: status ?? this.status,
+        toolOutput: toolOutput ?? this.toolOutput,
+        citations: citations ?? this.citations,
+        createdAt: createdAt ?? this.createdAt,
+        completedAt: completedAt ?? this.completedAt,
+        metadata: metadata ?? this.metadata,
+      );
 
   @override
-  String toString() => 'ReasoningStep(id: $id, agent: $agent, status: $status, desc: $description)';
+  String toString() =>
+      'ReasoningStep(id: $id, agent: $agent, status: $status, desc: $description)';
 }
 
 /// 智能体贡献信息（用于多智能体协作展示）
 class AgentContribution {
-
   AgentContribution({
     required this.agentName,
     required this.agentType,

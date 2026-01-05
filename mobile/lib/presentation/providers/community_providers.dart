@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/domain/community/community_models.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/auth.dart';
 
 // Feed State Controller
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
-
-  FeedNotifier(this._repository, this._currentUserId) : super(const AsyncValue.loading()) {
+  FeedNotifier(this._repository, this._currentUserId)
+      : super(const AsyncValue.loading()) {
     refresh();
   }
   final CommunityRepository _repository;
@@ -23,7 +23,8 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 
   // Optimistic Update: Add post locally before sync
-  Future<void> addPostOptimistically(String content, List<String> imageUrls, String topic) async {
+  Future<void> addPostOptimistically(
+      String content, List<String> imageUrls, String topic,) async {
     if (_currentUserId == null) return;
 
     // 1. Create Temporary Post Object
@@ -47,21 +48,22 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
     try {
       // 3. Perform Actual API Call
-      await _repository.createPost(CreatePostRequest(
-        userId: _currentUserId!,
-        content: content,
-        imageUrls: imageUrls,
-        topic: topic,
-      ),);
-      
+      await _repository.createPost(
+        CreatePostRequest(
+          userId: _currentUserId!,
+          content: content,
+          imageUrls: imageUrls,
+          topic: topic,
+        ),
+      );
+
       // 4. Wait a bit for Worker to sync (Optional hack for MVP)
       // In a real CQRS app, we might just leave the optimistic one until next refresh
       // or listen to a WebSocket event that confirms creation.
-      
+
       // For this demo, let's trigger a refresh after 500ms
       await Future.delayed(const Duration(milliseconds: 500));
       await refresh();
-
     } catch (e) {
       // Revert if failed
       state = AsyncValue.data(currentList);
@@ -70,7 +72,8 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 }
 
-final feedProvider = StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
+final feedProvider =
+    StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
   final repository = ref.watch(communityRepositoryProvider);
   final user = ref.watch(currentUserProvider);
   return FeedNotifier(repository, user?.id);

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
-import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
-import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 复习模式枚举
 enum ReviewMode {
@@ -29,7 +28,6 @@ enum ReviewMode {
 /// 3. 进度可见：顶部进度条，底部统计
 /// 4. 智能提示：显示 AI 分析，帮助理解
 class ReviewScreen extends ConsumerStatefulWidget {
-
   const ReviewScreen({
     super.key,
     this.mode = ReviewMode.today,
@@ -46,7 +44,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   int _currentIndex = 0;
   bool _showAnswer = false;
   bool _showAnalysis = false;
-  final Map<String, String> _reviewResults = {}; // errorId -> performance (remembered/fuzzy/forgotten)
+  final Map<String, String> _reviewResults =
+      {}; // errorId -> performance (remembered/fuzzy/forgotten)
   bool _isSubmitting = false;
 
   @override
@@ -200,10 +199,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: theme.colorScheme.outline.withOpacity(0.2),
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -242,7 +241,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           if (_showAnswer) ...[
             const SizedBox(height: 16),
             _buildAnswerSection(context, error),
-
             if (_showAnalysis && error.latestAnalysis != null) ...[
               const SizedBox(height: 16),
               _buildAnalysisSection(context, error),
@@ -262,10 +260,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer.withOpacity(0.3),
+            color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: theme.colorScheme.error.withOpacity(0.3),
+              color: theme.colorScheme.error.withValues(alpha: 0.3),
             ),
           ),
           child: Column(
@@ -302,10 +300,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.green.withOpacity(0.3),
+              color: Colors.green.withValues(alpha: 0.3),
             ),
           ),
           child: Column(
@@ -340,78 +338,79 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
   }
 
-  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'AI 分析',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showAnalysis = false;
-                });
-              },
-              icon: const Icon(Icons.visibility_off, size: 16),
-              label: const Text('隐藏'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        AnalysisCard(analysis: error.latestAnalysis!),
-      ],
-    );
+  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'AI 分析',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showAnalysis = false;
+                  });
+                },
+                icon: const Icon(Icons.visibility_off, size: 16),
+                label: const Text('隐藏'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          AnalysisCard(analysis: error.latestAnalysis!),
+        ],
+      );
 
   Widget _buildRevealButton(BuildContext context) => SafeArea(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showAnswer = true;
-                });
-              },
-              icon: const Icon(Icons.visibility),
-              label: const Text('查看答案'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                minimumSize: const Size(double.infinity, 0),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showAnswer = true;
+                  });
+                },
+                icon: const Icon(Icons.visibility),
+                label: const Text('查看答案'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size(double.infinity, 0),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '先思考答案，再点击查看',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                '先思考答案，再点击查看',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildActionBar(
     BuildContext context,
@@ -427,7 +426,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -451,7 +450,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
             // 评价按钮
             ReviewPerformanceButtons(
-              onPerformanceSelected: (performance) => _handleReview(context, error, performance),
+              onPerformanceSelected: (performance) =>
+                  _handleReview(context, error, performance),
               isLoading: _isSubmitting,
             ),
           ],
@@ -502,48 +502,51 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     }
   }
 
-  Widget _buildEmptyState(BuildContext context, {String? customMessage}) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            size: 80,
-            color: Colors.green.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            customMessage ?? '暂无需要复习的错题',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
+  Widget _buildEmptyState(BuildContext context, {String? customMessage}) =>
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              size: 80,
+              color: Colors.green.shade300,
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '做得很好！继续保持',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
+            const SizedBox(height: 16),
+            Text(
+              customMessage ?? '暂无需要复习的错题',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('返回'),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 8),
+            const Text(
+              '做得很好！继续保持',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('返回'),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildCompletionState(BuildContext context, List<ErrorRecord> errors) {
     final theme = Theme.of(context);
     final totalReviewed = _reviewResults.length;
-    final remembered = _reviewResults.values.where((p) => p == 'remembered').length;
+    final remembered =
+        _reviewResults.values.where((p) => p == 'remembered').length;
     final fuzzy = _reviewResults.values.where((p) => p == 'fuzzy').length;
-    final forgotten = _reviewResults.values.where((p) => p == 'forgotten').length;
+    final forgotten =
+        _reviewResults.values.where((p) => p == 'forgotten').length;
 
     return Center(
       child: SingleChildScrollView(
@@ -556,7 +559,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -586,7 +589,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                color:
+                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -728,42 +732,42 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   }
 
   Widget _buildErrorState(BuildContext context, String error) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 80,
-            color: Colors.red,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '加载失败',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 80,
+              color: Colors.red,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
+            const SizedBox(height: 16),
+            const Text(
+              '加载失败',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
-              ref.invalidate(todayReviewListProvider);
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.invalidate(todayReviewListProvider);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('重试'),
+            ),
+          ],
+        ),
+      );
 
   Future<void> _confirmExit(BuildContext context) async {
     if (_reviewResults.isEmpty) {

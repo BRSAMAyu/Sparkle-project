@@ -17,23 +17,25 @@ class TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-      title: 'Chain of Thought Visualization Test',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.dark,
-      ),
-      home: const ReasoningVisualizationDemo(),
-    );
+        title: 'Chain of Thought Visualization Test',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        home: const ReasoningVisualizationDemo(),
+      );
 }
 
 class ReasoningVisualizationDemo extends StatefulWidget {
   const ReasoningVisualizationDemo({super.key});
 
   @override
-  State<ReasoningVisualizationDemo> createState() => _ReasoningVisualizationDemoState();
+  State<ReasoningVisualizationDemo> createState() =>
+      _ReasoningVisualizationDemoState();
 }
 
-class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo> {
+class _ReasoningVisualizationDemoState
+    extends State<ReasoningVisualizationDemo> {
   bool _showRealTime = false;
   final bool _showCompleted = false;
 
@@ -60,7 +62,8 @@ class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo>
       description: '正在生成 Python 代码...',
       agent: AgentType.code,
       status: StepStatus.inProgress,
-      toolOutput: '```python\nimport numpy as np\n\ndef derivative(f, x, h=1e-5):\n    """计算函数f在x处的导数"""\n    return (f(x + h) - f(x - h)) / (2 * h)\n```',
+      toolOutput:
+          '```python\nimport numpy as np\n\ndef derivative(f, x, h=1e-5):\n    """计算函数f在x处的导数"""\n    return (f(x + h) - f(x - h)) / (2 * h)\n```',
       createdAt: DateTime.now().subtract(const Duration(seconds: 3)),
     ),
   ];
@@ -98,7 +101,8 @@ class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo>
       description: '生成 Python 实现代码',
       agent: AgentType.code,
       status: StepStatus.completed,
-      toolOutput: '```python\ndef power_derivative(x, n=2):\n    return n * x**(n-1)\n```',
+      toolOutput:
+          '```python\ndef power_derivative(x, n=2):\n    return n * x**(n-1)\n```',
       createdAt: DateTime.now().subtract(const Duration(seconds: 3)),
       completedAt: DateTime.now().subtract(const Duration(seconds: 1)),
     ),
@@ -134,156 +138,159 @@ class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(
-        title: const Text('Chain of Thought Visualization'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      body: SingleChildScrollView(
+        appBar: AppBar(
+          title: const Text('Chain of Thought Visualization'),
+          backgroundColor: Colors.deepPurple,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 24),
+              _buildSection(
+                '1. 实时推理过程 (Real-time)',
+                '模拟AI正在思考时的流式更新',
+                _buildRealTimeDemo(),
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                '2. 已完成的推理 (Completed)',
+                '展示完整的思考过程',
+                _buildCompletedDemo(),
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                '3. 多智能体协作 (Multi-Agent)',
+                '多个专家共同解决问题',
+                _buildCollaborationDemo(),
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                '4. 持久化消息 (Persisted)',
+                '在历史消息中展示推理过程',
+                _buildPersistedMessageDemo(),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildHeader() => Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.deepPurple.shade700, Colors.blue.shade700],
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '🧠 Chain of Thought Visualization',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'This demo shows the new reasoning visualization system for Sparkle.',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildSection(String title, String subtitle, Widget content) =>
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade700),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildSection(
-              '1. 实时推理过程 (Real-time)',
-              '模拟AI正在思考时的流式更新',
-              _buildRealTimeDemo(),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildSection(
-              '2. 已完成的推理 (Completed)',
-              '展示完整的思考过程',
-              _buildCompletedDemo(),
+            Text(
+              subtitle,
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
             ),
-            const SizedBox(height: 16),
-            _buildSection(
-              '3. 多智能体协作 (Multi-Agent)',
-              '多个专家共同解决问题',
-              _buildCollaborationDemo(),
-            ),
-            const SizedBox(height: 16),
-            _buildSection(
-              '4. 持久化消息 (Persisted)',
-              '在历史消息中展示推理过程',
-              _buildPersistedMessageDemo(),
-            ),
+            const SizedBox(height: 12),
+            content,
           ],
         ),
-      ),
-    );
-
-  Widget _buildHeader() => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.deepPurple.shade700, Colors.blue.shade700],
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '🧠 Chain of Thought Visualization',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'This demo shows the new reasoning visualization system for Sparkle.',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-
-  Widget _buildSection(String title, String subtitle, Widget content) => Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade700),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          content,
-        ],
-      ),
-    );
+      );
 
   Widget _buildRealTimeDemo() => Column(
-      children: [
-        AgentReasoningBubble(
-          steps: _realTimeSteps,
-          isThinking: true,
-          totalDurationMs: 2100,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _showRealTime = !_showRealTime;
-                  if (_showRealTime) {
-                    // Simulate adding a new step
-                    _realTimeSteps.add(
-                      ReasoningStep(
-                        id: 'step_4',
-                        description: '验证代码正确性',
-                        agent: AgentType.code,
-                        status: StepStatus.completed,
-                        createdAt: DateTime.now(),
-                        completedAt: DateTime.now().add(const Duration(milliseconds: 500)),
-                      ),
-                    );
-                  }
-                });
-              },
-              icon: const Icon(Icons.play_arrow),
-              label: Text(_showRealTime ? '重置' : '模拟下一步'),
-            ),
-          ],
-        ),
-      ],
-    );
+        children: [
+          AgentReasoningBubble(
+            steps: _realTimeSteps,
+            isThinking: true,
+            totalDurationMs: 2100,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showRealTime = !_showRealTime;
+                    if (_showRealTime) {
+                      // Simulate adding a new step
+                      _realTimeSteps.add(
+                        ReasoningStep(
+                          id: 'step_4',
+                          description: '验证代码正确性',
+                          agent: AgentType.code,
+                          status: StepStatus.completed,
+                          createdAt: DateTime.now(),
+                          completedAt: DateTime.now()
+                              .add(const Duration(milliseconds: 500)),
+                        ),
+                      );
+                    }
+                  });
+                },
+                icon: const Icon(Icons.play_arrow),
+                label: Text(_showRealTime ? '重置' : '模拟下一步'),
+              ),
+            ],
+          ),
+        ],
+      );
 
   Widget _buildCompletedDemo() => AgentReasoningBubble(
-      steps: _completedSteps,
-      totalDurationMs: 7000,
-    );
+        steps: _completedSteps,
+        totalDurationMs: 7000,
+      );
 
   Widget _buildCollaborationDemo() => MultiAgentCollaborationBubble(
-      contributions: _collaborationContributions,
-      summary: '综合三位专家的分析，推荐使用幂函数直接计算导数，时间复杂度O(1)，代码简洁高效。',
-      isComplete: true,
-    );
+        contributions: _collaborationContributions,
+        summary: '综合三位专家的分析，推荐使用幂函数直接计算导数，时间复杂度O(1)，代码简洁高效。',
+        isComplete: true,
+      );
 
   Widget _buildPersistedMessageDemo() {
     final message = ChatMessageModel(
       id: 'demo_msg_1',
       conversationId: 'demo_conv',
       role: MessageRole.assistant,
-      content: '根据您的要求，我已经完成了微积分公式的Python实现。\n\n**导数公式**: d/dx(x²) = 2x\n\n**Python代码**:\n```python\ndef power_derivative(x, n=2):\n    return n * x**(n-1)\n```\n\n这个实现使用了幂函数的导数规则，效率为O(1)。',
+      content:
+          '根据您的要求，我已经完成了微积分公式的Python实现。\n\n**导数公式**: d/dx(x²) = 2x\n\n**Python代码**:\n```python\ndef power_derivative(x, n=2):\n    return n * x**(n-1)\n```\n\n这个实现使用了幂函数的导数规则，效率为O(1)。',
       createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
       reasoningSteps: _completedSteps,
       reasoningSummary: '完成于 7.0s，4个步骤',
@@ -340,9 +347,10 @@ class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo>
               children: [
                 if (message.aiStatus != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.2),
+                      color: Colors.amber.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -360,7 +368,8 @@ class _ReasoningVisualizationDemoState extends State<ReasoningVisualizationDemo>
                 const SizedBox(height: 8),
                 Text(
                   message.content,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 14, height: 1.5,),
                 ),
               ],
             ),

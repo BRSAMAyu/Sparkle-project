@@ -14,82 +14,88 @@ class _NotesToolState extends State<NotesTool> {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.xl),
-      height: 600, // Taller for notes
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+        padding: const EdgeInsets.all(DS.xl),
+        height: 600, // Taller for notes
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: DS.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
-                  const SizedBox(width: DS.sm),
-                  Text(
-                    '随手记',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: () {
-                  _controller.clear();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已清空')));
-                },
-                child: Text('清空', style: TextStyle(color: DS.error)),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.lg),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(DS.lg),
-              decoration: BoxDecoration(
-                color: DS.warning.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
-              ),
-              child: TextField(
-                controller: _controller,
-                maxLines: null,
-                expands: true,
-                decoration: const InputDecoration(
-                  hintText: '在这里记录想法...',
-                  border: InputBorder.none,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                style: const TextStyle(fontSize: 16, height: 1.5),
               ),
             ),
-          ),
-          const SizedBox(height: DS.lg),
-          CustomButton.primary(
-            text: '复制到剪贴板',
-            onPressed: () {
-               // Clipboard logic if needed, or just close
-               Navigator.pop(context);
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('笔记已保存 (Mock)')));
-            },
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: DS.xl),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.note_alt_outlined, color: DS.brandPrimary),
+                    const SizedBox(width: DS.sm),
+                    Text(
+                      '随手记',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+                    _controller.clear();
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(const SnackBar(content: Text('已清空')));
+                  },
+                  child: Text('清空', style: TextStyle(color: DS.error)),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.lg),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(DS.lg),
+                decoration: BoxDecoration(
+                  color: DS.warning.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+                ),
+                child: TextField(
+                  controller: _controller,
+                  maxLines: null,
+                  expands: true,
+                  decoration: const InputDecoration(
+                    hintText: '在这里记录想法...',
+                    border: InputBorder.none,
+                  ),
+                  style: const TextStyle(fontSize: 16, height: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            CustomButton.primary(
+              text: '复制到剪贴板',
+              onPressed: () {
+                // Clipboard logic if needed, or just close
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('笔记已保存 (Mock)')),);
+              },
+            ),
+          ],
+        ),
+      );
 }

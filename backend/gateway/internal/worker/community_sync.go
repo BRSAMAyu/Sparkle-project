@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -125,7 +126,16 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 	}
 
 	// Fetch post from database
-	post, err := w.queries.GetPost(ctx, pgtype.UUID{Bytes: postID, Valid: true})
+	createdAt := evt.Timestamp
+	if raw, ok := evt.Payload["created_at"]; ok {
+		if ts, err := parseEventTime(raw); err == nil {
+			createdAt = ts
+		}
+	}
+	post, err := w.queries.GetPost(ctx, db.GetPostParams{
+		ID:        pgtype.UUID{Bytes: postID, Valid: true},
+		CreatedAt: pgtype.Timestamp{Time: createdAt, Valid: true},
+	})
 	if err != nil {
 		return fmt.Errorf("fetch post: %w", err)
 	}
@@ -182,6 +192,19 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 	)
 
 	return nil
+}
+
+func parseEventTime(value interface{}) (time.Time, error) {
+	switch v := value.(type) {
+	case string:
+		return time.Parse(time.RFC3339Nano, v)
+	case time.Time:
+		return v, nil
+	case float64:
+		return time.Unix(int64(v), 0).UTC(), nil
+	default:
+		return time.Time{}, fmt.Errorf("unsupported time type")
+	}
 }
 
 // handlePostLiked processes a PostLiked event.

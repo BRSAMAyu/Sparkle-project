@@ -4,7 +4,8 @@ import 'package:sparkle/data/repositories/i_cognitive_repository.dart';
 
 class MockCognitiveRepository implements ICognitiveRepository {
   @override
-  Future<CognitiveFragmentModel> createFragment(CognitiveFragmentCreate data) async {
+  Future<CognitiveFragmentModel> createFragment(
+      CognitiveFragmentCreate data,) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return CognitiveFragmentModel(
       id: 'mock-frag-${DateTime.now().millisecondsSinceEpoch}',
@@ -19,7 +20,8 @@ class MockCognitiveRepository implements ICognitiveRepository {
   }
 
   @override
-  Future<List<CognitiveFragmentModel>> getFragments({int limit = 20, int skip = 0}) async {
+  Future<List<CognitiveFragmentModel>> getFragments(
+      {int limit = 20, int skip = 0,}) async {
     await Future.delayed(const Duration(milliseconds: 800));
     return [
       CognitiveFragmentModel(
@@ -96,4 +98,3 @@ class MockCognitiveRepository implements ICognitiveRepository {
     ];
   }
 }
-

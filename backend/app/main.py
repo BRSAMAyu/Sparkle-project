@@ -20,6 +20,7 @@ from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
+from app.api.v2.agent_graph import router as agent_graph_router  # New V2 Agent Router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
 from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
@@ -186,6 +187,8 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(agent_graph_router, prefix="/api/v2/agent", tags=["Agent V2"])
+
 
 # Mount static files for uploads
 # Make sure the directory exists

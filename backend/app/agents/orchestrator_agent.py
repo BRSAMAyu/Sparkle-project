@@ -4,7 +4,7 @@ Orchestrator Agent - 协调者智能体
 负责路由查询到合适的专业智能体，并整合多个智能体的响应
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from loguru import logger
 
 from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse

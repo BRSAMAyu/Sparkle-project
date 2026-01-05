@@ -90,11 +90,14 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('队列水位: $_queueLength / $_currentThreshold',
-              style: const TextStyle(fontWeight: FontWeight.bold),),
+          Text(
+            '队列水位: $_queueLength / $_currentThreshold',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: DS.sm),
           LinearProgressIndicator(
-            value: _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,
+            value:
+                _currentThreshold > 0 ? _queueLength / _currentThreshold : 1.0,
             color: isTripped ? DS.error : DS.success,
             backgroundColor: DS.brandPrimary200,
           ),
@@ -131,7 +134,8 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         ],
       ),
       actions: [
-        SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
+        SparkleButton.ghost(
+            label: '关闭', onPressed: () => Navigator.pop(context),),
       ],
     );
   }

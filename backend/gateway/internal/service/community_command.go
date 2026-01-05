@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -87,6 +88,7 @@ func (s *CommunityCommandService) CreatePost(ctx context.Context, req CreatePost
 				"content":    req.Content,
 				"image_urls": req.ImageURLs,
 				"topic":      req.Topic,
+				"created_at": post.CreatedAt.Time.Format(time.RFC3339Nano),
 			},
 			event.EventMetadata{
 				UserID: req.UserID,

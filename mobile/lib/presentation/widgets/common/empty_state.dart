@@ -16,7 +16,6 @@ enum EmptyStateType {
 ///
 /// 用于显示列表为空、搜索无结果等场景
 class EmptyState extends StatelessWidget {
-
   const EmptyState({
     super.key,
     this.type = EmptyStateType.general,
@@ -33,66 +32,73 @@ class EmptyState extends StatelessWidget {
   factory EmptyState.noTasks({
     Key? key,
     VoidCallback? onCreateTask,
-  }) => EmptyState(
-      key: key,
-      type: EmptyStateType.noTasks,
-      title: '还没有任务',
-      description: '创建您的第一个学习任务，开启高效学习之旅',
-      icon: Icons.task_alt_rounded,
-      actionText: '创建任务',
-      onAction: onCreateTask,
-    );
+  }) =>
+      EmptyState(
+        key: key,
+        type: EmptyStateType.noTasks,
+        title: '还没有任务',
+        description: '创建您的第一个学习任务，开启高效学习之旅',
+        icon: Icons.task_alt_rounded,
+        actionText: '创建任务',
+        onAction: onCreateTask,
+      );
 
   /// 无聊天记录空状态
   factory EmptyState.noChats({
     Key? key,
     VoidCallback? onStartChat,
-  }) => EmptyState(
-      key: key,
-      type: EmptyStateType.noChats,
-      title: '我是你的 AI 导师 Sparkle',
-      description: '有什么可以帮你？',
-      icon: Icons.chat_bubble_outline_rounded,
-      actionText: '开始对话',
-      onAction: onStartChat,
-    );
+  }) =>
+      EmptyState(
+        key: key,
+        type: EmptyStateType.noChats,
+        title: '我是你的 AI 导师 Sparkle',
+        description: '有什么可以帮你？',
+        icon: Icons.chat_bubble_outline_rounded,
+        actionText: '开始对话',
+        onAction: onStartChat,
+      );
 
   /// 无计划空状态
   factory EmptyState.noPlans({
     Key? key,
     VoidCallback? onCreatePlan,
-  }) => EmptyState(
-      key: key,
-      type: EmptyStateType.noPlans,
-      title: '还没有学习计划',
-      description: '制定学习计划，让AI帮您规划学习路线',
-      icon: Icons.calendar_today_rounded,
-      actionText: '创建计划',
-      onAction: onCreatePlan,
-    );
+  }) =>
+      EmptyState(
+        key: key,
+        type: EmptyStateType.noPlans,
+        title: '还没有学习计划',
+        description: '制定学习计划，让AI帮您规划学习路线',
+        icon: Icons.calendar_today_rounded,
+        actionText: '创建计划',
+        onAction: onCreatePlan,
+      );
 
   /// 无错题空状态
   factory EmptyState.noErrors({
     Key? key,
-  }) => EmptyState(
-      key: key,
-      type: EmptyStateType.noErrors,
-      title: '太棒了！',
-      description: '您还没有错题记录，继续保持',
-      icon: Icons.emoji_events_rounded,
-    );
+  }) =>
+      EmptyState(
+        key: key,
+        type: EmptyStateType.noErrors,
+        title: '太棒了！',
+        description: '您还没有错题记录，继续保持',
+        icon: Icons.emoji_events_rounded,
+      );
 
   /// 无搜索结果空状态
   factory EmptyState.noResults({
     Key? key,
     String? searchQuery,
-  }) => EmptyState(
-      key: key,
-      type: EmptyStateType.noResults,
-      title: '没有找到结果',
-      description: searchQuery != null ? '没有找到与"$searchQuery"相关的内容' : '请尝试其他搜索关键词',
-      icon: Icons.search_off_rounded,
-    );
+  }) =>
+      EmptyState(
+        key: key,
+        type: EmptyStateType.noResults,
+        title: '没有找到结果',
+        description:
+            searchQuery != null ? '没有找到与"$searchQuery"相关的内容' : '请尝试其他搜索关键词',
+        icon: Icons.search_off_rounded,
+      );
+
   /// 空状态类型
   final EmptyStateType type;
 
@@ -192,71 +198,72 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 图标
-            if (showIcon) _buildIcon(),
-            if (showIcon) const SizedBox(height: DS.spacing24),
-            // 标题
-            Text(
-              title ?? _getDefaultTitle(),
-              style: TextStyle(
-                fontSize: DS.fontSize2xl,
-                fontWeight: DS.fontWeightBold,
-                color: context.colors.textPrimary,
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 图标
+              if (showIcon) _buildIcon(),
+              if (showIcon) const SizedBox(height: DS.spacing24),
+              // 标题
+              Text(
+                title ?? _getDefaultTitle(),
+                style: TextStyle(
+                  fontSize: DS.fontSize2xl,
+                  fontWeight: DS.fontWeightBold,
+                  color: context.colors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.spacing12),
-            // 描述
-            Text(
-              description ?? _getDefaultDescription(),
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                color: DS.neutral600,
-                height: DS.lineHeightNormal,
+              const SizedBox(height: DS.spacing12),
+              // 描述
+              Text(
+                description ?? _getDefaultDescription(),
+                style: TextStyle(
+                  fontSize: DS.fontSizeBase,
+                  color: DS.neutral600,
+                  height: DS.lineHeightNormal,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            // 操作按钮
-            if (customAction != null || (actionText != null && onAction != null)) ...[
-              const SizedBox(height: DS.spacing32),
-              customAction ??
-                  CustomButton.primary(
-                    text: actionText!,
-                    onPressed: onAction,
-                    icon: _getActionIcon(),
-                  ),
+              // 操作按钮
+              if (customAction != null ||
+                  (actionText != null && onAction != null)) ...[
+                const SizedBox(height: DS.spacing32),
+                customAction ??
+                    CustomButton.primary(
+                      text: actionText!,
+                      onPressed: onAction,
+                      icon: _getActionIcon(),
+                    ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildIcon() => Container(
-      width: 120.0,
-      height: 120.0,
-      decoration: BoxDecoration(
-        gradient: _getIconGradient(),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: _getIconColor().withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Icon(
-        icon ?? _getDefaultIcon(),
-        size: DS.iconSize3xl,
-        color: DS.brandPrimaryConst,
-      ),
-    );
+        width: 120.0,
+        height: 120.0,
+        decoration: BoxDecoration(
+          gradient: _getIconGradient(),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: _getIconColor().withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon ?? _getDefaultIcon(),
+          size: DS.iconSize3xl,
+          color: DS.brandPrimaryConst,
+        ),
+      );
 
   IconData? _getActionIcon() {
     switch (type) {
@@ -276,9 +283,9 @@ class EmptyState extends StatelessWidget {
 ///
 /// 用于列表中的空状态展示，占用空间更小
 class CompactEmptyState extends StatelessWidget {
-
   const CompactEmptyState({
-    required this.message, super.key,
+    required this.message,
+    super.key,
     this.icon,
     this.onAction,
     this.actionText,
@@ -290,43 +297,43 @@ class CompactEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Container(
-              width: 64.0,
-              height: 64.0,
-              decoration: BoxDecoration(
-                color: DS.neutral100,
-                shape: BoxShape.circle,
+        padding: const EdgeInsets.all(DS.spacing24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Container(
+                width: 64.0,
+                height: 64.0,
+                decoration: BoxDecoration(
+                  color: DS.neutral100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: DS.iconSizeLg,
+                  color: DS.neutral400,
+                ),
               ),
-              child: Icon(
-                icon,
-                size: DS.iconSizeLg,
-                color: DS.neutral400,
+              const SizedBox(height: DS.spacing16),
+            ],
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: DS.fontSizeBase,
+                color: DS.neutral600,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: DS.spacing16),
+            if (onAction != null && actionText != null) ...[
+              const SizedBox(height: DS.spacing16),
+              CustomButton.text(
+                text: actionText!,
+                onPressed: onAction,
+                size: CustomButtonSize.small,
+              ),
+            ],
           ],
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: DS.fontSizeBase,
-              color: DS.neutral600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (onAction != null && actionText != null) ...[
-            const SizedBox(height: DS.spacing16),
-            CustomButton.text(
-              text: actionText!,
-              onPressed: onAction,
-              size: CustomButtonSize.small,
-            ),
-          ],
-        ],
-      ),
-    );
+        ),
+      );
 }

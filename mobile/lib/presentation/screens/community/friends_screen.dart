@@ -49,7 +49,9 @@ class _MyFriendsTab extends ConsumerWidget {
     return friendsState.when(
       data: (friends) {
         if (friends.isEmpty) {
-          return const Center(child: CompactEmptyState(message: 'No friends yet', icon: Icons.people_outline));
+          return const Center(
+              child: CompactEmptyState(
+                  message: 'No friends yet', icon: Icons.people_outline,),);
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(friendsProvider.notifier).refresh(),
@@ -61,23 +63,34 @@ class _MyFriendsTab extends ConsumerWidget {
               final friend = friendInfo.friend;
               return InkWell(
                 onTap: () {
-                  context.push('/community/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}');
+                  context.push(
+                      '/community/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',);
                 },
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: DS.brandPrimaryConst, width: 2),
+                          border:
+                              Border.all(color: DS.brandPrimaryConst, width: 2),
                           boxShadow: [
-                            BoxShadow(color: DS.brandPrimaryConst.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                            BoxShadow(
+                                color: DS.brandPrimaryConst
+                                    .withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),),
                           ],
                         ),
                         child: CircleAvatar(
-                          backgroundImage: friend.avatarUrl != null ? NetworkImage(friend.avatarUrl!) : null,
-                          child: friend.avatarUrl == null ? Text(friend.displayName[0]) : null,
+                          backgroundImage: friend.avatarUrl != null
+                              ? NetworkImage(friend.avatarUrl!)
+                              : null,
+                          child: friend.avatarUrl == null
+                              ? Text(friend.displayName[0])
+                              : null,
                         ),
                       ),
                       const SizedBox(width: DS.md),
@@ -85,12 +98,17 @@ class _MyFriendsTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(friend.displayName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
-                            Text('Lv.${friend.flameLevel}', style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12)),
+                            Text(friend.displayName,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500, fontSize: 16,),),
+                            Text('Lv.${friend.flameLevel}',
+                                style: TextStyle(
+                                    color: DS.brandPrimaryConst, fontSize: 12,),),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 20, color: DS.brandPrimary),
+                      Icon(Icons.chevron_right,
+                          size: 20, color: DS.brandPrimary,),
                     ],
                   ),
                 ),
@@ -100,7 +118,10 @@ class _MyFriendsTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: LoadingIndicator()),
-      error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendsProvider.notifier).refresh())),
+      error: (e, s) => Center(
+          child: CustomErrorWidget.page(
+              message: e.toString(),
+              onRetry: () => ref.read(friendsProvider.notifier).refresh(),),),
     );
   }
 }
@@ -128,8 +149,12 @@ class _PendingRequestsTab extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-                    child: user.avatarUrl == null ? Text(user.displayName[0]) : null,
+                    backgroundImage: user.avatarUrl != null
+                        ? NetworkImage(user.avatarUrl!)
+                        : null,
+                    child: user.avatarUrl == null
+                        ? Text(user.displayName[0])
+                        : null,
                   ),
                   title: Text(user.displayName),
                   subtitle: const Text('Wants to be your friend'),
@@ -139,14 +164,18 @@ class _PendingRequestsTab extends ConsumerWidget {
                       IconButton(
                         icon: Icon(Icons.check, color: DS.success),
                         onPressed: () {
-                          ref.read(pendingRequestsProvider.notifier).respondToRequest(request.id, true);
+                          ref
+                              .read(pendingRequestsProvider.notifier)
+                              .respondToRequest(request.id, true);
                           ref.read(friendsProvider.notifier).refresh();
                         },
                       ),
                       IconButton(
                         icon: Icon(Icons.close, color: DS.error),
                         onPressed: () {
-                          ref.read(pendingRequestsProvider.notifier).respondToRequest(request.id, false);
+                          ref
+                              .read(pendingRequestsProvider.notifier)
+                              .respondToRequest(request.id, false);
                         },
                       ),
                     ],
@@ -158,7 +187,11 @@ class _PendingRequestsTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: LoadingIndicator()),
-      error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh())),
+      error: (e, s) => Center(
+          child: CustomErrorWidget.page(
+              message: e.toString(),
+              onRetry: () =>
+                  ref.read(pendingRequestsProvider.notifier).refresh(),),),
     );
   }
 }
@@ -176,7 +209,8 @@ class _RecommendationsTab extends ConsumerWidget {
           return const Center(child: Text('No recommendations available'));
         }
         return RefreshIndicator(
-          onRefresh: () => ref.read(friendRecommendationsProvider.notifier).refresh(),
+          onRefresh: () =>
+              ref.read(friendRecommendationsProvider.notifier).refresh(),
           child: ListView.builder(
             itemCount: recommendations.length,
             padding: const EdgeInsets.all(DS.lg),
@@ -185,16 +219,23 @@ class _RecommendationsTab extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: rec.user.avatarUrl != null ? NetworkImage(rec.user.avatarUrl!) : null,
-                    child: rec.user.avatarUrl == null ? Text(rec.user.displayName[0]) : null,
+                    backgroundImage: rec.user.avatarUrl != null
+                        ? NetworkImage(rec.user.avatarUrl!)
+                        : null,
+                    child: rec.user.avatarUrl == null
+                        ? Text(rec.user.displayName[0])
+                        : null,
                   ),
                   title: Text(rec.user.displayName),
                   subtitle: Text('Match: ${(rec.matchScore * 100).toInt()}%'),
                   trailing: IconButton(
                     icon: const Icon(Icons.person_add),
                     onPressed: () {
-                       ref.read(friendRecommendationsProvider.notifier).sendRequest(rec.user.id);
-                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent')));
+                      ref
+                          .read(friendRecommendationsProvider.notifier)
+                          .sendRequest(rec.user.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Request sent')),);
                     },
                   ),
                 ),
@@ -204,7 +245,11 @@ class _RecommendationsTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: LoadingIndicator()),
-      error: (e, s) => Center(child: CustomErrorWidget.page(message: e.toString(), onRetry: () => ref.read(friendRecommendationsProvider.notifier).refresh())),
+      error: (e, s) => Center(
+          child: CustomErrorWidget.page(
+              message: e.toString(),
+              onRetry: () =>
+                  ref.read(friendRecommendationsProvider.notifier).refresh(),),),
     );
   }
 }

@@ -6,13 +6,16 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 final themeManagerProvider = Provider((ref) => ThemeManager());
 
 /// Provider to manage the application's ThemeMode (Light, Dark, System)
-final themeModeProvider = StateProvider<AppThemeMode>((ref) => ThemeManager().mode);
+final themeModeProvider =
+    StateProvider<AppThemeMode>((ref) => ThemeManager().mode);
 
 /// Provider to manage brand preset
-final brandPresetProvider = StateProvider<BrandPreset>((ref) => ThemeManager().brandPreset);
+final brandPresetProvider =
+    StateProvider<BrandPreset>((ref) => ThemeManager().brandPreset);
 
 /// Provider to manage high contrast mode
-final highContrastProvider = StateProvider<bool>((ref) => ThemeManager().highContrast);
+final highContrastProvider =
+    StateProvider<bool>((ref) => ThemeManager().highContrast);
 
 /// Helper to convert AppThemeMode to ThemeMode
 ThemeMode appThemeModeToThemeMode(AppThemeMode mode) {

@@ -11,7 +11,8 @@ class PostUser with _$PostUser {
     @JsonKey(name: 'avatar_url') String? avatarUrl,
   }) = _PostUser;
 
-  factory PostUser.fromJson(Map<String, dynamic> json) => _$PostUserFromJson(json);
+  factory PostUser.fromJson(Map<String, dynamic> json) =>
+      _$PostUserFromJson(json);
 }
 
 @freezed
@@ -20,7 +21,9 @@ class Post with _$Post {
     required String id,
     @JsonKey(name: 'user_id') required String userId,
     required String content,
-    @JsonKey(name: 'created_at') required DateTime createdAt, required PostUser user, @JsonKey(name: 'image_urls') List<String>? imageUrls,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    required PostUser user,
+    @JsonKey(name: 'image_urls') List<String>? imageUrls,
     String? topic,
     @JsonKey(name: 'like_count') @Default(0) int likeCount,
     @Default(false) bool isOptimistic, // For optimistic UI
@@ -38,5 +41,6 @@ class CreatePostRequest with _$CreatePostRequest {
     String? topic,
   }) = _CreatePostRequest;
 
-  factory CreatePostRequest.fromJson(Map<String, dynamic> json) => _$CreatePostRequestFromJson(json);
+  factory CreatePostRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreatePostRequestFromJson(json);
 }

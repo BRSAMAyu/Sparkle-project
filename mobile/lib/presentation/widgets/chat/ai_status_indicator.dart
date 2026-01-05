@@ -5,7 +5,6 @@ import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
 /// AI 状态指示器
 /// 显示 AI 的当前状态（THINKING, GENERATING, EXECUTING_TOOL 等）
 class AiStatusIndicator extends StatelessWidget {
-
   const AiStatusIndicator({
     super.key,
     this.status,
@@ -32,7 +31,6 @@ class AiStatusIndicator extends StatelessWidget {
 
 /// AI 状态气泡（紧凑版，用于聊天气泡中）
 class AiStatusBubble extends StatelessWidget {
-
   const AiStatusBubble({
     required this.status,
     super.key,

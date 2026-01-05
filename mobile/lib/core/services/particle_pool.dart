@@ -100,8 +100,9 @@ class PoolStats {
   final int totalReused;
 
   /// 复用率
-  double get reuseRate =>
-      totalCreated + totalReused > 0 ? totalReused / (totalCreated + totalReused) : 0;
+  double get reuseRate => totalCreated + totalReused > 0
+      ? totalReused / (totalCreated + totalReused)
+      : 0;
 
   @override
   String toString() =>

@@ -81,8 +81,8 @@ void main() {
       };
 
       expect(workflow['type'], 'task_decomposition');
-      expect(workflow['steps'], isA<List>());
-      final steps = workflow['steps'] as List;
+      expect(workflow['steps'], isA<List<Map<String, String>>>());
+      final steps = workflow['steps'] as List<Map<String, String>>;
       expect(steps.length, 2);
     });
   });

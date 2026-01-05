@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class LearningModeControl extends StatefulWidget {
-
   const LearningModeControl({
-    required this.depth, required this.curiosity, required this.onChanged, super.key,
+    required this.depth,
+    required this.curiosity,
+    required this.onChanged,
+    super.key,
   });
   final double depth; // 0.0 - 1.0
   final double curiosity; // 0.0 - 1.0
@@ -64,22 +66,30 @@ class _LearningModeControlState extends State<LearningModeControl> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    color: isDark ? DS.brandPrimary.shade900 : DS.brandPrimary.shade100,
-                    border: Border.all(color: isDark ? DS.brandPrimary24 : DS.brandPrimary.shade300),
+                    color: isDark
+                        ? DS.brandPrimary.shade900
+                        : DS.brandPrimary.shade100,
+                    border: Border.all(
+                        color: isDark
+                            ? DS.brandPrimary24
+                            : DS.brandPrimary.shade300,),
                     boxShadow: [
-                       BoxShadow(
-                          color: DS.primaryBase.withValues(alpha: 0.15 * _currentCuriosity),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                       ),
+                      BoxShadow(
+                        color: DS.primaryBase
+                            .withValues(alpha: 0.15 * _currentCuriosity),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
                     ],
                   ),
                   child: GestureDetector(
                     onPanUpdate: (details) {
-                      _updatePosition(details.localPosition, Size(maxSize, maxSize));
+                      _updatePosition(
+                          details.localPosition, Size(maxSize, maxSize),);
                     },
                     onTapDown: (details) {
-                      _updatePosition(details.localPosition, Size(maxSize, maxSize));
+                      _updatePosition(
+                          details.localPosition, Size(maxSize, maxSize),);
                     },
                     child: Stack(
                       children: [
@@ -90,22 +100,42 @@ class _LearningModeControlState extends State<LearningModeControl> {
                         Positioned(
                           left: 8,
                           top: 8,
-                          child: Text('深度+', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
+                          child: Text('深度+',
+                              style: TextStyle(
+                                  color: isDark
+                                      ? DS.brandPrimary54
+                                      : DS.brandPrimary.shade600,
+                                  fontSize: 11,),),
                         ),
                         Positioned(
                           left: 8,
                           bottom: 8,
-                          child: Text('深度-', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
+                          child: Text('深度-',
+                              style: TextStyle(
+                                  color: isDark
+                                      ? DS.brandPrimary54
+                                      : DS.brandPrimary.shade600,
+                                  fontSize: 11,),),
                         ),
                         Positioned(
                           right: 8,
                           bottom: 8,
-                          child: Text('好奇+', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
+                          child: Text('好奇+',
+                              style: TextStyle(
+                                  color: isDark
+                                      ? DS.brandPrimary54
+                                      : DS.brandPrimary.shade600,
+                                  fontSize: 11,),),
                         ),
                         Positioned(
                           right: 8,
                           top: 8,
-                          child: Text('好奇-', style: TextStyle(color: isDark ? DS.brandPrimary54 : DS.brandPrimary.shade600, fontSize: 11)),
+                          child: Text('好奇-',
+                              style: TextStyle(
+                                  color: isDark
+                                      ? DS.brandPrimary54
+                                      : DS.brandPrimary.shade600,
+                                  fontSize: 11,),),
                         ),
 
                         // The Handle
@@ -126,7 +156,8 @@ class _LearningModeControlState extends State<LearningModeControl> {
                                 ),
                               ],
                             ),
-                            child: Icon(Icons.touch_app, size: 16, color: DS.primaryBase),
+                            child: Icon(Icons.touch_app,
+                                size: 16, color: DS.primaryBase,),
                           ),
                         ),
                       ],
@@ -151,9 +182,9 @@ class _LearningModeControlState extends State<LearningModeControl> {
   }
 
   Widget _buildGrid(double width, double height) => CustomPaint(
-      size: Size(width, height),
-      painter: GridPainter(),
-    );
+        size: Size(width, height),
+        painter: GridPainter(),
+      );
 
   Widget _buildInfoChip(String label) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -161,7 +192,8 @@ class _LearningModeControlState extends State<LearningModeControl> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? DS.brandPrimary10 : DS.primaryBase.withValues(alpha: 0.1),
+        color:
+            isDark ? DS.brandPrimary10 : DS.primaryBase.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(

@@ -14,7 +14,6 @@ import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ChatBubble extends StatefulWidget {
-
   const ChatBubble({
     required this.message,
     super.key,
@@ -60,7 +59,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     _position = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart));
+    ).animate(
+        CurvedAnimation(parent: _entryController, curve: Curves.easeOutQuart),);
 
     _entryController.forward();
   }
@@ -100,19 +100,21 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   bool get _isRevoked {
-    if (widget.message is MessageInfo) return (widget.message as MessageInfo).isRevoked;
-    if (widget.message is PrivateMessageInfo) return (widget.message as PrivateMessageInfo).isRevoked;
+    if (widget.message is MessageInfo)
+      return (widget.message as MessageInfo).isRevoked;
+    if (widget.message is PrivateMessageInfo)
+      return (widget.message as PrivateMessageInfo).isRevoked;
     return false;
   }
 
-  String get _content => (widget.message is ChatMessageModel) 
-      ? (widget.message as ChatMessageModel).content 
+  String get _content => (widget.message is ChatMessageModel)
+      ? (widget.message as ChatMessageModel).content
       : (widget.message is PrivateMessageInfo)
           ? (widget.message as PrivateMessageInfo).content ?? ''
           : (widget.message as MessageInfo).content ?? '';
 
-  DateTime get _createdAt => (widget.message is ChatMessageModel) 
-      ? (widget.message as ChatMessageModel).createdAt 
+  DateTime get _createdAt => (widget.message is ChatMessageModel)
+      ? (widget.message as ChatMessageModel).createdAt
       : (widget.message is PrivateMessageInfo)
           ? (widget.message as PrivateMessageInfo).createdAt
           : (widget.message as MessageInfo).createdAt;
@@ -129,8 +131,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     if (_isRevoked || !mounted) return;
 
     // Allow revocation within 24 hours for user messages
-    final canRevoke = _isUser && DateTime.now().difference(_createdAt).inHours < 24;
-    
+    final canRevoke =
+        _isUser && DateTime.now().difference(_createdAt).inHours < 24;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -143,7 +146,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.onQuote != null && widget.message is PrivateMessageInfo)
+              if (widget.onQuote != null &&
+                  widget.message is PrivateMessageInfo)
                 ListTile(
                   leading: const Icon(Icons.format_quote_rounded),
                   title: const Text('引用'),
@@ -162,7 +166,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   if (mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)),
+                      const SnackBar(
+                          content: Text('已复制到剪贴板'),
+                          duration: Duration(seconds: 1),),
                     );
                   }
                 },
@@ -192,7 +198,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
 
     final isUser = _isUser;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
-    
+
     return SlideTransition(
       position: _position,
       child: ScaleTransition(
@@ -202,12 +208,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Column(
             children: [
               Row(
-                mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                mainAxisAlignment:
+                    isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (!isUser && widget.showAvatar) _buildAvatar(false),
-                  if (!isUser && !widget.showAvatar) const SizedBox(width: 44), 
-
+                  if (!isUser && !widget.showAvatar) const SizedBox(width: 44),
                   Flexible(
                     child: GestureDetector(
                       onDoubleTap: _handleDoubleTap,
@@ -229,94 +235,157 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                           alignment: Alignment.center,
                           children: [
                             Column(
-                              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              crossAxisAlignment: isUser
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
-                                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,),
+                                  constraints: BoxConstraints(
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width *
+                                              0.72,),
                                   decoration: isUser
-                                    ? BoxDecoration(
-                                        gradient: DS.primaryGradient,
-                                        borderRadius: _getBorderRadius(true),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: DS.primaryBase.withValues(alpha: 0.25),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      )
-                                    : BoxDecoration(
-                                        color: context.sparkleColors.surfaceSecondary,
-                                        borderRadius: _getBorderRadius(false),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: context.sparkleColors.brandPrimary.withValues(alpha: 0.05),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                        border: Border.all(color: context.sparkleColors.neutral200.withValues(alpha: 0.5)),
-                                      ),
+                                      ? BoxDecoration(
+                                          gradient: DS.primaryGradient,
+                                          borderRadius: _getBorderRadius(true),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: DS.primaryBase
+                                                  .withValues(alpha: 0.25),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        )
+                                      : BoxDecoration(
+                                          color: context
+                                              .sparkleColors.surfaceSecondary,
+                                          borderRadius: _getBorderRadius(false),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: context
+                                                  .sparkleColors.brandPrimary
+                                                  .withValues(alpha: 0.05),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                          border: Border.all(
+                                              color: context
+                                                  .sparkleColors.neutral200
+                                                  .withValues(alpha: 0.5),),
+                                        ),
                                   child: ClipRRect(
                                     borderRadius: _getBorderRadius(isUser),
                                     child: BackdropFilter(
-                                      filter: isUser ? ImageFilter.blur() : ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                      filter: isUser
+                                          ? ImageFilter.blur()
+                                          : ImageFilter.blur(
+                                              sigmaX: 10, sigmaY: 10,),
                                       child: Container(
-                                        decoration: isUser ? null : BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              context.sparkleColors.surfacePrimary.withValues(alpha: 0.8),
-                                              context.sparkleColors.surfaceSecondary.withValues(alpha: 0.9),
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                                        decoration: isUser
+                                            ? null
+                                            : BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    context.sparkleColors
+                                                        .surfacePrimary
+                                                        .withValues(alpha: 0.8),
+                                                    context.sparkleColors
+                                                        .surfaceSecondary
+                                                        .withValues(alpha: 0.9),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                              ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 10, horizontal: 14,),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            if (widget.message is PrivateMessageInfo && (widget.message as PrivateMessageInfo).quotedMessage != null)
-                                              _buildQuoteArea(context, isUser, (widget.message as PrivateMessageInfo).quotedMessage!),
-                                            if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).aiStatus != null)
+                                            if (widget.message
+                                                    is PrivateMessageInfo &&
+                                                (widget.message
+                                                            as PrivateMessageInfo)
+                                                        .quotedMessage !=
+                                                    null)
+                                              _buildQuoteArea(
+                                                  context,
+                                                  isUser,
+                                                  (widget.message
+                                                          as PrivateMessageInfo)
+                                                      .quotedMessage!,),
+                                            if (widget.message
+                                                    is ChatMessageModel &&
+                                                (widget.message
+                                                            as ChatMessageModel)
+                                                        .aiStatus !=
+                                                    null)
                                               Padding(
-                                                padding: const EdgeInsets.only(bottom: 8.0),
-                                                child: AiStatusBubble(status: (widget.message as ChatMessageModel).aiStatus!),
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 8.0,),
+                                                child: AiStatusBubble(
+                                                    status: (widget.message
+                                                            as ChatMessageModel)
+                                                        .aiStatus!,),
                                               ),
-                                            if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).reasoningSteps != null)
+                                            if (widget.message
+                                                    is ChatMessageModel &&
+                                                (widget.message
+                                                            as ChatMessageModel)
+                                                        .reasoningSteps !=
+                                                    null)
                                               Padding(
-                                                padding: const EdgeInsets.only(bottom: 8.0),
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 8.0,),
                                                 child: AgentReasoningBubble(
-                                                  steps: (widget.message as ChatMessageModel).reasoningSteps!,
-                                                  totalDurationMs: _calculateReasoningDuration(widget.message as ChatMessageModel),
+                                                  steps: (widget.message
+                                                          as ChatMessageModel)
+                                                      .reasoningSteps!,
+                                                  totalDurationMs:
+                                                      _calculateReasoningDuration(
+                                                          widget.message
+                                                              as ChatMessageModel,),
                                                 ),
                                               ),
                                             MarkdownBody(
                                               data: _content,
-                                              styleSheet: _getMarkdownStyle(context, isUser),
-                                              onTapLink: (text, href, title) async {
+                                              styleSheet: _getMarkdownStyle(
+                                                  context, isUser,),
+                                              onTapLink:
+                                                  (text, href, title) async {
                                                 if (href == null) return;
                                                 final uri = Uri.tryParse(href);
                                                 if (uri == null) return;
-                                                
-                                                final scheme = uri.scheme.toLowerCase();
-                                                const allowedSchemes = ['http', 'https'];
-                                                if (!allowedSchemes.contains(scheme)) {
+
+                                                final scheme =
+                                                    uri.scheme.toLowerCase();
+                                                const allowedSchemes = [
+                                                  'http',
+                                                  'https',
+                                                ];
+                                                if (!allowedSchemes
+                                                    .contains(scheme)) {
                                                   // Prevent malicious schemes (javascript:, file:, etc.)
                                                   return;
                                                 }
-                                                
+
                                                 try {
                                                   if (await canLaunchUrl(uri)) {
                                                     await launchUrl(
                                                       uri,
-                                                      mode: LaunchMode.externalApplication,
+                                                      mode: LaunchMode
+                                                          .externalApplication,
                                                     );
                                                   }
                                                 } catch (e) {
-                                                  debugPrint('Failed to launch URL: $e');
+                                                  debugPrint(
+                                                      'Failed to launch URL: $e',);
                                                 }
                                               },
                                             ),
@@ -326,17 +395,31 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                     ),
                                   ),
                                 ),
-                                if (widget.message is ChatMessageModel && (widget.message as ChatMessageModel).widgets != null)
-                                  ... (widget.message as ChatMessageModel).widgets!.map((w) =>
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0, right: 8.0, left: 8.0),
-                                      child: ActionCard(
-                                        action: w,
-                                        onConfirm: widget.onActionConfirm != null ? () => widget.onActionConfirm!(w) : null,
-                                        onDismiss: widget.onActionDismiss != null ? () => widget.onActionDismiss!(w) : null,
+                                if (widget.message is ChatMessageModel &&
+                                    (widget.message as ChatMessageModel)
+                                            .widgets !=
+                                        null)
+                                  ...(widget.message as ChatMessageModel)
+                                      .widgets!
+                                      .map(
+                                        (w) => Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 8.0, right: 8.0, left: 8.0,),
+                                          child: ActionCard(
+                                            action: w,
+                                            onConfirm: widget.onActionConfirm !=
+                                                    null
+                                                ? () =>
+                                                    widget.onActionConfirm!(w)
+                                                : null,
+                                            onDismiss: widget.onActionDismiss !=
+                                                    null
+                                                ? () =>
+                                                    widget.onActionDismiss!(w)
+                                                : null,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
                               ],
                             ),
                             if (_showHeart) _buildHeartAnimation(),
@@ -345,12 +428,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-
                   if (isUser && widget.showAvatar) _buildAvatar(true),
                   if (isUser && !widget.showAvatar) const SizedBox(width: 44),
                 ],
               ),
-              
               Padding(
                 padding: EdgeInsets.only(
                   top: 4,
@@ -358,7 +439,8 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   right: isUser ? 52 : 0,
                 ),
                 child: Row(
-                  mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  mainAxisAlignment:
+                      isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                   children: [
                     if (isUser) _buildMessageStatus(),
                     const SizedBox(width: DS.xs),
@@ -376,57 +458,77 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuoteArea(BuildContext context, bool isUser, PrivateMessageInfo msg) => Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: isUser ? context.sparkleColors.brandPrimary.withValues(alpha: 0.15) : context.sparkleColors.surfaceTertiary.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border(left: BorderSide(color: isUser ? context.sparkleColors.brandPrimary.withValues(alpha: 0.7) : context.sparkleColors.brandPrimary, width: 3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            msg.sender.displayName,
-            style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.bold,
-              color: isUser ? context.sparkleColors.brandPrimary : context.sparkleColors.brandPrimary,
+  Widget _buildQuoteArea(
+          BuildContext context, bool isUser, PrivateMessageInfo msg,) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: isUser
+              ? context.sparkleColors.brandPrimary.withValues(alpha: 0.15)
+              : context.sparkleColors.surfaceTertiary.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border(
+              left: BorderSide(
+                  color: isUser
+                      ? context.sparkleColors.brandPrimary
+                          .withValues(alpha: 0.7)
+                      : context.sparkleColors.brandPrimary,
+                  width: 3,),),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              msg.sender.displayName,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isUser
+                    ? context.sparkleColors.brandPrimary
+                    : context.sparkleColors.brandPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            msg.content ?? '',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color: isUser ? context.sparkleColors.brandPrimary.withValues(alpha: 0.9) : context.sparkleColors.textSecondary,
+            const SizedBox(height: 2),
+            Text(
+              msg.content ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: isUser
+                    ? context.sparkleColors.brandPrimary.withValues(alpha: 0.9)
+                    : context.sparkleColors.textSecondary,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildRevokedPlaceholder() => Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
-          style: TextStyle(fontSize: 12, color: context.sparkleColors.neutral400),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            _isUser ? '你撤回了一条消息' : '对方撤回了一条消息',
+            style: TextStyle(
+                fontSize: 12, color: context.sparkleColors.neutral400,),
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildMessageStatus() {
     if (widget.message is! PrivateMessageInfo) return const SizedBox.shrink();
     final msg = widget.message as PrivateMessageInfo;
-    
+
     if (msg.isSending) {
-      return const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1));
+      return const SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(strokeWidth: 1),);
     }
     if (msg.hasError) {
-      return Icon(Icons.error_outline, color: context.sparkleColors.semanticError, size: 14);
+      return Icon(Icons.error_outline,
+          color: context.sparkleColors.semanticError, size: 14,);
     }
 
     final isRead = msg.isRead || msg.readAt != null;
@@ -436,12 +538,16 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         Icon(
           isRead ? Icons.done_all_rounded : Icons.done_rounded,
           size: 14,
-          color: isRead ? context.sparkleColors.semanticInfo : context.sparkleColors.neutral400,
+          color: isRead
+              ? context.sparkleColors.semanticInfo
+              : context.sparkleColors.neutral400,
         ),
         if (isRead)
           Padding(
             padding: const EdgeInsets.only(left: 2),
-            child: Text('已读', style: TextStyle(fontSize: 10, color: context.sparkleColors.semanticInfo)),
+            child: Text('已读',
+                style: TextStyle(
+                    fontSize: 10, color: context.sparkleColors.semanticInfo,),),
           ),
       ],
     );
@@ -476,7 +582,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isUser ? context.sparkleColors.brandPrimary : context.sparkleColors.brandSecondary).withValues(alpha: 0.2),
+            color: (isUser
+                    ? context.sparkleColors.brandPrimary
+                    : context.sparkleColors.brandSecondary)
+                .withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -487,32 +596,65 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: isUser ? context.sparkleColors.brandPrimary : (isDark ? context.sparkleColors.neutral200 : context.sparkleColors.brandPrimary),
+            color: isUser
+                ? context.sparkleColors.brandPrimary
+                : (isDark
+                    ? context.sparkleColors.neutral200
+                    : context.sparkleColors.brandPrimary),
             shape: BoxShape.circle,
           ),
           clipBehavior: Clip.antiAlias,
-          child: avatarUrl != null 
-            ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_,__,___) => Center(child: Text(initial)))
-            : Center(child: Text(initial, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isUser ? Colors.white : Colors.white))),
+          child: avatarUrl != null
+              ? Image.network(avatarUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Center(child: Text(initial)),)
+              : Center(
+                  child: Text(initial,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isUser ? Colors.white : Colors.white,),),),
         ),
       ),
     );
   }
 
-  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) => MarkdownStyleSheet(
-      p: TextStyle(color: isUser ? Colors.white : context.sparkleColors.textPrimary, fontSize: 16, height: 1.4),
-      h1: TextStyle(color: isUser ? Colors.white : context.sparkleColors.textPrimary, fontSize: 24, fontWeight: FontWeight.bold),
-      code: TextStyle(backgroundColor: isUser ? Colors.white.withValues(alpha: 0.2) : context.sparkleColors.surfaceTertiary, fontFamily: 'monospace', fontSize: 14, color: isUser ? Colors.white : context.sparkleColors.brandSecondary),
-      codeblockDecoration: BoxDecoration(color: isUser ? Colors.white.withValues(alpha: 0.1) : context.sparkleColors.surfaceTertiary, borderRadius: BorderRadius.circular(12)),
-      a: TextStyle(color: isUser ? Colors.white : context.sparkleColors.brandPrimary, decoration: TextDecoration.underline),
-    );
+  MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
+      MarkdownStyleSheet(
+        p: TextStyle(
+            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            fontSize: 16,
+            height: 1.4,),
+        h1: TextStyle(
+            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,),
+        code: TextStyle(
+            backgroundColor: isUser
+                ? Colors.white.withValues(alpha: 0.2)
+                : context.sparkleColors.surfaceTertiary,
+            fontFamily: 'monospace',
+            fontSize: 14,
+            color:
+                isUser ? Colors.white : context.sparkleColors.brandSecondary,),
+        codeblockDecoration: BoxDecoration(
+            color: isUser
+                ? Colors.white.withValues(alpha: 0.1)
+                : context.sparkleColors.surfaceTertiary,
+            borderRadius: BorderRadius.circular(12),),
+        a: TextStyle(
+            color: isUser ? Colors.white : context.sparkleColors.brandPrimary,
+            decoration: TextDecoration.underline,),
+      );
 
   BorderRadius _getBorderRadius(bool isUser) => BorderRadius.only(
-      topLeft: const Radius.circular(16),
-      topRight: const Radius.circular(16),
-      bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
-      bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
-    );
+        topLeft: const Radius.circular(16),
+        topRight: const Radius.circular(16),
+        bottomLeft:
+            isUser ? const Radius.circular(16) : const Radius.circular(4),
+        bottomRight:
+            isUser ? const Radius.circular(4) : const Radius.circular(16),
+      );
 
   int? _calculateReasoningDuration(ChatMessageModel message) {
     if (message.reasoningSteps == null || message.reasoningSteps!.isEmpty) {
@@ -524,12 +666,15 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final lastStep = message.reasoningSteps!.last;
 
     if (firstStep.createdAt != null && lastStep.completedAt != null) {
-      return lastStep.completedAt!.difference(firstStep.createdAt!).inMilliseconds;
+      return lastStep.completedAt!
+          .difference(firstStep.createdAt!)
+          .inMilliseconds;
     }
 
     // Fallback to summary parsing if available
     if (message.reasoningSummary != null) {
-      final match = RegExp(r'(\d+(?:\.\d+)?)s').firstMatch(message.reasoningSummary!);
+      final match =
+          RegExp(r'(\d+(?:\.\d+)?)s').firstMatch(message.reasoningSummary!);
       if (match != null) {
         final seconds = double.tryParse(match.group(1)!);
         if (seconds != null) {
@@ -542,35 +687,41 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   Widget _buildHeartAnimation() => TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) => Transform.scale(scale: value, child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [Shadow(blurRadius: 10, color: DS.brandPrimary26, offset: const Offset(0, 4))])),
-    );
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.elasticOut,
+        builder: (context, value, child) => Transform.scale(
+            scale: value,
+            child: Icon(Icons.favorite, color: DS.error, size: 48, shadows: [
+              Shadow(
+                  blurRadius: 10,
+                  color: DS.brandPrimary26,
+                  offset: const Offset(0, 4),),
+            ],),),
+      );
 }
 
 class _MetaTag extends StatelessWidget {
-
   const _MetaTag({required this.label, required this.color});
   final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          color: color,
-          fontFamily: 'monospace',
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
-      ),
-    );
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontFamily: 'monospace',
+          ),
+        ),
+      );
 }

@@ -3,7 +3,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 
 class AvatarOption {
-
   const AvatarOption({
     required this.id,
     required this.url,
@@ -15,9 +14,9 @@ class AvatarOption {
 }
 
 class AvatarSelectionDialog extends StatelessWidget {
-
   const AvatarSelectionDialog({
-    required this.onAvatarSelected, super.key,
+    required this.onAvatarSelected,
+    super.key,
     this.currentAvatarUrl,
   });
   final String? currentAvatarUrl;
@@ -26,32 +25,38 @@ class AvatarSelectionDialog extends StatelessWidget {
   static const List<AvatarOption> presets = [
     AvatarOption(
       id: 'geek',
-      url: 'https://api.dicebear.com/9.x/bottts/svg?seed=geek&backgroundColor=b6e3f4',
+      url:
+          'https://api.dicebear.com/9.x/bottts/svg?seed=geek&backgroundColor=b6e3f4',
       label: '极客',
     ),
     AvatarOption(
       id: 'artist',
-      url: 'https://api.dicebear.com/9.x/avataaars/svg?seed=artist&backgroundColor=ffdfbf',
+      url:
+          'https://api.dicebear.com/9.x/avataaars/svg?seed=artist&backgroundColor=ffdfbf',
       label: '艺术家',
     ),
     AvatarOption(
       id: 'explorer',
-      url: 'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=explorer&backgroundColor=c0aede',
+      url:
+          'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=explorer&backgroundColor=c0aede',
       label: '探险家',
     ),
     AvatarOption(
       id: 'scholar',
-      url: 'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=scholar&backgroundColor=d1d4f9',
+      url:
+          'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=scholar&backgroundColor=d1d4f9',
       label: '学者',
     ),
     AvatarOption(
       id: 'energy',
-      url: 'https://api.dicebear.com/9.x/big-smile/svg?seed=energy&backgroundColor=ffd5dc',
+      url:
+          'https://api.dicebear.com/9.x/big-smile/svg?seed=energy&backgroundColor=ffd5dc',
       label: '元气',
     ),
     AvatarOption(
       id: 'pet',
-      url: 'https://api.dicebear.com/9.x/adventurer/svg?seed=pet&backgroundColor=ffdfbf',
+      url:
+          'https://api.dicebear.com/9.x/adventurer/svg?seed=pet&backgroundColor=ffdfbf',
       label: '萌友',
     ),
   ];
@@ -90,7 +95,8 @@ class AvatarSelectionDialog extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? DS.primaryBase : Colors.transparent,
+                          color:
+                              isSelected ? DS.primaryBase : Colors.transparent,
                           width: 3,
                         ),
                         boxShadow: isSelected
@@ -104,7 +110,9 @@ class AvatarSelectionDialog extends StatelessWidget {
                       ),
                       child: SparkleAvatar(
                         radius: 30,
-                        backgroundColor: isDark ? DS.brandPrimary.shade800 : DS.brandPrimary.shade100,
+                        backgroundColor: isDark
+                            ? DS.brandPrimary.shade800
+                            : DS.brandPrimary.shade100,
                         url: option.url,
                       ),
                     ),
@@ -114,7 +122,8 @@ class AvatarSelectionDialog extends StatelessWidget {
                     option.label,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected ? DS.primaryBase : null,
                     ),
                   ),
@@ -125,7 +134,8 @@ class AvatarSelectionDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        SparkleButton.ghost(label: '取消', onPressed: () => Navigator.pop(context)),
+        SparkleButton.ghost(
+            label: '取消', onPressed: () => Navigator.pop(context),),
       ],
     );
   }

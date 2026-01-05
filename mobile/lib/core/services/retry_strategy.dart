@@ -31,7 +31,8 @@ class RetryConfig {
   Duration getDelay(int attempt) {
     if (attempt <= 0) return Duration.zero;
 
-    final delayMs = initialDelay.inMilliseconds * _pow(backoffFactor, attempt - 1);
+    final delayMs =
+        initialDelay.inMilliseconds * _pow(backoffFactor, attempt - 1);
     return Duration(
       milliseconds: delayMs.toInt().clamp(0, maxDelay.inMilliseconds),
     );
@@ -63,11 +64,13 @@ class RetryStrategy {
       } catch (error) {
         // 检查是否应该重试
         if (attempt >= config.maxAttempts) {
-          debugPrint('RetryStrategy: Max attempts ($attempt) reached, giving up');
+          debugPrint(
+              'RetryStrategy: Max attempts ($attempt) reached, giving up',);
           rethrow;
         }
 
-        final canRetry = shouldRetry?.call(error) ?? _defaultShouldRetry(error, config);
+        final canRetry =
+            shouldRetry?.call(error) ?? _defaultShouldRetry(error, config);
         if (!canRetry) {
           debugPrint('RetryStrategy: Error not retryable: $error');
           rethrow;
@@ -97,7 +100,8 @@ class RetryStrategy {
 
       // 检查HTTP状态码
       final statusCode = error.response?.statusCode;
-      if (statusCode != null && config.retryableStatusCodes.contains(statusCode)) {
+      if (statusCode != null &&
+          config.retryableStatusCodes.contains(statusCode)) {
         return true;
       }
 
@@ -197,7 +201,8 @@ class CircuitBreakerRetryStrategy {
     if (_failureCount >= failureThreshold) {
       _state = CircuitState.open;
       _openedAt = DateTime.now();
-      debugPrint('CircuitBreaker: Opened due to $failureThreshold consecutive failures');
+      debugPrint(
+          'CircuitBreaker: Opened due to $failureThreshold consecutive failures',);
     }
   }
 
@@ -212,8 +217,8 @@ class CircuitBreakerRetryStrategy {
 
 /// 断路器状态
 enum CircuitState {
-  closed,   // 正常运行
-  open,     // 断开，拒绝请求
+  closed, // 正常运行
+  open, // 断开，拒绝请求
   halfOpen, // 半开，尝试恢复
 }
 
@@ -237,8 +242,7 @@ class NetworkResult<T> {
   factory NetworkResult.success(T data, {bool isFromCache = false}) =>
       NetworkResult._(data: data, isFromCache: isFromCache);
 
-  factory NetworkResult.failure(Object error) =>
-      NetworkResult._(error: error);
+  factory NetworkResult.failure(Object error) => NetworkResult._(error: error);
 
   final T? data;
   final Object? error;

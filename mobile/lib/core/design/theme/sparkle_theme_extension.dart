@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/design/tokens/color_tokens_v2.dart';
-import 'package:sparkle/core/design/tokens_v2/theme_manager.dart' show SparkleSpacing, SparkleTypography;
+import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
+    show SparkleSpacing, SparkleTypography;
 
 /// Theme extension for semantic design tokens.
 ///
@@ -18,23 +19,27 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     required this.performanceTier,
   });
 
-  factory SparkleThemeExtension.light({PerformanceTier tier = PerformanceTier.high}) => SparkleThemeExtension(
-      colors: const SparkleColors(brightness: Brightness.light),
-      typography: SparkleTypography.standard(),
-      spacing: const SparkleSpacing(),
-      radius: const SparkleRadius(),
-      motion: const SparkleMotionTokens(),
-      performanceTier: tier,
-    );
+  factory SparkleThemeExtension.light(
+          {PerformanceTier tier = PerformanceTier.high,}) =>
+      SparkleThemeExtension(
+        colors: const SparkleColors(brightness: Brightness.light),
+        typography: SparkleTypography.standard(),
+        spacing: const SparkleSpacing(),
+        radius: const SparkleRadius(),
+        motion: const SparkleMotionTokens(),
+        performanceTier: tier,
+      );
 
-  factory SparkleThemeExtension.dark({PerformanceTier tier = PerformanceTier.high}) => SparkleThemeExtension(
-      colors: const SparkleColors(brightness: Brightness.dark),
-      typography: SparkleTypography.standard(),
-      spacing: const SparkleSpacing(),
-      radius: const SparkleRadius(),
-      motion: const SparkleMotionTokens(),
-      performanceTier: tier,
-    );
+  factory SparkleThemeExtension.dark(
+          {PerformanceTier tier = PerformanceTier.high,}) =>
+      SparkleThemeExtension(
+        colors: const SparkleColors(brightness: Brightness.dark),
+        typography: SparkleTypography.standard(),
+        spacing: const SparkleSpacing(),
+        radius: const SparkleRadius(),
+        motion: const SparkleMotionTokens(),
+        performanceTier: tier,
+      );
 
   final SparkleColors colors;
   final SparkleTypography typography;
@@ -55,17 +60,19 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     SparkleRadius? radius,
     SparkleMotionTokens? motion,
     PerformanceTier? performanceTier,
-  }) => SparkleThemeExtension(
-      colors: colors ?? this.colors,
-      typography: typography ?? this.typography,
-      spacing: spacing ?? this.spacing,
-      radius: radius ?? this.radius,
-      motion: motion ?? this.motion,
-      performanceTier: performanceTier ?? this.performanceTier,
-    );
+  }) =>
+      SparkleThemeExtension(
+        colors: colors ?? this.colors,
+        typography: typography ?? this.typography,
+        spacing: spacing ?? this.spacing,
+        radius: radius ?? this.radius,
+        motion: motion ?? this.motion,
+        performanceTier: performanceTier ?? this.performanceTier,
+      );
 
   @override
-  SparkleThemeExtension lerp(ThemeExtension<SparkleThemeExtension>? other, double t) {
+  SparkleThemeExtension lerp(
+      ThemeExtension<SparkleThemeExtension>? other, double t,) {
     if (other is! SparkleThemeExtension) return this;
     // Tokens are discrete; switch at midpoint.
     return t < 0.5 ? this : other;

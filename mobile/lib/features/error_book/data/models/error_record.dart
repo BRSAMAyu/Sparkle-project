@@ -9,13 +9,22 @@ class ErrorRecord with _$ErrorRecord {
   const factory ErrorRecord({
     required String id,
     @JsonKey(name: 'question_text') required String questionText,
-    @JsonKey(name: 'user_answer') required String userAnswer, @JsonKey(name: 'correct_answer') required String correctAnswer, @JsonKey(name: 'subject_code') required String subject, @JsonKey(name: 'mastery_level') required double masteryLevel, @JsonKey(name: 'review_count') required int reviewCount, @JsonKey(name: 'created_at') required DateTime createdAt, @JsonKey(name: 'updated_at') required DateTime updatedAt, @JsonKey(name: 'question_image_url') String? questionImageUrl,
+    @JsonKey(name: 'user_answer') required String userAnswer,
+    @JsonKey(name: 'correct_answer') required String correctAnswer,
+    @JsonKey(name: 'subject_code') required String subject,
+    @JsonKey(name: 'mastery_level') required double masteryLevel,
+    @JsonKey(name: 'review_count') required int reviewCount,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'updated_at') required DateTime updatedAt,
+    @JsonKey(name: 'question_image_url') String? questionImageUrl,
     String? chapter,
     int? difficulty,
     @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
     @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
     @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
-    @JsonKey(name: 'knowledge_links') @Default([]) List<KnowledgeLink> knowledgeLinks,
+    @JsonKey(name: 'knowledge_links')
+    @Default([])
+    List<KnowledgeLink> knowledgeLinks,
   }) = _ErrorRecord;
 
   factory ErrorRecord.fromJson(Map<String, dynamic> json) =>
@@ -30,8 +39,12 @@ class ErrorAnalysis with _$ErrorAnalysis {
     @JsonKey(name: 'error_type_label') required String errorTypeLabel,
     @JsonKey(name: 'root_cause') required String rootCause,
     @JsonKey(name: 'correct_approach') required String correctApproach,
-    @JsonKey(name: 'study_suggestion') required String studySuggestion, @JsonKey(name: 'analyzed_at') required DateTime analyzedAt, @JsonKey(name: 'similar_traps') @Default([]) List<String> similarTraps,
-    @JsonKey(name: 'recommended_knowledge') @Default([]) List<String> recommendedKnowledge,
+    @JsonKey(name: 'study_suggestion') required String studySuggestion,
+    @JsonKey(name: 'analyzed_at') required DateTime analyzedAt,
+    @JsonKey(name: 'similar_traps') @Default([]) List<String> similarTraps,
+    @JsonKey(name: 'recommended_knowledge')
+    @Default([])
+    List<String> recommendedKnowledge,
   }) = _ErrorAnalysis;
 
   factory ErrorAnalysis.fromJson(Map<String, dynamic> json) =>
@@ -75,7 +88,8 @@ class ReviewStats with _$ReviewStats {
     @JsonKey(name: 'mastered_count') required int masteredCount,
     @JsonKey(name: 'need_review_count') required int needReviewCount,
     @JsonKey(name: 'review_streak_days') required int reviewStreakDays,
-    @JsonKey(name: 'subject_distribution') required Map<String, int> subjectDistribution,
+    @JsonKey(name: 'subject_distribution')
+    required Map<String, int> subjectDistribution,
   }) = _ReviewStats;
 
   factory ReviewStats.fromJson(Map<String, dynamic> json) =>

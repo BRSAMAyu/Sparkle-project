@@ -10,7 +10,6 @@ import 'package:sparkle/core/network/api_interceptor.dart';
 final apiClientProvider = Provider<ApiClient>(ApiClient.new);
 
 class ApiClient {
-
   ApiClient(this._ref) {
     final options = BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
@@ -29,7 +28,10 @@ class ApiClient {
   /// 获取 Dio 实例 (用于需要直接访问的场景)
   Dio get dio => _dio;
 
-  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       return await _dio.get(path, queryParameters: queryParameters);
     } on DioException {
@@ -38,7 +40,7 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> post<T>(String path, {data}) async {
+  Future<Response<T>> post<T>(String path, {Object? data}) async {
     try {
       return await _dio.post(path, data: data);
     } on DioException {
@@ -47,7 +49,7 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> put<T>(String path, {data}) async {
+  Future<Response<T>> put<T>(String path, {Object? data}) async {
     try {
       return await _dio.put(path, data: data);
     } on DioException {
@@ -56,7 +58,7 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> patch<T>(String path, {data}) async {
+  Future<Response<T>> patch<T>(String path, {Object? data}) async {
     try {
       return await _dio.patch(path, data: data);
     } on DioException {
@@ -74,7 +76,10 @@ class ApiClient {
   }
 
   /// SSE 流式 GET 请求
-  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) async* {
+  Stream<SSEEvent> getStream(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async* {
     try {
       final response = await _dio.get<ResponseBody>(
         path,
@@ -94,15 +99,16 @@ class ApiClient {
         return;
       }
 
-      var buffer = '';
+      var buffer = StringBuffer();
 
       await for (final chunk in stream) {
-        buffer += utf8.decode(chunk);
+        buffer.write(utf8.decode(chunk));
+        var bufferStr = buffer.toString();
 
-        while (buffer.contains('\n\n')) {
-          final eventEnd = buffer.indexOf('\n\n');
-          final eventStr = buffer.substring(0, eventEnd);
-          buffer = buffer.substring(eventEnd + 2);
+        while (bufferStr.contains('\n\n')) {
+          final eventEnd = bufferStr.indexOf('\n\n');
+          final eventStr = bufferStr.substring(0, eventEnd);
+          bufferStr = bufferStr.substring(eventEnd + 2);
 
           final event = _parseSSEEvent(eventStr);
           if (event != null) {
@@ -112,6 +118,7 @@ class ApiClient {
             }
           }
         }
+        buffer = StringBuffer()..write(bufferStr);
       }
     } on DioException catch (e) {
       yield SSEEvent(
@@ -130,7 +137,7 @@ class ApiClient {
   ///
   /// 返回一个 Stream，每次 yield 一个 SSE 事件
   /// 支持容错：网络断开时不会抛出异常，而是优雅地结束流
-  Stream<SSEEvent> postStream(String path, {dynamic data}) async* {
+  Stream<SSEEvent> postStream(String path, {Object? data}) async* {
     try {
       final response = await _dio.post<ResponseBody>(
         path,
@@ -150,16 +157,17 @@ class ApiClient {
         return;
       }
 
-      var buffer = '';
+      var buffer = StringBuffer();
 
       await for (final chunk in stream) {
-        buffer += utf8.decode(chunk);
+        buffer.write(utf8.decode(chunk));
+        var bufferStr = buffer.toString();
 
         // 解析 SSE 事件 (以双换行分隔)
-        while (buffer.contains('\n\n')) {
-          final eventEnd = buffer.indexOf('\n\n');
-          final eventStr = buffer.substring(0, eventEnd);
-          buffer = buffer.substring(eventEnd + 2);
+        while (bufferStr.contains('\n\n')) {
+          final eventEnd = bufferStr.indexOf('\n\n');
+          final eventStr = bufferStr.substring(0, eventEnd);
+          bufferStr = bufferStr.substring(eventEnd + 2);
 
           final event = _parseSSEEvent(eventStr);
           if (event != null) {
@@ -171,11 +179,13 @@ class ApiClient {
             }
           }
         }
+        buffer = StringBuffer()..write(bufferStr);
       }
 
       // 处理剩余的 buffer
-      if (buffer.isNotEmpty) {
-        final event = _parseSSEEvent(buffer);
+      final remaining = buffer.toString();
+      if (remaining.isNotEmpty) {
+        final event = _parseSSEEvent(remaining);
         if (event != null) {
           yield event;
         }
@@ -216,7 +226,6 @@ class ApiClient {
 
 /// SSE 事件数据类
 class SSEEvent {
-
   SSEEvent({required this.event, required this.data});
   final String event;
   final String data;

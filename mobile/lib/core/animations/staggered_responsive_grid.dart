@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 
 class StaggeredResponsiveGrid extends StatefulWidget {
-
   const StaggeredResponsiveGrid({
     required this.builder,
     required this.itemCount,
@@ -18,7 +17,8 @@ class StaggeredResponsiveGrid extends StatefulWidget {
   final double? childAspectRatio;
 
   @override
-  State<StaggeredResponsiveGrid> createState() => _StaggeredResponsiveGridState();
+  State<StaggeredResponsiveGrid> createState() =>
+      _StaggeredResponsiveGridState();
 }
 
 class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
@@ -30,7 +30,7 @@ class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
     super.initState();
     // Calculate total duration to cover all items
     final totalDuration = widget.duration + (widget.delay * widget.itemCount);
-    
+
     _controller = AnimationController(
       duration: totalDuration,
       vsync: this,
@@ -46,25 +46,25 @@ class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
 
   @override
   Widget build(BuildContext context) => ResponsiveGrid(
-      childAspectRatio: widget.childAspectRatio,
-      children: List.generate(widget.itemCount, (index) {
-        final startTime = widget.delay.inMilliseconds * index;
-        final endTime = startTime + widget.duration.inMilliseconds;
-        final totalTime = _controller.duration!.inMilliseconds;
+        childAspectRatio: widget.childAspectRatio,
+        children: List.generate(widget.itemCount, (index) {
+          final startTime = widget.delay.inMilliseconds * index;
+          final endTime = startTime + widget.duration.inMilliseconds;
+          final totalTime = _controller.duration!.inMilliseconds;
 
-        final start = (startTime / totalTime).clamp(0.0, 1.0);
-        final end = (endTime / totalTime).clamp(0.0, 1.0);
+          final start = (startTime / totalTime).clamp(0.0, 1.0);
+          final end = (endTime / totalTime).clamp(0.0, 1.0);
 
-        final animation = CurvedAnimation(
-          parent: _controller,
-          curve: Interval(
-            start,
-            end,
-            curve: Curves.easeOut,
-          ),
-        );
+          final animation = CurvedAnimation(
+            parent: _controller,
+            curve: Interval(
+              start,
+              end,
+              curve: Curves.easeOut,
+            ),
+          );
 
-        return widget.builder(context, index, animation);
-      }),
-    );
+          return widget.builder(context, index, animation);
+        }),
+      );
 }

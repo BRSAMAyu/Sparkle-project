@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Community Provider Security Tests', () {
-    test('community WebSocket URL does NOT include token in query parameters', () {
+    test('community WebSocket URL does NOT include token in query parameters',
+        () {
       // 模拟社区provider构造WebSocket URL的逻辑
       const baseUrl = 'ws://localhost:8080';
       const token = 'secret-jwt-token-12345';
@@ -60,7 +61,8 @@ void main() {
       expect(maskedHeader, contains('Bearer '));
     });
 
-    test('WebSocket URL construction is secure across all community endpoints', () {
+    test('WebSocket URL construction is secure across all community endpoints',
+        () {
       // 测试所有社区WebSocket端点
       const testCases = [
         {
@@ -69,7 +71,8 @@ void main() {
         },
         {
           'endpoint': '/community/groups/test-group-123/ws',
-          'expectedUrl': 'ws://localhost:8080/community/groups/test-group-123/ws',
+          'expectedUrl':
+              'ws://localhost:8080/community/groups/test-group-123/ws',
         },
       ];
 

@@ -9,7 +9,6 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 /// - 异常统一处理：转换 HTTP 异常为业务异常
 /// - 可测试性：通过依赖注入 Dio 实例便于 mock
 class ErrorBookRepository {
-
   ErrorBookRepository(this._dio);
   final Dio _dio;
   static const String _basePath = '/api/v1/errors';

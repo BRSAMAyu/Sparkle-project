@@ -31,7 +31,6 @@ class WidgetEvent extends ChatStreamEvent {
 
 /// 完成事件
 class DoneEvent extends ChatStreamEvent {
-
   DoneEvent({this.finishReason});
   final String? finishReason;
 }
@@ -44,7 +43,6 @@ class UnknownEvent extends ChatStreamEvent {
 
 /// 状态更新事件（THINKING, GENERATING 等）
 class StatusUpdateEvent extends ChatStreamEvent {
-
   StatusUpdateEvent({
     required this.state,
     required this.details,
@@ -55,14 +53,12 @@ class StatusUpdateEvent extends ChatStreamEvent {
 
 /// 完整文本事件
 class FullTextEvent extends ChatStreamEvent {
-
   FullTextEvent({required this.content});
   final String content;
 }
 
 /// 错误事件
 class ErrorEvent extends ChatStreamEvent {
-
   ErrorEvent({
     required this.code,
     required this.message,
@@ -75,7 +71,6 @@ class ErrorEvent extends ChatStreamEvent {
 
 /// Token 使用统计事件
 class UsageEvent extends ChatStreamEvent {
-
   UsageEvent({
     required this.promptTokens,
     required this.completionTokens,
@@ -88,7 +83,6 @@ class UsageEvent extends ChatStreamEvent {
 
 /// 推理步骤事件（Chain of Thought Visualization）
 class ReasoningStepEvent extends ChatStreamEvent {
-
   ReasoningStepEvent({required this.step});
   final ReasoningStep step;
 }
@@ -101,7 +95,6 @@ class CitationEvent extends ChatStreamEvent {
 
 /// ActionCard 状态事件
 class ActionStatusEvent extends ChatStreamEvent {
-
   ActionStatusEvent({
     required this.actionId,
     required this.status,

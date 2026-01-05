@@ -79,7 +79,10 @@ class Settings(BaseSettings):
 
     # File Storage
     UPLOAD_DIR: str = "./uploads"
-    MAX_UPLOAD_SIZE: int = 10485760  # 10MB
+    MAX_UPLOAD_SIZE: int = 52428800  # 50MB
+
+    # Internal API
+    INTERNAL_API_KEY: str = ""
 
     # Logging
     LOG_LEVEL: str = "INFO"

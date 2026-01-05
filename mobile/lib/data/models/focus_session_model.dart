@@ -7,7 +7,12 @@ part 'focus_session_model.g.dart';
 @freezed
 class FocusSessionRequest with _$FocusSessionRequest {
   const factory FocusSessionRequest({
-    @JsonKey(name: 'start_time') required DateTime startTime, @JsonKey(name: 'end_time') required DateTime endTime, @JsonKey(name: 'duration_minutes') required int durationMinutes, @JsonKey(name: 'focus_type') required String focusType, required String status, @JsonKey(name: 'task_id') String? taskId,
+    @JsonKey(name: 'start_time') required DateTime startTime,
+    @JsonKey(name: 'end_time') required DateTime endTime,
+    @JsonKey(name: 'duration_minutes') required int durationMinutes,
+    @JsonKey(name: 'focus_type') required String focusType,
+    required String status,
+    @JsonKey(name: 'task_id') String? taskId,
     @JsonKey(name: 'white_noise_type') String? whiteNoiseType,
   }) = _FocusSessionRequest;
 

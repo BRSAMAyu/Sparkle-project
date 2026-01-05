@@ -10,9 +10,9 @@ import 'package:sparkle/core/design/design_system.dart';
 /// - 动画集成
 /// - 主题感知
 class SparkleButton extends StatelessWidget {
-
   const SparkleButton({
-    required this.label, super.key,
+    required this.label,
+    super.key,
     this.onPressed,
     this.variant = ButtonVariant.primary,
     this.size = ButtonSize.medium,
@@ -31,65 +31,70 @@ class SparkleButton extends StatelessWidget {
     Widget? icon,
     bool loading = false,
     bool expand = false,
-  }) => SparkleButton(
-      label: label,
-      onPressed: onPressed,
-      icon: icon,
-      loading: loading,
-      expand: expand,
-    );
+  }) =>
+      SparkleButton(
+        label: label,
+        onPressed: onPressed,
+        icon: icon,
+        loading: loading,
+        expand: expand,
+      );
 
   factory SparkleButton.secondary({
     required String label,
     required VoidCallback onPressed,
     Widget? icon,
     bool expand = false,
-  }) => SparkleButton(
-      label: label,
-      onPressed: onPressed,
-      variant: ButtonVariant.secondary,
-      icon: icon,
-      expand: expand,
-    );
+  }) =>
+      SparkleButton(
+        label: label,
+        onPressed: onPressed,
+        variant: ButtonVariant.secondary,
+        icon: icon,
+        expand: expand,
+      );
 
   factory SparkleButton.outline({
     required String label,
     required VoidCallback onPressed,
     Widget? icon,
     bool expand = false,
-  }) => SparkleButton(
-      label: label,
-      onPressed: onPressed,
-      variant: ButtonVariant.outline,
-      icon: icon,
-      expand: expand,
-    );
+  }) =>
+      SparkleButton(
+        label: label,
+        onPressed: onPressed,
+        variant: ButtonVariant.outline,
+        icon: icon,
+        expand: expand,
+      );
 
   factory SparkleButton.ghost({
     required String label,
     required VoidCallback onPressed,
     Widget? icon,
     bool expand = false,
-  }) => SparkleButton(
-      label: label,
-      onPressed: onPressed,
-      variant: ButtonVariant.ghost,
-      icon: icon,
-      expand: expand,
-    );
+  }) =>
+      SparkleButton(
+        label: label,
+        onPressed: onPressed,
+        variant: ButtonVariant.ghost,
+        icon: icon,
+        expand: expand,
+      );
 
   factory SparkleButton.destructive({
     required String label,
     required VoidCallback onPressed,
     Widget? icon,
     bool expand = false,
-  }) => SparkleButton(
-      label: label,
-      onPressed: onPressed,
-      variant: ButtonVariant.destructive,
-      icon: icon,
-      expand: expand,
-    );
+  }) =>
+      SparkleButton(
+        label: label,
+        onPressed: onPressed,
+        variant: ButtonVariant.destructive,
+        icon: icon,
+        expand: expand,
+      );
   final String label;
   final VoidCallback? onPressed;
   final ButtonVariant variant;
@@ -127,7 +132,8 @@ class SparkleButton extends StatelessWidget {
               padding: _getPadding(info),
               child: Row(
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment: expand ? MainAxisAlignment.center : MainAxisAlignment.start,
+                mainAxisAlignment:
+                    expand ? MainAxisAlignment.center : MainAxisAlignment.start,
                 children: _buildChildren(theme, info),
               ),
             ),
@@ -188,7 +194,7 @@ class SparkleButton extends StatelessWidget {
       case ButtonVariant.outline:
         return Colors.transparent;
       case ButtonVariant.ghost:
-        return colors.surfacePrimary.withOpacity(0.1);
+        return colors.surfacePrimary.withValues(alpha: 0.1);
       case ButtonVariant.destructive:
         return colors.semanticError;
     }
@@ -210,7 +216,7 @@ class SparkleButton extends StatelessWidget {
 
   Color _getShadowColor(SparkleColors colors, BreakpointInfo info) {
     if (disabled) return Colors.transparent;
-    return colors.textPrimary.withOpacity(0.1);
+    return colors.textPrimary.withValues(alpha: 0.1);
   }
 
   double _getElevation(BreakpointInfo info) {
@@ -226,7 +232,8 @@ class SparkleButton extends StatelessWidget {
 
   EdgeInsets _getPadding(BreakpointInfo info) {
     final vertical = SpacingSystem.scale(info.context, base: SpacingSystem.sm);
-    final horizontal = SpacingSystem.scale(info.context, base: SpacingSystem.lg);
+    final horizontal =
+        SpacingSystem.scale(info.context, base: SpacingSystem.lg);
 
     switch (size) {
       case ButtonSize.small:
@@ -264,7 +271,8 @@ class SparkleButton extends StatelessWidget {
     );
 
     // 响应式字体大小
-    final scaleFactor = ResponsiveSystem.scale(info.context, 1.0, min: 0.9, max: 1.2);
+    final scaleFactor =
+        ResponsiveSystem.scale(info.context, 1.0, min: 0.9, max: 1.2);
     final adjustedSize = (base.fontSize ?? 14.0) * scaleFactor;
 
     return base.copyWith(
@@ -290,9 +298,9 @@ enum ButtonSize {
 
 /// 按钮组 - 用于表单或操作集合
 class SparkleButtonGroup extends StatelessWidget {
-
   const SparkleButtonGroup({
-    required this.buttons, super.key,
+    required this.buttons,
+    super.key,
     this.direction = Axis.horizontal,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.mainAxisSize = MainAxisSize.max,
@@ -310,10 +318,12 @@ class SparkleButtonGroup extends StatelessWidget {
     for (var i = 0; i < buttons.length; i++) {
       children.add(buttons[i]);
       if (i < buttons.length - 1) {
-        children.add(SizedBox(
-          width: direction == Axis.horizontal ? spacing : 0,
-          height: direction == Axis.vertical ? spacing : 0,
-        ),);
+        children.add(
+          SizedBox(
+            width: direction == Axis.horizontal ? spacing : 0,
+            height: direction == Axis.vertical ? spacing : 0,
+          ),
+        );
       }
     }
 
@@ -328,9 +338,9 @@ class SparkleButtonGroup extends StatelessWidget {
 
 /// 图标按钮
 class SparkleIconButton extends StatelessWidget {
-
   const SparkleIconButton({
-    required this.icon, super.key,
+    required this.icon,
+    super.key,
     this.onPressed,
     this.variant = ButtonVariant.primary,
     this.size = 48.0,
@@ -385,7 +395,7 @@ class SparkleIconButton extends StatelessWidget {
       case ButtonVariant.outline:
         return Colors.transparent;
       case ButtonVariant.ghost:
-        return colors.surfacePrimary.withOpacity(0.1);
+        return colors.surfacePrimary.withValues(alpha: 0.1);
       case ButtonVariant.destructive:
         return colors.semanticError;
     }
@@ -407,9 +417,10 @@ class SparkleIconButton extends StatelessWidget {
 
 /// 加载按钮 - 自动处理加载状态
 class SparkleLoadingButton extends StatefulWidget {
-
   const SparkleLoadingButton({
-    required this.label, required this.onPressed, super.key,
+    required this.label,
+    required this.onPressed,
+    super.key,
     this.variant = ButtonVariant.primary,
     this.size = ButtonSize.medium,
     this.icon,
@@ -446,12 +457,14 @@ class _SparkleLoadingButtonState extends State<SparkleLoadingButton> {
 
   @override
   Widget build(BuildContext context) => SparkleButton(
-      label: widget.label,
-      onPressed: _loading ? null : _handlePressed,
-      variant: widget.variant,
-      size: widget.size,
-      icon: _loading ? (widget.loadingIcon ?? const SizedBox.shrink()) : widget.icon,
-      loading: _loading,
-      semanticLabel: widget.semanticLabel,
-    );
+        label: widget.label,
+        onPressed: _loading ? null : _handlePressed,
+        variant: widget.variant,
+        size: widget.size,
+        icon: _loading
+            ? (widget.loadingIcon ?? const SizedBox.shrink())
+            : widget.icon,
+        loading: _loading,
+        semanticLabel: widget.semanticLabel,
+      );
 }

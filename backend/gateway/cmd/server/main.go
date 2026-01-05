@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sparkle/gateway/internal/agent"
 	v1 "github.com/sparkle/gateway/internal/api/v1"
 	"github.com/sparkle/gateway/internal/chaos"
@@ -29,7 +29,7 @@ import (
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/infra/logger"
-	"github.com/sparkle/gateway/internal/infra/otel"
+	otelinfra "github.com/sparkle/gateway/internal/infra/otel"
 	"github.com/sparkle/gateway/internal/infra/redis"
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
@@ -52,7 +52,7 @@ func main() {
 	cfg := config.Load()
 
 	// Initialize OpenTelemetry
-	shutdown := otel.InitTracer("sparkle-gateway")
+	shutdown := otelinfra.InitTracer("sparkle-gateway")
 	defer func() {
 		if err := shutdown(context.Background()); err != nil {
 			logger.Log.Error("Error shutting down tracer provider", zap.Error(err))
@@ -92,6 +92,13 @@ func main() {
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(pool) // P0: Add user context service
 	taskCommandService := service.NewTaskCommandService(pool) // P0: Task command service for ActionCard confirmations
+	fileMetadataService := service.NewFileMetadataService(pool)
+	fileProcessingClient := service.NewFileProcessingClient(cfg.BackendURL, cfg.InternalAPIKey)
+
+	fileStorageService, err := service.NewFileStorageService(cfg, logger.Log)
+	if err != nil {
+		log.Fatalf("Unable to initialize file storage: %v", err)
+	}
 
 	// Connect to Agent Service
 	agentClient, err := agent.NewClient(cfg)
@@ -118,6 +125,8 @@ func main() {
 
 	// Initialize Handlers
 	wsFactory := handler.NewWebSocketFactory(cfg)
+	fileEventHub := service.NewFileEventHub()
+	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		galaxyClient,
@@ -133,6 +142,7 @@ func main() {
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService)
+	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
 
 	// Auth Service
 	appleAuthService, err := service.NewAppleAuthService(cfg)
@@ -253,10 +263,25 @@ func main() {
 		}
 	}()
 
+	fileEventSubscriber := service.NewFileEventSubscriber(rdb, fileEventHub, logger.Log)
+	go func() {
+		if err := fileEventSubscriber.Run(context.Background()); err != nil {
+			logger.Log.Error("File event subscriber stopped", zap.Error(err))
+		}
+	}()
+
+	// File GC Worker (cleanup stale uploads)
+	fileGC := service.NewFileGCService(fileMetadataService, fileStorageService, cfg, logger.Log)
+	go func() {
+		if err := fileGC.Run(context.Background()); err != nil {
+			logger.Log.Error("File GC stopped", zap.Error(err))
+		}
+	}()
+
 	// ==================== Galaxy Outbox Relay (RabbitMQ) ====================
 	// This relay processes the outbox_events table and publishes to RabbitMQ
 	// for external service integration (Analytics, Task Stats, etc.)
-	
+
 	// Create raw DB connection for OutboxRelay as it uses sql.DB
 	sqlDB, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
@@ -319,6 +344,7 @@ func main() {
 
 	// WebSocket Route (Go Native)
 	r.GET("/ws/chat", middleware.AuthMiddleware(cfg), chatOrchestrator.HandleWebSocket)
+	r.GET("/ws/files", middleware.AuthMiddleware(cfg), fileEventHandler.HandleWebSocket)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)
@@ -343,6 +369,9 @@ func main() {
 
 		// Community Routes
 		commHandler.RegisterRoutes(api)
+
+		// File Routes
+		fileHandler.RegisterRoutes(api, authMiddleware)
 	}
 
 	// Swagger UI
@@ -604,7 +633,7 @@ func main() {
 		req.URL.Scheme = targetURL.Scheme
 		req.URL.Host = targetURL.Host
 		req.Host = targetURL.Host
-		
+
 		// Inject OTel Trace Context into headers for full-link tracing
 		otel.GetTextMapPropagator().Inject(req.Context(), propagation.HeaderCarrier(req.Header))
 	}

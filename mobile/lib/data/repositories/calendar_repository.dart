@@ -5,7 +5,6 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/data/models/calendar_event_model.dart';
 
 class CalendarRepository {
-
   CalendarRepository(this._notificationService);
   final NotificationService _notificationService;
   static const String _boxName = 'calendar_events_v1';
@@ -23,7 +22,7 @@ class CalendarRepository {
       if (e is Map) {
         return CalendarEventModel.fromJson(Map<String, dynamic>.from(e));
       }
-      return e as CalendarEventModel; 
+      return e as CalendarEventModel;
     }).toList();
   }
 
@@ -36,8 +35,8 @@ class CalendarRepository {
   Future<void> updateEvent(CalendarEventModel event) async {
     final box = await _getBox();
     await box.put(event.id, event.toJson());
-    _cancelReminders(event.id); 
-    _scheduleReminders(event); 
+    _cancelReminders(event.id);
+    _scheduleReminders(event);
   }
 
   Future<void> deleteEvent(String id) async {
@@ -48,7 +47,7 @@ class CalendarRepository {
 
   void _scheduleReminders(CalendarEventModel event) {
     final baseId = event.id.hashCode;
-    
+
     DateTimeComponents? matchComponents;
     if (event.recurrenceRule == 'daily') {
       matchComponents = DateTimeComponents.time;
@@ -61,10 +60,10 @@ class CalendarRepository {
     for (var i = 0; i < event.reminderMinutes.length; i++) {
       final minutes = event.reminderMinutes[i];
       final reminderTime = event.startTime.subtract(Duration(minutes: minutes));
-      
+
       if (matchComponents != null || reminderTime.isAfter(DateTime.now())) {
         _notificationService.scheduleNotification(
-          id: baseId + i, 
+          id: baseId + i,
           title: '日程提醒: ${event.title}',
           body: minutes == 0 ? '现在开始' : '还有 $minutes 分钟开始',
           scheduledDate: reminderTime,

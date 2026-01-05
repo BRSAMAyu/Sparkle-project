@@ -2,11 +2,11 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/galaxy_model.dart';
 import 'package:sparkle/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/data/models/plan_model.dart';
-import 'package:sparkle/data/models/task_model.dart';
-import 'package:sparkle/data/models/user_model.dart';
+import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoDataService {
@@ -23,22 +23,21 @@ class DemoDataService {
 
   // --- User Data ---
   UserModel get demoUser => UserModel(
-    id: 'CS_Sophomore_12345',
-    username: 'AI_Learner_02',
-    email: 'learner@sparkle.ai',
-    nickname: 'AI_Learner_02',
-    avatarUrl: _currentAvatarUrl ?? 'https://api.dicebear.com/9.x/avataaars/png?seed=AI_Learner_02',
-    flameLevel: 15,
-    flameBrightness: 0.85,
-    depthPreference: 0.7,
-    curiosityPreference: 0.8,
-    isActive: true,
-    createdAt: DateTime.now().subtract(const Duration(days: 45)),
-    updatedAt: DateTime.now(),
-    pushPreferences: PushPreferences(
-      
-    ),
-  );
+        id: 'CS_Sophomore_12345',
+        username: 'AI_Learner_02',
+        email: 'learner@sparkle.ai',
+        nickname: 'AI_Learner_02',
+        avatarUrl: _currentAvatarUrl ??
+            'https://api.dicebear.com/9.x/avataaars/png?seed=AI_Learner_02',
+        flameLevel: 15,
+        flameBrightness: 0.85,
+        depthPreference: 0.7,
+        curiosityPreference: 0.8,
+        isActive: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 45)),
+        updatedAt: DateTime.now(),
+        pushPreferences: PushPreferences(),
+      );
 
   void updateDemoAvatar(String url) {
     _currentAvatarUrl = url;
@@ -59,11 +58,11 @@ class DemoDataService {
         energyCost: 3,
         status: TaskStatus.pending,
         priority: 3, // High
-        dueDate: now.add(const Duration(days: 45)), 
+        dueDate: now.add(const Duration(days: 45)),
         createdAt: now.subtract(const Duration(days: 2)),
         updatedAt: now,
       ),
-       TaskModel(
+      TaskModel(
         id: _uuid.v4(),
         userId: 'CS_Sophomore_12345',
         title: '离散数学 - 图论基础',
@@ -114,7 +113,7 @@ class DemoDataService {
         id: _uuid.v4(),
         userId: 'CS_Sophomore_12345',
         title: '摄影技巧 - 光影构图学习',
-        type: TaskType.learning, 
+        type: TaskType.learning,
         tags: ['Hobby', 'Photography'],
         estimatedMinutes: 45,
         difficulty: 1,
@@ -133,7 +132,7 @@ class DemoDataService {
   // --- Galaxy Data ---
   GalaxyGraphResponse get demoGalaxy {
     final nodes = <GalaxyNodeModel>[];
-    
+
     // Core Subjects & Colors
     final subjects = ['数据结构', '离散数学', '计算机系统', '数字电路', '摄影', '文学'];
     final subjectColors = {
@@ -148,31 +147,35 @@ class DemoDataService {
     // Generate ~500 nodes
     for (var i = 0; i < 500; i++) {
       final subject = subjects[i % subjects.length];
-      final isCore = i < 20; 
+      final isCore = i < 20;
       final status = _determineNodeStatus(i);
       final isUnlocked = status != NodeStatus.locked;
-      final mastery = status == NodeStatus.mastered ? 100 : (status == NodeStatus.unlocked ? 30 : 0);
-      
+      final mastery = status == NodeStatus.mastered
+          ? 100
+          : (status == NodeStatus.unlocked ? 30 : 0);
+
       String? parentId;
       if (!isCore) {
-          parentId = 'node_${i % 20}'; 
+        parentId = 'node_${i % 20}';
       }
 
-      nodes.add(GalaxyNodeModel(
-        id: 'node_$i',
-        name: isCore ? subject : '$subject - 知识点 ${i+1}',
-        importance: isCore ? 5 : _random.nextInt(3) + 1,
-        sector: SectorEnum.values[i % SectorEnum.values.length],
-        isUnlocked: isUnlocked,
-        masteryScore: mastery,
-        baseColor: subjectColors[subject],
-        parentId: parentId,
-      ),);
+      nodes.add(
+        GalaxyNodeModel(
+          id: 'node_$i',
+          name: isCore ? subject : '$subject - 知识点 ${i + 1}',
+          importance: isCore ? 5 : _random.nextInt(3) + 1,
+          sector: SectorEnum.values[i % SectorEnum.values.length],
+          isUnlocked: isUnlocked,
+          masteryScore: mastery,
+          baseColor: subjectColors[subject],
+          parentId: parentId,
+        ),
+      );
     }
 
     return GalaxyGraphResponse(
-        nodes: nodes, 
-        userFlameIntensity: 0.85,
+      nodes: nodes,
+      userFlameIntensity: 0.85,
     );
   }
 
@@ -196,7 +199,15 @@ class DemoDataService {
     final status = _determineNodeStatus(index);
 
     // Determine sector based on index
-    final sectorValues = ['COSMOS', 'TECH', 'ART', 'CIVILIZATION', 'LIFE', 'WISDOM', 'VOID'];
+    final sectorValues = [
+      'COSMOS',
+      'TECH',
+      'ART',
+      'CIVILIZATION',
+      'LIFE',
+      'WISDOM',
+      'VOID',
+    ];
     final sectorCode = sectorValues[index % sectorValues.length];
 
     return KnowledgeDetailResponse(
@@ -238,17 +249,25 @@ class DemoDataService {
           ),
       ],
       relatedTasks: demoTasks.take(2).toList(),
-      relatedPlans: demoPlans.map((p) => RelatedPlan(
-        id: p.id,
-        title: p.name,
-        planType: p.type.toString().split('.').last,
-        status: p.isActive ? 'active' : 'completed',
-        targetDate: p.targetDate,
-      ),).toList(),
+      relatedPlans: demoPlans
+          .map(
+            (p) => RelatedPlan(
+              id: p.id,
+              title: p.name,
+              planType: p.type.toString().split('.').last,
+              status: p.isActive ? 'active' : 'completed',
+              targetDate: p.targetDate,
+            ),
+          )
+          .toList(),
       userStats: KnowledgeUserStats(
-        masteryScore: status == NodeStatus.mastered ? 95.0 :
-                      status == NodeStatus.review ? 60.0 :
-                      status == NodeStatus.unlocked ? 30.0 : 0.0,
+        masteryScore: status == NodeStatus.mastered
+            ? 95.0
+            : status == NodeStatus.review
+                ? 60.0
+                : status == NodeStatus.unlocked
+                    ? 30.0
+                    : 0.0,
         totalStudyMinutes: (index % 10 + 1) * 15,
         studyCount: index % 5 + 1,
         isUnlocked: status != NodeStatus.locked,
@@ -283,10 +302,10 @@ class DemoDataService {
       ),
       PlanModel(
         id: 'plan_growth_1',
-         userId: 'CS_Sophomore_12345',
+        userId: 'CS_Sophomore_12345',
         name: '计算机科学基础巩固',
         type: PlanType.growth,
-         dailyAvailableMinutes: 60,
+        dailyAvailableMinutes: 60,
         masteryLevel: 0.3,
         progress: 0.45, // 45%
         isActive: true,
@@ -301,42 +320,47 @@ class DemoDataService {
 
   // --- Chat Data ---
   List<ChatMessageModel> get demoChatHistory => [
-      ChatMessageModel(
-        id: 'msg_1',
-        conversationId: 'demo_conv_1',
-        role: MessageRole.user,
-        content: '我觉得最近学习效率有点低，总是忍不住想玩手机，怎么办？',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      ChatMessageModel(
-        id: 'msg_2',
-        conversationId: 'demo_conv_1',
-        role: MessageRole.assistant,
-        content: '理解你的感受。这种焦虑和自责其实是恶性循环的一部分。我们试着接纳这种情绪，而不是对抗它.\n\n根据你的学习记录，你这周已经在《离散数学》上投入了7.5小时，这非常棒。也许你可以试着先做一个简单的任务来找回状态？',
-        createdAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 59)),
-      ),
-      ChatMessageModel(
-        id: 'msg_3',
-        conversationId: 'demo_conv_1',
-        role: MessageRole.user,
-        content: '确实，那我先复习一下链表吧，但是我有点忘了怎么实现了。',
-        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-      ),
-      ChatMessageModel(
-        id: 'msg_4',
-        conversationId: 'demo_conv_1',
-        role: MessageRole.assistant,
-        content: '没问题。根据你的学习进度，建议先复习 **单链表的插入与删除** 操作.\n\n正在为您生成数据结构学习计划...', 
-        createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
-        toolResults: [
-           ToolResultModel(success: true, toolName: 'generate_plan', data: {'status': 'completed'}),
-        ],
-      ),
-      ChatMessageModel(
-        id: 'msg_5',
-        conversationId: 'demo_conv_1',
-        role: MessageRole.assistant,
-        content: '''
+        ChatMessageModel(
+          id: 'msg_1',
+          conversationId: 'demo_conv_1',
+          role: MessageRole.user,
+          content: '我觉得最近学习效率有点低，总是忍不住想玩手机，怎么办？',
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        ),
+        ChatMessageModel(
+          id: 'msg_2',
+          conversationId: 'demo_conv_1',
+          role: MessageRole.assistant,
+          content:
+              '理解你的感受。这种焦虑和自责其实是恶性循环的一部分。我们试着接纳这种情绪，而不是对抗它.\n\n根据你的学习记录，你这周已经在《离散数学》上投入了7.5小时，这非常棒。也许你可以试着先做一个简单的任务来找回状态？',
+          createdAt:
+              DateTime.now().subtract(const Duration(hours: 1, minutes: 59)),
+        ),
+        ChatMessageModel(
+          id: 'msg_3',
+          conversationId: 'demo_conv_1',
+          role: MessageRole.user,
+          content: '确实，那我先复习一下链表吧，但是我有点忘了怎么实现了。',
+          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+        ),
+        ChatMessageModel(
+          id: 'msg_4',
+          conversationId: 'demo_conv_1',
+          role: MessageRole.assistant,
+          content: '没问题。根据你的学习进度，建议先复习 **单链表的插入与删除** 操作.\n\n正在为您生成数据结构学习计划...',
+          createdAt: DateTime.now().subtract(const Duration(minutes: 29)),
+          toolResults: [
+            ToolResultModel(
+                success: true,
+                toolName: 'generate_plan',
+                data: {'status': 'completed'},),
+          ],
+        ),
+        ChatMessageModel(
+          id: 'msg_5',
+          conversationId: 'demo_conv_1',
+          role: MessageRole.assistant,
+          content: '''
 这是一个简单的链表节点定义（C++），你可以作为参考：
 
 ```cpp
@@ -348,64 +372,65 @@ struct ListNode {
 ```
 
 你可以试着手写一下 `reverseList` 函数吗？''',
-        createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
-      ),
-    ];
+          createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
+        ),
+      ];
 
   // --- Dashboard Data ---
   Map<String, dynamic> get demoDashboard => {
-      'weather': {
-        'type': 'sunny',
-        'condition': 'Clear sky',
-      },
-      'flame': {
-        'level': 15,
-        'brightness': 85, 
-        'today_focus_minutes': 120,
-        'tasks_completed': 3,
-        'nudge_message': '你今天已经在《数据结构》上投入了2小时，非常棒！休息一下吧。',
-      },
-      'sprint': {
-        'id': 'plan_sprint_1',
-        'name': '数据结构期中冲刺',
-        'progress': 0.7,
-        'days_left': 7,
-        'total_estimated_hours': 20.0,
-      },
-      'growth': {
-        'id': 'plan_growth_1',
-        'name': 'CS基础巩固',
-        'progress': 0.45,
-        'mastery_level': 0.3,
-      },
-      'next_actions': [
-        {
-          'id': 'task_1',
-          'title': '数据结构 - 链表实现',
-          'estimated_minutes': 120,
-          'priority': 3,
-          'type': 'learning',
+        'weather': {
+          'type': 'sunny',
+          'condition': 'Clear sky',
         },
-        {
-          'id': 'task_2',
-          'title': '离散数学 - 图论基础',
-          'estimated_minutes': 90,
-          'priority': 2,
-          'type': 'learning',
+        'flame': {
+          'level': 15,
+          'brightness': 85,
+          'today_focus_minutes': 120,
+          'tasks_completed': 3,
+          'nudge_message': '你今天已经在《数据结构》上投入了2小时，非常棒！休息一下吧。',
         },
-      ],
-      'cognitive': {
-        'weekly_pattern': 'Deep Work',
-        'pattern_type': 'productive',
-        'description': 'You are in a flow state this week.',
-        'solution_text': 'Keep it up!',
-        'status': 'analyzed',
-        'has_new_insight': true,
-      },
-    };
+        'sprint': {
+          'id': 'plan_sprint_1',
+          'name': '数据结构期中冲刺',
+          'progress': 0.7,
+          'days_left': 7,
+          'total_estimated_hours': 20.0,
+        },
+        'growth': {
+          'id': 'plan_growth_1',
+          'name': 'CS基础巩固',
+          'progress': 0.45,
+          'mastery_level': 0.3,
+        },
+        'next_actions': [
+          {
+            'id': 'task_1',
+            'title': '数据结构 - 链表实现',
+            'estimated_minutes': 120,
+            'priority': 3,
+            'type': 'learning',
+          },
+          {
+            'id': 'task_2',
+            'title': '离散数学 - 图论基础',
+            'estimated_minutes': 90,
+            'priority': 2,
+            'type': 'learning',
+          },
+        ],
+        'cognitive': {
+          'weekly_pattern': 'Deep Work',
+          'pattern_type': 'productive',
+          'description': 'You are in a flow state this week.',
+          'solution_text': 'Keep it up!',
+          'status': 'analyzed',
+          'has_new_insight': true,
+        },
+      };
 }
 
 enum NodeStatus { locked, unlocked, review, mastered }
 
 /// Provider for DemoDataService
-final demoDataServiceProvider = Provider<DemoDataService>((ref) => DemoDataService());
+final demoDataServiceProvider =
+    Provider<DemoDataService>((ref) => DemoDataService());

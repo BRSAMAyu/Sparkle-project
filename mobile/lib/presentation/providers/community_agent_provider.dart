@@ -1,14 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/agent_session_store.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/data/models/community_model.dart';
-import 'package:sparkle/data/repositories/auth_repository.dart';
-import 'package:sparkle/data/repositories/chat_repository.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/presentation/providers/agent_session_provider.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
-import 'package:sparkle/presentation/providers/chat_provider.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -30,17 +27,20 @@ UserBrief buildCommunityAgentUser() => UserBrief(
       id: kCommunityAgentUserId,
       username: 'sparkle_ai',
       nickname: kCommunityAgentDisplayName,
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=$kCommunityAgentAvatarSeed',
+      avatarUrl:
+          'https://api.dicebear.com/9.x/avataaars/png?seed=$kCommunityAgentAvatarSeed',
       flameLevel: 9,
       flameBrightness: 0.85,
       status: UserStatus.online,
     );
 
 bool isCommunityAgentMessage(MessageInfo message) =>
-    message.sender?.id == kCommunityAgentUserId || (message.contentData?[kAgentMetadataKey] == true);
+    message.sender?.id == kCommunityAgentUserId ||
+    (message.contentData?[kAgentMetadataKey] == true);
 
 bool isPrivateAgentMessage(PrivateMessageInfo message) =>
-    message.sender.id == kCommunityAgentUserId || (message.contentData?[kAgentMetadataKey] == true);
+    message.sender.id == kCommunityAgentUserId ||
+    (message.contentData?[kAgentMetadataKey] == true);
 
 class AgentChatState<T> {
   const AgentChatState({
@@ -128,7 +128,8 @@ String buildGroupAgentPrompt({
       .take(_maxContextMessages)
       .toList()
       .reversed
-      .map((msg) => '${msg.sender?.displayName ?? "系统"}: ${_compressContent(msg.content ?? "")}')
+      .map((msg) =>
+          '${msg.sender?.displayName ?? "系统"}: ${_compressContent(msg.content ?? "")}',)
       .join('\n');
 
   final name = groupName ?? '学习小组';
@@ -155,7 +156,8 @@ String buildPrivateAgentPrompt({
       .take(_maxContextMessages)
       .toList()
       .reversed
-      .map((msg) => '${msg.sender.displayName}: ${_compressContent(msg.content ?? "")}')
+      .map((msg) =>
+          '${msg.sender.displayName}: ${_compressContent(msg.content ?? "")}',)
       .join('\n');
 
   final name = friendName ?? '好友';
@@ -177,8 +179,10 @@ String _compressContent(String content) {
   return '${trimmed.substring(0, _maxContextChars)}…';
 }
 
-class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> {
-  GroupAgentChatNotifier(this._repository, this._ref, this._groupId) : super(const AgentChatState());
+class GroupAgentChatNotifier
+    extends StateNotifier<AgentChatState<MessageInfo>> {
+  GroupAgentChatNotifier(this._repository, this._ref, this._groupId)
+      : super(const AgentChatState());
 
   final ChatRepository _repository;
   final Ref _ref;
@@ -191,7 +195,8 @@ class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> 
   }) async {
     if (state.isSending) return;
 
-    state = state.copyWith(isSending: true, streamingContent: '', clearError: true);
+    state =
+        state.copyWith(isSending: true, streamingContent: '', clearError: true);
 
     final userContext = await _resolveUserContext(_ref);
     final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
@@ -228,8 +233,10 @@ class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> 
           buffer = event.content;
           state = state.copyWith(streamingContent: buffer);
         } else if (event is ErrorEvent) {
-          final message = ErrorMessages.getUserFriendlyMessage(event.code, event.message);
-          state = state.copyWith(isSending: false, streamingContent: '', error: message);
+          final message =
+              ErrorMessages.getUserFriendlyMessage(event.code, event.message);
+          state = state.copyWith(
+              isSending: false, streamingContent: '', error: message,);
           return;
         }
       }
@@ -251,8 +258,10 @@ class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> 
         state = state.copyWith(isSending: false, streamingContent: '');
       }
     } catch (e) {
-      final message = ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
-      state = state.copyWith(isSending: false, streamingContent: '', error: message);
+      final message =
+          ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
+      state = state.copyWith(
+          isSending: false, streamingContent: '', error: message,);
     }
   }
 
@@ -292,8 +301,10 @@ class GroupAgentChatNotifier extends StateNotifier<AgentChatState<MessageInfo>> 
   }
 }
 
-class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessageInfo>> {
-  PrivateAgentChatNotifier(this._repository, this._ref, this._friendId) : super(const AgentChatState());
+class PrivateAgentChatNotifier
+    extends StateNotifier<AgentChatState<PrivateMessageInfo>> {
+  PrivateAgentChatNotifier(this._repository, this._ref, this._friendId)
+      : super(const AgentChatState());
 
   final ChatRepository _repository;
   final Ref _ref;
@@ -306,7 +317,8 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
   }) async {
     if (state.isSending) return;
 
-    state = state.copyWith(isSending: true, streamingContent: '', clearError: true);
+    state =
+        state.copyWith(isSending: true, streamingContent: '', clearError: true);
 
     final userContext = await _resolveUserContext(_ref);
     final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
@@ -343,8 +355,10 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
           buffer = event.content;
           state = state.copyWith(streamingContent: buffer);
         } else if (event is ErrorEvent) {
-          final message = ErrorMessages.getUserFriendlyMessage(event.code, event.message);
-          state = state.copyWith(isSending: false, streamingContent: '', error: message);
+          final message =
+              ErrorMessages.getUserFriendlyMessage(event.code, event.message);
+          state = state.copyWith(
+              isSending: false, streamingContent: '', error: message,);
           return;
         }
       }
@@ -367,8 +381,10 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
         state = state.copyWith(isSending: false, streamingContent: '');
       }
     } catch (e) {
-      final message = ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
-      state = state.copyWith(isSending: false, streamingContent: '', error: message);
+      final message =
+          ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
+      state = state.copyWith(
+          isSending: false, streamingContent: '', error: message,);
     }
   }
 
@@ -412,12 +428,18 @@ class PrivateAgentChatNotifier extends StateNotifier<AgentChatState<PrivateMessa
   }
 }
 
-final groupChatAgentProvider = StateNotifierProvider.family<GroupAgentChatNotifier, AgentChatState<MessageInfo>, String>((ref, groupId) {
+final groupChatAgentProvider = StateNotifierProvider.family<
+    GroupAgentChatNotifier,
+    AgentChatState<MessageInfo>,
+    String>((ref, groupId) {
   final repository = ref.watch(chatRepositoryProvider);
   return GroupAgentChatNotifier(repository, ref, groupId);
 });
 
-final privateChatAgentProvider = StateNotifierProvider.family<PrivateAgentChatNotifier, AgentChatState<PrivateMessageInfo>, String>((ref, friendId) {
+final privateChatAgentProvider = StateNotifierProvider.family<
+    PrivateAgentChatNotifier,
+    AgentChatState<PrivateMessageInfo>,
+    String>((ref, friendId) {
   final repository = ref.watch(chatRepositoryProvider);
   return PrivateAgentChatNotifier(repository, ref, friendId);
 });

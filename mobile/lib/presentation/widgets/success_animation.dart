@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class SuccessAnimation extends StatefulWidget {
-
   const SuccessAnimation({
     super.key,
     this.child,
@@ -24,8 +23,7 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: DS.durationSlow);
+    _confettiController = ConfettiController(duration: DS.durationSlow);
     if (widget.playAnimation) {
       _confettiController.play();
     }
@@ -58,26 +56,27 @@ class _SuccessAnimationState extends State<SuccessAnimation> {
 
   @override
   Widget build(BuildContext context) => Stack(
-      children: [
-        if (widget.child != null) widget.child!,
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive, // All directions
-            colors: [
-              DS.primaryBase,
-              DS.accent,
-              DS.success,
-              DS.info,
-            ], // Customize colors
-            gravity: 0.3,
-            emissionFrequency: 0.05,
-            numberOfParticles: 20, // number of particles to emit
-            maxBlastForce: 100,
-            minBlastForce: 80,
+        children: [
+          if (widget.child != null) widget.child!,
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality:
+                  BlastDirectionality.explosive, // All directions
+              colors: [
+                DS.primaryBase,
+                DS.accent,
+                DS.success,
+                DS.info,
+              ], // Customize colors
+              gravity: 0.3,
+              emissionFrequency: 0.05,
+              numberOfParticles: 20, // number of particles to emit
+              maxBlastForce: 100,
+              minBlastForce: 80,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 }

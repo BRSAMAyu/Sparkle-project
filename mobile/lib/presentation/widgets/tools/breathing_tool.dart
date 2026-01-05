@@ -11,15 +11,16 @@ class BreathingTool extends StatefulWidget {
   State<BreathingTool> createState() => _BreathingToolState();
 }
 
-class _BreathingToolState extends State<BreathingTool> with SingleTickerProviderStateMixin {
+class _BreathingToolState extends State<BreathingTool>
+    with SingleTickerProviderStateMixin {
   int _selectedDurationIndex = 0;
   final List<int> _durations = [1, 3, 5]; // Minutes
-  
+
   bool _isPlaying = false;
   int _completedRounds = 0;
   int _totalRounds = 0;
   String _instruction = '准备';
-  
+
   late AnimationController _controller;
   Timer? _timer;
 
@@ -86,7 +87,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
       // Phase 2: Hold (7s)
       setState(() => _instruction = '屏息');
       // Animation stays at 1.0
-      
+
       _timer = Timer(const Duration(seconds: 7), () {
         if (!mounted || !_isPlaying) return;
 
@@ -97,7 +98,7 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
 
         _timer = Timer(const Duration(seconds: 8), () {
           if (!mounted || !_isPlaying) return;
-          
+
           setState(() {
             _completedRounds++;
           });
@@ -109,166 +110,172 @@ class _BreathingToolState extends State<BreathingTool> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(DS.spacing24),
-      decoration: BoxDecoration(
-        color: DS.brandPrimaryConst,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: Colors.indigo.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.air, color: Colors.indigo),
-              ),
-              const SizedBox(width: DS.md),
-              const Text(
-                '呼吸练习',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.xxl),
-
-          // Breathing Circle Animation
-          Center(
-            child: SizedBox(
-              width: 200,
-              height: 200,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer ring
-                  Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.indigo.withValues(alpha: 0.1),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  // Animated Circle
-                  AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      // Scale from 0.4 to 1.0
-                      final scale = 0.4 + (_controller.value * 0.6);
-                      return Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width: 200,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Colors.indigo.shade200.withValues(alpha: 0.3),
-                                Colors.indigo.shade100.withValues(alpha: 0.1),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  // Inner Text
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _instruction,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.indigo.shade700,
-                        ),
-                      ),
-                      if (_isPlaying)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '$_completedRounds / $_totalRounds',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: DS.brandPrimary.shade600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: DS.xxxl),
-
-          // Duration Selector
-          if (!_isPlaying)
+        padding: const EdgeInsets.all(DS.spacing24),
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_durations.length, (index) {
-                final isSelected = _selectedDurationIndex == index;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedDurationIndex = index;
-                        _updateTotalRounds();
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.air, color: Colors.indigo),
+                ),
+                const SizedBox(width: DS.md),
+                const Text(
+                  '呼吸练习',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.xxl),
+
+            // Breathing Circle Animation
+            Center(
+              child: SizedBox(
+                width: 200,
+                height: 200,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer ring
+                    Container(
+                      width: 200,
+                      height: 200,
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.indigo : DS.brandPrimary.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${_durations[index]}分钟',
-                        style: TextStyle(
-                          color: isSelected ? DS.brandPrimary : DS.brandPrimary.shade600,
-                          fontWeight: FontWeight.w500,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.indigo.withValues(alpha: 0.1),
+                          width: 2,
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                    // Animated Circle
+                    AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        // Scale from 0.4 to 1.0
+                        final scale = 0.4 + (_controller.value * 0.6);
+                        return Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 200,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.indigo.shade200.withValues(alpha: 0.3),
+                                  Colors.indigo.shade100.withValues(alpha: 0.1),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Inner Text
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _instruction,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigo.shade700,
+                          ),
+                        ),
+                        if (_isPlaying)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '$_completedRounds / $_totalRounds',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: DS.brandPrimary.shade600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
 
-          const SizedBox(height: DS.xl),
+            const SizedBox(height: DS.xxxl),
 
-          // Control Button
-          CustomButton.primary(
-            text: _isPlaying ? '停止练习' : '开始练习',
-            icon: _isPlaying ? Icons.stop : Icons.play_arrow,
-            onPressed: _isPlaying ? _stopBreathing : _startBreathing,
-            customGradient: _isPlaying 
-              ? DS.warningGradient 
-              : LinearGradient(colors: [Colors.indigo, DS.brandPrimaryConst]),
-          ),
-        ],
-      ),
-    );
+            // Duration Selector
+            if (!_isPlaying)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_durations.length, (index) {
+                  final isSelected = _selectedDurationIndex == index;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedDurationIndex = index;
+                          _updateTotalRounds();
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8,),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.indigo
+                              : DS.brandPrimary.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_durations[index]}分钟',
+                          style: TextStyle(
+                            color: isSelected
+                                ? DS.brandPrimary
+                                : DS.brandPrimary.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+
+            const SizedBox(height: DS.xl),
+
+            // Control Button
+            CustomButton.primary(
+              text: _isPlaying ? '停止练习' : '开始练习',
+              icon: _isPlaying ? Icons.stop : Icons.play_arrow,
+              onPressed: _isPlaying ? _stopBreathing : _startBreathing,
+              customGradient: _isPlaying
+                  ? DS.warningGradient
+                  : LinearGradient(
+                      colors: [Colors.indigo, DS.brandPrimaryConst],),
+            ),
+          ],
+        ),
+      );
 }

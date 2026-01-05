@@ -10,13 +10,15 @@ class TypographySystem {
   static const double baseSize = 16.0;
 
   // 字体大小比例 (基于16px基础)
-  static const double sizeXs   = baseSize / ratio;        // ~12.8px
-  static const double sizeSm   = baseSize;                // 16px
-  static const double sizeMd   = baseSize * ratio;        // ~20px
-  static const double sizeLg   = baseSize * ratio * ratio; // ~25px
-  static const double sizeXl   = baseSize * ratio * ratio * ratio; // ~31.25px
-  static const double size2xl  = baseSize * ratio * ratio * ratio * ratio; // ~39px
-  static const double size3xl  = baseSize * ratio * ratio * ratio * ratio * ratio; // ~48.8px
+  static const double sizeXs = baseSize / ratio; // ~12.8px
+  static const double sizeSm = baseSize; // 16px
+  static const double sizeMd = baseSize * ratio; // ~20px
+  static const double sizeLg = baseSize * ratio * ratio; // ~25px
+  static const double sizeXl = baseSize * ratio * ratio * ratio; // ~31.25px
+  static const double size2xl =
+      baseSize * ratio * ratio * ratio * ratio; // ~39px
+  static const double size3xl =
+      baseSize * ratio * ratio * ratio * ratio * ratio; // ~48.8px
 
   // 字重
   static const FontWeight weightLight = FontWeight.w300;
@@ -38,102 +40,104 @@ class TypographySystem {
 
   /// 标准文本样式
   static TextStyle displayLarge() => const TextStyle(
-    fontSize: size3xl,
-    fontWeight: weightExtrabold,
-    height: leadingTight,
-    letterSpacing: trackingTight,
-  );
+        fontSize: size3xl,
+        fontWeight: weightExtrabold,
+        height: leadingTight,
+        letterSpacing: trackingTight,
+      );
 
   static TextStyle headingLarge() => const TextStyle(
-    fontSize: size2xl,
-    fontWeight: weightBold,
-    height: leadingTight,
-    letterSpacing: trackingTight,
-  );
+        fontSize: size2xl,
+        fontWeight: weightBold,
+        height: leadingTight,
+        letterSpacing: trackingTight,
+      );
 
   static TextStyle headingMedium() => const TextStyle(
-    fontSize: sizeXl,
-    fontWeight: weightSemibold,
-    height: leadingTight,
-    letterSpacing: trackingNormal,
-  );
+        fontSize: sizeXl,
+        fontWeight: weightSemibold,
+        height: leadingTight,
+        letterSpacing: trackingNormal,
+      );
 
   static TextStyle titleLarge() => const TextStyle(
-    fontSize: sizeLg,
-    fontWeight: weightSemibold,
-    height: leadingNormal,
-    letterSpacing: trackingNormal,
-  );
+        fontSize: sizeLg,
+        fontWeight: weightSemibold,
+        height: leadingNormal,
+        letterSpacing: trackingNormal,
+      );
 
   static TextStyle bodyLarge() => const TextStyle(
-    fontSize: sizeMd,
-    fontWeight: weightRegular,
-    height: leadingNormal,
-    letterSpacing: trackingNormal,
-  );
+        fontSize: sizeMd,
+        fontWeight: weightRegular,
+        height: leadingNormal,
+        letterSpacing: trackingNormal,
+      );
 
   static TextStyle bodyMedium() => const TextStyle(
-    fontSize: sizeSm,
-    fontWeight: weightRegular,
-    height: leadingNormal,
-    letterSpacing: trackingNormal,
-  );
+        fontSize: sizeSm,
+        fontWeight: weightRegular,
+        height: leadingNormal,
+        letterSpacing: trackingNormal,
+      );
 
   static TextStyle labelLarge() => const TextStyle(
-    fontSize: sizeSm,
-    fontWeight: weightMedium,
-    height: leadingTight,
-    letterSpacing: trackingWide,
-  );
+        fontSize: sizeSm,
+        fontWeight: weightMedium,
+        height: leadingTight,
+        letterSpacing: trackingWide,
+      );
 
   static TextStyle labelSmall() => const TextStyle(
-    fontSize: sizeXs,
-    fontWeight: weightMedium,
-    height: leadingTight,
-    letterSpacing: trackingWide,
-  );
+        fontSize: sizeXs,
+        fontWeight: weightMedium,
+        height: leadingTight,
+        letterSpacing: trackingWide,
+      );
 }
 
 /// 排版令牌 - 语义化样式
 @immutable
 class TypographyToken {
-
   const TypographyToken(this.name, this.style);
   final String name;
   final TextStyle style;
 
   /// 应用颜色
   TypographyToken withColor(Color color) => TypographyToken(
-      name,
-      style.copyWith(color: color),
-    );
+        name,
+        style.copyWith(color: color),
+      );
 
   /// 应用字重
   TypographyToken withWeight(FontWeight weight) => TypographyToken(
-      name,
-      style.copyWith(fontWeight: weight),
-    );
+        name,
+        style.copyWith(fontWeight: weight),
+      );
 
   /// 应用字号
   TypographyToken withSize(double size) => TypographyToken(
-      name,
-      style.copyWith(fontSize: size),
-    );
+        name,
+        style.copyWith(fontSize: size),
+      );
 
   /// 响应式变体
   TypographyTokenVariant variant({
     required TextStyle tablet,
     required TextStyle desktop,
-  }) => TypographyTokenVariant(
-      mobile: style,
-      tablet: tablet,
-      desktop: desktop,
-    );
+  }) =>
+      TypographyTokenVariant(
+        mobile: style,
+        tablet: tablet,
+        desktop: desktop,
+      );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TypographyToken && runtimeType == other.runtimeType && style == other.style;
+      other is TypographyToken &&
+          runtimeType == other.runtimeType &&
+          style == other.style;
 
   @override
   int get hashCode => style.hashCode;
@@ -142,7 +146,6 @@ class TypographyToken {
 /// 响应式排版变体
 @immutable
 class TypographyTokenVariant {
-
   const TypographyTokenVariant({
     required this.mobile,
     required this.tablet,
@@ -182,29 +185,29 @@ enum TextKey {
 /// 排版主题扩展
 extension TypographyThemeExtension on ThemeData {
   Map<TextKey, TextStyle> get sparkleTypography => {
-    TextKey.displayLarge: TypographySystem.displayLarge().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.headingLarge: TypographySystem.headingLarge().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.headingMedium: TypographySystem.headingMedium().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.titleLarge: TypographySystem.titleLarge().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.bodyLarge: TypographySystem.bodyLarge().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.bodyMedium: TypographySystem.bodyMedium().copyWith(
-      color: colorScheme.onSurface,
-    ),
-    TextKey.labelLarge: TypographySystem.labelLarge().copyWith(
-      color: colorScheme.primary,
-    ),
-    TextKey.labelSmall: TypographySystem.labelSmall().copyWith(
-      color: colorScheme.onSurface.withOpacity(0.7),
-    ),
-  };
+        TextKey.displayLarge: TypographySystem.displayLarge().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.headingLarge: TypographySystem.headingLarge().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.headingMedium: TypographySystem.headingMedium().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.titleLarge: TypographySystem.titleLarge().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.bodyLarge: TypographySystem.bodyLarge().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.bodyMedium: TypographySystem.bodyMedium().copyWith(
+          color: colorScheme.onSurface,
+        ),
+        TextKey.labelLarge: TypographySystem.labelLarge().copyWith(
+          color: colorScheme.primary,
+        ),
+        TextKey.labelSmall: TypographySystem.labelSmall().copyWith(
+          color: colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+      };
 }

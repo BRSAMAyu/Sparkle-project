@@ -17,7 +17,13 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Tuple
 from dataclasses import dataclass
 
-from circuitbreaker import circuit
+try:
+    from circuitbreaker import circuit
+except ImportError:
+    def circuit(*_args, **_kwargs):
+        def decorator(func):
+            return func
+        return decorator
 import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)
@@ -45,6 +51,10 @@ class QuotaCheckResult:
     remaining: int
     percentage: float
     message: Optional[str] = None
+
+
+class QuotaExceededError(Exception):
+    """Raised when an LLM quota check fails."""
 
 
 @dataclass

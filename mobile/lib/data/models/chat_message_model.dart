@@ -11,10 +11,14 @@ enum MessageRole {
 }
 
 @JsonSerializable()
-class ChatMessageModel { // Metadata for FinOps and Chaos
+class ChatMessageModel {
+  // Metadata for FinOps and Chaos
 
   ChatMessageModel({
-    required this.conversationId, required this.role, required this.content, String? id,
+    required this.conversationId,
+    required this.role,
+    required this.content,
+    String? id,
     this.userId,
     this.taskId,
     DateTime? createdAt,
@@ -29,10 +33,11 @@ class ChatMessageModel { // Metadata for FinOps and Chaos
     this.reasoningSummary,
     this.isReasoningComplete,
     this.meta,
-  }) : id = id ?? const Uuid().v4(),
-       createdAt = createdAt ?? DateTime.now();
+  })  : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now();
 
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) => _$ChatMessageModelFromJson(json);
+  factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
+      _$ChatMessageModelFromJson(json);
   final String id;
   @JsonKey(name: 'user_id')
   final String? userId; // Optional for client-generated messages
@@ -44,11 +49,11 @@ class ChatMessageModel { // Metadata for FinOps and Chaos
   final String content;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
-  
+
   // New: Agent Workflow support
-  final List<WidgetPayload>? widgets;        // Widgets to render
+  final List<WidgetPayload>? widgets; // Widgets to render
   @JsonKey(name: 'tool_results')
-  final List<ToolResultModel>? toolResults;  // Tool execution results
+  final List<ToolResultModel>? toolResults; // Tool execution results
   @JsonKey(name: 'has_errors')
   final bool? hasErrors;
   final List<ErrorInfo>? errors;
@@ -57,10 +62,14 @@ class ChatMessageModel { // Metadata for FinOps and Chaos
   @JsonKey(name: 'confirmation_data')
   final ConfirmationData? confirmationData;
   @JsonKey(includeFromJson: false, includeToJson: false)
-  final String? aiStatus; // Optional status for assistant messages (THINKING, etc.)
+  final String?
+      aiStatus; // Optional status for assistant messages (THINKING, etc.)
 
   // New: Chain of Thought Visualization support
-  @JsonKey(name: 'reasoning_steps', fromJson: _reasoningStepsFromJson, toJson: _reasoningStepsToJson)
+  @JsonKey(
+      name: 'reasoning_steps',
+      fromJson: _reasoningStepsFromJson,
+      toJson: _reasoningStepsToJson,)
   final List<ReasoningStep>? reasoningSteps; // Step-by-step thinking process
 
   @JsonKey(name: 'reasoning_summary')
@@ -91,30 +100,32 @@ class ChatMessageModel { // Metadata for FinOps and Chaos
     String? reasoningSummary,
     bool? isReasoningComplete,
     MessageMeta? meta,
-  }) => ChatMessageModel(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      conversationId: conversationId ?? this.conversationId,
-      taskId: taskId ?? this.taskId,
-      role: role ?? this.role,
-      content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
-      widgets: widgets ?? this.widgets,
-      toolResults: toolResults ?? this.toolResults,
-      hasErrors: hasErrors ?? this.hasErrors,
-      errors: errors ?? this.errors,
-      requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
-      confirmationData: confirmationData ?? this.confirmationData,
-      aiStatus: aiStatus ?? this.aiStatus,
-      reasoningSteps: reasoningSteps ?? this.reasoningSteps,
-      reasoningSummary: reasoningSummary ?? this.reasoningSummary,
-      isReasoningComplete: isReasoningComplete ?? this.isReasoningComplete,
-      meta: meta ?? this.meta,
-    );
+  }) =>
+      ChatMessageModel(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        conversationId: conversationId ?? this.conversationId,
+        taskId: taskId ?? this.taskId,
+        role: role ?? this.role,
+        content: content ?? this.content,
+        createdAt: createdAt ?? this.createdAt,
+        widgets: widgets ?? this.widgets,
+        toolResults: toolResults ?? this.toolResults,
+        hasErrors: hasErrors ?? this.hasErrors,
+        errors: errors ?? this.errors,
+        requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
+        confirmationData: confirmationData ?? this.confirmationData,
+        aiStatus: aiStatus ?? this.aiStatus,
+        reasoningSteps: reasoningSteps ?? this.reasoningSteps,
+        reasoningSummary: reasoningSummary ?? this.reasoningSummary,
+        isReasoningComplete: isReasoningComplete ?? this.isReasoningComplete,
+        meta: meta ?? this.meta,
+      );
 }
 
 @JsonSerializable()
-class MessageMeta { // 'open' | 'closed'
+class MessageMeta {
+  // 'open' | 'closed'
 
   MessageMeta({
     this.latencyMs,
@@ -123,7 +134,8 @@ class MessageMeta { // 'open' | 'closed'
     this.breakerStatus,
   });
 
-  factory MessageMeta.fromJson(Map<String, dynamic> json) => _$MessageMetaFromJson(json);
+  factory MessageMeta.fromJson(Map<String, dynamic> json) =>
+      _$MessageMetaFromJson(json);
   @JsonKey(name: 'latency_ms')
   final int? latencyMs;
   @JsonKey(name: 'is_cache_hit')
@@ -138,7 +150,9 @@ class MessageMeta { // 'open' | 'closed'
 // Helper functions for ReasoningStep serialization
 List<ReasoningStep>? _reasoningStepsFromJson(List<dynamic>? json) {
   if (json == null) return null;
-  return json.map((e) => ReasoningStep.fromJson(e as Map<String, dynamic>)).toList();
+  return json
+      .map((e) => ReasoningStep.fromJson(e as Map<String, dynamic>))
+      .toList();
 }
 
 List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
@@ -148,18 +162,18 @@ List<Map<String, dynamic>>? _reasoningStepsToJson(List<ReasoningStep>? steps) {
 
 @JsonSerializable()
 class WidgetPayload {
-
   WidgetPayload({required this.type, required this.data});
 
-  factory WidgetPayload.fromJson(Map<String, dynamic> json) => _$WidgetPayloadFromJson(json);
-  final String type;  // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
+  factory WidgetPayload.fromJson(Map<String, dynamic> json) =>
+      _$WidgetPayloadFromJson(json);
+  final String
+      type; // 'task_card' | 'knowledge_card' | 'task_list' | 'plan_card'
   final Map<String, dynamic> data;
   Map<String, dynamic> toJson() => _$WidgetPayloadToJson(this);
 }
 
 @JsonSerializable()
 class ToolResultModel {
-
   ToolResultModel({
     required this.success,
     required this.toolName,
@@ -169,7 +183,8 @@ class ToolResultModel {
     this.widgetData,
   });
 
-  factory ToolResultModel.fromJson(Map<String, dynamic> json) => _$ToolResultModelFromJson(json);
+  factory ToolResultModel.fromJson(Map<String, dynamic> json) =>
+      _$ToolResultModelFromJson(json);
   final bool success;
   @JsonKey(name: 'tool_name')
   final String toolName;
@@ -185,10 +200,10 @@ class ToolResultModel {
 
 @JsonSerializable()
 class ErrorInfo {
-
   ErrorInfo({required this.tool, required this.message, this.suggestion});
 
-  factory ErrorInfo.fromJson(Map<String, dynamic> json) => _$ErrorInfoFromJson(json);
+  factory ErrorInfo.fromJson(Map<String, dynamic> json) =>
+      _$ErrorInfoFromJson(json);
   final String tool;
   final String message;
   final String? suggestion;
@@ -197,7 +212,6 @@ class ErrorInfo {
 
 @JsonSerializable()
 class ConfirmationData {
-
   ConfirmationData({
     required this.actionId,
     required this.toolName,
@@ -205,7 +219,8 @@ class ConfirmationData {
     required this.preview,
   });
 
-  factory ConfirmationData.fromJson(Map<String, dynamic> json) => _$ConfirmationDataFromJson(json);
+  factory ConfirmationData.fromJson(Map<String, dynamic> json) =>
+      _$ConfirmationDataFromJson(json);
   @JsonKey(name: 'action_id')
   final String actionId;
   @JsonKey(name: 'tool_name')
@@ -218,7 +233,6 @@ class ConfirmationData {
 // Backend API response for chat endpoint
 @JsonSerializable()
 class ChatApiResponse {
-
   ChatApiResponse({
     required this.message,
     required this.conversationId,
@@ -230,7 +244,8 @@ class ChatApiResponse {
     this.confirmationData,
   });
 
-  factory ChatApiResponse.fromJson(Map<String, dynamic> json) => _$ChatApiResponseFromJson(json);
+  factory ChatApiResponse.fromJson(Map<String, dynamic> json) =>
+      _$ChatApiResponseFromJson(json);
   final String message;
   @JsonKey(name: 'conversation_id')
   final String conversationId;

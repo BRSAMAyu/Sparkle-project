@@ -8,8 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/cqrs/event"
+	"github.com/sparkle/gateway/internal/db"
 )
 
 // Repository handles outbox table operations.
@@ -36,34 +38,35 @@ type Repository interface {
 
 // PostgresRepository implements Repository using PostgreSQL.
 type PostgresRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	queries *db.Queries
 }
 
 // NewPostgresRepository creates a new PostgreSQL-backed outbox repository.
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
-	return &PostgresRepository{pool: pool}
+	return &PostgresRepository{
+		pool:    pool,
+		queries: db.New(pool),
+	}
 }
 
 // InsertWithTx inserts an outbox entry within an existing transaction.
 func (r *PostgresRepository) InsertWithTx(ctx context.Context, tx pgx.Tx, entry *event.OutboxEntry) error {
-	query := `
-		INSERT INTO event_outbox (
-			id, aggregate_type, aggregate_id, event_type,
-			event_version, payload, metadata, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`
+	params := db.InsertOutboxEntryParams{
+		ID:            toPgUUID(entry.ID),
+		AggregateType: string(entry.AggregateType),
+		AggregateID:   toPgUUID(entry.AggregateID),
+		EventType:     string(entry.EventType),
+		EventVersion:  int32(entry.EventVersion),
+		Payload:       entry.Payload,
+		Metadata:      entry.Metadata,
+		CreatedAt: pgtype.Timestamp{
+			Time:  entry.CreatedAt,
+			Valid: true,
+		},
+	}
 
-	_, err := tx.Exec(ctx, query,
-		entry.ID,
-		string(entry.AggregateType),
-		entry.AggregateID,
-		string(entry.EventType),
-		entry.EventVersion,
-		entry.Payload,
-		entry.Metadata,
-		entry.CreatedAt,
-	)
-
+	err := r.queries.WithTx(tx).InsertOutboxEntry(ctx, params)
 	if err != nil {
 		return fmt.Errorf("insert outbox entry: %w", err)
 	}
@@ -80,54 +83,27 @@ func (r *PostgresRepository) Insert(ctx context.Context, entry *event.OutboxEntr
 
 // GetUnpublished retrieves unpublished entries ordered by creation time.
 func (r *PostgresRepository) GetUnpublished(ctx context.Context, limit int) ([]*event.OutboxEntry, error) {
-	query := `
-		SELECT id, aggregate_type, aggregate_id, event_type,
-		       event_version, payload, metadata, sequence_number,
-		       created_at, published_at
-		FROM event_outbox
-		WHERE published_at IS NULL
-		ORDER BY created_at ASC
-		LIMIT $1
-		FOR UPDATE SKIP LOCKED
-	`
-
-	rows, err := r.pool.Query(ctx, query, limit)
+	rows, err := r.queries.GetUnpublishedOutboxEntries(ctx, int32(limit))
 	if err != nil {
 		return nil, fmt.Errorf("query unpublished: %w", err)
 	}
-	defer rows.Close()
 
-	var entries []*event.OutboxEntry
-	for rows.Next() {
-		entry := &event.OutboxEntry{}
-		var aggregateType, eventType string
-		var metadata []byte
-
-		err := rows.Scan(
-			&entry.ID,
-			&aggregateType,
-			&entry.AggregateID,
-			&eventType,
-			&entry.EventVersion,
-			&entry.Payload,
-			&metadata,
-			&entry.SequenceNumber,
-			&entry.CreatedAt,
-			&entry.PublishedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
+	entries := make([]*event.OutboxEntry, len(rows))
+	for i, row := range rows {
+		entries[i] = &event.OutboxEntry{
+			ID:             fromPgUUID(row.ID),
+			AggregateType:  event.AggregateType(row.AggregateType),
+			AggregateID:    fromPgUUID(row.AggregateID),
+			EventType:      event.EventType(row.EventType),
+			EventVersion:   int(row.EventVersion),
+			Payload:        row.Payload,
+			Metadata:       row.Metadata,
+			SequenceNumber: row.SequenceNumber,
+			CreatedAt:      row.CreatedAt.Time,
 		}
-
-		entry.AggregateType = event.AggregateType(aggregateType)
-		entry.EventType = event.EventType(eventType)
-		entry.Metadata = metadata
-
-		entries = append(entries, entry)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+		if row.PublishedAt.Valid {
+			entries[i].PublishedAt = &row.PublishedAt.Time
+		}
 	}
 
 	return entries, nil
@@ -139,13 +115,12 @@ func (r *PostgresRepository) MarkPublished(ctx context.Context, ids []uuid.UUID)
 		return nil
 	}
 
-	query := `
-		UPDATE event_outbox
-		SET published_at = NOW()
-		WHERE id = ANY($1)
-	`
+	pgIDs := make([]pgtype.UUID, len(ids))
+	for i, id := range ids {
+		pgIDs[i] = toPgUUID(id)
+	}
 
-	_, err := r.pool.Exec(ctx, query, ids)
+	err := r.queries.MarkOutboxEntriesPublished(ctx, pgIDs)
 	if err != nil {
 		return fmt.Errorf("mark published: %w", err)
 	}
@@ -155,26 +130,17 @@ func (r *PostgresRepository) MarkPublished(ctx context.Context, ids []uuid.UUID)
 
 // DeleteOld removes published entries older than the retention period.
 func (r *PostgresRepository) DeleteOld(ctx context.Context, retentionDays int) (int64, error) {
-	query := `
-		DELETE FROM event_outbox
-		WHERE published_at IS NOT NULL
-		  AND published_at < NOW() - INTERVAL '1 day' * $1
-	`
-
-	result, err := r.pool.Exec(ctx, query, retentionDays)
+	count, err := r.queries.DeleteOldOutboxEntries(ctx, int32(retentionDays))
 	if err != nil {
 		return 0, fmt.Errorf("delete old: %w", err)
 	}
 
-	return result.RowsAffected(), nil
+	return count, nil
 }
 
 // GetPendingCount returns the count of unpublished entries.
 func (r *PostgresRepository) GetPendingCount(ctx context.Context) (int64, error) {
-	query := `SELECT COUNT(*) FROM event_outbox WHERE published_at IS NULL`
-
-	var count int64
-	err := r.pool.QueryRow(ctx, query).Scan(&count)
+	count, err := r.queries.GetOutboxPendingCount(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("count pending: %w", err)
 	}
@@ -184,35 +150,36 @@ func (r *PostgresRepository) GetPendingCount(ctx context.Context) (int64, error)
 
 // EventStoreRepository handles event store operations.
 type EventStoreRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	queries *db.Queries
 }
 
 // NewEventStoreRepository creates a new event store repository.
 func NewEventStoreRepository(pool *pgxpool.Pool) *EventStoreRepository {
-	return &EventStoreRepository{pool: pool}
+	return &EventStoreRepository{
+		pool:    pool,
+		queries: db.New(pool),
+	}
 }
 
 // SaveWithTx saves an event to the event store within an existing transaction.
 func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry *event.EventStoreEntry) error {
-	query := `
-		INSERT INTO event_store (
-			id, aggregate_type, aggregate_id, event_type,
-			event_version, sequence_number, payload, metadata, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`
+	params := db.InsertEventStoreEntryParams{
+		ID:             toPgUUID(entry.ID),
+		AggregateType:  string(entry.AggregateType),
+		AggregateID:    toPgUUID(entry.AggregateID),
+		EventType:      string(entry.EventType),
+		EventVersion:   int32(entry.EventVersion),
+		SequenceNumber: entry.SequenceNumber,
+		Payload:        entry.Payload,
+		Metadata:       entry.Metadata,
+		CreatedAt: pgtype.Timestamp{
+			Time:  entry.CreatedAt,
+			Valid: true,
+		},
+	}
 
-	_, err := tx.Exec(ctx, query,
-		entry.ID,
-		string(entry.AggregateType),
-		entry.AggregateID,
-		string(entry.EventType),
-		entry.EventVersion,
-		entry.SequenceNumber,
-		entry.Payload,
-		entry.Metadata,
-		entry.CreatedAt,
-	)
-
+	err := r.queries.WithTx(tx).InsertEventStoreEntry(ctx, params)
 	if err != nil {
 		return fmt.Errorf("save event: %w", err)
 	}
@@ -226,15 +193,17 @@ func (r *EventStoreRepository) GetByAggregate(
 	aggregateType event.AggregateType,
 	aggregateID uuid.UUID,
 ) ([]*event.EventStoreEntry, error) {
-	query := `
-		SELECT id, aggregate_type, aggregate_id, event_type,
-		       event_version, sequence_number, payload, metadata, created_at
-		FROM event_store
-		WHERE aggregate_type = $1 AND aggregate_id = $2
-		ORDER BY sequence_number ASC
-	`
+	params := db.GetEventsByAggregateParams{
+		AggregateType: string(aggregateType),
+		AggregateID:   toPgUUID(aggregateID),
+	}
 
-	return r.queryEntries(ctx, query, string(aggregateType), aggregateID)
+	rows, err := r.queries.GetEventsByAggregate(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("query events: %w", err)
+	}
+
+	return r.mapEventStoreEntries(rows), nil
 }
 
 // GetAfterSequence retrieves events after a specific sequence number.
@@ -244,15 +213,18 @@ func (r *EventStoreRepository) GetAfterSequence(
 	aggregateID uuid.UUID,
 	afterSequence int64,
 ) ([]*event.EventStoreEntry, error) {
-	query := `
-		SELECT id, aggregate_type, aggregate_id, event_type,
-		       event_version, sequence_number, payload, metadata, created_at
-		FROM event_store
-		WHERE aggregate_type = $1 AND aggregate_id = $2 AND sequence_number > $3
-		ORDER BY sequence_number ASC
-	`
+	params := db.GetEventsAfterSequenceParams{
+		AggregateType:  string(aggregateType),
+		AggregateID:    toPgUUID(aggregateID),
+		SequenceNumber: afterSequence,
+	}
 
-	return r.queryEntries(ctx, query, string(aggregateType), aggregateID, afterSequence)
+	rows, err := r.queries.GetEventsAfterSequence(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("query events: %w", err)
+	}
+
+	return r.mapEventStoreEntries(rows), nil
 }
 
 // GetNextSequenceNumber returns the next sequence number for an aggregate.
@@ -261,77 +233,58 @@ func (r *EventStoreRepository) GetNextSequenceNumber(
 	aggregateType event.AggregateType,
 	aggregateID uuid.UUID,
 ) (int64, error) {
-	query := `
-		SELECT COALESCE(MAX(sequence_number), 0) + 1
-		FROM event_store
-		WHERE aggregate_type = $1 AND aggregate_id = $2
-	`
+	params := db.GetNextSequenceNumberParams{
+		AggregateType: string(aggregateType),
+		AggregateID:   toPgUUID(aggregateID),
+	}
 
-	var nextSeq int64
-	err := r.pool.QueryRow(ctx, query, string(aggregateType), aggregateID).Scan(&nextSeq)
+	nextSeq, err := r.queries.GetNextSequenceNumber(ctx, params)
 	if err != nil {
 		return 0, fmt.Errorf("get next sequence: %w", err)
 	}
 
-	return nextSeq, nil
+	return int64(nextSeq), nil
 }
 
-func (r *EventStoreRepository) queryEntries(ctx context.Context, query string, args ...interface{}) ([]*event.EventStoreEntry, error) {
-	rows, err := r.pool.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("query events: %w", err)
-	}
-	defer rows.Close()
-
-	var entries []*event.EventStoreEntry
-	for rows.Next() {
-		entry := &event.EventStoreEntry{}
-		var aggregateType, eventType string
-
-		err := rows.Scan(
-			&entry.ID,
-			&aggregateType,
-			&entry.AggregateID,
-			&eventType,
-			&entry.EventVersion,
-			&entry.SequenceNumber,
-			&entry.Payload,
-			&entry.Metadata,
-			&entry.CreatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
+func (r *EventStoreRepository) mapEventStoreEntries(rows []db.EventStore) []*event.EventStoreEntry {
+	entries := make([]*event.EventStoreEntry, len(rows))
+	for i, row := range rows {
+		entries[i] = &event.EventStoreEntry{
+			ID:             fromPgUUID(row.ID),
+			AggregateType:  event.AggregateType(row.AggregateType),
+			AggregateID:    fromPgUUID(row.AggregateID),
+			EventType:      event.EventType(row.EventType),
+			EventVersion:   int(row.EventVersion),
+			SequenceNumber: row.SequenceNumber,
+			Payload:        row.Payload,
+			Metadata:       row.Metadata,
+			CreatedAt:      row.CreatedAt.Time,
 		}
-
-		entry.AggregateType = event.AggregateType(aggregateType)
-		entry.EventType = event.EventType(eventType)
-
-		entries = append(entries, entry)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
-
-	return entries, nil
+	return entries
 }
 
 // ProcessedEventsRepository handles idempotency tracking.
 type ProcessedEventsRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	queries *db.Queries
 }
 
 // NewProcessedEventsRepository creates a new processed events repository.
 func NewProcessedEventsRepository(pool *pgxpool.Pool) *ProcessedEventsRepository {
-	return &ProcessedEventsRepository{pool: pool}
+	return &ProcessedEventsRepository{
+		pool:    pool,
+		queries: db.New(pool),
+	}
 }
 
 // IsProcessed checks if an event has already been processed by a consumer group.
 func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, consumerGroup string) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM processed_events WHERE event_id = $1 AND consumer_group = $2)`
-
-	var exists bool
-	err := r.pool.QueryRow(ctx, query, eventID, consumerGroup).Scan(&exists)
+	params := db.IsEventProcessedParams{
+		EventID:       eventID,
+		ConsumerGroup: consumerGroup,
+	}
+	exists, err := r.queries.IsEventProcessed(ctx, params)
 	if err != nil {
 		return false, fmt.Errorf("check processed: %w", err)
 	}
@@ -341,13 +294,11 @@ func (r *ProcessedEventsRepository) IsProcessed(ctx context.Context, eventID, co
 
 // MarkProcessed marks an event as processed by a consumer group.
 func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, consumerGroup string) error {
-	query := `
-		INSERT INTO processed_events (event_id, consumer_group, processed_at)
-		VALUES ($1, $2, NOW())
-		ON CONFLICT (event_id) DO NOTHING
-	`
-
-	_, err := r.pool.Exec(ctx, query, eventID, consumerGroup)
+	params := db.MarkEventProcessedParams{
+		EventID:       eventID,
+		ConsumerGroup: consumerGroup,
+	}
+	err := r.queries.MarkEventProcessed(ctx, params)
 	if err != nil {
 		return fmt.Errorf("mark processed: %w", err)
 	}
@@ -357,17 +308,12 @@ func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, 
 
 // Cleanup removes old processed event records.
 func (r *ProcessedEventsRepository) Cleanup(ctx context.Context, retentionDays int) (int64, error) {
-	query := `
-		DELETE FROM processed_events
-		WHERE processed_at < NOW() - INTERVAL '1 day' * $1
-	`
-
-	result, err := r.pool.Exec(ctx, query, retentionDays)
+	count, err := r.queries.CleanupOldProcessedEvents(ctx, int32(retentionDays))
 	if err != nil {
 		return 0, fmt.Errorf("cleanup: %w", err)
 	}
 
-	return result.RowsAffected(), nil
+	return count, nil
 }
 
 // UnitOfWork provides transactional operations for CQRS.
@@ -392,6 +338,7 @@ func (u *UnitOfWork) ExecuteInTransaction(ctx context.Context, fn func(txCtx *Tr
 	return pgx.BeginFunc(ctx, u.pool, func(tx pgx.Tx) error {
 		txCtx := &TransactionContext{
 			tx:             tx,
+			queries:        db.New(tx),
 			outboxRepo:     u.outboxRepo,
 			eventStoreRepo: u.eventStoreRepo,
 		}
@@ -402,6 +349,7 @@ func (u *UnitOfWork) ExecuteInTransaction(ctx context.Context, fn func(txCtx *Tr
 // TransactionContext provides access to repositories within a transaction.
 type TransactionContext struct {
 	tx             pgx.Tx
+	queries        *db.Queries
 	outboxRepo     *PostgresRepository
 	eventStoreRepo *EventStoreRepository
 }
@@ -409,6 +357,11 @@ type TransactionContext struct {
 // Tx returns the underlying transaction.
 func (c *TransactionContext) Tx() pgx.Tx {
 	return c.tx
+}
+
+// Queries returns the transaction-bound queries.
+func (c *TransactionContext) Queries() *db.Queries {
+	return c.queries
 }
 
 // SaveEventToOutbox saves an event to the outbox within the transaction.
@@ -456,12 +409,22 @@ func (c *TransactionContext) SaveEventToBoth(ctx context.Context, domainEvent *e
 }
 
 // Exec executes a SQL statement within the transaction.
+// Deprecated: Use Queries() and sqlc generated methods instead.
 func (c *TransactionContext) Exec(ctx context.Context, sql string, args ...interface{}) error {
 	_, err := c.tx.Exec(ctx, sql, args...)
 	return err
 }
 
 // QueryRow executes a query that returns a single row within the transaction.
+// Deprecated: Use Queries() and sqlc generated methods instead.
 func (c *TransactionContext) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
 	return c.tx.QueryRow(ctx, sql, args...)
+}
+
+func toPgUUID(id uuid.UUID) pgtype.UUID {
+	return pgtype.UUID{Bytes: id, Valid: true}
+}
+
+func fromPgUUID(id pgtype.UUID) uuid.UUID {
+	return uuid.UUID(id.Bytes)
 }

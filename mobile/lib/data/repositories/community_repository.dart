@@ -45,7 +45,8 @@ class CommunityRepository {
     );
   }
 
-  Future<List<FriendshipInfo>> getFriends({int limit = 50, int offset = 0}) async {
+  Future<List<FriendshipInfo>> getFriends(
+      {int limit = 50, int offset = 0,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.friends,
       queryParameters: {'limit': limit, 'offset': offset},
@@ -66,7 +67,8 @@ class CommunityRepository {
     throw Exception('Failed to load pending requests');
   }
 
-  Future<List<FriendRecommendation>> getFriendRecommendations({int limit = 10}) async {
+  Future<List<FriendRecommendation>> getFriendRecommendations(
+      {int limit = 10,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.friendsRecommendations,
       queryParameters: {'limit': limit},
@@ -169,7 +171,8 @@ class CommunityRepository {
     throw Exception('Failed to search groups');
   }
 
-  Future<List<MessageInfo>> getMessages(String groupId, {String? beforeId, int limit = 50}) async {
+  Future<List<MessageInfo>> getMessages(String groupId,
+      {String? beforeId, int limit = 50,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.groupMessages(groupId),
       queryParameters: {
@@ -257,7 +260,8 @@ class CommunityRepository {
     throw Exception('Failed to update group reaction');
   }
 
-  Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword, {int limit = 50}) async {
+  Future<List<MessageInfo>> searchGroupMessages(String groupId, String keyword,
+      {int limit = 50,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.groupMessagesSearch(groupId),
       queryParameters: {'keyword': keyword, 'limit': limit},
@@ -269,7 +273,9 @@ class CommunityRepository {
     throw Exception('Failed to search group messages');
   }
 
-  Future<List<MessageInfo>> getThreadMessages(String groupId, String threadRootId, {int limit = 100}) async {
+  Future<List<MessageInfo>> getThreadMessages(
+      String groupId, String threadRootId,
+      {int limit = 100,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.groupThreadMessages(groupId, threadRootId),
       queryParameters: {'limit': limit},
@@ -281,7 +287,8 @@ class CommunityRepository {
     throw Exception('Failed to load thread messages');
   }
 
-  Future<List<PrivateMessageInfo>> getPrivateMessages(String friendId, {String? beforeId, int limit = 50}) async {
+  Future<List<PrivateMessageInfo>> getPrivateMessages(String friendId,
+      {String? beforeId, int limit = 50,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.privateMessages(friendId),
       queryParameters: {
@@ -296,7 +303,8 @@ class CommunityRepository {
     throw Exception('Failed to load private messages');
   }
 
-  Future<PrivateMessageInfo> sendPrivateMessage(PrivateMessageSend message) async {
+  Future<PrivateMessageInfo> sendPrivateMessage(
+      PrivateMessageSend message,) async {
     final response = await _apiClient.post(
       ApiEndpoints.sendPrivateMessage,
       data: message.toJson(),
@@ -350,7 +358,9 @@ class CommunityRepository {
     throw Exception('Failed to update private reaction');
   }
 
-  Future<List<PrivateMessageInfo>> searchPrivateMessages(String friendId, String keyword, {int limit = 50}) async {
+  Future<List<PrivateMessageInfo>> searchPrivateMessages(
+      String friendId, String keyword,
+      {int limit = 50,}) async {
     final response = await _apiClient.get(
       ApiEndpoints.privateMessagesSearch(friendId),
       queryParameters: {'keyword': keyword, 'limit': limit},
@@ -390,7 +400,8 @@ class CommunityRepository {
     throw Exception('Failed to load group tasks');
   }
 
-  Future<GroupTaskInfo> createGroupTask(String groupId, GroupTaskCreate task) async {
+  Future<GroupTaskInfo> createGroupTask(
+      String groupId, GroupTaskCreate task,) async {
     final response = await _apiClient.post(
       ApiEndpoints.groupTasks(groupId),
       data: task.toJson(),
@@ -434,6 +445,8 @@ class CommunityRepository {
         return 'capsule_share';
       case MessageType.prismShare:
         return 'prism_share';
+      case MessageType.fileShare:
+        return 'file_share';
       case MessageType.progress:
         return 'progress';
       case MessageType.achievement:

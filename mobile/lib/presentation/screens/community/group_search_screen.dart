@@ -75,10 +75,13 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: DS.brandPrimary.shade200,
-                    child: Icon(group.type.name == 'sprint' ? Icons.timer : Icons.group),
+                    child: Icon(group.type.name == 'sprint'
+                        ? Icons.timer
+                        : Icons.group,),
                   ),
                   title: Text(group.name),
-                  subtitle: Text('${group.memberCount} members • ${group.totalFlamePower} flame'),
+                  subtitle: Text(
+                      '${group.memberCount} members • ${group.totalFlamePower} flame',),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     context.push('/community/groups/${group.id}');

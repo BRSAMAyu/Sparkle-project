@@ -59,88 +59,93 @@ class AppThemes {
     return _buildThemeData(theme, Brightness.dark);
   }
 
-  static ThemeData _buildThemeData(SparkleThemeData theme, Brightness brightness) => ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      primaryColor: theme.colors.brandPrimary,
-      scaffoldBackgroundColor: theme.colors.surfacePrimary,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: theme.colors.brandPrimary,
+  static ThemeData _buildThemeData(
+          SparkleThemeData theme, Brightness brightness,) =>
+      ThemeData(
+        useMaterial3: true,
         brightness: brightness,
-        primary: theme.colors.brandPrimary,
-        secondary: theme.colors.brandSecondary,
-        surface: theme.colors.surfacePrimary,
-        error: theme.colors.semanticError,
-      ),
-      textTheme: _buildTextTheme(theme),
-      cardTheme: _buildCardTheme(theme),
-      buttonTheme: _buildButtonTheme(theme),
-      inputDecorationTheme: _buildInputTheme(theme),
-      extensions: [
-        _SparkleThemeExtension(theme),
-      ],
-    );
+        primaryColor: theme.colors.brandPrimary,
+        scaffoldBackgroundColor: theme.colors.surfacePrimary,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: theme.colors.brandPrimary,
+          brightness: brightness,
+          primary: theme.colors.brandPrimary,
+          secondary: theme.colors.brandSecondary,
+          surface: theme.colors.surfacePrimary,
+          error: theme.colors.semanticError,
+        ),
+        textTheme: _buildTextTheme(theme),
+        cardTheme: _buildCardTheme(theme),
+        buttonTheme: _buildButtonTheme(theme),
+        inputDecorationTheme: _buildInputTheme(theme),
+        extensions: [
+          _SparkleThemeExtension(theme),
+        ],
+      );
 
   static TextTheme _buildTextTheme(SparkleThemeData theme) => TextTheme(
-      displayLarge: theme.typography.displayLarge,
-      headlineLarge: theme.typography.headingLarge,
-      headlineMedium: theme.typography.headingMedium,
-      titleLarge: theme.typography.titleLarge,
-      bodyLarge: theme.typography.bodyLarge,
-      bodyMedium: theme.typography.bodyMedium,
-      labelLarge: theme.typography.labelLarge,
-      labelSmall: theme.typography.labelSmall,
-    );
+        displayLarge: theme.typography.displayLarge,
+        headlineLarge: theme.typography.headingLarge,
+        headlineMedium: theme.typography.headingMedium,
+        titleLarge: theme.typography.titleLarge,
+        bodyLarge: theme.typography.bodyLarge,
+        bodyMedium: theme.typography.bodyMedium,
+        labelLarge: theme.typography.labelLarge,
+        labelSmall: theme.typography.labelSmall,
+      );
 
   static CardThemeData _buildCardTheme(SparkleThemeData theme) => CardThemeData(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(theme.spacing.sm),
-      ),
-      color: theme.colors.surfaceSecondary,
-    );
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(theme.spacing.sm),
+        ),
+        color: theme.colors.surfaceSecondary,
+      );
 
-  static ButtonThemeData _buildButtonTheme(SparkleThemeData theme) => ButtonThemeData(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(theme.spacing.sm),
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: theme.spacing.lg,
-        vertical: theme.spacing.sm,
-      ),
-    );
+  static ButtonThemeData _buildButtonTheme(SparkleThemeData theme) =>
+      ButtonThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(theme.spacing.sm),
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: theme.spacing.lg,
+          vertical: theme.spacing.sm,
+        ),
+      );
 
-  static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) => InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(theme.spacing.sm),
-        borderSide: BorderSide(color: theme.colors.surfaceTertiary),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(theme.spacing.sm),
-        borderSide: BorderSide(color: theme.colors.surfaceTertiary),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(theme.spacing.sm),
-        borderSide: BorderSide(color: theme.colors.brandPrimary, width: 2),
-      ),
-      filled: true,
-      fillColor: theme.colors.surfaceSecondary,
-      contentPadding: EdgeInsets.all(theme.spacing.lg),
-    );
+  static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) =>
+      InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderSide: BorderSide(color: theme.colors.surfaceTertiary),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderSide: BorderSide(color: theme.colors.surfaceTertiary),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(theme.spacing.sm),
+          borderSide: BorderSide(color: theme.colors.brandPrimary, width: 2),
+        ),
+        filled: true,
+        fillColor: theme.colors.surfaceSecondary,
+        contentPadding: EdgeInsets.all(theme.spacing.lg),
+      );
 }
 
 /// 主题扩展 - 用于访问自定义主题属性
 @immutable
 class _SparkleThemeExtension extends ThemeExtension<_SparkleThemeExtension> {
-
   const _SparkleThemeExtension(this.sparkle);
   final SparkleThemeData sparkle;
 
   @override
-  _SparkleThemeExtension copyWith({SparkleThemeData? sparkle}) => _SparkleThemeExtension(sparkle ?? this.sparkle);
+  _SparkleThemeExtension copyWith({SparkleThemeData? sparkle}) =>
+      _SparkleThemeExtension(sparkle ?? this.sparkle);
 
   @override
-  _SparkleThemeExtension lerp(ThemeExtension<_SparkleThemeExtension>? other, double t) {
+  _SparkleThemeExtension lerp(
+      ThemeExtension<_SparkleThemeExtension>? other, double t,) {
     if (other is! _SparkleThemeExtension) return this;
     return _SparkleThemeExtension(sparkle);
   }
@@ -201,7 +206,8 @@ class SparkleColorAliases {
   Color get textPrimary => _theme.colors.textPrimary;
   Color get textSecondary => _theme.colors.textSecondary;
 
-  LinearGradient getTaskGradient(String taskType) => _theme.colors.getTaskGradient(taskType);
+  LinearGradient getTaskGradient(String taskType) =>
+      _theme.colors.getTaskGradient(taskType);
   Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
 }
@@ -227,11 +233,12 @@ class DS {
     Color end, {
     Alignment begin = Alignment.topLeft,
     Alignment endAlignment = Alignment.bottomRight,
-  }) => LinearGradient(
-      colors: [start, end],
-      begin: begin,
-      end: endAlignment,
-    );
+  }) =>
+      LinearGradient(
+        colors: [start, end],
+        begin: begin,
+        end: endAlignment,
+      );
 
   // 颜色
   static Color get brandPrimary => _theme.colors.brandPrimary;
@@ -243,12 +250,17 @@ class DS {
   static Color get primaryBase => brandPrimary;
   static Color get secondaryBase => brandSecondary;
   static Color get accent => brandSecondary;
-  static Color get primaryDark => _shiftLightness(brandPrimary, _isDark ? 0.1 : -0.15);
-  static Color get secondaryDark => _shiftLightness(brandSecondary, _isDark ? 0.1 : -0.15);
-  static Color get secondaryBaseDark => _shiftLightness(brandSecondary, _isDark ? 0.2 : -0.2);
+  static Color get primaryDark =>
+      _shiftLightness(brandPrimary, _isDark ? 0.1 : -0.15);
+  static Color get secondaryDark =>
+      _shiftLightness(brandSecondary, _isDark ? 0.1 : -0.15);
+  static Color get secondaryBaseDark =>
+      _shiftLightness(brandSecondary, _isDark ? 0.2 : -0.2);
   static Color get secondaryLight => _shiftLightness(brandSecondary, 0.2);
-  static Color get successLight => _shiftLightness(success, _isDark ? 0.15 : 0.2);
-  static Color get warningLight => _shiftLightness(warning, _isDark ? 0.15 : 0.2);
+  static Color get successLight =>
+      _shiftLightness(success, _isDark ? 0.15 : 0.2);
+  static Color get warningLight =>
+      _shiftLightness(warning, _isDark ? 0.15 : 0.2);
   static Color get errorLight => _shiftLightness(error, _isDark ? 0.15 : 0.2);
   static Color get infoLight => _shiftLightness(info, _isDark ? 0.15 : 0.2);
 
@@ -256,15 +268,18 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
-  static Color get surfaceHigh => _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
+  static Color get surfaceHigh =>
+      _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
 
   // Text colors
   static Color get textPrimary => _theme.colors.textPrimary;
   static Color get textSecondary => _theme.colors.textSecondary;
-  static Color get textTertiary => _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+  static Color get textTertiary =>
+      _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
   static Color get border => _isDark ? neutral600 : neutral300;
-  static Color get overlay30 => (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
+  static Color get overlay30 =>
+      (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
 
   static Color get brandPrimary10 => brandPrimary.withValues(alpha: 0.1);
   static Color get brandPrimary12 => brandPrimary.withValues(alpha: 0.12);
@@ -292,7 +307,7 @@ class DS {
   static Color get brandPrimary700 => brandPrimary.withValues(alpha: 0.8);
   static Color get brandPrimary800 => brandPrimary.withValues(alpha: 0.9);
   static Color get brandPrimary900 => brandPrimary; // Fully opaque
-  
+
   // Const variants for backward compatibility (for const constructors)
   static Color get brandPrimaryConst => brandPrimary;
   static Color get brandPrimary10Const => brandPrimary10;
@@ -322,43 +337,57 @@ class DS {
   static Color get success700 => success.withValues(alpha: 0.8);
   static Color get success800 => success.withValues(alpha: 0.9);
   static Color get success900 => success; // Fully opaque
-  
+
   // Const variants for semantic colors
   static Color get successConst => success;
 
   // Special surfaces and accents
-  static Color get deepSpaceStart => _blend(neutral900, brandPrimary, _isDark ? 0.12 : 0.22);
-  static Color get deepSpaceEnd => _blend(neutral800, brandSecondary, _isDark ? 0.1 : 0.18);
-  static Color get deepSpaceSurface => _blend(surfacePrimary, deepSpaceStart, 0.6);
-  static Color get glassBackground => surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
-  static Color get glassBorder => _blend(surfaceTertiary, brandPrimary, 0.4).withValues(alpha: 0.25);
+  static Color get deepSpaceStart =>
+      _blend(neutral900, brandPrimary, _isDark ? 0.12 : 0.22);
+  static Color get deepSpaceEnd =>
+      _blend(neutral800, brandSecondary, _isDark ? 0.1 : 0.18);
+  static Color get deepSpaceSurface =>
+      _blend(surfacePrimary, deepSpaceStart, 0.6);
+  static Color get glassBackground =>
+      surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
+  static Color get glassBorder =>
+      _blend(surfaceTertiary, brandPrimary, 0.4).withValues(alpha: 0.25);
   static Color get prismBlue => info;
   static Color get prismGreen => success;
   static Color get prismPurple => brandSecondary;
   static Color get flameCore => _blend(warning, brandPrimary, 0.4);
 
   // Gradients
-  static LinearGradient get primaryGradient => _buildGradient(brandPrimary, brandSecondary);
-  static LinearGradient get secondaryGradient => _buildGradient(brandSecondary, brandPrimary);
-  static LinearGradient get secondaryGradientDark => _buildGradient(secondaryBaseDark, brandPrimary);
-  static LinearGradient get accentGradient => _buildGradient(accent, _shiftLightness(accent, _isDark ? 0.1 : -0.05));
-  static LinearGradient get infoGradient => _buildGradient(info, info.withValues(alpha: 0.7));
-  static LinearGradient get warningGradient => _buildGradient(warning, warning.withValues(alpha: 0.7));
-  static LinearGradient get successGradient => _buildGradient(success, success.withValues(alpha: 0.7));
-  static LinearGradient get errorGradient => _buildGradient(error, error.withValues(alpha: 0.7));
-  static LinearGradient get cardGradientNeutral => _buildGradient(surfaceSecondary, surfacePrimary);
+  static LinearGradient get primaryGradient =>
+      _buildGradient(brandPrimary, brandSecondary);
+  static LinearGradient get secondaryGradient =>
+      _buildGradient(brandSecondary, brandPrimary);
+  static LinearGradient get secondaryGradientDark =>
+      _buildGradient(secondaryBaseDark, brandPrimary);
+  static LinearGradient get accentGradient =>
+      _buildGradient(accent, _shiftLightness(accent, _isDark ? 0.1 : -0.05));
+  static LinearGradient get infoGradient =>
+      _buildGradient(info, info.withValues(alpha: 0.7));
+  static LinearGradient get warningGradient =>
+      _buildGradient(warning, warning.withValues(alpha: 0.7));
+  static LinearGradient get successGradient =>
+      _buildGradient(success, success.withValues(alpha: 0.7));
+  static LinearGradient get errorGradient =>
+      _buildGradient(error, error.withValues(alpha: 0.7));
+  static LinearGradient get cardGradientNeutral =>
+      _buildGradient(surfaceSecondary, surfacePrimary);
   static LinearGradient get deepSpaceGradient => _buildGradient(
-      deepSpaceStart,
-      deepSpaceEnd,
-      begin: Alignment.topCenter,
-      endAlignment: Alignment.bottomCenter,
-    );
+        deepSpaceStart,
+        deepSpaceEnd,
+        begin: Alignment.topCenter,
+        endAlignment: Alignment.bottomCenter,
+      );
   static LinearGradient get flameGradient => _buildGradient(
-      flameCore,
-      warning,
-      begin: Alignment.topCenter,
-      endAlignment: Alignment.bottomCenter,
-    );
+        flameCore,
+        warning,
+        begin: Alignment.topCenter,
+        endAlignment: Alignment.bottomCenter,
+      );
 
   // 间距 (常量版本用于const构造函数)
   static const double xs = 4.0;
@@ -396,12 +425,20 @@ class DS {
   static const double radius12 = 12.0;
   static const double radius16 = 16.0;
   static const double radius20 = 20.0;
-  static const BorderRadius borderRadius4 = BorderRadius.all(Radius.circular(4.0));
-  static const BorderRadius borderRadius8 = BorderRadius.all(Radius.circular(radius8));
-  static const BorderRadius borderRadius12 = BorderRadius.all(Radius.circular(radius12));
-  static const BorderRadius borderRadius16 = BorderRadius.all(Radius.circular(radius16));
-  static const BorderRadius borderRadius20 = BorderRadius.all(Radius.circular(radius20));
-  static const BorderRadius borderRadiusFull = BorderRadius.all(Radius.circular(999.0));
+  static const BorderRadius borderRadius4 =
+      BorderRadius.all(Radius.circular(4.0));
+  static const BorderRadius borderRadius8 =
+      BorderRadius.all(Radius.circular(radius8));
+  static const BorderRadius borderRadius12 =
+      BorderRadius.all(Radius.circular(radius12));
+  static const BorderRadius borderRadius16 =
+      BorderRadius.all(Radius.circular(radius16));
+  static const BorderRadius borderRadius20 =
+      BorderRadius.all(Radius.circular(radius20));
+  static const BorderRadius borderRadiusFull =
+      BorderRadius.all(Radius.circular(999.0));
+  static const double borderRadiusLg = radius16;
+  static const double borderRadiusXl = radius20;
 
   // Icon sizes
   static const double iconSizeXs = 16.0;
@@ -425,6 +462,7 @@ class DS {
   static const FontWeight fontWeightRegular = TypographySystem.weightRegular;
   static const FontWeight fontWeightMedium = TypographySystem.weightMedium;
   static const FontWeight fontWeightSemibold = TypographySystem.weightSemibold;
+  static const FontWeight fontWeightSemiBold = fontWeightSemibold;
   static const FontWeight fontWeightBold = TypographySystem.weightBold;
   static const double lineHeightNormal = TypographySystem.leadingNormal;
 
@@ -449,24 +487,27 @@ class DS {
   static List<BoxShadow> get shadowMd => _theme.shadows.medium;
   static List<BoxShadow> get shadowLg => _theme.shadows.large;
   static List<BoxShadow> get shadowXl => [
-      BoxShadow(
-        color: brandPrimary.withValues(alpha: _isDark ? 0.25 : 0.12),
-        blurRadius: 24,
-        offset: const Offset(0, 12),
-      ),
-    ];
+        BoxShadow(
+          color: brandPrimary.withValues(alpha: _isDark ? 0.25 : 0.12),
+          blurRadius: 24,
+          offset: const Offset(0, 12),
+        ),
+      ];
   static List<BoxShadow> get shadowPrimary => [
-      BoxShadow(
-        color: brandPrimary.withValues(alpha: _isDark ? 0.3 : 0.2),
-        blurRadius: 16,
-        offset: const Offset(0, 8),
-      ),
-    ];
+        BoxShadow(
+          color: brandPrimary.withValues(alpha: _isDark ? 0.3 : 0.2),
+          blurRadius: 16,
+          offset: const Offset(0, 8),
+        ),
+      ];
 
   // 任务类型颜色
-  static Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
-  static Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
-  static LinearGradient getTaskGradient(String taskType) => _theme.colors.getTaskGradient(taskType);
+  static Color getTaskColor(String taskType) =>
+      _theme.colors.getTaskColor(taskType);
+  static Color getPlanColor(String planType) =>
+      _theme.colors.getPlanColor(planType);
+  static LinearGradient getTaskGradient(String taskType) =>
+      _theme.colors.getTaskGradient(taskType);
 
   // 任务类型颜色快捷方式
   static Color get taskLearning => _theme.colors.taskLearning;
@@ -479,21 +520,26 @@ class DS {
   static Color get planGrowth => _theme.colors.planGrowth;
 
   // 用户状态颜色
-  static Color getStatusColor(String userStatus) => _theme.colors.getStatusColor(userStatus);
+  static Color getStatusColor(String userStatus) =>
+      _theme.colors.getStatusColor(userStatus);
   static Color get statusOnline => _theme.colors.statusOnline;
   static Color get statusOffline => _theme.colors.statusOffline;
   static Color get statusInvisible => _theme.colors.statusInvisible;
 
   // 中性色
-  static Color get neutral50 => _blend(surfacePrimary, _theme.colors.neutral200, 0.4);
-  static Color get neutral100 => _blend(surfacePrimary, _theme.colors.neutral200, 0.7);
+  static Color get neutral50 =>
+      _blend(surfacePrimary, _theme.colors.neutral200, 0.4);
+  static Color get neutral100 =>
+      _blend(surfacePrimary, _theme.colors.neutral200, 0.7);
   static Color get neutral200 => _theme.colors.neutral200;
   static Color get neutral300 => _theme.colors.neutral300;
   static Color get neutral400 => _theme.colors.neutral400;
   static Color get neutral500 => _theme.colors.neutral500;
   static Color get neutral600 => _theme.colors.neutral600;
-  static Color get neutral700 => _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.35);
-  static Color get neutral800 => _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.7);
+  static Color get neutral700 =>
+      _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.35);
+  static Color get neutral800 =>
+      _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.7);
   static Color get neutral900 => _theme.colors.textPrimary;
 }
 
@@ -536,10 +582,10 @@ class DesignSystemInitializer {
 
   /// 检查系统状态
   static Map<String, dynamic> get status => {
-      'initialized': _initialized,
-      'themeMode': ThemeManager().mode.name,
-      'brandPreset': ThemeManager().brandPreset.name,
-      'highContrast': ThemeManager().highContrast,
-      'version': '2.0.0',
-    };
+        'initialized': _initialized,
+        'themeMode': ThemeManager().mode.name,
+        'brandPreset': ThemeManager().brandPreset.name,
+        'highContrast': ThemeManager().highContrast,
+        'version': '2.0.0',
+      };
 }

@@ -15,7 +15,8 @@ from app.api.deps import get_current_user
 from app.core.websocket import manager
 from app.core.rate_limiting import limiter
 from app.models.user import User, UserStatus
-from app.models.community import GroupType, GroupMember
+from app.models.community import GroupType, GroupMember, GroupRole
+from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
@@ -29,6 +30,8 @@ from app.schemas.community import (
     # 消息
     MessageSend, MessageInfo, MessageEdit, MessageReactionUpdate,
     PrivateMessageSend, PrivateMessageInfo,
+    # 群文件
+    GroupFileShareRequest, GroupFilePermissionUpdate, GroupFileInfo, GroupFileCategoryStat, GroupFilePermissions,
     # 任务
     GroupTaskCreate, GroupTaskInfo,
     # 状态
@@ -64,6 +67,7 @@ from app.services.community_service import (
     FriendshipService, GroupService, GroupMessageService,
     CheckinService, GroupTaskService, PrivateMessageService
 )
+from app.services.group_file_service import GroupFileService
 from app.services.collaboration_service import collaboration_service
 from app.services.community_advanced_service import (
     EncryptionService, ModerationService, ReportService, FavoriteService,
@@ -133,6 +137,41 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         revoked_at=msg.revoked_at,
         edited_at=msg.edited_at,
         quoted_message=quoted_message
+    )
+
+
+def _build_group_file_info(group_file: GroupFile, member_role) -> GroupFileInfo:
+    shared_by = None
+    if group_file.shared_by:
+        shared_by = UserBrief(
+            id=group_file.shared_by.id,
+            username=group_file.shared_by.username,
+            nickname=group_file.shared_by.nickname,
+            avatar_url=group_file.shared_by.avatar_url,
+            flame_level=group_file.shared_by.flame_level,
+            flame_brightness=group_file.shared_by.flame_brightness
+        )
+
+    stored_file = group_file.file
+    return GroupFileInfo(
+        id=group_file.id,
+        created_at=group_file.created_at,
+        updated_at=group_file.updated_at,
+        group_id=group_file.group_id,
+        file_id=group_file.file_id,
+        shared_by=shared_by,
+        category=group_file.category,
+        tags=group_file.tags or [],
+        view_role=group_file.view_role,
+        download_role=group_file.download_role,
+        manage_role=group_file.manage_role,
+        file_name=stored_file.file_name,
+        mime_type=stored_file.mime_type,
+        file_size=stored_file.file_size,
+        status=stored_file.status,
+        visibility=stored_file.visibility,
+        can_download=GroupFileService.can_download(member_role, group_file.download_role),
+        can_manage=GroupFileService.can_manage(member_role, group_file.manage_role),
     )
 
 def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
@@ -736,6 +775,121 @@ async def get_messages(
         result.append(_build_message_info(msg))
     return result
 
+
+# ============ 群文件 ============
+
+@router.post("/groups/{group_id}/files/{file_id}/share", response_model=GroupFileInfo, summary="分享文件到群组")
+async def share_group_file(
+    group_id: UUID,
+    file_id: UUID,
+    data: GroupFileShareRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        permissions = data.permissions or GroupFilePermissions()
+        group_file, stored_file = await GroupFileService.share_file(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            file_id=file_id,
+            category=data.category,
+            tags=data.tags,
+            view_role=GroupRole(permissions.view_role.value),
+            download_role=GroupRole(permissions.download_role.value),
+            manage_role=GroupRole(permissions.manage_role.value),
+        )
+
+        if data.send_message:
+            message_payload = MessageSend(
+                message_type=MessageTypeEnum.FILE_SHARE,
+                content=stored_file.file_name,
+                content_data={
+                    "file_id": str(stored_file.id),
+                    "file_name": stored_file.file_name,
+                    "mime_type": stored_file.mime_type,
+                    "file_size": stored_file.file_size,
+                    "status": stored_file.status,
+                },
+            )
+            message = await GroupMessageService.send_message(
+                db,
+                group_id,
+                current_user.id,
+                message_payload,
+            )
+            message_info = _build_message_info(message)
+            await manager.broadcast(message_info.model_dump(mode="json"), str(group_id))
+
+        await db.commit()
+        member = await GroupFileService._require_member(db, group_id, current_user.id)
+        return _build_group_file_info(group_file, member.role)
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/files", response_model=List[GroupFileInfo], summary="获取群文件列表")
+async def list_group_files(
+    group_id: UUID,
+    category: Optional[str] = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        group_files, member_role = await GroupFileService.list_files(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            category=category,
+            limit=limit,
+            offset=offset,
+        )
+        return [_build_group_file_info(item, member_role) for item in group_files]
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@router.put("/groups/{group_id}/files/{file_id}/permissions", response_model=GroupFileInfo, summary="更新群文件权限")
+async def update_group_file_permissions(
+    group_id: UUID,
+    file_id: UUID,
+    data: GroupFilePermissionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        permissions = data.permissions
+        group_file = await GroupFileService.update_permissions(
+            db,
+            group_id=group_id,
+            user_id=current_user.id,
+            file_id=file_id,
+            view_role=GroupRole(permissions.view_role.value),
+            download_role=GroupRole(permissions.download_role.value),
+            manage_role=GroupRole(permissions.manage_role.value),
+        )
+        await db.commit()
+        member = await GroupFileService._require_member(db, group_id, current_user.id)
+        return _build_group_file_info(group_file, member.role)
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/groups/{group_id}/files/categories", response_model=List[GroupFileCategoryStat], summary="获取群文件分类统计")
+async def get_group_file_categories(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rows = await GroupFileService.category_stats(db, group_id, current_user.id)
+        return [GroupFileCategoryStat(category=category, count=count) for category, count in rows]
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 @router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
 async def edit_group_message(

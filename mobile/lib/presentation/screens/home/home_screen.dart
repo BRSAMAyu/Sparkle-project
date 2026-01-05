@@ -4,15 +4,14 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
-import 'package:sparkle/core/services/message_notification_service.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/presentation/providers/task_provider.dart';
-import 'package:sparkle/presentation/screens/chat/chat_screen.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';
-import 'package:sparkle/presentation/screens/galaxy_screen.dart';
-import 'package:sparkle/presentation/screens/profile/profile_screen.dart';
 import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
 import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
 import 'package:sparkle/presentation/widgets/home/focus_card.dart';
@@ -82,7 +81,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         body: _screens[_selectedIndex],
         destinations: destinations,
         currentIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
       ),
     );
   }
@@ -105,7 +105,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               count > 99 ? '99+' : '$count',
-              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,),
               textAlign: TextAlign.center,
             ),
           ),
@@ -144,13 +147,14 @@ class _DashboardScreen extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   // Top Overlay
-                  SliverToBoxAdapter(child: _buildTopOverlay(context, user, l10n)),
-                  
+                  SliverToBoxAdapter(
+                      child: _buildTopOverlay(context, user, l10n),),
+
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
-                  
+
                   const SliverToBoxAdapter(child: SizedBox(height: 10)),
-                  
+
                   // Bento Grid
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -158,7 +162,7 @@ class _DashboardScreen extends ConsumerWidget {
                       child: _buildBentoGrid(context, dashboardState),
                     ),
                   ),
-                  
+
                   const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
@@ -169,7 +173,8 @@ class _DashboardScreen extends ConsumerWidget {
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16, // Adjusted for ResponsiveScaffold which puts this inside body
+            bottom:
+                16, // Adjusted for ResponsiveScaffold which puts this inside body
             child: OmniBar(hintText: l10n.typeMessage),
           ),
         ],
@@ -177,41 +182,46 @@ class _DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTopOverlay(BuildContext context, dynamic user, AppLocalizations l10n) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-            backgroundColor: DS.primaryBase,
-            child: user?.avatarUrl == null ? Text((user?.nickname ?? 'U')[0].toUpperCase()) : null,
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Lv.${user?.flameLevel ?? 1}',
-                style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.warning,
+  Widget _buildTopOverlay(
+          BuildContext context, UserModel? user, AppLocalizations l10n,) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundImage:
+                  user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+              backgroundColor: DS.primaryBase,
+              child: user?.avatarUrl == null
+                  ? Text((user?.nickname ?? 'U')[0].toUpperCase())
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lv.${user?.flameLevel ?? 1}',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.warning,
+                  ),
                 ),
-              ),
-              Text(
-                user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
-                style: TextStyle(
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.brandPrimary,
+                Text(
+                  user?.nickname ?? (user?.username ?? l10n.exploreGalaxy),
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.brandPrimary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildBentoGrid(BuildContext context, DashboardState state) {
     // Wrap with ContentConstraint for responsive width on desktop

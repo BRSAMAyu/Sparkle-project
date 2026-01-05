@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 
-final notificationRepositoryProvider = Provider<NotificationRepository>((ref) => NotificationRepository(ref.read(apiClientProvider)));
+final notificationRepositoryProvider = Provider<NotificationRepository>(
+    (ref) => NotificationRepository(ref.read(apiClientProvider)),);
 
 class NotificationRepository {
-
   NotificationRepository(this._apiClient);
   final ApiClient _apiClient;
 
@@ -23,12 +23,12 @@ class NotificationRepository {
       },
     );
     // Assuming backend returns a List directly based on previous backend implementation
-    // But usually we wrap it in ApiResponseModel? 
+    // But usually we wrap it in ApiResponseModel?
     // Wait, the backend implementation in `read_notifications` returns `List[NotificationResponse]`.
     // It does NOT return ApiResponseModel wrapper in the code I wrote in previous turn.
     // However, usually API returns standard structure.
     // Let's check `api_response_model.dart`.
-    
+
     // For now, I'll assume direct list as per my backend code.
     final list = response.data as List<dynamic>;
     return list.map((e) => NotificationModel.fromJson(e)).toList();

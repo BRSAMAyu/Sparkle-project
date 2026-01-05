@@ -8,7 +8,8 @@ UserBrief _user(String id, String name) => UserBrief(
       nickname: name,
     );
 
-MessageInfo _groupMessage(String id, String content, UserBrief sender) => MessageInfo(
+MessageInfo _groupMessage(String id, String content, UserBrief sender) =>
+    MessageInfo(
       id: id,
       messageType: MessageType.text,
       sender: sender,
@@ -17,7 +18,8 @@ MessageInfo _groupMessage(String id, String content, UserBrief sender) => Messag
       updatedAt: DateTime(2024),
     );
 
-PrivateMessageInfo _privateMessage(String id, String content, UserBrief sender, UserBrief receiver) =>
+PrivateMessageInfo _privateMessage(
+        String id, String content, UserBrief sender, UserBrief receiver,) =>
     PrivateMessageInfo(
       id: id,
       sender: sender,

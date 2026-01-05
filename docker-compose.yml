@@ -33,6 +33,19 @@ services:
         limits:
           memory: 4G
 
+  minio:
+    image: minio/minio:latest
+    container_name: sparkle_minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./minio_data:/data
+
   sparkle_backend:
     build:
       context: ./backend
@@ -46,6 +59,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
     depends_on:
       sparkle_db:
         condition: service_healthy
@@ -125,11 +139,25 @@ services:
       - BACKEND_URL=http://sparkle_backend:8000
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - OTEL_EXPORTER_OTLP_ENDPOINT=sparkle_tempo:4317
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      - MINIO_ENDPOINT=sparkle_minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
+      - MINIO_USE_SSL=false
+      - MINIO_AUTO_CREATE_BUCKET=true
+      - FILE_MAX_UPLOAD_SIZE=52428800
+      - FILE_PRESIGN_EXPIRES_SECONDS=420
+      - FILE_GC_INTERVAL_MINUTES=60
+      - FILE_GC_GRACE_HOURS=24
+      - FILE_GC_BATCH_SIZE=200
     depends_on:
       sparkle_backend:
         condition: service_started
       sparkle_db:
         condition: service_healthy
+      minio:
+        condition: service_started
       tempo:
         condition: service_started
 

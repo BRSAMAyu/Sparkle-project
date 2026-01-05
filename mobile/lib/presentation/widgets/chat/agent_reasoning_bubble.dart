@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// 智能体推理气泡组件
 ///
 /// 可展开的推理过程显示，展示AI的思考步骤
 class AgentReasoningBubble extends StatefulWidget {
-
   const AgentReasoningBubble({
-    required this.agentName, required this.agentType, required this.reasoning, required this.responseText, required this.agentColor, super.key,
+    required this.agentName,
+    required this.agentType,
+    required this.reasoning,
+    required this.responseText,
+    required this.agentColor,
+    super.key,
     this.confidence,
     this.citations,
   });
+
   /// 智能体名称
   final String agentName;
 
@@ -78,7 +84,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(cite['title'] ?? '详情'),
+        title: Text((cite['title'] as String?) ?? '详情'),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,24 +94,29 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Chip(
-                    label: Text('相关度: ${(cite['score'] * 100).toStringAsFixed(0)}%'),
-                    backgroundColor: widget.agentColor.withOpacity(0.1),
-                    labelStyle: TextStyle(color: widget.agentColor, fontSize: 12),
+                    label: Text(
+                        '相关度: ${((cite['score'] as num) * 100).toStringAsFixed(0)}%',),
+                    backgroundColor: widget.agentColor.withValues(alpha: 0.1),
+                    labelStyle:
+                        TextStyle(color: widget.agentColor, fontSize: 12),
                   ),
                 ),
-              Text(cite['content'] ?? '', style: const TextStyle(fontSize: 14, height: 1.5)),
+              Text((cite['content'] as String?) ?? '',
+                  style: const TextStyle(fontSize: 14, height: 1.5),),
             ],
           ),
         ),
         actions: [
-          SparkleButton.ghost(label: '关闭', onPressed: () => Navigator.pop(context)),
+          SparkleButton.ghost(
+              label: '关闭', onPressed: () => Navigator.pop(context),),
         ],
       ),
     );
   }
 
   Widget _buildCitations(BuildContext context) {
-    if (widget.citations == null || widget.citations!.isEmpty) return const SizedBox.shrink();
+    if (widget.citations == null || widget.citations!.isEmpty)
+      return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,9 +130,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               Text(
                 '引用来源 (${widget.citations!.length})',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: widget.agentColor,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: widget.agentColor,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ],
           ),
@@ -143,10 +154,11 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   decoration: BoxDecoration(
                     color: DS.brandPrimaryConst,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: widget.agentColor.withOpacity(0.2)),
+                    border:
+                        Border.all(color: widget.agentColor.withValues(alpha: 0.2)),
                     boxShadow: [
                       BoxShadow(
-                        color: DS.brandPrimary.withOpacity(0.03),
+                        color: DS.brandPrimary.withValues(alpha: 0.03),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -171,7 +183,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           cite['content'] ?? '',
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, color: DS.brandPrimary.shade700),
+                          style: TextStyle(
+                              fontSize: 10, color: DS.brandPrimary.shade700,),
                         ),
                       ),
                     ],
@@ -193,10 +206,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: widget.agentColor.withOpacity(0.1),
+        color: widget.agentColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: widget.agentColor.withOpacity(0.3),
+          color: widget.agentColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -284,10 +297,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: widget.agentColor.withOpacity(0.05),
+                color: widget.agentColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: widget.agentColor.withOpacity(0.2),
+                  color: widget.agentColor.withValues(alpha: 0.2),
                 ),
               ),
               child: Column(
@@ -347,11 +360,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 ///
 /// 显示多个智能体的协作结果
 class MultiAgentCollaborationBubble extends StatelessWidget {
-
   const MultiAgentCollaborationBubble({
-    required this.contributions, super.key,
+    required this.contributions,
+    super.key,
     this.summary,
   });
+
   /// 参与的智能体列表
   final List<AgentContribution> contributions;
 
@@ -384,7 +398,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100.withOpacity(0.5),
+              color: Colors.purple.shade100.withValues(alpha: 0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -423,14 +437,16 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
           ),
 
           // 各专家贡献
-          ...contributions.map((contribution) => AgentReasoningBubble(
+          ...contributions.map(
+            (contribution) => AgentReasoningBubble(
               agentName: contribution.agentName,
               agentType: contribution.agentType,
               reasoning: contribution.reasoning,
               responseText: contribution.responseText,
               agentColor: contribution.agentColor,
               confidence: contribution.confidence,
-            ),),
+            ),
+          ),
 
           // 综合总结（如果有）
           if (summary != null)
@@ -438,7 +454,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
               margin: const EdgeInsets.all(DS.md),
               padding: const EdgeInsets.all(DS.md),
               decoration: BoxDecoration(
-                color: DS.brandPrimary.withOpacity(0.8),
+                color: DS.brandPrimary.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Colors.purple.shade200,
@@ -480,7 +496,6 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
 
 /// 智能体贡献信息
 class AgentContribution {
-
   AgentContribution({
     required this.agentName,
     required this.agentType,

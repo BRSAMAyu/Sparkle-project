@@ -3,13 +3,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/services/chat_cache_service.dart';
-import 'package:sparkle/core/services/message_notification_service.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/data/models/community_model.dart';
-import 'package:sparkle/data/repositories/auth_repository.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
-import 'package:sparkle/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/presentation/providers/guest_provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -20,7 +18,8 @@ final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
 });
 
 // Global Community Events Stream
-final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref) {
+final communityEventsStreamProvider =
+    Provider.autoDispose<Stream<dynamic>>((ref) {
   final wsService = WebSocketService();
   final tokenAsync = ref.watch(_wsTokenProvider);
 
@@ -49,14 +48,16 @@ final communityEventsStreamProvider = Provider.autoDispose<Stream<dynamic>>((ref
 });
 
 // 1. Friends Provider
-final friendsProvider = StateNotifierProvider<FriendsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) {
+final friendsProvider =
+    StateNotifierProvider<FriendsNotifier, AsyncValue<List<FriendshipInfo>>>(
+        (ref) {
   final stream = ref.watch(communityEventsStreamProvider);
   return FriendsNotifier(ref.watch(communityRepositoryProvider), stream);
 });
 
 class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
-
-  FriendsNotifier(this._repository, Stream<dynamic> events) : super(const AsyncValue.loading()) {
+  FriendsNotifier(this._repository, Stream<dynamic> events)
+      : super(const AsyncValue.loading()) {
     loadFriends();
     events.listen(_handleEvent);
   }
@@ -67,7 +68,10 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
       try {
         final json = jsonDecode(data);
         if (json['type'] == 'status_update') {
-           _updateFriendStatus(json['user_id'], json['status']);
+          _updateFriendStatus(
+            json['user_id'] as String,
+            json['status'] as String,
+          );
         }
       } catch (e) {
         debugPrint('Event Error: $e');
@@ -81,7 +85,7 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
         (e) => e.name == statusStr,
         orElse: () => UserStatus.offline,
       );
-      
+
       final updatedFriends = friends.map((f) {
         if (f.friend.id == userId) {
           return FriendshipInfo(
@@ -103,7 +107,7 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
         }
         return f;
       }).toList();
-      
+
       state = AsyncValue.data(updatedFriends);
     });
   }
@@ -121,11 +125,14 @@ class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   Future<void> refresh() => loadFriends();
 }
 
-final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier, AsyncValue<List<FriendshipInfo>>>((ref) => PendingRequestsNotifier(ref.watch(communityRepositoryProvider)));
+final pendingRequestsProvider = StateNotifierProvider<PendingRequestsNotifier,
+        AsyncValue<List<FriendshipInfo>>>(
+    (ref) => PendingRequestsNotifier(ref.watch(communityRepositoryProvider)),);
 
-class PendingRequestsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
-
-  PendingRequestsNotifier(this._repository) : super(const AsyncValue.loading()) {
+class PendingRequestsNotifier
+    extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
+  PendingRequestsNotifier(this._repository)
+      : super(const AsyncValue.loading()) {
     loadPendingRequests();
   }
   final CommunityRepository _repository;
@@ -153,11 +160,15 @@ class PendingRequestsNotifier extends StateNotifier<AsyncValue<List<FriendshipIn
 }
 
 // 2. Recommendations Provider
-final friendRecommendationsProvider = StateNotifierProvider<FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>((ref) => FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider)));
+final friendRecommendationsProvider = StateNotifierProvider<
+        FriendRecommendationsNotifier, AsyncValue<List<FriendRecommendation>>>(
+    (ref) =>
+        FriendRecommendationsNotifier(ref.watch(communityRepositoryProvider)),);
 
-class FriendRecommendationsNotifier extends StateNotifier<AsyncValue<List<FriendRecommendation>>> {
-
-  FriendRecommendationsNotifier(this._repository) : super(const AsyncValue.loading()) {
+class FriendRecommendationsNotifier
+    extends StateNotifier<AsyncValue<List<FriendRecommendation>>> {
+  FriendRecommendationsNotifier(this._repository)
+      : super(const AsyncValue.loading()) {
     loadRecommendations();
   }
   final CommunityRepository _repository;
@@ -184,10 +195,11 @@ class FriendRecommendationsNotifier extends StateNotifier<AsyncValue<List<Friend
 }
 
 // 3. User Search Provider
-final userSearchProvider = StateNotifierProvider<UserSearchNotifier, AsyncValue<List<UserBrief>>>((ref) => UserSearchNotifier(ref.watch(communityRepositoryProvider)));
+final userSearchProvider =
+    StateNotifierProvider<UserSearchNotifier, AsyncValue<List<UserBrief>>>(
+        (ref) => UserSearchNotifier(ref.watch(communityRepositoryProvider)),);
 
 class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
-
   UserSearchNotifier(this._repository) : super(const AsyncValue.data([]));
   final CommunityRepository _repository;
 
@@ -207,13 +219,18 @@ class UserSearchNotifier extends StateNotifier<AsyncValue<List<UserBrief>>> {
 }
 
 // 4. My Groups Provider
-final myGroupsProvider = StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>((ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)));
+final myGroupsProvider =
+    StateNotifierProvider<MyGroupsNotifier, AsyncValue<List<GroupListItem>>>(
+        (ref) => MyGroupsNotifier(ref.watch(communityRepositoryProvider)),);
 
-final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier, AsyncValue<GroupInfo>, String>((ref, groupId) => GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId));
+final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier,
+        AsyncValue<GroupInfo>, String>(
+    (ref, groupId) =>
+        GroupDetailNotifier(ref.watch(communityRepositoryProvider), groupId),);
 
 class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
-
-  GroupDetailNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
+  GroupDetailNotifier(this._repository, this._groupId)
+      : super(const AsyncValue.loading()) {
     loadDetail();
   }
   final CommunityRepository _repository;
@@ -251,7 +268,8 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 
   Future<CheckinResponse> checkin(int minutes, String? message) async {
     try {
-      final response = await _repository.checkin(_groupId, todayDurationMinutes: minutes, message: message);
+      final response = await _repository.checkin(_groupId,
+          todayDurationMinutes: minutes, message: message,);
       await loadDetail();
       return response;
     } catch (e) {
@@ -261,7 +279,6 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 }
 
 class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
-
   MyGroupsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadGroups();
   }
@@ -291,16 +308,20 @@ class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
 }
 
 // 5. Group Chat Provider (Family)
-final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier, AsyncValue<List<MessageInfo>>, String>((ref, groupId) => GroupChatNotifier(
+final groupChatProvider = StateNotifierProvider.family<GroupChatNotifier,
+    AsyncValue<List<MessageInfo>>, String>(
+  (ref, groupId) => GroupChatNotifier(
     ref.watch(communityRepositoryProvider),
     ref.watch(authRepositoryProvider),
     groupId,
     ref,
-  ),);
+  ),
+);
 
 class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
-
-  GroupChatNotifier(this._repository, this._authRepository, this._groupId, this._ref) : super(const AsyncValue.loading()) {
+  GroupChatNotifier(
+      this._repository, this._authRepository, this._groupId, this._ref,)
+      : super(const AsyncValue.loading()) {
     _initialize();
   }
   final CommunityRepository _repository;
@@ -351,24 +372,28 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         if (data is String) {
           try {
             final jsonData = jsonDecode(data);
-            
+
             if (jsonData['type'] == 'ack') {
               final nonce = jsonData['nonce'];
               if (nonce != null && _pendingNonces.contains(nonce)) {
                 _pendingNonces.remove(nonce);
-                Future(() => _cacheService.removePendingGroupMessage(_groupId, nonce.toString()));
-                state.whenData((messages) => state = AsyncValue.data([...messages]));
+                Future(() => _cacheService.removePendingGroupMessage(
+                    _groupId, nonce.toString(),),);
+                state.whenData(
+                    (messages) => state = AsyncValue.data([...messages]),);
               }
               return;
             }
 
-            if (jsonData['type'] == 'message_edit' && jsonData['message'] != null) {
+            if (jsonData['type'] == 'message_edit' &&
+                jsonData['message'] != null) {
               final message = MessageInfo.fromJson(jsonData['message']);
               _handleEditedEvent(message);
               return;
             }
 
-            if (jsonData['type'] == 'message_revoke' || jsonData['type'] == 'revoked') {
+            if (jsonData['type'] == 'message_revoke' ||
+                jsonData['type'] == 'revoked') {
               final messageId = jsonData['message_id'];
               if (messageId != null) {
                 _handleRevokedEvent(messageId.toString());
@@ -380,7 +405,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
               final messageId = jsonData['message_id'];
               final reactions = jsonData['reactions'];
               if (messageId != null) {
-                _handleReactionUpdate(messageId.toString(), reactions as Map<String, dynamic>?);
+                _handleReactionUpdate(
+                    messageId.toString(), reactions as Map<String, dynamic>?,);
               }
               return;
             }
@@ -392,19 +418,20 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
                 // Trigger in-app notification for incoming group messages
                 // Only notify if message is from someone else
-                if (message.sender != null && message.sender!.id != _currentUserId) {
+                if (message.sender != null &&
+                    message.sender!.id != _currentUserId) {
                   _ref.read(unreadMessageCountProvider.notifier).increment();
                   _ref.read(inAppNotificationProvider.notifier).show(
-                    NotificationMessage(
-                      id: message.id,
-                      senderName: message.sender!.displayName,
-                      senderAvatarUrl: message.sender!.avatarUrl,
-                      content: message.content ?? '',
-                      timestamp: message.createdAt,
-                      type: NotificationType.groupMessage,
-                      targetId: _groupId,
-                    ),
-                  );
+                        NotificationMessage(
+                          id: message.id,
+                          senderName: message.sender!.displayName,
+                          senderAvatarUrl: message.sender!.avatarUrl,
+                          content: message.content ?? '',
+                          timestamp: message.createdAt,
+                          type: NotificationType.groupMessage,
+                          targetId: _groupId,
+                        ),
+                      );
                 }
               }
             });
@@ -423,7 +450,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     if (pending.isEmpty) return;
     for (final payload in pending) {
       try {
-        final typeName = payload['message_type']?.toString() ?? MessageType.text.name;
+        final typeName =
+            payload['message_type']?.toString() ?? MessageType.text.name;
         final messageType = MessageType.values.firstWhere(
           (e) => e.name == typeName,
           orElse: () => MessageType.text,
@@ -440,7 +468,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
               .toList(),
           nonce: payload['nonce']?.toString(),
         );
-        await _cacheService.removePendingGroupMessage(_groupId, payload['nonce']?.toString() ?? '');
+        await _cacheService.removePendingGroupMessage(
+            _groupId, payload['nonce']?.toString() ?? '',);
         state.whenData((messages) {
           if (!messages.any((m) => m.id == message.id)) {
             state = AsyncValue.data([message, ...messages]);
@@ -620,7 +649,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     });
   }
 
-  void _handleReactionUpdate(String messageId, Map<String, dynamic>? reactions) {
+  void _handleReactionUpdate(
+      String messageId, Map<String, dynamic>? reactions,) {
     state.whenData((messages) {
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index != -1) {
@@ -665,10 +695,12 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 }
 
 // 6. Group Search Provider
-final groupSearchProvider = StateNotifierProvider<GroupSearchNotifier, AsyncValue<List<GroupListItem>>>((ref) => GroupSearchNotifier(ref.watch(communityRepositoryProvider)));
+final groupSearchProvider =
+    StateNotifierProvider<GroupSearchNotifier, AsyncValue<List<GroupListItem>>>(
+        (ref) => GroupSearchNotifier(ref.watch(communityRepositoryProvider)),);
 
-class GroupSearchNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
-
+class GroupSearchNotifier
+    extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   GroupSearchNotifier(this._repository) : super(const AsyncValue.data([]));
   final CommunityRepository _repository;
 
@@ -684,11 +716,15 @@ class GroupSearchNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>>
 }
 
 // 7. Group Tasks Provider (Family)
-final groupTasksProvider = StateNotifierProvider.family<GroupTasksNotifier, AsyncValue<List<GroupTaskInfo>>, String>((ref, groupId) => GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId));
+final groupTasksProvider = StateNotifierProvider.family<GroupTasksNotifier,
+        AsyncValue<List<GroupTaskInfo>>, String>(
+    (ref, groupId) =>
+        GroupTasksNotifier(ref.watch(communityRepositoryProvider), groupId),);
 
-class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> {
-
-  GroupTasksNotifier(this._repository, this._groupId) : super(const AsyncValue.loading()) {
+class GroupTasksNotifier
+    extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> {
+  GroupTasksNotifier(this._repository, this._groupId)
+      : super(const AsyncValue.loading()) {
     loadTasks();
   }
   final CommunityRepository _repository;
@@ -717,7 +753,9 @@ class GroupTasksNotifier extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> 
 }
 
 // 8. Private Chat Provider (Family)
-final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>((ref, friendId) {
+final privateChatProvider = StateNotifierProvider.autoDispose
+    .family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>(
+        (ref, friendId) {
   final stream = ref.watch(communityEventsStreamProvider);
   return PrivateChatNotifier(
     ref.watch(communityRepositoryProvider),
@@ -727,9 +765,11 @@ final privateChatProvider = StateNotifierProvider.autoDispose.family<PrivateChat
   );
 });
 
-class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
-
-  PrivateChatNotifier(this._repository, this._friendId, Stream<dynamic> events, this._ref) : super(const AsyncValue.loading()) {
+class PrivateChatNotifier
+    extends StateNotifier<AsyncValue<List<PrivateMessageInfo>>> {
+  PrivateChatNotifier(
+      this._repository, this._friendId, Stream<dynamic> events, this._ref,)
+      : super(const AsyncValue.loading()) {
     _initialize(events);
   }
   final CommunityRepository _repository;
@@ -758,13 +798,15 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     if (data is String) {
       try {
         final jsonData = jsonDecode(data);
-        
+
         if (jsonData['type'] == 'ack') {
           final nonce = jsonData['nonce'];
           if (nonce != null && _pendingNonces.contains(nonce)) {
             _pendingNonces.remove(nonce);
-            Future(() => _cacheService.removePendingPrivateMessage(_friendId, nonce.toString()));
-            state.whenData((messages) => state = AsyncValue.data([...messages]));
+            Future(() => _cacheService.removePendingPrivateMessage(
+                _friendId, nonce.toString(),),);
+            state
+                .whenData((messages) => state = AsyncValue.data([...messages]));
           }
           return;
         }
@@ -779,20 +821,21 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
           final groupMessage = MessageInfo.fromJson(jsonData['message']);
           _ref.read(unreadMessageCountProvider.notifier).increment();
           _ref.read(inAppNotificationProvider.notifier).show(
-            NotificationMessage(
-              id: groupMessage.id,
-              senderName: groupMessage.sender?.displayName ?? '群成员',
-              senderAvatarUrl: groupMessage.sender?.avatarUrl,
-              content: groupMessage.content ?? '提及了你',
-              timestamp: groupMessage.createdAt,
-              type: NotificationType.mention,
-              targetId: jsonData['group_id']?.toString(),
-            ),
-          );
+                NotificationMessage(
+                  id: groupMessage.id,
+                  senderName: groupMessage.sender?.displayName ?? '群成员',
+                  senderAvatarUrl: groupMessage.sender?.avatarUrl,
+                  content: groupMessage.content ?? '提及了你',
+                  timestamp: groupMessage.createdAt,
+                  type: NotificationType.mention,
+                  targetId: jsonData['group_id']?.toString(),
+                ),
+              );
           return;
         }
 
-        if (jsonData['type'] == 'message_revoke' || jsonData['type'] == 'revoked') {
+        if (jsonData['type'] == 'message_revoke' ||
+            jsonData['type'] == 'revoked') {
           final messageId = jsonData['message_id'];
           if (messageId != null) {
             _handleRevokedEvent(messageId.toString());
@@ -804,39 +847,41 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
           final messageId = jsonData['message_id'];
           final reactions = jsonData['reactions'];
           if (messageId != null) {
-            _handleReactionUpdate(messageId.toString(), reactions as Map<String, dynamic>?);
+            _handleReactionUpdate(
+                messageId.toString(), reactions as Map<String, dynamic>?,);
           }
           return;
         }
 
         if (jsonData['sender'] != null && jsonData['receiver'] != null) {
-           try {
-             final message = PrivateMessageInfo.fromJson(jsonData);
-             if (message.sender.id == _friendId || message.receiver.id == _friendId) {
-               state.whenData((messages) {
-                 if (!messages.any((m) => m.id == message.id)) {
-                   final updated = [message, ...messages];
-                   state = AsyncValue.data(updated);
+          try {
+            final message = PrivateMessageInfo.fromJson(jsonData);
+            if (message.sender.id == _friendId ||
+                message.receiver.id == _friendId) {
+              state.whenData((messages) {
+                if (!messages.any((m) => m.id == message.id)) {
+                  final updated = [message, ...messages];
+                  state = AsyncValue.data(updated);
 
-                   // Trigger in-app notification for incoming messages
-                   if (message.sender.id == _friendId) {
-                     _ref.read(unreadMessageCountProvider.notifier).increment();
-                     _ref.read(inAppNotificationProvider.notifier).show(
-                       NotificationMessage(
-                         id: message.id,
-                         senderName: message.sender.displayName,
-                         senderAvatarUrl: message.sender.avatarUrl,
-                         content: message.content ?? '',
-                         timestamp: message.createdAt,
-                         type: NotificationType.privateMessage,
-                         targetId: _friendId,
-                       ),
-                     );
-                   }
-                 }
-               });
-             }
-           } catch (_) {}
+                  // Trigger in-app notification for incoming messages
+                  if (message.sender.id == _friendId) {
+                    _ref.read(unreadMessageCountProvider.notifier).increment();
+                    _ref.read(inAppNotificationProvider.notifier).show(
+                          NotificationMessage(
+                            id: message.id,
+                            senderName: message.sender.displayName,
+                            senderAvatarUrl: message.sender.avatarUrl,
+                            content: message.content ?? '',
+                            timestamp: message.createdAt,
+                            type: NotificationType.privateMessage,
+                            targetId: _friendId,
+                          ),
+                        );
+                  }
+                }
+              });
+            }
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('WS Parse Error (Private): $e');
@@ -849,7 +894,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     if (pending.isEmpty) return;
     for (final payload in pending) {
       try {
-        final typeName = payload['message_type']?.toString() ?? MessageType.text.name;
+        final typeName =
+            payload['message_type']?.toString() ?? MessageType.text.name;
         final messageType = MessageType.values.firstWhere(
           (e) => e.name == typeName,
           orElse: () => MessageType.text,
@@ -868,7 +914,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
             nonce: payload['nonce']?.toString(),
           ),
         );
-        await _cacheService.removePendingPrivateMessage(_friendId, payload['nonce']?.toString() ?? '');
+        await _cacheService.removePendingPrivateMessage(
+            _friendId, payload['nonce']?.toString() ?? '',);
         state.whenData((messages) {
           final tempId = 'local_${payload['nonce'] ?? ''}';
           final filtered = messages.where((m) => m.id != tempId).toList();
@@ -889,7 +936,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index != -1) {
         final updated = [...messages];
-        updated[index] = updated[index].copyWith(isRevoked: true, revokedAt: DateTime.now());
+        updated[index] =
+            updated[index].copyWith(isRevoked: true, revokedAt: DateTime.now());
         state = AsyncValue.data(updated);
       }
     });
@@ -897,7 +945,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
 
   void _handleEditedEvent(PrivateMessageInfo message) {
     state.whenData((messages) {
-      final isRelated = message.sender.id == _friendId || message.receiver.id == _friendId;
+      final isRelated =
+          message.sender.id == _friendId || message.receiver.id == _friendId;
       if (!isRelated) return;
       final index = messages.indexWhere((m) => m.id == message.id);
       if (index != -1) {
@@ -910,7 +959,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     });
   }
 
-  void _handleReactionUpdate(String messageId, Map<String, dynamic>? reactions) {
+  void _handleReactionUpdate(
+      String messageId, Map<String, dynamic>? reactions,) {
     state.whenData((messages) {
       final index = messages.indexWhere((m) => m.id == messageId);
       if (index != -1) {
@@ -940,7 +990,7 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
     _quotedMessage = message;
     // We trigger a state update to the same list to notify listeners of notifier itself
     // Actually, simple getter is fine if we call it from UI, but for reactive UI
-    // we might need a separate StateProvider for quotedMessage. 
+    // we might need a separate StateProvider for quotedMessage.
     // Let's keep it simple for now as it's passed back to ChatInput.
   }
 
@@ -982,7 +1032,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       isSending: true,
     );
 
-    state.whenData((messages) => state = AsyncValue.data([tempMessage, ...messages]));
+    state.whenData(
+        (messages) => state = AsyncValue.data([tempMessage, ...messages]),);
 
     try {
       final message = await _repository.sendPrivateMessage(
@@ -1010,7 +1061,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
       _pendingNonces.remove(nonce);
     } catch (e) {
       _pendingNonces.remove(nonce);
-      await _cacheService.enqueuePendingPrivateMessage(_friendId, pendingPayload);
+      await _cacheService.enqueuePendingPrivateMessage(
+          _friendId, pendingPayload,);
       state.whenData((messages) {
         final updated = messages.map((m) {
           if (m.id == tempId) {
@@ -1035,7 +1087,8 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
 
   Future<void> editMessage(String messageId, String content) async {
     try {
-      final message = await _repository.editPrivateMessage(messageId, content: content);
+      final message =
+          await _repository.editPrivateMessage(messageId, content: content);
       _handleEditedEvent(message);
     } catch (e) {
       rethrow;
@@ -1135,7 +1188,9 @@ class PrivateChatNotifier extends StateNotifier<AsyncValue<List<PrivateMessageIn
 }
 
 // 9. Current User Status Provider
-final currentUserStatusProvider = StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) => CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider)));
+final currentUserStatusProvider =
+    StateNotifierProvider<CurrentUserStatusNotifier, UserStatus>((ref) =>
+        CurrentUserStatusNotifier(ref.watch(communityRepositoryProvider)),);
 
 class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
   CurrentUserStatusNotifier(this._repository) : super(UserStatus.online);

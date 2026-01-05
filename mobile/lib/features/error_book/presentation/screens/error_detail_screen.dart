@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
-import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
-import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
 /// 错题详情页面
 ///
@@ -12,9 +12,9 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 /// 2. 操作便捷：编辑、删除、重新分析、开始复习
 /// 3. 视觉清晰：分段展示，关键信息突出
 class ErrorDetailScreen extends ConsumerWidget {
-
   const ErrorDetailScreen({
-    required this.errorId, super.key,
+    required this.errorId,
+    super.key,
   });
   final String errorId;
 
@@ -28,54 +28,57 @@ class ErrorDetailScreen extends ConsumerWidget {
         actions: [
           // 编辑按钮
           errorAsync.whenOrNull(
-            data: (error) => IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: '编辑',
-              onPressed: () => _navigateToEdit(context, error),
-            ),
-          ) ?? const SizedBox.shrink(),
+                data: (error) => IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: '编辑',
+                  onPressed: () => _navigateToEdit(context, error),
+                ),
+              ) ??
+              const SizedBox.shrink(),
           // 更多操作
           errorAsync.whenOrNull(
-            data: (error) => PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                switch (value) {
-                  case 'reanalyze':
-                    _reanalyze(context, ref, error);
-                  case 'delete':
-                    _confirmDelete(context, ref, error);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'reanalyze',
-                  child: Row(
-                    children: [
-                      Icon(Icons.psychology_outlined),
-                      SizedBox(width: 12),
-                      Text('重新分析'),
-                    ],
-                  ),
+                data: (error) => PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'reanalyze':
+                        _reanalyze(context, ref, error);
+                      case 'delete':
+                        _confirmDelete(context, ref, error);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'reanalyze',
+                      child: Row(
+                        children: [
+                          Icon(Icons.psychology_outlined),
+                          SizedBox(width: 12),
+                          Text('重新分析'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.red),
+                          SizedBox(width: 12),
+                          Text('删除错题', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('删除错题', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ) ?? const SizedBox.shrink(),
+              ) ??
+              const SizedBox.shrink(),
         ],
       ),
       body: errorAsync.when(
         data: (error) => _buildDetailContent(context, ref, error),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorState(context, ref, error.toString()),
+        error: (error, stack) =>
+            _buildErrorState(context, ref, error.toString()),
       ),
       bottomNavigationBar: errorAsync.whenOrNull(
         data: (error) => _buildBottomBar(context, ref, error),
@@ -87,43 +90,44 @@ class ErrorDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ErrorRecord error,
-  ) => SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 80),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 科目和元数据
-          _buildMetadataSection(context, error),
+  ) =>
+      SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 科目和元数据
+            _buildMetadataSection(context, error),
 
-          const Divider(height: 1),
-
-          // 题目内容
-          _buildQuestionSection(context, error),
-
-          const Divider(height: 1),
-
-          // 答案对比
-          _buildAnswerSection(context, error),
-
-          const Divider(height: 1),
-
-          // AI 分析
-          if (error.latestAnalysis != null) ...[
-            _buildAnalysisSection(context, error),
             const Divider(height: 1),
-          ],
 
-          // 关联知识点
-          if (error.knowledgeLinks.isNotEmpty) ...[
-            _buildKnowledgeSection(context, error),
+            // 题目内容
+            _buildQuestionSection(context, error),
+
             const Divider(height: 1),
-          ],
 
-          // 复习统计
-          _buildReviewStatsSection(context, error),
-        ],
-      ),
-    );
+            // 答案对比
+            _buildAnswerSection(context, error),
+
+            const Divider(height: 1),
+
+            // AI 分析
+            if (error.latestAnalysis != null) ...[
+              _buildAnalysisSection(context, error),
+              const Divider(height: 1),
+            ],
+
+            // 关联知识点
+            if (error.knowledgeLinks.isNotEmpty) ...[
+              _buildKnowledgeSection(context, error),
+              const Divider(height: 1),
+            ],
+
+            // 复习统计
+            _buildReviewStatsSection(context, error),
+          ],
+        ),
+      );
 
   Widget _buildMetadataSection(BuildContext context, ErrorRecord error) {
     final theme = Theme.of(context);
@@ -140,7 +144,8 @@ class ErrorDetailScreen extends ConsumerWidget {
               if (error.chapter != null) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
@@ -203,9 +208,9 @@ class ErrorDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -251,7 +256,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: SelectableText(
@@ -347,10 +352,10 @@ class ErrorDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           width: 1.5,
         ),
       ),
@@ -382,39 +387,40 @@ class ErrorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) => Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.psychology,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'AI 智能分析',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const Spacer(),
-              Text(
-                _formatDateTime(error.latestAnalysis!.analyzedAt),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          AnalysisCard(analysis: error.latestAnalysis!),
-        ],
-      ),
-    );
+  Widget _buildAnalysisSection(BuildContext context, ErrorRecord error) =>
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.psychology,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'AI 智能分析',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const Spacer(),
+                Text(
+                  _formatDateTime(error.latestAnalysis!.analyzedAt),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            AnalysisCard(analysis: error.latestAnalysis!),
+          ],
+        ),
+      );
 
   Widget _buildKnowledgeSection(BuildContext context, ErrorRecord error) {
     final theme = Theme.of(context);
@@ -444,20 +450,24 @@ class ErrorDetailScreen extends ConsumerWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: error.knowledgeLinks.map((link) => ActionChip(
-                avatar: const Icon(Icons.timeline, size: 16),
-                label: Text(link.nodeName),
-                tooltip: '跳转到知识星图',
-                onPressed: () {
-                  // TODO: 导航到知识星图对应节点
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('跳转到知识点: ${link.nodeName}'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),).toList(),
+            children: error.knowledgeLinks
+                .map(
+                  (link) => ActionChip(
+                    avatar: const Icon(Icons.timeline, size: 16),
+                    label: Text(link.nodeName),
+                    tooltip: '跳转到知识星图',
+                    onPressed: () {
+                      // TODO: 导航到知识星图对应节点
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('跳转到知识点: ${link.nodeName}'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -540,10 +550,10 @@ class ErrorDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -605,71 +615,73 @@ class ErrorDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ErrorRecord error,
-  ) => SafeArea(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+  ) =>
+      SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: FilledButton.icon(
+            onPressed: () => _startReview(context, ref, error),
+            icon: const Icon(Icons.play_circle_outline),
+            label: const Text('开始复习'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) =>
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 80,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '加载失败',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.invalidate(errorDetailProvider(errorId));
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('重试'),
             ),
           ],
         ),
-        child: FilledButton.icon(
-          onPressed: () => _startReview(context, ref, error),
-          icon: const Icon(Icons.play_circle_outline),
-          label: const Text('开始复习'),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-
-  Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 80,
-            color: Colors.red,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '加载失败',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () {
-              ref.invalidate(errorDetailProvider(errorId));
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('重试'),
-          ),
-        ],
-      ),
-    );
+      );
 
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
