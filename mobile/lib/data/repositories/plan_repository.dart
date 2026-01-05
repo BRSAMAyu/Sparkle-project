@@ -20,8 +20,9 @@ class PlanRepository {
     if (DemoDataService.isDemoMode) {
       var plans = DemoDataService().demoPlans;
       if (type != null) plans = plans.where((p) => p.type == type).toList();
-      if (isActive != null)
+      if (isActive != null) {
         plans = plans.where((p) => p.isActive == isActive).toList();
+      }
       return plans;
     }
     try {

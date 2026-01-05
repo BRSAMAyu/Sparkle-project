@@ -115,8 +115,9 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   Widget _buildCitations(BuildContext context) {
-    if (widget.citations == null || widget.citations!.isEmpty)
+    if (widget.citations == null || widget.citations!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

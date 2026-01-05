@@ -100,10 +100,12 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   }
 
   bool get _isRevoked {
-    if (widget.message is MessageInfo)
+    if (widget.message is MessageInfo) {
       return (widget.message as MessageInfo).isRevoked;
-    if (widget.message is PrivateMessageInfo)
+    }
+    if (widget.message is PrivateMessageInfo) {
       return (widget.message as PrivateMessageInfo).isRevoked;
+    }
     return false;
   }
 

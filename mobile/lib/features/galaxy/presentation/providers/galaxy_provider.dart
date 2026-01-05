@@ -713,8 +713,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           totalMastery += node.masteryScore;
           childIds.add(node.id);
         }
-        if (groupNodes.isNotEmpty)
+        if (groupNodes.isNotEmpty) {
           center = center / groupNodes.length.toDouble();
+        }
 
         clusters[parentId] = ClusterInfo(
           id: parentId,
@@ -751,8 +752,9 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           totalMastery += node.masteryScore;
           childIds.add(node.id);
         }
-        if (sectorNodes.isNotEmpty)
+        if (sectorNodes.isNotEmpty) {
           center = center / sectorNodes.length.toDouble();
+        }
 
         final clusterId = 'sector_${sector.name}';
         clusters[clusterId] = ClusterInfo(

@@ -268,8 +268,9 @@ class StarMapPainter extends CustomPainter {
         _drawNodes(canvas);
       case AggregationLevel.nebula:
       case AggregationLevel.full:
-        if (aggregationLevel == AggregationLevel.nebula)
+        if (aggregationLevel == AggregationLevel.nebula) {
           _drawClusteredView(canvas);
+        }
         _drawNodes(canvas);
     }
 
@@ -318,7 +319,9 @@ class StarMapPainter extends CustomPainter {
       if (viewport != null) {
         final cRect = viewport!.inflate(50);
         if (!cRect.contains(edge.start - center) &&
-            !cRect.contains(edge.end - center)) continue;
+            !cRect.contains(edge.end - center)) {
+          continue;
+        }
       }
 
       final style = _RelationStyle.forType(edge.edge.relationType);
@@ -423,8 +426,9 @@ class StarMapPainter extends CustomPainter {
 
     for (final p in _processedNodes) {
       if (viewport != null) {
-        if (!viewport!.inflate(p.radius * 3).contains(p.position - center))
+        if (!viewport!.inflate(p.radius * 3).contains(p.position - center)) {
           continue;
+        }
       }
 
       final progress = nodeAnimationProgress[p.node.idHash] ?? 1.0;

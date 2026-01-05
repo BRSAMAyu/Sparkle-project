@@ -68,7 +68,7 @@ class ChatRepository {
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
-    final List<dynamic> list = response.data ?? [];
+    final list = response.data ?? [];
     return list
         .map((item) => ChatMessageModel.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -86,7 +86,7 @@ class ChatRepository {
       ];
     }
     final response = await _dio.get<List<dynamic>>('/api/v1/chat/sessions');
-    final List<dynamic> data = response.data ?? [];
+    final data = response.data ?? [];
     return List<Map<String, dynamic>>.from(
       data.map((item) => item as Map<String, dynamic>),
     );

@@ -389,8 +389,9 @@ class MockCommunityRepository implements CommunityRepository {
       quotedMessage: quotedMessage,
     );
 
-    if (!_mockPrivateMessages.containsKey(message.targetUserId))
+    if (!_mockPrivateMessages.containsKey(message.targetUserId)) {
       _mockPrivateMessages[message.targetUserId] = [];
+    }
     _mockPrivateMessages[message.targetUserId]!.insert(0, newMsg);
 
     // Auto-read by "other person" for demo

@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 void main() {
   group('GalaxyLayoutEngine', () {

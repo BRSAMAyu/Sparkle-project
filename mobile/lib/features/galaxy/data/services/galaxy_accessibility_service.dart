@@ -48,8 +48,9 @@ class GalaxyAccessibilityService {
     bool? highContrast,
     bool? hapticEnabled,
   }) {
-    if (screenReaderEnabled != null)
+    if (screenReaderEnabled != null) {
       _isScreenReaderEnabled = screenReaderEnabled;
+    }
     if (reduceMotion != null) _reduceMotionEnabled = reduceMotion;
     if (highContrast != null) _highContrastEnabled = highContrast;
     if (hapticEnabled != null) this.hapticEnabled = hapticEnabled;

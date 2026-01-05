@@ -423,7 +423,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          ((session['updated_at'] as String?)?.split('T')[0]) ??
+                          (session['updated_at'] as String?)?.split('T')[0] ??
                               '',
                           style: TextStyle(fontSize: 12, color: DS.neutral500),
                         ),

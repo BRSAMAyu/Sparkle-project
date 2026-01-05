@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
-import '../models/file_models.dart';
-import '../repositories/file_repository.dart';
+import 'package:sparkle/features/file/data/models/file_models.dart';
+import 'package:sparkle/features/file/data/repositories/file_repository.dart';
 
 final fileUploadServiceProvider = Provider<FileUploadService>(
     (ref) => FileUploadService(ref.read(fileRepositoryProvider)),);

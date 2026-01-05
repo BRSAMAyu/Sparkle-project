@@ -432,9 +432,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
   Widget _buildCheckinBubble(BuildContext context, bool isMe) {
     final data = widget.message.contentData ?? {};
-    final int flame = (data['flame_power'] as num?)?.toInt() ?? 0;
-    final int duration = (data['today_duration'] as num?)?.toInt() ?? 0;
-    final int streak = (data['streak'] as num?)?.toInt() ?? 0;
+    final flame = (data['flame_power'] as num?)?.toInt() ?? 0;
+    final duration = (data['today_duration'] as num?)?.toInt() ?? 0;
+    final streak = (data['streak'] as num?)?.toInt() ?? 0;
 
     return Container(
       width: 240,

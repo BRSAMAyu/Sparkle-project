@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/features/file/file.dart';
 
 class FilePickerWithPresignedUpload extends ConsumerStatefulWidget {
   const FilePickerWithPresignedUpload({

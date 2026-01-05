@@ -47,9 +47,9 @@ class _MilestoneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int nodeCount = data['node_count'] as int? ?? 0;
-    final String username = data['username'] as String? ?? 'Sparkle User';
-    final String date = data['date'] as String? ?? '2024.01.01';
+    final nodeCount = data['node_count'] as int? ?? 0;
+    final username = data['username'] as String? ?? 'Sparkle User';
+    final date = data['date'] as String? ?? '2024.01.01';
 
     return Container(
       width: 800,
@@ -229,8 +229,8 @@ class _StreakRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int streakDays = data['streak_days'] as int? ?? 30;
-    final String username = data['username'] as String? ?? 'Sparkle User';
+    final streakDays = data['streak_days'] as int? ?? 30;
+    final username = data['username'] as String? ?? 'Sparkle User';
 
     return Container(
       width: 800,
@@ -316,9 +316,9 @@ class _MasteryAchievementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String domain = data['domain'] as String? ?? '数学';
-    final int masteryPercent = data['mastery_percent'] as int? ?? 90;
-    final String username = data['username'] as String? ?? 'Sparkle User';
+    final domain = data['domain'] as String? ?? '数学';
+    final masteryPercent = data['mastery_percent'] as int? ?? 90;
+    final username = data['username'] as String? ?? 'Sparkle User';
 
     return Container(
       width: 800,
@@ -413,9 +413,9 @@ class _TaskCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int taskCount = data['task_count'] as int? ?? 20;
-    final String sprintName = data['sprint_name'] as String? ?? 'Sprint #1';
-    final String username = data['username'] as String? ?? 'Sparkle User';
+    final taskCount = data['task_count'] as int? ?? 20;
+    final sprintName = data['sprint_name'] as String? ?? 'Sprint #1';
+    final username = data['username'] as String? ?? 'Sparkle User';
 
     return Container(
       width: 800,
