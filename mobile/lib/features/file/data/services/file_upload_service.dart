@@ -111,7 +111,7 @@ class FileUploadService {
             contentType: MediaType.parse(mimeType),
           ),
         };
-        await _uploadDio.post(
+        await _uploadDio.post<void>(
           session.presignedUrl,
           data: FormData.fromMap(formMap),
           options: Options(
@@ -128,7 +128,7 @@ class FileUploadService {
         if (attempt >= maxAttempts) {
           rethrow;
         }
-        await Future.delayed(delay);
+        await Future<void>.delayed(delay);
         delay *= 2;
       }
     }

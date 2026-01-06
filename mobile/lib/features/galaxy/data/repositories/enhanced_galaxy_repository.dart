@@ -36,9 +36,6 @@ class EnhancedGalaxyRepository {
     failureThreshold: 3,
   );
 
-  // 重试配置
-  static const RetryConfig _defaultRetryConfig = RetryConfig();
-
   /// 获取星图数据（带重试和缓存）
   Future<NetworkResult<GalaxyGraphResponse>> getGraph({
     double zoomLevel = 1.0,
@@ -62,11 +59,15 @@ class EnhancedGalaxyRepository {
     try {
       final response = await _circuitBreaker.execute(
         () async {
-          final response = await _apiClient.get(
+          final response = await _apiClient.get<Map<String, dynamic>>(
             ApiEndpoints.galaxyGraph,
             queryParameters: {'zoom_level': zoomLevel},
           );
-          return GalaxyGraphResponse.fromJson(response.data);
+          final payload = response.data;
+          if (payload == null) {
+            throw const FormatException('Galaxy graph payload missing');
+          }
+          return GalaxyGraphResponse.fromJson(payload);
         },
         onRetry: (attempt, error, delay) {
           debugPrint(
@@ -109,7 +110,7 @@ class EnhancedGalaxyRepository {
 
     try {
       await RetryStrategy.executeWithRetry(
-        () => _apiClient.post(ApiEndpoints.sparkNode(id)),
+        () => _apiClient.post<void>(ApiEndpoints.sparkNode(id)),
       );
 
       // 清除相关缓存
@@ -137,11 +138,16 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry(
+      final response = await RetryStrategy.executeWithRetry<KnowledgeDetailResponse>(
         () async {
-          final response =
-              await _apiClient.get(ApiEndpoints.galaxyNodeDetail(nodeId));
-          return KnowledgeDetailResponse.fromJson(response.data);
+          final response = await _apiClient.get<Map<String, dynamic>>(
+            ApiEndpoints.galaxyNodeDetail(nodeId),
+          );
+          final payload = response.data;
+          if (payload == null) {
+            throw const FormatException('Node detail payload missing');
+          }
+          return KnowledgeDetailResponse.fromJson(payload);
         },
       );
 
@@ -163,12 +169,14 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry(
+      final response = await RetryStrategy.executeWithRetry<KnowledgeDetailResponse?>(
         () async {
-          final response =
-              await _apiClient.post(ApiEndpoints.galaxyPredictNext);
-          if (response.data == null) return null;
-          return KnowledgeDetailResponse.fromJson(response.data);
+          final response = await _apiClient.post<Map<String, dynamic>>(
+            ApiEndpoints.galaxyPredictNext,
+          );
+          final payload = response.data;
+          if (payload == null) return null;
+          return KnowledgeDetailResponse.fromJson(payload);
         },
         config: const RetryConfig(maxAttempts: 2),
       );
@@ -188,13 +196,15 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry(
+      final response = await RetryStrategy.executeWithRetry<List<GalaxySearchResult>>(
         () async {
-          final response = await _apiClient.post(
+          final response = await _apiClient.post<Map<String, dynamic>>(
             ApiEndpoints.galaxySearch,
             data: {'query': query},
           );
-          return GalaxySearchResponse.fromJson(response.data).results;
+          final payload = response.data;
+          if (payload == null) return [];
+          return GalaxySearchResponse.fromJson(payload).results;
         },
         config: const RetryConfig(maxAttempts: 2),
       );
@@ -215,7 +225,7 @@ class EnhancedGalaxyRepository {
 
     try {
       await RetryStrategy.executeWithRetry(
-        () => _apiClient.post(ApiEndpoints.galaxyNodeFavorite(nodeId)),
+        () => _apiClient.post<void>(ApiEndpoints.galaxyNodeFavorite(nodeId)),
       );
 
       // 清除节点详情缓存
@@ -237,7 +247,7 @@ class EnhancedGalaxyRepository {
 
     try {
       await RetryStrategy.executeWithRetry(
-        () => _apiClient.post(
+        () => _apiClient.post<void>(
           ApiEndpoints.galaxyNodeDecayPause(nodeId),
           data: {'pause': pause},
         ),
@@ -293,12 +303,19 @@ class GalaxyError implements Exception {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
         message = '连接超时，请检查网络';
+        break;
       case DioExceptionType.receiveTimeout:
         message = '服务器响应超时';
+        break;
       case DioExceptionType.connectionError:
         message = '网络连接失败';
+        break;
       default:
-        message = e.response?.data?['detail'] ?? '网络请求失败';
+        message = _extractDetailFromResponse(
+          e,
+          fallback: '网络请求失败',
+        );
+        break;
     }
     return GalaxyError._(
       type: GalaxyErrorType.network,
@@ -341,6 +358,20 @@ class GalaxyError implements Exception {
 
   @override
   String toString() => 'GalaxyError[$type]: $message';
+
+  static String _extractDetailFromResponse(
+    DioException exception, {
+    required String fallback,
+  }) {
+    final data = exception.response?.data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'];
+      if (detail is String && detail.isNotEmpty) {
+        return detail;
+      }
+    }
+    return fallback;
+  }
 }
 
 enum GalaxyErrorType {

@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sparkle/data/models/compact_knowledge_node.dart';
+import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 part 'galaxy_model.g.dart';
 

@@ -142,15 +142,17 @@ class ChatRepository {
     controller = StreamController<ChatStreamEvent>(
       onCancel: () {
         if (!controller.isClosed) {
-          controller.close();
+          unawaited(controller.close());
         }
       },
     );
 
-    _startSSEConnection(
-      message: message,
-      conversationId: conversationId,
-      controller: controller,
+    unawaited(
+      _startSSEConnection(
+        message: message,
+        conversationId: conversationId,
+        controller: controller,
+      ),
     );
 
     return controller.stream;
@@ -158,15 +160,15 @@ class ChatRepository {
 
   Stream<ChatStreamEvent> _mockChatStream(String message) async* {
     yield TextEvent(content: 'Received: $message\n');
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     yield TextEvent(content: 'Thinking...\n');
     yield ToolStartEvent(toolName: 'demo_tool');
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     yield ToolResultEvent(
         result:
             ToolResultModel(success: true, toolName: 'demo_tool', data: {}),);
     yield TextEvent(content: 'This is a simulated response in Demo Mode.\n');
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     yield TextEvent(
         content: 'I can show you Markdown too:\n\n* Item 1\n* Item 2',);
     yield DoneEvent();
@@ -218,12 +220,12 @@ class ChatRepository {
       }
 
       if (!controller.isClosed) {
-        controller.close();
+        unawaited(controller.close());
       }
     } catch (e) {
       if (!controller.isClosed) {
         controller.addError(e);
-        controller.close();
+        unawaited(controller.close());
       }
     }
   }

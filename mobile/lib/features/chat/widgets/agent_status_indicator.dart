@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// Agent 状态枚举
@@ -150,7 +152,8 @@ class _AnimatedIconState extends State<_AnimatedIcon>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
-    )..repeat();
+    );
+    unawaited(_controller.repeat());
   }
 
   @override
@@ -194,7 +197,8 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1400),
       vsync: this,
-    )..repeat();
+    );
+    unawaited(_controller.repeat());
   }
 
   @override

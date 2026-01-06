@@ -10,7 +10,7 @@ class ReviewPerformanceButtons extends StatelessWidget {
     super.key,
     this.isLoading = false,
   });
-  final Function(String performance) onPerformanceSelected;
+  final ValueChanged<String> onPerformanceSelected;
   final bool isLoading;
 
   @override
@@ -144,7 +144,7 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
     required this.onPerformanceSelected,
     super.key,
   });
-  final Function(String performance) onPerformanceSelected;
+  final ValueChanged<String> onPerformanceSelected;
 
   static Future<String?> show(BuildContext context) =>
       showModalBottomSheet<String>(

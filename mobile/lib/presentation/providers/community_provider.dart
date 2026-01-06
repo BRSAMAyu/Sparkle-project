@@ -371,7 +371,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       _wsService.stream.listen((data) {
         if (data is String) {
           try {
-            final jsonData = jsonDecode(data);
+            final jsonData = jsonDecode(data) as Map<String, dynamic>;
 
             if (jsonData['type'] == 'ack') {
               final nonce = jsonData['nonce'];
@@ -387,7 +387,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
             if (jsonData['type'] == 'message_edit' &&
                 jsonData['message'] != null) {
-              final message = MessageInfo.fromJson(jsonData['message']);
+              final message = MessageInfo.fromJson(
+                jsonData['message'] as Map<String, dynamic>,
+              );
               _handleEditedEvent(message);
               return;
             }
@@ -584,7 +586,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     if (targetIndex == -1) return;
     final target = messages[targetIndex];
     final currentReactions = Map<String, dynamic>.from(target.reactions ?? {});
-    final users = List<String>.from(currentReactions[emoji] ?? <String>[]);
+    final users = List<String>.from(
+      (currentReactions[emoji] as Iterable<dynamic>?) ?? const <String>[],
+    );
     final isAdd = !users.contains(userId);
     try {
       final message = await _repository.updateGroupReaction(
@@ -797,7 +801,7 @@ class PrivateChatNotifier
   void _handleEvent(dynamic data) {
     if (data is String) {
       try {
-        final jsonData = jsonDecode(data);
+            final jsonData = jsonDecode(data) as Map<String, dynamic>;
 
         if (jsonData['type'] == 'ack') {
           final nonce = jsonData['nonce'];
@@ -812,13 +816,17 @@ class PrivateChatNotifier
         }
 
         if (jsonData['type'] == 'message_edit' && jsonData['message'] != null) {
-          final message = PrivateMessageInfo.fromJson(jsonData['message']);
+          final message = PrivateMessageInfo.fromJson(
+            jsonData['message'] as Map<String, dynamic>,
+          );
           _handleEditedEvent(message);
           return;
         }
 
         if (jsonData['type'] == 'mention' && jsonData['message'] != null) {
-          final groupMessage = MessageInfo.fromJson(jsonData['message']);
+          final groupMessage = MessageInfo.fromJson(
+            jsonData['message'] as Map<String, dynamic>,
+          );
           _ref.read(unreadMessageCountProvider.notifier).increment();
           _ref.read(inAppNotificationProvider.notifier).show(
                 NotificationMessage(
@@ -1104,7 +1112,9 @@ class PrivateChatNotifier
     if (targetIndex == -1) return;
     final target = messages[targetIndex];
     final currentReactions = Map<String, dynamic>.from(target.reactions ?? {});
-    final users = List<String>.from(currentReactions[emoji] ?? <String>[]);
+    final users = List<String>.from(
+      (currentReactions[emoji] as Iterable<dynamic>?) ?? const <String>[],
+    );
     final isAdd = !users.contains(userId);
     try {
       final message = await _repository.updatePrivateReaction(

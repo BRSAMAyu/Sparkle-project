@@ -10,7 +10,7 @@ class LearningModeControl extends StatefulWidget {
   });
   final double depth; // 0.0 - 1.0
   final double curiosity; // 0.0 - 1.0
-  final Function(double depth, double curiosity) onChanged;
+  final void Function(double depth, double curiosity) onChanged;
 
   @override
   State<LearningModeControl> createState() => _LearningModeControlState();

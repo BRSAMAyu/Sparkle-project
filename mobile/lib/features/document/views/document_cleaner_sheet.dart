@@ -9,7 +9,7 @@ import 'package:sparkle/features/document/models/document_cleaning_model.dart';
 
 class DocumentCleanerSheet extends ConsumerStatefulWidget {
   const DocumentCleanerSheet({required this.onResult, super.key});
-  final Function(String result) onResult;
+  final ValueChanged<String> onResult;
 
   @override
   ConsumerState<DocumentCleanerSheet> createState() =>

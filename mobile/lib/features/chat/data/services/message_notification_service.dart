@@ -144,7 +144,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_controller);
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override

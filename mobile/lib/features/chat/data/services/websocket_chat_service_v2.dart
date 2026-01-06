@@ -599,9 +599,7 @@ class WebSocketChatServiceV2 {
     final messages = List<Map<String, dynamic>>.from(_pendingMessages);
     _pendingMessages.clear();
 
-    for (final message in messages) {
-      _sendMessage(message);
-    }
+    messages.forEach(_sendMessage);
   }
 
   String _applyWebSocketSchemeForEnvironment(
@@ -638,7 +636,7 @@ class WebSocketChatServiceV2 {
     await _teardownSocket(_connGen);
     _updateConnectionState(WsConnectionState.disconnected);
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     if (!_disposed) {
       _establishConnection(_currentUserId!, _currentToken);
     }
@@ -678,7 +676,10 @@ class WebSocketChatServiceV2 {
     _log('🔌 Closing connection');
     _stopHeartbeat();
     _reconnectTimer?.cancel();
-    _channel?.sink.close();
+    final sink = _channel?.sink;
+    if (sink != null) {
+      unawaited(sink.close());
+    }
     _channel = null;
     _updateConnectionState(WsConnectionState.disconnected);
   }
@@ -690,7 +691,7 @@ class WebSocketChatServiceV2 {
     _disposed = true;
     _connGen++; // Invalidate any pending connection attempts
 
-    _socketSubscription?.cancel();
+    unawaited(_socketSubscription?.cancel());
     _socketSubscription = null;
 
     _reconnectTimer?.cancel();
@@ -702,10 +703,10 @@ class WebSocketChatServiceV2 {
 
     if (_messageStreamController != null &&
         !_messageStreamController!.isClosed) {
-      _messageStreamController!.close();
+      unawaited(_messageStreamController!.close());
     }
     if (!_connectionStateController.isClosed) {
-      _connectionStateController.close();
+      unawaited(_connectionStateController.close());
     }
     _pendingMessages.clear();
   }

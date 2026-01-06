@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/data/models/api_response_model.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/models/api_response_model.dart';
 
 class TaskRepository {
   TaskRepository(this._apiClient);
@@ -42,10 +42,18 @@ class TaskRepository {
         queryParams.addAll(
             filters.map((key, value) => MapEntry(key, value.toString())),);
       }
-      final response = await _apiClient.get(ApiEndpoints.tasks,
-          queryParameters: queryParams,);
-      return PaginatedResponse.fromJson(response.data,
-          (json) => TaskModel.fromJson(json as Map<String, dynamic>),);
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.tasks,
+        queryParameters: queryParams,
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('getTasks response is empty');
+      }
+      return PaginatedResponse.fromJson(
+        payload,
+        (json) => TaskModel.fromJson(json as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       return _handleDioError(e, 'getTasks');
     }
@@ -57,12 +65,11 @@ class TaskRepository {
           orElse: () => DemoDataService().demoTasks.first,);
     }
     try {
-      final response = await _apiClient.get(ApiEndpoints.task(id));
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskModel.fromJson(data);
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.task(id),
+      );
+      final payload = _unwrapResponseMap(response.data, action: 'getTask');
+      return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getTask');
     }
@@ -77,12 +84,13 @@ class TaskRepository {
           .toList();
     }
     try {
-      final response = await _apiClient.get(ApiEndpoints.todayTasks);
-      final rData = response.data;
-      final List<dynamic> data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return data.map((json) => TaskModel.fromJson(json)).toList();
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.todayTasks,
+      );
+      final data = _unwrapResponseList(response.data);
+      return data
+          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'getTodayTasks');
     }
@@ -93,13 +101,14 @@ class TaskRepository {
       return DemoDataService().demoTasks.take(limit).toList();
     }
     try {
-      final response = await _apiClient.get(ApiEndpoints.recommendedTasks,
-          queryParameters: {'limit': limit},);
-      final rData = response.data;
-      final List<dynamic> data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return data.map((json) => TaskModel.fromJson(json)).toList();
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.recommendedTasks,
+        queryParameters: {'limit': limit},
+      );
+      final data = _unwrapResponseList(response.data);
+      return data
+          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'getRecommendedTasks');
     }
@@ -127,13 +136,13 @@ class TaskRepository {
       return newTask;
     }
     try {
-      final response =
-          await _apiClient.post(ApiEndpoints.tasks, data: task.toJson());
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskModel.fromJson(data);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.tasks,
+        data: task.toJson(),
+      );
+      final payload =
+          _unwrapResponseMap(response.data, action: 'createTask');
+      return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTask');
     }
@@ -158,13 +167,13 @@ class TaskRepository {
       throw Exception('Task not found in demo data');
     }
     try {
-      final response =
-          await _apiClient.put(ApiEndpoints.task(id), data: task.toJson());
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskModel.fromJson(data);
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        ApiEndpoints.task(id),
+        data: task.toJson(),
+      );
+      final payload =
+          _unwrapResponseMap(response.data, action: 'updateTask');
+      return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'updateTask');
     }
@@ -176,7 +185,7 @@ class TaskRepository {
       return;
     }
     try {
-      await _apiClient.delete(ApiEndpoints.task(id));
+      await _apiClient.delete<void>(ApiEndpoints.task(id));
     } on DioException catch (e) {
       return _handleDioError(e, 'deleteTask');
     }
@@ -195,12 +204,12 @@ class TaskRepository {
       }
     }
     try {
-      final response = await _apiClient.post(ApiEndpoints.startTask(id));
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskModel.fromJson(data);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.startTask(id),
+      );
+      final payload =
+          _unwrapResponseMap(response.data, action: 'startTask');
+      return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
     }
@@ -230,13 +239,13 @@ class TaskRepository {
     try {
       final taskComplete =
           TaskComplete(actualMinutes: actualMinutes, userNote: note);
-      final response = await _apiClient.post(ApiEndpoints.completeTask(id),
-          data: taskComplete.toJson(),);
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskCompletionResult.fromJson(data);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.completeTask(id),
+        data: taskComplete.toJson(),
+      );
+      final payload =
+          _unwrapResponseMap(response.data, action: 'completeTask');
+      return TaskCompletionResult.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'completeTask');
     }
@@ -256,12 +265,12 @@ class TaskRepository {
     }
     try {
       // Backend uses a POST for this action
-      final response = await _apiClient.post(ApiEndpoints.abandonTask(id));
-      final rData = response.data;
-      final data = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return TaskModel.fromJson(data);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.abandonTask(id),
+      );
+      final payload =
+          _unwrapResponseMap(response.data, action: 'abandonTask');
+      return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'abandonTask');
     }
@@ -283,14 +292,41 @@ class TaskRepository {
       );
     }
     try {
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.taskSuggestions,
         data: {'input_text': inputText},
       );
-      return TaskSuggestionResponse.fromJson(response.data);
+      final payload =
+          _unwrapResponseMap(response.data, action: 'getSuggestions');
+      return TaskSuggestionResponse.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'getSuggestions');
     }
+  }
+
+  Map<String, dynamic> _unwrapResponseMap(
+    Map<String, dynamic>? payload, {
+    required String action,
+  }) {
+    if (payload == null) {
+      throw Exception('$action response is empty');
+    }
+    final rawData = payload['data'];
+    if (rawData is Map<String, dynamic>) {
+      return rawData;
+    }
+    return payload;
+  }
+
+  List<dynamic> _unwrapResponseList(Map<String, dynamic>? payload) {
+    if (payload == null) {
+      return [];
+    }
+    final rawData = payload['data'];
+    if (rawData is List<dynamic>) {
+      return rawData;
+    }
+    return [];
   }
 }
 

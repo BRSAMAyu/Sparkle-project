@@ -19,7 +19,7 @@ class FileRepository {
     required int fileSize,
     required String mimeType,
   }) async {
-    final response = await _dio.post(
+    final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.filesPrepareUpload,
       data: {
         'filename': filename,
@@ -36,7 +36,7 @@ class FileRepository {
     String? visibility,
     String? description,
   }) async {
-    final response = await _dio.post(
+    final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.filesCompleteUpload,
       data: {
         'upload_id': uploadId,
@@ -49,7 +49,7 @@ class FileRepository {
   }
 
   Future<StoredFile> getFile(String fileId, {String? groupId}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.file(fileId),
       queryParameters: {
         if (groupId != null) 'group_id': groupId,
@@ -59,7 +59,7 @@ class FileRepository {
   }
 
   Future<PresignedUrl> getDownloadUrl(String fileId, {String? groupId}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.fileDownload(fileId),
       queryParameters: {
         if (groupId != null) 'group_id': groupId,
@@ -70,7 +70,7 @@ class FileRepository {
   }
 
   Future<PresignedUrl> getThumbnailUrl(String fileId, {String? groupId}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.fileThumbnail(fileId),
       queryParameters: {
         if (groupId != null) 'group_id': groupId,
@@ -82,7 +82,7 @@ class FileRepository {
 
   Future<List<StoredFile>> listMyFiles(
       {String? status, int limit = 20, int offset = 0,}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<List<dynamic>>(
       ApiEndpoints.myFiles,
       queryParameters: {
         if (status != null) 'status': status,
@@ -90,7 +90,7 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = response.data as List<dynamic>;
+    final data = response.data ?? <dynamic>[];
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -98,14 +98,14 @@ class FileRepository {
 
   Future<List<StoredFile>> searchMyFiles(
       {required String query, int limit = 20,}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<List<dynamic>>(
       ApiEndpoints.myFilesSearch,
       queryParameters: {
         'q': query,
         'limit': limit,
       },
     );
-    final data = response.data as List<dynamic>;
+    final data = response.data ?? <dynamic>[];
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -117,7 +117,7 @@ class FileRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await _dio.get(
+    final response = await _dio.get<List<dynamic>>(
       ApiEndpoints.groupFiles(groupId),
       queryParameters: {
         if (category != null) 'category': category,
@@ -125,7 +125,7 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = response.data as List<dynamic>;
+    final data = response.data ?? <dynamic>[];
     return data
         .map((item) => GroupFileInfo.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -139,7 +139,7 @@ class FileRepository {
     GroupFilePermissions? permissions,
     bool sendMessage = true,
   }) async {
-    final response = await _dio.post(
+    final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.groupFileShare(groupId, fileId),
       data: {
         if (category != null) 'category': category,
@@ -156,7 +156,7 @@ class FileRepository {
     String fileId,
     GroupFilePermissions permissions,
   ) async {
-    final response = await _dio.put(
+    final response = await _dio.put<Map<String, dynamic>>(
       ApiEndpoints.groupFilePermissions(groupId, fileId),
       data: {
         'permissions': permissions.toJson(),
@@ -167,8 +167,9 @@ class FileRepository {
 
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
       String groupId,) async {
-    final response = await _dio.get(ApiEndpoints.groupFileCategories(groupId));
-    final data = response.data as List<dynamic>;
+    final response =
+        await _dio.get<List<dynamic>>(ApiEndpoints.groupFileCategories(groupId));
+    final data = response.data ?? <dynamic>[];
     return data
         .map((item) =>
             GroupFileCategoryStat.fromJson(item as Map<String, dynamic>),)

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
-import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 // 1. AuthState Class
 class AuthState {
@@ -111,15 +111,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     DemoDataService.isDemoMode = true;
 
     // Simulate a short delay
-    unawaited(Future<void>.delayed(const Duration(milliseconds: 500), () {
-      final guestUser = DemoDataService().demoUser;
+    unawaited(
+      Future<void>.delayed(
+        const Duration(milliseconds: 500),
+        () {
+          final guestUser = DemoDataService().demoUser;
 
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: true,
-        user: guestUser,
-      );
-    }));
+          state = state.copyWith(
+            isLoading: false,
+            isAuthenticated: true,
+            user: guestUser,
+          );
+        },
+      ),
+    );
   }
 
   Future<void> refreshUser() async {

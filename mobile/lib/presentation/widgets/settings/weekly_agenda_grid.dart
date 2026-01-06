@@ -14,7 +14,7 @@ class WeeklyAgendaGrid extends StatefulWidget {
     this.initialData,
   });
   final Map<String, dynamic>? initialData;
-  final Function(Map<String, dynamic> data) onChanged;
+  final ValueChanged<Map<String, dynamic>> onChanged;
 
   @override
   State<WeeklyAgendaGrid> createState() => _WeeklyAgendaGridState();

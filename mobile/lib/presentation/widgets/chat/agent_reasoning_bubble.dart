@@ -146,6 +146,8 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
             itemCount: widget.citations!.length,
             itemBuilder: (context, index) {
               final cite = widget.citations![index];
+              final title = (cite['title'] as String?) ?? '未知来源';
+              final content = (cite['content'] as String?) ?? '';
               return GestureDetector(
                 onTap: () => _showCitationDetails(context, cite),
                 child: Container(
@@ -169,7 +171,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        cite['title'] ?? '未知来源',
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -181,7 +183,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                       const SizedBox(height: DS.xs),
                       Expanded(
                         child: Text(
-                          cite['content'] ?? '',
+                          content,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

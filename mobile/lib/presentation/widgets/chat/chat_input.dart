@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/community_model.dart';
-import 'package:sparkle/features/document/views/document_cleaner_sheet.dart';
+import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/presentation/providers/settings_provider.dart';
 import 'package:sparkle/presentation/widgets/file/file_picker_with_presigned.dart';

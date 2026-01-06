@@ -5,7 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
-import 'package:sparkle/features/user/domain/entities/user_model.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class SmartPushSettingsScreen extends ConsumerStatefulWidget {
   const SmartPushSettingsScreen({super.key});

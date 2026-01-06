@@ -359,18 +359,18 @@ class GraphRAGTrace {
         traceId: json['trace_id'] as String,
         query: json['query'] as String,
         timestamp: DateTime.parse(json['timestamp'] as String),
-        nodesRetrieved: (json['nodes_retrieved'] as List)
-            .map((node) => NodeInfo.fromJson(node))
+        nodesRetrieved: (json['nodes_retrieved'] as List<dynamic>)
+            .map((node) => NodeInfo.fromJson(node as Map<String, dynamic>))
             .toList(),
-        nodeSources: Map<String, String>.from(json['node_sources'] ?? {}),
+        nodeSources: Map<String, String>.from(
+          json['node_sources'] as Map<String, dynamic>? ?? {},
+        ),
         vectorSearchCount: json['vector_search_count'] as int,
         graphSearchCount: json['graph_search_count'] as int,
         userInterestCount: json['user_interest_count'] as int,
-        timing: Map<String, double>.from(
-          (json['timing'] as Map).map(
-            (key, value) => MapEntry(key as String, (value as num).toDouble()),
-          ),
-        ),
+        timing: (json['timing'] as Map<String, dynamic>?)
+                ?.map((key, value) => MapEntry(key, (value as num).toDouble())) ??
+            const <String, double>{},
       );
   final String traceId;
   final String query;

@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class SparkleAvatar extends StatelessWidget {
   const SparkleAvatar({

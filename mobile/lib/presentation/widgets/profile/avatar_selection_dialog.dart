@@ -20,7 +20,7 @@ class AvatarSelectionDialog extends StatelessWidget {
     this.currentAvatarUrl,
   });
   final String? currentAvatarUrl;
-  final Function(String) onAvatarSelected;
+  final ValueChanged<String> onAvatarSelected;
 
   static const List<AvatarOption> presets = [
     AvatarOption(

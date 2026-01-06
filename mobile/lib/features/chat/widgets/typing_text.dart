@@ -206,7 +206,8 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 530), // 标准光标闪烁速度
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
   }
 
   @override

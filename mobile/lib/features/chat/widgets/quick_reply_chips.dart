@@ -29,7 +29,7 @@ class QuickReplyChips extends StatelessWidget {
     this.enabled = true,
     this.customReplies,
   });
-  final Function(String message) onTap;
+  final ValueChanged<String> onTap;
   final bool enabled;
   final List<QuickReply>? customReplies;
 
@@ -216,7 +216,7 @@ class QuickReplyGrid extends StatelessWidget {
     super.key,
     this.crossAxisCount = 2,
   });
-  final Function(String message) onTap;
+  final ValueChanged<String> onTap;
   final List<QuickReply> replies;
   final int crossAxisCount;
 

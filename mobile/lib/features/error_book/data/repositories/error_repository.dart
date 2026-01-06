@@ -15,7 +15,7 @@ class ErrorRepository {
     String? aiAnalysis,
     List<String>? imageUrls,
   }) async {
-    final response = await _apiClient.post(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '/errors',
       data: {
         'subject_id': subjectId,
@@ -26,12 +26,12 @@ class ErrorRepository {
         if (imageUrls != null && imageUrls.isNotEmpty) 'image_urls': imageUrls,
       },
     );
-    return response.data;
+    return response.data ?? <String, dynamic>{};
   }
 
   /// 获取科目列表
   Future<List<Map<String, dynamic>>> getSubjects() async {
-    final response = await _apiClient.get('/subjects');
+    final response = await _apiClient.get<dynamic>('/subjects');
     final data = response.data;
     if (data is List) {
       return data.cast<Map<String, dynamic>>();
@@ -43,4 +43,5 @@ class ErrorRepository {
 }
 
 final errorRepositoryProvider = Provider<ErrorRepository>(
-    (ref) => ErrorRepository(ref.watch(apiClientProvider)),);
+  (ref) => ErrorRepository(ref.watch(apiClientProvider)),
+);

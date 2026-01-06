@@ -33,7 +33,7 @@ class ErrorBookRepository {
     String? questionImageUrl,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         _basePath,
         data: {
           'question_text': questionText,
@@ -82,7 +82,7 @@ class ErrorBookRepository {
         if (masteryMax != null) 'mastery_max': masteryMax,
       };
 
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         _basePath,
         queryParameters: queryParams,
       );
@@ -99,7 +99,7 @@ class ErrorBookRepository {
   /// 返回包含 AI 分析和关联知识点的完整信息
   Future<ErrorRecord> getError(String errorId) async {
     try {
-      final response = await _dio.get('$_basePath/$errorId');
+      final response = await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleError(e, '获取错题详情失败');
@@ -127,7 +127,7 @@ class ErrorBookRepository {
         if (chapter != null) 'chapter': chapter,
       };
 
-      final response = await _dio.patch(
+      final response = await _dio.patch<Map<String, dynamic>>(
         '$_basePath/$errorId',
         data: data,
       );
@@ -144,7 +144,7 @@ class ErrorBookRepository {
   /// 软删除，数据库中标记为已删除但不物理删除
   Future<void> deleteError(String errorId) async {
     try {
-      await _dio.delete('$_basePath/$errorId');
+      await _dio.delete<void>('$_basePath/$errorId');
     } on DioException catch (e) {
       throw _handleError(e, '删除错题失败');
     }
@@ -156,7 +156,7 @@ class ErrorBookRepository {
   /// AI 分析是异步的，立即返回确认，实际分析在后台执行
   Future<void> reAnalyzeError(String errorId) async {
     try {
-      await _dio.post('$_basePath/$errorId/analyze');
+      await _dio.post<void>('$_basePath/$errorId/analyze');
     } on DioException catch (e) {
       throw _handleError(e, '重新分析失败');
     }
@@ -181,7 +181,7 @@ class ErrorBookRepository {
     String reviewType = 'active',
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '$_basePath/review',
         data: {
           'error_id': errorId,
@@ -206,7 +206,7 @@ class ErrorBookRepository {
     int pageSize = 20,
   }) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '$_basePath/today/review',
         queryParameters: {
           'page': page,
@@ -231,8 +231,8 @@ class ErrorBookRepository {
   /// - 各科目分布
   Future<ReviewStats> getStats() async {
     try {
-      final response = await _dio.get('$_basePath/stats');
-      return ReviewStats.fromJson(response.data as Map<String, dynamic>);
+      final response = await _dio.get<Map<String, dynamic>>('$_basePath/stats');
+      return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
     } on DioException catch (e) {
       throw _handleError(e, '获取统计数据失败');
     }
@@ -248,7 +248,9 @@ class ErrorBookRepository {
       return Exception('未登录或登录已过期');
     } else if (e.response?.statusCode == 400) {
       // 尝试从响应中提取详细错误信息
-      final errorDetail = e.response?.data['detail'] as String?;
+      final data = e.response?.data;
+      final errorDetail =
+          data is Map<String, dynamic> ? data['detail'] as String? : null;
       return Exception(errorDetail ?? '请求参数错误');
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

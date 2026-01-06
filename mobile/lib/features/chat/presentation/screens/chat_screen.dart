@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
@@ -316,8 +317,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       }
                       ref.read(chatProvider.notifier).addAttachment(file);
                     },
-                    onSend: (text, {replyToId}) =>
-                        ref.read(chatProvider.notifier).sendMessage(text),
+                    onSend: (text, {replyToId}) => unawaited(
+                      ref.read(chatProvider.notifier).sendMessage(text),
+                    ),
                   ),
                 ],
               ),
@@ -336,16 +338,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _showHistoryBottomSheet(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: isDark ? DS.neutral900 : DS.brandPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: isDark ? DS.neutral900 : DS.brandPrimary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
         child: Column(
           children: [
             Container(
@@ -433,9 +436,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             : null,
                         onTap: () {
                           Navigator.pop(context);
-                          ref
-                              .read(chatProvider.notifier)
-                              .loadConversationHistory(session['id'] as String);
+                          unawaited(
+                            ref
+                                .read(chatProvider.notifier)
+                                .loadConversationHistory(
+                                    session['id'] as String,),
+                          );
                         },
                       );
                     },
@@ -444,6 +450,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -490,25 +497,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   icon: Icons.add_task_rounded,
                   label: '新建微任务',
                   color: DS.brandPrimaryConst,
-                  onTap: () => ref
-                      .read(chatProvider.notifier)
-                      .sendMessage('帮我创建一个新的微任务'),
+                  onTap: () => unawaited(
+                    ref
+                        .read(chatProvider.notifier)
+                        .sendMessage('帮我创建一个新的微任务'),
+                  ),
                 ),
                 _QuickActionChip(
                   icon: Icons.calendar_month_rounded,
                   label: '生成长期计划',
                   color: Colors.purple,
-                  onTap: () => ref
-                      .read(chatProvider.notifier)
-                      .sendMessage('帮我生成一个长期学习计划'),
+                  onTap: () => unawaited(
+                    ref
+                        .read(chatProvider.notifier)
+                        .sendMessage('帮我生成一个长期学习计划'),
+                  ),
                 ),
                 _QuickActionChip(
                   icon: Icons.bug_report_rounded,
                   label: '错误归因',
                   color: DS.brandPrimaryConst,
-                  onTap: () => ref
-                      .read(chatProvider.notifier)
-                      .sendMessage('我想分析一下最近的错误原因'),
+                  onTap: () => unawaited(
+                    ref
+                        .read(chatProvider.notifier)
+                        .sendMessage('我想分析一下最近的错误原因'),
+                  ),
                 ),
               ],
             ),
@@ -520,10 +533,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+    unawaited(
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      ),
     );
   }
 }
@@ -682,7 +697,8 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
   }
 
@@ -713,7 +729,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
-    )..repeat();
+    );
+    unawaited(_controller.repeat());
   }
 
   @override

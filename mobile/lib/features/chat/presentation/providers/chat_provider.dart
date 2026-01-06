@@ -165,7 +165,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _isDisposed = true;
-    _connectionStateSubscription?.cancel();
+    unawaited(_connectionStateSubscription?.cancel());
     _streamDebouncer.cancel();
     _chatRepository.dispose();
     super.dispose();

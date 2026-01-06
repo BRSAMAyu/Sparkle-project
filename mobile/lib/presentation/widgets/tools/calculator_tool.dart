@@ -20,14 +20,11 @@ class _CalculatorToolState extends State<CalculatorTool> {
         _result = '';
       } else if (text == '=') {
         try {
-          final p = Parser();
+          final p = GrammarParser();
           final exp = p.parse(_expression.replaceAll('x', '*'));
           final cm = ContextModel();
-          // Using the older but working API with ignore if the new one isn't fully compatible
-          // or library version is locked.
-          // Actually, let's keep logic and just suppress the specific lint.
-          // ignore: deprecated_member_use
-          _result = '${exp.evaluate(EvaluationType.REAL, cm)}';
+          final evaluator = RealEvaluator(cm);
+          _result = '${evaluator.evaluate(exp)}';
           // Remove .0 if integer
           if (_result.endsWith('.0')) {
             _result = _result.substring(0, _result.length - 2);

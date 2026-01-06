@@ -24,17 +24,22 @@ class DocumentRepository {
       'options': jsonEncode({'enable_ocr': enableOcr}),
     });
 
-    final response = await _dio.post(
+    final response = await _dio.post<Map<String, dynamic>>(
       '/documents/clean', // Assuming base URL is set in Dio
       data: formData,
     );
 
-    return response.data['task_id'];
+    final data = response.data;
+    if (data == null || data['task_id'] == null) {
+      throw Exception('Missing task_id in response');
+    }
+    return data['task_id'] as String;
   }
 
   /// Polls the status of a cleaning task.
   Future<CleaningTaskStatus> getTaskStatus(String taskId) async {
-    final response = await _dio.get('/documents/clean/$taskId');
-    return CleaningTaskStatus.fromJson(response.data);
+    final response =
+        await _dio.get<Map<String, dynamic>>('/documents/clean/$taskId');
+    return CleaningTaskStatus.fromJson(response.data ?? <String, dynamic>{});
   }
 }

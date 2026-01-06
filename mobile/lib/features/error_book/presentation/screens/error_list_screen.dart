@@ -306,7 +306,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
   Future<void> _navigateToAddError(BuildContext context) async {
     final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
+      MaterialPageRoute<bool>(
         builder: (context) => const AddErrorScreen(),
       ),
     );
@@ -320,7 +320,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
   Future<void> _navigateToDetail(BuildContext context, String errorId) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (context) => ErrorDetailScreen(errorId: errorId),
       ),
     );
@@ -360,7 +360,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
   Future<void> _showFilterDialog(BuildContext context) async {
     // TODO: 实现更多筛选选项（掌握度、章节等）
-    showDialog(
+    await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('筛选选项'),

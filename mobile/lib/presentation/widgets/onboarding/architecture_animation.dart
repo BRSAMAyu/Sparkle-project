@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -49,7 +50,8 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat();
+    );
+    unawaited(_pulseController.repeat());
 
     _fadeAnimation = CurvedAnimation(
       parent: _mainController,
@@ -62,15 +64,15 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
     );
 
     if (widget.autoPlay) {
-      _startAnimation();
+      unawaited(_startAnimation());
     }
   }
 
   Future<void> _startAnimation() async {
     for (var i = 0; i < _totalSteps; i++) {
       setState(() => _currentStep = i);
-      _mainController.forward(from: 0);
-      await Future.delayed(const Duration(seconds: 3));
+      unawaited(_mainController.forward(from: 0));
+      await Future<void>.delayed(const Duration(seconds: 3));
     }
 
     widget.onComplete?.call();

@@ -11,7 +11,7 @@ class TaskListWidget extends StatelessWidget {
     required this.tasks,
     super.key,
   });
-  final List<dynamic> tasks;
+  final List<Map<String, dynamic>> tasks;
 
   @override
   Widget build(BuildContext context) {

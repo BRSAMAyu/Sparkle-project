@@ -1,4 +1,4 @@
-export 'domain/entities/user_model.dart';
+
 export 'presentation/screens/edit_profile_screen.dart';
 export 'presentation/screens/learning_mode_screen.dart';
 export 'presentation/screens/password_reset_screen.dart';

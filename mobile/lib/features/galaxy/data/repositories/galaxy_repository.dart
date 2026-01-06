@@ -20,15 +20,24 @@ class GalaxyRepository {
       return DemoDataService().demoGalaxy;
     }
     try {
-      final response = await _apiClient.get(
+      final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.galaxyGraph,
         queryParameters: {'zoom_level': zoomLevel},
       );
-      return GalaxyGraphResponse.fromJson(response.data);
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Galaxy graph payload is missing');
+      }
+      return GalaxyGraphResponse.fromJson(payload);
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Failed to load galaxy graph';
+      throw Exception(
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to load galaxy graph',
+        ),
+      );
     } catch (_) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -38,9 +47,14 @@ class GalaxyRepository {
       return;
     }
     try {
-      await _apiClient.post(ApiEndpoints.sparkNode(id));
+      await _apiClient.post<void>(ApiEndpoints.sparkNode(id));
     } on DioException catch (e) {
-      throw Exception(e.response?.data?['detail'] ?? 'Failed to spark node');
+      throw Exception(
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to spark node',
+        ),
+      );
     }
   }
 
@@ -58,13 +72,23 @@ class GalaxyRepository {
       return DemoDataService().getDemoNodeDetail(nodeId);
     }
     try {
-      final response =
-          await _apiClient.get(ApiEndpoints.galaxyNodeDetail(nodeId));
-      return KnowledgeDetailResponse.fromJson(response.data);
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.galaxyNodeDetail(nodeId),
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Node detail payload is missing');
+      }
+      return KnowledgeDetailResponse.fromJson(payload);
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Failed to load node detail';
+      throw Exception(
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to load node detail',
+        ),
+      );
     } catch (_) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -75,9 +99,12 @@ class GalaxyRepository {
       return null;
     }
     try {
-      final response = await _apiClient.post(ApiEndpoints.galaxyPredictNext);
-      if (response.data == null) return null;
-      return KnowledgeDetailResponse.fromJson(response.data);
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.galaxyPredictNext,
+      );
+      final payload = response.data;
+      if (payload == null) return null;
+      return KnowledgeDetailResponse.fromJson(payload);
     } catch (e) {
       // It's okay if prediction fails, just return null
       return null;
@@ -89,11 +116,13 @@ class GalaxyRepository {
       return [];
     }
     try {
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.galaxySearch,
         data: {'query': query},
       );
-      final searchResponse = GalaxySearchResponse.fromJson(response.data);
+      final payload = response.data;
+      if (payload == null) return [];
+      final searchResponse = GalaxySearchResponse.fromJson(payload);
       return searchResponse.results;
     } on DioException {
       return [];
@@ -108,10 +137,14 @@ class GalaxyRepository {
       return;
     }
     try {
-      await _apiClient.post(ApiEndpoints.galaxyNodeFavorite(nodeId));
+      await _apiClient.post<void>(ApiEndpoints.galaxyNodeFavorite(nodeId));
     } on DioException catch (e) {
       throw Exception(
-          e.response?.data?['detail'] ?? 'Failed to toggle favorite',);
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to toggle favorite',
+        ),
+      );
     }
   }
 
@@ -121,13 +154,28 @@ class GalaxyRepository {
       return;
     }
     try {
-      await _apiClient.post(
+      await _apiClient.post<void>(
         ApiEndpoints.galaxyNodeDecayPause(nodeId),
         data: {'pause': pause},
       );
     } on DioException catch (e) {
       throw Exception(
-          e.response?.data?['detail'] ?? 'Failed to update decay status',);
+        _extractDetail(
+          e,
+          defaultMessage: 'Failed to update decay status',
+        ),
+      );
     }
+  }
+
+  String _extractDetail(DioException exception, {required String defaultMessage}) {
+    final data = exception.response?.data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'];
+      if (detail is String && detail.isNotEmpty) {
+        return detail;
+      }
+    }
+    return defaultMessage;
   }
 }

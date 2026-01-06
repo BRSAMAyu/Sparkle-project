@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/features/user/domain/entities/user_model.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class UserRepository {
   UserRepository(this._apiClient);
@@ -13,11 +13,15 @@ class UserRepository {
       return DemoDataService().demoUser; // Mock update
     }
     try {
-      final response = await _apiClient.put(
+      final response = await _apiClient.put<Map<String, dynamic>>(
         '/users/me/preferences',
         data: preferences.toJson(),
       );
-      return UserModel.fromJson(response.data);
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Failed to update preferences');
+      }
+      return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
     }
@@ -30,11 +34,15 @@ class UserRepository {
     }
     try {
       // Assuming a dedicated endpoint or patching the user profile
-      final response = await _apiClient.put(
+      final response = await _apiClient.put<Map<String, dynamic>>(
         '/users/me/push-preference',
         data: prefs.toJson(),
       );
-      return UserModel.fromJson(response.data);
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('Failed to update push preferences');
+      }
+      return UserModel.fromJson(payload);
     } catch (e) {
       rethrow;
     }

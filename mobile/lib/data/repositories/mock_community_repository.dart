@@ -393,17 +393,22 @@ class MockCommunityRepository implements CommunityRepository {
     _mockPrivateMessages[message.targetUserId]!.insert(0, newMsg);
 
     // Auto-read by "other person" for demo
-    unawaited(Future<void>.delayed(const Duration(seconds: 2), () {
-      final index = _mockPrivateMessages[message.targetUserId]!
-          .indexWhere((m) => m.id == newMsg.id);
-      if (index != -1) {
-        _mockPrivateMessages[message.targetUserId]![index] =
-            _mockPrivateMessages[message.targetUserId]![index].copyWith(
-          isRead: true,
-          readAt: DateTime.now(),
-        );
-      }
-    }));
+    unawaited(
+      Future<void>.delayed(
+        const Duration(seconds: 2),
+        () {
+          final index = _mockPrivateMessages[message.targetUserId]!
+              .indexWhere((m) => m.id == newMsg.id);
+          if (index != -1) {
+            _mockPrivateMessages[message.targetUserId]![index] =
+                _mockPrivateMessages[message.targetUserId]![index].copyWith(
+              isRead: true,
+              readAt: DateTime.now(),
+            );
+          }
+        },
+      ),
+    );
 
     return newMsg;
   }
@@ -530,7 +535,7 @@ class MockCommunityRepository implements CommunityRepository {
     String? nonce,
   }) async {
     // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
 
     final currentUser = _mockUsers.firstWhere((u) => u.id == currentUserId);
     final newMsg = MessageInfo(

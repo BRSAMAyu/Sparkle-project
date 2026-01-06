@@ -89,7 +89,12 @@ class AgentMessageRenderer extends StatelessWidget {
         return KnowledgeCard(data: widget.data);
 
       case 'task_list':
-        return TaskListWidget(tasks: widget.data['tasks'] as List);
+        final rawTasks = widget.data['tasks'] as List<dynamic>?;
+        return TaskListWidget(
+          tasks: (rawTasks ?? <dynamic>[])
+              .whereType<Map<String, dynamic>>()
+              .toList(),
+        );
 
       case 'plan_card':
         return PlanCard(data: widget.data);

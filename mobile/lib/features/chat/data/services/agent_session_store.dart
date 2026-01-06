@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,7 +24,7 @@ class AgentSessionStore {
       return existing;
     }
     final sessionId = 'agent_${_uuid.v4()}';
-    _prefs.setString(key, sessionId);
+    unawaited(_prefs.setString(key, sessionId));
     return sessionId;
   }
 

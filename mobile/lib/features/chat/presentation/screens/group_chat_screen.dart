@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -29,13 +31,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final durationController = TextEditingController(text: '60');
     final messageController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Daily Check-in'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Daily Check-in'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             TextField(
               controller: durationController,
               decoration: const InputDecoration(
@@ -67,14 +70,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 await ref
                     .read(groupDetailProvider(widget.groupId).notifier)
                     .checkin(duration, message);
+                if (!context.mounted) return;
                 // Refresh chat to see the checkin message
                 ref.invalidate(groupChatProvider(widget.groupId));
 
-                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Checked in successfully!')),);
               } catch (e) {
-                if (!mounted) return;
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context)
                     .showSnackBar(SnackBar(content: Text('Failed: $e')));
               }
@@ -82,6 +85,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             child: const Text('Check-in'),
           ),
         ],
+        ),
       ),
     );
   }
@@ -115,9 +119,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           IconButton(
             icon: const Icon(Icons.folder_open_rounded),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => GroupFilesScreen(groupId: widget.groupId),
+              unawaited(
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => GroupFilesScreen(groupId: widget.groupId),
+                  ),
                 ),
               );
             },
@@ -240,10 +246,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   widget.groupId,
                   file.id,
                 );
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('文件已分享至群聊')),
                 );
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('分享失败: $e')),
                 );
@@ -282,10 +290,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
               final actualReplyId = _quotedMessage?.id ?? replyToId;
               setState(() => _quotedMessage = null);
-              ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(
-                    content: text,
-                    replyToId: actualReplyId,
-                  );
+              unawaited(
+                ref.read(groupChatProvider(widget.groupId).notifier).sendMessage(
+                      content: text,
+                      replyToId: actualReplyId,
+                    ),
+              );
             },
           ),
         ],
@@ -328,11 +338,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     GroupInfo? groupInfo,
   }) {
     if (agentState.isSending) return;
-    ref.read(groupChatAgentProvider(widget.groupId).notifier).sendAgentMessage(
-          prompt: prompt,
-          groupName: groupInfo?.name,
-          recentMessages: messages,
-        );
+    unawaited(
+      ref.read(groupChatAgentProvider(widget.groupId).notifier).sendAgentMessage(
+            prompt: prompt,
+            groupName: groupInfo?.name,
+            recentMessages: messages,
+          ),
+    );
   }
 
   Widget _buildAgentToolbar(
@@ -422,12 +434,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       );
 
   void _openThread(MessageInfo message) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          ThreadSheet(groupId: widget.groupId, rootMessage: message),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) =>
+            ThreadSheet(groupId: widget.groupId, rootMessage: message),
+      ),
     );
   }
 
@@ -438,7 +452,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     var isLoading = false;
 
     try {
-      await showModalBottomSheet(
+      await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,

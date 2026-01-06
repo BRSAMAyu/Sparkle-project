@@ -29,10 +29,16 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         Uri.parse('${ApiConstants.baseUrl}/admin/chaos/status'),
       );
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final thresholdValue = data['threshold'];
+        final queueValue = data['queue_length'];
         setState(() {
-          _currentThreshold = data['threshold'];
-          _queueLength = data['queue_length'];
+          _currentThreshold = thresholdValue is int
+              ? thresholdValue
+              : int.tryParse(thresholdValue?.toString() ?? '') ?? _currentThreshold;
+          _queueLength = queueValue is int
+              ? queueValue
+              : int.tryParse(queueValue?.toString() ?? '') ?? _queueLength;
         });
       }
     } catch (e) {

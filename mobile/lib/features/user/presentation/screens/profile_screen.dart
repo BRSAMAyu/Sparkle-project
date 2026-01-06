@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/user/domain/entities/user_model.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
