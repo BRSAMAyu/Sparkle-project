@@ -66,6 +66,12 @@ class User(BaseModel):
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
     last_login_at = Column(DateTime, nullable=True)
 
+    # 🆕 年龄校验 (V3.1)
+    is_minor = Column(Boolean, nullable=True)  # None = unknown, True/False = verified
+    age_verified = Column(Boolean, default=False, nullable=False)
+    age_verification_source = Column(String(50), nullable=True)  # registration, parent_consent, device_mode
+    age_verified_at = Column(DateTime, nullable=True)
+
     # 关系定义
     push_preference = relationship(
         "PushPreference",

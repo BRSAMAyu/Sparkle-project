@@ -11,6 +11,7 @@ from app.models.galaxy import StudyRecord
 from app.models.chat import ChatMessage, MessageRole
 from app.models.cognitive import CognitiveFragment
 from app.models.analytics import UserDailyMetric
+from app.services.compliance.crypto_erase import CryptoEraseManager
 
 class AnalyticsService:
     def __init__(self, db: AsyncSession):
@@ -95,7 +96,16 @@ class AnalyticsService:
             
             anxiety_score = 0.0
             if fragments:
-                anxious_count = sum(1 for f in fragments if f.sentiment == "anxious")
+                crypto = CryptoEraseManager(self.db)
+                anxious_count = 0
+                for f in fragments:
+                    if f.sentiment == "anxious":
+                        anxious_count += 1
+                        continue
+                    if f.sensitive_tags_encrypted:
+                        decrypted = await crypto.decrypt_payload(user_id, f.sensitive_tags_encrypted)
+                        if decrypted and "anxiety_high" in decrypted:
+                            anxious_count += 1
                 anxiety_score = anxious_count / len(fragments)
 
             # 4. System Metrics

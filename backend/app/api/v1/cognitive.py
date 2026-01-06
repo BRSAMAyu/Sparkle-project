@@ -47,7 +47,9 @@ async def create_fragment(
         context_tags=fragment_in.context_tags,
         error_tags=fragment_in.error_tags,
         severity=fragment_in.severity,
-        task_id=fragment_in.task_id
+        task_id=fragment_in.task_id,
+        source_event_id=fragment_in.source_event_id,
+        persona_version=fragment_in.persona_version
     )
     
     # Trigger AI Analysis via Background Task

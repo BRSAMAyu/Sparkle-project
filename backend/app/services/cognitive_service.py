@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,9 @@ class CognitiveService:
         error_tags: Optional[List[str]] = None,
         severity: int = 1,
         task_id: Optional[UUID] = None,
-        fragment_id: Optional[UUID] = None
+        fragment_id: Optional[UUID] = None,
+        source_event_id: Optional[str] = None,
+        persona_version: Optional[str] = None
     ) -> CognitiveFragment:
         """Create a new cognitive fragment and generate its embedding."""
         
@@ -50,6 +52,8 @@ class CognitiveService:
             error_tags=error_tags,
             severity=severity,
             task_id=task_id,
+            source_event_id=source_event_id,
+            persona_version=persona_version,
             analysis_status=AnalysisStatus.PENDING,
             created_at=datetime.utcnow()
         )

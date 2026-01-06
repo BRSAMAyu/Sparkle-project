@@ -29,12 +29,14 @@ from app.models.community import (
 )
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
 from app.models.analytics import UserDailyMetric
+from app.models.compliance import LegalHold, UserPersonaKey, CryptoShreddingCertificate, DlqReplayAuditLog, PersonaSnapshot
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.focus import FocusSession, FocusType, FocusStatus
 from app.models.vocabulary import WordBook, DictionaryEntry
 from app.models.file_storage import StoredFile
 from app.models.document_chunks import DocumentChunk
 from app.models.group_files import GroupFile
+from app.models.irt import IRTItemParameter, UserIRTAbility
 
 __all__ = [
     "BaseModel",
@@ -79,6 +81,11 @@ __all__ = [
     "BehaviorPattern",
     # Analytics
     "UserDailyMetric",
+    "LegalHold",
+    "UserPersonaKey",
+    "CryptoShreddingCertificate",
+    "DlqReplayAuditLog",
+    "PersonaSnapshot",
     "CuriosityCapsule",
     # Focus
     "FocusSession",
@@ -90,4 +97,6 @@ __all__ = [
     "StoredFile",
     "DocumentChunk",
     "GroupFile",
+    "IRTItemParameter",
+    "UserIRTAbility",
 ]

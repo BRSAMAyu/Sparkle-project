@@ -109,10 +109,21 @@ class ContextOrchestrator:
             preferences=user_data.get("preferences", {}),
             engagement_metrics=user_data.get("metrics", {})
         )
+
+        context = self._sanitize_context(context)
         
         # Cache the result
         await self._cache_context(user_id, context)
         
+        return context
+
+    def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
+        sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
+        def _clean(data: Dict[str, Any]) -> Dict[str, Any]:
+            return {k: v for k, v in data.items() if k not in sensitive_keys}
+
+        context.preferences = _clean(context.preferences)
+        context.engagement_metrics = _clean(context.engagement_metrics)
         return context
 
     def _handle_result(self, result, name: str, default: Any) -> Any:

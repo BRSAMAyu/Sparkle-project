@@ -174,6 +174,9 @@ class UserNodeStatus(Base):
 
     # 掌握度/亮度 (0-100)
     mastery_score = Column(Float, default=0, nullable=False)
+    # BKT 掌握概率 (0-1)
+    bkt_mastery_prob = Column(Float, default=0.0, nullable=False)
+    bkt_last_updated_at = Column(DateTime, nullable=True)
     
     # 投入时间 (分钟)
     total_minutes = Column(Integer, default=0, nullable=False)

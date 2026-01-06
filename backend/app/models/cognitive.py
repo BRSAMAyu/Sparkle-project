@@ -42,6 +42,15 @@ class CognitiveFragment(BaseModel):
     
     # AI 预分析结果
     sentiment = Column(String(20), nullable=True)   # anxious, bored, neutral...
+
+    # 画像版本与溯源 (V3.1)
+    persona_version = Column(String(50), nullable=True)
+    source_event_id = Column(String(64), nullable=True, index=True)
+    
+    # 敏感标签加密存储 (V3.1)
+    sensitive_tags_encrypted = Column(Text, nullable=True)
+    sensitive_tags_version = Column(Integer, default=1, nullable=True)
+    sensitive_tags_key_id = Column(String(100), nullable=True)
     
     # 标签系统 (v2.3 Enhanced)
     tags = Column(JSON, nullable=True)     # Generic tags

@@ -23,6 +23,8 @@ class CognitiveFragmentCreate(BaseModel):
     error_tags: Optional[List[str]] = None
     severity: int = Field(1, ge=1, le=5)
     task_id: Optional[UUID] = None
+    source_event_id: Optional[str] = None
+    persona_version: Optional[str] = None
 
 # ========== Response Schemas ========== 
 
@@ -40,6 +42,8 @@ class CognitiveFragmentResponse(BaseModel):
     analysis_status: AnalysisStatus
     error_message: Optional[str]
     task_id: Optional[UUID]
+    source_event_id: Optional[str]
+    persona_version: Optional[str]
     created_at: datetime
 
     class Config:

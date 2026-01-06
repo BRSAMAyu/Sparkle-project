@@ -24,6 +24,7 @@ from app.api.v1 import (
     focus,
     vocabulary,
     audit,
+    dlq_admin,
     health_production,
     graph_monitor,
     graphrag_trace,
@@ -41,6 +42,7 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
+api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
 api_router.include_router(error_book.router) # Prefix is defined in router itself (/errors)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
