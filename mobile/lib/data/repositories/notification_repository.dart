@@ -3,7 +3,8 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/data/models/notification_model.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
-    (ref) => NotificationRepository(ref.read(apiClientProvider)),);
+  (ref) => NotificationRepository(ref.read(apiClientProvider)),
+);
 
 class NotificationRepository {
   NotificationRepository(this._apiClient);
@@ -14,7 +15,7 @@ class NotificationRepository {
     int limit = 50,
     bool unreadOnly = false,
   }) async {
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<dynamic>(
       '/notifications/',
       queryParameters: {
         'skip': skip,
@@ -31,10 +32,12 @@ class NotificationRepository {
 
     // For now, I'll assume direct list as per my backend code.
     final list = response.data as List<dynamic>;
-    return list.map((e) => NotificationModel.fromJson(e)).toList();
+    return list
+        .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> markAsRead(String id) async {
-    await _apiClient.put('/notifications/$id/read');
+    await _apiClient.put<dynamic>('/notifications/$id/read');
   }
 }

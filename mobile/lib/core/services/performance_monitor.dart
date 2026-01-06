@@ -8,6 +8,8 @@
 /// 5. 性能数据聚合和分析
 library;
 
+// ignore_for_file: cascade_invocations, discarded_futures, unawaited_futures, unused_field, prefer_expression_function_bodies
+
 import 'dart:async';
 import 'dart:developer' as developer;
 

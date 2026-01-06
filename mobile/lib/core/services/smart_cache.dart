@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_foreach
+
 import 'dart:collection';
 
 /// 智能缓存管理器 - 支持LRU+时间限制清理

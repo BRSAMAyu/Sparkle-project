@@ -36,10 +36,11 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      // Handle Dio-specific errors
-      throw e.response?.data['detail'] ?? 'Registration failed';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Registration failed');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -65,9 +66,11 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return tokenResponse;
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Login failed';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Login failed');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -104,9 +107,11 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return tokenResponse;
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Social login failed';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Social login failed');
     } catch (e) {
-      throw 'An unexpected error occurred: $e';
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
@@ -130,7 +135,7 @@ class AuthRepository {
     }
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) {
-      throw 'No refresh token available.';
+      throw Exception('No refresh token available.');
     }
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -142,11 +147,14 @@ class AuthRepository {
       return tokenResponse;
     } on DioException catch (e) {
       await clearTokens(); // Clear tokens if refresh fails
-      throw e.response?.data['detail'] ??
-          'Session expired. Please log in again.';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(
+        detail ?? 'Session expired. Please log in again.',
+      );
     } catch (e) {
       await clearTokens();
-      throw 'An unexpected error occurred during token refresh.';
+      throw Exception('An unexpected error occurred during token refresh.');
     }
   }
 
@@ -158,9 +166,11 @@ class AuthRepository {
       final response = await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.me);
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Could not fetch user profile.';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Could not fetch user profile.');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -172,9 +182,11 @@ class AuthRepository {
       final response = await _apiClient.put<Map<String, dynamic>>(ApiEndpoints.me, data: data);
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Could not update profile.';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Could not update profile.');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -200,9 +212,11 @@ class AuthRepository {
       );
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Could not update avatar.';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Could not update avatar.');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 
@@ -211,7 +225,7 @@ class AuthRepository {
       if (DemoDataService.isDemoMode) {
         return;
       }
-      await _apiClient.post(
+      await _apiClient.post<dynamic>(
         '${ApiEndpoints.me}/password',
         data: {
           'old_password': oldPassword,
@@ -219,9 +233,11 @@ class AuthRepository {
         },
       );
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Could not change password.';
+      final detail =
+          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+      throw Exception(detail ?? 'Could not change password.');
     } catch (e) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 

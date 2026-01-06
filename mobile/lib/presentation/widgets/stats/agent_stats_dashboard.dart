@@ -1,4 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
+// ignore_for_file: avoid_dynamic_calls
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';

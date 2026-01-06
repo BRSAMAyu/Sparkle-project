@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations, prefer_expression_function_bodies, deprecated_member_use
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';

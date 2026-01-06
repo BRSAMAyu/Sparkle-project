@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations, prefer_foreach, prefer_expression_function_bodies
+
 import 'dart:collection';
 
 import 'package:flutter/material.dart';

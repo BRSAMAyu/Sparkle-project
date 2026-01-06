@@ -9,11 +9,11 @@ class CalendarRepository {
   final NotificationService _notificationService;
   static const String _boxName = 'calendar_events_v1';
 
-  Future<Box> _getBox() async {
+  Future<Box<dynamic>> _getBox() async {
     if (!Hive.isBoxOpen(_boxName)) {
-      return Hive.openBox(_boxName);
+      return Hive.openBox<dynamic>(_boxName);
     }
-    return Hive.box(_boxName);
+    return Hive.box<dynamic>(_boxName);
   }
 
   Future<List<CalendarEventModel>> getEvents() async {
@@ -29,23 +29,23 @@ class CalendarRepository {
   Future<void> addEvent(CalendarEventModel event) async {
     final box = await _getBox();
     await box.put(event.id, event.toJson());
-    _scheduleReminders(event);
+    await _scheduleReminders(event);
   }
 
   Future<void> updateEvent(CalendarEventModel event) async {
     final box = await _getBox();
     await box.put(event.id, event.toJson());
-    _cancelReminders(event.id);
-    _scheduleReminders(event);
+    await _cancelReminders(event.id);
+    await _scheduleReminders(event);
   }
 
   Future<void> deleteEvent(String id) async {
     final box = await _getBox();
     await box.delete(id);
-    _cancelReminders(id);
+    await _cancelReminders(id);
   }
 
-  void _scheduleReminders(CalendarEventModel event) {
+  Future<void> _scheduleReminders(CalendarEventModel event) async {
     final baseId = event.id.hashCode;
 
     DateTimeComponents? matchComponents;
@@ -62,7 +62,7 @@ class CalendarRepository {
       final reminderTime = event.startTime.subtract(Duration(minutes: minutes));
 
       if (matchComponents != null || reminderTime.isAfter(DateTime.now())) {
-        _notificationService.scheduleNotification(
+        await _notificationService.scheduleNotification(
           id: baseId + i,
           title: '日程提醒: ${event.title}',
           body: minutes == 0 ? '现在开始' : '还有 $minutes 分钟开始',
@@ -74,10 +74,10 @@ class CalendarRepository {
     }
   }
 
-  void _cancelReminders(String eventId) {
+  Future<void> _cancelReminders(String eventId) async {
     final baseId = eventId.hashCode;
     for (var i = 0; i < 5; i++) {
-      _notificationService.cancelNotification(baseId + i);
+      await _notificationService.cancelNotification(baseId + i);
     }
   }
 }

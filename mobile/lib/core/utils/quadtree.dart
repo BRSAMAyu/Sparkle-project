@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 import 'dart:math';
 
 /// A simple point data structure for QuadTree

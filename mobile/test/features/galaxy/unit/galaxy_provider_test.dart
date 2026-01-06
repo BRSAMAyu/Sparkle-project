@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// ignore_for_file: cascade_invocations
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';

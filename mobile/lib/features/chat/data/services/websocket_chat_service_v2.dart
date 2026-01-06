@@ -165,11 +165,17 @@ class WebSocketChatServiceV2 {
   WebSocketChatServiceV2({
     String? baseUrl,
     WebSocketChannelFactory? channelFactory,
+    bool enableReconnect = true,
+    bool autoConnect = true,
   })  : baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
-        _channelFactory = channelFactory;
+        _channelFactory = channelFactory,
+        _enableReconnect = enableReconnect,
+        _autoConnect = autoConnect;
 
   // Factory for creating channels
   final WebSocketChannelFactory? _channelFactory;
+  final bool _enableReconnect;
+  final bool _autoConnect;
 
   // WebSocket 连接
   WebSocketChannel? _channel;
@@ -242,7 +248,7 @@ class WebSocketChatServiceV2 {
     _messageStreamController ??= StreamController<ChatStreamEvent>.broadcast();
 
     // 检查是否需要建立连接
-    if (_shouldConnect(userId, token)) {
+    if (_autoConnect && _shouldConnect(userId, token)) {
       _establishConnection(userId, token);
     }
 
@@ -322,6 +328,10 @@ class WebSocketChatServiceV2 {
     }
 
     // 未连接
+    if (_connectionState == WsConnectionState.failed && !_enableReconnect) {
+      return false;
+    }
+
     if (_connectionState == WsConnectionState.disconnected ||
         _connectionState == WsConnectionState.failed) {
       return true;
@@ -480,6 +490,11 @@ class WebSocketChatServiceV2 {
   /// 触发重连（指数退避）(TODO-A7)
   void _triggerReconnect() {
     if (_disposed) return; // TODO-A7: Check disposed
+    if (!_enableReconnect) {
+      _log('⛔ Reconnect disabled');
+      _updateConnectionState(WsConnectionState.failed);
+      return;
+    }
 
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       _log('❌ Max reconnect attempts reached');

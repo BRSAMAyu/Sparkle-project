@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// Sparkle 动效设计系统
@@ -91,9 +93,12 @@ class SparkleMotion {
 
   /// 呼吸动画控制器配置 (Helper)
   /// return AnimationController configured for breathing
-  static AnimationController createBreathingController(TickerProvider vsync) =>
-      AnimationController(
-        vsync: vsync,
-        duration: const Duration(seconds: 4), // 4秒一个周期
-      )..repeat(reverse: true);
+  static AnimationController createBreathingController(TickerProvider vsync) {
+    final controller = AnimationController(
+      vsync: vsync,
+      duration: const Duration(seconds: 4), // 4秒一个周期
+    );
+    unawaited(controller.repeat(reverse: true));
+    return controller;
+  }
 }

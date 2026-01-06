@@ -1,3 +1,5 @@
+// ignore_for_file: cancel_subscriptions
+
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sparkle/core/offline/sync_queue.dart';
@@ -14,10 +16,10 @@ class NetworkMonitor {
     _subscription = _connectivity.onConnectivityChanged.listen((result) {
       if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
 
-      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
         if (!result.contains(ConnectivityResult.none)) {
           // Network restored, trigger sync
-          unawaited(_syncQueue.syncPendingUpdates());
+          await _syncQueue.syncPendingUpdates();
         }
       });
     });
@@ -25,6 +27,13 @@ class NetworkMonitor {
 
   void stopMonitoring() {
     _debounceTimer?.cancel();
-    _subscription?.cancel();
+    final subscription = _subscription;
+    if (subscription != null) {
+      unawaited(subscription.cancel());
+    }
+  }
+
+  void dispose() {
+    stopMonitoring();
   }
 }

@@ -6,24 +6,25 @@ class VocabularyRepository {
   final ApiClient _apiClient;
 
   Future<Map<String, dynamic>> lookup(String word) async {
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<dynamic>(
       '/vocabulary/lookup',
       queryParameters: {'word': word},
     );
-    return response.data;
+    return response.data as Map<String, dynamic>;
   }
 
   Future<void> addToWordbook(Map<String, dynamic> data) async {
-    await _apiClient.post('/vocabulary/wordbook', data: data);
+    await _apiClient.post<dynamic>('/vocabulary/wordbook', data: data);
   }
 
   Future<List<dynamic>> getReviewList() async {
-    final response = await _apiClient.get('/vocabulary/wordbook/review');
-    return response.data;
+    final response =
+        await _apiClient.get<dynamic>('/vocabulary/wordbook/review');
+    return response.data as List<dynamic>;
   }
 
   Future<void> recordReview(String wordId, bool success) async {
-    await _apiClient.post(
+    await _apiClient.post<dynamic>(
       '/vocabulary/wordbook/review',
       data: {
         'word_id': wordId,
@@ -34,22 +35,25 @@ class VocabularyRepository {
 
   // LLM Methods
   Future<List<String>> getAssociations(String word) async {
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<dynamic>(
       '/vocabulary/llm/associate',
       queryParameters: {'word': word},
     );
-    return List<String>.from(response.data['associations']);
+    final data = response.data as Map<String, dynamic>;
+    final associations = data['associations'] as List<dynamic>?;
+    return List<String>.from(associations ?? const []);
   }
 
   Future<String> generateSentence(String word, {String? context}) async {
-    final response = await _apiClient.get(
+    final response = await _apiClient.get<dynamic>(
       '/vocabulary/llm/sentence',
       queryParameters: {
         'word': word,
         if (context != null) 'context': context,
       },
     );
-    return response.data['sentence'];
+    final data = response.data as Map<String, dynamic>;
+    return data['sentence'] as String;
   }
 }
 

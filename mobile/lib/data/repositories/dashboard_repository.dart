@@ -14,7 +14,7 @@ class DashboardRepository {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoDashboard;
     }
-    final response = await _apiClient.get(ApiEndpoints.dashboardStatus);
+    final response = await _apiClient.get<dynamic>(ApiEndpoints.dashboardStatus);
     return response.data as Map<String, dynamic>;
   }
 }

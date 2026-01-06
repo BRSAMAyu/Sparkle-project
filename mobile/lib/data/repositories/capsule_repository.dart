@@ -7,14 +7,14 @@ class CapsuleRepository {
   final ApiClient _apiClient;
 
   Future<List<CuriosityCapsuleModel>> getTodayCapsules() async {
-    final response = await _apiClient.get('/capsules/today');
+    final response = await _apiClient.get<dynamic>('/capsules/today');
     return (response.data as List)
         .map((e) => CuriosityCapsuleModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   Future<void> markAsRead(String id) async {
-    await _apiClient.post('/capsules/$id/read');
+    await _apiClient.post<dynamic>('/capsules/$id/read');
   }
 }
 

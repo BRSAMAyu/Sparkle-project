@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -59,17 +61,13 @@ class OfflineSyncQueue {
   final ConflictResolver _conflictResolver = ConflictResolver();
   final Uuid _uuid = const Uuid();
 
-  StreamSubscription<dynamic>? _ackSubscription;
-
   void _listenForAcks() {
     // This global listener is kept for general monitoring or other message types.
     // Specific ACK handling is done via _waitForAck's temporary listeners or a centralized dispatcher.
     // For now, we keep this empty or for logging, as _waitForAck attaches its own listener.
   }
 
-  void dispose() {
-    _ackSubscription?.cancel();
-  }
+  void dispose() {}
 
   Future<void> queueMasteryUpdate(String nodeId, int mastery) async {
     final requestId = _uuid.v4();
@@ -274,7 +272,7 @@ class OfflineSyncQueue {
 
   Future<void> _waitForAck(String requestId) {
     final completer = Completer<void>();
-    late final StreamSubscription subscription;
+    late final StreamSubscription<dynamic> subscription;
 
     subscription = _wsService.stream.listen((message) {
       if (message is! Map) return;

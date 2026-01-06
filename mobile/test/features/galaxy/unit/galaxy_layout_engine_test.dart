@@ -296,7 +296,7 @@ List<GalaxyEdgeModel> _generateMockEdges(List<GalaxyNodeModel> nodes) {
   final edges = <GalaxyEdgeModel>[];
 
   for (var i = 1; i < nodes.length; i++) {
-    if (i % 2 == 0) {
+    if (i.isEven) {
       edges.add(
         GalaxyEdgeModel(
           id: 'edge_$i',

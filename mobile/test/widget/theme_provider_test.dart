@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations, avoid_unnecessary_containers
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,7 +77,7 @@ void main() {
             child: Consumer(
               builder: (context, ref, child) {
                 final manager = ref.watch(themeManagerProvider);
-                providerWorked = manager != null;
+                providerWorked = manager.toString().isNotEmpty;
                 return const Scaffold();
               },
             ),

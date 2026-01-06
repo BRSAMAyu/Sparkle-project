@@ -1,6 +1,9 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/chat.dart';
@@ -80,10 +83,13 @@ void main() {
   group('WebSocketChatServiceV2 - Comprehensive Tests', () {
     late WebSocketChatServiceV2 service;
     late MockWebSocketChannel mockChannel;
+    late DebugPrintCallback originalDebugPrint;
     WebSocketChannel mockFactory(Uri uri, {Map<String, dynamic>? headers}) =>
         mockChannel;
 
     setUp(() {
+      originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {};
       mockChannel = MockWebSocketChannel();
       service = WebSocketChatServiceV2(
         baseUrl: 'ws://test.com',
@@ -91,9 +97,10 @@ void main() {
       );
     });
 
-    tearDown(() async {
+    tearDown(() {
       service.dispose();
-      await mockChannel.close();
+      unawaited(mockChannel.close());
+      debugPrint = originalDebugPrint;
     });
 
     test('Initial state is disconnected', () {
@@ -292,6 +299,8 @@ void main() {
         channelFactory: (uri, {headers}) {
           throw Exception('Connection failed');
         },
+        enableReconnect: false,
+        autoConnect: false,
       );
 
       for (var i = 0; i < 60; i++) {

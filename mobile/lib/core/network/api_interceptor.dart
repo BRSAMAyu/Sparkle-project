@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,7 +93,7 @@ class AuthInterceptor extends Interceptor {
         return handler.resolve(response);
       } catch (e) {
         // Refresh token failed, logout user
-        _ref.read(authRepositoryProvider).logout();
+        unawaited(_ref.read(authRepositoryProvider).logout());
         return super.onError(err, handler);
       }
     }

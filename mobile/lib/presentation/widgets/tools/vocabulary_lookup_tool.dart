@@ -1,3 +1,5 @@
+// ignore_for_file: unawaited_futures, discarded_futures
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

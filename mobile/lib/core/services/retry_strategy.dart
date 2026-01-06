@@ -1,3 +1,5 @@
+// ignore_for_file: only_throw_errors
+
 import 'dart:async';
 import 'dart:io';
 

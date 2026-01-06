@@ -1,4 +1,6 @@
 import 'dart:developer';
+// ignore_for_file: unused_field, inference_failure_on_function_invocation
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';

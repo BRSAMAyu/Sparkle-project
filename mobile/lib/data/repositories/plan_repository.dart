@@ -11,8 +11,10 @@ class PlanRepository {
   final ApiClient _apiClient;
 
   T _handleDioError<T>(DioException e, String functionName) {
-    final errorMessage = e.response?.data?['detail'] ??
-        'An unknown error occurred in $functionName';
+    final detail =
+        (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
+    final errorMessage =
+        detail ?? 'An unknown error occurred in $functionName';
     throw Exception(errorMessage);
   }
 
@@ -30,10 +32,14 @@ class PlanRepository {
       if (type != null) query['type'] = type.name;
       if (isActive != null) query['is_active'] = isActive;
 
-      final response =
-          await _apiClient.get(ApiEndpoints.plans, queryParameters: query);
-      final List<dynamic> data = response.data;
-      return data.map((json) => PlanModel.fromJson(json)).toList();
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.plans,
+        queryParameters: query,
+      );
+      final data = response.data as List<dynamic>;
+      return data
+          .map((json) => PlanModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'getPlans');
     }
@@ -45,8 +51,8 @@ class PlanRepository {
           orElse: () => DemoDataService().demoPlans.first,);
     }
     try {
-      final response = await _apiClient.get(ApiEndpoints.plan(id));
-      return PlanModel.fromJson(response.data);
+      final response = await _apiClient.get<dynamic>(ApiEndpoints.plan(id));
+      return PlanModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       return _handleDioError(e, 'getPlan');
     }
@@ -74,9 +80,11 @@ class PlanRepository {
       return newPlan;
     }
     try {
-      final response =
-          await _apiClient.post(ApiEndpoints.plans, data: plan.toJson());
-      return PlanModel.fromJson(response.data);
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.plans,
+        data: plan.toJson(),
+      );
+      return PlanModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       return _handleDioError(e, 'createPlan');
     }
@@ -93,9 +101,11 @@ class PlanRepository {
       }
     }
     try {
-      final response =
-          await _apiClient.put(ApiEndpoints.plan(id), data: plan.toJson());
-      return PlanModel.fromJson(response.data);
+      final response = await _apiClient.put<dynamic>(
+        ApiEndpoints.plan(id),
+        data: plan.toJson(),
+      );
+      return PlanModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       return _handleDioError(e, 'updatePlan');
     }
@@ -107,7 +117,7 @@ class PlanRepository {
       return;
     }
     try {
-      await _apiClient.delete(ApiEndpoints.plan(id));
+      await _apiClient.delete<dynamic>(ApiEndpoints.plan(id));
     } on DioException catch (e) {
       return _handleDioError(e, 'deletePlan');
     }
@@ -124,9 +134,11 @@ class PlanRepository {
     }
     try {
       final planUpdate = PlanUpdate(isActive: activate);
-      final response = await _apiClient.put(ApiEndpoints.plan(id),
-          data: planUpdate.toJson(),);
-      return PlanModel.fromJson(response.data);
+      final response = await _apiClient.put<dynamic>(
+        ApiEndpoints.plan(id),
+        data: planUpdate.toJson(),
+      );
+      return PlanModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       return _handleDioError(e, activate ? 'activatePlan' : 'deactivatePlan');
     }
@@ -159,10 +171,14 @@ class PlanRepository {
       ];
     }
     try {
-      final response = await _apiClient
-          .post(ApiEndpoints.generateTasks(planId), data: {'count': count});
-      final List<dynamic> data = response.data;
-      return data.map((json) => TaskModel.fromJson(json)).toList();
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.generateTasks(planId),
+        data: {'count': count},
+      );
+      final data = response.data as List<dynamic>;
+      return data
+          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       return _handleDioError(e, 'generateTasks');
     }

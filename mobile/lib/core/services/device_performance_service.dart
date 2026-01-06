@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -206,7 +207,10 @@ mixin PerformanceAwareStateMixin<T extends StatefulWidget> on State<T> {
     // Setup frame time monitoring in debug mode
     if (kDebugMode) {
       _performanceTicker = Ticker(_onTick);
-      _performanceTicker?.start();
+      final ticker = _performanceTicker;
+      if (ticker != null) {
+        unawaited(ticker.start());
+      }
     }
   }
 

@@ -13,7 +13,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
   NotificationService() {
-    _initialize();
+    unawaited(_initialize());
   }
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();

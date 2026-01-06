@@ -1,5 +1,7 @@
 import 'dart:async';
 
+// ignore_for_file: discarded_futures
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/presentation/widgets/common/custom_button.dart';

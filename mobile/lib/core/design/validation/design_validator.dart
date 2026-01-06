@@ -9,15 +9,15 @@ class DesignValidator {
   static bool validateContrast(
     Color foreground,
     Color background, {
-    Level level = Level.AA,
+    Level level = Level.aa,
     bool isLargeText = false,
   }) {
     final ratio = _calculateContrastRatio(foreground, background);
 
     switch (level) {
-      case Level.AA:
+      case Level.aa:
         return ratio >= (isLargeText ? 3.0 : 4.5);
-      case Level.AAA:
+      case Level.aaa:
         return ratio >= (isLargeText ? 4.5 : 7.0);
     }
   }
@@ -168,7 +168,7 @@ class DesignValidator {
   }
 }
 
-enum Level { AA, AAA }
+enum Level { aa, aaa }
 
 enum ViolationType {
   color,
@@ -298,15 +298,14 @@ ${_generateRecommendations()}
 /// Widget 验证扩展
 extension WidgetValidation on Widget {
   /// 验证Widget是否符合设计规范
-  Future<ValidationReport> validateDesign() async {
-    // 这里可以实现更复杂的Widget树分析
-    // 例如：遍历子widget，检查是否使用了硬编码值
-    return const ValidationReport(
-      totalChecks: 0,
-      violations: [],
-      score: 1.0,
-    );
-  }
+  Future<ValidationReport> validateDesign() async =>
+      // 这里可以实现更复杂的Widget树分析
+      // 例如：遍历子widget，检查是否使用了硬编码值
+      const ValidationReport(
+        totalChecks: 0,
+        violations: [],
+        score: 1.0,
+      );
 }
 
 /// 设计系统检查器

@@ -23,15 +23,14 @@ class MockChatRepository extends Mock implements ChatRepository {
     String? token,
     List<String>? fileIds,
     bool includeReferences = false,
-  }) {
-    // 模拟流式响应
-    return Stream.fromIterable([
-      StatusUpdateEvent(state: 'THINKING', details: '思考中...'),
-      TextEvent(content: 'Hello'),
-      TextEvent(content: ' World'),
-      DoneEvent(finishReason: 'stop'),
-    ]);
-  }
+  }) =>
+      // 模拟流式响应
+      Stream.fromIterable([
+        StatusUpdateEvent(state: 'THINKING', details: '思考中...'),
+        TextEvent(content: 'Hello'),
+        TextEvent(content: ' World'),
+        DoneEvent(finishReason: 'stop'),
+      ]);
 
   @override
   void dispose() {}

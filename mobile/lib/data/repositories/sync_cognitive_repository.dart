@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/data/models/cognitive_fragment_model.dart';
@@ -66,14 +68,14 @@ class SyncCognitiveRepository implements ICognitiveRepository {
 
     // Load pending local fragments
     final pendingMaps = await _localRepository.getQueueRaw();
-    final pendingFragments = pendingMaps
+    final pendingFragments = pendingMaps.cast<Map<String, dynamic>>()
         .map(
           (map) => CognitiveFragmentModel(
-            id: map['id'] ?? 'local_pending_${map.hashCode}',
+            id: (map['id'] as String?) ?? 'local_pending_${map.hashCode}',
             userId: 'current_user',
-            sourceType: map['source_type'] ?? 'unknown',
-            content: map['content'] ?? '',
-            taskId: map['task_id'],
+            sourceType: (map['source_type'] as String?) ?? 'unknown',
+            content: (map['content'] as String?) ?? '',
+            taskId: map['task_id'] as String?,
             createdAt: DateTime.now(),
             sentiment: 'neutral',
             tags: ['pending'],
@@ -92,22 +94,20 @@ class SyncCognitiveRepository implements ICognitiveRepository {
       }
     }
 
-    final resultList = merged.values.toList();
-    // Sort by created_at desc (local items will be at top if approximate date is now)
-    resultList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final resultList = merged.values.toList()
+      // Sort by created_at desc (local items will be at top if approximate date is now)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return resultList;
   }
 
   @override
-  Future<List<BehaviorPatternModel>> getBehaviorPatterns() async {
-    // Patterns are server-generated, so we only fetch from API
-    // (Could cache this in future)
-    return _apiRepository.getBehaviorPatterns();
-  }
+  Future<List<BehaviorPatternModel>> getBehaviorPatterns() =>
+      _apiRepository.getBehaviorPatterns();
 
   /// Try to sync pending fragments
   Future<void> syncPending() async {
-    final pending = await _localRepository.getQueueRaw();
+    final pending = (await _localRepository.getQueueRaw())
+        .cast<Map<String, dynamic>>();
     if (pending.isEmpty) return;
 
     debugPrint('🔄 Syncing ${pending.length} pending fragments...');
@@ -125,9 +125,10 @@ class SyncCognitiveRepository implements ICognitiveRepository {
       final item = pending[i];
       try {
         final data = CognitiveFragmentCreate(
-          content: item['content'],
-          sourceType: item['source_type'],
-          taskId: item['task_id'],
+          id: item['id'] as String?,
+          content: (item['content'] as String?) ?? '',
+          sourceType: (item['source_type'] as String?) ?? 'unknown',
+          taskId: item['task_id'] as String?,
         );
 
         await _apiRepository.createFragment(data);
@@ -150,8 +151,10 @@ class SyncCognitiveRepository implements ICognitiveRepository {
 
   void _syncPendingInBackground() {
     // Fire and forget
-    syncPending().catchError((e) {
-      debugPrint('Background sync failed: $e');
-    });
+    unawaited(
+      syncPending().catchError(
+        (Object e) => debugPrint('Background sync failed: $e'),
+      ),
+    );
   }
 }

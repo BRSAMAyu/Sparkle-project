@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +18,7 @@ void main() {
     test('inserts items correctly', () {
       final item = SimpleQuadTreeItem(
         id: 'item1',
-        position: const Offset(0, 0),
+        position: Offset.zero,
       );
 
       expect(tree.insert(item), isTrue);
@@ -137,7 +139,7 @@ void main() {
         tree.insert(
           SimpleQuadTreeItem(
             id: 'a',
-            position: const Offset(0, 0),
+            position: Offset.zero,
           ),
         );
         tree.insert(
@@ -193,7 +195,7 @@ void main() {
     test('removes items correctly', () {
       final item = SimpleQuadTreeItem(
         id: 'item1',
-        position: const Offset(0, 0),
+        position: Offset.zero,
       );
 
       tree.insert(item);

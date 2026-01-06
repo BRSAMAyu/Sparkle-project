@@ -1,13 +1,14 @@
-import 'package:sparkle/core/network/api_client.dart';
+import 'dart:async';
+
 import 'package:sparkle/data/models/community_model.dart';
 import 'package:sparkle/data/repositories/community_repository.dart';
 import 'package:sparkle/domain/community/community_models.dart';
 import 'package:uuid/uuid.dart';
 
 class MockCommunityRepository implements CommunityRepository {
-  MockCommunityRepository([this._apiClient]);
+  MockCommunityRepository();
 
-  MockCommunityRepository._init() : _apiClient = null {
+  MockCommunityRepository._init() {
     // Create current user matching DemoDataService
     final me = _createUser('AI_Learner_02', 15, UserStatus.online,
         id: currentUserId, avatarSeed: 'AI_Learner_02',);
@@ -311,10 +312,8 @@ class MockCommunityRepository implements CommunityRepository {
         ),
       ],
     };
-    _mockGroupTasks = {};
   }
   factory MockCommunityRepository.instance() => _instance;
-  final ApiClient? _apiClient;
 
   // Demo user ID - matches DemoDataService.demoUser.id
   static const String currentUserId = 'CS_Sophomore_12345';
@@ -337,7 +336,6 @@ class MockCommunityRepository implements CommunityRepository {
   late final List<GroupInfo> _mockGroups;
   late final Map<String, List<MessageInfo>> _mockGroupMessages;
   late final Map<String, List<PrivateMessageInfo>> _mockPrivateMessages;
-  late final Map<String, List<GroupTaskInfo>> _mockGroupTasks;
 
   static final MockCommunityRepository _instance =
       MockCommunityRepository._init();
@@ -395,7 +393,7 @@ class MockCommunityRepository implements CommunityRepository {
     _mockPrivateMessages[message.targetUserId]!.insert(0, newMsg);
 
     // Auto-read by "other person" for demo
-    Future.delayed(const Duration(seconds: 2), () {
+    unawaited(Future<void>.delayed(const Duration(seconds: 2), () {
       final index = _mockPrivateMessages[message.targetUserId]!
           .indexWhere((m) => m.id == newMsg.id);
       if (index != -1) {
@@ -405,7 +403,7 @@ class MockCommunityRepository implements CommunityRepository {
           readAt: DateTime.now(),
         );
       }
-    });
+    }));
 
     return newMsg;
   }
@@ -458,7 +456,9 @@ class MockCommunityRepository implements CommunityRepository {
       if (index != -1) {
         final original = list[index];
         final reactions = Map<String, dynamic>.from(original.reactions ?? {});
-        final users = List<String>.from(reactions[emoji] ?? <String>[]);
+        final users = List<String>.from(
+          (reactions[emoji] as List<dynamic>?) ?? const <String>[],
+        );
         if (isAdd) {
           if (!users.contains(userId)) {
             users.add(userId);
@@ -635,7 +635,9 @@ class MockCommunityRepository implements CommunityRepository {
     }
     final original = list[index];
     final reactions = Map<String, dynamic>.from(original.reactions ?? {});
-    final users = List<String>.from(reactions[emoji] ?? <String>[]);
+    final users = List<String>.from(
+      (reactions[emoji] as List<dynamic>?) ?? const <String>[],
+    );
     if (isAdd) {
       if (!users.contains(userId)) {
         users.add(userId);

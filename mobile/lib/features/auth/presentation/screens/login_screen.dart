@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,10 +28,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).login(
-            _usernameController.text.trim(),
-            _passwordController.text.trim(),
-          );
+      unawaited(
+        ref.read(authProvider.notifier).login(
+              _usernameController.text.trim(),
+              _passwordController.text.trim(),
+            ),
+      );
     }
   }
 
@@ -162,11 +166,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       label: 'Google',
                       onTap: () {
                         // Mock Google Login
-                        ref.read(authProvider.notifier).socialLogin(
-                              provider: 'google',
-                              token: 'mock-google-token-123',
-                              nickname: 'Google User',
-                            );
+                        unawaited(
+                          ref.read(authProvider.notifier).socialLogin(
+                                provider: 'google',
+                                token: 'mock-google-token-123',
+                                nickname: 'Google User',
+                              ),
+                        );
                       },
                     ),
                     _SocialLoginButton(
@@ -174,11 +180,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       label: 'Apple',
                       onTap: () {
                         // Mock Apple Login
-                        ref.read(authProvider.notifier).socialLogin(
-                              provider: 'apple',
-                              token: 'mock-apple-token-123',
-                              nickname: 'Apple User',
-                            );
+                        unawaited(
+                          ref.read(authProvider.notifier).socialLogin(
+                                provider: 'apple',
+                                token: 'mock-apple-token-123',
+                                nickname: 'Apple User',
+                              ),
+                        );
                       },
                     ),
                     _SocialLoginButton(
@@ -187,11 +195,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       label: 'WeChat',
                       onTap: () {
                         // Mock WeChat Login
-                        ref.read(authProvider.notifier).socialLogin(
-                              provider: 'wechat',
-                              token: 'mock-wechat-token-123',
-                              nickname: 'WeChat User',
-                            );
+                        unawaited(
+                          ref.read(authProvider.notifier).socialLogin(
+                                provider: 'wechat',
+                                token: 'mock-wechat-token-123',
+                                nickname: 'WeChat User',
+                              ),
+                        );
                       },
                     ),
                   ],

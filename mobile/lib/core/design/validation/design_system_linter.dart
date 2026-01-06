@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';

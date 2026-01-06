@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable, discarded_futures, inference_failure_on_function_invocation, strict_raw_type
+
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';

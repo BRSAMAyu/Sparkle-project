@@ -58,15 +58,15 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authStateNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
 
   // Update the notifier when auth state changes
-  ref.listen<AuthState>(
-    authProvider,
-    (_, next) {
-      authStateNotifier.value = next;
-    },
-  );
-
-  // Dispose the notifier when the provider is disposed
-  ref.onDispose(authStateNotifier.dispose);
+  ref
+    ..listen<AuthState>(
+      authProvider,
+      (_, next) {
+        authStateNotifier.value = next;
+      },
+    )
+    // Dispose the notifier when the provider is disposed
+    ..onDispose(authStateNotifier.dispose);
 
   return GoRouter(
     navigatorKey: navigatorKey, // Set the global navigator key

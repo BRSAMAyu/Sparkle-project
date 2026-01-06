@@ -1,3 +1,5 @@
+// ignore_for_file: use_setters_to_change_properties
+
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

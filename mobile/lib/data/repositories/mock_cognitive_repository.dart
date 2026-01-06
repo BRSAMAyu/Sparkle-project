@@ -6,7 +6,7 @@ class MockCognitiveRepository implements ICognitiveRepository {
   @override
   Future<CognitiveFragmentModel> createFragment(
       CognitiveFragmentCreate data,) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     return CognitiveFragmentModel(
       id: 'mock-frag-${DateTime.now().millisecondsSinceEpoch}',
       userId: 'user-1',
@@ -22,7 +22,7 @@ class MockCognitiveRepository implements ICognitiveRepository {
   @override
   Future<List<CognitiveFragmentModel>> getFragments(
       {int limit = 20, int skip = 0,}) async {
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future<void>.delayed(const Duration(milliseconds: 800));
     return [
       CognitiveFragmentModel(
         id: 'frag-1',
@@ -57,7 +57,7 @@ class MockCognitiveRepository implements ICognitiveRepository {
 
   @override
   Future<List<BehaviorPatternModel>> getBehaviorPatterns() async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
     return [
       BehaviorPatternModel(
         id: 'pattern-1',

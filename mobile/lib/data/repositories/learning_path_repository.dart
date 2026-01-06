@@ -29,14 +29,20 @@ class LearningPathRepository {
       ];
     }
     try {
-      final response =
-          await _apiClient.get(ApiEndpoints.learningPath(targetNodeId));
-      final List<dynamic> data = response.data;
-      return data.map((e) => LearningPathNode.fromJson(e)).toList();
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.learningPath(targetNodeId),
+      );
+      final data = response.data as List<dynamic>;
+      return data
+          .map((e) => LearningPathNode.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
-      throw e.response?.data['detail'] ?? 'Failed to load learning path';
+      throw Exception(
+        (e.response?.data as Map<String, dynamic>?)?['detail'] ??
+            'Failed to load learning path',
+      );
     } catch (_) {
-      throw 'An unexpected error occurred';
+      throw Exception('An unexpected error occurred');
     }
   }
 }

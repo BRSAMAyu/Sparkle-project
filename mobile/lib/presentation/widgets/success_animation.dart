@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';

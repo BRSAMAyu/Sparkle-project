@@ -20,7 +20,7 @@ class CommunityShareRepository {
     String permission = 'view',
     String? comment,
   }) async {
-    final response = await _apiClient.post(
+    final response = await _apiClient.post<dynamic>(
       ApiEndpoints.communityShare,
       data: {
         'resource_type': resourceType,

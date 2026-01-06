@@ -37,7 +37,7 @@ class FocusRepository {
 
       debugPrint('📤 Logging focus session: ${request.toJson()}');
 
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<dynamic>(
         ApiEndpoints.focusSessions,
         data: request.toJson(),
       );
@@ -45,7 +45,8 @@ class FocusRepository {
       debugPrint('📥 Focus session logged: ${response.data}');
 
       return FocusSessionResponse.fromJson(
-          response.data as Map<String, dynamic>,);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       debugPrint('❌ Failed to log focus session: ${e.message}');
       debugPrint('Response: ${e.response?.data}');
@@ -56,9 +57,12 @@ class FocusRepository {
   /// Get today's focus statistics
   Future<FocusStatsResponse> getFocusStats() async {
     try {
-      final response = await _apiClient.get(ApiEndpoints.focusStats);
+      final response =
+          await _apiClient.get<dynamic>(ApiEndpoints.focusStats);
 
-      return FocusStatsResponse.fromJson(response.data as Map<String, dynamic>);
+      return FocusStatsResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       debugPrint('❌ Failed to get focus stats: ${e.message}');
       rethrow;
@@ -71,7 +75,7 @@ class FocusRepository {
     required String context,
   }) async {
     try {
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<dynamic>(
         ApiEndpoints.focusLlmGuide,
         data: {
           'task_title': taskTitle,
@@ -79,7 +83,8 @@ class FocusRepository {
         },
       );
 
-      return response.data['guidance'] as String;
+      final data = response.data as Map<String, dynamic>;
+      return data['guidance'] as String;
     } on DioException catch (e) {
       debugPrint('❌ Failed to get LLM guidance: ${e.message}');
       rethrow;
@@ -92,7 +97,7 @@ class FocusRepository {
     required String taskType,
   }) async {
     try {
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<dynamic>(
         ApiEndpoints.focusLlmBreakdown,
         data: {
           'task_title': taskTitle,
@@ -100,7 +105,8 @@ class FocusRepository {
         },
       );
 
-      return (response.data['subtasks'] as List<dynamic>)
+      final data = response.data as Map<String, dynamic>;
+      return (data['subtasks'] as List<dynamic>)
           .map((e) => e.toString())
           .toList();
     } on DioException catch (e) {

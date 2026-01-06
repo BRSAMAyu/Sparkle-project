@@ -3,14 +3,15 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 
 final omniBarRepositoryProvider = Provider<OmniBarRepository>(
-    (ref) => OmniBarRepository(ref.read(apiClientProvider)),);
+  (ref) => OmniBarRepository(ref.read(apiClientProvider)),
+);
 
 class OmniBarRepository {
   OmniBarRepository(this._apiClient);
   final ApiClient _apiClient;
 
   Future<Map<String, dynamic>> dispatch(String text) async {
-    final response = await _apiClient.post(
+    final response = await _apiClient.post<dynamic>(
       ApiEndpoints.omnibarDispatch,
       data: {'text': text},
     );

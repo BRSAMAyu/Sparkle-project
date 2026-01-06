@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 
@@ -35,7 +37,7 @@ class _StaggeredResponsiveGridState extends State<StaggeredResponsiveGrid>
       duration: totalDuration,
       vsync: this,
     );
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/data/models/chat_message_model.dart';
 import 'package:sparkle/data/models/reasoning_step_model.dart';

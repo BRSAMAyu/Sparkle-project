@@ -18,7 +18,7 @@ class ApiCognitiveRepository implements ICognitiveRepository {
   Future<CognitiveFragmentModel> createFragment(
       CognitiveFragmentCreate data,) async {
     try {
-      final response = await _apiClient.post(
+      final response = await _apiClient.post<dynamic>(
         ApiEndpoints.cognitiveFragments,
         data: data.toJson(),
       );
@@ -28,7 +28,9 @@ class ApiCognitiveRepository implements ICognitiveRepository {
           ? rData['data']
           : rData;
 
-      return CognitiveFragmentModel.fromJson(responseData as Map<String, dynamic>);
+      return CognitiveFragmentModel.fromJson(
+        responseData as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw Exception(
           (e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to create fragment',);
@@ -39,32 +41,42 @@ class ApiCognitiveRepository implements ICognitiveRepository {
   Future<List<CognitiveFragmentModel>> getFragments(
       {int limit = 20, int skip = 0,}) async {
     try {
-      final response = await _apiClient.get(
+      final response = await _apiClient.get<dynamic>(
         ApiEndpoints.cognitiveFragments,
         queryParameters: {'limit': limit, 'skip': skip},
       );
       final rData = response.data;
-      final List<dynamic> list = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return list.map((e) => CognitiveFragmentModel.fromJson(e as Map<String, dynamic>)).toList();
+      final list = rData is Map && rData['data'] is List
+          ? rData['data'] as List<dynamic>
+          : rData as List<dynamic>;
+      return list
+          .map((e) => CognitiveFragmentModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
-      throw Exception((e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to get fragments');
+      throw Exception(
+        (e.response?.data as Map<String, dynamic>?)?['detail'] ??
+            'Failed to get fragments',
+      );
     }
   }
 
   @override
   Future<List<BehaviorPatternModel>> getBehaviorPatterns() async {
     try {
-      final response = await _apiClient.get(ApiEndpoints.cognitivePatterns);
+      final response =
+          await _apiClient.get<dynamic>(ApiEndpoints.cognitivePatterns);
       final rData = response.data;
-      final List<dynamic> list = rData is Map && rData.containsKey('data')
-          ? rData['data']
-          : rData;
-      return list.map((e) => BehaviorPatternModel.fromJson(e as Map<String, dynamic>)).toList();
+      final list = rData is Map && rData['data'] is List
+          ? rData['data'] as List<dynamic>
+          : rData as List<dynamic>;
+      return list
+          .map((e) => BehaviorPatternModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw Exception(
-          (e.response?.data as Map<String, dynamic>?)?['detail'] ?? 'Failed to get behavior patterns',);
+        (e.response?.data as Map<String, dynamic>?)?['detail'] ??
+            'Failed to get behavior patterns',
+      );
     }
   }
 }
@@ -72,7 +84,7 @@ class ApiCognitiveRepository implements ICognitiveRepository {
 final cognitiveRepositoryProvider = Provider<ICognitiveRepository>((ref) {
   // Toggle between Mock and Real API
   // In production, this should be controlled by environment variables or build flags
-  const useMock = false;
+  const useMock = bool.fromEnvironment('USE_MOCK');
 
   if (useMock) {
     return MockCognitiveRepository();

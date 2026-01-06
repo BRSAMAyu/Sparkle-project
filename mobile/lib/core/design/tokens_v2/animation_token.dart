@@ -13,7 +13,7 @@ class AnimationSystem {
   static const Curve easeIn = Curves.easeIn;
 
   // 语义化时长
-  static const Duration instant = Duration();
+  static const Duration instant = Duration.zero;
   static const Duration quick = Duration(milliseconds: 150);
   static const Duration normal = Duration(milliseconds: 250);
   static const Duration slow = Duration(milliseconds: 400);
@@ -206,7 +206,7 @@ extension AnimationExtensions on Widget {
 
   /// 上滑动画
   Widget slideUp({Duration duration = AnimationSystem.normal}) => AnimatedSlide(
-        offset: const Offset(0, 0),
+        offset: Offset.zero,
         from: const Offset(0, 0.2),
         duration: duration,
         child: this,

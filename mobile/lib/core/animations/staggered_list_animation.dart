@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 class StaggeredListAnimation extends StatefulWidget {
@@ -14,7 +16,8 @@ class StaggeredListAnimation extends StatefulWidget {
   final Duration duration;
 
   @override
-  _StaggeredListAnimationState createState() => _StaggeredListAnimationState();
+  State<StaggeredListAnimation> createState() =>
+      _StaggeredListAnimationState();
 }
 
 class _StaggeredListAnimationState extends State<StaggeredListAnimation>
@@ -28,7 +31,7 @@ class _StaggeredListAnimationState extends State<StaggeredListAnimation>
       duration: widget.duration,
       vsync: this,
     );
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override

@@ -36,20 +36,16 @@ class AppColors {
           ? DS.neutral900
           : DS.brandPrimary;
 
-  static Color textOnDark(BuildContext context) {
-    // For dark backgrounds, always use light text for maximum contrast
-    return DS.brandPrimary;
-  }
+  // For dark backgrounds, always use light text for maximum contrast
+  static Color textOnDark(BuildContext context) => DS.brandPrimary;
 
   static Color iconOnBright(BuildContext context) =>
       Theme.of(context).brightness == Brightness.light
           ? DS.neutral800
           : DS.neutral100;
 
-  static Color iconOnDark(BuildContext context) {
-    // For dark backgrounds, always use light icons for maximum contrast
-    return DS.brandPrimary;
-  }
+  // For dark backgrounds, always use light icons for maximum contrast
+  static Color iconOnDark(BuildContext context) => DS.brandPrimary;
 }
 
 /// Theme Extension for custom properties

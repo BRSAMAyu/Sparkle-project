@@ -43,8 +43,6 @@ void main() {
 
     test('token masking in logs works correctly', () {
       const token = 'secret-jwt-token-12345';
-      const authHeader = 'Bearer $token';
-
       // 模拟日志掩码逻辑（类似WebSocketChatServiceV2中的实现）
       String maskSecret(String secret) {
         if (secret.length < 6) return '***';

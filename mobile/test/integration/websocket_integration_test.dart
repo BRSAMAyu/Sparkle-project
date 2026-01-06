@@ -1,3 +1,5 @@
+// ignore_for_file: strict_raw_type, inference_failure_on_collection_literal, prefer_foreach, cascade_invocations
+
 import 'package:flutter_test/flutter_test.dart';
 
 // Note: These are integration test templates that would run with live services
