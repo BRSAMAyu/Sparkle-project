@@ -7,6 +7,11 @@ from app.models.user import User, PushPreference
 from app.models.task import Task, TaskType, TaskStatus
 from app.models.plan import Plan, PlanType
 from app.models.chat import ChatMessage, MessageRole
+from app.models.user import User
+from app.models.audit_log import SecurityAuditLog, DataAccessLog, ComplianceCheckLog, SystemConfigChangeLog
+from app.models.error_book import ErrorRecord
+from app.models.galaxy import KnowledgeNode, NodeRelation
+
 from app.models.error_book import ErrorRecord
 from app.models.job import Job, JobType, JobStatus
 from app.models.subject import Subject

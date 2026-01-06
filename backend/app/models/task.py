@@ -54,6 +54,9 @@ class Task(BaseModel):
     # 追溯信息
     tool_result_id = Column(String(50), nullable=True, index=True)
 
+    # 追溯信息
+    tool_result_id = Column(String(50), nullable=True, index=True)
+
     # 完成信息
     actual_minutes = Column(Integer, nullable=True)
     user_note = Column(Text, nullable=True)

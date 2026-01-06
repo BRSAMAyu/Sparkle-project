@@ -46,6 +46,16 @@ class AgentServiceStub(object):
                 request_serializer=agent__service__pb2.MemoryQuery.SerializeToString,
                 response_deserializer=agent__service__pb2.MemoryResult.FromString,
                 _registered_method=True)
+        self.GetUserProfile = channel.unary_unary(
+                '/agent.v1.AgentService/GetUserProfile',
+                request_serializer=agent__service__pb2.ProfileRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.UserProfile.FromString,
+                _registered_method=True)
+        self.GetWeeklyReport = channel.unary_unary(
+                '/agent.v1.AgentService/GetWeeklyReport',
+                request_serializer=agent__service__pb2.WeeklyReportRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.WeeklyReport.FromString,
+                _registered_method=True)
 
 
 class AgentServiceServicer(object):
@@ -69,6 +79,20 @@ class AgentServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetUserProfile(self, request, context):
+        """GetUserProfile retrieves the user's profile data.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetWeeklyReport(self, request, context):
+        """GetWeeklyReport generates or retrieves a weekly summary for the user.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -81,6 +105,16 @@ def add_AgentServiceServicer_to_server(servicer, server):
                     servicer.RetrieveMemory,
                     request_deserializer=agent__service__pb2.MemoryQuery.FromString,
                     response_serializer=agent__service__pb2.MemoryResult.SerializeToString,
+            ),
+            'GetUserProfile': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUserProfile,
+                    request_deserializer=agent__service__pb2.ProfileRequest.FromString,
+                    response_serializer=agent__service__pb2.UserProfile.SerializeToString,
+            ),
+            'GetWeeklyReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetWeeklyReport,
+                    request_deserializer=agent__service__pb2.WeeklyReportRequest.FromString,
+                    response_serializer=agent__service__pb2.WeeklyReport.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -139,6 +173,60 @@ class AgentService(object):
             '/agent.v1.AgentService/RetrieveMemory',
             agent__service__pb2.MemoryQuery.SerializeToString,
             agent__service__pb2.MemoryResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUserProfile(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent.v1.AgentService/GetUserProfile',
+            agent__service__pb2.ProfileRequest.SerializeToString,
+            agent__service__pb2.UserProfile.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetWeeklyReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent.v1.AgentService/GetWeeklyReport',
+            agent__service__pb2.WeeklyReportRequest.SerializeToString,
+            agent__service__pb2.WeeklyReport.FromString,
             options,
             channel_credentials,
             insecure,

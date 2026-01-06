@@ -422,6 +422,79 @@ void main() {
         expect(clusterIds.any((id) => id.startsWith('sector_')), isTrue);
       });
     });
+
+    group('Event Handling', () {
+      test('handles galaxy.node.updated and performs optimistic update',
+          () async {
+        final testNodes = _generateMockNodes(5);
+        final targetNodeId = testNodes[0].id;
+        final initialMastery = testNodes[0].masteryScore;
+        final newMastery = initialMastery + 20;
+
+        final eventsController = StreamController<SSEEvent>();
+        mockRepository = FakeEnhancedGalaxyRepository(
+          graphResult: NetworkResult.success(
+            GalaxyGraphResponse(
+              nodes: testNodes,
+              edges: [],
+              userFlameIntensity: 0.5,
+            ),
+          ),
+          eventsStreamOverride: eventsController.stream,
+        );
+
+        // Re-override to use the new mock with events controller
+        container = ProviderContainer(
+          overrides: [
+            enhancedGalaxyRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+
+        final notifier = container.read(galaxyProvider.notifier);
+        await notifier.loadGalaxy();
+
+        // Verify initial state
+        expect(container.read(galaxyProvider).nodes[0].masteryScore,
+            equals(initialMastery),);
+
+        // Simulate event from backend
+        eventsController.add(SSEEvent(
+          event: 'galaxy.node.updated',
+          data: '{"node_id": "$targetNodeId", "new_mastery": $newMastery}',
+        ),);
+
+        // Wait for event loop to process
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Verify state was updated optimistically without full reload
+        final state = container.read(galaxyProvider);
+        expect(state.nodes[0].masteryScore, equals(newMastery));
+        expect(mockRepository.getGraphCalls, 1); // No reload triggered
+
+        eventsController.close();
+      });
+
+      test('handles nodes_expanded and triggers reload', () async {
+        final eventsController = StreamController<SSEEvent>();
+        mockRepository.eventsStream = eventsController.stream;
+
+        final notifier = container.read(galaxyProvider.notifier);
+
+        // Simulate expansion event
+        eventsController.add(SSEEvent(
+          event: 'nodes_expanded',
+          data: '{"nodes": []}',
+        ),);
+
+        // Wait for event loop
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Should have triggered loadGalaxy
+        expect(mockRepository.getGraphCalls, 1);
+
+        eventsController.close();
+      });
+    });
   });
 
   group('GalaxyState', () {

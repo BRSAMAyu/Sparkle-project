@@ -170,6 +170,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       (event) {
         if (event.event == 'nodes_expanded') {
           _handleNodesExpanded(event.jsonData);
+        } else if (event.event == 'galaxy.node.updated') {
+          _handleNodeUpdated(event.jsonData);
         }
       },
       onError: (error, stack) {
@@ -192,6 +194,38 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   void _handleNodesExpanded(Map<String, dynamic>? data) {
     if (data == null || data['nodes'] == null) return;
     loadGalaxy(forceRefresh: true);
+  }
+
+  void _handleNodeUpdated(Map<String, dynamic>? data) {
+    if (data == null || data['node_id'] == null || data['new_mastery'] == null) {
+      return;
+    }
+
+    final nodeId = data['node_id'] as String;
+    final newMastery = (data['new_mastery'] as num).toInt();
+
+    // Optimistic update of local state
+    final updatedNodes = state.nodes.map((node) {
+      if (node.id == nodeId) {
+        return node.copyWith(masteryScore: newMastery);
+      }
+      return node;
+    }).toList();
+
+    // Re-calculate clusters if necessary (since mastery affects cluster stats)
+    final updatedClusters = _calculateClusters(
+      state.aggregationLevel,
+      nodes: updatedNodes,
+      positions: state.nodePositions,
+    );
+
+    state = state.copyWith(
+      nodes: updatedNodes,
+      clusters: updatedClusters,
+    );
+    
+    // Recalculate visibility in case mastery affects filtering (though currently it mostly doesn't)
+    _recalculateVisibility();
   }
 
   Future<void> loadGalaxy({bool forceRefresh = false}) async {

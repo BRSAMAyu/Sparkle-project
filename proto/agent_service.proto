@@ -17,6 +17,12 @@ service AgentService {
   // RetrieveMemory allows the gateway (or other services) to query the AI's long-term memory store (Vector DB).
   // This is used for RAG (Retrieval-Augmented Generation) or context building.
   rpc RetrieveMemory(MemoryQuery) returns (MemoryResult);
+
+  // GetUserProfile retrieves the user's profile data.
+  rpc GetUserProfile(ProfileRequest) returns (UserProfile);
+
+  // GetWeeklyReport generates or retrieves a weekly summary for the user.
+  rpc GetWeeklyReport(WeeklyReportRequest) returns (WeeklyReport);
 }
 
 // ============================================================================
@@ -62,6 +68,9 @@ message ChatRequest {
 
   // Optional: include document references in streaming responses.
   bool include_references = 11;
+
+  // Optional: List of tools currently active/available for this request
+  repeated string active_tools = 12;
 }
 
 // UserProfile defines key user attributes for personalization.
@@ -79,6 +88,27 @@ message UserProfile {
     // P0: Extra context (JSON string) containing user state for context propagation
     // Includes pending_tasks, active_plans, focus_stats, recent_progress (set by Go Gateway)
     string extra_context = 6;
+    
+    // User level/experience
+    int32 level = 7;
+    
+    // URL to user's avatar image
+    string avatar_url = 8;
+}
+
+// Request to get user profile
+message ProfileRequest {
+    string user_id = 1;
+}
+
+message WeeklyReportRequest {
+  string user_id = 1;
+  string week_id = 2;
+}
+
+message WeeklyReport {
+  string summary = 1;
+  int32 tasks_completed = 2;
 }
 
 // ToolResult represents the output of a tool execution performed by the Client/Gateway.
@@ -148,6 +178,9 @@ message ChatResponse {
   
   // Indicates why the generation finished.
   FinishReason finish_reason = 9;
+
+  // Timestamp of response generation
+  int64 timestamp = 13;
 }
 
 message CitationBlock {
@@ -196,16 +229,16 @@ message ToolResultPayload {
 // AgentType defines the different types of specialized agents in the system.
 enum AgentType {
     AGENT_UNKNOWN = 0;
-    ORCHESTRATOR = 1;     // Main brain - understands intent, decomposes tasks, aggregates results
-    KNOWLEDGE = 2;        // Librarian - handles GraphRAG retrieval, document search
-    MATH = 3;             // Calculator - numerical computation, formula derivation
-    CODE = 4;             // Engineer - code generation, debugging, execution
-    DATA_ANALYSIS = 5;    // Data Scientist - data processing, statistics, visualization
-    TRANSLATION = 6;      // Translator - language translation, localization
-    IMAGE = 7;            // Image Specialist - image generation, editing, analysis
-    AUDIO = 8;            // Audio Engineer - audio processing, speech-to-text, music
-    WRITING = 9;          // Writer - content creation, summarization, editing
-    REASONING = 10;       // Logic Expert - complex reasoning, problem solving
+    ORCHESTRATOR = 1; // Main brain - understands intent, decomposes tasks, aggregates results
+    KNOWLEDGE = 2; // Librarian - handles GraphRAG retrieval, document search
+    MATH = 3; // Calculator - numerical computation, formula derivation
+    CODE = 4; // Engineer - code generation, debugging, execution
+    DATA_ANALYSIS = 5; // Data Scientist - data processing, statistics, visualization
+    TRANSLATION = 6; // Translator - language translation, localization
+    IMAGE = 7; // Image Specialist - image generation, editing, analysis
+    AUDIO = 8; // Audio Engineer - audio processing, speech-to-text, music
+    WRITING = 9; // Writer - content creation, summarization, editing
+    REASONING = 10; // Logic Expert - complex reasoning, problem solving
 }
 
 message AgentStatus {
@@ -218,8 +251,8 @@ message AgentStatus {
     }
     State state = 1;
     string details = 2;
-    string current_agent_name = 3;  // Legacy: Human-readable agent name
-    AgentType active_agent = 4;     // Type-safe agent identifier for UI visualization
+    string current_agent_name = 3; // Legacy: Human-readable agent name
+    AgentType active_agent = 4; // Type-safe agent identifier for UI visualization
 }
 
 message Error {

@@ -260,16 +260,72 @@ class ChatOrchestrator:
             # Pass redis_client to UserService for caching
             user_service = UserService(db_session, self.redis)
 
-            # Get user context for LLM (with Redis caching)
+            # --- Use ContextOrchestrator (P4) ---
+            from app.core.context_manager import ContextOrchestrator, CognitiveContext
+            
+            context_orchestrator = ContextOrchestrator(db_session, self.redis)
+            # Fetch aggregated context (cached)
+            cognitive_context = await context_orchestrator.get_user_context(user_id)
+            
+            # Map CognitiveContext to legacy dict format for backward compatibility
+            # In future, we should use CognitiveContext object directly in prompt builder
+            
+            user_context_data = None
+            if cognitive_context:
+                # Use data from new orchestrator
+                user_context_data = {
+                    "preferences": cognitive_context.preferences,
+                    # Add other fields if needed by legacy prompt
+                }
+                
+                # Fetch active plans manually if not in cognitive context yet
+                # Active plans (latest 3)
+                plans_stmt = (
+                    select(Plan)
+                    .where(
+                        and_(
+                            Plan.user_id == uuid.UUID(user_id),
+                            Plan.is_active == True
+                        )
+                    )
+                    .order_by(desc(Plan.created_at))
+                    .limit(3)
+                )
+                plans_result = await db_session.execute(plans_stmt)
+                plans = plans_result.scalars().all()
+                active_plans = [
+                    {
+                        "id": str(plan.id),
+                        "title": plan.name,
+                        "type": plan.type.value,
+                        "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                        "progress": plan.progress or 0
+                    }
+                    for plan in plans
+                ]
+                
+                return {
+                    "user_context": user_context_data, # Legacy field
+                    "analytics_summary": cognitive_context.engagement_metrics,
+                    "preferences": cognitive_context.preferences,
+                    "next_actions": cognitive_context.active_tasks,
+                    "active_plans": active_plans,
+                    "focus_stats": cognitive_context.focus_stats,
+                    
+                    # New field for full context injection
+                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
+                }
+            
+            # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
+            logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
+            
+            # ... Legacy Logic ...
             user_context = await user_service.get_context(uuid.UUID(user_id))
-
-            # Get analytics summary (with Redis caching)
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
 
-            user_context_data = None
             if user_context:
                 user_context_data = user_context.model_dump()
-
+            
             # Next actions (top pending tasks)
             tasks_stmt = (
                 select(Task)

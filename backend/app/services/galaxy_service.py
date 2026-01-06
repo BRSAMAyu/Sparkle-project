@@ -32,6 +32,60 @@ class GalaxyService:
         self.structure = GraphStructureService(db)
         self.retrieval = KnowledgeRetrievalService(db)
         self.stats = GalaxyStatsService(db)
+        
+        # Subscribe to error.created events
+        # Note: In a real production app, subscription should be handled in a startup event or a separate worker
+        # to avoid re-subscribing on every request if GalaxyService is transient.
+        # Assuming GalaxyService is scoped or we rely on external worker.
+        # For this task, we'll implement the handler method that can be registered.
+
+    async def handle_error_created(self, event_data: dict):
+        """
+        Handle error.created event: reduce mastery for related nodes.
+        """
+        try:
+            user_id = UUID(event_data["user_id"])
+            linked_node_ids = [UUID(nid) for nid in event_data.get("linked_node_ids", [])]
+            
+            if not linked_node_ids:
+                return
+
+            logger.info(f"Processing error event for user {user_id}, linked nodes: {linked_node_ids}")
+
+            for node_id in linked_node_ids:
+                # 1. Get current status
+                query = text("SELECT mastery_score FROM user_node_status WHERE user_id = :uid AND node_id = :nid")
+                res = await self.db.execute(query, {"uid": user_id, "nid": node_id})
+                current = res.scalar_one_or_none()
+                
+                current_score = current if current is not None else 0
+                
+                # 2. Penalty Logic (Simple: -10%)
+                # Ensure it doesn't go below 0
+                new_score = max(0, int(current_score * 0.9))
+                
+                if new_score != current_score:
+                    # 3. Update Mastery using existing method (handles Outbox + Audit)
+                    await self.update_node_mastery(
+                        user_id=user_id,
+                        node_id=node_id,
+                        new_mastery=new_score,
+                        reason="error_penalty"
+                    )
+                    
+                    # 4. Publish galaxy.node.updated (Specific for frontend realtime update)
+                    # update_node_mastery already publishes galaxy.node.mastery_updated via Outbox
+                    # We can also publish a realtime event via Redis directly if needed for immediate websocket
+                    realtime_event = KnowledgeNodeUpdated(
+                        user_id=str(user_id),
+                        node_id=str(node_id),
+                        new_mastery=new_score
+                    )
+                    await event_bus.publish("galaxy.node.updated", realtime_event.to_dict())
+                    logger.info(f"Reduced mastery for node {node_id} to {new_score}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to handle error_created event: {e}")
 
     # --- Delegated to GraphStructureService ---
 
@@ -301,15 +355,14 @@ class GalaxyService:
             # B. Update Individual Data (UPSERT pattern)
             # Added revision column update
             upsert_query = text("""
-                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision)
-                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision)
+                INSERT INTO user_node_status (user_id, node_id, mastery_score, updated_at, last_study_at, is_unlocked, revision, total_minutes, total_study_minutes, last_interacted_at, created_at, study_count, is_collapsed, is_favorite, decay_paused)
+                VALUES (:user_id, :node_id, :mastery, :updated_at, :updated_at, true, :revision, 0, 0, :updated_at, :updated_at, 0, false, false, false)
                 ON CONFLICT (user_id, node_id) DO UPDATE SET
                     mastery_score = EXCLUDED.mastery_score,
                     updated_at = EXCLUDED.updated_at,
                     last_study_at = EXCLUDED.updated_at,
                     is_unlocked = true,
                     revision = EXCLUDED.revision
-                WHERE user_node_status.revision < EXCLUDED.revision OR (user_node_status.revision = EXCLUDED.revision AND user_node_status.updated_at < EXCLUDED.updated_at)
             """)
             
             update_time = version or datetime.utcnow()
@@ -350,18 +403,22 @@ class GalaxyService:
 
             
             # 5. Add to Outbox
-            outbox_event = EventOutbox(
-                topic="galaxy.node.mastery_updated",
-                payload={
+            outbox_query = text("""
+                INSERT INTO outbox_events (aggregate_id, event_type, payload, status, created_at)
+                VALUES (:aggregate_id, :event_type, :payload, 'pending', :created_at)
+            """)
+            await self.db.execute(outbox_query, {
+                "aggregate_id": user_id,
+                "event_type": "galaxy.node.mastery_updated",
+                "payload": json.dumps({
                     "user_id": str(user_id),
                     "node_id": str(node_id),
                     "mastery_score": new_mastery,
                     "revision": new_revision,
                     "timestamp": datetime.utcnow().isoformat()
-                },
-                created_at=datetime.utcnow() # Explicitly set for partitioning
-            )
-            self.db.add(outbox_event)
+                }),
+                "created_at": datetime.utcnow()
+            })
             
             await self.db.flush()
             

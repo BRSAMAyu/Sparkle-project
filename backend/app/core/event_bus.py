@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Type, List, Dict, Any, Optional
-import pika
+from typing import Dict, Any, Optional, Callable, List
 import json
 import os
+import asyncio
 from datetime import datetime
 from loguru import logger
+import redis.asyncio as redis
+from redis.exceptions import ResponseError
 
 class Event(ABC):
     """Event base class"""
@@ -48,95 +50,178 @@ class NodeMasteryUpdatedEvent(Event):
             "timestamp": self.timestamp.isoformat()
         }
 
+class ErrorCreated(Event):
+    def __init__(self, user_id: str, error_id: str, linked_node_ids: List[str] = None):
+        self.user_id = user_id
+        self.error_id = error_id
+        self.linked_node_ids = linked_node_ids or []
+        self.timestamp = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            "event_type": "error_created",
+            "user_id": self.user_id,
+            "error_id": self.error_id,
+            "linked_node_ids": self.linked_node_ids,
+            "timestamp": self.timestamp.isoformat()
+        }
+
 class EventBus:
-    """Event Bus - RabbitMQ Wrapper with improved stability"""
-    def __init__(self, rabbitmq_url: Optional[str] = None):
-        self.rabbitmq_url = rabbitmq_url or os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-        self.connection = None
-        self.channel = None
-        self._connect()
+    """
+    Event Bus - Redis Streams Implementation
+    Supports asynchronous publishing and consumer groups.
+    """
+    def __init__(self, redis_url: Optional[str] = None):
+        # We delay connection until needed or explicitly initialized
+        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.redis: Optional[redis.Redis] = None
+        self._consumers = []
+        self._running = False
 
-    def _connect(self):
-        """Establish connection with heartbeats to prevent unexpected closures"""
-        try:
-            # heartbeat=60 is crucial for long-lived connections
-            parameters = pika.URLParameters(self.rabbitmq_url)
-            parameters.heartbeat = 60
-            parameters.blocked_connection_timeout = 300
-            
-            self.connection = pika.BlockingConnection(parameters)
-            self.channel = self.connection.channel()
-            self.channel.exchange_declare(
-                exchange='sparkle_events',
-                exchange_type='topic',
-                durable=True
-            )
-            logger.info("Successfully connected to RabbitMQ with heartbeats")
-        except Exception as e:
-            logger.error(f"Failed to connect to RabbitMQ: {e}")
-            self.connection = None
-            self.channel = None
-
-    def _ensure_connection(self):
-        """Check connection health and reconnect if necessary"""
-        if self.connection is None or self.connection.is_closed or \
-           self.channel is None or self.channel.is_closed:
-            logger.warning("RabbitMQ connection lost, attempting to reconnect...")
-            self._connect()
-
-    def publish(self, event: Event, routing_key: str):
-        """Publish event with automatic retry and health check"""
-        self._ensure_connection()
-        
-        if not self.channel:
-            logger.error(f"Cannot publish event {routing_key}: Connection unavailable")
-            return
-
-        try:
-            self.channel.basic_publish(
-                exchange='sparkle_events',
-                routing_key=routing_key,
-                body=json.dumps(event.to_dict()),
-                properties=pika.BasicProperties(
-                    delivery_mode=2,  # Persistent
-                    content_type='application/json',
-                    timestamp=int(datetime.utcnow().timestamp())
+    async def connect(self):
+        """Establish Redis connection"""
+        if not self.redis:
+            try:
+                self.redis = redis.from_url(
+                    self.redis_url,
+                    encoding="utf-8",
+                    decode_responses=True
                 )
-            )
-            logger.debug(f"Published event {routing_key}")
-        except pika.exceptions.AMQPError as e:
-            logger.error(f"AMQP error during publish: {e}")
-            # Reset connection on AMQP errors to trigger reconnect on next attempt
-            self.connection = None
+                await self.redis.ping()
+                logger.info("Successfully connected to Redis Event Bus")
+            except Exception as e:
+                logger.error(f"Failed to connect to Redis: {e}")
+                self.redis = None
+
+    async def close(self):
+        """Close connection and stop consumers"""
+        self._running = False
+        if self.redis:
+            await self.redis.close()
+            self.redis = None
+            logger.info("Redis Event Bus connection closed")
+
+    async def publish(self, event_type: str, payload: dict, stream: str = "sparkle_events") -> Optional[str]:
+        """
+        Publish event to Redis Stream
+        
+        Args:
+            event_type: Type of the event (used as key in payload usually, but here just for logging/logic)
+            payload: Dictionary data to send
+            stream: Redis Stream key name
+            
+        Returns:
+            Message ID if successful, None otherwise
+        """
+        if not self.redis:
+            await self.connect()
+            if not self.redis:
+                logger.error("Cannot publish: Redis not connected")
+                return None
+
+        try:
+            # Ensure payload implies event_type if not present, or wrap it
+            message = payload.copy()
+            if "event_type" not in message:
+                message["event_type"] = event_type
+            
+            # Serialize complex types if necessary (Redis expects str->str dict for simpler usage)
+            # We use json dumps for the whole payload or individual fields.
+            # Here we dump the whole payload into a 'data' field to avoid field limitation issues,
+            # or we flatten it. For simplicity and flexibility, let's put it in 'data'.
+            # However, standard stream usage often puts fields directly. 
+            # Let's stringify values.
+            
+            msg_body = {}
+            for k, v in message.items():
+                if isinstance(v, (dict, list)):
+                    msg_body[k] = json.dumps(v)
+                else:
+                    msg_body[k] = str(v)
+
+            # XADD
+            msg_id = await self.redis.xadd(stream, msg_body)
+            logger.debug(f"Published event {event_type} to {stream} with ID {msg_id}")
+            return msg_id
+
         except Exception as e:
-            logger.error(f"Unexpected error during publish: {e}")
+            logger.error(f"Failed to publish event {event_type}: {e}")
+            return None
 
-    def subscribe(self, routing_key: str, callback):
-        """Subscribe to event"""
-        if not self.channel or self.channel.is_closed:
-             self._connect()
-             if not self.channel:
-                 logger.error("Cannot subscribe, RabbitMQ not connected")
-                 return
+    async def subscribe(self, stream: str, group_name: str, consumer_name: str, callback: Callable[[Dict], Any]):
+        """
+        Start a background consumer for a consumer group.
+        
+        Args:
+            stream: Redis Stream key
+            group_name: Consumer Group name
+            consumer_name: Unique consumer name instance
+            callback: Async function to handle message payload (dict)
+        """
+        if not self.redis:
+            await self.connect()
 
-        queue_name = f"queue_{routing_key.replace('.', '_')}"
-        self.channel.queue_declare(queue=queue_name, durable=True)
-        self.channel.queue_bind(
-            queue=queue_name,
-            exchange='sparkle_events',
-            routing_key=routing_key
-        )
-        self.channel.basic_consume(
-            queue=queue_name,
-            on_message_callback=callback,
-            auto_ack=False
-        )
-        logger.info(f"Subscribed to {routing_key}")
+        # 1. Create Consumer Group if not exists
+        try:
+            await self.redis.xgroup_create(stream, group_name, id="0", mkstream=True)
+            logger.info(f"Created consumer group {group_name} for stream {stream}")
+        except ResponseError as e:
+            if "BUSYGROUP" in str(e):
+                logger.debug(f"Consumer group {group_name} already exists")
+            else:
+                logger.error(f"Error creating consumer group: {e}")
+                return
 
-    def start_consuming(self):
-        if self.channel:
-            logger.info("Starting to consume messages...")
-            self.channel.start_consuming()
+        # 2. Start Consumption Loop
+        self._running = True
+        asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+
+    async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
+        logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")
+        
+        while self._running:
+            try:
+                if not self.redis:
+                    await asyncio.sleep(1)
+                    continue
+
+                # Read from group
+                # count=1 for processing one by one, block=5000ms
+                entries = await self.redis.xreadgroup(
+                    groupname=group_name,
+                    consumername=consumer_name,
+                    streams={stream: ">"},
+                    count=1,
+                    block=2000
+                )
+
+                if not entries:
+                    continue
+
+                for stream_name, messages in entries:
+                    for message_id, data in messages:
+                        try:
+                            # Parse data (handling json strings if we did that)
+                            parsed_data = {}
+                            for k, v in data.items():
+                                try:
+                                    parsed_data[k] = json.loads(v)
+                                except (json.JSONDecodeError, TypeError):
+                                    parsed_data[k] = v
+                            
+                            # Invoke callback
+                            await callback(parsed_data)
+                            
+                            # ACK
+                            await self.redis.xack(stream, group_name, message_id)
+                            
+                        except Exception as e:
+                            logger.error(f"Error processing message {message_id}: {e}")
+                            # TODO: Implement Dead Letter Queue or Retry logic here
+                            
+            except Exception as e:
+                logger.error(f"Error in consumer loop: {e}")
+                await asyncio.sleep(1) # Backoff
 
 # Global instance
 event_bus = EventBus()

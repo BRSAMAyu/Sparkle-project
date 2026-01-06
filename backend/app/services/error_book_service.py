@@ -20,6 +20,7 @@ from app.schemas.error_book import (
 )
 from app.core.llm_client import llm_client
 from app.services.embedding_service import embedding_service
+from app.core.event_bus import event_bus, ErrorCreated
 
 class ReviewSchedulerService:
     """
@@ -209,6 +210,18 @@ class ErrorBookService:
 
             await self.db.commit()
             logger.info(f"Analysis completed for error {error.id}")
+
+            # Publish Error Created Event
+            try:
+                if linked_ids:
+                    event = ErrorCreated(
+                        user_id=str(user_id),
+                        error_id=str(error.id),
+                        linked_node_ids=[str(i) for i in linked_ids]
+                    )
+                    await event_bus.publish(event.to_dict()['event_type'], event.to_dict())
+            except Exception as e:
+                logger.error(f"Failed to publish ErrorCreated event: {e}")
 
         except Exception as e:
             logger.error(f"Async analysis failed for error {error_id}: {e}")
