@@ -202,6 +202,42 @@ class GalaxyLayoutEngine {
     const maxIterations = 50;
     const pushForce = 0.8;
 
+    // OPTIMIZATION: N < 50, skip QuadTree and use brute force O(N^2)
+    // Note: Viewport culling is handled by the consumer (Painter/Provider) before rendering,
+    // so we only focus on collision resolution here as per spec.
+    if (nodes.length < 50) {
+      for (var iter = 0; iter < maxIterations; iter++) {
+        var hasOverlap = false;
+        for (var i = 0; i < nodes.length; i++) {
+          final nodeA = nodes[i];
+          final posA = positions[nodeA.id];
+          if (posA == null) continue;
+
+          for (var j = i + 1; j < nodes.length; j++) {
+            final nodeB = nodes[j];
+            final posB = positions[nodeB.id];
+            if (posB == null) continue;
+
+            final minDist = minNodeSpacing + nodeA.radius + nodeB.radius;
+            final delta = posA - posB;
+            final dist = delta.distance;
+
+            if (dist < minDist && dist > 0.1) {
+              hasOverlap = true;
+              final overlap = minDist - dist;
+              final direction = Offset(delta.dx / dist, delta.dy / dist);
+              final push = direction * overlap * pushForce * 0.5;
+
+              positions[nodeA.id] = posA + push;
+              positions[nodeB.id] = posB - push;
+            }
+          }
+        }
+        if (!hasOverlap) break;
+      }
+      return;
+    }
+
     // 使用四叉树加速碰撞检测
     for (var iter = 0; iter < maxIterations; iter++) {
       var hasOverlap = false;

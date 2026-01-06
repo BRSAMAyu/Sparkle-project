@@ -6,16 +6,87 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
+/// Widget that renders the background in tiles to avoid texture size limits
+class TiledSectorBackground extends StatelessWidget {
+  const TiledSectorBackground({
+    required this.width,
+    required this.height,
+    super.key,
+  });
+
+  final double width;
+  final double height;
+  
+  static const double _maxTileSize = 2048.0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (width <= _maxTileSize && height <= _maxTileSize) {
+      return RepaintBoundary(
+        child: CustomPaint(
+          painter: SectorBackgroundPainter(
+            totalSize: Size(width, height),
+          ),
+          size: Size(width, height),
+        ),
+      );
+    }
+    
+    final cols = (width / _maxTileSize).ceil();
+    final rows = (height / _maxTileSize).ceil();
+    
+    final tileWidth = width / cols;
+    final tileHeight = height / rows;
+
+    return Column(
+      children: List.generate(rows, (r) {
+        return Row(
+          children: List.generate(cols, (c) {
+             final x = c * tileWidth;
+             final y = r * tileHeight;
+             return _buildTile(x, y, tileWidth, tileHeight);
+          }),
+        );
+      }),
+    );
+  }
+
+  Widget _buildTile(double x, double y, double w, double h) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: Size(w, h),
+        painter: SectorBackgroundPainter(
+          totalSize: Size(width, height),
+          offset: Offset(x, y),
+        ),
+      ),
+    );
+  }
+}
+
 /// Painter for the sector nebula backgrounds
 class SectorBackgroundPainter extends CustomPainter {
   SectorBackgroundPainter({
-    required this.canvasSize,
-  });
-  final double canvasSize;
+    required this.totalSize,
+    this.offset = Offset.zero,
+    // Legacy support
+    double? canvasSize,
+  }) : actualTotalSize = canvasSize != null ? Size(canvasSize, canvasSize) : totalSize;
+
+  final Size totalSize;
+  final Size actualTotalSize;
+  final Offset offset;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    // Save canvas state
+    canvas.save();
+    // Translate canvas to simulate drawing on the full surface
+    // If we are tile (x,y), we shift back by (x,y) so that (0,0) of this canvas
+    // corresponds to (x,y) of the virtual full canvas.
+    canvas.translate(-offset.dx, -offset.dy);
+
+    final center = Offset(actualTotalSize.width / 2, actualTotalSize.height / 2);
 
     // Draw each sector's nebula
     for (final entry in SectorConfig.styles.entries) {
@@ -26,6 +97,8 @@ class SectorBackgroundPainter extends CustomPainter {
     for (final entry in SectorConfig.styles.entries) {
       _drawSectorLabel(canvas, center, entry.value);
     }
+    
+    canvas.restore();
   }
 
   void _drawSectorNebula(
@@ -44,7 +117,7 @@ class SectorBackgroundPainter extends CustomPainter {
 
     // Create a pie slice shape
     const innerRadius = 100.0; // Start from center area (leave room for flame)
-    final outerRadius = canvasSize / 2 - 200; // Leave margin at edges
+    final outerRadius = actualTotalSize.width / 2 - 200; // Leave margin at edges
 
     // Move to inner arc start point
     final innerStart = Offset(
@@ -160,5 +233,5 @@ class SectorBackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SectorBackgroundPainter oldDelegate) =>
-      oldDelegate.canvasSize != canvasSize;
+      oldDelegate.totalSize != totalSize || oldDelegate.offset != offset;
 }

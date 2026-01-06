@@ -13,8 +13,8 @@ import 'package:sparkle/core/services/smart_cache.dart';
 /// 3. 支持不同样式的文本
 class TextImageCache {
   TextImageCache({
-    this.maxSize = 100,
-    this.maxAge = const Duration(minutes: 10),
+    this.maxSize = 200,
+    this.maxAge = const Duration(seconds: 60),
   }) : _cache = SmartCache<String, _CachedTextImage>(
           maxSize: maxSize,
           maxAge: maxAge,
@@ -158,14 +158,24 @@ class BatchTextRenderer {
   BatchTextRenderer({
     this.cacheEnabled = true,
     this.maxCacheSize = 200,
-  }) : _cache = cacheEnabled ? TextImageCache(maxSize: maxCacheSize) : null;
+  }) : _cache = cacheEnabled ? TextImageCache(maxSize: maxCacheSize) : null,
+       _painterCache = SmartCache<String, TextPainter>(
+         maxSize: maxCacheSize,
+         onEvicted: (key, painter) {
+           // Standard Flutter TextPainter does not require manual disposal 
+           // in most versions, but in recent ones it might help clear native resources.
+           // However, to be safe against older SDKs and since it's "Low" priority,
+           // we skip explicit dispose to avoid compile errors if SDK < 3.10.
+           // painter.dispose(); 
+         },
+       );
 
   final bool cacheEnabled;
   final int maxCacheSize;
   final TextImageCache? _cache;
 
   // TextPainter缓存（同步使用）
-  final Map<String, TextPainter> _painterCache = {};
+  final SmartCache<String, TextPainter> _painterCache;
 
   /// 获取TextPainter（同步，用于绘制）
   TextPainter getTextPainter(
@@ -175,8 +185,9 @@ class BatchTextRenderer {
   }) {
     final key = '${text}_${style.hashCode}_$maxWidth';
 
-    if (_painterCache.containsKey(key)) {
-      return _painterCache[key]!;
+    final cached = _painterCache.get(key);
+    if (cached != null) {
+      return cached;
     }
 
     final painter = TextPainter(
@@ -185,14 +196,7 @@ class BatchTextRenderer {
     );
     painter.layout(maxWidth: maxWidth);
 
-    // 限制缓存大小
-    if (_painterCache.length >= maxCacheSize) {
-      // 移除最早的条目
-      final firstKey = _painterCache.keys.first;
-      _painterCache.remove(firstKey);
-    }
-
-    _painterCache[key] = painter;
+    _painterCache.set(key, painter);
     return painter;
   }
 
@@ -245,7 +249,7 @@ class BatchTextRenderer {
 
   /// 获取统计信息
   Map<String, dynamic> get stats => {
-        'painterCacheSize': _painterCache.length,
+        'painterCacheSize': _painterCache.size,
         'imageCacheStats': _cache?.stats.toString() ?? 'disabled',
       };
 }

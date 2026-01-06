@@ -3,9 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/text_cache.dart';
-import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
@@ -44,7 +44,7 @@ class ProcessedEdge {
   final double strokeWidth;
 }
 
-/// 关系类型颜色配置
+/// Relation style configuration
 class _RelationStyle {
   const _RelationStyle({
     required this.color,
@@ -93,6 +93,8 @@ class StarMapPainter extends CustomPainter {
     required this.nodes,
     this.edges = const [],
     this.scale = 1.0,
+    this.performanceTier = PerformanceTier.high,
+    this.currentDpr = 3.0, // Default to high if not provided
     this.aggregationLevel = AggregationLevel.full,
     this.clusters = const {},
     this.viewport,
@@ -108,14 +110,22 @@ class StarMapPainter extends CustomPainter {
   final List<CompactKnowledgeNode> nodes;
   final List<GalaxyEdgeModel> edges;
   final double scale;
+  final PerformanceTier performanceTier;
+  final double currentDpr;
   final AggregationLevel aggregationLevel;
   final Map<String, ClusterInfo> clusters;
   final Rect? viewport;
   final Offset center;
   final int? selectedNodeIdHash;
   final Set<int> expandedEdgeNodeIdHashes;
-  final Map<int, double> nodeAnimationProgress; // Keyed by idHash
+  final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
+
+  // LOD Thresholds
+  static const double _lod0Limit = 0.2;
+  static const double _lod1Limit = 0.4;
+  static const double _lod2Limit = 0.6;
+  static const double _lod3Limit = 0.8;
 
   static final SmartCache<int, List<ProcessedNode>> _nodeCache =
       SmartCache(maxSize: 10);
@@ -216,7 +226,7 @@ class StarMapPainter extends CustomPainter {
       );
     }
 
-    // Parent-child connections logic
+    // Parent-child connections
     for (final node in nodes) {
       if (node.parentIdHash != null) {
         final start = _positionCache[node.parentIdHash!];
@@ -231,8 +241,8 @@ class StarMapPainter extends CustomPainter {
           ProcessedEdge(
             edge: GalaxyEdgeModel(
               id: 'p_${node.idHash}',
-              sourceId: '', // Dummy
-              targetId: '', // Dummy
+              sourceId: '',
+              targetId: '',
               relationType: EdgeRelationType.parentChild,
               strength: 0.7,
             ),
@@ -255,25 +265,34 @@ class StarMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawRootConnections(canvas);
-    _drawEdges(canvas);
-
-    switch (aggregationLevel) {
-      case AggregationLevel.universe:
-      case AggregationLevel.galaxy:
-        _drawSectorView(canvas);
-        if (aggregationLevel == AggregationLevel.galaxy) _drawNodes(canvas);
-      case AggregationLevel.cluster:
-        _drawClusteredView(canvas);
-        _drawNodes(canvas);
-      case AggregationLevel.nebula:
-      case AggregationLevel.full:
-        if (aggregationLevel == AggregationLevel.nebula) {
-          _drawClusteredView(canvas);
-        }
-        _drawNodes(canvas);
+    // LOD 0 (<0.2): Centroid Halo + Starfield Labels (Hide all nodes/connections)
+    if (scale < _lod0Limit) {
+      _drawSectorView(canvas); 
+      return; 
     }
 
+    // LOD 1 (0.2-0.4): Large Nodes + Key Labels
+    // LOD 2 (0.4-0.6): All Nodes + Parent-Child Connections (Standard Label Density)
+    // LOD 3 (0.6-0.8): Associative Connections + Glow (More Labels)
+    // LOD 4 (>0.8): Full Text + Dynamic Particles
+
+    // Draw Edges
+    // Edges start at L2 (0.4) for parent-child, L3 (0.6) for others
+    if (scale >= _lod1Limit) { 
+        // Logic check: L2 starts at 0.4.
+        if (scale >= _lod1Limit) { // Actually > 0.4 which is L2? No, _lod1Limit is 0.4.
+           // Prompt: "Edgers start at L2 (0.4)"
+           // My code: if (scale >= _lod1Limit) -> if (scale >= 0.4)
+           // If scale < 0.6 (L2), only parent-child.
+           _drawEdges(canvas, parentChildOnly: scale < _lod2Limit);
+        }
+    }
+
+    // Draw Nodes
+    // L1 (0.2-0.4): Large Nodes only. L2+ (>0.4): All nodes.
+    _drawNodes(canvas, onlyLarge: scale < _lod1Limit);
+
+    // Selection Highlight (Always visible if selected and node is visible)
     if (selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
       _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]!);
@@ -290,32 +309,22 @@ class StarMapPainter extends CustomPainter {
       ..strokeWidth = 2.0 + (selectionPulse * 1.0);
 
     canvas.drawCircle(pos, radius, paint);
-    paint.color =
-        DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
-    paint.style = PaintingStyle.fill;
-    canvas.drawCircle(pos, 40, paint);
-  }
-
-  void _drawRootConnections(Canvas canvas) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    for (final node in nodes) {
-      if (node.parentIdHash == null) {
-        final pos = _positionCache[node.idHash]!;
-        final sectorColor =
-            SectorConfig.getColor(SectorEnum.values[node.sectorIndex]);
-        paint.shader = ui.Gradient.linear(center, pos, [
-          sectorColor.withValues(alpha: 0.0),
-          sectorColor.withValues(alpha: 0.3),
-        ]);
-        canvas.drawLine(center, pos, paint);
-      }
+    
+    // Fill only if high tier
+    if (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high) {
+        paint.color =
+            DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
+        paint.style = PaintingStyle.fill;
+        canvas.drawCircle(pos, 40, paint);
     }
   }
 
-  void _drawEdges(Canvas canvas) {
+  void _drawEdges(Canvas canvas, {required bool parentChildOnly}) {
+    // Optimization: If DPR is very low, skip thin lines or use simpler drawing
+    final lowRes = currentDpr < 1.5;
+
     for (final edge in _processedEdges) {
+      // Culling
       if (viewport != null) {
         final cRect = viewport!.inflate(50);
         if (!cRect.contains(edge.start - center) &&
@@ -323,16 +332,37 @@ class StarMapPainter extends CustomPainter {
           continue;
         }
       }
+      
+      if (parentChildOnly && edge.edge.relationType != EdgeRelationType.parentChild) {
+        continue;
+      }
+
+      // Skip weak non-structural edges on low res
+      if (lowRes && edge.edge.strength < 0.5 && edge.edge.relationType != EdgeRelationType.parentChild) {
+        continue;
+      }
 
       final style = _RelationStyle.forType(edge.edge.relationType);
+      
+      // Tier Check: Low tier = no dashed lines, simple lines
+      if (performanceTier == PerformanceTier.low || lowRes) {
+         final paint = Paint()
+           ..color = style.color.withValues(alpha: 0.5)
+           ..strokeWidth = edge.strokeWidth;
+         canvas.drawLine(edge.start, edge.end, paint);
+         continue;
+      }
+
       if (style.isDashed) {
         _drawDashedEdge(canvas, edge, style);
       } else {
         _drawSolidEdge(canvas, edge, style);
       }
 
-      if (edge.edge.relationType == EdgeRelationType.prerequisite ||
-          edge.edge.relationType == EdgeRelationType.derived) {
+      // Arrows only on higher scale/tier
+      if (scale > _lod3Limit && (
+          edge.edge.relationType == EdgeRelationType.prerequisite ||
+          edge.edge.relationType == EdgeRelationType.derived)) {
         _drawArrow(canvas, edge.start, edge.end, style.color, edge.strokeWidth);
       }
     }
@@ -340,15 +370,22 @@ class StarMapPainter extends CustomPainter {
 
   void _drawSolidEdge(Canvas canvas, ProcessedEdge edge, _RelationStyle style) {
     final paint = Paint()
-      ..shader = ui.Gradient.linear(edge.start, edge.end, [
-        Color.lerp(edge.startColor, style.color, 0.5)!
-            .withValues(alpha: 0.6 * edge.edge.strength),
-        Color.lerp(edge.endColor, style.color, 0.5)!
-            .withValues(alpha: 0.3 * edge.edge.strength),
-      ])
       ..strokeWidth = edge.strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
+
+    // Gradient only on Medium+
+    if (performanceTier != PerformanceTier.low) {
+        paint.shader = ui.Gradient.linear(edge.start, edge.end, [
+            Color.lerp(edge.startColor, style.color, 0.5)!
+                .withValues(alpha: 0.6 * edge.edge.strength),
+            Color.lerp(edge.endColor, style.color, 0.5)!
+                .withValues(alpha: 0.3 * edge.edge.strength),
+        ]);
+    } else {
+        paint.color = style.color.withValues(alpha: 0.5);
+    }
+    
     canvas.drawLine(edge.start, edge.end, paint);
   }
 
@@ -393,63 +430,80 @@ class StarMapPainter extends CustomPainter {
     canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.7));
   }
 
-  void _drawClusteredView(Canvas canvas) {
+  void _drawSectorView(Canvas canvas) {
+     // L0 Representation
     for (final cluster in clusters.values) {
       final pos = cluster.position;
       final color = SectorConfig.getColor(cluster.sector);
-      final radius = 15.0 + (cluster.nodeCount.clamp(1, 50) * 0.8);
+      // Simple Halo
       canvas.drawCircle(
-          pos, radius, Paint()..color = color.withValues(alpha: 0.4),);
-      _drawClusterLabel(canvas, cluster.name, pos, radius, color);
+          pos, 40.0, Paint()..color = color.withValues(alpha: 0.2),);
+      
+      // L0 Labels (Cluster Names)
+      _drawClusterLabel(canvas, cluster.name, pos, 40.0, color);
     }
   }
 
   void _drawClusterLabel(
       Canvas canvas, String name, Offset pos, double r, Color c,) {
+    // Only draw if we are REALLY zoomed out
+    if (scale > _lod0Limit) return;
+    
     _textRenderer.drawText(canvas, name, pos + Offset(0, r + 8),
         TextStyle(color: DS.brandPrimary, fontSize: 12),);
   }
 
-  void _drawSectorView(Canvas canvas) {
-    for (final cluster in clusters.values) {
-      final pos = cluster.position;
-      final color = SectorConfig.getColor(cluster.sector);
-      canvas.drawCircle(
-          pos, 40.0, Paint()..color = color.withValues(alpha: 0.2),);
-    }
-  }
-
-  void _drawNodes(Canvas canvas) {
+  void _drawNodes(Canvas canvas, {required bool onlyLarge}) {
     final nodePaint = Paint()..style = PaintingStyle.fill;
     final glowPaint = Paint()
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
 
     for (final p in _processedNodes) {
+      // Culling
       if (viewport != null) {
         if (!viewport!.inflate(p.radius * 3).contains(p.position - center)) {
           continue;
         }
+      }
+      
+      // LOD Filtering
+      // L1: Large nodes only (importance >= 3)
+      if (onlyLarge && p.node.importance < 3) {
+          continue;
       }
 
       final progress = nodeAnimationProgress[p.node.idHash] ?? 1.0;
       final r = p.radius * (0.3 + progress * 0.7);
 
       if (scale < 0.3 && p.node.importance < 3) {
-        canvas.drawCircle(p.position, r * 0.5,
+         // Should not happen if L0 logic is correct, but for L1 transition:
+         canvas.drawCircle(p.position, r * 0.5,
             Paint()..color = p.color.withValues(alpha: 0.5 * progress),);
-        continue;
+         continue;
       }
 
       if (p.node.isUnlocked) {
-        final m = p.node.mastery / 100.0;
-        glowPaint.color =
-            p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * progress);
-        canvas.drawCircle(p.position, r * 3.0, glowPaint);
+        // Glow: L3+ (>= 0.6) AND (Ultra or High Tier)
+        if (scale >= _lod2Limit && 
+           (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high)) {
+            final m = p.node.mastery / 100.0;
+            glowPaint.color =
+                p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * progress);
+            canvas.drawCircle(p.position, r * 3.0, glowPaint);
+        }
 
-        nodePaint.shader = ui.Gradient.radial(p.position, r, [
-          DS.brandPrimary.withValues(alpha: 0.9 * progress),
-          p.color.withValues(alpha: progress),
-        ]);
+        // Main Node
+        // Disable fancy shader gradient on low tier OR low DPR
+        if (performanceTier != PerformanceTier.low && currentDpr >= 1.5) {
+             nodePaint.shader = ui.Gradient.radial(p.position, r, [
+                DS.brandPrimary.withValues(alpha: 0.9 * progress),
+                p.color.withValues(alpha: progress),
+            ]);
+        } else {
+             nodePaint.color = p.color.withValues(alpha: progress);
+             nodePaint.shader = null;
+        }
+        
         canvas.drawCircle(p.position, r, nodePaint);
         nodePaint.shader = null;
 
@@ -466,7 +520,29 @@ class StarMapPainter extends CustomPainter {
             Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * progress),);
       }
 
-      if (scale > 0.5) _drawNodeLabel(canvas, p.node, p.position, p.color);
+      // Labels Logic
+      // L1 (0.2-0.4): Key Labels (Imp >= 4)
+      // L2 (0.4-0.6): Standard Labels (Imp >= 3)
+      // L3 (0.6-0.8): More Labels (Imp >= 2)
+      // L4 (>0.8): All Labels
+      
+      bool showLabel = false;
+      if (scale >= _lod3Limit) {
+          showLabel = true; // L4: All
+      } else if (scale >= _lod2Limit) {
+          // L3: Imp >= 2
+          if (p.node.importance >= 2) showLabel = true;
+      } else if (scale >= _lod1Limit) {
+          // L2: Imp >= 3
+          if (p.node.importance >= 3) showLabel = true;
+      } else if (scale >= _lod0Limit) {
+           // L1: Imp >= 4
+           if (p.node.importance >= 4) showLabel = true;
+      }
+      
+      if (showLabel) {
+         _drawNodeLabel(canvas, p.node, p.position, p.color);
+      }
     }
   }
 
@@ -485,6 +561,8 @@ class StarMapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant StarMapPainter old) =>
       old.scale != scale ||
+      old.performanceTier != performanceTier ||
+      old.currentDpr != currentDpr ||
       old.viewport != viewport ||
       !identical(old.nodes, nodes) ||
       old.selectionPulse != selectionPulse;

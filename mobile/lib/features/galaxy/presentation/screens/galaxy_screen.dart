@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/central_flame.dart';
@@ -68,6 +69,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Listen to transformation changes for scale updates
     _transformationController.addListener(_onTransformChanged);
 
+    // Start Performance Monitoring
+    PerformanceService.instance.startMonitoring();
+
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = MediaQuery.of(context).size;
@@ -97,6 +101,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
+    PerformanceService.instance.stopMonitoring();
     super.dispose();
   }
 
@@ -465,100 +470,131 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               child: SizedBox(
                 width: _canvasSize,
                 height: _canvasSize,
-                child: Stack(
-                  children: [
-                    // 1. Background: Sector nebula and stars (Static, Cached)
-                    Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([
+                    _transformationController,
+                    _selectionPulseController,
+                    PerformanceService.instance.currentTier,
+                    PerformanceService.instance.currentDpr,
+                  ]),
+                  builder: (context, child) {
+                    final scale = _transformationController.value
+                        .getMaxScaleOnAxis();
+                    // Calculate viewport for culling optimization
+                    final matrix = _transformationController.value;
+                    final screenSize = MediaQuery.of(context).size;
+                    final inverseMatrix = matrix.clone()..invert();
+                    final topLeft = MatrixUtils.transformPoint(
+                        inverseMatrix, Offset.zero,);
+                    final bottomRight = MatrixUtils.transformPoint(
+                      inverseMatrix,
+                      Offset(screenSize.width, screenSize.height),
+                    );
+                    final viewport =
+                        Rect.fromPoints(topLeft, bottomRight).shift(
+                            const Offset(
+                                -_canvasCenter, -_canvasCenter,),);
+
+                    // Convert to Compact models with centered positions for rendering
+                    final compactNodes =
+                        galaxyState.visibleNodes.map((node) {
+                      final pos = galaxyState.nodePositions[node.id] ??
+                          Offset.zero;
+                      return node.toCompact(pos.dx + _canvasCenter,
+                          pos.dy + _canvasCenter,);
+                    }).toList();
+
+                    final selectedHash =
+                        galaxyState.selectedNodeId?.hashCode;
+                    final expandedHashes = galaxyState
+                        .expandedEdgeNodeIds
+                        .map((id) => id.hashCode)
+                        .toSet();
+                    final animationHashes = galaxyState
+                        .nodeAnimationProgress
+                        .map((id, val) => MapEntry(id.hashCode, val));
+
+                    final painter = StarMapPainter(
+                      nodes: compactNodes,
+                      edges: galaxyState.visibleEdges,
+                      scale: scale,
+                      performanceTier: PerformanceService.instance.currentTier.value,
+                      currentDpr: PerformanceService.instance.currentDpr.value,
+                      aggregationLevel: galaxyState.aggregationLevel,
+                      clusters: _centerClusters(galaxyState.clusters,
+                          _canvasCenter, _canvasCenter,),
+                      viewport: viewport,
+                      center:
+                          const Offset(_canvasCenter, _canvasCenter),
+                      selectedNodeIdHash: selectedHash,
+                      expandedEdgeNodeIdHashes: expandedHashes,
+                      nodeAnimationProgress: animationHashes,
+                      selectionPulse: _selectionPulseController.value,
+                    );
+
+                    final content = Stack(
+                      children: [
+                        // 1. Background: Sector nebula and stars (Static, Cached)
+                        Positioned.fill(
+                          child: TiledSectorBackground(
+                            width: _canvasSize,
+                            height: _canvasSize,
+                          ),
+                        ),
+
+                        // 2. Central Flame at canvas center (Static position)
+                        Positioned(
+                          left: _canvasCenter - _centralFlameSize / 2,
+                          top: _canvasCenter - _centralFlameSize / 2,
+                          child: Opacity(
+                            opacity: _isEntering ? 0.0 : 1.0,
+                            child: CentralFlame(
+                              intensity: galaxyState.userFlameIntensity,
+                              size: _centralFlameSize,
+                            ),
+                          ),
+                        ),
+
+                        // 3. Star map on top (Dynamic with Culling)
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: _isEntering ? 0.0 : 1.0,
+                            child: CustomPaint(painter: painter),
+                          ),
+                        ),
+                      ],
+                    );
+
+                    // DPR Scaling Logic
+                    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+                    final currentDpr = PerformanceService.instance.currentDpr.value;
+                    final renderScale = (currentDpr / devicePixelRatio).clamp(0.1, 1.0);
+
+                    if (renderScale > 0.99) {
+                      return content;
+                    }
+
+                    // Render at lower resolution and scale up
+                    return Transform.scale(
+                      scale: 1 / renderScale,
+                      alignment: Alignment.topLeft,
+                      transformHitTests: false,
                       child: RepaintBoundary(
-                        child: CustomPaint(
-                          painter: SectorBackgroundPainter(
-                            canvasSize: _canvasSize,
+                        child: SizedBox(
+                          width: _canvasSize * renderScale,
+                          height: _canvasSize * renderScale,
+                          child: FittedBox(
+                            fit: BoxFit.fill,
+                            child: SizedBox(
+                              width: _canvasSize,
+                              height: _canvasSize,
+                              child: content,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-
-                    // 2. Central Flame at canvas center (Static position)
-                    Positioned(
-                      left: _canvasCenter - _centralFlameSize / 2,
-                      top: _canvasCenter - _centralFlameSize / 2,
-                      child: Opacity(
-                        opacity: _isEntering ? 0.0 : 1.0,
-                        child: CentralFlame(
-                          intensity: galaxyState.userFlameIntensity,
-                          size: _centralFlameSize,
-                        ),
-                      ),
-                    ),
-
-                    // 3. Star map on top (Dynamic with Culling)
-                    Positioned.fill(
-                      child: Opacity(
-                        opacity: _isEntering ? 0.0 : 1.0,
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _transformationController,
-                            _selectionPulseController,
-                          ]),
-                          builder: (context, child) {
-                            final scale = _transformationController.value
-                                .getMaxScaleOnAxis();
-                            // Calculate viewport for culling optimization
-                            final matrix = _transformationController.value;
-                            final screenSize = MediaQuery.of(context).size;
-                            final inverseMatrix = matrix.clone()..invert();
-                            final topLeft = MatrixUtils.transformPoint(
-                                inverseMatrix, Offset.zero,);
-                            final bottomRight = MatrixUtils.transformPoint(
-                              inverseMatrix,
-                              Offset(screenSize.width, screenSize.height),
-                            );
-                            final viewport =
-                                Rect.fromPoints(topLeft, bottomRight).shift(
-                                    const Offset(
-                                        -_canvasCenter, -_canvasCenter,),);
-
-                            // Convert to Compact models with centered positions for rendering
-                            final compactNodes =
-                                galaxyState.visibleNodes.map((node) {
-                              final pos = galaxyState.nodePositions[node.id] ??
-                                  Offset.zero;
-                              return node.toCompact(pos.dx + _canvasCenter,
-                                  pos.dy + _canvasCenter,);
-                            }).toList();
-
-                            final selectedHash =
-                                galaxyState.selectedNodeId?.hashCode;
-                            final expandedHashes = galaxyState
-                                .expandedEdgeNodeIds
-                                .map((id) => id.hashCode)
-                                .toSet();
-                            final animationHashes = galaxyState
-                                .nodeAnimationProgress
-                                .map((id, val) => MapEntry(id.hashCode, val));
-
-                            return CustomPaint(
-                              painter: StarMapPainter(
-                                nodes: compactNodes,
-                                edges: galaxyState.visibleEdges,
-                                scale: scale,
-                                aggregationLevel: galaxyState.aggregationLevel,
-                                clusters: _centerClusters(galaxyState.clusters,
-                                    _canvasCenter, _canvasCenter,),
-                                viewport: viewport,
-                                center:
-                                    const Offset(_canvasCenter, _canvasCenter),
-                                selectedNodeIdHash: selectedHash,
-                                expandedEdgeNodeIdHashes: expandedHashes,
-                                nodeAnimationProgress: animationHashes,
-                                selectionPulse: _selectionPulseController.value,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),
