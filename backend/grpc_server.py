@@ -17,6 +17,7 @@ from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
 from app.services.agent_grpc_service import AgentServiceImpl
 from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
 from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
+from app.api.grpc_auth import AuthInterceptor
 from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
 from app.orchestration.orchestrator import ChatOrchestrator
@@ -63,6 +64,7 @@ async def serve():
     # 创建服务器
     server = grpc.aio.server(
         futures.ThreadPoolExecutor(max_workers=10),
+        interceptors=[AuthInterceptor()],
         options=[
             ('grpc.max_send_message_length', 50 * 1024 * 1024),  # 50MB
             ('grpc.max_receive_message_length', 50 * 1024 * 1024),  # 50MB

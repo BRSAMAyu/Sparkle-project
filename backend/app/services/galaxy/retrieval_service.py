@@ -107,13 +107,17 @@ class KnowledgeRetrievalService:
         else:
             final_chunks = candidates[:limit]
             
-        # 6. Fetch Nodes from DB
+        # 6. Fetch Nodes from DB (Optimized with Status Join to avoid N+1)
         parent_ids = list(set([chunk.parent_id for chunk in final_chunks]))
         if not parent_ids:
             return []
             
         stmt = (
-            select(KnowledgeNode)
+            select(KnowledgeNode, UserNodeStatus)
+            .outerjoin(
+                UserNodeStatus, 
+                (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
+            )
             .options(
                 selectinload(KnowledgeNode.subject),
                 selectinload(KnowledgeNode.parent)
@@ -121,8 +125,8 @@ class KnowledgeRetrievalService:
             .where(KnowledgeNode.id.in_(parent_ids))
         )
         result = await self.db.execute(stmt)
-        nodes_list = result.scalars().all()
-        nodes_map = {str(node.id): node for node in nodes_list}
+        rows = result.all()
+        nodes_map = {str(node.id): (node, status) for node, status in rows}
         
         # 7. Assemble Result
         search_results = []
@@ -134,9 +138,7 @@ class KnowledgeRetrievalService:
                 continue
             
             seen_parents.add(pid)
-            node = nodes_map[pid]
-            
-            user_status = await self._get_user_status(user_id_uuid, node.id)
+            node, user_status = nodes_map[pid]
             search_results.append(self._format_search_result(node, user_status, 1.0))
             
         return search_results

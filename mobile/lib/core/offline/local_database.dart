@@ -74,9 +74,15 @@ class LocalDatabase {
 
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
+    // In production, you would fetch a secure key from SecureStorage
+    // final secureStorage = const FlutterSecureStorage();
+    // final encryptionKey = await secureStorage.read(key: 'db_key');
+
     isar = await Isar.open(
       [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema],
       directory: dir.path,
+      // encryptionKey: encryptionKey, // Enable encryption in production
+      inspector: true, // Disable in production
     );
   }
 }

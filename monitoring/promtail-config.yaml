@@ -13,6 +13,23 @@ scrape_configs:
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
+    pipeline_stages:
+      - docker: {}
+      - match:
+          selector: '{container="sparkle_backend"}'
+          stages:
+            - regex:
+                expression: '(.*)password(.*)'
+                replace: '***'
+            - regex:
+                expression: '(.*)key(.*)'
+                replace: '***'
+      - match:
+          selector: '{container="sparkle_gateway"}'
+          stages:
+            - regex:
+                expression: '(.*)Authorization(.*)'
+                replace: '***'
     relabel_configs:
       - source_labels: ['__meta_docker_container_name']
         regex: '/(.*)'

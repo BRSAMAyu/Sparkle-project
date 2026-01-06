@@ -38,8 +38,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """
         try:
             # 从 metadata 获取追踪信息
-            metadata = dict(context.invocation_metadata())
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
             user_id = request.user_id or metadata.get("user-id", "")
+            
+            # Security Audit: Log missing authorization headers
+            if not metadata.get("authorization") and not request.user_id:
+                logger.warning(f"SECURITY ALERT: StreamChat call without authorization metadata or user_id. Session: {request.session_id}")
+            elif metadata.get("authorization"):
+                logger.debug(f"Auth metadata found for user_id={user_id}")
+            
             trace_id = metadata.get("x-trace-id", request.request_id)
 
             logger.info(f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}")

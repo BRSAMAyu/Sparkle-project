@@ -16,8 +16,9 @@ import (
 )
 
 type Client struct {
-	conn *grpc.ClientConn
-	api  agentv1.AgentServiceClient
+	conn   *grpc.ClientConn
+	api    agentv1.AgentServiceClient
+	config *config.Config
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
@@ -46,10 +47,26 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		}
 	}
 
+	// Retry policy configuration
+	retryPolicy := `{
+		"methodConfig": [{
+			"name": [{"service": "agent.v1.AgentService"}],
+			"waitForReady": true,
+			"retryPolicy": {
+				"MaxAttempts": 4,
+				"InitialBackoff": ".01s",
+				"MaxBackoff": ".1s",
+				"BackoffMultiplier": 1.0,
+				"RetryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED"]
+			}
+		}]
+	}`
+
 	conn, err := grpc.DialContext(ctx, cfg.AgentAddress,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithBlock(),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+		grpc.WithDefaultServiceConfig(retryPolicy),
 	)
 	if err != nil {
 		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
@@ -57,7 +74,7 @@ func NewClient(cfg *config.Config) (*Client, error) {
 	}
 
 	client := agentv1.NewAgentServiceClient(conn)
-	return &Client{conn: conn, api: client}, nil
+	return &Client{conn: conn, api: client, config: cfg}, nil
 }
 
 func (c *Client) Close() {
@@ -69,7 +86,8 @@ func (c *Client) Close() {
 func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
 	// Inject Metadata for business context
 	md := metadata.New(map[string]string{
-		"user-id": req.UserId,
+		"user-id":            req.UserId,
+		"x-internal-api-key": c.config.InternalAPIKey,
 	})
 
 	outCtx := metadata.NewOutgoingContext(ctx, md)
