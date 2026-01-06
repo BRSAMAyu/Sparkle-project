@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
 import 'package:sparkle/presentation/widgets/profile/avatar_selection_dialog.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});

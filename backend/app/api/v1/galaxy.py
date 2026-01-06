@@ -2,11 +2,13 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user_id, get_db
 from app.services.galaxy_service import GalaxyService
@@ -357,7 +359,6 @@ async def galaxy_events_stream(
 # Phase 3 & 4 Endpoints
 # ==========================================
 
-from pydantic import BaseModel, Field
 class ViewportRequest(BaseModel):
     min_x: float
     max_x: float

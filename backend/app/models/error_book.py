@@ -41,6 +41,11 @@ class ErrorRecord(Base):
     # 结构: { "error_type": "...", "root_cause": "...", "study_suggestions": "...", "ocr_text": "..." }
     latest_analysis = Column(JSONB, nullable=True)
     
+    # 认知维度标签 (e.g., ['logic', 'memory'])
+    cognitive_tags = Column(ARRAY(String), default=list)
+    # AI 深度分析摘要 (Text)
+    ai_analysis_summary = Column(Text, nullable=True)
+    
     # --- 知识图谱关联 ---
     # 强关联: 已存在的知识点 ID
     linked_knowledge_node_ids = Column(ARRAY(UUID(as_uuid=True)), default=list)
@@ -52,10 +57,11 @@ class ErrorRecord(Base):
     is_deleted = Column(Boolean, default=False)
 
     # Relationships
-    user = relationship("User", backref="error_records")
+    user = relationship("User", back_populates="error_records")
 
     # Indexes
     __table_args__ = (
         Index('idx_errors_user_review', 'user_id', 'next_review_at', postgresql_where=(mastery_level < 1.0)),
         Index('idx_errors_subject', 'subject_code'),
+        Index('idx_error_records_cognitive_tags', 'cognitive_tags', postgresql_using='gin'),
     )

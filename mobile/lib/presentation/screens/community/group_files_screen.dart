@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/presentation/widgets/file/file_picker_with_presigned.dart';
 import 'package:url_launcher/url_launcher.dart';
 

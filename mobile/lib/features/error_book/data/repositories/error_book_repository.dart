@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 /// 错题档案 Repository
 ///
@@ -67,6 +68,7 @@ class ErrorBookRepository {
     String? keyword,
     double? masteryMin,
     double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -80,6 +82,8 @@ class ErrorBookRepository {
         if (keyword != null) 'keyword': keyword,
         if (masteryMin != null) 'mastery_min': masteryMin,
         if (masteryMax != null) 'mastery_max': masteryMax,
+        if (cognitiveDimension != null)
+          'cognitive_dimension': cognitiveDimension.code,
       };
 
       final response = await _dio.get<Map<String, dynamic>>(

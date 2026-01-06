@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 part 'error_book_provider.g.dart';
 
@@ -29,6 +30,7 @@ class ErrorListQuery {
     this.chapter,
     this.needReview,
     this.keyword,
+    this.cognitiveDimension,
     this.page = 1,
     this.pageSize = 20,
   });
@@ -36,6 +38,7 @@ class ErrorListQuery {
   final String? chapter;
   final bool? needReview;
   final String? keyword;
+  final CognitiveDimension? cognitiveDimension;
   final int page;
   final int pageSize;
 
@@ -48,6 +51,7 @@ class ErrorListQuery {
           chapter == other.chapter &&
           needReview == other.needReview &&
           keyword == other.keyword &&
+          cognitiveDimension == other.cognitiveDimension &&
           page == other.page &&
           pageSize == other.pageSize;
 
@@ -57,6 +61,7 @@ class ErrorListQuery {
       chapter.hashCode ^
       needReview.hashCode ^
       keyword.hashCode ^
+      cognitiveDimension.hashCode ^
       page.hashCode ^
       pageSize.hashCode;
 }
@@ -81,6 +86,7 @@ Future<ErrorListResponse> errorList(
     chapter: query.chapter,
     needReview: query.needReview,
     keyword: query.keyword,
+    cognitiveDimension: query.cognitiveDimension,
     page: query.page,
     pageSize: query.pageSize,
   );
@@ -330,23 +336,27 @@ class ErrorFilterState {
     this.chapterFilter,
     this.showOnlyNeedReview = false,
     this.searchKeyword = '',
+    this.cognitiveDimension,
   });
   final String? selectedSubject;
   final String? chapterFilter;
   final bool showOnlyNeedReview;
   final String searchKeyword;
+  final CognitiveDimension? cognitiveDimension;
 
   ErrorFilterState copyWith({
     String? selectedSubject,
     String? chapterFilter,
     bool? showOnlyNeedReview,
     String? searchKeyword,
+    CognitiveDimension? cognitiveDimension,
   }) =>
       ErrorFilterState(
         selectedSubject: selectedSubject ?? this.selectedSubject,
         chapterFilter: chapterFilter ?? this.chapterFilter,
         showOnlyNeedReview: showOnlyNeedReview ?? this.showOnlyNeedReview,
         searchKeyword: searchKeyword ?? this.searchKeyword,
+        cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,
       );
 
   /// 转换为查询参数
@@ -355,6 +365,7 @@ class ErrorFilterState {
         chapter: chapterFilter,
         needReview: showOnlyNeedReview ? true : null,
         keyword: searchKeyword.isEmpty ? null : searchKeyword,
+        cognitiveDimension: cognitiveDimension,
         page: page,
         pageSize: pageSize,
       );
@@ -382,6 +393,10 @@ class ErrorFilter extends _$ErrorFilter {
 
   void setSearchKeyword(String keyword) {
     state = state.copyWith(searchKeyword: keyword);
+  }
+
+  void setCognitiveDimension(CognitiveDimension? dimension) {
+    state = state.copyWith(cognitiveDimension: dimension);
   }
 
   void reset() {

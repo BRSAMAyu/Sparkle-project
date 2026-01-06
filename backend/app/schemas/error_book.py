@@ -47,6 +47,14 @@ class ReviewPerformanceEnum(str, Enum):
     FUZZY = "fuzzy"
     FORGOTTEN = "forgotten"
 
+COGNITIVE_DIMENSIONS = {
+    "memory",
+    "understanding",
+    "application",
+    "analysis",
+    "evaluation",
+    "creation",
+}
 
 # ============================================
 # 错题创建/更新 Schema
@@ -62,6 +70,15 @@ class ErrorRecordCreate(BaseModel):
     
     subject: SubjectEnum = Field(..., description="科目")
     chapter: Optional[str] = Field(None, max_length=100, description="章节（可选）")
+    
+    cognitive_tags: List[str] = Field(default_factory=list, description="认知维度标签")
+    ai_analysis_summary: Optional[str] = Field(None, description="AI 分析摘要")
+
+    @validator("cognitive_tags", each_item=True)
+    def validate_cognitive_tags(cls, value: str) -> str:
+        if value not in COGNITIVE_DIMENSIONS:
+            raise ValueError("Invalid cognitive dimension tag")
+        return value
     
     @root_validator(pre=True)
     def check_content_or_image(cls, values):
@@ -80,6 +97,15 @@ class ErrorRecordUpdate(BaseModel):
     subject: Optional[SubjectEnum] = None
     chapter: Optional[str] = Field(None, max_length=100)
     question_image_url: Optional[str] = Field(None, max_length=500)
+    
+    cognitive_tags: Optional[List[str]] = None
+    ai_analysis_summary: Optional[str] = None
+
+    @validator("cognitive_tags", each_item=True)
+    def validate_cognitive_tags(cls, value: str) -> str:
+        if value not in COGNITIVE_DIMENSIONS:
+            raise ValueError("Invalid cognitive dimension tag")
+        return value
 
 
 # ============================================
@@ -132,9 +158,12 @@ class ErrorRecordResponse(BaseModel):
     # AI 分析 (从 JSONB 字段解析)
     latest_analysis: Optional[ErrorAnalysisResult] = None
     
+    cognitive_tags: List[str] = Field(default_factory=list)
+    ai_analysis_summary: Optional[str] = None
+    
     # 关联信息 (Service 层需要手动填充)
-    knowledge_links: List[KnowledgeLinkBrief] = []
-    suggested_concepts: List[str] = []
+    knowledge_links: List[KnowledgeLinkBrief] = Field(default_factory=list)
+    suggested_concepts: List[str] = Field(default_factory=list)
     
     created_at: datetime
     updated_at: datetime
@@ -179,9 +208,19 @@ class ErrorQueryParams(BaseModel):
     """错题查询参数"""
     subject: Optional[SubjectEnum] = None
     chapter: Optional[str] = None
+    error_type: Optional[ErrorTypeEnum] = None
     mastery_min: Optional[float] = Field(None, ge=0, le=1)
     mastery_max: Optional[float] = Field(None, ge=0, le=1)
     need_review: Optional[bool] = None
     keyword: Optional[str] = None
+    cognitive_dimension: Optional[str] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
+
+    @validator("cognitive_dimension")
+    def validate_cognitive_dimension(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if value not in COGNITIVE_DIMENSIONS:
+            raise ValueError("Invalid cognitive dimension")
+        return value

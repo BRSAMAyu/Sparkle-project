@@ -6,6 +6,7 @@ import 'package:sparkle/features/error_book/presentation/screens/add_error_scree
 import 'package:sparkle/features/error_book/presentation/screens/error_detail_screen.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 /// 错题列表页面
 ///
@@ -14,7 +15,8 @@ import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.d
 /// 2. 状态清晰：loading/empty/error 状态都有明确提示
 /// 3. 性能优化：分页加载、滑动删除
 class ErrorListScreen extends ConsumerStatefulWidget {
-  const ErrorListScreen({super.key});
+  const ErrorListScreen({super.key, this.filterByDimension});
+  final CognitiveDimension? filterByDimension;
 
   @override
   ConsumerState<ErrorListScreen> createState() => _ErrorListScreenState();
@@ -30,6 +32,13 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // 初始化时如果传入了认知维度，立即设置筛选
+    if (widget.filterByDimension != null) {
+      ref
+          .read(errorFilterProvider.notifier)
+          .setCognitiveDimension(widget.filterByDimension);
+    }
   }
 
   @override
@@ -102,6 +111,34 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       ),
       body: Column(
         children: [
+          // 如果有认知维度筛选，显示提示条
+          if (filterState.cognitiveDimension != null)
+             Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+              child: Row(
+                children: [
+                  Icon(Icons.psychology, size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    '正针对 "${filterState.cognitiveDimension!.label}" 维度进行针对性复习',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () => ref.read(errorFilterProvider.notifier).setCognitiveDimension(null),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+
           // 科目筛选条
           ColoredBox(
             color: theme.colorScheme.surface,
@@ -390,6 +427,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
     String? chapter,
     bool? needReview,
     String? keyword,
+    CognitiveDimension? cognitiveDimension,
     int? page,
     int? pageSize,
   }) =>
@@ -398,6 +436,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
         chapter: chapter ?? this.chapter,
         needReview: needReview ?? this.needReview,
         keyword: keyword ?? this.keyword,
+        cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,
         page: page ?? this.page,
         pageSize: pageSize ?? this.pageSize,
       );

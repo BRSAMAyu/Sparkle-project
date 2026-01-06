@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// 智能体推理气泡组件

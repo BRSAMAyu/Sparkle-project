@@ -134,6 +134,33 @@ class _PrismCardState extends ConsumerState<PrismCard>
                           color: DS.brandPrimary.withAlpha(150),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => context.push('/errors?dimension=analysis'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: DS.brandPrimary.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: DS.brandPrimary.withAlpha(50)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.error_outline, size: 12, color: DS.brandPrimaryConst),
+                              const SizedBox(width: 4),
+                              Text(
+                                '复习弱项: 分析',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: DS.brandPrimaryConst,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ] else ...[
                       Text(
                         '点击同步闪念，发现你的行为定式',

@@ -442,7 +442,7 @@ final errorOperationsProvider =
 );
 
 typedef _$ErrorOperations = AutoDisposeNotifier<ErrorOperationState>;
-String _$errorFilterHash() => r'c0cc217ef00d3a37fa409e17df0c2b5a800139e5';
+String _$errorFilterHash() => r'eb6cf9bd93d16a57f62cdb6821105cb667241234';
 
 /// 错题筛选器 Provider
 ///

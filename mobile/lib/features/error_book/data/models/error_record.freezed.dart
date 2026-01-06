@@ -49,6 +49,11 @@ mixin _$ErrorRecord {
   ErrorAnalysis? get latestAnalysis => throw _privateConstructorUsedError;
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks => throw _privateConstructorUsedError;
+  @JsonKey(name: 'cognitive_tags')
+  List<CognitiveDimension> get cognitiveTags =>
+      throw _privateConstructorUsedError;
+  @JsonKey(name: 'ai_analysis_summary')
+  String? get aiAnalysisSummary => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -78,7 +83,9 @@ abstract class $ErrorRecordCopyWith<$Res> {
       @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
-      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks});
+      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'cognitive_tags') List<CognitiveDimension> cognitiveTags,
+      @JsonKey(name: 'ai_analysis_summary') String? aiAnalysisSummary});
 
   $ErrorAnalysisCopyWith<$Res>? get latestAnalysis;
 }
@@ -112,6 +119,8 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
+    Object? cognitiveTags = null,
+    Object? aiAnalysisSummary = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -178,6 +187,14 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
+      cognitiveTags: null == cognitiveTags
+          ? _value.cognitiveTags
+          : cognitiveTags // ignore: cast_nullable_to_non_nullable
+              as List<CognitiveDimension>,
+      aiAnalysisSummary: freezed == aiAnalysisSummary
+          ? _value.aiAnalysisSummary
+          : aiAnalysisSummary // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 
@@ -218,7 +235,9 @@ abstract class _$$ErrorRecordImplCopyWith<$Res>
       @JsonKey(name: 'next_review_at') DateTime? nextReviewAt,
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
-      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks});
+      @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'cognitive_tags') List<CognitiveDimension> cognitiveTags,
+      @JsonKey(name: 'ai_analysis_summary') String? aiAnalysisSummary});
 
   @override
   $ErrorAnalysisCopyWith<$Res>? get latestAnalysis;
@@ -251,6 +270,8 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
+    Object? cognitiveTags = null,
+    Object? aiAnalysisSummary = freezed,
   }) {
     return _then(_$ErrorRecordImpl(
       id: null == id
@@ -317,6 +338,14 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value._knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
+      cognitiveTags: null == cognitiveTags
+          ? _value._cognitiveTags
+          : cognitiveTags // ignore: cast_nullable_to_non_nullable
+              as List<CognitiveDimension>,
+      aiAnalysisSummary: freezed == aiAnalysisSummary
+          ? _value.aiAnalysisSummary
+          : aiAnalysisSummary // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -341,8 +370,12 @@ class _$ErrorRecordImpl implements _ErrorRecord {
       @JsonKey(name: 'last_reviewed_at') this.lastReviewedAt,
       @JsonKey(name: 'latest_analysis') this.latestAnalysis,
       @JsonKey(name: 'knowledge_links')
-      final List<KnowledgeLink> knowledgeLinks = const []})
-      : _knowledgeLinks = knowledgeLinks;
+      final List<KnowledgeLink> knowledgeLinks = const [],
+      @JsonKey(name: 'cognitive_tags')
+      final List<CognitiveDimension> cognitiveTags = const [],
+      @JsonKey(name: 'ai_analysis_summary') this.aiAnalysisSummary})
+      : _knowledgeLinks = knowledgeLinks,
+        _cognitiveTags = cognitiveTags;
 
   factory _$ErrorRecordImpl.fromJson(Map<String, dynamic> json) =>
       _$$ErrorRecordImplFromJson(json);
@@ -398,9 +431,22 @@ class _$ErrorRecordImpl implements _ErrorRecord {
     return EqualUnmodifiableListView(_knowledgeLinks);
   }
 
+  final List<CognitiveDimension> _cognitiveTags;
+  @override
+  @JsonKey(name: 'cognitive_tags')
+  List<CognitiveDimension> get cognitiveTags {
+    if (_cognitiveTags is EqualUnmodifiableListView) return _cognitiveTags;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_cognitiveTags);
+  }
+
+  @override
+  @JsonKey(name: 'ai_analysis_summary')
+  final String? aiAnalysisSummary;
+
   @override
   String toString() {
-    return 'ErrorRecord(id: $id, questionText: $questionText, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, masteryLevel: $masteryLevel, reviewCount: $reviewCount, createdAt: $createdAt, updatedAt: $updatedAt, questionImageUrl: $questionImageUrl, chapter: $chapter, difficulty: $difficulty, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks)';
+    return 'ErrorRecord(id: $id, questionText: $questionText, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, masteryLevel: $masteryLevel, reviewCount: $reviewCount, createdAt: $createdAt, updatedAt: $updatedAt, questionImageUrl: $questionImageUrl, chapter: $chapter, difficulty: $difficulty, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks, cognitiveTags: $cognitiveTags, aiAnalysisSummary: $aiAnalysisSummary)';
   }
 
   @override
@@ -436,7 +482,11 @@ class _$ErrorRecordImpl implements _ErrorRecord {
             (identical(other.latestAnalysis, latestAnalysis) ||
                 other.latestAnalysis == latestAnalysis) &&
             const DeepCollectionEquality()
-                .equals(other._knowledgeLinks, _knowledgeLinks));
+                .equals(other._knowledgeLinks, _knowledgeLinks) &&
+            const DeepCollectionEquality()
+                .equals(other._cognitiveTags, _cognitiveTags) &&
+            (identical(other.aiAnalysisSummary, aiAnalysisSummary) ||
+                other.aiAnalysisSummary == aiAnalysisSummary));
   }
 
   @JsonKey(ignore: true)
@@ -458,7 +508,9 @@ class _$ErrorRecordImpl implements _ErrorRecord {
       nextReviewAt,
       lastReviewedAt,
       latestAnalysis,
-      const DeepCollectionEquality().hash(_knowledgeLinks));
+      const DeepCollectionEquality().hash(_knowledgeLinks),
+      const DeepCollectionEquality().hash(_cognitiveTags),
+      aiAnalysisSummary);
 
   @JsonKey(ignore: true)
   @override
@@ -492,7 +544,11 @@ abstract class _ErrorRecord implements ErrorRecord {
       @JsonKey(name: 'last_reviewed_at') final DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') final ErrorAnalysis? latestAnalysis,
       @JsonKey(name: 'knowledge_links')
-      final List<KnowledgeLink> knowledgeLinks}) = _$ErrorRecordImpl;
+      final List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'cognitive_tags')
+      final List<CognitiveDimension> cognitiveTags,
+      @JsonKey(name: 'ai_analysis_summary')
+      final String? aiAnalysisSummary}) = _$ErrorRecordImpl;
 
   factory _ErrorRecord.fromJson(Map<String, dynamic> json) =
       _$ErrorRecordImpl.fromJson;
@@ -542,6 +598,12 @@ abstract class _ErrorRecord implements ErrorRecord {
   @override
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks;
+  @override
+  @JsonKey(name: 'cognitive_tags')
+  List<CognitiveDimension> get cognitiveTags;
+  @override
+  @JsonKey(name: 'ai_analysis_summary')
+  String? get aiAnalysisSummary;
   @override
   @JsonKey(ignore: true)
   _$$ErrorRecordImplCopyWith<_$ErrorRecordImpl> get copyWith =>

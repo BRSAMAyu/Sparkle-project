@@ -34,6 +34,11 @@ _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => KnowledgeLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      cognitiveTags: (json['cognitive_tags'] as List<dynamic>?)
+              ?.map((e) => $enumDecode(_$CognitiveDimensionEnumMap, e))
+              .toList() ??
+          const [],
+      aiAnalysisSummary: json['ai_analysis_summary'] as String?,
     );
 
 Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
@@ -54,7 +59,20 @@ Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
       'last_reviewed_at': instance.lastReviewedAt?.toIso8601String(),
       'latest_analysis': instance.latestAnalysis,
       'knowledge_links': instance.knowledgeLinks,
+      'cognitive_tags': instance.cognitiveTags
+          .map((e) => _$CognitiveDimensionEnumMap[e]!)
+          .toList(),
+      'ai_analysis_summary': instance.aiAnalysisSummary,
     };
+
+const _$CognitiveDimensionEnumMap = {
+  CognitiveDimension.memory: 'memory',
+  CognitiveDimension.understanding: 'understanding',
+  CognitiveDimension.application: 'application',
+  CognitiveDimension.analysis: 'analysis',
+  CognitiveDimension.evaluation: 'evaluation',
+  CognitiveDimension.creation: 'creation',
+};
 
 _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
     _$ErrorAnalysisImpl(

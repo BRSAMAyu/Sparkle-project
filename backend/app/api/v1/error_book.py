@@ -50,6 +50,7 @@ async def list_errors(
     mastery_max: Optional[float] = Query(None, ge=0, le=1, description="掌握度上限"),
     need_review: Optional[bool] = Query(None, description="只看需要复习的"),
     keyword: Optional[str] = Query(None, description="题目关键词搜索"),
+    cognitive_dimension: Optional[str] = Query(None, description="按认知维度筛选"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
@@ -66,6 +67,7 @@ async def list_errors(
         mastery_max=mastery_max,
         need_review=need_review,
         keyword=keyword,
+        cognitive_dimension=cognitive_dimension,
         page=page,
         page_size=page_size
     )

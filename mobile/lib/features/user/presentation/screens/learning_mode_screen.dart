@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
-import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/presentation/widgets/profile/preference_controller_2d.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 class LearningModeScreen extends ConsumerStatefulWidget {
   const LearningModeScreen({super.key});

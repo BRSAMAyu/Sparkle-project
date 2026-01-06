@@ -29,6 +29,7 @@ import 'package:sparkle/presentation/screens/plan/plan_edit_screen.dart';
 import 'package:sparkle/presentation/screens/plan/sprint_screen.dart';
 import 'package:sparkle/presentation/screens/splash/splash_screen.dart';
 import 'package:sparkle/presentation/screens/stats/calendar_stats_screen.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Helper to build pages with transitions
@@ -234,10 +235,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/errors',
         name: 'errors',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const ErrorListScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final dimensionCode = state.uri.queryParameters['dimension'];
+          CognitiveDimension? dimension;
+          if (dimensionCode != null) {
+            try {
+              dimension = CognitiveDimension.values.firstWhere(
+                (e) => e.code == dimensionCode,
+              );
+            } catch (_) {}
+          }
+          return _buildTransitionPage(
+            state: state,
+            child: ErrorListScreen(filterByDimension: dimension),
+          );
+        },
       ),
       GoRoute(
         path: '/errors/new',

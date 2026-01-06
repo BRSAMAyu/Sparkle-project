@@ -4,7 +4,7 @@ Login, Register, Refresh Token, Social Login
 """
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -30,6 +30,7 @@ router = APIRouter()
 @router.post("/register", response_model=Any)
 @limiter.limit("5/15minutes")
 async def register(
+    request: Request,
     data: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
@@ -81,6 +82,7 @@ async def register(
 @router.post("/login", response_model=Any)
 @limiter.limit("5/15minutes")
 async def login(
+    request: Request,
     data: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
@@ -149,6 +151,7 @@ async def login(
 @router.post("/social-login", response_model=Any)
 @limiter.limit("5/15minutes")
 async def social_login(
+    request: Request,
     data: SocialLoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -294,6 +297,7 @@ async def social_login(
 @router.post("/refresh", response_model=Any)
 @limiter.limit("10/15minutes")
 async def refresh_token(
+    request: Request,
     data: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):

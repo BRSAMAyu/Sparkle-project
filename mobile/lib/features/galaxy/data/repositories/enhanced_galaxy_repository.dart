@@ -303,19 +303,15 @@ class GalaxyError implements Exception {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
         message = '连接超时，请检查网络';
-        break;
       case DioExceptionType.receiveTimeout:
         message = '服务器响应超时';
-        break;
       case DioExceptionType.connectionError:
         message = '网络连接失败';
-        break;
       default:
         message = _extractDetailFromResponse(
           e,
           fallback: '网络请求失败',
         );
-        break;
     }
     return GalaxyError._(
       type: GalaxyErrorType.network,

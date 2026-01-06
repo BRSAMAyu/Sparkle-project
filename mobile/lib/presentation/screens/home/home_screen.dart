@@ -12,7 +12,6 @@ import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/presentation/screens/community/community_screen.dart';
-import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/presentation/widgets/home/calendar_heatmap_card.dart';
 import 'package:sparkle/presentation/widgets/home/dashboard_curiosity_card.dart';
 import 'package:sparkle/presentation/widgets/home/focus_card.dart';
@@ -23,6 +22,7 @@ import 'package:sparkle/presentation/widgets/home/omnibar.dart';
 import 'package:sparkle/presentation/widgets/home/prism_card.dart';
 import 'package:sparkle/presentation/widgets/home/sprint_card.dart';
 import 'package:sparkle/presentation/widgets/home/weather_header.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 /// HomeScreen v2.0 - Project Cockpit
 class HomeScreen extends ConsumerStatefulWidget {

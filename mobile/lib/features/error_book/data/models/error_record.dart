@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 part 'error_record.freezed.dart';
 part 'error_record.g.dart';
@@ -25,6 +26,10 @@ class ErrorRecord with _$ErrorRecord {
     @JsonKey(name: 'knowledge_links')
     @Default([])
     List<KnowledgeLink> knowledgeLinks,
+    @JsonKey(name: 'cognitive_tags')
+    @Default([])
+    List<CognitiveDimension> cognitiveTags,
+    @JsonKey(name: 'ai_analysis_summary') String? aiAnalysisSummary,
   }) = _ErrorRecord;
 
   factory ErrorRecord.fromJson(Map<String, dynamic> json) =>

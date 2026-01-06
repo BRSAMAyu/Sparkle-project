@@ -11,7 +11,7 @@ from sqlalchemy import Column, String, DateTime, JSON, Text, ForeignKey, Enum
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
-from app.core.database import Base
+from app.db.session import Base
 
 
 class SecurityAuditLog(Base):

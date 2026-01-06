@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/text_cache.dart';
-import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 /// Pre-processed node data for efficient painting
 class ProcessedNode {
