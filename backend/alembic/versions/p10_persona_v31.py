@@ -1,7 +1,7 @@
 """persona v3.1 core models
 
 Revision ID: p10_persona_v31
-Revises: p9_add_group_files
+Revises: p10_add_cognitive_tags
 Create Date: 2026-01-08 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from app.models.base import GUID
 
 # revision identifiers, used by Alembic.
 revision = 'p10_persona_v31'
-down_revision = 'p9_add_group_files'
+down_revision = 'p10_add_cognitive_tags'
 branch_labels = None
 depends_on = None
 
