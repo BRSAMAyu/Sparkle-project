@@ -31,10 +31,11 @@ class AgentReasoningBubble extends StatefulWidget {
 }
 
 class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
+  late AnimationController _shimmerController;
 
   @override
   void initState() {
@@ -49,11 +50,17 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       parent: _animationController,
       curve: Curves.easeInOut,
     );
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _shimmerController.dispose();
     super.dispose();
   }
 
@@ -114,7 +121,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     final isCompleted =
         !widget.isThinking && widget.steps.every((s) => s.isCompleted);
 
-    return InkWell(
+    Widget headerContent = InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
@@ -206,6 +213,42 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           ],
         ),
       ),
+    );
+
+    if (!widget.isThinking) {
+      return headerContent;
+    }
+
+    // Shimmer effect for thinking state
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Colors.white,
+                Colors.white,
+                Colors.white70, // Slight dim for shimmer
+                Colors.white,
+                Colors.white,
+              ],
+              stops: [
+                0.0,
+                (_shimmerController.value - 0.2).clamp(0.0, 1.0),
+                _shimmerController.value,
+                (_shimmerController.value + 0.2).clamp(0.0, 1.0),
+                1.0,
+              ],
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.modulate,
+          child: child,
+        );
+      },
+      child: headerContent,
     );
   }
 
