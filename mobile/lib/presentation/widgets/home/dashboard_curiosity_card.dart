@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,57 +14,46 @@ class DashboardCuriosityCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => context.push('/curiosity-capsule'),
-      child: ClipRRect(
+      child: MaterialStyler(
+        material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: DS.glassBackground,
-              borderRadius: DS.borderRadius20,
-              border: Border.all(color: DS.glassBorder),
-            ),
-            padding: const EdgeInsets.all(DS.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(DS.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Icon(Icons.lightbulb_outline, color: DS.accent, size: 20),
-                    if (cognitive.hasNewInsight)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: DS.error,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  cognitive.weeklyPattern ?? '探索未知',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: DS.brandPrimaryConst,
+                Icon(Icons.lightbulb_outline, color: DS.accent, size: 20),
+                if (cognitive.hasNewInsight)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: DS.error,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: DS.xs),
-                Text(
-                  '好奇心胶囊',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: DS.brandPrimary.withAlpha(150),
-                  ),
-                ),
               ],
             ),
-          ),
+            const Spacer(),
+            Text(
+              cognitive.weeklyPattern ?? '探索未知',
+              style: context.sparkleTypography.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                color: DS.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              '好奇心胶囊',
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.brandPrimary.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
         ),
       ),
     );

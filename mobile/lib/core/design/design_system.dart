@@ -39,6 +39,7 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
+export 'materials.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';

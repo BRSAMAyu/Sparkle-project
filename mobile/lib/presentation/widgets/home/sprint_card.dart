@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,27 +22,18 @@ class SprintCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
+      child: MaterialStyler(
+        material: AppMaterials.ceramic,
         borderRadius: DS.borderRadius20,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: DS.glassBackground,
-              borderRadius: DS.borderRadius20,
-              border: Border.all(color: DS.glassBorder),
-            ),
-            padding: const EdgeInsets.all(DS.lg),
-            child: sprint != null
-                ? _buildSprintContent(sprint)
-                : _buildEmptyState(),
-          ),
-        ),
+        padding: const EdgeInsets.all(DS.lg),
+        child: sprint != null
+            ? _buildSprintContent(context, sprint)
+            : _buildEmptyState(context),
       ),
     );
   }
 
-  Widget _buildSprintContent(SprintData sprint) {
+  Widget _buildSprintContent(BuildContext context, SprintData sprint) {
     final progress = sprint.progress;
     final daysLeft = sprint.daysLeft;
     final isUrgent = daysLeft <= 3;
@@ -54,10 +44,9 @@ class SprintCard extends ConsumerWidget {
         // Header
         Text(
           '冲刺',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          style: context.sparkleTypography.labelSmall.copyWith(
             color: DS.brandPrimary70,
+            fontWeight: FontWeight.w500,
           ),
         ),
 
@@ -83,7 +72,7 @@ class SprintCard extends ConsumerWidget {
                   children: [
                     Text(
                       '$daysLeft',
-                      style: TextStyle(
+                      style: context.sparkleTypography.headingMedium.copyWith(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: isUrgent ? DS.error : DS.brandPrimary,
@@ -91,9 +80,9 @@ class SprintCard extends ConsumerWidget {
                     ),
                     Text(
                       '天',
-                      style: TextStyle(
+                      style: context.sparkleTypography.labelSmall.copyWith(
                         fontSize: 10,
-                        color: DS.brandPrimary.withAlpha(180),
+                        color: DS.brandPrimary.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -108,8 +97,7 @@ class SprintCard extends ConsumerWidget {
         // Sprint name
         Text(
           sprint.name,
-          style: TextStyle(
-            fontSize: 12,
+          style: context.sparkleTypography.labelSmall.copyWith(
             fontWeight: FontWeight.w600,
             color: DS.brandPrimaryConst,
           ),
@@ -119,22 +107,22 @@ class SprintCard extends ConsumerWidget {
         const SizedBox(height: 2),
         Text(
           '${(progress * 100).toInt()}% 完成',
-          style: TextStyle(
+          style: context.sparkleTypography.labelSmall.copyWith(
             fontSize: 10,
-            color: DS.brandPrimary.withAlpha(150),
+            color: DS.brandPrimary.withValues(alpha: 0.6),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildEmptyState() => Column(
+  Widget _buildEmptyState(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              color: DS.brandPrimary.withAlpha(20),
+              color: DS.brandPrimary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -146,7 +134,7 @@ class SprintCard extends ConsumerWidget {
           const Spacer(),
           Text(
             '无冲刺计划',
-            style: TextStyle(
+            style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: DS.brandPrimary70,
@@ -157,7 +145,7 @@ class SprintCard extends ConsumerWidget {
             '点击创建',
             style: TextStyle(
               fontSize: 11,
-              color: DS.brandPrimary.withAlpha(120),
+              color: DS.brandPrimary.withValues(alpha: 0.47),
             ),
           ),
         ],
@@ -179,7 +167,7 @@ class _CircularProgressPainter extends CustomPainter {
 
     // Background circle
     final bgPaint = Paint()
-      ..color = DS.brandPrimary.withAlpha(30)
+      ..color = DS.brandPrimary.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6;
     canvas.drawCircle(center, radius, bgPaint);

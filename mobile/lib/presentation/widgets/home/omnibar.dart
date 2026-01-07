@@ -140,23 +140,29 @@ class _OmniBarState extends ConsumerState<OmniBar>
       animation: _glowAnimation,
       builder: (context, child) {
         final color = _getIntentColor();
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
-              width: 1.5,
-            ),
-            boxShadow: [
+        
+        // Base neoGlass material
+        var material = AppMaterials.neoGlass.copyWith(
+           // Higher opacity for floating dock
+           backgroundColor: context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),
+           // Dynamic border based on glow
+           borderColor: color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
+           borderWidth: 1.5,
+           // Dynamic shadow/glow
+           shadows: [
               BoxShadow(
                 color: color.withValues(alpha: 0.2 * _glowAnimation.value),
                 blurRadius: 12,
                 spreadRadius: 2,
               ),
-            ],
-          ),
+              ...context.sparkleShadows.medium,
+           ],
+        );
+
+        return MaterialStyler(
+          material: material,
+          borderRadius: BorderRadius.circular(32),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
             children: [
               Expanded(
@@ -164,29 +170,38 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   controller: _controller,
                   focusNode: _focusNode,
                   onSubmitted: enterToSend ? (_) => _submit() : null,
-                  style: TextStyle(color: DS.textSecondary, fontSize: 15),
+                  style: context.sparkleTypography.bodyLarge.copyWith(
+                    color: DS.textPrimary,
+                  ),
                   decoration: InputDecoration(
                     hintText: _isListening
                         ? 'Listening...'
                         : (widget.hintText ?? 'Tell me what you think...'),
-                    hintStyle: TextStyle(
+                    hintStyle: context.sparkleTypography.bodyLarge.copyWith(
                       color: _isListening
-                          ? DS.primaryBase
-                          : DS.textSecondary.withAlpha(80),
-                      fontSize: 14,
+                          ? DS.brandPrimary
+                          : DS.textSecondary.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
                   ),
+                  cursorColor: DS.brandPrimary,
                 ),
               ),
               if (_isLoading)
-                const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                      ),),
+                )
               else if (_controller.text.isEmpty && !_isListening)
                 IconButton(
-                  icon: Icon(Icons.mic, color: DS.primaryBase),
+                  icon: Icon(Icons.mic, color: DS.brandPrimary),
                   onPressed: _toggleListening,
                   tooltip: '语音输入',
                 )
@@ -199,11 +214,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
                             ? Icons.auto_awesome
                             : Icons.arrow_upward_rounded),
                     color: _isListening
-                        ? DS.errorAccent
+                        ? DS.error
                         : (_intentType != null
                             ? color
                             : DS.textSecondary.withValues(alpha: 0.7)),
-                    size: 20,
+                    size: 24,
                   ),
                   onPressed: _isListening ? _toggleListening : _submit,
                 ),

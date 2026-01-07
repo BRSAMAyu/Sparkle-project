@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -48,129 +46,121 @@ class _FocusCardState extends ConsumerState<FocusCard>
 
     return GestureDetector(
       onTap: widget.onTap,
-      child: ClipRRect(
+      child: MaterialStyler(
+        material: AppMaterials.neoGlass.copyWith(
+           rimLightColor: DS.brandPrimary.withValues(alpha: 0.3),
+        ),
         borderRadius: DS.borderRadius20,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  DS.flameCore.withValues(alpha: 0.15), // Corrected .withValues
-                  DS.glassBackground,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: DS.borderRadius20,
-              border: Border.all(color: DS.glassBorder),
-            ),
-            padding: const EdgeInsets.all(DS.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(DS.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '专注核心',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: DS.textSecondary.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4,),
-                      decoration: BoxDecoration(
-                        color: DS.flameCore.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Lv.$flameLevel',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Flame Animation
-                      AnimatedBuilder(
-                        animation: _flameAnimation,
-                        builder: (context, child) => Transform.scale(
-                          scale: _flameAnimation.value,
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              gradient: RadialGradient(
-                                colors: [
-                                  DS.flameCore,
-                                  DS.flameCore.withValues(alpha: 0.4),
-                                  Colors.transparent,
-                                ],
-                              ),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.local_fire_department_rounded,
-                              color: DS.warning,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: DS.md),
-                      // Nudge Message
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8,),
-                        decoration: BoxDecoration(
-                          color: DS.brandPrimary.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          nudgeMessage,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            height: 1.3,
-                            color: DS.textSecondary.withValues(alpha: 0.9),
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                Text(
+                  '专注核心',
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.textSecondary.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-
-                const SizedBox(height: DS.sm),
-
-                // Metrics Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMetric(
-                        context, _formatFocusTime(todayMinutes), '今日专注',),
-                    Container(height: 20, width: 1, color: DS.brandPrimary12),
-                    _buildMetric(context, '$tasksCompleted', '今日完成'),
-                  ],
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.flameCore.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Lv.$flameLevel',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: DS.textSecondary,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
+
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Flame Animation
+                  AnimatedBuilder(
+                    animation: _flameAnimation,
+                    builder: (context, child) => Transform.scale(
+                      scale: _flameAnimation.value,
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            colors: [
+                              DS.flameCore,
+                              DS.flameCore.withValues(alpha: 0.4),
+                              Colors.transparent,
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.local_fire_department_rounded,
+                          color: DS.warning,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: DS.md),
+                  // Nudge Message
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.brandPrimary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      nudgeMessage,
+                      textAlign: TextAlign.center,
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        fontSize: 11,
+                        height: 1.3,
+                        color: DS.textSecondary.withValues(alpha: 0.9),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: DS.sm),
+
+            // Metrics Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMetric(
+                  context,
+                  _formatFocusTime(todayMinutes),
+                  '今日专注',
+                ),
+                Container(height: 20, width: 1, color: DS.brandPrimary12),
+                _buildMetric(context, '$tasksCompleted', '今日完成'),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -181,7 +171,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
         children: [
           Text(
             value,
-            style: TextStyle(
+            style: context.sparkleTypography.titleLarge.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: DS.textSecondary,
@@ -190,7 +180,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
+            style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 10,
               color: DS.textSecondary.withValues(alpha: 0.6),
             ),
