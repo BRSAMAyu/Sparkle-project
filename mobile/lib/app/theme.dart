@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// App Colors - now using Design Tokens
+/// @deprecated Use [DS] from `package:sparkle/core/design/design_system.dart` instead.
+@Deprecated('Use DS from package:sparkle/core/design/design_system.dart')
 class AppColors {
   static Color get primary => DS.primaryBase;
   static Color get secondary => DS.secondaryBase;
@@ -49,6 +51,8 @@ class AppColors {
 }
 
 /// Theme Extension for custom properties
+/// @deprecated Use [ThemeManager] and [DesignSystem] instead.
+@Deprecated('Use ThemeManager and DesignSystem instead')
 class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   const AppThemeExtension({
     required this.primaryGradient,
@@ -96,6 +100,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   }
 }
 
+/// @deprecated Use [AppThemes] from `package:sparkle/core/design/design_system.dart` instead.
+@Deprecated('Use AppThemes from package:sparkle/core/design/design_system.dart')
 class AppThemes {
   /// Light theme with design tokens
   static ThemeData get lightTheme => ThemeData(
@@ -115,6 +121,7 @@ class AppThemes {
           error: DS.error,
           onError: DS.brandPrimary,
         ),
+
 
         // Extensions
         extensions: <ThemeExtension<dynamic>>[

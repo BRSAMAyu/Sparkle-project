@@ -24,8 +24,9 @@ class PerformanceService extends ChangeNotifier {
   static const Duration _sustainedHighPerformanceDuration = Duration(seconds: 5);
 
   // --- Monitoring State ---
-  // Store frame end timestamps to compute a real-time sliding window.
-  final Queue<Duration> _frameTimestamps = Queue();
+  // Store only durations. We sum them to measure the window.
+  final Queue<Duration> _frameDurations = Queue();
+  Duration _totalRecordedDuration = Duration.zero;
   
   DateTime? _lastStateChangeTime;
   DateTime? _highPerformanceStartTime;
@@ -44,6 +45,29 @@ class PerformanceService extends ChangeNotifier {
       currentTier.value == PerformanceTier.ultra ||
       currentTier.value == PerformanceTier.high;
   bool get enableAntialiasing => currentTier.value != PerformanceTier.low;
+
+  /// Get the current render configuration
+  RenderConfig get renderConfig => RenderConfig.forTier(currentTier.value);
+
+  /// Record a frame time for runtime performance monitoring (Manual)
+  /// Kept for compatibility, but prefer automatic monitoring via startMonitoring()
+  void recordFrameTime(Duration frameTime) {
+    // We can integrate this into the automatic queue if needed,
+    // but for now we rely on FrameTiming callback.
+    // If automatic monitoring is off, we could use this.
+    if (!_monitoring) {
+       _frameDurations.add(frameTime);
+       _totalRecordedDuration += frameTime;
+       // Trigger evaluation if we have enough data
+       if (_totalRecordedDuration > _targetWindowDuration) {
+         _evaluatePerformance();
+         // Cleanup
+         while (_frameDurations.isNotEmpty && _totalRecordedDuration > _targetWindowDuration) {
+            _totalRecordedDuration -= _frameDurations.removeFirst();
+         }
+       }
+    }
+  }
   
   // Focus Mode configuration
   int get focusStarCount {
@@ -54,6 +78,8 @@ class PerformanceService extends ChangeNotifier {
       case PerformanceTier.low: return 30;
     }
   }
+
+  bool get enableFocusTwinkle => currentTier.value != PerformanceTier.low;
 
   // Cognitive Prism configuration
   int get prismParticleCount {
@@ -80,7 +106,8 @@ class PerformanceService extends ChangeNotifier {
     _monitoring = false;
     SchedulerBinding.instance.removeTimingsCallback(_onFrameTiming);
     _checkTimer?.cancel();
-    _frameTimestamps.clear();
+    _frameDurations.clear();
+    _totalRecordedDuration = Duration.zero;
   }
   
   double _getDeviceRefreshRate() {
@@ -96,29 +123,28 @@ class PerformanceService extends ChangeNotifier {
 
   void _onFrameTiming(List<FrameTiming> timings) {
     for (final timing in timings) {
-      _frameTimestamps.add(timing.rasterFinish);
+      _frameDurations.add(timing.totalSpan);
+      _totalRecordedDuration += timing.totalSpan;
     }
-
-    // Maintain a real-time window based on timestamps.
-    while (_frameTimestamps.length > 1) {
-      final window =
-          _frameTimestamps.last - _frameTimestamps.first;
-      if (window <= _targetWindowDuration) break;
-      _frameTimestamps.removeFirst();
+    
+    // Maintain window size approx 1s based on actual frame cost
+    while (_frameDurations.isNotEmpty && 
+           _totalRecordedDuration > _targetWindowDuration) {
+      final removed = _frameDurations.removeFirst();
+      _totalRecordedDuration -= removed;
     }
   }
 
   void _evaluatePerformance() {
-    if (_frameTimestamps.length < 2) return;
-    final window = _frameTimestamps.last - _frameTimestamps.first;
+    if (_frameDurations.isEmpty) return;
     // Require at least 0.5s of data to judge
-    if (window < const Duration(milliseconds: 500)) return;
+    if (_totalRecordedDuration < const Duration(milliseconds: 500)) return;
 
-    // Calculate FPS based on real-time window.
-    final durationSeconds = window.inMicroseconds / 1000000.0;
+    // Calculate Average FPS: Frame Count / Total Duration (in seconds)
+    final durationSeconds = _totalRecordedDuration.inMicroseconds / 1000000.0;
     if (durationSeconds <= 0) return;
-
-    final fps = (_frameTimestamps.length - 1) / durationSeconds;
+    
+    final fps = _frameDurations.length / durationSeconds;
 
     final now = DateTime.now();
     final timeSinceChange =
@@ -134,8 +160,8 @@ class PerformanceService extends ChangeNotifier {
       upgradeThreshold = 115.0;
     } else if (_deviceRefreshRate < 45) {
       // 30Hz Target
-      downgradeThreshold = 20.0;
-      upgradeThreshold = _deviceRefreshRate * 0.93;
+      downgradeThreshold = 20.0; 
+      upgradeThreshold = 28.0; // Hard to upgrade from 30 if device is locked there
     } else {
       // 60Hz Target
       downgradeThreshold = 35.0;
@@ -227,4 +253,70 @@ class PerformanceService extends ChangeNotifier {
     stopMonitoring();
     super.dispose();
   }
+}
+
+/// Configuration for rendering based on performance tier
+class RenderConfig {
+  const RenderConfig({
+    required this.tier,
+    required this.useShaders,
+    required this.maxParticles,
+    required this.enableGlow,
+    required this.enableBlur,
+    required this.targetFps,
+    required this.lodThreshold,
+  });
+
+  factory RenderConfig.forTier(PerformanceTier tier) {
+    switch (tier) {
+      case PerformanceTier.ultra:
+        return const RenderConfig(
+          tier: PerformanceTier.ultra,
+          useShaders: true,
+          maxParticles: 300,
+          enableGlow: true,
+          enableBlur: true,
+          targetFps: 120,
+          lodThreshold: 0.2,
+        );
+      case PerformanceTier.high:
+        return const RenderConfig(
+          tier: PerformanceTier.high,
+          useShaders: true,
+          maxParticles: 200,
+          enableGlow: true,
+          enableBlur: true,
+          targetFps: 60,
+          lodThreshold: 0.3,
+        );
+      case PerformanceTier.medium:
+        return const RenderConfig(
+          tier: PerformanceTier.medium,
+          useShaders: true,
+          maxParticles: 80,
+          enableGlow: true,
+          enableBlur: false,
+          targetFps: 45,
+          lodThreshold: 0.5,
+        );
+      case PerformanceTier.low:
+        return const RenderConfig(
+          tier: PerformanceTier.low,
+          useShaders: false,
+          maxParticles: 30,
+          enableGlow: false,
+          enableBlur: false,
+          targetFps: 30,
+          lodThreshold: 0.7,
+        );
+    }
+  }
+
+  final PerformanceTier tier;
+  final bool useShaders;
+  final int maxParticles;
+  final bool enableGlow;
+  final bool enableBlur;
+  final int targetFps;
+  final double lodThreshold;
 }

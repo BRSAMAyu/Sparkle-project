@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 
 /// ---------------------------------------------------------------------------
 /// 1. THE RECIPE (Pure Data)
@@ -15,8 +16,10 @@ class SparkleMaterial {
     this.backgroundGradient,
     this.backgroundColor,
     this.opacity = 1.0,
+    this.blendMode,
     this.noiseOpacity = 0.0,
     this.noiseBlendMode = BlendMode.overlay,
+    this.noiseColor,
     this.blurSigma = 0.0,
     this.rimLightColor,
     this.glowColor,
@@ -29,11 +32,13 @@ class SparkleMaterial {
   final Gradient? backgroundGradient;
   final Color? backgroundColor;
   final double opacity;
+  final BlendMode? blendMode;
   
   /// Opacity of the noise texture overlay (0.0 - 1.0)
   /// Use 0.0 for text containers to ensure readability.
   final double noiseOpacity;
   final BlendMode noiseBlendMode;
+  final Color? noiseColor;
   
   /// Backdrop filter blur sigma.
   final double blurSigma;
@@ -59,8 +64,10 @@ class SparkleMaterial {
     Gradient? backgroundGradient,
     Color? backgroundColor,
     double? opacity,
+    BlendMode? blendMode,
     double? noiseOpacity,
     BlendMode? noiseBlendMode,
+    Color? noiseColor,
     double? blurSigma,
     Color? rimLightColor,
     Color? glowColor,
@@ -73,8 +80,10 @@ class SparkleMaterial {
       backgroundGradient: backgroundGradient ?? this.backgroundGradient,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       opacity: opacity ?? this.opacity,
+      blendMode: blendMode ?? this.blendMode,
       noiseOpacity: noiseOpacity ?? this.noiseOpacity,
       noiseBlendMode: noiseBlendMode ?? this.noiseBlendMode,
+      noiseColor: noiseColor ?? this.noiseColor,
       blurSigma: blurSigma ?? this.blurSigma,
       rimLightColor: rimLightColor ?? this.rimLightColor,
       glowColor: glowColor ?? this.glowColor,
@@ -106,15 +115,16 @@ class AppMaterials {
     final enableNoise = PerformanceService.instance.currentTier.value == PerformanceTier.ultra;
 
     return SparkleMaterial(
-      blurSigma: enableBlur ? 16.0 : 0.0,
+      blurSigma: enableBlur ? 15.0 : 0.0,
       noiseOpacity: (enableNoise && isDark) ? 0.03 : (enableNoise ? 0.05 : 0.0),
       noiseBlendMode: BlendMode.overlay,
+      noiseColor: colors.noiseColor,
       backgroundGradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: isDark 
+        colors: isDark
             ? [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.02)]
-            : [Colors.white.withValues(alpha: 0.6), Colors.white.withValues(alpha: 0.3)],
+            : [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.15)],
       ),
       rimLightColor: colors.rimLight,
       borderWidth: 1.0,
@@ -176,6 +186,7 @@ class MaterialStyler extends StatelessWidget {
     required this.material,
     required this.child,
     this.shape = BoxShape.rectangle,
+    this.shapeBorder,
     this.borderRadius,
     this.padding,
   });
@@ -183,17 +194,20 @@ class MaterialStyler extends StatelessWidget {
   final SparkleMaterial material;
   final Widget child;
   final BoxShape shape;
+  final ShapeBorder? shapeBorder;
   final BorderRadiusGeometry? borderRadius;
   final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
-    // Determine the border radius to use for clipping
-    final BorderRadius resolvedRadius = borderRadius is BorderRadius 
-        ? borderRadius as BorderRadius 
-        : (shape == BoxShape.circle 
-            ? BorderRadius.circular(1000) 
+    // Determine the border radius to use for clipping when no ShapeBorder is provided.
+    final BorderRadius resolvedRadius = borderRadius is BorderRadius
+        ? borderRadius as BorderRadius
+        : (shape == BoxShape.circle
+            ? BorderRadius.circular(1000)
             : BorderRadius.zero);
+
+    final BorderRadius clipRadius = shapeBorder == null ? resolvedRadius : BorderRadius.zero;
 
     return Container(
       // Shadow layer: Rendered outside the clip
@@ -202,132 +216,173 @@ class MaterialStyler extends StatelessWidget {
         borderRadius: shape == BoxShape.rectangle ? borderRadius : null,
         boxShadow: material.shadows,
       ),
-      child: ClipRRect(
-        borderRadius: resolvedRadius,
-        child: Stack(
-          children: [
-            // Layer 2: Backdrop Blur
-            if (material.blurSigma > 0.0)
+      child: ClipPath(
+        clipper: shapeBorder != null ? ShapeBorderClipper(shape: shapeBorder!) : null,
+        child: ClipRRect(
+          borderRadius: clipRadius,
+          child: Stack(
+            children: [
+              // Layer 1: Background (Color / Gradient)
               Positioned.fill(
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(
-                    sigmaX: material.blurSigma,
-                    sigmaY: material.blurSigma,
-                  ),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-
-            // Layer 1: Background (Color / Gradient)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: material.backgroundColor,
-                  gradient: material.backgroundGradient,
+                child: _MaterialBackground(
+                  material: material,
                   shape: shape,
                 ),
               ),
-            ),
 
-            // Layer 3: Noise Overlay
-            if (material.noiseOpacity > 0.0)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Opacity(
-                    opacity: material.noiseOpacity,
-                    child: Image.asset(
-                      'assets/images/noise_texture.png',
-                      fit: BoxFit.cover,
-                      repeat: ImageRepeat.repeat,
-                      gaplessPlayback: true,
-                      color: material.noiseBlendMode == BlendMode.dst ? null : Colors.white, // Hint for some blend modes
-                      colorBlendMode: material.noiseBlendMode,
+              // Layer 2: Backdrop Blur
+              if (material.blurSigma > 0.0)
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: material.blurSigma,
+                      sigmaY: material.blurSigma,
+                    ),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+
+              // Layer 3: Noise Overlay
+              if (material.noiseOpacity > 0.0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: material.noiseOpacity,
+                      child: Image.asset(
+                        'assets/images/noise_texture.png',
+                        fit: BoxFit.cover,
+                        repeat: ImageRepeat.repeat,
+                        gaplessPlayback: true,
+                        color: material.noiseColor,
+                        colorBlendMode: material.noiseBlendMode,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-            // Layer 4: Inner Glow (Emphasis)
-            if (material.glowColor != null)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: shape,
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.5,
-                      colors: [
-                         Colors.transparent,
-                         material.glowColor!,
-                      ],
-                      stops: const [0.6, 1.0],
+              // Layer 4: Rim Light
+              if (material.rimLightColor != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _MaterialRimPainter(
+                        rimColor: material.rimLightColor,
+                        borderRadius: resolvedRadius,
+                        shape: shape,
+                        shapeBorder: shapeBorder,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-            // Layer 5: Content
-            Padding(
-              padding: padding ?? EdgeInsets.zero,
-              child: child,
-            ),
-
-            // Layer 6: Rim Light & Border
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _MaterialHighlightPainter(
-                    rimColor: material.rimLightColor,
-                    borderColor: material.borderColor,
-                    borderWidth: material.borderWidth,
-                    borderRadius: resolvedRadius,
-                    shape: shape,
+              // Layer 5: Inner Glow (Emphasis)
+              if (material.glowColor != null)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: shape,
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 1.5,
+                        colors: [
+                           Colors.transparent,
+                           material.glowColor!,
+                        ],
+                        stops: const [0.6, 1.0],
+                      ),
+                    ),
                   ),
                 ),
+
+              // Layer 6: Content
+              Padding(
+                padding: padding ?? EdgeInsets.zero,
+                child: child,
               ),
-            ),
-          ],
+
+              // Layer 7: Border
+              if (material.borderWidth > 0 &&
+                  (material.borderColor != null || material.borderGradient != null))
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _MaterialBorderPainter(
+                        borderColor: material.borderColor,
+                        borderGradient: material.borderGradient,
+                        borderWidth: material.borderWidth,
+                        borderRadius: resolvedRadius,
+                        shape: shape,
+                        shapeBorder: shapeBorder,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _MaterialHighlightPainter extends CustomPainter {
-  _MaterialHighlightPainter({
+class _MaterialBackground extends StatelessWidget {
+  const _MaterialBackground({
+    required this.material,
+    required this.shape,
+  });
+
+  final SparkleMaterial material;
+  final BoxShape shape;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = Container(
+      decoration: BoxDecoration(
+        color: material.backgroundColor,
+        gradient: material.backgroundGradient,
+        shape: shape,
+      ),
+    );
+
+    if (material.opacity < 1.0) {
+      content = Opacity(opacity: material.opacity, child: content);
+    }
+
+    if (material.blendMode != null) {
+      content = ColorFiltered(
+        colorFilter: ColorFilter.mode(
+          Colors.white,
+          material.blendMode!,
+        ),
+        child: content,
+      );
+    }
+
+    return content;
+  }
+}
+
+class _MaterialRimPainter extends CustomPainter {
+  _MaterialRimPainter({
     this.rimColor,
-    this.borderColor,
-    this.borderWidth = 0.0,
     this.borderRadius,
     this.shape = BoxShape.rectangle,
+    this.shapeBorder,
   });
 
   final Color? rimColor;
-  final Color? borderColor;
-  final double borderWidth;
   final BorderRadius? borderRadius;
   final BoxShape shape;
+  final ShapeBorder? shapeBorder;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     final RRect rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
+    final Path? borderPath =
+        shapeBorder?.getOuterPath(rect);
 
-    // 1. Draw Border (if any)
-    if (borderColor != null && borderWidth > 0) {
-      final borderPaint = Paint()
-        ..color = borderColor!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = borderWidth;
-      
-      if (shape == BoxShape.circle) {
-         canvas.drawCircle(rect.center, size.width / 2, borderPaint);
-      } else {
-         canvas.drawRRect(rrect, borderPaint);
-      }
-    }
-
-    // 2. Draw Rim Light (Top Edge)
+    // Draw Rim Light (Top Edge)
     if (rimColor != null) {
       final rimPaint = Paint()
         ..style = PaintingStyle.stroke
@@ -342,21 +397,79 @@ class _MaterialHighlightPainter extends CustomPainter {
           stops: const [0.0, 0.4], // Fade out quickly
         ).createShader(rect);
 
-      if (shape == BoxShape.circle) {
+      if (borderPath != null) {
+        canvas.drawPath(borderPath, rimPaint);
+      } else if (shape == BoxShape.circle) {
         canvas.drawCircle(rect.center, size.width / 2, rimPaint);
       } else {
-        // We trim the path to only show top part effectively via gradient, 
+        // We trim the path to only show top part effectively via gradient,
         // but drawing the full RRect with top-down gradient works well for Rim Light.
-        canvas.drawRRect(rrect.deflate(0.5), rimPaint); 
+        canvas.drawRRect(rrect.deflate(0.5), rimPaint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _MaterialHighlightPainter oldDelegate) {
+  bool shouldRepaint(covariant _MaterialRimPainter oldDelegate) {
     return oldDelegate.rimColor != rimColor ||
-        oldDelegate.borderColor != borderColor ||
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.shapeBorder != shapeBorder;
+  }
+}
+
+class _MaterialBorderPainter extends CustomPainter {
+  _MaterialBorderPainter({
+    this.borderColor,
+    this.borderGradient,
+    this.borderWidth = 0.0,
+    this.borderRadius,
+    this.shape = BoxShape.rectangle,
+    this.shapeBorder,
+  });
+
+  final Color? borderColor;
+  final Gradient? borderGradient;
+  final double borderWidth;
+  final BorderRadius? borderRadius;
+  final BoxShape shape;
+  final ShapeBorder? shapeBorder;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (borderWidth <= 0) return;
+    if (borderColor == null && borderGradient == null) return;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final RRect rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
+    final Path? borderPath =
+        shapeBorder?.getOuterPath(rect);
+
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    if (borderGradient != null) {
+      borderPaint.shader = borderGradient!.createShader(rect);
+    } else if (borderColor != null) {
+      borderPaint.color = borderColor!;
+    }
+
+    if (borderPath != null) {
+      canvas.drawPath(borderPath, borderPaint);
+    } else if (shape == BoxShape.circle) {
+      canvas.drawCircle(rect.center, size.width / 2, borderPaint);
+    } else {
+      canvas.drawRRect(rrect, borderPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MaterialBorderPainter oldDelegate) {
+    return oldDelegate.borderColor != borderColor ||
+        oldDelegate.borderGradient != borderGradient ||
         oldDelegate.borderWidth != borderWidth ||
-        oldDelegate.borderRadius != borderRadius;
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.shape != shape ||
+        oldDelegate.shapeBorder != shapeBorder;
   }
 }

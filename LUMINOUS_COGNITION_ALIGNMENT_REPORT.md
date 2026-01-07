@@ -19,7 +19,7 @@ This document confirms the alignment of the Sparkle mobile application codebase 
 | **Material Layer** | Created `mobile/lib/core/design/materials.dart`. | ✅ |
 | **Recipe (`SparkleMaterial`)** | Implemented as a pure data class decoupling look from rendering. | ✅ |
 | **Presets (`AppMaterials`)** | Implemented `neoGlass`, `obsidian`, `ceramic` presets. | ✅ |
-| **Renderer (`MaterialStyler`)** | Implemented strictly following the layer order (Shadow -> Blur -> Background -> Noise -> Glow -> Content -> Rim Light). | ✅ |
+| **Renderer (`MaterialStyler`)** | Implemented with required render order (Background -> Blur -> Noise -> Rim Light -> Glow -> Content -> Border). Shadow renders outside the clip. | ✅ |
 | **Tokens v2.1** | Added `surfaceAmbient`, `rimLight`, `glowPrimary`, `noiseColor` to `theme_manager.dart`. | ✅ |
 
 ### 2.2 Component Refactoring (Material Rollout)
@@ -32,7 +32,7 @@ This document confirms the alignment of the Sparkle mobile application codebase 
 | **SprintCard** | Ceramic | Refactored to use `AppMaterials.ceramic` (Standard Bento Card). | ✅ |
 | **DashboardCuriosity** | Ceramic | Refactored to use `AppMaterials.ceramic`. | ✅ |
 | **PrismCard** | NeoGlass (Variant) | Refactored to use `AppMaterials.neoGlass` with custom gradient override for prism effect. | ✅ |
-| **ChatBubble** | Ceramic/Custom | Refactored to use `ContinuousRectangleBorder` (Super-ellipse) and removed noise. | ✅ |
+| **ChatBubble** | Ceramic/Custom | Refactored to use `MaterialStyler` with `ContinuousRectangleBorder` (Super-ellipse) and noise disabled. | ✅ |
 
 ### 2.3 Artistic Polish
 

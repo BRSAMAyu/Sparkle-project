@@ -243,43 +243,47 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                               children: [
                                 Container(
                                   margin: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,),
-                                  constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                              0.72,),
-                                  decoration: ShapeDecoration(
-                                    shape: ContinuousRectangleBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    color: isUser
-                                        ? DS.brandPrimary
-                                        : context.sparkleColors.surfaceSecondary,
-                                    shadows: [
-                                      BoxShadow(
-                                        color: isUser
-                                            ? DS.brandPrimary.withValues(alpha: 0.2)
-                                            : Colors.black.withValues(alpha: 0.05),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                    horizontal: 8.0,
                                   ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 14,),
-                                    decoration: isUser
-                                        ? BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                DS.brandPrimary,
-                                                DS.brandPrimary.withValues(alpha: 0.8),
-                                              ],
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                            0.72,
+                                  ),
+                                  child: MaterialStyler(
+                                    material: isUser
+                                        ? SparkleMaterial(
+                                            backgroundGradient: LinearGradient(
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
+                                              colors: [
+                                                DS.brandPrimary,
+                                                DS.brandPrimary
+                                                    .withValues(alpha: 0.85),
+                                              ],
                                             ),
+                                            noiseOpacity: 0.0,
+                                            shadows: [
+                                              BoxShadow(
+                                                color: DS.brandPrimary
+                                                    .withValues(alpha: 0.2),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
                                           )
-                                        : null,
+                                        : AppMaterials.ceramic.copyWith(
+                                            glowColor: context
+                                                .sparkleColors.glowPrimary
+                                                .withValues(alpha: 0.2),
+                                          ),
+                                    shapeBorder: ContinuousRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 14,
+                                    ),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,

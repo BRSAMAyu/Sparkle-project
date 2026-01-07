@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 
 /// Model representing a single energy particle in the transfer animation
 class EnergyParticle {
@@ -178,6 +180,7 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
             targetColor: widget.targetColor,
             trailParticles: List.from(_trailParticles),
             currentTime: _controller.value,
+            renderConfig: PerformanceService.instance.renderConfig,
           ),
         ),
       );
@@ -204,6 +207,7 @@ class _EnergyParticlePainter extends CustomPainter {
     required this.targetColor,
     required this.trailParticles,
     required this.currentTime,
+    required this.renderConfig,
   });
   final Offset currentPosition;
   final double progress;
@@ -211,6 +215,7 @@ class _EnergyParticlePainter extends CustomPainter {
   final Color targetColor;
   final List<_TrailParticle> trailParticles;
   final double currentTime;
+  final RenderConfig renderConfig;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -224,8 +229,11 @@ class _EnergyParticlePainter extends CustomPainter {
           DS.brandPrimary,
           targetColor,
           progress,
-        ).withValues(alpha: 0.4 * fadeOut)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+        ).withValues(alpha: 0.4 * fadeOut);
+        
+      if (renderConfig.enableBlur) {
+        trailPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      }
 
       canvas.drawCircle(particle.position, particle.size * fadeOut, trailPaint);
     }
@@ -237,22 +245,33 @@ class _EnergyParticlePainter extends CustomPainter {
       progress,
     );
 
-    // Outer glow (large, soft)
-    final outerGlowPaint = Paint()
-      ..color = particleColor.withValues(alpha: 0.3)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 20 * glowScale);
-    canvas.drawCircle(currentPosition, 15 * glowScale, outerGlowPaint);
+    // Outer glow (large, soft) - Only if enabled
+    if (renderConfig.enableBlur) {
+        final outerGlowPaint = Paint()
+          ..color = particleColor.withValues(alpha: 0.3)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 20 * glowScale);
+        canvas.drawCircle(currentPosition, 15 * glowScale, outerGlowPaint);
+    }
 
-    // Middle glow
-    final middleGlowPaint = Paint()
-      ..color = particleColor.withValues(alpha: 0.5)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * glowScale);
-    canvas.drawCircle(currentPosition, 10 * glowScale, middleGlowPaint);
+    // Middle glow - Only if glow enabled
+    if (renderConfig.enableGlow) {
+        final middleGlowPaint = Paint()
+          ..color = particleColor.withValues(alpha: 0.5);
+          
+        if (renderConfig.enableBlur) {
+           middleGlowPaint.maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * glowScale);
+        }
+        
+        canvas.drawCircle(currentPosition, 10 * glowScale, middleGlowPaint);
+    }
 
     // Inner glow (bright core)
     final innerGlowPaint = Paint()
-      ..color = DS.brandPrimary.withValues(alpha: 0.8)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..color = DS.brandPrimary.withValues(alpha: 0.8);
+      
+    if (renderConfig.enableBlur) {
+       innerGlowPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    }
     canvas.drawCircle(currentPosition, 5 * glowScale, innerGlowPaint);
 
     // Core particle (solid)
@@ -268,7 +287,7 @@ class _EnergyParticlePainter extends CustomPainter {
     canvas.drawCircle(currentPosition, 2, whitePaint);
 
     // Impact flash at the end
-    if (progress > 0.9) {
+    if (progress > 0.9 && renderConfig.enableBlur) {
       final impactProgress = (progress - 0.9) / 0.1;
       final impactRadius = 30 * impactProgress;
       final impactOpacity = (1 - impactProgress) * 0.6;
@@ -287,7 +306,8 @@ class _EnergyParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) =>
       oldDelegate.currentPosition != currentPosition ||
       oldDelegate.progress != progress ||
-      oldDelegate.glowScale != glowScale;
+      oldDelegate.glowScale != glowScale ||
+      oldDelegate.renderConfig.tier != renderConfig.tier;
 }
 
 /// Controller for managing energy transfer animations

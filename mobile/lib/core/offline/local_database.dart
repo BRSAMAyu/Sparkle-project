@@ -81,8 +81,6 @@ class LocalDatabase {
     isar = await Isar.open(
       [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema],
       directory: dir.path,
-      // encryptionKey: encryptionKey, // Enable encryption in production
-      inspector: true, // Disable in production
     );
   }
 }

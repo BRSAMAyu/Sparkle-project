@@ -175,8 +175,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             // 1. 星空背景
             Positioned.fill(
               child: AnimatedStarBackground(
-                starCount: PerformanceService.focusStarCount,
-                enableTwinkle: PerformanceService.enableFocusTwinkle,
+                starCount: PerformanceService.instance.focusStarCount,
+                enableTwinkle: PerformanceService.instance.enableFocusTwinkle,
               ),
             ),
 

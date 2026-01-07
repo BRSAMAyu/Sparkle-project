@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/device_performance_service.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 
 /// P2: Central flame widget with performance-aware rendering
 /// Automatically degrades visual effects on low-end devices
@@ -26,7 +27,7 @@ class _CentralFlameState extends State<CentralFlame>
   @override
   void initState() {
     super.initState();
-    _renderConfig = DevicePerformanceService.instance.renderConfig;
+    _renderConfig = PerformanceService.instance.renderConfig;
 
     // Adjust animation duration based on performance tier
     final duration = _renderConfig.tier == PerformanceTier.low

@@ -39,20 +39,17 @@ class TiledSectorBackground extends StatelessWidget {
     final tileHeight = height / rows;
 
     return Column(
-      children: List.generate(rows, (r) {
-        return Row(
+      children: List.generate(rows, (r) => Row(
           children: List.generate(cols, (c) {
              final x = c * tileWidth;
              final y = r * tileHeight;
              return _buildTile(x, y, tileWidth, tileHeight);
           }),
-        );
-      }),
+        )),
     );
   }
 
-  Widget _buildTile(double x, double y, double w, double h) {
-    return RepaintBoundary(
+  Widget _buildTile(double x, double y, double w, double h) => RepaintBoundary(
       child: CustomPaint(
         size: Size(w, h),
         painter: SectorBackgroundPainter(
@@ -61,7 +58,6 @@ class TiledSectorBackground extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// Painter for the sector nebula backgrounds

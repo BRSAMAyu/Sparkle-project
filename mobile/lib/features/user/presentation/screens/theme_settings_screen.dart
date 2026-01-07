@@ -16,7 +16,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeManager = ref.watch(themeManagerProvider);
-    final currentMode = ref.watch(themeModeProvider);
+    final currentMode = ref.watch(appThemeModeProvider);
     final currentPreset = ref.watch(brandPresetProvider);
     final highContrast = ref.watch(highContrastProvider);
 

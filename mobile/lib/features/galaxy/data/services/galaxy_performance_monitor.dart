@@ -201,7 +201,7 @@ class GalaxyPerformanceMonitor {
     final isHighRefresh = _calculateAverageFps(const Duration(seconds: 2)) > 65;
 
     // --- 降级逻辑 (Downgrade) ---
-    bool shouldDowngrade = false;
+    var shouldDowngrade = false;
     if (isHighRefresh) {
       // 120Hz设备: < 80 FPS
       if (avgFps1s < 80) shouldDowngrade = true;
@@ -226,7 +226,7 @@ class GalaxyPerformanceMonitor {
     // 这里每帧计算5秒平均值可能略耗时，可以优化为定时检查，但每秒检查一次也行
     if (_renderCount % 60 == 0) { // 简单节流
       final avgFps5s = _calculateAverageFps(const Duration(seconds: 5));
-      bool shouldUpgrade = false;
+      var shouldUpgrade = false;
       
       if (isHighRefresh) {
          // 120Hz设备: > 115 FPS
@@ -265,7 +265,7 @@ class GalaxyPerformanceMonitor {
       type: PerformanceEventType.frameDrop,
       message: 'Downgrading to ${newTier.name} due to low FPS ($currentFps)',
       severity: PerformanceSeverity.warning,
-    ));
+    ),);
   }
 
   void _upgradeTier(double currentFps) {
@@ -286,7 +286,7 @@ class GalaxyPerformanceMonitor {
       type: PerformanceEventType.frameDrop, // 这里复用type，实际是info
       message: 'Upgrading to ${newTier.name} (FPS: $currentFps)',
       severity: PerformanceSeverity.info,
-    ));
+    ),);
   }
 
   /// 检测性能问题

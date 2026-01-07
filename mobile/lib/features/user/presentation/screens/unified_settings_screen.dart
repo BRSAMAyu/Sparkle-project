@@ -85,11 +85,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               title: Text(l10n.theme),
               subtitle: Text('${l10n.lightMode}/${l10n.darkMode}'),
               trailing: DropdownButton<AppThemeMode>(
-                value: ref.watch(themeModeProvider),
+                value: ref.watch(appThemeModeProvider),
                 underline: const SizedBox.shrink(),
                 onChanged: (AppThemeMode? newValue) {
                   if (newValue != null) {
-                    ref.read(themeModeProvider.notifier).state = newValue;
+                    ref.read(themeManagerProvider).setAppThemeMode(newValue);
                   }
                 },
                 items: [

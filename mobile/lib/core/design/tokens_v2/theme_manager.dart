@@ -137,6 +137,13 @@ class ThemeManager extends ChangeNotifier {
     await prefs.setInt('brand_preset', _brandPreset.index);
     await prefs.setBool('high_contrast', _highContrast);
   }
+
+  @override
+  void dispose() {
+    // Prevent disposal of the singleton instance by Riverpod or other owners.
+    // This instance is meant to live for the entire application lifecycle.
+    // Calling super.dispose() would mark it as disposed and prevent future use.
+  }
 }
 
 enum AppThemeMode { system, light, dark }
@@ -210,6 +217,10 @@ class SparkleColors {
     required this.surfacePrimary,
     required this.surfaceSecondary,
     required this.surfaceTertiary,
+    required this.surfaceAmbient,
+    required this.rimLight,
+    required this.glowPrimary,
+    required this.noiseColor,
     required this.textPrimary,
     required this.textSecondary,
     required this.textDisabled,

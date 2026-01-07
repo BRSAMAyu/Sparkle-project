@@ -14,9 +14,10 @@ class SparkleApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    // Watch the manager to rebuild when theme changes (colors, high contrast, etc.)
     ref.watch(themeManagerProvider);
-    final appThemeMode = ref.watch(themeModeProvider);
-    final themeMode = appThemeModeToThemeMode(appThemeMode);
+    // Watch the mode specifically for MaterialApp.themeMode
+    final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
