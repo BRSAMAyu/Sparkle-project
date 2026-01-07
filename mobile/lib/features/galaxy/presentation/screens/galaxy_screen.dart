@@ -33,7 +33,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   final TransformationController _transformationController =
       TransformationController();
   late final AnimationController _selectionPulseController;
-  late final AnimationController _beamFlowController;
   final List<AnimationController> _transientControllers = [];
   bool _isDisposing = false;
 
@@ -66,11 +65,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-
-    _beamFlowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(); // Continuous flow
 
     // Listen to transformation changes for scale updates
     _transformationController.addListener(_onTransformChanged);
@@ -105,7 +99,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     _transientControllers.clear();
     _selectionPulseController.dispose();
-    _beamFlowController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
     PerformanceService.instance.stopMonitoring();
@@ -481,7 +474,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                   animation: Listenable.merge([
                     _transformationController,
                     _selectionPulseController,
-                    _beamFlowController,
                     PerformanceService.instance.currentTier,
                     PerformanceService.instance.currentDpr,
                   ]),
@@ -538,13 +530,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       expandedEdgeNodeIdHashes: expandedHashes,
                       nodeAnimationProgress: animationHashes,
                       selectionPulse: _selectionPulseController.value,
-                      beamFlow: _beamFlowController.value,
                     );
 
                     final content = Stack(
                       children: [
                         // 1. Background: Sector nebula and stars (Static, Cached)
-                        Positioned.fill(
+                        const Positioned.fill(
                           child: TiledSectorBackground(
                             width: _canvasSize,
                             height: _canvasSize,

@@ -9,7 +9,6 @@ import 'package:sparkle/core/services/text_cache.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
-import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 
 /// Pre-processed node data for efficient painting
 class ProcessedNode {
@@ -104,7 +103,6 @@ class StarMapPainter extends CustomPainter {
     this.expandedEdgeNodeIdHashes = const {},
     this.nodeAnimationProgress = const {},
     this.selectionPulse = 0.0,
-    this.beamFlow = 0.0,
   }) {
     _preprocessData();
   }
@@ -122,7 +120,6 @@ class StarMapPainter extends CustomPainter {
   final Set<int> expandedEdgeNodeIdHashes;
   final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
-  final double beamFlow;
 
   // LOD Thresholds
   static const double _lod0Limit = 0.2;
@@ -379,31 +376,12 @@ class StarMapPainter extends CustomPainter {
 
     // Gradient only on Medium+
     if (performanceTier != PerformanceTier.low) {
-        // Create a 3-stop gradient to simulate a "pulse" or flow
-        // The flow effect shifts the stops based on beamFlow (0.0 -> 1.0)
-        final stops = [
-          0.0,
-          (0.5 + beamFlow) % 1.0, // Moving highlight
-          1.0,
-        ].toList()..sort();
-
-        // If the highlight wraps around, we need a more complex shader or simply stick to a shifting midpoint
-        // Simplified approach: Shift the midpoint color towards the target
-        
-        paint.shader = ui.Gradient.linear(
-            edge.start, 
-            edge.end, 
-            [
-              edge.startColor.withValues(alpha: 0.3 * edge.edge.strength),
-              style.color.withValues(alpha: 0.8 * edge.edge.strength), // Highlight
-              edge.endColor.withValues(alpha: 0.3 * edge.edge.strength),
-            ],
-            [
-              0.0,
-              ((beamFlow * 0.8) + 0.1), // Move from 0.1 to 0.9
-              1.0
-            ]
-        );
+        paint.shader = ui.Gradient.linear(edge.start, edge.end, [
+            Color.lerp(edge.startColor, style.color, 0.5)!
+                .withValues(alpha: 0.6 * edge.edge.strength),
+            Color.lerp(edge.endColor, style.color, 0.5)!
+                .withValues(alpha: 0.3 * edge.edge.strength),
+        ]);
     } else {
         paint.color = style.color.withValues(alpha: 0.5);
     }
@@ -478,7 +456,7 @@ class StarMapPainter extends CustomPainter {
   void _drawNodes(Canvas canvas, {required bool onlyLarge}) {
     final nodePaint = Paint()..style = PaintingStyle.fill;
     final glowPaint = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0); // Efficient blur
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
 
     for (final p in _processedNodes) {
       // Culling
@@ -489,6 +467,7 @@ class StarMapPainter extends CustomPainter {
       }
       
       // LOD Filtering
+      // L1: Large nodes only (importance >= 3)
       if (onlyLarge && p.node.importance < 3) {
           continue;
       }
@@ -497,35 +476,37 @@ class StarMapPainter extends CustomPainter {
       final r = p.radius * (0.3 + progress * 0.7);
 
       if (scale < 0.3 && p.node.importance < 3) {
+         // Should not happen if L0 logic is correct, but for L1 transition:
          canvas.drawCircle(p.position, r * 0.5,
             Paint()..color = p.color.withValues(alpha: 0.5 * progress),);
          continue;
       }
 
       if (p.node.isUnlocked) {
-        // Halo Logic: Luminous Cognition Spec
-        // Halo alpha follows alpha = clamp(scale * 2.0 - 0.4)
-        final haloAlphaBase = (scale * 2.0 - 0.4).clamp(0.0, 1.0);
-        
-        if (haloAlphaBase > 0 && 
+        // Glow: L3+ (>= 0.6) AND (Ultra or High Tier)
+        if (scale >= _lod2Limit && 
            (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high)) {
             final m = p.node.mastery / 100.0;
-            // Combined alpha: LOD base * mastery boost * animation progress
-            final glowAlpha = haloAlphaBase * (0.3 + m * 0.4) * progress;
-            
-            glowPaint.color = p.color.withValues(alpha: glowAlpha);
-            // Draw Halo
-            canvas.drawCircle(p.position, r + 4.0, glowPaint);
+            glowPaint.color =
+                p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * progress);
+            canvas.drawCircle(p.position, r * 3.0, glowPaint);
         }
 
-        // Core Node: Solid Circle (Spec Requirement)
-        nodePaint.color = p.color.withValues(alpha: progress);
-        nodePaint.shader = null; // Ensure no gradient
+        // Main Node
+        // Disable fancy shader gradient on low tier OR low DPR
+        if (performanceTier != PerformanceTier.low && currentDpr >= 1.5) {
+             nodePaint.shader = ui.Gradient.radial(p.position, r, [
+                DS.brandPrimary.withValues(alpha: 0.9 * progress),
+                p.color.withValues(alpha: progress),
+            ]);
+        } else {
+             nodePaint.color = p.color.withValues(alpha: progress);
+             nodePaint.shader = null;
+        }
         
-        // Draw Core
         canvas.drawCircle(p.position, r, nodePaint);
+        nodePaint.shader = null;
 
-        // Ring for studied nodes
         if (p.node.studyCount >= 2 && progress > 0.7) {
           canvas.drawCircle(
               p.position,
@@ -535,20 +516,27 @@ class StarMapPainter extends CustomPainter {
                 ..style = PaintingStyle.stroke,);
         }
       } else {
-        // Locked Node: Dim solid
         canvas.drawCircle(p.position, r * 0.8,
             Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * progress),);
       }
 
       // Labels Logic
-      bool showLabel = false;
+      // L1 (0.2-0.4): Key Labels (Imp >= 4)
+      // L2 (0.4-0.6): Standard Labels (Imp >= 3)
+      // L3 (0.6-0.8): More Labels (Imp >= 2)
+      // L4 (>0.8): All Labels
+      
+      var showLabel = false;
       if (scale >= _lod3Limit) {
-          showLabel = true; 
+          showLabel = true; // L4: All
       } else if (scale >= _lod2Limit) {
+          // L3: Imp >= 2
           if (p.node.importance >= 2) showLabel = true;
       } else if (scale >= _lod1Limit) {
+          // L2: Imp >= 3
           if (p.node.importance >= 3) showLabel = true;
       } else if (scale >= _lod0Limit) {
+           // L1: Imp >= 4
            if (p.node.importance >= 4) showLabel = true;
       }
       
@@ -577,6 +565,5 @@ class StarMapPainter extends CustomPainter {
       old.currentDpr != currentDpr ||
       old.viewport != viewport ||
       !identical(old.nodes, nodes) ||
-      old.selectionPulse != selectionPulse ||
-      old.beamFlow != beamFlow;
+      old.selectionPulse != selectionPulse;
 }
