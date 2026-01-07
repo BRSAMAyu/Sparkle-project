@@ -8,10 +8,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
-import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
-import 'package:sparkle/presentation/widgets/chat/chat_bubble.dart';
-import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});

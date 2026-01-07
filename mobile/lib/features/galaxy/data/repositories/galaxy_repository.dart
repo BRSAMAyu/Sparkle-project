@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 final galaxyRepositoryProvider = Provider<GalaxyRepository>((ref) {

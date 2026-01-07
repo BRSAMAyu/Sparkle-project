@@ -1,4 +1,4 @@
-import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class UploadSession {
   UploadSession({

@@ -6,9 +6,9 @@ import 'package:sparkle/core/animations/staggered_responsive_grid.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
-import 'package:sparkle/presentation/widgets/common/empty_state.dart';
-import 'package:sparkle/presentation/widgets/common/error_widget.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, completed }

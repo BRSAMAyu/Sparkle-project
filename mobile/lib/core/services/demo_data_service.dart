@@ -3,9 +3,9 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/knowledge_detail_model.dart';
-import 'package:sparkle/data/models/plan_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';

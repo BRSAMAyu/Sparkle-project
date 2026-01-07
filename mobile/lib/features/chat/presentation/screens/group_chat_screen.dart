@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/presentation/providers/community_agent_provider.dart';
-import 'package:sparkle/presentation/providers/community_provider.dart';
-import 'package:sparkle/presentation/screens/community/group_files_screen.dart';
-import 'package:sparkle/presentation/widgets/chat/ai_status_indicator.dart';
-import 'package:sparkle/presentation/widgets/chat/chat_input.dart';
-import 'package:sparkle/presentation/widgets/common/error_widget.dart';
-import 'package:sparkle/presentation/widgets/common/loading_indicator.dart';
-import 'package:sparkle/presentation/widgets/community/group_chat_bubble.dart';
-import 'package:sparkle/presentation/widgets/community/thread_sheet.dart';
+import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/screens/group_files_screen.dart';
+import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
+import 'package:sparkle/features/community/presentation/widgets/thread_sheet.dart';
 
 class GroupChatScreen extends ConsumerStatefulWidget {
   const GroupChatScreen({required this.groupId, super.key});

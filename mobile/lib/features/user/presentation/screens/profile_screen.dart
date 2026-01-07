@@ -5,9 +5,9 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/presentation/providers/locale_provider.dart';
-import 'package:sparkle/presentation/widgets/common/sparkle_avatar.dart';
-import 'package:sparkle/presentation/widgets/profile/statistics_card.dart';
+import 'package:sparkle/core/providers/locale_provider.dart';
+import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class ProfileScreen extends ConsumerWidget {

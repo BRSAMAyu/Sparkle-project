@@ -6,3 +6,4 @@ export 'presentation/screens/add_error_screen.dart';
 export 'presentation/screens/error_detail_screen.dart';
 export 'presentation/screens/error_list_screen.dart';
 export 'presentation/screens/review_screen.dart';
+export 'error_book_routes.dart';

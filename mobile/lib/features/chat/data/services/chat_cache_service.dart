@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:sparkle/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class ChatCacheService {
   factory ChatCacheService() => _instance;

@@ -7,3 +7,4 @@ export 'presentation/screens/schedule_preferences_screen.dart';
 export 'presentation/screens/smart_push_settings_screen.dart';
 export 'presentation/screens/theme_settings_screen.dart';
 export 'presentation/screens/unified_settings_screen.dart';
+export 'user_routes.dart';

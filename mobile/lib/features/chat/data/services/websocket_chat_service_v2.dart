@@ -4,9 +4,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
-import 'package:sparkle/data/models/reasoning_step_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 

@@ -3,9 +3,9 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/chat_response_model.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 
 class ChatRepository {

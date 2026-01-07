@@ -11,8 +11,8 @@ import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dar
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
-import 'package:sparkle/presentation/widgets/common/custom_button.dart';
-import 'package:sparkle/presentation/widgets/success_animation.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/success_animation.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
@@ -530,7 +530,7 @@ class _TimerControls extends StatelessWidget {
               final activeTask =
                   ProviderScope.containerOf(context).read(activeTaskProvider);
               if (activeTask != null) {
-                context.push('/focus/mindfulness', extra: activeTask);
+                context.push('/focus/mindfulness/${activeTask.id}');
               }
             },
             customGradient: DS.primaryGradient,

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/presentation/widgets/tools/breathing_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/calculator_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/flash_capsule_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/focus_stats_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/notes_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/translator_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/vocabulary_lookup_tool.dart';
-import 'package:sparkle/presentation/widgets/tools/wordbook_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/breathing_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/calculator_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/flash_capsule_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/focus_stats_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/notes_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/translator_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/vocabulary_lookup_tool.dart';
+import 'package:sparkle/features/tools/presentation/widgets/wordbook_tool.dart';
 
 class QuickToolsPanel extends StatelessWidget {
   // 当前任务ID，用于关联

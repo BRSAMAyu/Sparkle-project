@@ -6,7 +6,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
-import 'package:sparkle/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 /// 增强的Galaxy仓库Provider

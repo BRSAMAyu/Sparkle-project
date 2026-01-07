@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/presentation/providers/theme_provider.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 
 /// Theme Settings Screen - 主题设置屏幕
 ///
