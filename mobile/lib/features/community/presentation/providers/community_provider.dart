@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:uuid/uuid.dart';
 
 // Token provider for WebSocket connections

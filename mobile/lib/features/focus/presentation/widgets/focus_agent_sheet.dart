@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
+import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class FocusAgentSheet extends ConsumerWidget {

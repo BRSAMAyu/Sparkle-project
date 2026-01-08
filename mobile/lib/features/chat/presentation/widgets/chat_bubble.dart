@@ -262,7 +262,6 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                                     .withValues(alpha: 0.85),
                                               ],
                                             ),
-                                            noiseOpacity: 0.0,
                                             shadows: [
                                               BoxShadow(
                                                 color: DS.brandPrimary

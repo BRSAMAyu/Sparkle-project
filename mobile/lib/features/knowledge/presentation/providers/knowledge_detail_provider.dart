@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 
 /// Provider family for fetching knowledge node details
 final knowledgeDetailProvider =

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class PrivateChatBubble extends ConsumerStatefulWidget {
   const PrivateChatBubble({required this.message, super.key});

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 
 /// 生词本工具 - 查看和复习生词
 class WordbookTool extends ConsumerStatefulWidget {

@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/presentation/widgets/file_message_bubble.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/file/file.dart';
 
 class GroupChatBubble extends ConsumerStatefulWidget {
   const GroupChatBubble({

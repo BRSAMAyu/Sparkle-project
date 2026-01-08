@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/features/error_book/error_book.dart';
 
 /// 错误类型选项
 const List<String> _errorTypes = [

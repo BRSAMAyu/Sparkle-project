@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 class PrivateChatScreen extends ConsumerStatefulWidget {
   const PrivateChatScreen({

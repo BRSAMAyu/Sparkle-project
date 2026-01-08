@@ -121,7 +121,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     final isCompleted =
         !widget.isThinking && widget.steps.every((s) => s.isCompleted);
 
-    Widget headerContent = InkWell(
+    final Widget headerContent = InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
@@ -222,8 +222,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     // Shimmer effect for thinking state
     return AnimatedBuilder(
       animation: _shimmerController,
-      builder: (context, child) {
-        return ShaderMask(
+      builder: (context, child) => ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
               begin: Alignment.topLeft,
@@ -246,8 +245,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           },
           blendMode: BlendMode.modulate,
           child: child,
-        );
-      },
+        ),
       child: headerContent,
     );
   }

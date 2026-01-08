@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_chat_bubble.dart';
 
 class ThreadSheet extends ConsumerStatefulWidget {

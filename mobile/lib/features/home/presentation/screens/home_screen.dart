@@ -6,12 +6,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/features/user/user.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/community/presentation/screens/community_screen.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
@@ -22,6 +19,9 @@ import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
 import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/sprint_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/user/user.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 /// HomeScreen v2.0 - Project Cockpit

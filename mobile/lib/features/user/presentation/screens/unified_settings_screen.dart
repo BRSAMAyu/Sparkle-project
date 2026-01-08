@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {
   const UnifiedSettingsScreen({super.key});

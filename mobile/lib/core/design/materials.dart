@@ -75,8 +75,7 @@ class SparkleMaterial {
     Gradient? borderGradient,
     Color? borderColor,
     double? borderWidth,
-  }) {
-    return SparkleMaterial(
+  }) => SparkleMaterial(
       backgroundGradient: backgroundGradient ?? this.backgroundGradient,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       opacity: opacity ?? this.opacity,
@@ -92,7 +91,6 @@ class SparkleMaterial {
       borderColor: borderColor ?? this.borderColor,
       borderWidth: borderWidth ?? this.borderWidth,
     );
-  }
 }
 
 /// ---------------------------------------------------------------------------
@@ -117,7 +115,6 @@ class AppMaterials {
     return SparkleMaterial(
       blurSigma: enableBlur ? 15.0 : 0.0,
       noiseOpacity: (enableNoise && isDark) ? 0.03 : (enableNoise ? 0.05 : 0.0),
-      noiseBlendMode: BlendMode.overlay,
       noiseColor: colors.noiseColor,
       backgroundGradient: LinearGradient(
         begin: Alignment.topLeft,
@@ -149,7 +146,6 @@ class AppMaterials {
     }
 
     return SparkleMaterial(
-      blurSigma: 0.0,
       noiseOpacity: 0.0, // Clean, glossy look
       backgroundColor: Colors.black.withValues(alpha: 0.6),
       rimLightColor: colors.brandPrimary.withValues(alpha: 0.4),
@@ -166,7 +162,6 @@ class AppMaterials {
   static SparkleMaterial get ceramic {
     final colors = ThemeManager().current.colors;
     return SparkleMaterial(
-      blurSigma: 0.0,
       noiseOpacity: 0.0,
       backgroundColor: colors.surfaceSecondary,
       shadows: ThemeManager().current.shadows.small,
@@ -182,9 +177,7 @@ class AppMaterials {
 
 class MaterialStyler extends StatelessWidget {
   const MaterialStyler({
-    super.key,
-    required this.material,
-    required this.child,
+    required this.material, required this.child, super.key,
     this.shape = BoxShape.rectangle,
     this.shapeBorder,
     this.borderRadius,
@@ -201,15 +194,15 @@ class MaterialStyler extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Determine the border radius to use for clipping when no ShapeBorder is provided.
-    final BorderRadius resolvedRadius = borderRadius is BorderRadius
+    final resolvedRadius = borderRadius is BorderRadius
         ? borderRadius as BorderRadius
         : (shape == BoxShape.circle
             ? BorderRadius.circular(1000)
             : BorderRadius.zero);
 
-    final BorderRadius clipRadius = shapeBorder == null ? resolvedRadius : BorderRadius.zero;
+    final clipRadius = shapeBorder == null ? resolvedRadius : BorderRadius.zero;
 
-    return Container(
+    return DecoratedBox(
       // Shadow layer: Rendered outside the clip
       decoration: BoxDecoration(
         shape: shape,
@@ -282,7 +275,6 @@ class MaterialStyler extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: shape,
                       gradient: RadialGradient(
-                        center: Alignment.center,
                         radius: 1.5,
                         colors: [
                            Colors.transparent,
@@ -378,8 +370,8 @@ class _MaterialRimPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final RRect rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final Path? borderPath =
+    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
+    final borderPath =
         shapeBorder?.getOuterPath(rect);
 
     // Draw Rim Light (Top Edge)
@@ -410,11 +402,9 @@ class _MaterialRimPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MaterialRimPainter oldDelegate) {
-    return oldDelegate.rimColor != rimColor ||
+  bool shouldRepaint(covariant _MaterialRimPainter oldDelegate) => oldDelegate.rimColor != rimColor ||
         oldDelegate.borderRadius != borderRadius ||
         oldDelegate.shapeBorder != shapeBorder;
-  }
 }
 
 class _MaterialBorderPainter extends CustomPainter {
@@ -440,8 +430,8 @@ class _MaterialBorderPainter extends CustomPainter {
     if (borderColor == null && borderGradient == null) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final RRect rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
-    final Path? borderPath =
+    final rrect = (borderRadius ?? BorderRadius.zero).toRRect(rect);
+    final borderPath =
         shapeBorder?.getOuterPath(rect);
 
     final borderPaint = Paint()
@@ -464,12 +454,10 @@ class _MaterialBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MaterialBorderPainter oldDelegate) {
-    return oldDelegate.borderColor != borderColor ||
+  bool shouldRepaint(covariant _MaterialBorderPainter oldDelegate) => oldDelegate.borderColor != borderColor ||
         oldDelegate.borderGradient != borderGradient ||
         oldDelegate.borderWidth != borderWidth ||
         oldDelegate.borderRadius != borderRadius ||
         oldDelegate.shape != shape ||
         oldDelegate.shapeBorder != shapeBorder;
-  }
 }

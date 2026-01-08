@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
-import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 
 // 1. ChatState Class
 class ChatState {

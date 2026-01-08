@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
+import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 
 final learningPathProvider =
     FutureProvider.family<List<LearningPathNode>, String>(

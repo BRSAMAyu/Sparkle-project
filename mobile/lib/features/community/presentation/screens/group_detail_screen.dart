@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/bonfire_widget.dart';
 
 class GroupDetailScreen extends ConsumerWidget {

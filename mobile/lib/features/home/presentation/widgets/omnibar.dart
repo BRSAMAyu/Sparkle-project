@@ -142,7 +142,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
         final color = _getIntentColor();
         
         // Base neoGlass material
-        var material = AppMaterials.neoGlass.copyWith(
+        final material = AppMaterials.neoGlass.copyWith(
            // Higher opacity for floating dock
            backgroundColor: context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),
            // Dynamic border based on glow

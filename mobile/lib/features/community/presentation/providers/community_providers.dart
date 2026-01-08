@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/community/data/models/community_models.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
 // Feed State Controller
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {

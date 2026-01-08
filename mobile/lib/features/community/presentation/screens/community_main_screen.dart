@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
-import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
 
 // Provider for last selected tab

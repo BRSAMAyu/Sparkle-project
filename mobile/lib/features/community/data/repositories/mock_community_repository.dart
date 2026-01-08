@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:uuid/uuid.dart';
 
 class MockCommunityRepository implements CommunityRepository {

@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/calendar/calendar.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/cognitive/cognitive.dart';
 import 'package:sparkle/features/community/community.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/features/plan/plan.dart';
-import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/features/user/user.dart';
-import 'package:sparkle/features/calendar/calendar.dart';
-import 'package:sparkle/features/cognitive/cognitive.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
+import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/splash/splash.dart';
+import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/user/user.dart';
 
 /// Router configuration provider
 final routerProvider = Provider<GoRouter>((ref) {

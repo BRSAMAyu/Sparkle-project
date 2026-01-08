@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 
 class TaskFeedbackDialog extends StatelessWidget {
   const TaskFeedbackDialog({

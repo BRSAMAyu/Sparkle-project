@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
-import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
+import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Agent 消息渲染器

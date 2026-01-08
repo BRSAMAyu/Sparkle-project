@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
-import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 
 class KnowledgeDetailScreen extends ConsumerWidget {
   const KnowledgeDetailScreen({required this.nodeId, super.key});

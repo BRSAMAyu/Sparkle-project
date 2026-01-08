@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 class GroupTasksScreen extends ConsumerWidget {
   const GroupTasksScreen({required this.groupId, super.key});

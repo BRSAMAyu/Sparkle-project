@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 
 /// 带有在线状态指示器的头像
 class StatusAvatar extends StatelessWidget {

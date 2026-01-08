@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/plan/data/models/plan_model.dart';
-import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
 class PlanDetailScreen extends ConsumerWidget {
   const PlanDetailScreen({required this.planId, super.key});

@@ -3,9 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/app/routes.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Sparkle Application Root Widget
 class SparkleApp extends ConsumerWidget {

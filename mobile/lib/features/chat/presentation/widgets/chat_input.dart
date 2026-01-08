@@ -4,8 +4,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
-import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({

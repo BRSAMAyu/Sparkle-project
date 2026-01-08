@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
+import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势

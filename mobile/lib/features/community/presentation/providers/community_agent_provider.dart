@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:uuid/uuid.dart';
 
 const String kCommunityAgentUserId = 'sparkle_agent';

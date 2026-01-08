@@ -1,3 +1,7 @@
+export 'community_routes.dart';
+export 'presentation/providers/community_agent_provider.dart';
+export 'presentation/providers/community_provider.dart';
+export 'presentation/providers/community_providers.dart';
 export 'presentation/screens/community_main_screen.dart';
 export 'presentation/screens/community_screen.dart';
 export 'presentation/screens/create_group_screen.dart';
@@ -8,7 +12,3 @@ export 'presentation/screens/group_files_screen.dart';
 export 'presentation/screens/group_list_screen.dart';
 export 'presentation/screens/group_search_screen.dart';
 export 'presentation/screens/group_tasks_screen.dart';
-export 'presentation/providers/community_provider.dart';
-export 'presentation/providers/community_agent_provider.dart';
-export 'presentation/providers/community_providers.dart';
-export 'community_routes.dart';

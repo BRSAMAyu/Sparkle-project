@@ -45,7 +45,7 @@ class TiledSectorBackground extends StatelessWidget {
              final y = r * tileHeight;
              return _buildTile(x, y, tileWidth, tileHeight);
           }),
-        )),
+        ),),
     );
   }
 
