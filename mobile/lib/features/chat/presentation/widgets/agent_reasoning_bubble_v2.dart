@@ -223,8 +223,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     return AnimatedBuilder(
       animation: _shimmerController,
       builder: (context, child) => ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
+          shaderCallback: (bounds) => LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: const [
@@ -241,9 +240,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 (_shimmerController.value + 0.2).clamp(0.0, 1.0),
                 1.0,
               ],
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.modulate,
+            ).createShader(bounds),
           child: child,
         ),
       child: headerContent,

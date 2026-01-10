@@ -146,7 +146,6 @@ class AppMaterials {
     }
 
     return SparkleMaterial(
-      noiseOpacity: 0.0, // Clean, glossy look
       backgroundColor: Colors.black.withValues(alpha: 0.6),
       rimLightColor: colors.brandPrimary.withValues(alpha: 0.4),
       glowColor: colors.brandPrimary.withValues(alpha: 0.1),
@@ -162,7 +161,6 @@ class AppMaterials {
   static SparkleMaterial get ceramic {
     final colors = ThemeManager().current.colors;
     return SparkleMaterial(
-      noiseOpacity: 0.0,
       backgroundColor: colors.surfaceSecondary,
       shadows: ThemeManager().current.shadows.small,
       borderColor: colors.surfaceTertiary.withValues(alpha: 0.5),
