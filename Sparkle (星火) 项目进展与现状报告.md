@@ -98,27 +98,8 @@
 
   ---
 
-  Sparkle (星火) 项目全局架构与工程对齐文档
 
-  版本: v1.0.0 (Post-Phase 4)
-  更新日期: 2026年1月10日
-  适用对象: 全体研发团队 (后端/移动端/产品/设计)
-
-  ---
-
-  1. 项目愿景与定位
-
-  Sparkle (星火) 是一个面向大学生的 AI 原生自适应学习助手。
-  不同于传统的 To-Do 或笔记应用，Sparkle 的核心理念是 "Cognitive Companionship" (认知陪伴)。
-
-  核心价值主张
-   1. 知识可视化 (Knowledge Galaxy): 摒弃列表，用星系图谱直观展示知识关联与掌握度。
-   2. 主动式 AI (Proactive Agent): AI 不仅回答问题，更基于用户状态（考试临近、注意力涣散）主动规划任务和建议专注。
-   3. 长期记忆 (Long-term Memory): 系统会"记住"用户的学习偏好、工具使用习惯，越用越懂你。
-
-  ---
-
-  2. 系统顶层架构 (System Architecture)
+  1. 系统顶层架构 (System Architecture)
 
   我们采用 混合微服务架构 (Hybrid Microservices)，根据业务特性选择最合适的语言栈。
 
