@@ -25,10 +25,16 @@ class LLMFactory:
         # 3. 中文/RAG 特化模型 (GalaxyGuide)
         # DeepSeek V3 (假设通过 OpenAI 兼容接口调用)
         "deepseek-chat": {
-            "model": "deepseek-chat",
+            "model": settings.DEEPSEEK_CHAT_MODEL,
             "base_url": settings.DEEPSEEK_BASE_URL,
             "api_key": settings.DEEPSEEK_API_KEY,
             "temperature": 0.3 # RAG 需要低温
+        },
+        "deepseek-reason": {
+            "model": settings.DEEPSEEK_REASON_MODEL,
+            "base_url": settings.DEEPSEEK_BASE_URL,
+            "api_key": settings.DEEPSEEK_API_KEY,
+            "temperature": 0.2
         },
         # 4. 兜底模型
         "default": {
@@ -60,7 +66,7 @@ class LLMFactory:
         else:
             # 角色 -> 模型 映射策略
             if agent_role in ["planner", "exam_oracle"]:
-                config_key = "gpt-4o"
+                config_key = "deepseek-reason"
             elif agent_role in ["galaxy_guide"]:
                 config_key = "deepseek-chat"
             elif agent_role in ["router", "time_tutor"]:

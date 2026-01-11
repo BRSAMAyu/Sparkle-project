@@ -3,9 +3,20 @@ Sparkle AI Agent - gRPC Server
 Python 后端 gRPC 服务入口
 负责 AI 推理、RAG 检索、长期记忆管理
 """
+import sys
+import os
 import asyncio
 import signal
 from concurrent import futures
+
+# Add project root and generated directories to PYTHONPATH
+# This solves the ModuleNotFoundError for pb2 modules
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+sys.path.append(os.path.join(current_dir, "app", "gen", "agent", "v1"))
+sys.path.append(os.path.join(current_dir, "app", "gen", "galaxy", "v1"))
+sys.path.append(os.path.join(current_dir, "app", "gen", "proto", "error_book"))
+
 from loguru import logger
 import grpc
 from grpc_reflection.v1alpha import reflection

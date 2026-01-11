@@ -22,6 +22,7 @@ from app.schemas.galaxy import (
 from app.services.galaxy.structure_service import GraphStructureService
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.stats_service import GalaxyStatsService
+from app.services.expansion_service import ExpansionService
 from app.services.embedding_service import embedding_service
 from app.core.cache import cached
 from app.core.event_bus import event_bus, KnowledgeNodeUpdated
@@ -238,6 +239,29 @@ class GalaxyService:
             results.append(self.retrieval._format_search_result(node, status, 0.0)) # Score missing
             
         return results
+
+    async def record_expansion_feedback(
+        self,
+        user_id: UUID,
+        trigger_node_id: UUID,
+        expansion_queue_id: Optional[UUID],
+        rating: Optional[int],
+        implicit_score: Optional[float],
+        feedback_type: str,
+        prompt_version: Optional[str],
+        metadata: Optional[dict]
+    ) -> UUID:
+        expansion_service = ExpansionService(self.db)
+        return await expansion_service.record_feedback(
+            user_id=user_id,
+            trigger_node_id=trigger_node_id,
+            expansion_queue_id=expansion_queue_id,
+            rating=rating,
+            implicit_score=implicit_score,
+            feedback_type=feedback_type,
+            prompt_version=prompt_version,
+            metadata=metadata
+        )
 
     async def semantic_search_nodes(
         self,

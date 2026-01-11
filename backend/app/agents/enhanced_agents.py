@@ -287,12 +287,11 @@ class StudyPlannerAgent(BaseAgent):
         user_message = context.user_query
 
         # 调用 LLM
-        response_text = await llm_service.chat(
+        response_text = await llm_service.reason(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            model="qwen-plus",
             temperature=0.7
         )
 
@@ -526,12 +525,11 @@ class ProblemSolverAgent(BaseAgent):
 请用友好、鼓励的语气回复。
 """
 
-        response_text = await llm_service.chat(
+        response_text = await llm_service.reason(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query}
             ],
-            model="qwen-plus",
             temperature=0.8
         )
 

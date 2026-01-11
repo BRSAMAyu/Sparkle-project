@@ -19,7 +19,7 @@ from app.models.idempotency_key import IdempotencyKey
 from app.models.notification import Notification, PushHistory
 from app.models.galaxy import (
     KnowledgeNode, UserNodeStatus, NodeRelation,
-    StudyRecord, NodeExpansionQueue
+    StudyRecord, NodeExpansionQueue, ExpansionFeedback
 )
 from app.models.community import (
     Friendship, FriendshipStatus,
@@ -63,6 +63,7 @@ __all__ = [
     "NodeRelation",
     "StudyRecord",
     "NodeExpansionQueue",
+    "ExpansionFeedback",
     # Community
     "Friendship",
     "FriendshipStatus",

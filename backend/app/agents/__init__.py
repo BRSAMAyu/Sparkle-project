@@ -10,6 +10,7 @@ from typing import Dict, Type
 from .base_agent import BaseAgent, AgentContext, AgentResponse
 from .orchestrator_agent import OrchestratorAgent
 from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
+from .search_agent import SearchAgent
 
 # Enhanced Agents (v2.0)
 from .enhanced_agents import (
@@ -35,6 +36,7 @@ AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
     "code": CodeAgent,
     "writing": WritingAgent,
     "science": ScienceAgent,
+    "search": SearchAgent,
     # Enhanced Agents (v2.0)
     "enhanced_orchestrator": EnhancedOrchestratorAgent,
     "study_planner": StudyPlannerAgent,
@@ -61,6 +63,7 @@ __all__ = [
     "CodeAgent",
     "WritingAgent",
     "ScienceAgent",
+    "SearchAgent",
     # Enhanced Agents (v2.0)
     "EnhancedOrchestratorAgent",
     "StudyPlannerAgent",

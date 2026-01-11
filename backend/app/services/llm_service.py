@@ -137,16 +137,20 @@ class LLMService:
         if provider_type == "deepseek":
             api_key = settings.DEEPSEEK_API_KEY
             base_url = settings.DEEPSEEK_BASE_URL
+            self.chat_model = settings.DEEPSEEK_CHAT_MODEL or settings.LLM_MODEL_NAME
+            self.reason_model = settings.DEEPSEEK_REASON_MODEL or settings.LLM_REASON_MODEL_NAME
         else:
             # 默认使用通用 LLM 配置 (OpenAI, Qwen 等)
             api_key = settings.LLM_API_KEY
             base_url = settings.LLM_API_BASE_URL
+            self.chat_model = settings.LLM_MODEL_NAME
+            self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
             
         self.provider: LLMProvider = OpenAICompatibleProvider(
             api_key=api_key,
             base_url=base_url
         )
-        self.default_model = settings.LLM_MODEL_NAME
+        self.default_model = self.chat_model
         self.demo_mode = getattr(settings, 'DEMO_MODE', False)
 
     def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
@@ -192,7 +196,7 @@ class LLMService:
         """
         Send a chat request to the LLM.
         """
-        model = model or self.default_model
+        model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
@@ -208,6 +212,51 @@ class LLMService:
             logger.debug(f"Sending chat request to model: {model}")
             response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
             return response
+
+    async def reason(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.2,
+        **kwargs
+    ) -> str:
+        """
+        Send a deep reasoning request to the LLM.
+        """
+        model = model or self.reason_model
+        with tracer.start_as_current_span("llm_reason") as span:
+            span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
+            response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+            return response
+
+    async def reason_json(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.2,
+        **kwargs
+    ) -> Any:
+        """
+        Request JSON output from the LLM using reasoning model.
+        """
+        raw = await self.reason(messages, model=model, temperature=temperature, **kwargs)
+        cleaned = raw.replace("```json", "").replace("```", "").strip()
+
+        def _extract_json_block(text: str) -> Optional[str]:
+            for start, end in (("{", "}"), ("[", "]")):
+                if start in text and end in text:
+                    return text[text.find(start):text.rfind(end) + 1]
+            return None
+
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            extracted = _extract_json_block(cleaned)
+            if extracted:
+                return json.loads(extracted)
+            logger.warning("Failed to parse JSON from LLM reasoning response, returning empty result")
+            return {}
 
     async def chat_json(
         self,
@@ -247,7 +296,7 @@ class LLMService:
         """
         Stream chat response from the LLM.
         """
-        model = model or self.default_model
+        model = model or self.chat_model
         with tracer.start_as_current_span("llm_stream_chat") as span:
             span.set_attribute("llm.model", model)
             

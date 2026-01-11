@@ -67,15 +67,28 @@ class Settings(BaseSettings):
     LLM_API_BASE_URL: str = ""
     LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "qwen-turbo"
+    LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "qwen"  # 'qwen' | 'deepseek' | 'openai'
 
     # DeepSeek Specific
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
+    DEEPSEEK_REASON_MODEL: str = "deepseek-reasoner"
 
     # Embedding Service
     EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
     EMBEDDING_DIM: int = 1536  # 向量维度
+
+    # Semantic Cache
+    SEMANTIC_CACHE_ENABLED: bool = True
+    SEMANTIC_CACHE_SIM_THRESHOLD: float = 0.9
+    SEMANTIC_CACHE_MAX_CANDIDATES: int = 200
+
+    # Expansion Feedback Loop
+    EXPANSION_AB_TEST_ENABLED: bool = True
+    EXPANSION_SEMANTIC_DEDUP_ENABLED: bool = True
+    EXPANSION_SEMANTIC_DEDUP_THRESHOLD: float = 0.15
 
     # File Storage
     UPLOAD_DIR: str = "./uploads"

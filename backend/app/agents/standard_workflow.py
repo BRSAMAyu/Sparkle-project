@@ -373,6 +373,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
     intent = state.context_data.get("detected_intent")
     stream_callback = state.context_data.get("stream_callback")
     user_id = state.context_data.get("user_id", "")
+    db_session = state.context_data.get("db_session")
 
     if not intent or not _should_use_collaboration(user_message, intent):
         logger.info("No collaboration needed, moving to standard workflow")
@@ -395,6 +396,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
             knowledge_graph=state.context_data.get("knowledge_graph"),
             learning_status=state.context_data.get("learning_status"),
             focus_stats=state.context_data.get("focus_stats"),
+            db_session=db_session,
         )
 
         # Send status update

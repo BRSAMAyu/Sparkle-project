@@ -24,8 +24,7 @@ def fix_grpc_imports(base_dir):
                     print(f"Fixed imports in {path}")
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    gen_dir = os.path.join(current_dir, "app", "gen")
+    gen_dir = os.path.join(os.getcwd(), "app", "gen")
     if os.path.exists(gen_dir):
         fix_grpc_imports(gen_dir)
     else:

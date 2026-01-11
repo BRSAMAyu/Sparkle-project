@@ -7,13 +7,15 @@ Redis Semantic Cache Service - 语义缓存服务
 import json
 import hashlib
 import asyncio
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from loguru import logger
 import numpy as np
 
 from redis.asyncio import Redis
 from redis.asyncio.lock import Lock
+from app.config import settings
+from app.services.embedding_service import embedding_service
 
 
 class SemanticCacheService:
@@ -44,6 +46,9 @@ class SemanticCacheService:
         self.CACHE_PREFIX = "semantic_cache:"
         self.STATS_KEY = "semantic_cache:stats"
         self.LOCK_PREFIX = "semantic_cache:lock:"
+        self.EMBED_PREFIX = "semantic_cache:emb:"
+        self.KEY_SET = "semantic_cache:keys"
+        self.max_candidates = settings.SEMANTIC_CACHE_MAX_CANDIDATES
 
         # 初始化统计
         # 注意：这里不能在 __init__ 中 await，所以统计初始化改为按需触发或单独的 async init 方法
@@ -61,11 +66,17 @@ class SemanticCacheService:
                 "total_hits": 0,
                 "total_misses": 0,
                 "total_sets": 0,
+                "semantic_hits": 0,
                 "start_time": datetime.utcnow().isoformat()
             }
             await self.redis.hset(self.STATS_KEY, mapping={
                 k: json.dumps(v) for k, v in stats.items()
             })
+
+    def _normalize_query(self, query: str) -> str:
+        """Normalize query for stable cache keys."""
+        normalized = " ".join(query.strip().lower().split())
+        return normalized
 
     def _generate_cache_key(self, query: str, user_id: Optional[str] = None) -> str:
         """
@@ -74,7 +85,7 @@ class SemanticCacheService:
         使用查询文本的 SHA256 哈希 + 用户ID（可选）
         """
         # 标准化查询文本
-        normalized_query = query.strip().lower()
+        normalized_query = self._normalize_query(query)
 
         # 生成哈希
         if user_id:
@@ -85,10 +96,100 @@ class SemanticCacheService:
         hash_key = hashlib.sha256(cache_input.encode()).hexdigest()
 
         return f"{self.CACHE_PREFIX}{hash_key}"
+
+    def _embedding_key(self, cache_key: str) -> str:
+        return f"{self.EMBED_PREFIX}{cache_key}"
     
     def _generate_lock_key(self, cache_key: str) -> str:
         """生成锁键"""
         return f"{self.LOCK_PREFIX}{cache_key}"
+
+    async def _get_embedding_payload(self, cache_key: str) -> Optional[Dict[str, Any]]:
+        if not self.redis:
+            return None
+        if not settings.SEMANTIC_CACHE_ENABLED:
+            return None
+        emb_key = self._embedding_key(cache_key)
+        payload_raw = await self.redis.get(emb_key)
+        if not payload_raw:
+            return None
+        try:
+            return json.loads(payload_raw)
+        except json.JSONDecodeError:
+            return None
+
+    async def _set_embedding_payload(
+        self,
+        cache_key: str,
+        embedding: List[float],
+        user_id: Optional[str],
+        normalized_query: str,
+        ttl: int
+    ) -> None:
+        if not self.redis:
+            return
+        emb_key = self._embedding_key(cache_key)
+        payload = {
+            "embedding": embedding,
+            "user_id": user_id,
+            "normalized_query": normalized_query,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        await self.redis.setex(emb_key, ttl, json.dumps(payload))
+        await self.redis.sadd(self.KEY_SET, cache_key)
+
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+        if not a or not b:
+            return 0.0
+        vec_a = np.array(a, dtype=np.float32)
+        vec_b = np.array(b, dtype=np.float32)
+        denom = (np.linalg.norm(vec_a) * np.linalg.norm(vec_b))
+        if denom == 0:
+            return 0.0
+        return float(np.dot(vec_a, vec_b) / denom)
+
+    async def _find_similar_cache_key(
+        self,
+        query_embedding: List[float],
+        user_id: Optional[str],
+        threshold: float
+    ) -> Optional[Tuple[str, float]]:
+        if not self.redis:
+            return None
+
+        total_keys = await self.redis.scard(self.KEY_SET)
+        if total_keys == 0:
+            return None
+
+        if total_keys > self.max_candidates:
+            candidate_keys = await self.redis.srandmember(self.KEY_SET, number=self.max_candidates)
+        else:
+            candidate_keys = await self.redis.smembers(self.KEY_SET)
+
+        if not candidate_keys:
+            return None
+
+        best_key = None
+        best_score = 0.0
+
+        for cache_key in candidate_keys:
+            payload = await self._get_embedding_payload(cache_key)
+            if not payload:
+                continue
+            if user_id and payload.get("user_id") not in (None, user_id):
+                continue
+
+            embedding = payload.get("embedding")
+            if not embedding:
+                continue
+            score = self._cosine_similarity(query_embedding, embedding)
+            if score >= threshold and score > best_score:
+                best_score = score
+                best_key = cache_key
+
+        if best_key:
+            return best_key, best_score
+        return None
 
     async def get(
         self,
@@ -112,6 +213,7 @@ class SemanticCacheService:
             return None
 
         try:
+            await self._init_stats()
             cache_key = self._generate_cache_key(query, user_id)
             cached_data = await self.redis.get(cache_key)
 
@@ -126,11 +228,27 @@ class SemanticCacheService:
                 )
 
                 return result.get("data")
-            else:
-                # 未命中
-                await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
-                logger.debug(f"Cache MISS: query='{query[:30]}...'")
-                return None
+            # 语义相似检索
+            if similarity_threshold < 1.0:
+                normalized_query = self._normalize_query(query)
+                query_embedding = await embedding_service.get_embedding(normalized_query)
+                similar = await self._find_similar_cache_key(query_embedding, user_id, similarity_threshold)
+                if similar:
+                    similar_key, score = similar
+                    cached_similar = await self.redis.get(similar_key)
+                    if cached_similar:
+                        await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
+                        await self.redis.hincrby(self.STATS_KEY, "semantic_hits", 1)
+                        result = json.loads(cached_similar)
+                        logger.debug(
+                            f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}"
+                        )
+                        return result.get("data")
+
+            # 未命中
+            await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
+            logger.debug(f"Cache MISS: query='{query[:30]}...'")
+            return None
 
         except Exception as e:
             logger.error(f"Cache GET error: {e}")
@@ -142,6 +260,7 @@ class SemanticCacheService:
         factory_func,
         user_id: Optional[str] = None,
         ttl: Optional[int] = None,
+        similarity_threshold: Optional[float] = None,
         *args,
         **kwargs
     ) -> Optional[Dict[str, Any]]:
@@ -161,9 +280,12 @@ class SemanticCacheService:
         """
         if not self.redis:
             return await factory_func(*args, **kwargs)
+        if not settings.SEMANTIC_CACHE_ENABLED:
+            return await factory_func(*args, **kwargs)
 
         # 1. 尝试获取缓存
-        data = await self.get(query, user_id)
+        effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
+        data = await self.get(query, user_id, effective_threshold)
         if data is not None:
             return data
 
@@ -183,7 +305,7 @@ class SemanticCacheService:
             # 所以会释放 event loop，不会阻塞其他协程。
             async with lock:
                 # 双重检查 (Double-Checked Locking)
-                data = await self.get(query, user_id)
+                data = await self.get(query, user_id, effective_threshold)
                 if data is not None:
                     return data
                 
@@ -232,28 +354,39 @@ class SemanticCacheService:
             return False
 
         try:
+            await self._init_stats()
+            normalized_query = self._normalize_query(query)
             cache_key = self._generate_cache_key(query, user_id)
 
             # 包装数据，添加元信息
             cache_value = {
                 "data": data,
                 "query": query,
+                "normalized_query": normalized_query,
                 "user_id": user_id,
                 "cached_at": datetime.utcnow().isoformat(),
             }
 
             # 序列化并存储
+            ttl_value = ttl or self.default_ttl
             await self.redis.setex(
                 cache_key,
-                ttl or self.default_ttl,
+                ttl_value,
                 json.dumps(cache_value)
+            )
+            await self._set_embedding_payload(
+                cache_key=cache_key,
+                embedding=await embedding_service.get_embedding(normalized_query),
+                user_id=user_id,
+                normalized_query=normalized_query,
+                ttl=ttl_value
             )
 
             # 更新统计
             await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
 
             logger.debug(
-                f"Cache SET: query='{query[:30]}...', ttl={ttl or self.default_ttl}s"
+                f"Cache SET: query='{query[:30]}...', ttl={ttl_value}s"
             )
 
             return True
@@ -299,9 +432,11 @@ class SemanticCacheService:
         try:
             # 查找所有缓存键
             keys = await self.redis.keys(f"{self.CACHE_PREFIX}*")
+            emb_keys = await self.redis.keys(f"{self.EMBED_PREFIX}*")
 
-            if keys:
-                deleted = await self.redis.delete(*keys)
+            if keys or emb_keys:
+                delete_keys = list(keys or []) + list(emb_keys or []) + [self.KEY_SET]
+                deleted = await self.redis.delete(*delete_keys)
                 logger.warning(f"Cache CLEAR_ALL: deleted {deleted} keys")
                 return deleted
             else:

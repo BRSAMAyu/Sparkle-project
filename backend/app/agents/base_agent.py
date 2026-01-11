@@ -17,6 +17,7 @@ class AgentRole(Enum):
     CODE = "code"  # 编程专家
     WRITING = "writing"  # 写作专家
     SCIENCE = "science"  # 科学专家
+    SEARCH = "search"  # 检索专家
 
 
 @dataclass
@@ -31,6 +32,7 @@ class AgentContext:
     knowledge_context: Optional[str] = None
     user_preferences: Optional[Dict[str, Any]] = None
     previous_agent_outputs: Optional[List[Dict[str, Any]]] = None
+    db_session: Optional[Any] = None
 
 
 @dataclass

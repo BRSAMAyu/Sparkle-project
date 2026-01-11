@@ -16,6 +16,7 @@ from loguru import logger
 from .base_agent import AgentResponse
 from .enhanced_agents import EnhancedAgentContext, StudyPlannerAgent, ProblemSolverAgent
 from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
+from .search_agent import SearchAgent
 
 
 # ==========================================
@@ -269,6 +270,23 @@ class ProgressiveExplorationWorkflow:
         conversation_history = []
         start_time = datetime.now()
         outputs = []
+
+        # Round 0: SearchAgent - 知识检索
+        logger.info("[ProgressiveExploration] Round 0: Knowledge retrieval...")
+        search_agent = SearchAgent()
+        search_response = await search_agent.process(context)
+        outputs.append(search_response)
+        conversation_history.append({
+            "agent": "SearchExpert",
+            "content": search_response.response_text,
+            "reasoning": search_response.reasoning
+        })
+        timeline.append({
+            "agent": "SearchExpert",
+            "action": "检索知识证据",
+            "timestamp": (datetime.now() - start_time).total_seconds(),
+            "output_summary": search_response.response_text[:100] + "..."
+        })
 
         # Round 1: MathAgent - 数学推导
         logger.info("[ProgressiveExploration] Round 1: Math analysis...")

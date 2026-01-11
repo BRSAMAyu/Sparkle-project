@@ -19,6 +19,8 @@ from app.schemas.galaxy import (
     SparkResult,
     SearchRequest,
     SearchResponse,
+    ExpansionFeedbackRequest,
+    ExpansionFeedbackResponse,
     ReviewSuggestionsResponse,
     ReviewSuggestion,
     NodeDetailResponse,
@@ -197,6 +199,28 @@ async def search_nodes(
         results=results,
         total_count=len(results)
     )
+
+
+@router.post("/expansion/feedback", response_model=ExpansionFeedbackResponse)
+async def submit_expansion_feedback(
+    request: ExpansionFeedbackRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    提交知识拓展反馈
+    """
+    feedback_id = await galaxy_service.record_expansion_feedback(
+        user_id=UUID(user_id),
+        trigger_node_id=request.trigger_node_id,
+        expansion_queue_id=request.expansion_queue_id,
+        rating=request.rating,
+        implicit_score=request.implicit_score,
+        feedback_type=request.feedback_type,
+        prompt_version=request.prompt_version,
+        metadata=request.metadata
+    )
+    return ExpansionFeedbackResponse(success=True, feedback_id=feedback_id)
 
 
 @router.get("/review/suggestions", response_model=ReviewSuggestionsResponse)

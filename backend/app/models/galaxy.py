@@ -256,6 +256,8 @@ class NodeExpansionQueue(BaseModel):
     
     expanded_nodes = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
+    prompt_version = Column(String(50), nullable=True)
+    model_name = Column(String(50), nullable=True)
     
     processed_at = Column(DateTime, nullable=True)
 
@@ -263,3 +265,28 @@ class NodeExpansionQueue(BaseModel):
     trigger_node = relationship("KnowledgeNode")
     user = relationship("User")
     trigger_task = relationship("Task")
+
+
+class ExpansionFeedback(BaseModel):
+    """
+    知识拓展反馈表
+    """
+    __tablename__ = "expansion_feedback"
+
+    expansion_queue_id = Column(GUID(), ForeignKey("node_expansion_queue.id"), nullable=True, index=True)
+    trigger_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+
+    # Explicit 1-5 rating, implicit signal (0-1)
+    rating = Column(Integer, nullable=True)
+    implicit_score = Column(Float, nullable=True)
+    feedback_type = Column(String(20), default="explicit")  # explicit | implicit
+
+    prompt_version = Column(String(50), nullable=True)
+    model_name = Column(String(50), nullable=True)
+    meta_data = Column(JSON, nullable=True)
+
+    # Relations
+    trigger_node = relationship("KnowledgeNode")
+    user = relationship("User")
+    expansion_queue = relationship("NodeExpansionQueue")

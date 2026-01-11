@@ -18,6 +18,10 @@ def mock_redis():
     mock.delete = AsyncMock()
     mock.keys = AsyncMock()
     mock.hgetall = AsyncMock()
+    mock.sadd = AsyncMock()
+    mock.smembers = AsyncMock(return_value=set())
+    mock.scard = AsyncMock(return_value=0)
+    mock.srandmember = AsyncMock(return_value=[])
     
     # Mock redis lock
     mock_lock = MagicMock()
@@ -51,8 +55,8 @@ async def test_get_with_lock_miss_acquire_success(mock_redis):
     mock_redis.get.side_effect = [None, None] 
     
     factory = AsyncMock(return_value="new_data")
-    
-    result = await service.get_with_lock("test query", factory)
+    with patch("app.services.semantic_cache_service.embedding_service.get_embedding", AsyncMock(return_value=[0.0, 1.0])):
+        result = await service.get_with_lock("test query", factory)
     
     assert result == "new_data"
     factory.assert_called_once()
@@ -69,8 +73,8 @@ async def test_get_with_lock_miss_double_check_hit(mock_redis):
     mock_redis.get.side_effect = [None, b'{"data": "data_from_other", "cached_at": "now"}']
     
     factory = AsyncMock(return_value="new_data")
-    
-    result = await service.get_with_lock("test query", factory)
+    with patch("app.services.semantic_cache_service.embedding_service.get_embedding", AsyncMock(return_value=[0.0, 1.0])):
+        result = await service.get_with_lock("test query", factory)
     
     assert result == "data_from_other"
     factory.assert_not_called()

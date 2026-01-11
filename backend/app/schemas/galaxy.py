@@ -40,6 +40,16 @@ class SearchRequest(BaseModel):
     threshold: float = Field(0.3, ge=0.0, le=1.0)
 
 
+class ExpansionFeedbackRequest(BaseModel):
+    trigger_node_id: UUID
+    expansion_queue_id: Optional[UUID] = None
+    rating: Optional[int] = Field(None, ge=1, le=5)
+    implicit_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+    feedback_type: str = Field("explicit")
+    prompt_version: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
 # ==========================================
 # 响应模型
 # ==========================================
@@ -212,6 +222,11 @@ class SearchResponse(BaseModel):
     query: str
     results: List[SearchResultItem]
     total_count: int = 0
+
+
+class ExpansionFeedbackResponse(BaseModel):
+    success: bool = True
+    feedback_id: UUID
 
 
 class ReviewSuggestion(BaseModel):

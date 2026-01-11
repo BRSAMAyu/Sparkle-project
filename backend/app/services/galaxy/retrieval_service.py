@@ -13,6 +13,7 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.embedding_service import embedding_service
 from app.services.rerank_service import rerank_service
 from app.core.redis_search_client import redis_search_client
+from app.config import settings
 from app.schemas.galaxy import SearchResultItem, NodeBase, UserStatusInfo, SectorCode
 try:
     from app.services.semantic_cache_service import semantic_cache_service
@@ -45,6 +46,7 @@ class KnowledgeRetrievalService:
             query=query,
             factory_func=self._execute_hybrid_search,
             user_id=str(user_id), # Optional: could be global if knowledge is shared
+            similarity_threshold=settings.SEMANTIC_CACHE_SIM_THRESHOLD,
             # factory_func arguments
             user_id_uuid=user_id,
             query_str=query,

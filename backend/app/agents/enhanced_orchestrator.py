@@ -16,6 +16,7 @@ from opentelemetry import trace
 
 from .base_agent import BaseAgent, AgentRole, AgentContext, AgentResponse
 from .specialist_agents import MathAgent, CodeAgent, WritingAgent, ScienceAgent
+from .search_agent import SearchAgent
 from .enhanced_agents import (
     StudyPlannerAgent,
     ProblemSolverAgent,
@@ -67,6 +68,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
             CodeAgent(),
             WritingAgent(),
             ScienceAgent(),
+            SearchAgent(),
         ]
 
         # 初始化协作工作流
@@ -352,9 +354,20 @@ class EnhancedOrchestratorAgent(BaseAgent):
 
             # 整合响应
             if len(agent_responses) == 1:
-                return agent_responses[0]
-            else:
-                return await self._synthesize_responses(context, agent_responses)
+                primary = agent_responses[0]
+                if primary.needs_handoff and primary.handoff_target:
+                    for agent in self.specialist_agents:
+                        if agent.role.value == primary.handoff_target:
+                            handoff_response = await agent.process(context)
+                            return await self._synthesize_responses(context, [primary, handoff_response])
+
+                if primary.confidence is not None and primary.confidence < 0.6:
+                    search_response = await SearchAgent().process(context)
+                    return await self._synthesize_responses(context, [primary, search_response])
+
+                return primary
+
+            return await self._synthesize_responses(context, agent_responses)
 
     async def _synthesize_responses(
         self,

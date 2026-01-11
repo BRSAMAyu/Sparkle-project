@@ -26,7 +26,7 @@ from app.models import (
     User, PushPreference, Task, Plan, ChatMessage, ErrorRecord,
     Job, Subject, IdempotencyKey, Notification, PushHistory,
     # Galaxy models
-    KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord, NodeExpansionQueue,
+    KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord, NodeExpansionQueue, ExpansionFeedback,
     # Community models
     Friendship, Group, GroupMember, GroupMessage, GroupTask,
     GroupTaskClaim, SharedResource, PrivateMessage,
