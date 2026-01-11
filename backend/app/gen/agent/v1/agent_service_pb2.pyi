@@ -20,6 +20,13 @@ class FinishReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONTENT_FILTER: _ClassVar[FinishReason]
     ERROR: _ClassVar[FinishReason]
 
+class InterventionLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SILENT_MARKER: _ClassVar[InterventionLevel]
+    TOAST: _ClassVar[InterventionLevel]
+    CARD: _ClassVar[InterventionLevel]
+    FULL_SCREEN_MODAL: _ClassVar[InterventionLevel]
+
 class AgentType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     AGENT_UNKNOWN: _ClassVar[AgentType]
@@ -39,6 +46,10 @@ LENGTH: FinishReason
 TOOL_CALLS: FinishReason
 CONTENT_FILTER: FinishReason
 ERROR: FinishReason
+SILENT_MARKER: InterventionLevel
+TOAST: InterventionLevel
+CARD: InterventionLevel
+FULL_SCREEN_MODAL: InterventionLevel
 AGENT_UNKNOWN: AgentType
 ORCHESTRATOR: AgentType
 KNOWLEDGE: AgentType
@@ -176,7 +187,7 @@ class ChatMessage(_message.Message):
     def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ChatResponse(_message.Message):
-    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "finish_reason", "timestamp")
+    __slots__ = ("response_id", "created_at", "request_id", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp")
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
@@ -188,6 +199,7 @@ class ChatResponse(_message.Message):
     USAGE_FIELD_NUMBER: _ClassVar[int]
     CITATIONS_FIELD_NUMBER: _ClassVar[int]
     TOOL_RESULT_FIELD_NUMBER: _ClassVar[int]
+    INTERVENTION_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     response_id: str
@@ -201,9 +213,10 @@ class ChatResponse(_message.Message):
     usage: Usage
     citations: CitationBlock
     tool_result: ToolResultPayload
+    intervention: InterventionPayload
     finish_reason: FinishReason
     timestamp: int
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
 
 class CitationBlock(_message.Message):
     __slots__ = ("citations",)
@@ -264,6 +277,78 @@ class ToolResultPayload(_message.Message):
     widget_data: _struct_pb2.Struct
     tool_call_id: str
     def __init__(self, tool_name: _Optional[str] = ..., success: bool = ..., data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., error_message: _Optional[str] = ..., suggestion: _Optional[str] = ..., widget_type: _Optional[str] = ..., widget_data: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., tool_call_id: _Optional[str] = ...) -> None: ...
+
+class EvidenceRef(_message.Message):
+    __slots__ = ("type", "id", "schema_version", "user_deleted")
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
+    USER_DELETED_FIELD_NUMBER: _ClassVar[int]
+    type: str
+    id: str
+    schema_version: str
+    user_deleted: bool
+    def __init__(self, type: _Optional[str] = ..., id: _Optional[str] = ..., schema_version: _Optional[str] = ..., user_deleted: bool = ...) -> None: ...
+
+class CoolDownPolicy(_message.Message):
+    __slots__ = ("policy", "until_ms")
+    POLICY_FIELD_NUMBER: _ClassVar[int]
+    UNTIL_MS_FIELD_NUMBER: _ClassVar[int]
+    policy: str
+    until_ms: int
+    def __init__(self, policy: _Optional[str] = ..., until_ms: _Optional[int] = ...) -> None: ...
+
+class InterventionReason(_message.Message):
+    __slots__ = ("trigger_event_id", "explanation_text", "confidence", "evidence_refs", "decision_trace")
+    TRIGGER_EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPLANATION_TEXT_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    EVIDENCE_REFS_FIELD_NUMBER: _ClassVar[int]
+    DECISION_TRACE_FIELD_NUMBER: _ClassVar[int]
+    trigger_event_id: str
+    explanation_text: str
+    confidence: float
+    evidence_refs: _containers.RepeatedCompositeFieldContainer[EvidenceRef]
+    decision_trace: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, trigger_event_id: _Optional[str] = ..., explanation_text: _Optional[str] = ..., confidence: _Optional[float] = ..., evidence_refs: _Optional[_Iterable[_Union[EvidenceRef, _Mapping]]] = ..., decision_trace: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class InterventionRequest(_message.Message):
+    __slots__ = ("id", "dedupe_key", "topic", "created_at_ms", "expires_at_ms", "is_retractable", "supersedes_id", "schema_version", "policy_version", "model_version", "reason", "level", "on_reject", "content")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    DEDUPE_KEY_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_MS_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_MS_FIELD_NUMBER: _ClassVar[int]
+    IS_RETRACTABLE_FIELD_NUMBER: _ClassVar[int]
+    SUPERSEDES_ID_FIELD_NUMBER: _ClassVar[int]
+    SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
+    POLICY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MODEL_VERSION_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    LEVEL_FIELD_NUMBER: _ClassVar[int]
+    ON_REJECT_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    dedupe_key: str
+    topic: str
+    created_at_ms: int
+    expires_at_ms: int
+    is_retractable: bool
+    supersedes_id: str
+    schema_version: str
+    policy_version: str
+    model_version: str
+    reason: InterventionReason
+    level: InterventionLevel
+    on_reject: CoolDownPolicy
+    content: _struct_pb2.Struct
+    def __init__(self, id: _Optional[str] = ..., dedupe_key: _Optional[str] = ..., topic: _Optional[str] = ..., created_at_ms: _Optional[int] = ..., expires_at_ms: _Optional[int] = ..., is_retractable: bool = ..., supersedes_id: _Optional[str] = ..., schema_version: _Optional[str] = ..., policy_version: _Optional[str] = ..., model_version: _Optional[str] = ..., reason: _Optional[_Union[InterventionReason, _Mapping]] = ..., level: _Optional[_Union[InterventionLevel, str]] = ..., on_reject: _Optional[_Union[CoolDownPolicy, _Mapping]] = ..., content: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+
+class InterventionPayload(_message.Message):
+    __slots__ = ("request",)
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    request: InterventionRequest
+    def __init__(self, request: _Optional[_Union[InterventionRequest, _Mapping]] = ...) -> None: ...
 
 class AgentStatus(_message.Message):
     __slots__ = ("state", "details", "current_agent_name", "active_agent")

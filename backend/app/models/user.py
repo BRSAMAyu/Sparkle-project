@@ -81,6 +81,14 @@ class User(BaseModel):
         lazy="joined"
     )
 
+    intervention_settings = relationship(
+        "UserInterventionSettings",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="joined"
+    )
+
     tasks = relationship(
         "Task",
         back_populates="user",
@@ -97,6 +105,20 @@ class User(BaseModel):
 
     chat_messages = relationship(
         "ChatMessage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    intervention_requests = relationship(
+        "InterventionRequest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    intervention_feedback = relationship(
+        "InterventionFeedback",
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="dynamic"

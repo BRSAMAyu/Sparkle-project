@@ -75,6 +75,17 @@ class TaskDecompositionWorkflow:
         timeline = []
         start_time = datetime.now()
 
+        # Step 0: SearchAgent 检索相关背景
+        logger.info("[TaskDecomposition] Step 0: Retrieving background knowledge...")
+        search_agent = SearchAgent()
+        search_response = await search_agent.process(context)
+        timeline.append({
+            "agent": "SearchExpert",
+            "action": "检索背景知识",
+            "timestamp": (datetime.now() - start_time).total_seconds(),
+            "output_summary": search_response.response_text[:100] + "..."
+        })
+
         # Step 1: StudyPlannerAgent 分析整体情况
         logger.info("[TaskDecomposition] Step 1: Analyzing with StudyPlanner...")
         planner = StudyPlannerAgent()
@@ -101,7 +112,7 @@ class TaskDecompositionWorkflow:
         # 假设知识点分类到不同领域
         subject_distribution = self._categorize_concepts(weak_points + forgetting_risks)
 
-        outputs = [planner_response]
+        outputs = [search_response, planner_response]
 
         # 数学领域
         if subject_distribution.get("math"):
@@ -486,6 +497,18 @@ class ErrorDiagnosisWorkflow:
             "action": "分析错误原因",
             "timestamp": (datetime.now() - start_time).total_seconds(),
             "output_summary": solver_response.response_text[:100] + "..."
+        })
+
+        # Step 1.5: SearchAgent 补充检索证据
+        logger.info("[ErrorDiagnosis] Step 1.5: Retrieving supporting knowledge...")
+        search_agent = SearchAgent()
+        search_response = await search_agent.process(context)
+        outputs.append(search_response)
+        timeline.append({
+            "agent": "SearchExpert",
+            "action": "检索支撑知识",
+            "timestamp": (datetime.now() - start_time).total_seconds(),
+            "output_summary": search_response.response_text[:100] + "..."
         })
 
         # Step 2: 识别薄弱知识点（从 metadata 中提取）

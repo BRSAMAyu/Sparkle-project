@@ -39,7 +39,11 @@ from app.models import (
     # Focus models
     FocusSession,
     # Vocabulary models
-    WordBook, DictionaryEntry
+    WordBook, DictionaryEntry,
+    # Intervention models
+    InterventionRequest, InterventionAuditLog, InterventionFeedback, UserInterventionSettings,
+    # Phase 1 models
+    TrackingEvent, UserStateSnapshot
 )  # noqa: F401
 
 # this is the Alembic Config object

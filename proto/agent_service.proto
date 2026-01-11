@@ -174,6 +174,9 @@ message ChatResponse {
 
     // Tool execution result (for UI rendering).
     ToolResultPayload tool_result = 12;
+
+    // Intervention payload (contract-based UI).
+    InterventionPayload intervention = 14;
   }
   
   // Indicates why the generation finished.
@@ -224,6 +227,61 @@ message ToolResultPayload {
     string widget_type = 6;
     google.protobuf.Struct widget_data = 7;
     string tool_call_id = 8;
+}
+
+// ============================================================================
+// Intervention Contract (Phase 0.5)
+// ============================================================================
+
+message EvidenceRef {
+  string type = 1;        // "event" | "error" | "concept" | "task" | "summary"
+  string id = 2;
+  string schema_version = 3;
+  bool user_deleted = 4;
+}
+
+enum InterventionLevel {
+  SILENT_MARKER = 0;
+  TOAST = 1;
+  CARD = 2;
+  FULL_SCREEN_MODAL = 3;
+}
+
+message CoolDownPolicy {
+  string policy = 1;   // "MUTE_TOPIC_24H" | "MUTE_ALL_2H" | ...
+  int64 until_ms = 2;
+}
+
+message InterventionReason {
+  string trigger_event_id = 1;
+  string explanation_text = 2;
+  float confidence = 3;
+  repeated EvidenceRef evidence_refs = 4;
+  repeated string decision_trace = 5;
+}
+
+message InterventionRequest {
+  string id = 1;
+  string dedupe_key = 2;
+  string topic = 3;
+  int64 created_at_ms = 4;
+  int64 expires_at_ms = 5;
+  bool is_retractable = 6;
+  string supersedes_id = 7;
+
+  string schema_version = 8;  // "intervention.v1"
+  string policy_version = 9;
+  string model_version = 10;
+
+  InterventionReason reason = 11;
+  InterventionLevel level = 12;
+  CoolDownPolicy on_reject = 13;
+
+  google.protobuf.Struct content = 14;
+}
+
+message InterventionPayload {
+  InterventionRequest request = 1;
 }
 
 // AgentType defines the different types of specialized agents in the system.

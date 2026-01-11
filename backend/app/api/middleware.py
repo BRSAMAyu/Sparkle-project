@@ -4,6 +4,7 @@ API 中间件
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.concurrency import iterate_in_threadpool
+import hashlib
 
 from app.core.idempotency import IdempotencyStore
 
@@ -15,6 +16,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         "/api/v1/chat/stream",
         "/api/v1/tasks",
         "/api/v1/plans",
+        "/api/v1/events/ingest",
     ]
     
     def __init__(self, app, store: IdempotencyStore):
@@ -44,6 +46,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         status_code: int,
         content_type: str,
         user_id: str | None,
+        request_hash: str | None,
     ):
         collected = bytearray()
         try:
@@ -65,6 +68,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                         "status_code": status_code,
                         "content_type": content_type,
                         "user_id": user_id,
+                        "request_hash": request_hash,
                     },
                     ttl=3600,
                 )
@@ -83,6 +87,10 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         idempotency_key = request.headers.get("X-Idempotency-Key")
         if not idempotency_key:
             return await call_next(request)  # 无幂等键，正常处理
+
+        body_bytes = await request.body()
+        request._body = body_bytes
+        request_hash = hashlib.sha256(body_bytes).hexdigest() if body_bytes else None
         
         user_id = self._extract_user_id(request)
         cache_key = f"{user_id}:{idempotency_key}" if user_id else idempotency_key
@@ -90,6 +98,13 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # 检查是否已处理
         cached = await self.store.get(cache_key)
         if cached:
+            cached_hash = cached.get("request_hash")
+            if cached_hash and request_hash and cached_hash != request_hash:
+                return Response(
+                    content='{"error": "Idempotency key conflict"}',
+                    status_code=409,
+                    media_type="application/json",
+                )
             content_type = cached.get("content_type") or "application/json"
             # 构造响应
             return Response(
@@ -131,6 +146,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                         response.status_code,
                         content_type,
                         user_id,
+                        request_hash,
                     )
                     return response
                 else:
@@ -146,6 +162,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                                 "status_code": response.status_code,
                                 "content_type": content_type or "application/json",
                                 "user_id": user_id,
+                                "request_hash": request_hash,
                             },
                             ttl=3600,
                         )

@@ -33,7 +33,9 @@ from app.api.v1 import (
     learning_paths,
     error_book,
     ingestion,
-    files
+    files,
+    interventions,
+    events
 )
 
 api_router = APIRouter()
@@ -41,6 +43,8 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
+api_router.include_router(interventions.router, tags=["interventions"])
+api_router.include_router(events.router, tags=["events"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])

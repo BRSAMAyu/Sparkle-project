@@ -76,6 +76,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		// Set user context
 		c.Set("user_id", userID)
 		c.Set("is_admin", isAdmin)
+		c.Set("auth_token", tokenString)
 		c.Next()
 	}
 }

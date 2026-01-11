@@ -138,6 +138,7 @@ func main() {
 		wsFactory,
 		userContextService, // P0: Pass user context service
 		taskCommandService, // P0: Pass task command service
+		cfg.BackendURL,
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)

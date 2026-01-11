@@ -81,6 +81,58 @@ func (FinishReason) EnumDescriptor() ([]byte, []int) {
 	return file_agent_service_proto_rawDescGZIP(), []int{0}
 }
 
+type InterventionLevel int32
+
+const (
+	InterventionLevel_SILENT_MARKER     InterventionLevel = 0
+	InterventionLevel_TOAST             InterventionLevel = 1
+	InterventionLevel_CARD              InterventionLevel = 2
+	InterventionLevel_FULL_SCREEN_MODAL InterventionLevel = 3
+)
+
+// Enum value maps for InterventionLevel.
+var (
+	InterventionLevel_name = map[int32]string{
+		0: "SILENT_MARKER",
+		1: "TOAST",
+		2: "CARD",
+		3: "FULL_SCREEN_MODAL",
+	}
+	InterventionLevel_value = map[string]int32{
+		"SILENT_MARKER":     0,
+		"TOAST":             1,
+		"CARD":              2,
+		"FULL_SCREEN_MODAL": 3,
+	}
+)
+
+func (x InterventionLevel) Enum() *InterventionLevel {
+	p := new(InterventionLevel)
+	*p = x
+	return p
+}
+
+func (x InterventionLevel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (InterventionLevel) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_service_proto_enumTypes[1].Descriptor()
+}
+
+func (InterventionLevel) Type() protoreflect.EnumType {
+	return &file_agent_service_proto_enumTypes[1]
+}
+
+func (x InterventionLevel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use InterventionLevel.Descriptor instead.
+func (InterventionLevel) EnumDescriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{1}
+}
+
 // AgentType defines the different types of specialized agents in the system.
 type AgentType int32
 
@@ -139,11 +191,11 @@ func (x AgentType) String() string {
 }
 
 func (AgentType) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_service_proto_enumTypes[1].Descriptor()
+	return file_agent_service_proto_enumTypes[2].Descriptor()
 }
 
 func (AgentType) Type() protoreflect.EnumType {
-	return &file_agent_service_proto_enumTypes[1]
+	return &file_agent_service_proto_enumTypes[2]
 }
 
 func (x AgentType) Number() protoreflect.EnumNumber {
@@ -152,7 +204,7 @@ func (x AgentType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentType.Descriptor instead.
 func (AgentType) EnumDescriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{1}
+	return file_agent_service_proto_rawDescGZIP(), []int{2}
 }
 
 type AgentStatus_State int32
@@ -194,11 +246,11 @@ func (x AgentStatus_State) String() string {
 }
 
 func (AgentStatus_State) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_service_proto_enumTypes[2].Descriptor()
+	return file_agent_service_proto_enumTypes[3].Descriptor()
 }
 
 func (AgentStatus_State) Type() protoreflect.EnumType {
-	return &file_agent_service_proto_enumTypes[2]
+	return &file_agent_service_proto_enumTypes[3]
 }
 
 func (x AgentStatus_State) Number() protoreflect.EnumNumber {
@@ -207,7 +259,7 @@ func (x AgentStatus_State) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentStatus_State.Descriptor instead.
 func (AgentStatus_State) EnumDescriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{13, 0}
+	return file_agent_service_proto_rawDescGZIP(), []int{18, 0}
 }
 
 // ChatRequest encapsulates the user's input and necessary context for the AI.
@@ -889,6 +941,7 @@ type ChatResponse struct {
 	//	*ChatResponse_Usage
 	//	*ChatResponse_Citations
 	//	*ChatResponse_ToolResult
+	//	*ChatResponse_Intervention
 	Content isChatResponse_Content `protobuf_oneof:"content"`
 	// Indicates why the generation finished.
 	FinishReason FinishReason `protobuf:"varint,9,opt,name=finish_reason,json=finishReason,proto3,enum=agent.v1.FinishReason" json:"finish_reason,omitempty"`
@@ -1028,6 +1081,15 @@ func (x *ChatResponse) GetToolResult() *ToolResultPayload {
 	return nil
 }
 
+func (x *ChatResponse) GetIntervention() *InterventionPayload {
+	if x != nil {
+		if x, ok := x.Content.(*ChatResponse_Intervention); ok {
+			return x.Intervention
+		}
+	}
+	return nil
+}
+
 func (x *ChatResponse) GetFinishReason() FinishReason {
 	if x != nil {
 		return x.FinishReason
@@ -1087,6 +1149,11 @@ type ChatResponse_ToolResult struct {
 	ToolResult *ToolResultPayload `protobuf:"bytes,12,opt,name=tool_result,json=toolResult,proto3,oneof"`
 }
 
+type ChatResponse_Intervention struct {
+	// Intervention payload (contract-based UI).
+	Intervention *InterventionPayload `protobuf:"bytes,14,opt,name=intervention,proto3,oneof"`
+}
+
 func (*ChatResponse_Delta) isChatResponse_Content() {}
 
 func (*ChatResponse_ToolCall) isChatResponse_Content() {}
@@ -1102,6 +1169,8 @@ func (*ChatResponse_Usage) isChatResponse_Content() {}
 func (*ChatResponse_Citations) isChatResponse_Content() {}
 
 func (*ChatResponse_ToolResult) isChatResponse_Content() {}
+
+func (*ChatResponse_Intervention) isChatResponse_Content() {}
 
 type CitationBlock struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1423,6 +1492,394 @@ func (x *ToolResultPayload) GetToolCallId() string {
 	return ""
 }
 
+type EvidenceRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "event" | "error" | "concept" | "task" | "summary"
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	SchemaVersion string                 `protobuf:"bytes,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	UserDeleted   bool                   `protobuf:"varint,4,opt,name=user_deleted,json=userDeleted,proto3" json:"user_deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvidenceRef) Reset() {
+	*x = EvidenceRef{}
+	mi := &file_agent_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvidenceRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvidenceRef) ProtoMessage() {}
+
+func (x *EvidenceRef) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvidenceRef.ProtoReflect.Descriptor instead.
+func (*EvidenceRef) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *EvidenceRef) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetSchemaVersion() string {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetUserDeleted() bool {
+	if x != nil {
+		return x.UserDeleted
+	}
+	return false
+}
+
+type CoolDownPolicy struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        string                 `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"` // "MUTE_TOPIC_24H" | "MUTE_ALL_2H" | ...
+	UntilMs       int64                  `protobuf:"varint,2,opt,name=until_ms,json=untilMs,proto3" json:"until_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CoolDownPolicy) Reset() {
+	*x = CoolDownPolicy{}
+	mi := &file_agent_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CoolDownPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CoolDownPolicy) ProtoMessage() {}
+
+func (x *CoolDownPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CoolDownPolicy.ProtoReflect.Descriptor instead.
+func (*CoolDownPolicy) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CoolDownPolicy) GetPolicy() string {
+	if x != nil {
+		return x.Policy
+	}
+	return ""
+}
+
+func (x *CoolDownPolicy) GetUntilMs() int64 {
+	if x != nil {
+		return x.UntilMs
+	}
+	return 0
+}
+
+type InterventionReason struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TriggerEventId  string                 `protobuf:"bytes,1,opt,name=trigger_event_id,json=triggerEventId,proto3" json:"trigger_event_id,omitempty"`
+	ExplanationText string                 `protobuf:"bytes,2,opt,name=explanation_text,json=explanationText,proto3" json:"explanation_text,omitempty"`
+	Confidence      float32                `protobuf:"fixed32,3,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	EvidenceRefs    []*EvidenceRef         `protobuf:"bytes,4,rep,name=evidence_refs,json=evidenceRefs,proto3" json:"evidence_refs,omitempty"`
+	DecisionTrace   []string               `protobuf:"bytes,5,rep,name=decision_trace,json=decisionTrace,proto3" json:"decision_trace,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *InterventionReason) Reset() {
+	*x = InterventionReason{}
+	mi := &file_agent_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionReason) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionReason) ProtoMessage() {}
+
+func (x *InterventionReason) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionReason.ProtoReflect.Descriptor instead.
+func (*InterventionReason) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *InterventionReason) GetTriggerEventId() string {
+	if x != nil {
+		return x.TriggerEventId
+	}
+	return ""
+}
+
+func (x *InterventionReason) GetExplanationText() string {
+	if x != nil {
+		return x.ExplanationText
+	}
+	return ""
+}
+
+func (x *InterventionReason) GetConfidence() float32 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+func (x *InterventionReason) GetEvidenceRefs() []*EvidenceRef {
+	if x != nil {
+		return x.EvidenceRefs
+	}
+	return nil
+}
+
+func (x *InterventionReason) GetDecisionTrace() []string {
+	if x != nil {
+		return x.DecisionTrace
+	}
+	return nil
+}
+
+type InterventionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DedupeKey     string                 `protobuf:"bytes,2,opt,name=dedupe_key,json=dedupeKey,proto3" json:"dedupe_key,omitempty"`
+	Topic         string                 `protobuf:"bytes,3,opt,name=topic,proto3" json:"topic,omitempty"`
+	CreatedAtMs   int64                  `protobuf:"varint,4,opt,name=created_at_ms,json=createdAtMs,proto3" json:"created_at_ms,omitempty"`
+	ExpiresAtMs   int64                  `protobuf:"varint,5,opt,name=expires_at_ms,json=expiresAtMs,proto3" json:"expires_at_ms,omitempty"`
+	IsRetractable bool                   `protobuf:"varint,6,opt,name=is_retractable,json=isRetractable,proto3" json:"is_retractable,omitempty"`
+	SupersedesId  string                 `protobuf:"bytes,7,opt,name=supersedes_id,json=supersedesId,proto3" json:"supersedes_id,omitempty"`
+	SchemaVersion string                 `protobuf:"bytes,8,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"` // "intervention.v1"
+	PolicyVersion string                 `protobuf:"bytes,9,opt,name=policy_version,json=policyVersion,proto3" json:"policy_version,omitempty"`
+	ModelVersion  string                 `protobuf:"bytes,10,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
+	Reason        *InterventionReason    `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`
+	Level         InterventionLevel      `protobuf:"varint,12,opt,name=level,proto3,enum=agent.v1.InterventionLevel" json:"level,omitempty"`
+	OnReject      *CoolDownPolicy        `protobuf:"bytes,13,opt,name=on_reject,json=onReject,proto3" json:"on_reject,omitempty"`
+	Content       *structpb.Struct       `protobuf:"bytes,14,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InterventionRequest) Reset() {
+	*x = InterventionRequest{}
+	mi := &file_agent_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionRequest) ProtoMessage() {}
+
+func (x *InterventionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionRequest.ProtoReflect.Descriptor instead.
+func (*InterventionRequest) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *InterventionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetDedupeKey() string {
+	if x != nil {
+		return x.DedupeKey
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetCreatedAtMs() int64 {
+	if x != nil {
+		return x.CreatedAtMs
+	}
+	return 0
+}
+
+func (x *InterventionRequest) GetExpiresAtMs() int64 {
+	if x != nil {
+		return x.ExpiresAtMs
+	}
+	return 0
+}
+
+func (x *InterventionRequest) GetIsRetractable() bool {
+	if x != nil {
+		return x.IsRetractable
+	}
+	return false
+}
+
+func (x *InterventionRequest) GetSupersedesId() string {
+	if x != nil {
+		return x.SupersedesId
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetSchemaVersion() string {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetPolicyVersion() string {
+	if x != nil {
+		return x.PolicyVersion
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetModelVersion() string {
+	if x != nil {
+		return x.ModelVersion
+	}
+	return ""
+}
+
+func (x *InterventionRequest) GetReason() *InterventionReason {
+	if x != nil {
+		return x.Reason
+	}
+	return nil
+}
+
+func (x *InterventionRequest) GetLevel() InterventionLevel {
+	if x != nil {
+		return x.Level
+	}
+	return InterventionLevel_SILENT_MARKER
+}
+
+func (x *InterventionRequest) GetOnReject() *CoolDownPolicy {
+	if x != nil {
+		return x.OnReject
+	}
+	return nil
+}
+
+func (x *InterventionRequest) GetContent() *structpb.Struct {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+type InterventionPayload struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Request       *InterventionRequest   `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InterventionPayload) Reset() {
+	*x = InterventionPayload{}
+	mi := &file_agent_service_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionPayload) ProtoMessage() {}
+
+func (x *InterventionPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionPayload.ProtoReflect.Descriptor instead.
+func (*InterventionPayload) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *InterventionPayload) GetRequest() *InterventionRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
 type AgentStatus struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	State            AgentStatus_State      `protobuf:"varint,1,opt,name=state,proto3,enum=agent.v1.AgentStatus_State" json:"state,omitempty"`
@@ -1435,7 +1892,7 @@ type AgentStatus struct {
 
 func (x *AgentStatus) Reset() {
 	*x = AgentStatus{}
-	mi := &file_agent_service_proto_msgTypes[13]
+	mi := &file_agent_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1904,7 @@ func (x *AgentStatus) String() string {
 func (*AgentStatus) ProtoMessage() {}
 
 func (x *AgentStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[13]
+	mi := &file_agent_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1917,7 @@ func (x *AgentStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStatus.ProtoReflect.Descriptor instead.
 func (*AgentStatus) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{13}
+	return file_agent_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AgentStatus) GetState() AgentStatus_State {
@@ -1503,7 +1960,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_agent_service_proto_msgTypes[14]
+	mi := &file_agent_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1515,7 +1972,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[14]
+	mi := &file_agent_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1528,7 +1985,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{14}
+	return file_agent_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Error) GetCode() string {
@@ -1571,7 +2028,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_agent_service_proto_msgTypes[15]
+	mi := &file_agent_service_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1583,7 +2040,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[15]
+	mi := &file_agent_service_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1596,7 +2053,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{15}
+	return file_agent_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Usage) GetPromptTokens() int32 {
@@ -1645,7 +2102,7 @@ type MemoryQuery struct {
 
 func (x *MemoryQuery) Reset() {
 	*x = MemoryQuery{}
-	mi := &file_agent_service_proto_msgTypes[16]
+	mi := &file_agent_service_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1657,7 +2114,7 @@ func (x *MemoryQuery) String() string {
 func (*MemoryQuery) ProtoMessage() {}
 
 func (x *MemoryQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[16]
+	mi := &file_agent_service_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1670,7 +2127,7 @@ func (x *MemoryQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryQuery.ProtoReflect.Descriptor instead.
 func (*MemoryQuery) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{16}
+	return file_agent_service_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *MemoryQuery) GetUserId() string {
@@ -1727,7 +2184,7 @@ type MemoryFilter struct {
 
 func (x *MemoryFilter) Reset() {
 	*x = MemoryFilter{}
-	mi := &file_agent_service_proto_msgTypes[17]
+	mi := &file_agent_service_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1739,7 +2196,7 @@ func (x *MemoryFilter) String() string {
 func (*MemoryFilter) ProtoMessage() {}
 
 func (x *MemoryFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[17]
+	mi := &file_agent_service_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1752,7 +2209,7 @@ func (x *MemoryFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryFilter.ProtoReflect.Descriptor instead.
 func (*MemoryFilter) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{17}
+	return file_agent_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *MemoryFilter) GetTags() []string {
@@ -1793,7 +2250,7 @@ type MemoryResult struct {
 
 func (x *MemoryResult) Reset() {
 	*x = MemoryResult{}
-	mi := &file_agent_service_proto_msgTypes[18]
+	mi := &file_agent_service_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +2262,7 @@ func (x *MemoryResult) String() string {
 func (*MemoryResult) ProtoMessage() {}
 
 func (x *MemoryResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[18]
+	mi := &file_agent_service_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1818,7 +2275,7 @@ func (x *MemoryResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryResult.ProtoReflect.Descriptor instead.
 func (*MemoryResult) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{18}
+	return file_agent_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *MemoryResult) GetItems() []*MemoryItem {
@@ -1848,7 +2305,7 @@ type MemoryItem struct {
 
 func (x *MemoryItem) Reset() {
 	*x = MemoryItem{}
-	mi := &file_agent_service_proto_msgTypes[19]
+	mi := &file_agent_service_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1860,7 +2317,7 @@ func (x *MemoryItem) String() string {
 func (*MemoryItem) ProtoMessage() {}
 
 func (x *MemoryItem) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_service_proto_msgTypes[19]
+	mi := &file_agent_service_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1873,7 +2330,7 @@ func (x *MemoryItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryItem.ProtoReflect.Descriptor instead.
 func (*MemoryItem) Descriptor() ([]byte, []int) {
-	return file_agent_service_proto_rawDescGZIP(), []int{19}
+	return file_agent_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *MemoryItem) GetId() string {
@@ -1980,7 +2437,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2#.agent.v1.ChatMessage.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x05\n" +
 	"\fChatResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -1997,7 +2454,8 @@ const file_agent_service_proto_rawDesc = "" +
 	"\x05usage\x18\b \x01(\v2\x0f.agent.v1.UsageH\x00R\x05usage\x127\n" +
 	"\tcitations\x18\v \x01(\v2\x17.agent.v1.CitationBlockH\x00R\tcitations\x12>\n" +
 	"\vtool_result\x18\f \x01(\v2\x1b.agent.v1.ToolResultPayloadH\x00R\n" +
-	"toolResult\x12;\n" +
+	"toolResult\x12C\n" +
+	"\fintervention\x18\x0e \x01(\v2\x1d.agent.v1.InterventionPayloadH\x00R\fintervention\x12;\n" +
 	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReason\x12\x1c\n" +
 	"\ttimestamp\x18\r \x01(\x03R\ttimestampB\t\n" +
 	"\acontent\"A\n" +
@@ -2035,7 +2493,42 @@ const file_agent_service_proto_rawDesc = "" +
 	"\vwidget_data\x18\a \x01(\v2\x17.google.protobuf.StructR\n" +
 	"widgetData\x12 \n" +
 	"\ftool_call_id\x18\b \x01(\tR\n" +
-	"toolCallId\"\x97\x02\n" +
+	"toolCallId\"{\n" +
+	"\vEvidenceRef\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\tR\rschemaVersion\x12!\n" +
+	"\fuser_deleted\x18\x04 \x01(\bR\vuserDeleted\"C\n" +
+	"\x0eCoolDownPolicy\x12\x16\n" +
+	"\x06policy\x18\x01 \x01(\tR\x06policy\x12\x19\n" +
+	"\buntil_ms\x18\x02 \x01(\x03R\auntilMs\"\xec\x01\n" +
+	"\x12InterventionReason\x12(\n" +
+	"\x10trigger_event_id\x18\x01 \x01(\tR\x0etriggerEventId\x12)\n" +
+	"\x10explanation_text\x18\x02 \x01(\tR\x0fexplanationText\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x03 \x01(\x02R\n" +
+	"confidence\x12:\n" +
+	"\revidence_refs\x18\x04 \x03(\v2\x15.agent.v1.EvidenceRefR\fevidenceRefs\x12%\n" +
+	"\x0edecision_trace\x18\x05 \x03(\tR\rdecisionTrace\"\xb4\x04\n" +
+	"\x13InterventionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"dedupe_key\x18\x02 \x01(\tR\tdedupeKey\x12\x14\n" +
+	"\x05topic\x18\x03 \x01(\tR\x05topic\x12\"\n" +
+	"\rcreated_at_ms\x18\x04 \x01(\x03R\vcreatedAtMs\x12\"\n" +
+	"\rexpires_at_ms\x18\x05 \x01(\x03R\vexpiresAtMs\x12%\n" +
+	"\x0eis_retractable\x18\x06 \x01(\bR\risRetractable\x12#\n" +
+	"\rsupersedes_id\x18\a \x01(\tR\fsupersedesId\x12%\n" +
+	"\x0eschema_version\x18\b \x01(\tR\rschemaVersion\x12%\n" +
+	"\x0epolicy_version\x18\t \x01(\tR\rpolicyVersion\x12#\n" +
+	"\rmodel_version\x18\n" +
+	" \x01(\tR\fmodelVersion\x124\n" +
+	"\x06reason\x18\v \x01(\v2\x1c.agent.v1.InterventionReasonR\x06reason\x121\n" +
+	"\x05level\x18\f \x01(\x0e2\x1b.agent.v1.InterventionLevelR\x05level\x125\n" +
+	"\ton_reject\x18\r \x01(\v2\x18.agent.v1.CoolDownPolicyR\bonReject\x121\n" +
+	"\acontent\x18\x0e \x01(\v2\x17.google.protobuf.StructR\acontent\"N\n" +
+	"\x13InterventionPayload\x127\n" +
+	"\arequest\x18\x01 \x01(\v2\x1d.agent.v1.InterventionRequestR\arequest\"\x97\x02\n" +
 	"\vAgentStatus\x121\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1b.agent.v1.AgentStatus.StateR\x05state\x12\x18\n" +
 	"\adetails\x18\x02 \x01(\tR\adetails\x12,\n" +
@@ -2098,7 +2591,12 @@ const file_agent_service_proto_rawDesc = "" +
 	"\n" +
 	"TOOL_CALLS\x10\x03\x12\x12\n" +
 	"\x0eCONTENT_FILTER\x10\x04\x12\t\n" +
-	"\x05ERROR\x10\x05*\xa9\x01\n" +
+	"\x05ERROR\x10\x05*R\n" +
+	"\x11InterventionLevel\x12\x11\n" +
+	"\rSILENT_MARKER\x10\x00\x12\t\n" +
+	"\x05TOAST\x10\x01\x12\b\n" +
+	"\x04CARD\x10\x02\x12\x15\n" +
+	"\x11FULL_SCREEN_MODAL\x10\x03*\xa9\x01\n" +
 	"\tAgentType\x12\x11\n" +
 	"\rAGENT_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fORCHESTRATOR\x10\x01\x12\r\n" +
@@ -2131,79 +2629,92 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 	return file_agent_service_proto_rawDescData
 }
 
-var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_agent_service_proto_goTypes = []any{
 	(FinishReason)(0),             // 0: agent.v1.FinishReason
-	(AgentType)(0),                // 1: agent.v1.AgentType
-	(AgentStatus_State)(0),        // 2: agent.v1.AgentStatus.State
-	(*ChatRequest)(nil),           // 3: agent.v1.ChatRequest
-	(*UserProfile)(nil),           // 4: agent.v1.UserProfile
-	(*ProfileRequest)(nil),        // 5: agent.v1.ProfileRequest
-	(*WeeklyReportRequest)(nil),   // 6: agent.v1.WeeklyReportRequest
-	(*WeeklyReport)(nil),          // 7: agent.v1.WeeklyReport
-	(*ToolResult)(nil),            // 8: agent.v1.ToolResult
-	(*ChatConfig)(nil),            // 9: agent.v1.ChatConfig
-	(*ChatMessage)(nil),           // 10: agent.v1.ChatMessage
-	(*ChatResponse)(nil),          // 11: agent.v1.ChatResponse
-	(*CitationBlock)(nil),         // 12: agent.v1.CitationBlock
-	(*Citation)(nil),              // 13: agent.v1.Citation
-	(*ToolCall)(nil),              // 14: agent.v1.ToolCall
-	(*ToolResultPayload)(nil),     // 15: agent.v1.ToolResultPayload
-	(*AgentStatus)(nil),           // 16: agent.v1.AgentStatus
-	(*Error)(nil),                 // 17: agent.v1.Error
-	(*Usage)(nil),                 // 18: agent.v1.Usage
-	(*MemoryQuery)(nil),           // 19: agent.v1.MemoryQuery
-	(*MemoryFilter)(nil),          // 20: agent.v1.MemoryFilter
-	(*MemoryResult)(nil),          // 21: agent.v1.MemoryResult
-	(*MemoryItem)(nil),            // 22: agent.v1.MemoryItem
-	nil,                           // 23: agent.v1.UserProfile.PreferencesEntry
-	nil,                           // 24: agent.v1.ChatMessage.MetadataEntry
-	nil,                           // 25: agent.v1.Error.DetailsEntry
-	nil,                           // 26: agent.v1.MemoryItem.MetadataEntry
-	(*structpb.Struct)(nil),       // 27: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 28: google.protobuf.Timestamp
+	(InterventionLevel)(0),        // 1: agent.v1.InterventionLevel
+	(AgentType)(0),                // 2: agent.v1.AgentType
+	(AgentStatus_State)(0),        // 3: agent.v1.AgentStatus.State
+	(*ChatRequest)(nil),           // 4: agent.v1.ChatRequest
+	(*UserProfile)(nil),           // 5: agent.v1.UserProfile
+	(*ProfileRequest)(nil),        // 6: agent.v1.ProfileRequest
+	(*WeeklyReportRequest)(nil),   // 7: agent.v1.WeeklyReportRequest
+	(*WeeklyReport)(nil),          // 8: agent.v1.WeeklyReport
+	(*ToolResult)(nil),            // 9: agent.v1.ToolResult
+	(*ChatConfig)(nil),            // 10: agent.v1.ChatConfig
+	(*ChatMessage)(nil),           // 11: agent.v1.ChatMessage
+	(*ChatResponse)(nil),          // 12: agent.v1.ChatResponse
+	(*CitationBlock)(nil),         // 13: agent.v1.CitationBlock
+	(*Citation)(nil),              // 14: agent.v1.Citation
+	(*ToolCall)(nil),              // 15: agent.v1.ToolCall
+	(*ToolResultPayload)(nil),     // 16: agent.v1.ToolResultPayload
+	(*EvidenceRef)(nil),           // 17: agent.v1.EvidenceRef
+	(*CoolDownPolicy)(nil),        // 18: agent.v1.CoolDownPolicy
+	(*InterventionReason)(nil),    // 19: agent.v1.InterventionReason
+	(*InterventionRequest)(nil),   // 20: agent.v1.InterventionRequest
+	(*InterventionPayload)(nil),   // 21: agent.v1.InterventionPayload
+	(*AgentStatus)(nil),           // 22: agent.v1.AgentStatus
+	(*Error)(nil),                 // 23: agent.v1.Error
+	(*Usage)(nil),                 // 24: agent.v1.Usage
+	(*MemoryQuery)(nil),           // 25: agent.v1.MemoryQuery
+	(*MemoryFilter)(nil),          // 26: agent.v1.MemoryFilter
+	(*MemoryResult)(nil),          // 27: agent.v1.MemoryResult
+	(*MemoryItem)(nil),            // 28: agent.v1.MemoryItem
+	nil,                           // 29: agent.v1.UserProfile.PreferencesEntry
+	nil,                           // 30: agent.v1.ChatMessage.MetadataEntry
+	nil,                           // 31: agent.v1.Error.DetailsEntry
+	nil,                           // 32: agent.v1.MemoryItem.MetadataEntry
+	(*structpb.Struct)(nil),       // 33: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 34: google.protobuf.Timestamp
 }
 var file_agent_service_proto_depIdxs = []int32{
-	8,  // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
-	4,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
-	27, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
-	10, // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
-	9,  // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
-	23, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
-	24, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
-	14, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
-	16, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
-	17, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
-	18, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
-	12, // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
-	15, // 12: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
-	0,  // 13: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
-	13, // 14: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
-	27, // 15: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
-	27, // 16: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
-	2,  // 17: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
-	1,  // 18: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
-	25, // 19: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
-	20, // 20: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
-	28, // 21: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
-	28, // 22: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
-	22, // 23: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
-	28, // 24: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
-	26, // 25: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
-	3,  // 26: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
-	19, // 27: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
-	5,  // 28: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
-	6,  // 29: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
-	11, // 30: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
-	21, // 31: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
-	4,  // 32: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
-	7,  // 33: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
-	30, // [30:34] is the sub-list for method output_type
-	26, // [26:30] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	9,  // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
+	5,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
+	33, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
+	11, // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
+	10, // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
+	29, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
+	30, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
+	15, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
+	22, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
+	23, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
+	24, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
+	13, // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
+	16, // 12: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
+	21, // 13: agent.v1.ChatResponse.intervention:type_name -> agent.v1.InterventionPayload
+	0,  // 14: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
+	14, // 15: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
+	33, // 16: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
+	33, // 17: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
+	17, // 18: agent.v1.InterventionReason.evidence_refs:type_name -> agent.v1.EvidenceRef
+	19, // 19: agent.v1.InterventionRequest.reason:type_name -> agent.v1.InterventionReason
+	1,  // 20: agent.v1.InterventionRequest.level:type_name -> agent.v1.InterventionLevel
+	18, // 21: agent.v1.InterventionRequest.on_reject:type_name -> agent.v1.CoolDownPolicy
+	33, // 22: agent.v1.InterventionRequest.content:type_name -> google.protobuf.Struct
+	20, // 23: agent.v1.InterventionPayload.request:type_name -> agent.v1.InterventionRequest
+	3,  // 24: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
+	2,  // 25: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
+	31, // 26: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
+	26, // 27: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
+	34, // 28: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
+	34, // 29: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
+	28, // 30: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
+	34, // 31: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
+	32, // 32: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
+	4,  // 33: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
+	25, // 34: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
+	6,  // 35: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
+	7,  // 36: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
+	12, // 37: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
+	27, // 38: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
+	5,  // 39: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
+	8,  // 40: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
+	37, // [37:41] is the sub-list for method output_type
+	33, // [33:37] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -2224,14 +2735,15 @@ func file_agent_service_proto_init() {
 		(*ChatResponse_Usage)(nil),
 		(*ChatResponse_Citations)(nil),
 		(*ChatResponse_ToolResult)(nil),
+		(*ChatResponse_Intervention)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   24,
+			NumEnums:      4,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -37,6 +37,14 @@ from app.models.file_storage import StoredFile
 from app.models.document_chunks import DocumentChunk
 from app.models.group_files import GroupFile
 from app.models.irt import IRTItemParameter, UserIRTAbility
+from app.models.event import TrackingEvent
+from app.models.user_state import UserStateSnapshot
+from app.models.intervention import (
+    InterventionRequest,
+    InterventionAuditLog,
+    InterventionFeedback,
+    UserInterventionSettings,
+)
 
 __all__ = [
     "BaseModel",
@@ -100,4 +108,10 @@ __all__ = [
     "GroupFile",
     "IRTItemParameter",
     "UserIRTAbility",
+    "TrackingEvent",
+    "UserStateSnapshot",
+    "InterventionRequest",
+    "InterventionAuditLog",
+    "InterventionFeedback",
+    "UserInterventionSettings",
 ]
