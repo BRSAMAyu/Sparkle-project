@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
+import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/central_flame.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/energy_particle.dart';
@@ -14,6 +15,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_entra
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_search_dialog.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_shader_background.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/node_preview_card.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/parallax_star_background.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_background_painter.dart';
@@ -32,6 +34,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     with TickerProviderStateMixin {
   final TransformationController _transformationController =
       TransformationController();
+  late final GalaxyRenderEngine _renderEngine;
   late final AnimationController _selectionPulseController;
   final List<AnimationController> _transientControllers = [];
   bool _isDisposing = false;
@@ -60,6 +63,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   @override
   void initState() {
     super.initState();
+    _renderEngine = GalaxyRenderEngine();
 
     _selectionPulseController = AnimationController(
       vsync: this,
@@ -88,6 +92,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         ..scale(initialScale);
 
       unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
+      unawaited(_renderEngine.prewarm());
     });
   }
 
@@ -101,6 +106,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
+    _renderEngine.dispose();
     PerformanceService.instance.stopMonitoring();
     super.dispose();
   }
@@ -293,6 +299,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final targetScreenPos = _canvasToScreen(centeredCanvasPos);
 
     // Start success animation at target location
+    _renderEngine.addBurst(
+      screenPosition: targetScreenPos,
+      screenSize: MediaQuery.of(context).size,
+      strength: 1.0,
+    );
+
     final successKey = UniqueKey();
     setState(() {
       _activeSuccessAnimations.add(
@@ -429,10 +441,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       backgroundColor: DS.brandPrimary, // Deep space
       body: Stack(
         children: [
+          Positioned.fill(
+            child: GalaxyShaderBackground(engine: _renderEngine),
+          ),
           // 0. Parallax Background (Deepest Layer)
           Positioned.fill(
-            child: ParallaxStarBackground(
-              transformationController: _transformationController,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _renderEngine.isReady,
+              builder: (context, isReady, child) => ParallaxStarBackground(
+                transformationController: _transformationController,
+                drawBackground: !isReady,
+              ),
             ),
           ),
 

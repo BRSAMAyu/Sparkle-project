@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
@@ -165,25 +166,31 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   static const double _animationStep = 1000 / _animationFps; // ~16.67ms
   
   // Performance Monitor
-  StreamSubscription? _tierSubscription;
+  VoidCallback? _tierListener;
 
   void _initPerformanceMonitor() {
     // Start monitoring
     GalaxyPerformanceMonitor.instance.startMonitoring();
     
     // Set initial config
-    final initialTier = GalaxyPerformanceMonitor.instance.currentTier;
+    final initialTier = _mapPerformanceTier(
+      PerformanceService.instance.currentTier.value,
+    );
     state = state.copyWith(
       optimizationConfig: GalaxyOptimizationConfig.fromTier(initialTier),
     );
 
     // Listen for changes
-    _tierSubscription = GalaxyPerformanceMonitor.instance.onTierChanged.listen((tier) {
+    _tierListener = () {
       if (!mounted) return;
+      final tier = _mapPerformanceTier(
+        PerformanceService.instance.currentTier.value,
+      );
       state = state.copyWith(
         optimizationConfig: GalaxyOptimizationConfig.fromTier(tier),
       );
-    });
+    };
+    PerformanceService.instance.currentTier.addListener(_tierListener!);
   }
 
   @override
@@ -192,12 +199,28 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _eventsReconnectTimer?.cancel();
     _animationTimer?.cancel();
     _viewportThrottleTimer?.cancel();
-    _tierSubscription?.cancel();
+    final tierListener = _tierListener;
+    if (tierListener != null) {
+      PerformanceService.instance.currentTier.removeListener(tierListener);
+    }
     // Do not stop monitoring here as it might be used by other parts or singleton lifecycle
     // But for this screen it's probably fine. Let's keep it running for now or stop it?
     // If GalaxyScreen is the only consumer, we could stop it.
     // GalaxyPerformanceMonitor.instance.stopMonitoring(); 
     super.dispose();
+  }
+
+  GalaxyPerformanceTier _mapPerformanceTier(PerformanceTier tier) {
+    switch (tier) {
+      case PerformanceTier.low:
+        return GalaxyPerformanceTier.lite;
+      case PerformanceTier.medium:
+        return GalaxyPerformanceTier.standard;
+      case PerformanceTier.high:
+        return GalaxyPerformanceTier.standard;
+      case PerformanceTier.ultra:
+        return GalaxyPerformanceTier.ultra;
+    }
   }
 
   void _initEventsListener() {

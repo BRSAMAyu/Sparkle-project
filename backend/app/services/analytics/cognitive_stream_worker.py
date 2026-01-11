@@ -19,6 +19,7 @@ from app.services.analytics.irt_service import IRTService
 from app.services.analytics.model_metrics import record_bkt_auc, record_irt_rmse
 from app.services.compliance.age_gate import AgeGateService
 from app.services.compliance.crypto_erase import CryptoEraseManager
+from app.core.business_metrics import EVENT_STREAM_LAG
 
 
 class ShadowKafkaWriter:
@@ -97,11 +98,22 @@ class CognitiveStreamWorker:
 
     async def handle_event(self, event: Dict[str, Any]) -> None:
         try:
+            self._record_stream_lag(event)
             await self.shadow_writer.write(event)
             await self._process_event(event)
         except Exception as exc:
             logger.error(f"CognitiveStreamWorker failed: {exc}")
             await self._send_to_dlq(event, error=str(exc))
+
+    def _record_stream_lag(self, event: Dict[str, Any]) -> None:
+        ts_ms = event.get("ts_ms")
+        if ts_ms is None:
+            return
+        try:
+            lag_seconds = max(0.0, (datetime.utcnow().timestamp() * 1000 - float(ts_ms)) / 1000.0)
+        except (TypeError, ValueError):
+            return
+        EVENT_STREAM_LAG.labels(stream=self.STREAM_NAME).set(lag_seconds)
 
     async def _process_event(self, event: Dict[str, Any]) -> None:
         event_name = event.get("event_name") or event.get("event_type")

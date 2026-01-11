@@ -103,6 +103,8 @@ flutter:
   generate: true
   shaders:
     - shaders/core_flame.frag
+    - shaders/galaxy_field.frag
+    - shaders/particle_burst.frag
   # Assets
   assets:
     - assets/images/

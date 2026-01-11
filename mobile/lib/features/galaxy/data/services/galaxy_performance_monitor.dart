@@ -46,6 +46,7 @@ class GalaxyPerformanceMonitor {
   static const Duration _downgradeCooldown = Duration(seconds: 10);
   static const Duration _upgradeCooldown = Duration(seconds: 20);
   bool _forceTier = false; // 是否手动强制指定了Tier
+  bool _enableAdaptiveTier = false;
 
   /// 当前性能分级流
   Stream<GalaxyPerformanceTier> get onTierChanged => _tierController.stream;
@@ -60,11 +61,13 @@ class GalaxyPerformanceMonitor {
   void startMonitoring({
     Duration reportInterval = const Duration(seconds: 5),
     GalaxyPerformanceTier initialTier = GalaxyPerformanceTier.standard,
+    bool enableAdaptiveTier = false,
   }) {
     if (_isMonitoring) return;
 
     _isMonitoring = true;
     _currentTier = initialTier;
+    _enableAdaptiveTier = enableAdaptiveTier;
     _setupFrameCallback();
 
     // 定期报告
@@ -72,7 +75,9 @@ class GalaxyPerformanceMonitor {
       _generateReport();
     });
 
-    debugPrint('GalaxyPerformanceMonitor: Started monitoring (Tier: ${_currentTier.name})');
+    debugPrint(
+      'GalaxyPerformanceMonitor: Started monitoring (Tier: ${_currentTier.name}, adaptive: $_enableAdaptiveTier)',
+    );
   }
 
   /// 停止监控
@@ -125,7 +130,7 @@ class GalaxyPerformanceMonitor {
 
     // 检测性能问题并执行自适应调整
     _checkPerformanceIssues(frameDuration);
-    if (!_forceTier) {
+    if (_enableAdaptiveTier && !_forceTier) {
       _checkAdaptivePerformance();
     }
 

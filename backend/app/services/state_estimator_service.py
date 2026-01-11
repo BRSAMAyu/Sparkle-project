@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.business_metrics import STATE_ESTIMATOR_RUNS, STATE_ESTIMATOR_LATENCY
 from app.models.event import TrackingEvent
 from app.models.user_state import UserStateSnapshot
 
@@ -24,12 +25,15 @@ class StateEstimatorService:
         self.db = db
 
     async def update_state(self, user_id: UUID, timezone_name: Optional[str]) -> UserStateSnapshot:
+        start_time = datetime.utcnow()
         window = self._default_window()
         events = await self._fetch_recent_events(user_id, window)
         snapshot = self._compute_state(user_id, events, window, timezone_name)
         self.db.add(snapshot)
         await self.db.commit()
         await self.db.refresh(snapshot)
+        STATE_ESTIMATOR_RUNS.labels(result="success").inc()
+        STATE_ESTIMATOR_LATENCY.observe((datetime.utcnow() - start_time).total_seconds())
         return snapshot
 
     async def get_latest_snapshot(self, user_id: UUID) -> Optional[UserStateSnapshot]:

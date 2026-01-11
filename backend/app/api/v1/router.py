@@ -35,7 +35,8 @@ from app.api.v1 import (
     ingestion,
     files,
     interventions,
-    events
+    events,
+    nightly_reviews,
 )
 
 api_router = APIRouter()
@@ -45,6 +46,7 @@ api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestio
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
+api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])

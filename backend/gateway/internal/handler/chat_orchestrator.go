@@ -815,6 +815,27 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		reqID = fmt.Sprintf("req_%s", uuid.New().String())
 	}
 
+	if h.quota != nil {
+		remaining, err := h.quota.ReserveRequest(ctx, userID, reqID, 24*time.Hour)
+		if err != nil {
+			if err == service.ErrQuotaInsufficient {
+				log.Printf("Quota exhausted for user=%s request=%s", userID, reqID)
+				switch r := responder.(type) {
+				case *envelopeResponder:
+					r.SendError("resource_exhausted", "Quota exhausted", false)
+				default:
+					conn := responder.(*websocket.Conn)
+					conn.WriteJSON(gin.H{"type": "error", "message": "Quota exhausted"})
+				}
+				return false
+			}
+			log.Printf("Failed to reserve quota: %v", err)
+		} else {
+			span := trace.SpanFromContext(ctx)
+			span.SetAttributes(attribute.Int64("quota_remaining", remaining))
+		}
+	}
+
 	// Build ChatRequest
 	req := &agentv1.ChatRequest{
 		RequestId: reqID,
@@ -862,6 +883,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// Receive and forward streaming responses
 	var fullText string
+	var usageTotalTokens int64
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
@@ -888,6 +910,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			textBuilder.Reset()
 			textBuilder.WriteString(ft)
 		}
+		if usage := resp.GetUsage(); usage != nil {
+			usageTotalTokens = int64(usage.TotalTokens)
+		}
 
 		switch r := responder.(type) {
 		case *envelopeResponder:
@@ -907,6 +932,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 	fullText = textBuilder.String()
+
+	if h.quota != nil && usageTotalTokens > 0 {
+		if _, err := h.quota.RecordUsage(ctx, userID, reqID, usageTotalTokens, 24*time.Hour); err != nil {
+			log.Printf("Failed to record usage: %v", err)
+		}
+	} else if h.quota != nil && usageTotalTokens == 0 {
+		log.Printf("Usage missing for request=%s user=%s", reqID, userID)
+	}
 
 	// Add metadata for the final state
 	latency := time.Since(startTime).Milliseconds()
@@ -942,12 +975,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		result := fullText
 		go h.saveMessage(userID, sessionID, "assistant", result)
 
-		// Also decrement quota (async)
-		go func(uid string) {
-			if _, err := h.quota.DecrQuota(context.Background(), uid); err != nil {
-				log.Printf("Failed to decrement quota: %v", err)
-			}
-		}(userID)
 	}
 
 	return false

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import time
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
@@ -8,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
+from app.core.business_metrics import EVENT_INGEST_TOTAL, EVENT_INGEST_LATENCY, EVENT_DEDUPE_TOTAL
 from app.models.event import TrackingEvent
 
 
@@ -21,11 +23,16 @@ class EventService:
         user_id: UUID,
         events: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
+        start_time = time.perf_counter()
+        sources = {item.get("source") or "unknown" for item in events}
+        source_label = list(sources)[0] if len(sources) == 1 else "mixed"
         event_ids = []
+        seen_ids = set()
         for item in events:
             if not item.get("event_id"):
                 item["event_id"] = uuid4().hex
             event_ids.append(item["event_id"])
+            seen_ids.add(item["event_id"])
 
         existing = await self._fetch_existing_event_ids(event_ids)
         accepted = 0
@@ -39,6 +46,12 @@ class EventService:
         for item in events:
             event_id = item["event_id"]
             if event_id in existing:
+                deduped += 1
+                results.append({"event_id": event_id, "status": "deduped"})
+                continue
+            if event_id in seen_ids:
+                seen_ids.remove(event_id)
+            else:
                 deduped += 1
                 results.append({"event_id": event_id, "status": "deduped"})
                 continue
@@ -69,6 +82,13 @@ class EventService:
 
             for record in new_records:
                 await self._publish_event(record)
+
+        EVENT_INGEST_TOTAL.labels(status="accepted").inc(accepted)
+        EVENT_INGEST_TOTAL.labels(status="deduped").inc(deduped)
+        EVENT_INGEST_TOTAL.labels(status="failed").inc(failed)
+        if deduped:
+            EVENT_DEDUPE_TOTAL.labels(source=source_label).inc(deduped)
+        EVENT_INGEST_LATENCY.labels(source=source_label).observe(time.perf_counter() - start_time)
 
         return {
             "accepted": accepted,

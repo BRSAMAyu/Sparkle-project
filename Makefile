@@ -1,4 +1,4 @@
-.PHONY: dev-up sync-db proto-gen
+.PHONY: dev-up sync-db proto-gen db-migrate db-dump db-sqlc db-validate
 
 DB_CONTAINER=sparkle_db
 DB_USER=postgres
@@ -17,17 +17,26 @@ dev-up:
 	docker compose up -d
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
-sync-db:
-	@echo "🔄 1. Running Python Alembic Migrations..."
+sync-db: db-migrate db-dump db-sqlc
+	@echo "✅ Database Schema & Go Code Synced Successfully!"
+
+db-migrate:
+	@echo "🔄 Running Python Alembic Migrations..."
 	cd backend && alembic upgrade head
+
+db-validate:
 	@echo "🔍 Checking if $(DB_CONTAINER) is running..."
 	@docker ps -q -f name=$(DB_CONTAINER) > /dev/null || (echo "❌ Error: Container $(DB_CONTAINER) is not running. Run 'make dev-up' first." && exit 1)
-	@echo " 2. Dumping Schema (Structure Only)..."
+
+db-dump: db-validate
+	@echo "🧾 Dumping Schema (Structure Only)..."
 	mkdir -p backend/gateway/internal/db
-	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | grep -v '^\\' > backend/gateway/internal/db/schema.sql
-	@echo "⚡ 3. Generating Go Code via SQLC..."
+	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | \
+		grep -v '^\\' > backend/gateway/internal/db/schema.sql
+
+db-sqlc:
+	@echo "⚡ Generating Go Code via SQLC..."
 	cd backend/gateway && sqlc generate
-	@echo "✅ Database Schema & Go Code Synced Successfully!"
 
 # RAG 相关命令 (v2.0)
 init-rag:

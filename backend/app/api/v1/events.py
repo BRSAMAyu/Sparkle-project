@@ -1,6 +1,4 @@
 from typing import List
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +16,10 @@ from app.schemas.events import (
 )
 from app.services.event_service import EventService
 from app.services.state_estimator_service import StateEstimatorService
+from app.models.error_book import ErrorRecord
+from app.models.galaxy import KnowledgeNode
+from app.models.semantic_memory import StrategyNode
+from sqlalchemy import select
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -91,7 +93,13 @@ async def resolve_evidence(
         if item.type != "event":
             if item.type == "user_state":
                 estimator = StateEstimatorService(db)
-                snapshot = await estimator.get_snapshot_by_id(current_user.id, item.id)
+                try:
+                    snapshot = await estimator.get_snapshot_by_id(current_user.id, item.id)
+                except Exception:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="invalid_id")
+                    )
+                    continue
                 if not snapshot:
                     resolved.append(
                         EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
@@ -127,6 +135,89 @@ async def resolve_evidence(
                             time_context=snapshot.time_context,
                             derived_event_ids=snapshot.derived_event_ids,
                         ),
+                    )
+                )
+                continue
+
+            if item.type == "error":
+                result = await db.execute(
+                    select(ErrorRecord).where(
+                        ErrorRecord.id == item.id,
+                        ErrorRecord.user_id == current_user.id,
+                        ErrorRecord.is_deleted == False,
+                    )
+                )
+                error = result.scalar_one_or_none()
+                if not error:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        error={
+                            "id": str(error.id),
+                            "subject_code": error.subject_code,
+                            "root_cause": (error.latest_analysis or {}).get("root_cause"),
+                            "study_suggestion": (error.latest_analysis or {}).get("study_suggestion"),
+                        },
+                    )
+                )
+                continue
+
+            if item.type == "concept":
+                result = await db.execute(
+                    select(KnowledgeNode).where(KnowledgeNode.id == item.id)
+                )
+                node = result.scalar_one_or_none()
+                if not node:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        concept={
+                            "id": str(node.id),
+                            "name": node.name,
+                            "description": node.description,
+                            "subject_id": node.subject_id,
+                        },
+                    )
+                )
+                continue
+
+            if item.type == "strategy":
+                result = await db.execute(
+                    select(StrategyNode).where(
+                        StrategyNode.id == item.id,
+                        StrategyNode.user_id == current_user.id,
+                        StrategyNode.deleted_at.is_(None),
+                    )
+                )
+                strategy = result.scalar_one_or_none()
+                if not strategy:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        strategy={
+                            "id": str(strategy.id),
+                            "title": strategy.title,
+                            "description": strategy.description,
+                            "subject_code": strategy.subject_code,
+                        },
                     )
                 )
                 continue

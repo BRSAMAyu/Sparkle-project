@@ -6,3 +6,9 @@ import (
 
 //go:embed scripts/decr_quota.lua
 var DecrQuotaScript string
+
+//go:embed scripts/reserve_quota.lua
+var ReserveQuotaScript string
+
+//go:embed scripts/record_usage.lua
+var RecordUsageScript string

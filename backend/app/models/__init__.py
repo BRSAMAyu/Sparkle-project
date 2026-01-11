@@ -39,6 +39,8 @@ from app.models.group_files import GroupFile
 from app.models.irt import IRTItemParameter, UserIRTAbility
 from app.models.event import TrackingEvent
 from app.models.user_state import UserStateSnapshot
+from app.models.semantic_memory import StrategyNode, SemanticLink
+from app.models.nightly_review import NightlyReview
 from app.models.intervention import (
     InterventionRequest,
     InterventionAuditLog,
@@ -110,6 +112,9 @@ __all__ = [
     "UserIRTAbility",
     "TrackingEvent",
     "UserStateSnapshot",
+    "StrategyNode",
+    "SemanticLink",
+    "NightlyReview",
     "InterventionRequest",
     "InterventionAuditLog",
     "InterventionFeedback",

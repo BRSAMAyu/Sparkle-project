@@ -9,11 +9,15 @@ from uuid import UUID
 
 from app.api.deps import get_db, get_current_user_id
 from app.services.error_book_service import ErrorBookService
+from app.services.semantic_memory_service import SemanticMemoryService
 from app.schemas.error_book import (
     ErrorRecordCreate, ErrorRecordUpdate, ErrorRecordResponse,
     ErrorRecordListResponse, ErrorQueryParams, ReviewAction,
     ReviewStatsResponse, SubjectEnum, ErrorTypeEnum
 )
+from app.schemas.semantic_memory import ErrorSemanticSummary, StrategyNodeResponse, SimilarErrorItem, ConceptBrief
+from app.models.galaxy import KnowledgeNode
+from sqlalchemy import select
 
 router = APIRouter(prefix="/errors", tags=["Error Book"])
 
@@ -198,3 +202,59 @@ async def submit_review(
         return error
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{error_id}/semantic", response_model=ErrorSemanticSummary)
+async def get_error_semantic_summary(
+    error_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorBookService = Depends(get_error_service),
+    db: AsyncSession = Depends(get_db),
+):
+    error = await service.get_error(error_id, UUID(user_id))
+    if not error:
+        raise HTTPException(status_code=404, detail="错题不存在")
+
+    semantic_service = SemanticMemoryService(db)
+    strategies = await semantic_service.get_strategies_for_error(error_id, UUID(user_id))
+    similar_errors = await semantic_service.get_same_cause_errors(error_id, UUID(user_id), limit=5)
+
+    concepts = []
+    if error.linked_knowledge_node_ids:
+        result = await db.execute(
+            select(KnowledgeNode).where(KnowledgeNode.id.in_(error.linked_knowledge_node_ids))
+        )
+        nodes = result.scalars().all()
+        concepts = [
+            ConceptBrief(id=node.id, name=node.name, description=node.description)
+            for node in nodes
+        ]
+
+    root_cause = (error.latest_analysis or {}).get("root_cause") if error.latest_analysis else None
+
+    return ErrorSemanticSummary(
+        error_id=error.id,
+        root_cause=root_cause,
+        linked_concepts=concepts,
+        strategies=[
+            StrategyNodeResponse(
+                id=strategy.id,
+                title=strategy.title,
+                description=strategy.description,
+                subject_code=strategy.subject_code,
+                tags=strategy.tags,
+                created_at=strategy.created_at,
+            )
+            for strategy in strategies
+        ],
+        similar_errors=[
+            SimilarErrorItem(
+                id=item.id,
+                subject_code=item.subject_code,
+                root_cause=(item.latest_analysis or {}).get("root_cause"),
+                created_at=item.created_at,
+            )
+            for item in similar_errors
+        ],
+        metadata={"strategies_count": len(strategies)},
+    )

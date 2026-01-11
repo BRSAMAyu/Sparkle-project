@@ -17,6 +17,7 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
     op.create_table(
         "tracking_events",
         sa.Column("id", GUID(), nullable=False),
@@ -40,6 +41,15 @@ def upgrade():
     op.create_index("idx_tracking_events_user", "tracking_events", ["user_id"], unique=False)
     op.create_index("idx_tracking_events_type", "tracking_events", ["event_type"], unique=False)
     op.create_index("idx_tracking_events_ts", "tracking_events", ["ts_ms"], unique=False)
+    op.create_index("idx_tracking_events_user_ts", "tracking_events", ["user_id", "ts_ms"], unique=False)
+    if bind.dialect.name == "postgresql":
+        op.create_index(
+            "idx_tracking_events_entities_gin",
+            "tracking_events",
+            ["entities"],
+            unique=False,
+            postgresql_using="gin"
+        )
 
     op.create_table(
         "user_state_snapshots",
@@ -71,6 +81,10 @@ def downgrade():
     op.drop_index("idx_user_state_user", table_name="user_state_snapshots")
     op.drop_table("user_state_snapshots")
 
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.drop_index("idx_tracking_events_entities_gin", table_name="tracking_events")
+    op.drop_index("idx_tracking_events_user_ts", table_name="tracking_events")
     op.drop_index("idx_tracking_events_ts", table_name="tracking_events")
     op.drop_index("idx_tracking_events_type", table_name="tracking_events")
     op.drop_index("idx_tracking_events_user", table_name="tracking_events")

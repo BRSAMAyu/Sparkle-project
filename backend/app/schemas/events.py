@@ -76,6 +76,9 @@ class EvidenceResolveItem(BaseModel):
     status: str
     event: Optional[EventDetailResponse] = None
     state: Optional[UserStateSummary] = None
+    error: Optional[Dict[str, Any]] = None
+    concept: Optional[Dict[str, Any]] = None
+    strategy: Optional[Dict[str, Any]] = None
     redaction_reason: Optional[str] = None
 
 

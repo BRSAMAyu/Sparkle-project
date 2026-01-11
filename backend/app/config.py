@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     INTERVENTION_QUIET_HOURS_END: str = "07:00"
     INTERVENTION_BUDGET_TTL_SECONDS: int = 86400
 
+    # Event Retention
+    EVENT_RETENTION_DAYS: int = 30
+    STATE_RETENTION_DAYS: int = 30
+
     # File Storage
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 52428800  # 50MB

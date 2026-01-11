@@ -7,8 +7,10 @@ class ParallaxStarBackground extends StatelessWidget {
   const ParallaxStarBackground({
     required this.transformationController,
     super.key,
+    this.drawBackground = true,
   });
   final TransformationController transformationController;
+  final bool drawBackground;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -32,6 +34,7 @@ class ParallaxStarBackground extends StatelessWidget {
               offsetX: tx,
               offsetY: ty,
               scale: scale,
+              drawBackground: drawBackground,
             ),
             size: Size.infinite,
           );
@@ -44,33 +47,35 @@ class _ParallaxLayersPainter extends CustomPainter {
     required this.offsetX,
     required this.offsetY,
     required this.scale,
+    required this.drawBackground,
   });
   final double offsetX;
   final double offsetY;
   final double scale;
+  final bool drawBackground;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Fill with deep space void - use theme-aware colors
-    final center = Offset(size.width / 2, size.height / 2);
+    if (drawBackground) {
+      // Fill with deep space void - use theme-aware colors
+      final center = Offset(size.width / 2, size.height / 2);
+      final startColor = DS.deepSpaceStart;
+      final endColor = DS.deepSpaceEnd;
 
-    // Use gradient that adapts to light/dark theme
-    final startColor = DS.deepSpaceStart;
-    final endColor = DS.deepSpaceEnd;
+      final gradient = ui.Gradient.radial(
+        center,
+        math.max(size.width, size.height) * 0.8,
+        [
+          startColor,
+          Color.lerp(startColor, endColor, 0.5) ?? endColor,
+          endColor,
+        ],
+        [0.0, 0.5, 1.0],
+      );
 
-    final gradient = ui.Gradient.radial(
-      center,
-      math.max(size.width, size.height) * 0.8,
-      [
-        startColor,
-        Color.lerp(startColor, endColor, 0.5) ?? endColor,
-        endColor,
-      ],
-      [0.0, 0.5, 1.0],
-    );
-
-    final bgPaint = Paint()..shader = gradient;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+      final bgPaint = Paint()..shader = gradient;
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+    }
 
     // Layer 1: Distant Stars (Slowest, 0.05 factor)
     _drawLayer(canvas, size, 0.05, 150, 0.8, 1.0);
@@ -135,5 +140,6 @@ class _ParallaxLayersPainter extends CustomPainter {
   bool shouldRepaint(covariant _ParallaxLayersPainter oldDelegate) =>
       oldDelegate.offsetX != offsetX ||
       oldDelegate.offsetY != offsetY ||
-      oldDelegate.scale != scale;
+      oldDelegate.scale != scale ||
+      oldDelegate.drawBackground != drawBackground;
 }

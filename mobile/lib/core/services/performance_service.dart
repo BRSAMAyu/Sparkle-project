@@ -6,6 +6,47 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 
+@immutable
+class RenderConfig {
+  const RenderConfig({
+    required this.tier,
+    required this.enableParticles,
+    required this.enableGlow,
+    required this.enableBlur,
+    required this.enableAntialiasing,
+  });
+
+  final PerformanceTier tier;
+  final bool enableParticles;
+  final bool enableGlow;
+  final bool enableBlur;
+  final bool enableAntialiasing;
+}
+
+@immutable
+class BackgroundRenderSettings {
+  const BackgroundRenderSettings({
+    required this.renderScale,
+    required this.renderFps,
+    required this.noiseScale,
+    required this.fieldStrength,
+    required this.maxBursts,
+  });
+
+  final double renderScale;
+  final int renderFps;
+  final double noiseScale;
+  final double fieldStrength;
+  final int maxBursts;
+}
+
+class _FrameSample {
+  _FrameSample(this.endTimestamp, this.frameMs);
+
+  final Duration endTimestamp;
+  final double frameMs;
+}
+
 /// Service to manage app performance settings with adaptive degradation
 class PerformanceService extends ChangeNotifier {
   PerformanceService._();
@@ -21,19 +62,20 @@ class PerformanceService extends ChangeNotifier {
   static const Duration _targetWindowDuration = Duration(seconds: 1);
   static const Duration _downgradeCooldown = Duration(seconds: 10);
   static const Duration _upgradeCooldown = Duration(seconds: 20);
-  static const Duration _sustainedHighPerformanceDuration = Duration(seconds: 5);
 
   // --- Monitoring State ---
   // Store frame end timestamps to compute a real-time sliding window.
   final Queue<Duration> _frameTimestamps = Queue();
+  final Queue<_FrameSample> _frameSamples = Queue();
   
   DateTime? _lastStateChangeTime;
-  DateTime? _highPerformanceStartTime;
   bool _monitoring = false;
   Timer? _checkTimer;
   
   // Cache refresh rate
   double _deviceRefreshRate = 60.0;
+  int _downgradeStreak = 0;
+  int _upgradeStreak = 0;
 
   // --- Getters for Features based on Tier ---
   bool get enableParticles =>
@@ -65,6 +107,51 @@ class PerformanceService extends ChangeNotifier {
     }
   }
 
+  RenderConfig get renderConfig => RenderConfig(
+        tier: currentTier.value,
+        enableParticles: enableParticles,
+        enableGlow: enableGlow,
+        enableBlur: enableBlur,
+        enableAntialiasing: enableAntialiasing,
+      );
+
+  BackgroundRenderSettings get backgroundRenderSettings {
+    switch (currentTier.value) {
+      case PerformanceTier.low:
+        return const BackgroundRenderSettings(
+          renderScale: 0.5,
+          renderFps: 20,
+          noiseScale: 0.8,
+          fieldStrength: 0.6,
+          maxBursts: 1,
+        );
+      case PerformanceTier.medium:
+        return const BackgroundRenderSettings(
+          renderScale: 0.75,
+          renderFps: 30,
+          noiseScale: 1.0,
+          fieldStrength: 0.8,
+          maxBursts: 2,
+        );
+      case PerformanceTier.high:
+        return const BackgroundRenderSettings(
+          renderScale: 1.0,
+          renderFps: 60,
+          noiseScale: 1.2,
+          fieldStrength: 1.0,
+          maxBursts: 4,
+        );
+      case PerformanceTier.ultra:
+        return const BackgroundRenderSettings(
+          renderScale: 1.0,
+          renderFps: 60,
+          noiseScale: 1.4,
+          fieldStrength: 1.2,
+          maxBursts: 4,
+        );
+    }
+  }
+
   /// Start monitoring FPS
   void startMonitoring() {
     if (_monitoring) return;
@@ -81,6 +168,9 @@ class PerformanceService extends ChangeNotifier {
     SchedulerBinding.instance.removeTimingsCallback(_onFrameTiming);
     _checkTimer?.cancel();
     _frameTimestamps.clear();
+    _frameSamples.clear();
+    _downgradeStreak = 0;
+    _upgradeStreak = 0;
   }
   
   double _getDeviceRefreshRate() {
@@ -97,6 +187,12 @@ class PerformanceService extends ChangeNotifier {
   void _onFrameTiming(List<FrameTiming> timings) {
     for (final timing in timings) {
       _frameTimestamps.add(timing.rasterFinish);
+      _frameSamples.add(
+        _FrameSample(
+          timing.rasterFinish,
+          timing.totalSpan.inMicroseconds / 1000.0,
+        ),
+      );
     }
 
     // Maintain a real-time window based on timestamps.
@@ -105,6 +201,13 @@ class PerformanceService extends ChangeNotifier {
           _frameTimestamps.last - _frameTimestamps.first;
       if (window <= _targetWindowDuration) break;
       _frameTimestamps.removeFirst();
+    }
+
+    while (_frameSamples.length > 1) {
+      final window = _frameSamples.last.endTimestamp -
+          _frameSamples.first.endTimestamp;
+      if (window <= _targetWindowDuration) break;
+      _frameSamples.removeFirst();
     }
   }
 
@@ -119,6 +222,7 @@ class PerformanceService extends ChangeNotifier {
     if (durationSeconds <= 0) return;
 
     final fps = (_frameTimestamps.length - 1) / durationSeconds;
+    final p95FrameMs = _calculateP95FrameMs();
 
     final now = DateTime.now();
     final timeSinceChange =
@@ -127,43 +231,58 @@ class PerformanceService extends ChangeNotifier {
     // --- Determine Target & Thresholds ---
     var downgradeThreshold = 20.0;
     var upgradeThreshold = 58.0; // Default for 60Hz
+    var downgradeFrameMs = 40.0;
+    var upgradeFrameMs = 20.0;
     
     if (_deviceRefreshRate > 90) {
       // 120Hz Target
       downgradeThreshold = 80.0;
       upgradeThreshold = 115.0;
+      final targetMs = 1000 / _deviceRefreshRate;
+      downgradeFrameMs = targetMs * 2.5;
+      upgradeFrameMs = targetMs * 1.2;
     } else if (_deviceRefreshRate < 45) {
       // 30Hz Target
       downgradeThreshold = 20.0;
       upgradeThreshold = _deviceRefreshRate * 0.93;
+      final targetMs = 1000 / _deviceRefreshRate;
+      downgradeFrameMs = targetMs * 2.0;
+      upgradeFrameMs = targetMs * 1.1;
     } else {
       // 60Hz Target
       downgradeThreshold = 35.0;
       upgradeThreshold = 58.0;
+      final targetMs = 1000 / _deviceRefreshRate;
+      downgradeFrameMs = targetMs * 2.5;
+      upgradeFrameMs = targetMs * 1.2;
+    }
+
+    final isBad = fps < downgradeThreshold || p95FrameMs > downgradeFrameMs;
+    final isGood = fps > upgradeThreshold && p95FrameMs < upgradeFrameMs;
+
+    if (isBad) {
+      _downgradeStreak++;
+      _upgradeStreak = 0;
+    } else if (isGood) {
+      _upgradeStreak++;
+      _downgradeStreak = 0;
+    } else {
+      _downgradeStreak = 0;
+      _upgradeStreak = 0;
     }
 
     // --- Downgrade Logic ---
-    if (timeSinceChange > _downgradeCooldown) {
-      if (fps < downgradeThreshold) {
-        _performDowngrade();
-        return; 
-      }
+    if (timeSinceChange > _downgradeCooldown && _downgradeStreak >= 3) {
+      _downgradeStreak = 0;
+      _performDowngrade();
+      return;
     }
 
     // --- Upgrade Logic ---
-    if (timeSinceChange > _upgradeCooldown) {
-       // Only upgrade if we are consistently hitting the target cap
-       if (fps > upgradeThreshold) {
-         if (_highPerformanceStartTime == null) {
-           _highPerformanceStartTime = now;
-         } else if (now.difference(_highPerformanceStartTime!) >
-             _sustainedHighPerformanceDuration) {
-           _performUpgrade();
-           _highPerformanceStartTime = null; // Reset
-         }
-       } else {
-         _highPerformanceStartTime = null;
-       }
+    if (timeSinceChange > _upgradeCooldown && _upgradeStreak >= 8) {
+      _upgradeStreak = 0;
+      _performUpgrade();
+      return;
     }
   }
 
@@ -226,5 +345,12 @@ class PerformanceService extends ChangeNotifier {
   void dispose() {
     stopMonitoring();
     super.dispose();
+  }
+
+  double _calculateP95FrameMs() {
+    if (_frameSamples.isEmpty) return 0.0;
+    final samples = _frameSamples.map((s) => s.frameMs).toList()..sort();
+    final index = (samples.length * 0.95).clamp(0, samples.length - 1).toInt();
+    return samples[index];
   }
 }

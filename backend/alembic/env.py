@@ -43,7 +43,10 @@ from app.models import (
     # Intervention models
     InterventionRequest, InterventionAuditLog, InterventionFeedback, UserInterventionSettings,
     # Phase 1 models
-    TrackingEvent, UserStateSnapshot
+    TrackingEvent, UserStateSnapshot,
+    # Phase 2 models
+    StrategyNode, SemanticLink,
+    NightlyReview
 )  # noqa: F401
 
 # this is the Alembic Config object

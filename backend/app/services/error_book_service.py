@@ -21,6 +21,7 @@ from app.schemas.error_book import (
 from app.core.llm_client import llm_client
 from app.services.embedding_service import embedding_service
 from app.core.event_bus import event_bus, ErrorCreated
+from app.services.semantic_memory_service import SemanticMemoryService
 
 class ReviewSchedulerService:
     """
@@ -203,6 +204,12 @@ class ErrorBookService:
             error.latest_analysis = analysis_result
             error.linked_knowledge_node_ids = linked_ids
             # error.suggested_concepts = ... (if LLM returns them)
+
+            try:
+                semantic_service = SemanticMemoryService(self.db)
+                await semantic_service.upsert_strategy_from_error(error)
+            except Exception as e:
+                logger.warning(f"Semantic memory linking failed: {e}")
             
             # If question text was empty, maybe fill it with OCR?
             if not error.question_text and ocr_text:

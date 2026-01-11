@@ -123,6 +123,49 @@ STATE_SIZE = get_or_create_metric(
     ['session_id']
 )
 
+# ========== Event Pipeline Metrics ==========
+EVENT_INGEST_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_event_ingest_total',
+    'Event ingestion outcomes',
+    ['status']
+)
+
+EVENT_INGEST_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_event_ingest_latency_seconds',
+    'Event ingestion latency',
+    ['source']
+)
+
+EVENT_DEDUPE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_event_dedupe_total',
+    'Event dedupe hits',
+    ['source']
+)
+
+EVENT_STREAM_LAG = get_or_create_metric(
+    Gauge,
+    'sparkle_event_stream_lag_seconds',
+    'Stream processing lag in seconds',
+    ['stream']
+)
+
+STATE_ESTIMATOR_RUNS = get_or_create_metric(
+    Counter,
+    'sparkle_state_estimator_runs_total',
+    'State estimator runs',
+    ['result']
+)
+
+STATE_ESTIMATOR_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_state_estimator_latency_seconds',
+    'State estimator latency',
+    []
+)
+
 # ========== Decorators and Tools ==========
 def track_routing_decision(method: str):
     """Routing decision tracking decorator"""
