@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
+import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势
 ///
@@ -83,6 +84,12 @@ class _LearningForecastScreenState
                     children: [
                       // Header
                       _buildHeader(),
+                      const SizedBox(height: DS.xl),
+
+                      // Nightly Review
+                      _buildSectionTitle('夜间复盘'),
+                      const SizedBox(height: DS.md),
+                      const NightlyReviewPanel(compact: true),
                       const SizedBox(height: DS.xl),
 
                       // Engagement Heatmap

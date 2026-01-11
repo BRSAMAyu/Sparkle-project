@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
@@ -117,6 +118,12 @@ class ErrorDetailScreen extends ConsumerWidget {
               const Divider(height: 1),
             ],
 
+            // 同类错因语义摘要
+            _buildSemanticSummarySection(
+              context,
+              ref.watch(errorSemanticSummaryProvider(error.id)),
+            ),
+
             // 关联知识点
             if (error.knowledgeLinks.isNotEmpty) ...[
               _buildKnowledgeSection(context, error),
@@ -230,6 +237,164 @@ class ErrorDetailScreen extends ConsumerWidget {
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSemanticSummarySection(
+    BuildContext context,
+    AsyncValue<ErrorSemanticSummary> summaryAsync,
+  ) {
+    return summaryAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (summary) {
+        final hasContent = (summary.rootCause?.isNotEmpty ?? false) ||
+            summary.strategies.isNotEmpty ||
+            summary.similarErrors.isNotEmpty;
+        if (!hasContent) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(context, '同类错因总结'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (summary.rootCause != null &&
+                      summary.rootCause!.isNotEmpty) ...[
+                    _buildLabeledText(
+                      context,
+                      label: '主要错因',
+                      value: summary.rootCause!,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (summary.strategies.isNotEmpty) ...[
+                    _buildSectionSubtitle(context, '建议策略'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: summary.strategies.map((strategy) {
+                        return _buildTagChip(context, strategy.title);
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (summary.similarErrors.isNotEmpty) ...[
+                    _buildSectionSubtitle(context, '同类错题'),
+                    const SizedBox(height: 8),
+                    ...summary.similarErrors.map(
+                      (item) => _buildBulletText(
+                        context,
+                        '${item.subjectCode} • ${item.rootCause ?? '同类错因'}',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title,
+        style: theme.textTheme.titleMedium
+            ?.copyWith(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildSectionSubtitle(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    return Text(
+      title,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurface,
+      ),
+    );
+  }
+
+  Widget _buildLabeledText(
+    BuildContext context, {
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label：',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagChip(BuildContext context, String text) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBulletText(BuildContext context, String text) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(
+            Icons.arrow_right_rounded,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

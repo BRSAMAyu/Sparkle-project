@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 
@@ -31,26 +30,12 @@ class NightlyReviewPanel extends ConsumerWidget {
           },
         );
 
-        if (!compact) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: content,
-          );
-        }
-
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
-              borderRadius: DS.borderRadius16,
-              boxShadow: DS.shadowSm,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(DS.spacing8),
-              child: content,
-            ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: compact ? 6 : 8,
           ),
+          child: content,
         );
       },
       loading: () => const SizedBox.shrink(),

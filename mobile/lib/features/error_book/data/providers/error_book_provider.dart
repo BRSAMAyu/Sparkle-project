@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
@@ -104,6 +105,17 @@ Future<ErrorRecord> errorDetail(ErrorDetailRef ref, String errorId) async {
   final repository = ref.watch(errorBookRepositoryProvider);
   return repository.getError(errorId);
 }
+
+// ============================================
+// 错题语义摘要 Provider
+// ============================================
+
+/// 错题语义摘要 Provider
+final errorSemanticSummaryProvider =
+    FutureProvider.family<ErrorSemanticSummary, String>((ref, errorId) async {
+  final repository = ref.watch(errorBookRepositoryProvider);
+  return repository.getSemanticSummary(errorId);
+});
 
 // ============================================
 // 今日待复习 Provider

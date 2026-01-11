@@ -53,6 +53,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final hasAction = widget.onConfirm != null || widget.onDismiss != null;
+    final confirmLabel = _getConfirmLabel(widget.action.type);
+    final dismissLabel = _getDismissLabel(widget.action.type);
 
     return GestureDetector(
       onTapDown: hasAction ? (_) => _pressController.forward() : null,
@@ -174,14 +176,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                           children: [
                             if (widget.onDismiss != null)
                               CustomButton.text(
-                                text: '忽略',
+                                text: dismissLabel,
                                 onPressed: widget.onDismiss,
                                 size: CustomButtonSize.small,
                               ),
                             const SizedBox(width: DS.spacing8),
                             if (widget.onConfirm != null)
                               CustomButton.primary(
-                                text: '确认',
+                                text: confirmLabel,
                                 icon: Icons.check_rounded,
                                 onPressed: widget.onConfirm,
                                 size: CustomButtonSize.small,
@@ -268,6 +270,20 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       default:
         return 'AI建议操作';
     }
+  }
+
+  String _getConfirmLabel(String type) {
+    if (type == 'nightly_review') {
+      return '已复盘';
+    }
+    return '确认';
+  }
+
+  String _getDismissLabel(String type) {
+    if (type == 'nightly_review') {
+      return '稍后';
+    }
+    return '忽略';
   }
 
   Widget _buildContentForAction(BuildContext context, WidgetPayload action) {

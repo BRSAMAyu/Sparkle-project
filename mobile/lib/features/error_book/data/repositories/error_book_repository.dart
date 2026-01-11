@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 /// 错题档案 Repository
@@ -239,6 +240,20 @@ class ErrorBookRepository {
       return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
     } on DioException catch (e) {
       throw _handleError(e, '获取统计数据失败');
+    }
+  }
+
+  /// 获取错题语义摘要
+  ///
+  /// GET /errors/{error_id}/semantic
+  Future<ErrorSemanticSummary> getSemanticSummary(String errorId) async {
+    try {
+      final response =
+          await _dio.get<Map<String, dynamic>>('$_basePath/$errorId/semantic');
+      return ErrorSemanticSummary.fromJson(
+          response.data ?? <String, dynamic>{});
+    } on DioException catch (e) {
+      throw _handleError(e, '获取语义摘要失败');
     }
   }
 

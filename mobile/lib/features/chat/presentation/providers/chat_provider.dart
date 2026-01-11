@@ -14,6 +14,7 @@ import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -520,6 +521,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 确认 ActionCard
   void confirmAction(WidgetPayload action) {
+    if (action.type == 'nightly_review') {
+      final reviewId = action.data['review_id']?.toString() ?? '';
+      if (reviewId.isNotEmpty) {
+        _markNightlyReviewed(reviewId);
+        return;
+      }
+    }
+
     final interventionId = action.data['intervention_id']?.toString() ??
         action.data['request_id']?.toString() ??
         '';
@@ -559,6 +568,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 忽略 ActionCard
   void dismissAction(WidgetPayload action) {
+    if (action.type == 'nightly_review') {
+      debugPrint('ℹ️ Nightly review dismissed');
+      return;
+    }
+
     final interventionId = action.data['intervention_id']?.toString() ??
         action.data['request_id']?.toString() ??
         '';
@@ -593,6 +607,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
+  }
+
+  Future<void> _markNightlyReviewed(String reviewId) async {
+    try {
+      await ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);
+      debugPrint('✅ Nightly review marked as reviewed: $reviewId');
+    } catch (e) {
+      debugPrint('❌ Nightly review feedback failed: $e');
+    }
   }
 
   /// 处理 ActionCard 状态更新
