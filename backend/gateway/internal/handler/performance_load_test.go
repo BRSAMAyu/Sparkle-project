@@ -552,10 +552,14 @@ func TestBurstTraffic(t *testing.T) {
 
 			msg := map[string]interface{}{"content": "burst"}
 
+			reqStart := time.Now()
 			_, err := handler.HandleMessage(ctx, msg)
+			latency := float64(time.Since(reqStart).Milliseconds())
+
 			if err != nil {
 				stats.RecordError()
 			}
+			stats.RecordLatency(latency)
 		}(i)
 	}
 

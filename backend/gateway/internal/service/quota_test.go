@@ -1,66 +1,121 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewQuotaService tests QuotaService initialization
-func TestNewQuotaService(t *testing.T) {
-	// Note: Using nil redis client for init testing only
-	// Real integration tests would require a Redis instance
-	var rdb *redis.Client // This would be initialized properly in integration tests
-	qs := NewQuotaService(rdb)
+func TestQuotaService_ReserveRequest(t *testing.T) {
+	// Setup miniredis
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer rdb.Close()
 
-	assert.NotNil(t, qs)
-	assert.Equal(t, rdb, qs.rdb)
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_123"
+
+	t.Run("Reserve with sufficient quota", func(t *testing.T) {
+		// Set initial quota
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "10")
+
+		reqID := "req_1"
+		remaining, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(9), remaining)
+
+		// Verify quota decremented
+		val, _ := s.Get(fmt.Sprintf("user:quota:%s", uid))
+		assert.Equal(t, "9", val)
+
+		// Verify request key created
+		exists := s.Exists(fmt.Sprintf("quota:request:%s:%s", uid, reqID))
+		assert.True(t, exists)
+
+		// Verify sync queue
+		l, err := s.List("queue:sync:quota")
+		assert.NoError(t, err)
+		assert.Len(t, l, 1)
+	})
+
+	t.Run("Reserve with insufficient quota", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "0")
+
+		reqID := "req_2"
+		remaining, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
+		assert.ErrorIs(t, err, ErrQuotaInsufficient)
+		assert.Equal(t, int64(0), remaining)
+	})
+
+	t.Run("Idempotency", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "10")
+		reqID := "req_duplicate"
+
+		// First call
+		_, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+
+		// Second call with same ID should not decrement
+		remaining, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(9), remaining) // Should still be 9, not 8
+	})
 }
 
-// TestDecrQuotaStructure validates DecrQuota method signature
-func TestDecrQuotaStructure(t *testing.T) {
-	// This test validates the method exists and has correct signature
-	qs := &QuotaService{}
+func TestQuotaService_RecordUsage(t *testing.T) {
+	s := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer rdb.Close()
 
-	// Verify method is defined
-	assert.NotNil(t, qs.DecrQuota)
+	svc := NewQuotaService(rdb)
+	ctx := context.Background()
+	uid := "user_456"
 
-	// Method signature validation:
-	// func (s *QuotaService) DecrQuota(ctx context.Context, uid string) (int64, error)
-	// This is compile-time verified by Go's type system
-}
+	t.Run("Record usage", func(t *testing.T) {
+		reqID := "req_usage_1"
+		dayKey := fmt.Sprintf("llm_tokens:%s:%s", uid, time.Now().Format("2006-01-02"))
 
-// Integration test patterns for QuotaService when Redis is available
-// These tests demonstrate the expected behavior:
-//
-// TestDecrQuota_Integration_Success (requires Redis):
-//   1. Set initial quota in Redis: user:quota:{uid} = 100
-//   2. Call DecrQuota(ctx, uid)
-//   3. Expect: int64(99), nil error
-//   4. Verify in Redis: user:quota:{uid} = 99
-//
-// TestDecrQuota_Integration_NonexistentKey (requires Redis):
-//   1. Do not set any quota for user
-//   2. Call DecrQuota(ctx, uid)
-//   3. Expect: int64(-1), nil error (DECR on non-existent key returns -1)
-//
-// TestDecrQuota_Integration_Lua Script (requires Redis):
-//   1. Set initial quota: user:quota:{uid} = 100
-//   2. Call DecrQuota(ctx, uid)
-//   3. Verify:
-//      - Returns decremented value (99)
-//      - Queue entry pushed to queue:sync:quota
-//      - Payload contains JSON: {"uid":"...", "delta":-1, "ts":...}
-//
-// These tests should be run in ./tests/integration/ when full Redis is available
+		ok, err := svc.RecordUsage(ctx, uid, reqID, 100, time.Minute)
+		assert.NoError(t, err)
+		assert.True(t, ok)
 
-// BenchmarkNewQuotaService benchmarks QuotaService creation
-func BenchmarkNewQuotaService(b *testing.B) {
-	var rdb *redis.Client // Placeholder
+		// Verify tokens added
+		val, _ := s.Get(dayKey)
+		assert.Equal(t, "100", val)
+	})
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = NewQuotaService(rdb)
-	}
+	t.Run("Record usage idempotency", func(t *testing.T) {
+		reqID := "req_usage_dup"
+		dayKey := fmt.Sprintf("llm_tokens:%s:%s", uid, time.Now().Format("2006-01-02"))
+
+		// First call
+		svc.RecordUsage(ctx, uid, reqID, 50, time.Minute)
+
+		// Verify key exists
+		key := fmt.Sprintf("usage:request:%s:%s", uid, reqID)
+		assert.True(t, s.Exists(key), "Request key should exist after first call")
+
+		// Second call
+		ok, err := svc.RecordUsage(ctx, uid, reqID, 50, time.Minute)
+		assert.NoError(t, err)
+		assert.False(t, ok) // Should return false as it was already recorded
+
+		// Verify tokens are 100 + 50 = 150 (from prev test + this test's first call)
+		// Wait, miniredis is shared? No, different keys or I need to flush.
+		// Actually I reused 's' but different keys/reqIDs.
+		// Previous test used user_456 but distinct reqID.
+		// dayKey is same. 100 (prev) + 50 (this) = 150.
+		val, _ := s.Get(dayKey)
+		assert.Equal(t, "150", val)
+	})
 }

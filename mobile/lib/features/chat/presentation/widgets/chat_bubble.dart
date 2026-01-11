@@ -369,23 +369,34 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                   ...(widget.message as ChatMessageModel)
                                       .widgets!
                                       .map(
-                                        (w) => Padding(
-                                          padding: const EdgeInsets.only(
-                                              top: 8.0, right: 8.0, left: 8.0,),
-                                          child: ActionCard(
-                                            action: w,
-                                            onConfirm: widget.onActionConfirm !=
-                                                    null
-                                                ? () =>
-                                                    widget.onActionConfirm!(w)
-                                                : null,
-                                            onDismiss: widget.onActionDismiss !=
-                                                    null
-                                                ? () =>
-                                                    widget.onActionDismiss!(w)
-                                                : null,
-                                          ),
-                                        ),
+                                        (w) {
+                                          final actionable = (w.data['id'] ??
+                                                  w.data['tool_result_id'] ??
+                                                  w.data['intervention_id'] ??
+                                                  w.data['request_id']) !=
+                                              null;
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                                top: 8.0,
+                                                right: 8.0,
+                                                left: 8.0,),
+                                            child: ActionCard(
+                                              action: w,
+                                              onConfirm: actionable &&
+                                                      widget.onActionConfirm !=
+                                                          null
+                                                  ? () => widget
+                                                      .onActionConfirm!(w)
+                                                  : null,
+                                              onDismiss: actionable &&
+                                                      widget.onActionDismiss !=
+                                                          null
+                                                  ? () => widget
+                                                      .onActionDismiss!(w)
+                                                  : null,
+                                            ),
+                                          );
+                                        },
                                       ),
                               ],
                             ),

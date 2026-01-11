@@ -47,6 +47,7 @@ class GalaxyRenderEngine {
   final ValueNotifier<int> frameTick = ValueNotifier(0);
   final ValueNotifier<GalaxyRenderSettings> settings =
       ValueNotifier(_settingsFromService(PerformanceService.instance));
+  final ValueNotifier<String?> fallbackReason = ValueNotifier(null);
 
   FragmentShader? _fieldShader;
   FragmentShader? _burstShader;
@@ -55,6 +56,7 @@ class GalaxyRenderEngine {
   final List<GalaxyBurst?> _bursts = List<GalaxyBurst?>.filled(4, null);
   int _burstIndex = 0;
   DateTime _startTime = DateTime.now();
+  String? _lastLoggedReason;
 
   Future<void> prewarm() async {
     if (_shaderFailed || isReady.value) return;
@@ -69,10 +71,12 @@ class GalaxyRenderEngine {
       _burstShader = burstProgram.fragmentShader();
       _warmUpShaders();
       isReady.value = true;
+      fallbackReason.value = null;
       _startTicker();
     } catch (e) {
       _shaderFailed = true;
       isReady.value = false;
+      fallbackReason.value = 'prewarm_failed';
       debugPrint('GalaxyRenderEngine prewarm failed: $e');
     }
   }
@@ -83,6 +87,7 @@ class GalaxyRenderEngine {
     isReady.dispose();
     frameTick.dispose();
     settings.dispose();
+    fallbackReason.dispose();
   }
 
   void addBurst({
@@ -119,6 +124,14 @@ class GalaxyRenderEngine {
   double get timeSeconds => _secondsSinceStart();
 
   bool get hasShader => !_shaderFailed && isReady.value;
+  bool get shaderFailed => _shaderFailed;
+
+  void logFallbackOnce() {
+    final reason = fallbackReason.value;
+    if (reason == null || reason == _lastLoggedReason) return;
+    _lastLoggedReason = reason;
+    debugPrint('Galaxy shader fallback: $reason');
+  }
 
   void _startTicker() {
     _frameTimer?.cancel();

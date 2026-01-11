@@ -179,6 +179,11 @@ class ApiEndpoints {
   // Dashboard
   static const String dashboardStatus = '/dashboard/status';
 
+  // Nightly Reviews
+  static const String nightlyReviewLatest = '/reviews/nightly/latest';
+  static String nightlyReviewFeedback(String id) =>
+      '/reviews/nightly/$id/feedback';
+
   // Focus Sessions (P0.3)
   static const String focusSessions = '/focus/sessions';
   static const String focusStats = '/focus/stats';

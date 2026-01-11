@@ -142,7 +142,7 @@ func main() {
 	)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
-	chaosHandler := handler.NewChaosHandler(chatHistoryService)
+	chaosHandler := handler.NewChaosHandler(chatHistoryService, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
 
 	// Auth Service
@@ -383,9 +383,12 @@ func main() {
 	admin := r.Group("/admin", middleware.AdminAuthMiddleware(cfg))
 	{
 		// Chaos Engineering
-		admin.POST("/chaos/inject", chaosManager.HandleInject)
-		admin.POST("/chaos/config", chaosHandler.SetThreshold)
-		admin.GET("/chaos/status", chaosHandler.GetStatus)
+		chaosRoutes := admin.Group("/chaos", middleware.ChaosGuardMiddleware(cfg))
+		chaosRoutes.POST("/inject", chaosManager.HandleInject)
+		chaosRoutes.POST("/config", chaosHandler.SetThreshold)
+		chaosRoutes.GET("/status", chaosHandler.GetStatus)
+		chaosRoutes.POST("/grpc/latency", chaosHandler.SetGrpcLatency)
+		chaosRoutes.DELETE("/grpc/latency", chaosHandler.ResetGrpcLatency)
 
 		// CQRS Projection Management
 		admin.GET("/cqrs/projections", func(c *gin.Context) {

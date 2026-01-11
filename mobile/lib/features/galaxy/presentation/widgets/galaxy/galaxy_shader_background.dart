@@ -18,6 +18,7 @@ class GalaxyShaderBackground extends StatelessWidget {
         ]),
         builder: (context, child) {
           if (!engine.hasShader) {
+            engine.logFallbackOnce();
             return const SizedBox.shrink();
           }
 

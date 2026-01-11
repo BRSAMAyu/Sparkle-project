@@ -520,6 +520,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 确认 ActionCard
   void confirmAction(WidgetPayload action) {
+    final interventionId = action.data['intervention_id']?.toString() ??
+        action.data['request_id']?.toString() ??
+        '';
+    if (interventionId.isNotEmpty) {
+      _chatRepository.sendInterventionFeedback(
+        requestId: interventionId,
+        feedbackType: 'accept',
+        metadata: {'widget_type': action.type},
+      );
+      debugPrint('✅ Intervention accepted: $interventionId');
+      return;
+    }
+
     // 从 WidgetPayload 中提取 tool_result_id
     final toolResultId = action.data['id']?.toString() ??
         action.data['tool_result_id']?.toString() ??
@@ -546,6 +559,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// 忽略 ActionCard
   void dismissAction(WidgetPayload action) {
+    final interventionId = action.data['intervention_id']?.toString() ??
+        action.data['request_id']?.toString() ??
+        '';
+    if (interventionId.isNotEmpty) {
+      _chatRepository.sendInterventionFeedback(
+        requestId: interventionId,
+        feedbackType: 'reject',
+        metadata: {'widget_type': action.type},
+      );
+      debugPrint('❌ Intervention dismissed: $interventionId');
+      return;
+    }
+
     final toolResultId = action.data['id']?.toString() ??
         action.data['tool_result_id']?.toString() ??
         '';

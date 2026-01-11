@@ -19,6 +19,7 @@ import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
 import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/sprint_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -153,6 +154,8 @@ class _DashboardScreen extends ConsumerWidget {
 
                   // Message Notification Widget
                   const SliverToBoxAdapter(child: HomeNotificationCard()),
+
+                  const SliverToBoxAdapter(child: NightlyReviewPanel()),
 
                   const SliverToBoxAdapter(child: SizedBox(height: 10)),
 

@@ -25,6 +25,9 @@ type Config struct {
 	AdminSecret        string `mapstructure:"ADMIN_SECRET"`
 	RabbitMQURL        string `mapstructure:"RABBITMQ_URL"`
 	InternalAPIKey     string `mapstructure:"INTERNAL_API_KEY"`
+	ChaosEnabled       bool   `mapstructure:"CHAOS_ENABLED"`
+	ChaosAllowProd     bool   `mapstructure:"CHAOS_ALLOW_PROD"`
+	ToxiproxyURL       string `mapstructure:"TOXIPROXY_URL"`
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
@@ -50,6 +53,11 @@ type Config struct {
 // IsDevelopment returns true if running in development mode
 func (c *Config) IsDevelopment() bool {
 	return c.Environment == "" || c.Environment == "dev" || c.Environment == "development"
+}
+
+// IsProduction returns true if running in production mode
+func (c *Config) IsProduction() bool {
+	return c.Environment == "prod" || c.Environment == "production"
 }
 
 // IsOriginAllowed checks if the given origin is allowed for WebSocket connections
@@ -146,6 +154,9 @@ func Load() *Config {
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 	viper.SetDefault("INTERNAL_API_KEY", "")
+	viper.SetDefault("CHAOS_ENABLED", false)
+	viper.SetDefault("CHAOS_ALLOW_PROD", false)
+	viper.SetDefault("TOXIPROXY_URL", "http://toxiproxy:8474")
 
 	// File storage defaults
 	viper.SetDefault("MINIO_ENDPOINT", "localhost:9000")

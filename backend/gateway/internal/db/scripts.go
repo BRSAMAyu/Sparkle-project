@@ -12,3 +12,6 @@ var ReserveQuotaScript string
 
 //go:embed scripts/record_usage.lua
 var RecordUsageScript string
+
+//go:embed scripts/record_usage_segment.lua
+var RecordUsageSegmentScript string

@@ -240,6 +240,14 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Migration Contract Check
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/main
+        run: python scripts/check_migration_contracts.py
 
       - name: Set up Python
         uses: actions/setup-python@v5

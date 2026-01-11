@@ -212,6 +212,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.infoGradient;
       case 'add_error':
         return DS.warningGradient;
+      case 'nightly_review':
+        return DS.cardGradientNeutral;
       default:
         return DS.primaryGradient;
     }
@@ -227,6 +229,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.info;
       case 'add_error':
         return DS.warning;
+      case 'nightly_review':
+        return DS.neutral700;
       default:
         return DS.primaryBase;
     }
@@ -242,6 +246,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.settings_rounded;
       case 'add_error':
         return Icons.error_outline_rounded;
+      case 'nightly_review':
+        return Icons.nightlight_round;
       default:
         return Icons.touch_app_rounded;
     }
@@ -257,13 +263,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return 'AI建议：更新偏好';
       case 'add_error':
         return 'AI建议：记录错题';
+      case 'nightly_review':
+        return '夜间复盘';
       default:
         return 'AI建议操作';
     }
   }
 
-  Widget _buildContentForAction(BuildContext context, WidgetPayload action) =>
-      Column(
+  Widget _buildContentForAction(BuildContext context, WidgetPayload action) {
+    if (action.type == 'nightly_review') {
+      return _buildNightlyReviewContent(context, action);
+    }
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (action.data['title'] != null) ...[
@@ -342,6 +353,73 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             ),
         ],
       );
+  }
+
+  Widget _buildNightlyReviewContent(BuildContext context, WidgetPayload action) {
+    final summary = action.data['summary']?.toString() ?? '';
+    final reviewDate = action.data['review_date']?.toString() ?? '';
+    final rawTodos = action.data['todo_items'] as List<dynamic>? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (reviewDate.isNotEmpty)
+          Text(
+            reviewDate,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                ),
+          ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral900,
+                ),
+          ),
+        ],
+        if (rawTodos.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '明日待办',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...rawTodos.take(5).map((item) {
+            final todo = item as Map<String, dynamic>;
+            final type = todo['type']?.toString() ?? 'task';
+            final payload = todo['payload'] as Map<String, dynamic>? ?? {};
+            final label = payload['title']?.toString() ??
+                payload['error_id']?.toString() ??
+                payload['subject_code']?.toString() ??
+                type;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle_outline,
+                      size: DS.iconSizeXs, color: DS.neutral500),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.neutral800,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
 
   IconData _getParamIcon(String key) {
     switch (key.toLowerCase()) {

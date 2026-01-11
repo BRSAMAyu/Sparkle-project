@@ -17,8 +17,15 @@ class NightlyReviewResponse(BaseModel):
     summary_text: Optional[str] = None
     todo_items: Optional[List[NightlyReviewItem]] = None
     evidence_refs: Optional[List[Dict[str, Any]]] = None
+    widget_payload: Optional[Dict[str, Any]] = None
     model_version: Optional[str] = None
     status: str
+    reviewed_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class NightlyReviewFeedbackRequest(BaseModel):
+    action: str
+    source: Optional[str] = None

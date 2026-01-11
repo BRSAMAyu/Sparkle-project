@@ -26,6 +26,7 @@ services:
       - AGENT_ADDRESS=toxiproxy:8666
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
@@ -40,6 +41,8 @@ services:
       - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
       - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
       - TOXIPROXY_URL=http://toxiproxy:8474
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
       - toxiproxy
@@ -59,6 +62,7 @@ services:
       - AGENT_ADDRESS=toxiproxy:8666
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
@@ -73,6 +77,8 @@ services:
       - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
       - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
       - TOXIPROXY_URL=http://toxiproxy:8474
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
       - backend
       - toxiproxy

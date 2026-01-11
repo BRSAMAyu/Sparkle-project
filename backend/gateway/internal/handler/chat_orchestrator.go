@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -747,6 +749,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		attribute.String("session_id", input.SessionID),
 	)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
 	input.Message = sanitizer.Sanitize(input.Message)
 
@@ -815,6 +820,19 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		reqID = fmt.Sprintf("req_%s", uuid.New().String())
 	}
 
+	var dailyLimit int64
+	var dailyUsageStart int64
+	if h.quota != nil {
+		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
+		if dailyLimit > 0 {
+			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
+				dailyUsageStart = usage
+			} else {
+				log.Printf("Failed to load daily usage: %v", err)
+			}
+		}
+	}
+
 	if h.quota != nil {
 		remaining, err := h.quota.ReserveRequest(ctx, userID, reqID, 24*time.Hour)
 		if err != nil {
@@ -859,6 +877,18 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	if h.agentClient == nil {
+		log.Printf("Agent client not initialized")
+		switch r := responder.(type) {
+		case *envelopeResponder:
+			r.SendError("unavailable", "AI Service Unavailable", true)
+		default:
+			conn := responder.(*websocket.Conn)
+			conn.WriteJSON(gin.H{"type": "error", "message": "AI Service Unavailable"})
+		}
+		return false
+	}
+
 	// Call Python Agent via gRPC (server-side streaming)
 	stream, err := h.agentClient.StreamChat(ctx, req)
 	if err != nil {
@@ -884,6 +914,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	// Receive and forward streaming responses
 	var fullText string
 	var usageTotalTokens int64
+	var segmentRecorded int64
+	var segmentIndex int
+	var outputRuneCount int
+	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
@@ -905,13 +939,39 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		// Accumulate full text for persistence using pooled builder
 		if delta := resp.GetDelta(); delta != "" {
 			textBuilder.WriteString(delta)
+			outputRuneCount += countRunes(delta)
 		}
 		if ft := resp.GetFullText(); ft != "" {
 			textBuilder.Reset()
 			textBuilder.WriteString(ft)
+			outputRuneCount = countRunes(ft)
 		}
 		if usage := resp.GetUsage(); usage != nil {
 			usageTotalTokens = int64(usage.TotalTokens)
+		}
+
+		if h.quota != nil && segmentSize > 0 {
+			estimatedTokens := estimateTokensFromRunes(outputRuneCount)
+			for estimatedTokens-segmentRecorded >= segmentSize {
+				if dailyLimit > 0 && dailyUsageStart+segmentRecorded+segmentSize > dailyLimit {
+					log.Printf("Daily quota exceeded mid-stream user=%s request=%s", userID, reqID)
+					cancel()
+					switch r := responder.(type) {
+					case *envelopeResponder:
+						r.SendError("resource_exhausted", "Daily quota exceeded", false)
+					default:
+						conn := responder.(*websocket.Conn)
+						conn.WriteJSON(gin.H{"type": "error", "message": "Daily quota exceeded"})
+					}
+					return false
+				}
+				segmentIndex++
+				if _, err := h.quota.RecordUsageSegment(ctx, userID, reqID, segmentIndex, segmentSize, 24*time.Hour); err != nil {
+					log.Printf("Failed to record usage segment: %v", err)
+					break
+				}
+				segmentRecorded += segmentSize
+			}
 		}
 
 		switch r := responder.(type) {
@@ -934,11 +994,25 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	fullText = textBuilder.String()
 
 	if h.quota != nil && usageTotalTokens > 0 {
-		if _, err := h.quota.RecordUsage(ctx, userID, reqID, usageTotalTokens, 24*time.Hour); err != nil {
+		delta := usageTotalTokens - segmentRecorded
+		if delta < 0 {
+			delta = 0
+		}
+		if _, err := h.quota.RecordUsage(ctx, userID, reqID, delta, 24*time.Hour); err != nil {
 			log.Printf("Failed to record usage: %v", err)
 		}
 	} else if h.quota != nil && usageTotalTokens == 0 {
-		log.Printf("Usage missing for request=%s user=%s", reqID, userID)
+		estimatedTokens := estimateTokensFromRunes(outputRuneCount)
+		delta := estimatedTokens - segmentRecorded
+		if delta < 0 {
+			delta = 0
+		}
+		if _, err := h.quota.RecordUsage(ctx, userID, reqID, delta, 24*time.Hour); err != nil {
+			log.Printf("Failed to record usage: %v", err)
+		}
+		if delta == 0 {
+			log.Printf("Usage missing for request=%s user=%s", reqID, userID)
+		}
 	}
 
 	// Add metadata for the final state
@@ -978,6 +1052,33 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 
 	return false
+}
+
+func estimateTokensFromRunes(runes int) int64 {
+	if runes <= 0 {
+		return 0
+	}
+	estimated := int64(float64(runes) * 1.5)
+	if estimated < 1 {
+		return 1
+	}
+	return estimated
+}
+
+func countRunes(text string) int {
+	return len([]rune(text))
+}
+
+func getEnvInt64(key string, fallback int64) int64 {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	val, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return val
 }
 
 type actionStatusSender interface {

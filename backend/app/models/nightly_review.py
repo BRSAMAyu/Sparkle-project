@@ -2,7 +2,7 @@
 Nightly Review Models
 Phase 2 nightly reviewer output.
 """
-from sqlalchemy import Column, String, JSON, Date, ForeignKey
+from sqlalchemy import Column, String, JSON, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
@@ -18,5 +18,6 @@ class NightlyReview(BaseModel):
     evidence_refs = Column(JSON, nullable=True)
     model_version = Column(String(50), nullable=True)
     status = Column(String(30), default="generated", nullable=False)
+    reviewed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="nightly_reviews")

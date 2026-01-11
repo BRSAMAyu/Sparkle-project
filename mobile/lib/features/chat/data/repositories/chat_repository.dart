@@ -134,6 +134,18 @@ class ChatRepository {
     );
   }
 
+  void sendInterventionFeedback({
+    required String requestId,
+    required String feedbackType,
+    Map<String, dynamic>? metadata,
+  }) {
+    _wsService.sendInterventionFeedback(
+      requestId: requestId,
+      feedbackType: feedbackType,
+      metadata: metadata,
+    );
+  }
+
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(
@@ -251,8 +263,30 @@ class ChatRepository {
           widgetData: data['widget_data'] as Map<String, dynamic>,
         );
 
+      case 'intervention':
+        final intervention = data['intervention'] as Map<String, dynamic>? ?? {};
+        final content = intervention['content'] as Map<String, dynamic>? ?? {};
+        final widgetType =
+            content['widget_type'] as String? ?? 'intervention_card';
+        final widgetData =
+            (content['widget_data'] as Map<String, dynamic>?) ??
+                Map<String, dynamic>.from(content);
+        widgetData['intervention_id'] ??= intervention['id'];
+        widgetData['intervention_topic'] ??= intervention['topic'];
+        widgetData['intervention_level'] ??= intervention['level'];
+        return WidgetEvent(widgetType: widgetType, widgetData: widgetData);
+
       case 'done':
         return DoneEvent();
+
+      case 'intervention_feedback_ack':
+        return ActionStatusEvent(
+          actionId: data['request_id'] as String? ?? '',
+          status: data['status'] as String? ?? 'unknown',
+          message: data['message'] as String?,
+          widgetType: 'intervention',
+          timestamp: data['timestamp'] as int?,
+        );
 
       default:
         return UnknownEvent(data: data);

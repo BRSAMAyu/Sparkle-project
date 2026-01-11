@@ -56,6 +56,23 @@ class NightlyReviewService:
         )
         return result.scalar_one_or_none()
 
+    async def mark_reviewed(self, review_id: UUID, user_id: UUID) -> Optional[NightlyReview]:
+        result = await self.db.execute(
+            select(NightlyReview).where(
+                NightlyReview.id == review_id,
+                NightlyReview.user_id == user_id,
+            )
+        )
+        review = result.scalar_one_or_none()
+        if not review:
+            return None
+
+        review.status = "reviewed"
+        review.reviewed_at = datetime.utcnow()
+        await self.db.commit()
+        await self.db.refresh(review)
+        return review
+
     async def _get_or_create(self, user_id: UUID, review_date: date) -> NightlyReview:
         result = await self.db.execute(
             select(NightlyReview).where(
@@ -140,6 +157,7 @@ class NightlyReviewService:
                     "payload": {
                         "error_id": str(error.id),
                         "subject_code": error.subject_code,
+                        "title": f"{error.subject_code} 错题复盘",
                     },
                 }
             )

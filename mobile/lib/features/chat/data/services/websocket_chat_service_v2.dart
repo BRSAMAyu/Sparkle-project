@@ -58,6 +58,24 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return UnknownEvent(data: data);
 
+      case 'intervention':
+        final intervention = data['intervention'] as Map<String, dynamic>?;
+        if (intervention == null) {
+          return UnknownEvent(data: data);
+        }
+        final content = intervention['content'] as Map<String, dynamic>? ?? {};
+        final widgetType =
+            content['widget_type'] as String? ?? 'intervention_card';
+        final widgetData =
+            (content['widget_data'] as Map<String, dynamic>?) ??
+                Map<String, dynamic>.from(content);
+
+        widgetData['intervention_id'] ??= intervention['id'];
+        widgetData['intervention_topic'] ??= intervention['topic'];
+        widgetData['intervention_level'] ??= intervention['level'];
+
+        return WidgetEvent(widgetType: widgetType, widgetData: widgetData);
+
       case 'widget':
         final widgetType = data['widget_type'] as String?;
         final widgetData = data['widget_data'] as Map<String, dynamic>?;
@@ -126,6 +144,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             status: status,
             message: data['message'] as String?,
             widgetType: data['widget_type'] as String?,
+            timestamp: data['timestamp'] as int?,
+          );
+        }
+        return UnknownEvent(data: data);
+
+      case 'intervention_feedback_ack':
+        final requestId = data['request_id'] as String?;
+        final status = data['status'] as String?;
+        if (requestId != null && status != null) {
+          return ActionStatusEvent(
+            actionId: requestId,
+            status: status,
+            message: data['message'] as String?,
+            widgetType: 'intervention',
             timestamp: data['timestamp'] as int?,
           );
         }
@@ -293,6 +325,24 @@ class WebSocketChatServiceV2 {
 
     _sendMessage(feedback);
     _log('📤 Action feedback sent: $action for $widgetType');
+  }
+
+  /// 发送干预反馈（Intervention）
+  void sendInterventionFeedback({
+    required String requestId,
+    required String feedbackType,
+    Map<String, dynamic>? metadata,
+  }) {
+    final feedback = {
+      'type': 'intervention_feedback',
+      'request_id': requestId,
+      'feedback_type': feedbackType,
+      if (metadata != null) 'metadata': metadata,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    _sendMessage(feedback);
+    _log('📤 Intervention feedback sent: $feedbackType for $requestId');
   }
 
   /// 发送专注完成事件
