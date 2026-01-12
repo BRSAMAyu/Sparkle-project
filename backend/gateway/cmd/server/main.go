@@ -281,20 +281,17 @@ func main() {
 
 	// ==================== Galaxy Outbox Relay (RabbitMQ) ====================
 	// This relay processes the outbox_events table and publishes to RabbitMQ
-	// for external service integration (Analytics, Task Stats, etc.)
-
-	// Create raw DB connection for OutboxRelay as it uses sql.DB
-	sqlDB, err := sql.Open("postgres", cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Unable to open sql.DB for outbox relay: %v", err)
-	}
-	defer sqlDB.Close()
-
-	galaxyOutboxRelay, err := worker.NewOutboxRelay(sqlDB, cfg.RabbitMQURL, logger.Log, cqrsMetrics)
-	if err != nil {
-		logger.Log.Error("Failed to initialize Galaxy Outbox Relay", zap.Error(err))
+	// P1: Architecture Resilience
+	if cfg.RabbitMQURL != "" {
+		galaxyOutboxRelay, err := worker.NewOutboxRelay(sqlDB, cfg.RabbitMQURL, logger.Log, cqrsMetrics)
+		if err != nil {
+			logger.Log.Error("Failed to initialize Galaxy Outbox Relay", zap.Error(err))
+		} else {
+			// Start the relay in a goroutine
+			go galaxyOutboxRelay.Start(ctx)
+		}
 	} else {
-		go galaxyOutboxRelay.Start(context.Background())
+		logger.Log.Info("Skipping Galaxy Outbox Relay (RABBITMQ_URL not set)")
 	}
 
 	// ==================== CQRS Health Check ====================

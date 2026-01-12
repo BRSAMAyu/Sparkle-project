@@ -116,18 +116,18 @@ services:
     volumes:
       - ./backend:/app
 
-  flower:
-    image: mher/flower:1.2.0
-    container_name: sparkle_flower
-    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower.db
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-    environment:
-      - FLOWER_PURGE_OFFLINE_WORKERS=10
-    volumes:
-      - ./flower_data:/flower_data
+#  flower:
+#    image: mher/flower:1.2.0
+#    container_name: sparkle_flower
+#    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower.db
+#    ports:
+#      - "5555:5555"
+#    depends_on:
+#      - redis
+#    environment:
+#      - FLOWER_PURGE_OFFLINE_WORKERS=10
+#    volumes:
+#      - ./flower_data:/flower_data
 
   sparkle_gateway:
     build: 
