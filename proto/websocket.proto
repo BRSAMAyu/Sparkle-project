@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package sparkle.ws;
+
+option go_package = "github.com/sparkle/gateway/gen/ws;ws";
+
+import "agent_service.proto";
+
+// WebSocketMessage represents the envelope for all WebSocket communications
+message WebSocketMessage {
+  string version = 1; // Protocol version, e.g., "2.0"
+  string type = 2; // Message type: "chat", "tool_result", "status", etc.
+  bytes payload = 3; // Protobuf binary payload (marshaled specific message)
+  string trace_id = 4; // OpenTelemetry Trace ID
+  string request_id = 5; // Idempotency / Request ID
+  int64 timestamp = 6; // Unix timestamp in milliseconds
+}
+
+// ChatMessage represents a user chat message payload
+message ChatMessage {
+  string session_id = 1;
+  string user_id = 2;
+  string message = 3;
+  repeated agent.v1.ToolCall tool_calls = 4;
+}
+
+message UpdateNodeMasteryRequest {
+  string node_id = 1;
+  int32 mastery = 2;
+  int64 timestamp = 3;
+  string request_id = 4;
+  int32 revision = 5;
+}

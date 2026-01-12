@@ -218,6 +218,17 @@ class TestCoerceStrList:
         assert coerce_str_list([]) == []
 
 
+class TestExamIntentDetection:
+    """考试意图降级检测"""
+
+    def test_exam_intent_degraded_reason(self):
+        parser = LLMResponseParser()
+        result = parser.parse("建议你明天考试前进行冲刺复习。")
+        assert result.parse_degraded is True
+        assert result.degraded_reason is not None
+        assert "考试冲刺准备" in result.degraded_reason
+
+
 class TestCreateTaskParams:
     """任务参数验证测试"""
 

@@ -2,11 +2,13 @@
 Knowledge Galaxy API
 知识星图相关接口
 """
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user_id, get_db
 from app.services.galaxy_service import GalaxyService
@@ -17,6 +19,8 @@ from app.schemas.galaxy import (
     SparkResult,
     SearchRequest,
     SearchResponse,
+    ExpansionFeedbackRequest,
+    ExpansionFeedbackResponse,
     ReviewSuggestionsResponse,
     ReviewSuggestion,
     NodeDetailResponse,
@@ -42,6 +46,38 @@ async def get_decay_service(db: AsyncSession = Depends(get_db)) -> DecayService:
     """获取 DecayService 实例"""
     return DecayService(db)
 
+
+class MasterySyncRequest(BaseModel):
+    node_id: UUID
+    mastery: int = Field(..., ge=0, le=100)
+    version: datetime
+    reason: str = "offline_sync"
+
+@router.post("/sync/mastery")
+async def sync_node_mastery(
+    request: MasterySyncRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Synchronize node mastery from mobile client (via Gateway).
+    Supports optimistic concurrency using the version (timestamp) field.
+    """
+    result = await galaxy_service.update_node_mastery(
+        user_id=UUID(user_id),
+        node_id=request.node_id,
+        new_mastery=request.mastery,
+        reason=request.reason,
+        version=request.version
+    )
+    
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("reason", "conflict")
+        )
+        
+    return result
 
 # ==========================================
 # API 端点
@@ -163,6 +199,28 @@ async def search_nodes(
         results=results,
         total_count=len(results)
     )
+
+
+@router.post("/expansion/feedback", response_model=ExpansionFeedbackResponse)
+async def submit_expansion_feedback(
+    request: ExpansionFeedbackRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    提交知识拓展反馈
+    """
+    feedback_id = await galaxy_service.record_expansion_feedback(
+        user_id=UUID(user_id),
+        trigger_node_id=request.trigger_node_id,
+        expansion_queue_id=request.expansion_queue_id,
+        rating=request.rating,
+        implicit_score=request.implicit_score,
+        feedback_type=request.feedback_type,
+        prompt_version=request.prompt_version,
+        metadata=request.metadata
+    )
+    return ExpansionFeedbackResponse(success=True, feedback_id=feedback_id)
 
 
 @router.get("/review/suggestions", response_model=ReviewSuggestionsResponse)
@@ -320,6 +378,104 @@ async def galaxy_events_stream(
     response.background = cleanup
 
     return response
+
+# ==========================================
+# Phase 3 & 4 Endpoints
+# ==========================================
+
+class ViewportRequest(BaseModel):
+    min_x: float
+    max_x: float
+    min_y: float
+    max_y: float
+
+class PositionUpdateItem(BaseModel):
+    id: UUID
+    x: float
+    y: float
+
+class PositionUpdateRequest(BaseModel):
+    updates: list[PositionUpdateItem]
+
+@router.post("/nodes/viewport", response_model=GalaxyGraphResponse)
+async def get_nodes_in_viewport(
+    request: ViewportRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Get nodes within a specific viewport (bounding box).
+    Phase 3.2 Backend Viewport API.
+    """
+    nodes = await galaxy_service.get_nodes_in_bounds(
+        request.min_x, request.max_x, request.min_y, request.max_y
+    )
+    # Convert to GalaxyGraphResponse format (simplified for viewport)
+    # We might need to fetch status for these nodes too.
+    # For efficiency, we just return the nodes and let frontend handle status or fetch status in batch.
+    # But GalaxyGraphResponse expects NodeWithStatus.
+    
+    # Quick fix: fetch status for these nodes
+    # Ideally structure service should return NodeWithStatus if we modify get_nodes_in_bounds to do join.
+    # For MVP of this feature, let's map what we have.
+    
+    # We can reuse get_galaxy_graph logic but restricted by IDs if we had get_nodes_by_ids.
+    # Or just return raw nodes data in a specific response model.
+    # Reusing GalaxyGraphResponse for consistency.
+    
+    # Construct minimal response
+    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo
+    
+    mapped_nodes = []
+    for node in nodes:
+        # TODO: Fetch real status efficiently (bulk query)
+        status = UserNodeStatus(mastery_score=0, is_unlocked=False) 
+        mapped_nodes.append(NodeWithStatus.from_models(node, status))
+        
+    return GalaxyGraphResponse(
+        nodes=mapped_nodes,
+        relations=[], # Do not fetch relations for viewport query to save bandwidth? Or maybe local relations.
+        user_stats=None
+    )
+
+@router.post("/nodes/positions")
+async def update_node_positions(
+    request: PositionUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Persist node positions calculated by frontend layout engine.
+    Phase 3.2 Layout Persistence.
+    """
+    # Convert Pydantic models to dicts
+    updates = [{"id": item.id, "x": item.x, "y": item.y} for item in request.updates]
+    count = await galaxy_service.update_node_positions(updates)
+    return {"status": "success", "updated_count": count}
+
+@router.post("/node/{node_id}/autolink")
+async def trigger_auto_link(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Trigger Auto-Link Worker for a specific node.
+    Phase 4.1 Automation.
+    """
+    links_created = await galaxy_service.auto_link_nodes(node_id)
+    return {"status": "success", "links_created": links_created}
+
+@router.get("/heatmap")
+async def get_heatmap(
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service)
+):
+    """
+    Get Heatmap Data for MiniMap.
+    Phase 4.2 Insight.
+    """
+    return await galaxy_service.get_heatmap_data(UUID(user_id))
 
 
 # 导入必要的 or_ 函数

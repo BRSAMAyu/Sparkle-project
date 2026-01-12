@@ -1,0 +1,8 @@
+- [ ] Phase 1: 代码健壮性与 MiniMap (P1.10, P1.11)
+    - [ ] 修正 MiniMap 视口计算 (`galaxy_mini_map.dart`)
+    - [ ] 增强布局引擎错误恢复 (`galaxy_provider.dart`)
+- [ ] Phase 2: 交互细节优化 (P2.7, P2.9)
+    - [ ] 优化 ZoomControls 动画 (`zoom_controls.dart`)
+    - [ ] 添加边界反馈逻辑 (`galaxy_screen.dart`)
+- [ ] Phase 4: 性能监控 (P3.13)
+    - [ ] 添加简单 FPS 监测与降级逻辑

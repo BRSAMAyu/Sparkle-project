@@ -1,0 +1,66 @@
+# Prometheus 配置 - Celery 监控
+# 包含 Celery Worker、Beat 和系统指标
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "celery_alerts.yml"
+
+scrape_configs:
+  # Celery Worker 指标
+  - job_name: 'celery_worker'
+    static_configs:
+      - targets: ['sparkle_celery_worker:8080']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    labels:
+      service: 'celery'
+      component: 'worker'
+
+  # Celery Beat 指标
+  - job_name: 'celery_beat'
+    static_configs:
+      - targets: ['sparkle_celery_beat:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    labels:
+      service: 'celery'
+      component: 'beat'
+
+  # 系统指标 (Node Exporter)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Redis 监控
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # PostgreSQL 监控
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Python 应用指标 (如果暴露)
+  - job_name: 'sparkle_backend'
+    static_configs:
+      - targets: ['sparkle_backend:8000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+# 告警配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# 远程存储 (可选)
+# remote_write:
+#   - url: 'http://remote-storage:1234/receive'

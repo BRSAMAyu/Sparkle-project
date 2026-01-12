@@ -2,6 +2,7 @@
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
+from datetime import datetime
 from sqlalchemy import Column, String, Integer, Float, Boolean, Index, JSON, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship
 import enum
@@ -24,7 +25,12 @@ class AvatarStatus(str, enum.Enum):
 
 
 class User(BaseModel):
-// ...
+    __tablename__ = "users"
+
+    username = Column(String(100), unique=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(100), nullable=True)
     nickname = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
     
@@ -60,9 +66,23 @@ class User(BaseModel):
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
     last_login_at = Column(DateTime, nullable=True)
 
+    # 🆕 年龄校验 (V3.1)
+    is_minor = Column(Boolean, nullable=True)  # None = unknown, True/False = verified
+    age_verified = Column(Boolean, default=False, nullable=False)
+    age_verification_source = Column(String(50), nullable=True)  # registration, parent_consent, device_mode
+    age_verified_at = Column(DateTime, nullable=True)
+
     # 关系定义
     push_preference = relationship(
         "PushPreference",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="joined"
+    )
+
+    intervention_settings = relationship(
+        "UserInterventionSettings",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
@@ -90,6 +110,27 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    intervention_requests = relationship(
+        "InterventionRequest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    intervention_feedback = relationship(
+        "InterventionFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    token_usage = relationship(
+        "TokenUsage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     error_records = relationship(
         "ErrorRecord",
         back_populates="user",
@@ -99,6 +140,44 @@ class User(BaseModel):
     
     curiosity_capsules = relationship(
         "CuriosityCapsule",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 安全审计日志关系
+    security_audit_logs = relationship(
+        "SecurityAuditLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    data_access_logs = relationship(
+        "DataAccessLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    system_config_change_logs = relationship(
+        "SystemConfigChangeLog",
+        back_populates="changer",
+        foreign_keys="[SystemConfigChangeLog.changed_by]",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    compliance_check_logs = relationship(
+        "ComplianceCheckLog",
+        back_populates="executor",
+        foreign_keys="[ComplianceCheckLog.executed_by]",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    login_attempts = relationship(
+        "LoginAttempt",
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="dynamic"
@@ -136,6 +215,24 @@ class PushPreference(BaseModel):
 
     def __repr__(self):
         return f"<PushPreference(user_id={self.user_id}, timezone={self.timezone})>"
+
+
+class LoginAttempt(BaseModel):
+    """登录尝试记录表"""
+    __tablename__ = "login_attempts"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
+    username = Column(String(100), nullable=False, index=True)  # 尝试登录的用户名
+    ip_address = Column(String(45), nullable=False, index=True)  # 支持IPv6
+    user_agent = Column(String(500), nullable=True)  # 用户代理
+    success = Column(Boolean, nullable=False, index=True)  # 是否登录成功
+    attempted_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    # 关系
+    user = relationship("User", back_populates="login_attempts")
+
+    def __repr__(self):
+        return f"<LoginAttempt username={self.username} success={self.success} at={self.attempted_at}>"
 
 
 # 创建索引

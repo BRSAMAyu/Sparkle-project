@@ -1,0 +1,206 @@
+# Sparkle（星火） - AI 学习助手
+
+> 🎯 一个面向大学生的智能学习 App，核心概念是「AI 时间导师」
+
+## 📖 项目简介
+
+Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过「对话 → 任务卡 → 执行 → 反馈 → 冲刺计划」的完整闭环，为用户提供个性化的学习指导和时间管理。
+
+**目标**：2025年2月2日前完成 MVP 版本，参加大学软件创新大赛
+
+## ✨ 核心功能
+
+### 已完成功能 ✅
+
+#### 🎓 学习核心功能
+- 💬 **AI 微导师对话**：与 AI 导师实时对话，获取个性化学习建议和任务推荐
+- 📋 **智能任务卡系统**：
+  - 支持 6 种任务类型：学习、训练、纠错、反思、社交、规划
+  - 任务状态管理：待办、进行中、已完成、已放弃
+  - AI 智能生成任务建议
+- ⏱️ **专注执行模式**：番茄钟式任务执行，配合计时器提升专注力
+- 🎯 **冲刺 & 成长计划**：
+  - 考试冲刺计划（Sprint Plan）
+  - 长期成长计划（Growth Plan）
+  - AI 辅助计划制定和任务分解
+
+#### 📊 学习数据分析
+- 📝 **错题档案系统**：智能记录错题，支持遗忘曲线复习
+- 📈 **学习统计分析**：任务完成率、学习时长、知识点掌握度追踪
+- 🔥 **火花成长体系**：
+  - 火花等级（Flame Level）：反映学习阶段
+  - 火花亮度（Flame Brightness）：反映近期活跃度
+  - 可视化学习进度和成长轨迹
+
+#### 🌌 知识管理
+- 🗺️ **知识星图（Knowledge Map）**：
+  - 可视化知识图谱，构建个人知识网络
+  - LLM 驱动的知识点智能拓展和推荐
+  - 向量语义搜索，智能关联相关知识点
+  - 知识掌握度追踪（Mastery Level）
+  - 基于遗忘曲线的自动复习提醒
+- 📚 **科目管理**：支持多科目分类和课程管理
+
+#### 🔔 智能推送系统
+- 📱 **基于 Persona 的个性化推送**：
+  - 冲刺提醒：考试前智能推送学习计划和复习建议
+  - 记忆唤醒：根据遗忘曲线推送知识点复习
+  - 沉睡唤醒：长时间未活跃用户的个性化激励消息
+  - 可配置推送偏好（频率、时段、内容类型）
+  - 通知权限智能引导
+
+#### 👥 社群功能
+- 👥 **好友系统**：基于共同课程/考试匹配学习伙伴
+- 🏠 **学习小队**：面向长期目标的社群组织
+- 🏃 **冲刺群**：短期临时群组，带倒计时功能
+- 🔥 **火堆系统**：可视化社群学习氛围
+
+#### 👤 用户体验
+- 🚀 **游客模式**：支持游客快速体验核心功能，无需注册
+- 🔐 **完整的用户认证系统**：注册、登录、JWT Token 自动刷新
+- 🎨 **主题定制**：支持亮色/暗色主题切换
+
+## 🛠️ 技术架构
+
+### 前端（Mobile）
+- **框架**：Flutter 3.x
+- **语言**：Dart
+- **状态管理**：Riverpod
+- **本地存储**：shared_preferences + Hive
+- **网络请求**：Dio + WebSocket
+- **目标平台**：Android / iOS
+
+### 后端（混合架构）
+- **Go Gateway**：基于 Gin 框架，负责高并发 WebSocket 长连接、用户鉴权、会话管理、历史记录 CRUD。
+- **Python Agent Engine**：基于 gRPC，负责 AI 推理、工具调用、向量语义检索、遗忘曲线计算。
+- **通信协议**：Protobuf 定义接口，gRPC 进行跨语言双向流通信；WebSocket 与移动端进行实时事件推送。
+- **数据库**：PostgreSQL 16 + pgvector，共享数据模型。
+- **配置管理**：Pydantic v2 + python-dotenv + Viper。
+
+### AI 服务
+- **模型**：通义千问（Qwen）/ DeepSeek / GPT-3.5
+- **接口**：统一 LLM Service 抽象层，支持 Agent 编排和实时状态机同步。
+- **视觉交互**：WebSocket 支持“思考中”、“搜索中”等 AI 内部状态可视化。
+
+## 📁 项目结构
+
+```
+sparkle/
+├── backend/
+│   ├── gateway/          # Go Gateway服务 (WebSocket/HTTP入口)
+│   │   ├── cmd/         # 服务器入口
+│   │   ├── internal/    # 内部包(handler/agent/db等)
+│   │   └── go.mod       # Go模块
+│   └── app/             # Python gRPC服务 (AI智能引擎)
+├── mobile/              # Flutter移动端
+├── proto/               # Protobuf接口定义
+├── docs/                # 项目文档
+├── ARCHITECTURE.md      # 项目技术架构
+├── MODULES.md           # 功能模块详解
+├── COMMUNITY_FEATURES.md # 社群功能详解
+├── API_REFERENCE.md     # API接口参考
+└── DEVELOPMENT_GUIDE.md # 开发指南
+```
+
+## 🚀 快速开始
+
+### 一键启动开发环境（推荐）
+
+```bash
+# 查看完整启动指南
+make dev-all
+
+# 或按步骤启动：
+# 终端1: 启动数据库
+make dev-up
+
+# 终端2: 启动Python gRPC服务
+make grpc-server
+
+# 终端3: 启动Go Gateway
+make gateway-run
+```
+
+### 后端启动（详细步骤）
+
+```bash
+# 1. 启动数据库
+docker compose up -d
+
+# 2. 初始化Python环境
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# 编辑 .env 配置数据库和API密钥
+alembic upgrade head
+
+# 3. 启动Python gRPC服务
+python grpc_server.py
+
+# 4. 启动Go Gateway（另一终端）
+cd backend/gateway
+go mod tidy
+go build -o bin/gateway ./cmd/server
+./bin/gateway
+```
+
+### 移动端启动
+
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
+
+## 📚 项目文档
+
+- [项目技术架构](ARCHITECTURE.md) - 详细的系统架构和模块关系
+- [功能模块详解](MODULES.md) - 各功能模块的详细说明
+- [社群功能详解](COMMUNITY_FEATURES.md) - 社群功能的完整介绍
+- [API接口参考](API_REFERENCE.md) - 完整的API接口文档
+- [开发指南](DEVELOPMENT_GUIDE.md) - 开发环境搭建和开发流程
+- [API 设计文档](docs/api_design.md) - 早期API设计文档
+- [数据库设计文档](docs/database_schema.md) - 数据库表结构说明
+- [开发指南](docs/development_guide.md) - 早期开发指南
+
+## 👥 团队
+
+4名大二/大三计算机专业学生
+
+- 擅长：Python、AI开发工具（Cursor、Claude）
+- 学习中：Dart、Flutter、Go、gRPC
+- 已掌握：微服务架构、实时通信、跨语言开发
+
+## 📄 License
+
+本项目用于大学软件创新大赛
+
+## 🔗 相关链接
+
+- [项目看板](#)
+- [设计稿](#)
+- [API 文档](#) (启动后端后访问 `/docs`)
+
+---
+
+**Version**: MVP v0.3.0 (Go重构版)
+**Last Updated**: 2025-12-27
+
+## 🆕 最近更新
+
+### ✅ Go后端重构 & Flutter集成完成
+- **架构升级**：从 Python 单体转为 Go + Python 混合架构，显著提升高并发长连接性能。
+- **Go Gateway**：基于 Gin + Gorilla WebSocket 的高性能网关，支持协议转换与鉴权。
+- **Python Agent**：解耦 AI 推理，通过 gRPC 提供 StreamChat 流式服务。
+- **实时状态可视化**：Flutter 端实时显示“思考中”、“正在搜索”、“正在执行工具”等 AI 状态。
+- **对话系统增强**：支持会话恢复（History Loading）、自动重连、打字机效果优化。
+- **认证深度集成**：对话模块与 Auth Provider 完整打通，支持真实用户信息传递。
+
+### ✅ 已完成功能
+- ✅ 知识星图功能（遗忘曲线、知识点拓展、向量搜索）
+- ✅ 智能推送系统（基于Persona的个性化推送）
+- ✅ LLM宽容模式解析增强至v2.2
+- ✅ 游客模式支持
+- ✅ 推送偏好设置和通知权限配置
+- ✅ 社群功能完整实现（好友、群组、打卡、火堆系统）
+- ✅ Flutter客户端WebSocket适配完成

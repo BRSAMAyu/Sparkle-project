@@ -1,14 +1,14 @@
 import 'package:lunar/lunar.dart';
 
 class LunarService {
-  static final LunarService _instance = LunarService._internal();
   factory LunarService() => _instance;
   LunarService._internal();
+  static final LunarService _instance = LunarService._internal();
 
   /// Get Lunar date info for a given solar date
   Map<String, dynamic> getLunarInfo(DateTime date) {
     final lunar = Lunar.fromDate(date);
-    
+
     return {
       'lunarDate': '${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}',
       'year': '${lunar.getYearInGanZhi()}年 (${lunar.getYearShengXiao()})',
@@ -23,7 +23,7 @@ class LunarService {
     final lunar = Lunar.fromDate(date);
     final festivals = lunar.getFestivals();
     final term = lunar.getJieQi();
-    
+
     if (festivals.isNotEmpty) {
       return festivals.first;
     }
@@ -32,7 +32,7 @@ class LunarService {
     }
     return null;
   }
-  
+
   /// Get structured info for calendar cell
   LunarData getLunarData(DateTime date) {
     final lunar = Lunar.fromDate(date);
@@ -47,12 +47,6 @@ class LunarService {
 }
 
 class LunarData {
-  final String lunarDay;
-  final String lunarMonth;
-  final String term;
-  final List<String> festivals;
-  final bool isFestival;
-
   LunarData({
     required this.lunarDay,
     required this.lunarMonth,
@@ -60,7 +54,12 @@ class LunarData {
     required this.festivals,
     required this.isFestival,
   });
-  
+  final String lunarDay;
+  final String lunarMonth;
+  final String term;
+  final List<String> festivals;
+  final bool isFestival;
+
   String get displayString {
     if (festivals.isNotEmpty) return festivals.first;
     if (term.isNotEmpty) return term;

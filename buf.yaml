@@ -1,0 +1,18 @@
+# buf.yaml - Buf Configuration for Sparkle Project
+# P1: Modern protocol management with linting, breaking change detection, and unified code generation
+version: v2
+modules:
+  - path: proto
+    name: buf.build/sparkle/agent
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_VERSION_SUFFIX
+  disallow_comment_ignores: false
+breaking:
+  use:
+    - FILE
+  except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT

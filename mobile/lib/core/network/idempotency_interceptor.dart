@@ -15,12 +15,17 @@ class IdempotencyInterceptor extends Interceptor {
     }
     handler.next(options);
   }
-  
+
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     // 记录是否是重放响应
     if (response.headers.value('X-Idempotency-Replayed') == 'true') {
-      debugPrint('Idempotency replay detected for ${response.requestOptions.path}');
+      debugPrint(
+        'Idempotency replay detected for ${response.requestOptions.path}',
+      );
     }
     handler.next(response);
   }

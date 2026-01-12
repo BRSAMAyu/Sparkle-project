@@ -20,59 +20,85 @@ from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
+from app.api.v2.agent_graph import router as agent_graph_router  # New V2 Agent Router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
+from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
 from app.core.websocket import manager
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi.responses import JSONResponse
 from app.core.exceptions import SparkleException
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+import sys
+
+# Configure Loguru
+logger.remove()
+logger.add(
+    sys.stderr,
+    level=settings.LOG_LEVEL,
+    serialize=not settings.DEBUG, # JSON format in production
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
-    
+    """
+    应用生命周期管理
+
+    P1 Fix: All startup/shutdown logic is now unified in lifespan context manager.
+    Removed deprecated @app.on_event("startup") to prevent race conditions.
+    """
+
     # ==================== 启动时 ====================
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
-    
+
     # Ensure upload directory exists
     if not os.path.exists(settings.UPLOAD_DIR):
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
+
     # Initialize Cache (Redis)
     await cache_service.init_redis()
     # Initialize WebSocket Redis
     await manager.init_redis()
-    
+
     async with AsyncSessionLocal() as db:
         try:
-            # 🆕 0. 初始化数据库数据
+            # 0. 初始化数据库数据
             await init_db(db)
 
-            # 🆕 1. 恢复中断的 Job
+            # 1. 恢复中断的 Job
             job_service = JobService()
             await job_service.startup_recovery(db)
-            
-            # 🆕 2. 加载学科缓存
+
+            # 2. 加载学科缓存
             subject_service = SubjectService()
             await subject_service.load_cache(db)
 
-            # 🆕 3. 启动定时任务调度器
+            # 3. 启动定时任务调度器
             scheduler_service.start()
 
-            # 🆕 4. 启动知识拓展后台任务
+            # 4. 启动知识拓展后台任务
             await start_expansion_worker()
+
+            # 5. 启动图同步 Worker (AGE)
+            await start_sync_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
 
     logger.info("Sparkle API Server started successfully")
-    
+
     yield
-    
+
     # ==================== 关闭时 ====================
     logger.info("Shutting down Sparkle API Server...")
+
+    # 停止图同步 Worker
+    await stop_sync_worker()
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()
@@ -94,7 +120,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Auto-instrument FastAPI
+FastAPIInstrumentor.instrument_app(app)
+# Auto-instrument SQLAlchemy
+SQLAlchemyInstrumentor().instrument()
+# Auto-instrument Requests (for LLM API calls)
+RequestsInstrumentor().instrument()
+# Auto-instrument Redis
+RedisInstrumentor().instrument()
+
 setup_rate_limiting(app)
+
+# P1: Initialize Prometheus Instrumentator within app creation
+# Moved from deprecated @app.on_event("startup") to ensure proper lifecycle order
+_instrumentator = Instrumentator().instrument(app)
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -103,7 +143,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self' *; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: *;"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -120,12 +160,6 @@ app.add_middleware(
 # 🆕 幂等性中间件
 idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "memory")
 app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event to instrument and expose metrics"""
-    Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/")
@@ -153,6 +187,8 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(agent_graph_router, prefix="/api/v2/agent", tags=["Agent V2"])
+
 
 # Mount static files for uploads
 # Make sure the directory exists

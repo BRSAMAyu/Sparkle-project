@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package sparkle.agent.v2;
+
+message ChatRequestV2 {
+  string user_id = 1;
+  string message = 2;
+  string session_id = 3;
+  // 新增字段
+  repeated string active_tools = 4;
+}
+
+message ChatResponseV2 {
+  string content = 1;
+  string type = 2; 
+  // 新增字段
+  int64 timestamp = 3;
+}
+
+message WeeklyReportRequest {
+  string user_id = 1;
+  string week_id = 2;
+}
+
+message WeeklyReport {
+  string summary = 1;
+  int32 tasks_completed = 2;
+}
+
+service AgentServiceV2 {
+  rpc StreamChat(ChatRequestV2) returns (stream ChatResponseV2);
+  rpc GetUserProfile(ProfileRequestV2) returns (ProfileResponseV2);
+  rpc GetWeeklyReport(WeeklyReportRequest) returns (WeeklyReport); // 新增方法
+}
+
+message ProfileRequestV2 {
+  string user_id = 1;
+}
+
+message ProfileResponseV2 {
+  string user_id = 1;
+  string nickname = 2;
+  int32 level = 3;
+  string avatar_url = 4; // 新增
+}

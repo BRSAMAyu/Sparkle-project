@@ -4,7 +4,7 @@ API 中间件
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.concurrency import iterate_in_threadpool
-import json
+import hashlib
 
 from app.core.idempotency import IdempotencyStore
 
@@ -16,11 +16,63 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         "/api/v1/chat/stream",
         "/api/v1/tasks",
         "/api/v1/plans",
+        "/api/v1/events/ingest",
     ]
     
     def __init__(self, app, store: IdempotencyStore):
         super().__init__(app)
         self.store = store
+        self._max_cache_bytes = 2 * 1024 * 1024
+        self._max_sse_cache_bytes = 1024 * 1024
+
+    def _extract_user_id(self, request: Request) -> str | None:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header.removeprefix("Bearer ").strip()
+        if not token:
+            return None
+        try:
+            from app.core.security import decode_token
+            payload = decode_token(token, expected_type="access")
+            return payload.get("sub")
+        except Exception:
+            return None
+
+    async def _stream_with_cache(
+        self,
+        body_iterator,
+        cache_key: str,
+        status_code: int,
+        content_type: str,
+        user_id: str | None,
+        request_hash: str | None,
+    ):
+        collected = bytearray()
+        try:
+            async for chunk in body_iterator:
+                if isinstance(chunk, str):
+                    chunk_bytes = chunk.encode("utf-8")
+                else:
+                    chunk_bytes = chunk
+                if len(collected) < self._max_sse_cache_bytes:
+                    remaining = self._max_sse_cache_bytes - len(collected)
+                    collected.extend(chunk_bytes[:remaining])
+                yield chunk
+        finally:
+            if collected:
+                await self.store.set(
+                    cache_key,
+                    {
+                        "body": collected.decode("utf-8", errors="replace"),
+                        "status_code": status_code,
+                        "content_type": content_type,
+                        "user_id": user_id,
+                        "request_hash": request_hash,
+                    },
+                    ttl=3600,
+                )
+            await self.store.unlock(cache_key)
     
     async def dispatch(self, request: Request, call_next) -> Response:
         # 仅对 POST/PUT/PATCH 请求检查幂等性
@@ -35,27 +87,43 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         idempotency_key = request.headers.get("X-Idempotency-Key")
         if not idempotency_key:
             return await call_next(request)  # 无幂等键，正常处理
+
+        body_bytes = await request.body()
+        request._body = body_bytes
+        request_hash = hashlib.sha256(body_bytes).hexdigest() if body_bytes else None
         
+        user_id = self._extract_user_id(request)
+        cache_key = f"{user_id}:{idempotency_key}" if user_id else idempotency_key
+
         # 检查是否已处理
-        cached = await self.store.get(idempotency_key)
+        cached = await self.store.get(cache_key)
         if cached:
+            cached_hash = cached.get("request_hash")
+            if cached_hash and request_hash and cached_hash != request_hash:
+                return Response(
+                    content='{"error": "Idempotency key conflict"}',
+                    status_code=409,
+                    media_type="application/json",
+                )
+            content_type = cached.get("content_type") or "application/json"
             # 构造响应
             return Response(
-                content=cached["body"].encode() if isinstance(cached["body"], str) else cached["body"],
-                status_code=cached["status_code"],
-                headers={"X-Idempotency-Replayed": "true", "Content-Type": "application/json"},
-                media_type="application/json"
+                content=cached["body"].encode("utf-8") if isinstance(cached["body"], str) else cached["body"],
+                status_code=cached.get("status_code", 200),
+                headers={"X-Idempotency-Replayed": "true", "Content-Type": content_type},
+                media_type=content_type,
             )
         
         # 标记为处理中（防止并发）
         # 注意: 这里的 lock 逻辑对于分布式环境需要更严谨 (如 Redis SETNX)
-        if not await self.store.lock(idempotency_key):
+        if not await self.store.lock(cache_key):
             return Response(
                 content='{"error": "Request is being processed"}',
                 status_code=409,
                 media_type="application/json"
             )
         
+        unlock_in_finally = True
         try:
             # 执行实际请求
             response = await call_next(request)
@@ -71,57 +139,36 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 # 检查是否是流式响应
                 content_type = response.headers.get("content-type", "")
                 if "text/event-stream" in content_type:
-                    # 流式响应暂不缓存 body (或者需要更复杂的逻辑)
-                    # 仅标记为处理完成?
-                    # 文档示例代码: 
-                    # async for chunk in response.body_iterator:
-                    #    body += chunk
-                    # 这意味着它会消耗流，导致流无法传给客户端，除非重新构造流。
-                    # 或者 call_next 返回的 response 还没开始发送?
-                    # Starlette 的 response.body_iterator 一旦消耗就没了。
-                    # 我们需要 iterate 并且 yield back。
-                    
-                    async def body_iterator_wrapper():
-                        full_body = b""
-                        async for chunk in response.body_iterator:
-                            full_body += chunk
-                            yield chunk
-                        
-                        # 只有在完整接收后才 set (但流式是实时的，这会延迟吗? 不会，因为我们是 yield chunk)
-                        # 但 set 是 async 的，这里是在 generator 里。
-                        # 我们可以在后台任务中 set? 
-                        # 或者我们只是不缓存流式响应体，只防并发?
-                        
-                        # 文档代码示例确实读取了 body。
-                        # "async for chunk in response.body_iterator: body += chunk"
-                        # 这会阻塞流直到结束吗? 是的，如果是在 return Response 之前。
-                        # 但这里是 return Response(content=body...)，这会变成非流式!
-                        # 对于 SSE，这绝对不行。
-                        pass
-
-                    # 如果是 SSE，我们跳过缓存 body? 或者我们需要一种机制来"旁路"记录。
-                    # 鉴于 SSE 是为了实时性，把整个 body 读完再发给客户端就失去了 SSE 的意义。
-                    # 文档中的示例代码可能主要针对普通 API。
-                    # 针对 SSE，我们可能只需要 lock 防并发，或者仅缓存"Done"状态?
-                    # 
-                    # 让我们先对非流式做完整缓存。
-                    # 对 SSE，我们可能跳过缓存 body，或者需要特殊处理。
-                    
-                    # 简单起见，如果是 event-stream，我们先不缓存 body，只 unlock。
-                    pass
+                    unlock_in_finally = False
+                    response.body_iterator = self._stream_with_cache(
+                        response.body_iterator,
+                        cache_key,
+                        response.status_code,
+                        content_type,
+                        user_id,
+                        request_hash,
+                    )
+                    return response
                 else:
                     # 普通 JSON 响应
                     response_body = [section async for section in response.body_iterator]
                     response.body_iterator = iterate_in_threadpool(iter(response_body))
                     body = b"".join(response_body)
-                    
-                    await self.store.set(
-                        idempotency_key,
-                        {"body": body.decode("utf-8"), "status_code": response.status_code},
-                        ttl=3600  # 1小时过期
-                    )
+                    if len(body) <= self._max_cache_bytes:
+                        await self.store.set(
+                            cache_key,
+                            {
+                                "body": body.decode("utf-8", errors="replace"),
+                                "status_code": response.status_code,
+                                "content_type": content_type or "application/json",
+                                "user_id": user_id,
+                                "request_hash": request_hash,
+                            },
+                            ttl=3600,
+                        )
             
             return response
             
         finally:
-            await self.store.unlock(idempotency_key)
+            if unlock_in_finally:
+                await self.store.unlock(cache_key)

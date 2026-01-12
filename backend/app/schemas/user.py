@@ -1,5 +1,5 @@
 """User Schemas - Registration, login, profile, etc."""
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID
 import enum
@@ -57,6 +57,7 @@ class SocialLoginRequest(BaseModel):
     """Social login request"""
     provider: str = Field(description="Provider (google, apple, wechat)")
     token: str = Field(description="ID Token or Auth Code")
+    openid: Optional[str] = Field(default=None, description="WeChat OpenID")
     email: Optional[EmailStr] = Field(default=None, description="Email (if available)")
     nickname: Optional[str] = Field(default=None, description="Nickname (if available)")
     avatar_url: Optional[str] = Field(default=None, description="Avatar URL (if available)")
@@ -99,8 +100,29 @@ class UserFlameStatus(BaseModel):
 
 class UserPreferences(BaseModel):
     """User preferences"""
-    depth_preference: float = Field(description="Depth preference (0-1)")
-    curiosity_preference: float = Field(description="Curiosity preference (0-1)")
+    learning_depth: float = Field(description="Learning depth preference (0-1)")
+    curiosity_level: float = Field(description="Curiosity preference (0-1)")
+    schedule_preferences: Optional[Dict[str, Any]] = Field(default=None, description="Active time slots")
+    weather_preferences: Optional[Dict[str, Any]] = Field(default=None, description="Weather mapping preferences")
+    notification_enabled: bool = Field(default=True, description="Whether notifications are enabled")
+    persona_type: str = Field(default="coach", description="AI persona type (coach, anime, etc.)")
+    daily_cap: int = Field(default=5, description="Daily interaction cap")
+
+    class Config:
+        from_attributes = True
+
+
+class UserContext(BaseModel):
+    """User context for LLM prompts"""
+    user_id: str = Field(description="User ID string")
+    nickname: str = Field(description="User nickname")
+    timezone: str = Field(default="Asia/Shanghai", description="User timezone")
+    language: str = Field(default="zh-CN", description="User language")
+    is_pro: bool = Field(default=False, description="Whether user is Pro")
+    preferences: Dict[str, Any] = Field(default_factory=dict, description="Core preferences")
+    active_slots: Optional[Dict[str, Any]] = Field(default=None, description="Active time slots")
+    daily_cap: int = Field(default=5, description="Daily interaction cap")
+    persona_type: str = Field(default="coach", description="AI persona type")
 
     class Config:
         from_attributes = True
