@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/knowledge/data/models/community_model.dart';
-import 'package:sparkle/presentation/providers/community_agent_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/community_agent_provider.dart';
 
 UserBrief _user(String id, String name) => UserBrief(
       id: id,

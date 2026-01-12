@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
-import 'package:sparkle/presentation/providers/theme_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/theme_provider.dart';
 
 void main() {
   Future<void> pumpWithApp(WidgetTester tester, Widget child) async {

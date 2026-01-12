@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
 import 'package:sparkle/features/knowledge/data/models/reasoning_step_model.dart';
-import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 
 /// Mock Data Test for Chain of Thought Visualization
 ///

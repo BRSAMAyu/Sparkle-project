@@ -8,7 +8,7 @@ import 'package:sparkle/features/knowledge/data/models/focus_session_model.dart'
 import 'package:sparkle/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/presentation/providers/mindfulness_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/presentation/widgets/focus/focus_agent_sheet.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 

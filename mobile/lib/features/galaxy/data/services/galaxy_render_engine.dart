@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 
 class GalaxyRenderSettings {

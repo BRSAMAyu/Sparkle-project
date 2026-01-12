@@ -45,14 +45,12 @@ class GalaxyOptimizationConfig {
   }
 
   // Fallback if tier is unknown
-  factory GalaxyOptimizationConfig.standard() {
-    return const GalaxyOptimizationConfig(
-      shaderQuality: ShaderQuality.medium,
-      maxNodes: 500,
-      enablePhysics: false,
-      targetFps: 30,
-    );
-  }
+  static const GalaxyOptimizationConfig standard = GalaxyOptimizationConfig(
+    shaderQuality: ShaderQuality.medium,
+    maxNodes: 500,
+    enablePhysics: false,
+    targetFps: 30,
+  );
   const GalaxyOptimizationConfig({
     required this.shaderQuality,
     required this.maxNodes,
