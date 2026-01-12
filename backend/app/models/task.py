@@ -7,67 +7,35 @@ from sqlalchemy import (
     Column, String, Integer, Text, Enum,
     ForeignKey, DateTime, Date, Index, JSON, Boolean
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
 
-
 class TaskType(str, enum.Enum):
-    """任务类型枚举"""
-    LEARNING = "learning"      # 学习
-    TRAINING = "training"      # 训练
-    ERROR_FIX = "error_fix"    # 改错
-    REFLECTION = "reflection"  # 反思
-    SOCIAL = "social"          # 社交
-    PLANNING = "planning"      # 规划
-
+    LEARNING = "LEARNING"
+    TRAINING = "TRAINING"
+    ERROR_FIX = "ERROR_FIX"
+    REFLECTION = "REFLECTION"
+    SOCIAL = "SOCIAL"
+    PLANNING = "PLANNING"
 
 class TaskStatus(str, enum.Enum):
-    """任务状态枚举"""
-    PENDING = "pending"           # 待开始
-    IN_PROGRESS = "in_progress"   # 进行中
-    COMPLETED = "completed"       # 已完成
-    ABANDONED = "abandoned"       # 已放弃
-
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    ABANDONED = "ABANDONED"
 
 class Task(BaseModel):
-    """
-    任务模型
-
-    字段:
-        user_id: 所属用户ID
-        plan_id: 关联计划ID（可选）
-        title: 任务标题
-        type: 任务类型
-        tags: 标签列表(JSON)
-        estimated_minutes: 预估时长(分钟)
-        difficulty: 难度等级 (1-5)
-        energy_cost: 能量消耗 (1-5)
-        guide_content: 引导内容(AI生成)
-        status: 任务状态
-        started_at: 开始时间
-        completed_at: 完成时间
-        actual_minutes: 实际时长
-        user_note: 用户笔记
-        priority: 优先级
-        due_date: 截止日期
-
-    关系:
-        user: 所属用户
-        plan: 关联计划
-        chat_messages: 相关聊天消息
-    """
-
     __tablename__ = "tasks"
 
-    # 关联关系
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True, index=True)
 
     # 任务基本信息
     title = Column(String(255), nullable=False)
     type = Column(Enum(TaskType), nullable=False)
-    tags = Column(JSON, default=list, nullable=False)  # 标签列表
+    tags = Column(JSONB, default=list, nullable=False)  # 标签列表 (使用 JSONB)
 
     # 时间和难度
     estimated_minutes = Column(Integer, nullable=False)
@@ -80,7 +48,14 @@ class Task(BaseModel):
     # 状态信息
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
     started_at = Column(DateTime, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+
+    # 追溯信息
+    tool_result_id = Column(String(50), nullable=True, index=True)
+
+    # 追溯信息
+    tool_result_id = Column(String(50), nullable=True, index=True)
 
     # 完成信息
     actual_minutes = Column(Integer, nullable=True)

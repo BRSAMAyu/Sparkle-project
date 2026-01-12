@@ -4,12 +4,89 @@ Knowledge Galaxy Models
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean, DateTime, Float, JSON, LargeBinary, BigInteger
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
 from app.models.base import BaseModel, GUID
+
+
+class CollaborativeGalaxy(BaseModel):
+    """
+    协作星图表 (Collaborative Galaxies)
+    支持多用户共享和协作编辑的主题星图
+    """
+    __tablename__ = "collaborative_galaxies"
+
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    
+    # 可见性: private, shared, public
+    visibility = Column(String(20), default="private", nullable=False)
+    
+    # 关联学科 (可选)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
+
+    # 关系
+    creator = relationship("User", foreign_keys=[created_by])
+    subject = relationship("Subject")
+    permissions = relationship("GalaxyUserPermission", back_populates="galaxy", cascade="all, delete-orphan")
+
+
+class GalaxyUserPermission(Base):
+    """
+    协作星图用户权限表
+    """
+    __tablename__ = "galaxy_user_permissions"
+
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    
+    # 权限等级: owner, editor, viewer, contrib
+    permission_level = Column(String(20), nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # 关系
+    galaxy = relationship("CollaborativeGalaxy", back_populates="permissions")
+    user = relationship("User")
+
+
+class CRDTSnapshot(Base):
+    """
+    CRDT 状态快照表
+    存储 Yjs 文档的二进制状态
+    """
+    __tablename__ = "crdt_snapshots"
+
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    state_data = Column(LargeBinary, nullable=False)  # Yjs 二进制更新
+    operation_count = Column(Integer, default=0)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class CRDTOperationLog(Base):
+    """
+    协作操作日志表
+    用于审计和冲突回溯
+    """
+    __tablename__ = "crdt_operation_log"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    
+    # 操作类型: add_node, update_mastery, delete_node, etc.
+    operation_type = Column(String(50))
+    operation_data = Column(JSONB)
+    
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class KnowledgeNode(BaseModel):
@@ -32,8 +109,8 @@ class KnowledgeNode(BaseModel):
     # 描述
     description = Column(Text, nullable=True)
     
-    # 关键词 (使用 JSON 存储数组以兼容 SQLite/PG)
-    keywords = Column(JSON, default=list, nullable=True)
+    # 关键词 (使用 JSONB 优化搜索)
+    keywords = Column(JSONB, default=list, nullable=True)
     
     # 重要性等级 (1-5), 决定星星大小
     importance_level = Column(Integer, default=1, nullable=False)
@@ -46,6 +123,13 @@ class KnowledgeNode(BaseModel):
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
     embedding = Column(Vector(1536), nullable=True)
+    
+    # Layout Coordinates (for Viewport Query)
+    position_x = Column(Float, nullable=True, index=True)
+    position_y = Column(Float, nullable=True, index=True)
+
+    # Collaborative Data
+    global_spark_count = Column(Integer, default=0, nullable=False)
 
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")
@@ -90,6 +174,9 @@ class UserNodeStatus(Base):
 
     # 掌握度/亮度 (0-100)
     mastery_score = Column(Float, default=0, nullable=False)
+    # BKT 掌握概率 (0-1)
+    bkt_mastery_prob = Column(Float, default=0.0, nullable=False)
+    bkt_last_updated_at = Column(DateTime, nullable=True)
     
     # 投入时间 (分钟)
     total_minutes = Column(Integer, default=0, nullable=False)
@@ -107,6 +194,9 @@ class UserNodeStatus(Base):
     last_interacted_at = Column(DateTime, default=datetime.utcnow, nullable=False) # Keep for compatibility or remove?
     decay_paused = Column(Boolean, default=False)
     next_review_at = Column(DateTime, nullable=True, index=True)
+    
+    # Logical clock for conflict resolution
+    revision = Column(Integer, default=0, nullable=False)
     
     # 元数据
     first_unlock_at = Column(DateTime, nullable=True)
@@ -138,6 +228,7 @@ class StudyRecord(BaseModel):
 
     study_minutes = Column(Integer, nullable=False)
     mastery_delta = Column(Float, nullable=False)
+    initial_mastery = Column(Float, nullable=True) # 学习前的掌握度
     
     # record_type: task_complete, review, exploration
     record_type = Column(String(20), default='task_complete')
@@ -165,6 +256,8 @@ class NodeExpansionQueue(BaseModel):
     
     expanded_nodes = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
+    prompt_version = Column(String(50), nullable=True)
+    model_name = Column(String(50), nullable=True)
     
     processed_at = Column(DateTime, nullable=True)
 
@@ -172,3 +265,28 @@ class NodeExpansionQueue(BaseModel):
     trigger_node = relationship("KnowledgeNode")
     user = relationship("User")
     trigger_task = relationship("Task")
+
+
+class ExpansionFeedback(BaseModel):
+    """
+    知识拓展反馈表
+    """
+    __tablename__ = "expansion_feedback"
+
+    expansion_queue_id = Column(GUID(), ForeignKey("node_expansion_queue.id"), nullable=True, index=True)
+    trigger_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+
+    # Explicit 1-5 rating, implicit signal (0-1)
+    rating = Column(Integer, nullable=True)
+    implicit_score = Column(Float, nullable=True)
+    feedback_type = Column(String(20), default="explicit")  # explicit | implicit
+
+    prompt_version = Column(String(50), nullable=True)
+    model_name = Column(String(50), nullable=True)
+    meta_data = Column(JSON, nullable=True)
+
+    # Relations
+    trigger_node = relationship("KnowledgeNode")
+    user = relationship("User")
+    expansion_queue = relationship("NodeExpansionQueue")

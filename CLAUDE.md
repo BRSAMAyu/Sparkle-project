@@ -1,322 +1,518 @@
-# CLAUDE.md
+# CLAUDE.md — Opus 4.5 Optimized Edition
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> **Model Target**: Claude Opus 4.5 | **Project**: Sparkle (星火) AI Learning Assistant
+> **Architecture**: Go Gateway + Python Engine + Flutter Mobile | **Scale**: Large Monorepo
 
-## Project Overview
+---
 
-Sparkle (星火) is an AI-powered learning assistant app for college students, featuring an "AI Time Tutor" concept. The app helps users through a complete learning loop: dialogue → task cards → execution → feedback → sprint plans.
+## 🧠 Cognitive Protocol for Opus 4.5
 
-**Goal**: Complete MVP by February 2, 2025 for university software innovation competition.
+This section defines how Claude should think and operate in this complex codebase.
 
-**Tech Stack**:
-- Backend: FastAPI (Python 3.11+, tested with 3.14) + PostgreSQL/SQLite + SQLAlchemy 2.0
-- Mobile: Flutter 3.x + Riverpod + Dio
-- AI: Tongyi Qianwen (Qwen) / DeepSeek via OpenAI-compatible API
-
-## Repository Structure
+### Mental Model: The Three-Layer Sandwich
 
 ```
-sparkle-flutter/
-├── backend/          # FastAPI backend
-│   ├── app/
-│   │   ├── api/v1/   # API endpoints (auth, tasks, chat, plans, statistics, subjects, errors, knowledge, push)
-│   │   ├── core/     # Security, exceptions, idempotency
-│   │   ├── db/       # Database session and initialization
-│   │   ├── models/   # SQLAlchemy models
-│   │   ├── schemas/  # Pydantic schemas for request/response
-│   │   ├── services/ # Business logic (user, task, plan, chat, LLM, subject, knowledge, push)
-│   │   └── utils/    # Helper utilities (forgetting curve, vector search)
-│   ├── alembic/      # Database migrations
-│   └── tests/        # Pytest tests
-└── mobile/           # Flutter app
-    └── lib/
-        ├── app/      # App configuration, routes, theme
-        ├── core/     # Constants, errors, network client
-        ├── data/     # Models, repositories
-        └── presentation/ # Screens, widgets, providers (Riverpod)
+┌─────────────────────────────────────────────────────────────────┐
+│  FLUTTER (Presentation)  →  User intent, UI state, UX flow     │
+├─────────────────────────────────────────────────────────────────┤
+│  GO GATEWAY (Coordination) →  Auth, routing, caching, streams  │
+├─────────────────────────────────────────────────────────────────┤
+│  PYTHON ENGINE (Intelligence) →  AI logic, RAG, tools, LLM     │
+└─────────────────────────────────────────────────────────────────┘
+         ↕ PostgreSQL + pgvector    ↕ Redis    ↕ gRPC/WebSocket
 ```
 
-## Common Development Commands
+### Task Complexity Classification
 
-### Backend
+Before any action, classify the task:
 
-**Setup and Run**:
+| Level | Indicators | Protocol |
+|-------|-----------|----------|
+| **L1 Atomic** | Single file, <50 lines, typo/config | Execute immediately, no explanation |
+| **L2 Local** | 2-5 files, same language, single feature | Brief intent statement → Execute |
+| **L3 Cross-Boundary** | Proto change, Go↔Python, DB schema | 🔍 **Plan Required** (see below) |
+| **L4 Architectural** | New subsystem, major refactor, design pattern | 📋 **Deep Analysis Required** |
+
+### 🔍 Planning Protocol (L3+)
+
+For cross-boundary or architectural tasks, output this structure BEFORE any tool calls:
+
+```
+## 🔍 Analysis
+
+**Impact Scope**: [List affected layers: Go/Python/Flutter/DB/Proto]
+**Risk Assessment**: [Low/Medium/High] — [One-line justification]
+**Dependency Chain**: [A → B → C order of changes]
+
+## 📋 Execution Plan
+
+1. [Verification step - what to check first]
+2. [Primary change - the core modification]
+3. [Propagation - downstream updates]
+4. [Validation - how to verify success]
+```
+
+---
+
+## 🚫 Anti-Patterns (Hard Rules)
+
+These rules are NON-NEGOTIABLE. Violating them causes cascading failures.
+
+### Code Generation Anti-Patterns
+```
+❌ NEVER wrap XML tool tags in markdown code blocks
+❌ NEVER say "I will now..." or "Here is the code..." — just execute
+❌ NEVER assume file paths exist — verify with `ls` or `find` if >20% uncertain
+❌ NEVER modify generated files directly (see Source of Truth below)
+❌ NEVER make partial edits that leave code in broken state
+```
+
+### Architectural Anti-Patterns
+```
+❌ NEVER add direct DB calls in Go handlers (use service layer)
+❌ NEVER add business logic in Go Gateway (belongs in Python)
+❌ NEVER call Python REST from Python gRPC (internal only)
+❌ NEVER store secrets in code (use .env files)
+❌ NEVER skip proto regeneration after proto changes
+```
+
+---
+
+## 📜 Source of Truth Hierarchy
+
+Understanding this hierarchy prevents 90% of bugs in this codebase.
+
+### The Golden Rule
+```
+Proto Definition  →  Generated Code  →  Implementation
+     (Edit)              (Generate)        (Edit)
+```
+
+### Detailed Truth Table
+
+| Domain | Source of Truth | Generated From | Never Edit Directly |
+|--------|-----------------|----------------|---------------------|
+| **API Contract** | `proto/agent_service.proto` | `make proto-gen` | `backend/gateway/gen/`, `backend/app/gen/` |
+| **DB Schema (Go)** | `backend/gateway/internal/db/schema.sql` | `make sync-db` | `backend/gateway/internal/db/models.go` |
+| **DB Schema (Py)** | Alembic migrations | `alembic upgrade head` | SQLAlchemy models (must match) |
+| **Design Tokens** | `mobile/lib/core/design/design_system.dart` | Manual | Component hardcoded values |
+
+### Change Propagation Flowchart
+
+```
+Proto Change?
+    │
+    ├─→ make proto-gen
+    │       │
+    │       ├─→ Update Go client (backend/gateway/internal/agent/client.go)
+    │       └─→ Update Python service (backend/app/services/agent_grpc_service.py)
+    │
+DB Schema Change?
+    │
+    ├─→ Create Alembic migration (alembic revision -m "...")
+    ├─→ Apply migration (alembic upgrade head)
+    └─→ If Go needs data: Update queries → make sync-db
+```
+
+---
+
+## 🗺 Codebase Navigation Map
+
+### Critical Path Analysis
+
+These are the files you'll touch most often. Memorize their roles.
+
+#### Request Flow (Chat Message)
+```
+1. mobile/lib/core/services/chat_service.dart     # WebSocket client
+   ↓ WebSocket message
+2. backend/gateway/internal/handler/websocket.go  # Connection handler
+   ↓ Parse & validate
+3. backend/gateway/internal/handler/chat_orchestrator.go  # Flow control
+   ↓ gRPC call
+4. backend/gateway/internal/agent/client.go       # gRPC client wrapper
+   ↓ StreamChat RPC
+5. backend/app/services/agent_grpc_service.py     # gRPC service impl
+   ↓ Orchestrate
+6. backend/app/orchestration/orchestrator.py      # FSM state machine
+   ↓ Tool calls / LLM
+7. backend/app/services/llm_service.py            # LLM abstraction
+```
+
+#### State Management Layers
+```
+Flutter State:    Riverpod providers → mobile/lib/presentation/providers/
+Go State:         Redis cache → backend/gateway/internal/service/chat_history.go
+Python State:     FSM context → backend/app/orchestration/orchestrator.py
+Persistent State: PostgreSQL → backend/gateway/internal/db/queries/
+```
+
+### File Importance Ranking
+
+When exploring unfamiliar territory, prioritize these files:
+
+```
+★★★★★ (Core Logic)
+├── proto/agent_service.proto              # API contract
+├── backend/app/orchestration/orchestrator.py  # AI brain
+├── backend/gateway/internal/handler/websocket.go  # Real-time hub
+└── mobile/lib/core/services/chat_service.dart  # Client connection
+
+★★★★☆ (Integration Points)
+├── backend/gateway/internal/agent/client.go   # Go→Python bridge
+├── backend/app/services/agent_grpc_service.py # Python gRPC impl
+├── backend/gateway/internal/service/*.go      # Business services
+└── mobile/lib/presentation/providers/*.dart   # State providers
+
+★★★☆☆ (Supporting Infrastructure)
+├── backend/gateway/internal/db/schema.sql     # DB structure
+├── backend/app/orchestration/dynamic_tool_registry.py  # Tool system
+├── docker-compose.yml                         # Service definitions
+└── mobile/lib/core/design/design_system.dart  # UI tokens
+```
+
+---
+
+## 🔧 Command Reference (Optimized)
+
+### Quick Reference Card
+
 ```bash
-cd backend
+# === DAILY WORKFLOW ===
+make dev-all              # Start everything (3 terminals)
+make proto-gen            # After proto changes
+make sync-db              # After DB changes
 
-# Install dependencies
-pip install -r requirements.txt
+# === COMPONENT STARTUP ===
+make gateway-dev          # Go Gateway with hot reload
+make grpc-server          # Python gRPC server
+flutter run               # Mobile app
 
-# Configure environment
-cp .env.example .env
-# Edit .env: set DATABASE_URL, SECRET_KEY, LLM_API_KEY, etc.
+# === DEBUGGING ===
+docker compose logs -f gateway      # Go logs
+docker compose logs -f grpc-server  # Python logs
+grpcurl -plaintext localhost:50051 list  # List gRPC services
 
-# Run database migrations
-alembic upgrade head
+# === TESTING ===
+cd backend && pytest                    # Python tests
+cd backend/gateway && go test ./...     # Go tests
+cd mobile && flutter test               # Flutter tests
 
-# Start development server
-uvicorn app.main:app --reload
+# === UTILITIES ===
+cd mobile && ./fix_final_const.sh       # Fix Flutter const errors
+alembic revision -m "desc"              # New migration
+alembic upgrade head                    # Apply migrations
 ```
 
-**Database**:
+### Command Decision Tree
+
+```
+What changed?
+│
+├─→ Proto file? → make proto-gen → Update implementations
+│
+├─→ SQL schema? → alembic revision → alembic upgrade head → make sync-db
+│
+├─→ Go code? → make gateway-dev (auto-reload)
+│
+├─→ Python code? → Restart grpc-server
+│
+└─→ Flutter code? → Hot reload (r) or Hot restart (R)
+```
+
+---
+
+## 🏗 Architectural Invariants
+
+These rules define the system's structural integrity. Never violate them.
+
+### Layer Responsibility Matrix
+
+| Layer | MUST Do | MUST NOT Do |
+|-------|---------|-------------|
+| **Flutter** | UI rendering, local state, user input | Business logic, direct API calls to Python |
+| **Go Gateway** | Auth, WebSocket, caching, routing | AI reasoning, LLM calls, vector search |
+| **Python Engine** | AI orchestration, RAG, tool execution | User auth, session management |
+| **PostgreSQL** | Persistent storage, vector similarity | Caching (use Redis) |
+| **Redis** | Session cache, rate limiting, pub/sub | Long-term storage |
+
+### Interface Contracts
+
+```
+Flutter ←→ Go Gateway
+  Protocol: WebSocket (ws://localhost:8080/ws/chat)
+  Format: JSON messages with type field
+  Auth: JWT in connection header
+
+Go Gateway ←→ Python Engine
+  Protocol: gRPC (localhost:50051)
+  Contract: proto/agent_service.proto
+  Streaming: Server-side streaming for chat
+
+Python Engine ←→ Database
+  ORM: SQLAlchemy (async)
+  Vectors: pgvector with L2/Cosine distance
+  Migrations: Alembic
+```
+
+---
+
+## 🔄 Common Refactoring Patterns
+
+### Pattern 1: Adding a New AI Tool
+
+```
+1. Create tool file: backend/app/tools/my_tool.py
+   - Inherit from BaseTool
+   - Implement execute() method
+   - Define schema for LLM function calling
+
+2. Register tool: backend/app/orchestration/dynamic_tool_registry.py
+   - Add to tool registry
+   - Tool auto-available to orchestrator
+
+3. (Optional) Expose via API: proto/agent_service.proto
+   - Only if direct client access needed
+```
+
+### Pattern 2: Adding a New API Endpoint
+
+```
+1. Define in proto: proto/agent_service.proto
+   - Add message types
+   - Add RPC method
+
+2. Regenerate: make proto-gen
+
+3. Implement Python: backend/app/services/agent_grpc_service.py
+   - Add method matching proto definition
+
+4. Implement Go client: backend/gateway/internal/agent/client.go
+   - Add wrapper method
+
+5. Expose endpoint: backend/gateway/internal/handler/
+   - REST: Add Gin handler
+   - WebSocket: Add message type handler
+```
+
+### Pattern 3: Database Schema Migration
+
+```
+1. Plan migration: Consider both Go and Python access patterns
+
+2. Create Alembic migration:
+   cd backend && alembic revision -m "add_user_preferences"
+
+3. Write migration: backend/alembic/versions/xxxx_add_user_preferences.py
+   - def upgrade(): ADD changes
+   - def downgrade(): REVERSE changes
+
+4. Apply: alembic upgrade head
+
+5. If Go needs access:
+   - Update queries: backend/gateway/internal/db/queries/
+   - Regenerate: make sync-db
+```
+
+### Pattern 4: Cross-Language Feature
+
+```
+Example: Add "learning streak" feature
+
+1. Database Layer:
+   - Alembic migration for streak table
+   - SQLC queries if Go needs direct access
+
+2. Python Layer:
+   - Service in backend/app/services/streak_service.py
+   - Integrate with orchestrator if AI-aware
+
+3. Proto Layer:
+   - Define GetStreak RPC in proto
+   - make proto-gen
+
+4. Go Layer:
+   - Client wrapper in agent/client.go
+   - Handler in handler/ directory
+   - WebSocket message type if real-time
+
+5. Flutter Layer:
+   - Provider in presentation/providers/
+   - UI widget in presentation/widgets/
+```
+
+---
+
+## 🐛 Debugging Strategies
+
+### Symptom → Diagnosis Table
+
+| Symptom | Likely Cause | Diagnostic Command |
+|---------|--------------|-------------------|
+| WebSocket won't connect | Gateway not running | `curl http://localhost:8080/health` |
+| gRPC timeout | Python server down | `grpcurl -plaintext localhost:50051 list` |
+| "Field not found" error | Proto out of sync | `make proto-gen` then restart |
+| DB query fails | Migration not applied | `alembic current` vs `alembic heads` |
+| Flutter type error | Outdated generated code | `flutter pub get && flutter clean` |
+| Redis connection refused | Docker not running | `docker compose ps` |
+
+### Log Correlation Strategy
+
 ```bash
-# Create new migration (after model changes)
-alembic revision --autogen.ate -m "description"
+# Trace a request across layers
+# 1. Get request ID from Flutter logs
+# 2. Search Go Gateway logs
+docker compose logs gateway 2>&1 | grep "request_id"
 
-# Apply migrations
-alembic upgrade head
+# 3. Search Python logs
+docker compose logs grpc-server 2>&1 | grep "request_id"
 
-# Rollback one version
-alembic downgrade -1
+# 4. Check database if needed
+docker compose exec postgres psql -U sparkle -c "SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT 5;"
 ```
 
-**Testing**:
+---
+
+## 📊 Performance Considerations
+
+### Hot Paths (Optimize First)
+1. **WebSocket message parsing** — Every chat message goes through here
+2. **Orchestrator state transitions** — FSM bottleneck
+3. **Vector similarity search** — pgvector query performance
+4. **LLM token streaming** — Real-time responsiveness
+
+### Caching Layers
+```
+Request → Redis (chat history, rate limits)
+        → Go semantic cache (RAG results)
+        → Python LRU (embeddings, tool schemas)
+        → PostgreSQL (persistent)
+```
+
+### Connection Pools
+- Go → PostgreSQL: sqlc with pgxpool (default 10 connections)
+- Go → Redis: go-redis with pooling
+- Python → PostgreSQL: asyncpg pool
+- Go → Python gRPC: Connection reuse
+
+---
+
+## 🧪 Testing Strategy
+
+### Test Pyramid for This Project
+
+```
+                    ╱╲
+                   ╱  ╲
+                  ╱ E2E ╲        ← WebSocket integration tests
+                 ╱────────╲
+                ╱Integration╲    ← gRPC service tests
+               ╱──────────────╲
+              ╱   Unit Tests    ╲ ← Pure function tests
+             ╱────────────────────╲
+```
+
+### Critical Test Coverage Areas
+
+```python
+# Python: Must test
+- Orchestrator state transitions (FSM logic)
+- Tool execution edge cases
+- LLM response parsing
+- Vector search accuracy
+
+# Go: Must test
+- WebSocket message routing
+- Auth middleware
+- gRPC client error handling
+- Cache invalidation
+
+# Flutter: Must test
+- Provider state changes
+- WebSocket reconnection
+- Offline behavior
+```
+
+---
+
+## 📚 Documentation Locations
+
+| Topic | Location |
+|-------|----------|
+| Full Technical Guide | `docs/深度技术讲解教案_完整版.md` |
+| Architecture Overview | `docs/00_项目概览/02_技术架构.md` |
+| API Reference | `docs/02_技术设计文档/03_API参考.md` |
+| Knowledge Graph Design | `docs/02_技术设计文档/02_知识星图系统设计_v3.0.md` |
+| Proto Definitions | `proto/agent_service.proto` (canonical) |
+
+---
+
+## 🎯 Opus 4.5 Specific Optimizations
+
+### Leverage Extended Context
+This codebase benefits from loading multiple related files simultaneously. When analyzing a feature:
+
+```
+Load order for maximum context:
+1. Proto definition (API contract)
+2. Python implementation (logic)
+3. Go handler (integration)
+4. Flutter provider (client state)
+```
+
+### Multi-Step Reasoning
+For complex refactoring, use chain-of-thought:
+
+```
+Step 1: Map all touchpoints (grep for function/type name)
+Step 2: Identify dependency direction (who imports whom)
+Step 3: Plan change order (leaves → roots)
+Step 4: Execute with verification at each step
+```
+
+### Parallel Verification
+After significant changes, verify all affected layers:
+
 ```bash
-cd backend
-pytest                    # Run all tests
-pytest tests/test_auth.py # Run specific test file
-pytest -v                 # Verbose output
-pytest -k "test_name"     # Run tests matching pattern
+# Run in parallel if possible
+cd backend && pytest &
+cd backend/gateway && go test ./... &
+cd mobile && flutter test &
+wait
 ```
 
-**Code Quality**:
-```bash
-cd backend
-black app/               # Format code
-flake8 app/             # Lint code
-mypy app/               # Type checking
+---
+
+## 🔒 Security Checklist
+
+Before any PR involving auth, data, or external calls:
+
+```
+□ Secrets only in .env files (never in code)
+□ User input validated at Go Gateway layer
+□ SQL queries use parameterized statements
+□ WebSocket messages sanitized
+□ Rate limiting applied for expensive operations
+□ Error messages don't leak internal details
 ```
 
-**API Documentation**:
-- After starting the server: http://localhost:8000/docs (Swagger UI)
-- Alternative: http://localhost:8000/redoc
+---
 
-### Mobile
+## 📋 Pre-Commit Checklist
 
-**Setup and Run**:
-```bash
-cd mobile
+Before considering any task complete:
 
-# Install dependencies
-flutter pub get
-
-# Generate code (for json_serializable, riverpod_generator, etc.)
-flutter pub run build_runner build --delete-conflicting-outputs
-
-# Run app
-flutter run
-
-# Run on specific device
-flutter run -d <device-id>
+```
+□ Code compiles/lints without errors
+□ Generated files regenerated if sources changed
+□ Tests pass (at minimum, affected area)
+□ No hardcoded secrets or debug code
+□ Comments updated if behavior changed
+□ Proto backward compatible (if API change)
 ```
 
-**Code Generation** (required after changing models/providers):
-```bash
-cd mobile
-flutter pub run build_runner build --delete-conflicting-outputs
+---
 
-# Watch mode for development
-flutter pub run build_runner watch --delete-conflicting-outputs
-```
-
-**Testing**:
-```bash
-cd mobile
-flutter test            # Run all tests
-flutter test test/unit/ # Run specific directory
-```
-
-**Code Quality**:
-```bash
-cd mobile
-flutter analyze         # Static analysis
-dart format lib/        # Code quality
-```
-
-## Architecture & Key Concepts
-
-### Backend Architecture
-
-**Layered Structure**:
-1. **API Layer** (`app/api/v1/`): FastAPI routers handling HTTP requests
-2. **Service Layer** (`app/services/`): Business logic, orchestrates models and external services
-3. **Model Layer** (`app/models/`): SQLAlchemy ORM models (User, Task, Plan, ChatMessage, ErrorRecord, Job, Subject, IdempotencyKey)
-4. **Schema Layer** (`app/schemas/`): Pydantic models for validation and serialization
-
-**Key Models**:
-- **User**: User accounts with flame_level, flame_brightness, learning preferences (depth_preference, curiosity_preference), and push_settings
-- **Task**: Learning task cards with types (learning, training, error_fix, reflection, social, planning) and statuses (pending, in_progress, completed, abandoned)
-- **Plan**: Sprint plans (exam prep) or growth plans (long-term learning) with target_date and mastery_level
-- **ChatMessage**: AI conversation history with structured actions in JSON format
-- **ErrorRecord**: Wrong answer archive for spaced repetition with forgetting curve tracking
-- **Job**: Background job system for async task processing (has recovery mechanism on startup)
-- **Subject**: Subject/course catalog with caching
-- **KnowledgeNode**: Knowledge graph nodes with mastery tracking, vector embeddings for semantic search
-- **KnowledgeEdge**: Relationships between knowledge nodes (prerequisite, related, derived)
-- **NodeReview**: Spaced repetition review records for knowledge nodes
-- **PushLog**: Push notification history with delivery status and user engagement tracking
-
-**LLM Service**:
-- Abstracted in `app/services/llm_service.py`
-- Uses OpenAI-compatible API (works with Qwen, DeepSeek, OpenAI)
-- Configure via `LLM_API_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL_NAME` in .env
-- Enhanced parsing with "宽容模式" (tolerant mode) v2.2 for robust JSON extraction from LLM responses
-
-**Knowledge Graph Service**:
-- Knowledge node management with mastery level tracking
-- Vector embeddings for semantic search (using text-embedding models)
-- LLM-powered knowledge expansion and relationship inference
-- Spaced repetition scheduling based on forgetting curve algorithm
-- Service: `app/services/knowledge_service.py`
-
-**Push Notification Service**:
-- Persona-based intelligent push generation using LLM
-- Three push types: Sprint Reminder, Memory Wake, Sleep Wake
-- Configurable push preferences (frequency, time slots, content types)
-- Push log tracking with delivery status and user engagement metrics
-- Service: `app/services/push_service.py`
-
-**Idempotency System**:
-- Middleware-based idempotency using `IdempotencyMiddleware` (in `app/api/middleware.py`)
-- Stores in memory (dev) or database via `IdempotencyStore` (`app/core/idempotency.py`)
-- Prevents duplicate requests using `Idempotency-Key` header
-
-**Application Lifecycle**:
-- `app/main.py` uses `@asynccontextmanager` for startup/shutdown hooks
-- On startup: recovers interrupted Jobs, loads Subject cache
-- Includes CORS middleware and idempotency middleware
-
-**Database**:
-- Production: PostgreSQL with asyncpg driver
-- Development: SQLite with aiosqlite (switch via DATABASE_URL)
-- All models inherit from `BaseModel` (in `app/models/base.py`) with UUID primary keys
-- Uses Alembic for migrations
-
-### Mobile Architecture
-
-**State Management**:
-- Uses Riverpod for state management
-- Providers in `lib/presentation/providers/` (auth, chat, task, plan)
-- `ProviderScope` wraps the app in `main.dart`
-
-**Navigation**:
-- go_router for declarative routing
-- Route configuration in `lib/app/routes.dart`
-- Authentication-aware redirects
-
-**Data Flow**:
-1. **Models** (`lib/data/models/`): Data classes with json_serializable annotations (require code generation)
-2. **Repositories** (`lib/data/repositories/`): API communication layer using Dio
-3. **Providers** (`lib/presentation/providers/`): Business logic and state management
-4. **Screens** (`lib/presentation/screens/`): UI pages organized by feature
-
-**Network Layer**:
-- API client in `lib/core/network/api_client.dart`
-- Endpoints defined in `lib/core/network/api_endpoints.dart`
-- Interceptors: `api_interceptor.dart` (auth), `idempotency_interceptor.dart` (request deduplication)
-
-**Key Features**:
-- Chat interface with AI tutor (chat_screen.dart, chat_bubble.dart, action_card.dart)
-- Task management with execution timer (task screens, timer_widget.dart)
-- Sprint and growth plan screens
-- Knowledge map visualization with graph view
-- Push notification settings and preferences
-- Guest mode for quick onboarding
-- Profile and statistics with flame level/brightness display
-
-### Code Generation Requirements
-
-**Backend**: Not required (Python is interpreted)
-
-**Mobile**: **MUST** run code generation after modifying:
-- Data models with `@JsonSerializable()` annotations
-- Riverpod providers with annotations
-- Retrofit API definitions
-
-Run: `flutter pub run build_runner build --delete-conflicting-outputs`
-
-Files ending in `.g.dart` are generated and should not be manually edited.
-
-## Environment Configuration
-
-### Backend .env
-
-Required variables (see `.env.example`):
-- `SECRET_KEY`: JWT secret (change in production!)
-- `DATABASE_URL`: PostgreSQL or SQLite connection string
-- `LLM_API_BASE_URL`: AI service endpoint (e.g., Qwen, DeepSeek)
-- `LLM_API_KEY`: API key for LLM service
-- `LLM_MODEL_NAME`: Model identifier (e.g., qwen3-coder-plus, deepseek-chat)
-
-Optional:
-- `BACKEND_CORS_ORIGINS`: Comma-separated allowed origins
-- `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`: JWT expiry
-
-### Mobile Configuration
-
-API endpoint configured in `lib/core/constants/api_constants.dart` or `lib/core/network/api_endpoints.dart`
-
-## API Endpoints
-
-Base: `/api/v1`
-
-- `/auth` - Registration, login, token refresh, guest mode
-- `/users` - User profile management, push settings, notification preferences
-- `/tasks` - Task CRUD, start, complete operations
-- `/chat` - AI conversation with action suggestions
-- `/plans` - Plan management, AI task generation
-- `/statistics` - Learning overview, flame level/brightness
-- `/subjects` - Subject catalog
-- `/errors` - Error record management with forgetting curve
-- `/knowledge` - Knowledge graph management (nodes, edges, reviews)
-- `/knowledge/expand` - LLM-powered knowledge expansion
-- `/knowledge/search` - Vector semantic search for knowledge nodes
-- `/push` - Push notification management, delivery logs, testing
-
-See `docs/api_design.md` for detailed API specs.
-
-## Database Schema
-
-Key tables: users, tasks, plans, chat_messages, error_records, jobs, subjects, idempotency_keys, knowledge_nodes, knowledge_edges, node_reviews, push_logs
-
-**New Features**:
-- **Knowledge Graph**: knowledge_nodes (with vector embeddings), knowledge_edges (prerequisites/related), node_reviews (spaced repetition)
-- **Push System**: push_logs (delivery tracking), user.push_settings (JSONB preferences)
-- **Forgetting Curve**: Enhanced error_records with next_review_at calculation
-
-See `docs/database_schema.md` for full schema and relationships.
-
-## Development Notes
-
-- **Team**: 4 sophomore/junior CS students, experienced with Python/AI tools, learning Dart/Flutter
-- **Target**: MVP by 2025-02-02 for competition
-- **AI Integration**: Core feature uses LLM for personalized learning guidance
-- **Data**: Chinese language interface (comments and UI are in Chinese)
-
-## Important Patterns
-
-### Backend
-
-1. **Dependency Injection**: Use FastAPI's `Depends()` for database sessions and authentication
-2. **Async/Await**: All database operations are async using SQLAlchemy 2.0 async session
-3. **Error Handling**: Centralized exceptions in `app/core/exceptions.py`
-4. **Job Recovery**: Background jobs recover on startup via `JobService.startup_recovery()`
-
-### Mobile
-
-1. **Riverpod Providers**: Use `ref.watch()` to listen, `ref.read()` for one-time reads
-2. **Code Generation**: Always regenerate after model/provider changes
-3. **API Responses**: Wrapped in `ApiResponseModel<T>` for consistent error handling
-4. **Navigation**: Use `context.go()` or `context.push()` from go_router
-
-## Testing Strategy
-
-- Backend: pytest with async support (`pytest-asyncio`)
-- Mobile: Flutter test framework (test directory structure not yet created)
-- Test configuration in `backend/tests/conftest.py`
-
-## Documentation
-
-- `docs/api_design.md` - REST API specifications
-- `docs/database_schema.md` - Database models and schema
-- `docs/development_guide.md` - Additional development guidance
+**Document Version**: 2.0.0 (Opus 4.5 Optimized)
+**Last Updated**: 2025-12-28
+**Project Version**: Sparkle MVP v0.3.0

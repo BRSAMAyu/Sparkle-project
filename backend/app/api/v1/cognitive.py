@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.api.deps import get_current_user, get_db
+from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.models.cognitive import BehaviorPattern
 from app.schemas.cognitive import CognitiveFragmentCreate, CognitiveFragmentResponse, BehaviorPatternResponse
@@ -46,31 +47,18 @@ async def create_fragment(
         context_tags=fragment_in.context_tags,
         error_tags=fragment_in.error_tags,
         severity=fragment_in.severity,
-        task_id=fragment_in.task_id
+        task_id=fragment_in.task_id,
+        source_event_id=fragment_in.source_event_id,
+        persona_version=fragment_in.persona_version
     )
     
-    # Trigger AI Analysis
-    # Note: To avoid complexity with session passing in background tasks, 
-    # for this iteration we can run it inline if it's not too slow, 
-    # OR we need a proper session factory dependency.
-    # Given the complexity of "analyze_behavior" (RAG + LLM), it will be slow.
-    # For now, I will skip the background task trigger implementation in API 
-    # and rely on the client to call /analyze/trigger or just accept it's manual for now,
-    # OR (Better) - Implement a proper background worker later.
-    # 
-    # BUT, to fulfill the "Real-time" feel, I will attempt to run it 
-    # if the user specifically requests it or just logging it.
-    #
-    # Actually, simplest way for prototype: just await it. It might take 3-5 seconds.
-    # Let's try to await it for immediate feedback in testing, 
-    # but the response model doesn't include the analysis result yet (it's in patterns).
-    
-    # Let's execute it inline for now to ensure it works.
-    try:
-        await service.analyze_behavior(current_user.id, fragment.id)
-    except Exception as e:
-        # Log but don't fail the request
-        print(f"Analysis failed: {e}")
+    # Trigger AI Analysis via Background Task
+    background_tasks.add_task(
+        _analyze_fragment_task, 
+        current_user.id, 
+        fragment.id, 
+        AsyncSessionLocal
+    )
         
     return fragment
 

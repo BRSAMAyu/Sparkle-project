@@ -37,6 +37,7 @@ class ConnectionManager:
             await self.pubsub.psubscribe("presence:*")
             await self.pubsub.psubscribe("group:*")
             await self.pubsub.psubscribe("user:*")
+            await self.pubsub.psubscribe("visualize:*")
             
             self.listener_task = asyncio.create_task(self._redis_listener())
             logger.info("WebSocket Redis Pub/Sub initialized with pattern subscriptions")
@@ -111,6 +112,11 @@ class ConnectionManager:
             elif channel.startswith("user:"):
                 user_id = channel.split(":")[1]
                 await self._send_personal_local(data, user_id)
+
+            # 4. Visualization Updates
+            elif channel.startswith("visualize:"):
+                session_id = channel.split(":")[1]
+                await self._broadcast_local(data, f"visualize:{session_id}")
                 
         except Exception as e:
             logger.error(f"Error handling Redis message on channel {channel}: {e}")
@@ -123,6 +129,15 @@ class ConnectionManager:
             self.active_connections[group_id] = []
         self.active_connections[group_id].append(websocket)
         logger.info(f"User {user_id} connected to group {group_id}")
+
+    async def connect_visualization(self, websocket: WebSocket, session_id: str):
+        """Connect to visualization stream"""
+        await websocket.accept()
+        group_id = f"visualize:{session_id}"
+        if group_id not in self.active_connections:
+            self.active_connections[group_id] = []
+        self.active_connections[group_id].append(websocket)
+        logger.info(f"Client connected to visualization for session {session_id}")
 
     async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: List[str] = None):
         """Connect to personal channel and register friend map for presence"""
@@ -147,6 +162,16 @@ class ConnectionManager:
                 if not self.active_connections[group_id]:
                     del self.active_connections[group_id]
         logger.info(f"User {user_id} disconnected from group {group_id}")
+
+    def disconnect_visualization(self, websocket: WebSocket, session_id: str):
+        """Disconnect from visualization stream"""
+        group_id = f"visualize:{session_id}"
+        if group_id in self.active_connections:
+            if websocket in self.active_connections[group_id]:
+                self.active_connections[group_id].remove(websocket)
+                if not self.active_connections[group_id]:
+                    del self.active_connections[group_id]
+        logger.info(f"Client disconnected from visualization for session {session_id}")
 
     def disconnect_user(self, user_id: str):
         """Disconnect from personal channel and cleanup friend map"""
@@ -253,5 +278,13 @@ class ConnectionManager:
         else:
             # Fallback (impossible to know friends here without DB, so just skip or implement simple)
             pass
+
+    async def broadcast_visualization(self, session_id: str, data: dict):
+        """Broadcast visualization update"""
+        group_id = f"visualize:{session_id}"
+        if self.redis:
+            await self.redis.publish(f"visualize:{session_id}", json.dumps(data, default=str))
+        else:
+            await self._broadcast_local(data, group_id)
 
 manager = ConnectionManager()

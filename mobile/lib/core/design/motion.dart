@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 /// Sparkle 动效设计系统
-/// 
+///
 /// 包含统一的动画时长、曲线和常用动画构建器
 class SparkleMotion {
   SparkleMotion._();
@@ -9,7 +11,7 @@ class SparkleMotion {
   // ---------------------------------------------------------------------------
   // 1. 标准时长 (Durations)
   // ---------------------------------------------------------------------------
-  
+
   /// 无动画 (0ms)
   static const Duration instant = Duration.zero;
 
@@ -53,24 +55,22 @@ class SparkleMotion {
   static Widget pressScale({
     required Widget child,
     required Animation<double> animation,
-  }) {
-    return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 0.98).animate(animation),
-      child: child,
-    );
-  }
+  }) =>
+      ScaleTransition(
+        scale: Tween<double>(begin: 1.0, end: 0.98).animate(animation),
+        child: child,
+      );
 
   /// 淡入动画构建器
   /// opacity: 0.0 -> 1.0
   static Widget fadeIn({
     required Widget child,
     required Animation<double> animation,
-  }) {
-    return FadeTransition(
-      opacity: animation,
-      child: child,
-    );
-  }
+  }) =>
+      FadeTransition(
+        opacity: animation,
+        child: child,
+      );
 
   /// 上滑入场动画构建器
   /// translate Y: 20 -> 0
@@ -79,25 +79,26 @@ class SparkleMotion {
     required Widget child,
     required Animation<double> animation,
     double offset = 20.0,
-  }) {
-    return FadeTransition(
-      opacity: animation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: Offset(0, offset / 100), // Approximate relative offset
-          end: Offset.zero,
-        ).animate(animation),
-        child: child,
-      ),
-    );
-  }
+  }) =>
+      FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: Offset(0, offset / 100), // Approximate relative offset
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      );
 
   /// 呼吸动画控制器配置 (Helper)
   /// return AnimationController configured for breathing
   static AnimationController createBreathingController(TickerProvider vsync) {
-    return AnimationController(
+    final controller = AnimationController(
       vsync: vsync,
       duration: const Duration(seconds: 4), // 4秒一个周期
-    )..repeat(reverse: true);
+    );
+    unawaited(controller.repeat(reverse: true));
+    return controller;
   }
 }

@@ -1,0 +1,45 @@
+services:
+  routing_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_routing_service
+    command: ["uvicorn", "services.routing.main:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
+      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+    depends_on:
+      sparkle_redis:
+        condition: service_started
+
+  learning_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_learning_service
+    command: ["uvicorn", "services.learning.main:app", "--host", "0.0.0.0", "--port", "8002"]
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
+      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+    depends_on:
+      sparkle_redis:
+        condition: service_started
+
+  visualization_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_visualization_service
+    command: ["uvicorn", "services.visualization.main:app", "--host", "0.0.0.0", "--port", "8003"]
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
+      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+    depends_on:
+      sparkle_redis:
+        condition: service_started

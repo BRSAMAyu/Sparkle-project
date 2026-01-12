@@ -11,6 +11,14 @@ from alembic import op
 import sqlalchemy as sa
 ${imports if imports else ""}
 
+# Migration Contract:
+#   type: reversible|forward_only|destructive
+#   rollback_plan: "alembic downgrade -1" | "forward_fix_only"
+#   verification_query: "SELECT 1;"
+#   backfill_plan: "n/a"
+#   owner: "team-name"
+#   ticket: "n/a"
+
 # revision identifiers, used by Alembic.
 revision: str = ${repr(up_revision)}
 down_revision: Union[str, None] = ${repr(down_revision)}

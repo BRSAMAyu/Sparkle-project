@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package galaxy.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/galaxy/v1;galaxyv1";
+
+import "google/protobuf/timestamp.proto";
+
+// GalaxyService defines the interface for Knowledge Galaxy operations.
+service GalaxyService {
+  // UpdateNodeMastery updates the mastery level of a node for a user.
+  rpc UpdateNodeMastery(UpdateNodeMasteryRequest) returns (UpdateNodeMasteryResponse);
+
+  // SyncCollaborativeGalaxy syncs CRDT updates for a collaborative galaxy.
+  rpc SyncCollaborativeGalaxy(SyncCollaborativeGalaxyRequest) returns (SyncCollaborativeGalaxyResponse);
+}
+
+message CollaborativeGalaxyUpdate {
+  string galaxy_id = 1;
+  bytes yjs_update = 2; // Yjs binary update
+  string user_id = 3;
+  int64 timestamp = 4;
+}
+
+message SyncCollaborativeGalaxyRequest {
+  string galaxy_id = 1;
+  bytes partial_update = 2; // The update from client
+  string user_id = 3;
+}
+
+message SyncCollaborativeGalaxyResponse {
+  bool success = 1;
+  bytes server_update = 2; // The update from server to client
+}
+
+message UpdateNodeMasteryRequest {
+  string user_id = 1;
+  string node_id = 2;
+  int32 mastery = 3;
+  google.protobuf.Timestamp version = 4; // Deprecated: Use revision instead
+  string reason = 5;
+  string request_id = 6;
+  int64 revision = 7; // Logical clock for conflict resolution
+}
+
+message UpdateNodeMasteryResponse {
+  bool success = 1;
+  int32 old_mastery = 2;
+  int32 new_mastery = 3;
+  string reason = 4;
+  string request_id = 5;
+  int64 current_revision = 6; // The latest revision on server
+}

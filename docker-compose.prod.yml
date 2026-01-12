@@ -1,0 +1,171 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sparkle_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+    depends_on:
+      - gateway_blue
+      - gateway_green
+    networks:
+      - edge
+
+  gateway_blue:
+    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
+    container_name: sparkle_gateway_blue
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - AGENT_ADDRESS=toxiproxy:8666
+      - BACKEND_URL=${BACKEND_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_AUTO_CREATE_BUCKET=${MINIO_AUTO_CREATE_BUCKET:-true}
+      - FILE_MAX_UPLOAD_SIZE=${FILE_MAX_UPLOAD_SIZE:-52428800}
+      - FILE_PRESIGN_EXPIRES_SECONDS=${FILE_PRESIGN_EXPIRES_SECONDS:-420}
+      - FILE_GC_INTERVAL_MINUTES=${FILE_GC_INTERVAL_MINUTES:-60}
+      - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
+      - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
+      - TOXIPROXY_URL=http://toxiproxy:8474
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
+    depends_on:
+      - backend
+      - toxiproxy
+    networks:
+      - edge
+      - app
+
+  gateway_green:
+    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
+    container_name: sparkle_gateway_green
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - AGENT_ADDRESS=toxiproxy:8666
+      - BACKEND_URL=${BACKEND_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - MINIO_AUTO_CREATE_BUCKET=${MINIO_AUTO_CREATE_BUCKET:-true}
+      - FILE_MAX_UPLOAD_SIZE=${FILE_MAX_UPLOAD_SIZE:-52428800}
+      - FILE_PRESIGN_EXPIRES_SECONDS=${FILE_PRESIGN_EXPIRES_SECONDS:-420}
+      - FILE_GC_INTERVAL_MINUTES=${FILE_GC_INTERVAL_MINUTES:-60}
+      - FILE_GC_GRACE_HOURS=${FILE_GC_GRACE_HOURS:-24}
+      - FILE_GC_BATCH_SIZE=${FILE_GC_BATCH_SIZE:-200}
+      - TOXIPROXY_URL=http://toxiproxy:8474
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
+    depends_on:
+      - backend
+      - toxiproxy
+    networks:
+      - edge
+      - app
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    container_name: sparkle_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - ENVIRONMENT=production
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app
+
+  toxiproxy:
+    image: shopify/toxiproxy:2.5.0
+    container_name: sparkle_toxiproxy
+    restart: unless-stopped
+    networks:
+      - app
+
+  toxiproxy_init:
+    image: shopify/toxiproxy:2.5.0
+    container_name: sparkle_toxiproxy_init
+    restart: "no"
+    depends_on:
+      - toxiproxy
+      - backend
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /go/bin/toxiproxy-cli -h toxiproxy:8474 create grpc_backend -l 0.0.0.0:8666 -u backend:50051 || true
+    networks:
+      - app
+
+  db:
+    image: postgres:16
+    container_name: sparkle_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    networks:
+      - app
+
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: sparkle_redis
+    restart: unless-stopped
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./redis_data:/data
+      - ./redis.conf:/redis-stack.conf
+    networks:
+      - app
+
+  minio:
+    image: minio/minio:latest
+    container_name: sparkle_minio
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./minio_data:/data
+    networks:
+      - app
+
+networks:
+  edge:
+    name: sparkle_edge
+  app:
+    name: sparkle_app
+    internal: true

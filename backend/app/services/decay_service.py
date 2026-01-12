@@ -211,3 +211,199 @@ class DecayService:
             'dim_nodes_count': dim_count,
             'collapse_risk_count': collapse_count
         }
+
+    # ========== 必杀技 B: 时光机功能 ==========
+
+    async def project_decay_future(
+        self,
+        user_id: UUID,
+        days_ahead: int = 30
+    ) -> Dict[str, Dict[str, any]]:
+        """
+        时光机：预测未来的知识衰减状态
+
+        Args:
+            user_id: 用户ID
+            days_ahead: 预测天数（默认30天）
+
+        Returns:
+            dict: {
+                node_id: {
+                    current_mastery: float,
+                    future_mastery: float,
+                    color: str,  # 用于前端渲染
+                    opacity: float,  # 透明度 0-1
+                    status: str  # 'healthy' / 'dimming' / 'critical'
+                }
+            }
+        """
+        now = datetime.now(timezone.utc)
+
+        # 查询用户所有已解锁的节点
+        query = (
+            select(UserNodeStatus, KnowledgeNode)
+            .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(
+                and_(
+                    UserNodeStatus.user_id == user_id,
+                    UserNodeStatus.is_unlocked == True
+                )
+            )
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        projections = {}
+
+        for status, node in rows:
+            current_mastery = status.mastery_score
+
+            # 计算从现在到未来的衰减
+            days_since_last_study = (now - status.last_study_at).days if status.last_study_at else 0
+            total_days_elapsed = days_since_last_study + days_ahead
+
+            # 预测未来掌握度（不考虑复习）
+            future_mastery = self._calculate_decay(
+                current_mastery=current_mastery,
+                days_elapsed=total_days_elapsed
+            )
+
+            # 恢复到未衰减前的基线再计算
+            # 简化：直接基于当前状态预测
+            if not status.decay_paused:
+                future_mastery = self._calculate_decay(
+                    current_mastery=current_mastery,
+                    days_elapsed=days_ahead
+                )
+            else:
+                future_mastery = current_mastery  # 暂停衰减
+
+            # 生成前端可视化属性
+            projection = self._generate_visual_state(
+                node_id=str(node.id),
+                node_name=node.name,
+                current_mastery=current_mastery,
+                future_mastery=future_mastery
+            )
+
+            projections[str(node.id)] = projection
+
+        return projections
+
+    async def simulate_intervention(
+        self,
+        user_id: UUID,
+        node_ids: List[UUID],
+        days_ahead: int = 30,
+        review_boost: float = 30.0  # 复习提升的掌握度
+    ) -> Dict[str, Dict[str, any]]:
+        """
+        时光机干预模拟：如果现在复习这些节点，未来会如何？
+
+        Args:
+            user_id: 用户ID
+            node_ids: 要复习的节点ID列表
+            days_ahead: 预测天数
+            review_boost: 复习带来的掌握度提升
+
+        Returns:
+            dict: 与 project_decay_future 相同格式的预测结果
+        """
+        now = datetime.now(timezone.utc)
+
+        query = (
+            select(UserNodeStatus, KnowledgeNode)
+            .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(
+                and_(
+                    UserNodeStatus.user_id == user_id,
+                    UserNodeStatus.is_unlocked == True
+                )
+            )
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        projections = {}
+
+        for status, node in rows:
+            current_mastery = status.mastery_score
+
+            # 如果这个节点被复习
+            if node.id in node_ids:
+                # 假设复习后掌握度提升
+                boosted_mastery = min(current_mastery + review_boost, 100.0)
+
+                # 从提升后的掌握度开始衰减
+                future_mastery = self._calculate_decay(
+                    current_mastery=boosted_mastery,
+                    days_elapsed=days_ahead
+                )
+            else:
+                # 未复习，正常衰减
+                future_mastery = self._calculate_decay(
+                    current_mastery=current_mastery,
+                    days_elapsed=days_ahead
+                )
+
+            projection = self._generate_visual_state(
+                node_id=str(node.id),
+                node_name=node.name,
+                current_mastery=current_mastery,
+                future_mastery=future_mastery,
+                is_intervened=node.id in node_ids
+            )
+
+            projections[str(node.id)] = projection
+
+        return projections
+
+    def _generate_visual_state(
+        self,
+        node_id: str,
+        node_name: str,
+        current_mastery: float,
+        future_mastery: float,
+        is_intervened: bool = False
+    ) -> Dict[str, any]:
+        """
+        生成前端可视化状态
+
+        返回颜色、透明度、状态等用于 Galaxy 渲染
+        """
+        # 确定状态
+        if future_mastery >= 60:
+            status = "healthy"
+            color = "#4CAF50"  # 绿色
+        elif future_mastery >= self.THRESHOLD_DIM:
+            status = "stable"
+            color = "#2196F3"  # 蓝色
+        elif future_mastery >= self.THRESHOLD_COLLAPSE:
+            status = "dimming"
+            color = "#FF9800"  # 橙色
+        else:
+            status = "critical"
+            color = "#F44336"  # 红色
+
+        # 计算透明度（基于掌握度）
+        # 掌握度 100 -> opacity 1.0
+        # 掌握度 0 -> opacity 0.2
+        opacity = 0.2 + (future_mastery / 100.0) * 0.8
+
+        # 如果是干预节点，添加标记
+        if is_intervened:
+            color = "#00E676"  # 亮绿色表示被复习
+
+        return {
+            "node_id": node_id,
+            "node_name": node_name,
+            "current_mastery": round(current_mastery, 2),
+            "future_mastery": round(future_mastery, 2),
+            "mastery_change": round(future_mastery - current_mastery, 2),
+            "color": color,
+            "opacity": round(opacity, 2),
+            "status": status,
+            "is_intervened": is_intervened
+        }

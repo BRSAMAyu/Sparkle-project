@@ -21,8 +21,12 @@ class EmbeddingService:
 
     def __init__(self):
         self.provider = settings.LLM_PROVIDER
-        self.api_key = settings.LLM_API_KEY
-        self.base_url = settings.LLM_API_BASE_URL
+        if self.provider == "deepseek":
+            self.api_key = settings.DEEPSEEK_API_KEY
+            self.base_url = settings.DEEPSEEK_BASE_URL
+        else:
+            self.api_key = settings.LLM_API_KEY
+            self.base_url = settings.LLM_API_BASE_URL
         self.embedding_model = settings.EMBEDDING_MODEL
         self.embedding_dim = settings.EMBEDDING_DIM
 

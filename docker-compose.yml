@@ -1,0 +1,225 @@
+
+services:
+  sparkle_db:
+    image: pgvector/pgvector:pg16
+    container_name: sparkle_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+      POSTGRES_DB: ${DB_NAME:-sparkle}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sparkle"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: sparkle_redis
+    restart: always
+    volumes:
+      - ./redis_data:/data
+      - ./redis.conf:/redis-stack.conf
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-change-me}
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+
+  minio:
+    image: minio/minio:latest
+    container_name: sparkle_minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./minio_data:/data
+
+  sparkle_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  # ==================== Celery Task Queue ====================
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    container_name: sparkle_celery_beat
+    command: celery -A app.core.celery_app beat -l info
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  flower:
+    image: mher/flower:1.2.0
+    container_name: sparkle_flower
+    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower.db
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    environment:
+      - FLOWER_PURGE_OFFLINE_WORKERS=10
+    volumes:
+      - ./flower_data:/flower_data
+
+  sparkle_gateway:
+    build: 
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    container_name: sparkle_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=sparkle_redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-change-me}
+      - AGENT_ADDRESS=sparkle_backend:50051
+      - BACKEND_URL=http://sparkle_backend:8000
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=sparkle_tempo:4317
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      - MINIO_ENDPOINT=sparkle_minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
+      - MINIO_USE_SSL=false
+      - MINIO_AUTO_CREATE_BUCKET=true
+      - FILE_MAX_UPLOAD_SIZE=52428800
+      - FILE_PRESIGN_EXPIRES_SECONDS=420
+      - FILE_GC_INTERVAL_MINUTES=60
+      - FILE_GC_GRACE_HOURS=24
+      - FILE_GC_BATCH_SIZE=200
+    depends_on:
+      sparkle_backend:
+        condition: service_started
+      sparkle_db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      tempo:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # ==================== Observability Stack ====================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sparkle_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: sparkle_loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: sparkle_promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: sparkle_tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "3200:3200" # Tempo HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sparkle_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    depends_on:
+      - prometheus
+      - loki
+      - tempo

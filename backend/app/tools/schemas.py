@@ -33,6 +33,21 @@ class BatchCreateTasksParams(BaseModel):
     """批量创建任务的参数"""
     tasks: List[CreateTaskParams] = Field(..., description="任务列表", min_length=1, max_length=10)
 
+# ============ 碎片时间/微任务参数 ============
+
+class SuggestQuickTaskParams(BaseModel):
+    """碎片时间推荐任务参数"""
+    available_minutes: int = Field(..., description="可用时间（分钟）", ge=5, le=120)
+    include_in_progress: bool = Field(default=False, description="是否包含进行中的任务")
+    preferred_types: Optional[List[TaskType]] = Field(default=None, description="优先任务类型")
+
+class BreakdownTaskParams(BaseModel):
+    """任务拆解参数"""
+    title: str = Field(..., description="任务标题", max_length=100)
+    description: Optional[str] = Field(None, description="任务描述")
+    task_type: TaskType = Field(default=TaskType.LEARNING, description="任务类型")
+    max_tasks: int = Field(default=5, description="最多拆解数量", ge=2, le=8)
+
 # ============ 计划工具参数 ============
 
 class PlanType(str, Enum):
@@ -54,6 +69,14 @@ class GenerateTasksForPlanParams(BaseModel):
     topic: str = Field(..., description="学习主题/知识点")
     difficulty: str = Field(default="medium", description="难度: easy/medium/hard")
     task_count: int = Field(default=5, description="生成任务数量", ge=1, le=10)
+
+# ============ 专注工具参数 ============
+
+class SuggestFocusSessionParams(BaseModel):
+    """专注会话建议参数"""
+    duration_minutes: int = Field(default=25, description="专注时长（分钟）", ge=10, le=90)
+    task_id: Optional[str] = Field(default=None, description="关联任务 ID")
+    task_title: Optional[str] = Field(default=None, description="任务标题（无任务时备用）")
 
 # ============ 知识图谱工具参数 ============
 

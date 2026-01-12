@@ -4,11 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import joinedload
 
-from app.models.community import SharedResource, Group, GroupMember, SharedResourceType
-from app.models.plan import Plan
-from app.models.task import Task
-from app.models.cognitive import CognitiveFragment
-from app.services.notification_service import notification_service
+from app.models.community import (
+    SharedResource,
+    GroupMember,
+    SharedResourceType,
+    Friendship,
+    FriendshipStatus,
+)
 
 class CollaborationService:
     @staticmethod
@@ -25,28 +27,46 @@ class CollaborationService:
         """
         Share a resource (Plan, Task, Fragment) with a Group or User.
         """
+        if target_group_id and target_user_id:
+            raise ValueError("Only one of target_group_id or target_user_id can be set")
         if not target_group_id and not target_user_id:
             raise ValueError("Must specify either target_group_id or target_user_id")
+        if target_user_id and target_user_id == user_id:
+            raise ValueError("Cannot share to yourself")
+
+        if target_group_id:
+            membership_result = await db.execute(
+                select(GroupMember).where(
+                    GroupMember.group_id == target_group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter()
+                )
+            )
+            if not membership_result.scalar_one_or_none():
+                raise ValueError("Not a member of the target group")
+
+        if target_user_id:
+            u1, u2 = (
+                (user_id, target_user_id)
+                if str(user_id) < str(target_user_id)
+                else (target_user_id, user_id)
+            )
+            rel_result = await db.execute(
+                select(Friendship).where(
+                    Friendship.user_id == u1,
+                    Friendship.friend_id == u2,
+                    Friendship.status == FriendshipStatus.ACCEPTED,
+                    Friendship.not_deleted_filter()
+                )
+            )
+            if not rel_result.scalar_one_or_none():
+                raise ValueError("Can only share to accepted friends")
 
         # Create SharedResource
         shared = SharedResource(
             shared_by=user_id,
             group_id=target_group_id,
             target_user_id=target_user_id,
-            resource_type=resource_type, # This field is in model? Wait, checking model definition...
-            # The model has specific FKs: plan_id, task_id, cognitive_fragment_id.
-            # It does NOT have a 'resource_type' column in my SQL definition above, 
-            # BUT I might have missed it or replaced it with individual FKs.
-            # Let's check the migration file I just applied.
-            # Migration had: sa.Column('plan_id'... task_id... cognitive_fragment_id...)
-            # It did NOT have resource_type column explicitly? 
-            # Wait, I might have forgotten to add 'resource_type' string column in the migration 
-            # if I only relied on the class definition which I edited.
-            # Let's check the class definition I wrote in 'community.py'.
-            # I removed 'resource_type' column in the revised model thought process but 
-            # kept it in the Enum definition. 
-            # Actually, having specific FKs is enough, but a helper 'resource_type' is useful for querying.
-            # Let's see what I wrote to the file.
         )
         
         # Adjusting assignment based on resource_type enum
@@ -56,6 +76,10 @@ class CollaborationService:
             shared.task_id = resource_id
         elif resource_type == SharedResourceType.COGNITIVE_FRAGMENT:
             shared.cognitive_fragment_id = resource_id
+        elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+            shared.curiosity_capsule_id = resource_id
+        elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+            shared.behavior_pattern_id = resource_id
         
         shared.permission = permission
         shared.comment = comment
@@ -92,6 +116,10 @@ class CollaborationService:
                 stmt = stmt.where(SharedResource.task_id.isnot(None))
             elif resource_type == SharedResourceType.COGNITIVE_FRAGMENT:
                 stmt = stmt.where(SharedResource.cognitive_fragment_id.isnot(None))
+            elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
+                stmt = stmt.where(SharedResource.curiosity_capsule_id.isnot(None))
+            elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
+                stmt = stmt.where(SharedResource.behavior_pattern_id.isnot(None))
         
         stmt = stmt.order_by(SharedResource.created_at.desc()).limit(limit)
         
@@ -100,7 +128,9 @@ class CollaborationService:
             joinedload(SharedResource.sharer),
             joinedload(SharedResource.plan),
             joinedload(SharedResource.task),
-            joinedload(SharedResource.cognitive_fragment)
+            joinedload(SharedResource.cognitive_fragment),
+            joinedload(SharedResource.curiosity_capsule),
+            joinedload(SharedResource.behavior_pattern),
         )
         
         result = await db.execute(stmt)

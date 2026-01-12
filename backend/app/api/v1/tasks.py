@@ -94,6 +94,8 @@ async def create_task(
         priority=task_in.priority,
         due_date=task_in.due_date,
         guide_content=task_in.guide_content,
+        knowledge_node_id=task_in.knowledge_node_id,
+        tool_result_id=task_in.tool_result_id,
         status=TaskStatus.PENDING
     )
     
@@ -244,9 +246,14 @@ async def complete_task(
     task.actual_minutes = request.actual_minutes
     task.user_note = request.note
     # request.completion_quality is used for stats, ignored in model for now if not in schema
-    
+
     await db.commit()
     await db.refresh(task)
+
+    # P0.2: Auto-update plan progress when task is completed
+    if task.plan_id:
+        from app.services.plan_service import PlanService
+        await PlanService.update_progress(db, task.plan_id, task.user_id)
     
     # 🆕 Generate AI Feedback
     feedback = await feedback_service.generate_feedback(task, current_user, db)
@@ -273,11 +280,21 @@ async def complete_task(
         "retry_token": x_idempotency_key or "generated-token"
     }
 
-# Skeleton for other endpoints
-@router.get("", response_model=Dict[str, Any])
-async def list_tasks():
-    return {"data": []}
-
-@router.post("", response_model=Dict[str, Any])
-async def create_task():
-    return {"data": {}}
+@router.post("/confirm-batch/{tool_result_id}", response_model=Dict[str, Any])
+async def confirm_generated_tasks(
+    tool_result_id: str = Path(..., description="Tool result ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    确认 AI 生成的一批任务 (P0.1 修复)
+    """
+    from app.services.task_service import TaskService
+    tasks = await TaskService.confirm_tasks_by_tool_result(
+        db, tool_result_id, current_user.id
+    )
+    return {
+        "success": True,
+        "count": len(tasks),
+        "data": [TaskDetail.model_validate(t) for t in tasks]
+    }

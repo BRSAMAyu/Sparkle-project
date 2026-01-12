@@ -67,47 +67,81 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 - **语言**：Dart
 - **状态管理**：Riverpod
 - **本地存储**：shared_preferences + Hive
-- **网络请求**：Dio
+- **网络请求**：Dio + WebSocket
 - **目标平台**：Android / iOS
 
-### 后端（Backend）
-- **框架**：FastAPI (Python 3.11+ (tested with 3.14))
-- **ORM**：SQLAlchemy 2.0
-- **数据库**：PostgreSQL (开发环境可用 SQLite)
-- **任务调度**：APScheduler
-- **数据库迁移**：Alembic
-- **API 文档**：Swagger UI / ReDoc
+### 后端（混合架构）
+- **Go Gateway**：基于 Gin 框架，负责高并发 WebSocket 长连接、用户鉴权、会话管理、历史记录 CRUD。
+- **Python Agent Engine**：基于 gRPC，负责 AI 推理、工具调用、向量语义检索、遗忘曲线计算。
+- **通信协议**：Protobuf 定义接口，gRPC 进行跨语言双向流通信；WebSocket 与移动端进行实时事件推送。
+- **数据库**：PostgreSQL 16 + pgvector，共享数据模型。
+- **配置管理**：Pydantic v2 + python-dotenv + Viper。
 
 ### AI 服务
-- **模型**：通义千问（Qwen）/ DeepSeek
-- **接口**：统一 LLM Service 抽象层
-- **开发测试**：兼容 OpenAI API 格式
+- **模型**：通义千问（Qwen）/ DeepSeek / GPT-3.5
+- **接口**：统一 LLM Service 抽象层，支持 Agent 编排和实时状态机同步。
+- **视觉交互**：WebSocket 支持“思考中”、“搜索中”等 AI 内部状态可视化。
 
 ## 📁 项目结构
 
 ```
 sparkle/
-├── backend/          # Python FastAPI 后端
-├── mobile/           # Flutter 移动端
-├── docs/             # 项目文档
-├── ARCHITECTURE.md   # 项目技术架构
-├── MODULES.md        # 功能模块详解
+├── backend/
+│   ├── gateway/          # Go Gateway服务 (WebSocket/HTTP入口)
+│   │   ├── cmd/         # 服务器入口
+│   │   ├── internal/    # 内部包(handler/agent/db等)
+│   │   └── go.mod       # Go模块
+│   └── app/             # Python gRPC服务 (AI智能引擎)
+├── mobile/              # Flutter移动端
+├── proto/               # Protobuf接口定义
+├── docs/                # 项目文档
+├── ARCHITECTURE.md      # 项目技术架构
+├── MODULES.md           # 功能模块详解
 ├── COMMUNITY_FEATURES.md # 社群功能详解
-├── API_REFERENCE.md  # API接口参考
+├── API_REFERENCE.md     # API接口参考
 └── DEVELOPMENT_GUIDE.md # 开发指南
 ```
 
 ## 🚀 快速开始
 
-### 后端启动
+### 一键启动开发环境（推荐）
 
 ```bash
+# 查看完整启动指南
+make dev-all
+
+# 或按步骤启动：
+# 终端1: 启动数据库
+make dev-up
+
+# 终端2: 启动Python gRPC服务
+make grpc-server
+
+# 终端3: 启动Go Gateway
+make gateway-run
+```
+
+### 后端启动（详细步骤）
+
+```bash
+# 1. 启动数据库
+docker compose up -d
+
+# 2. 初始化Python环境
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env 配置数据库和 API 密钥
+# 编辑 .env 配置数据库和API密钥
 alembic upgrade head
-uvicorn app.main:app --reload
+
+# 3. 启动Python gRPC服务
+python grpc_server.py
+
+# 4. 启动Go Gateway（另一终端）
+cd backend/gateway
+go mod tidy
+go build -o bin/gateway ./cmd/server
+./bin/gateway
 ```
 
 ### 移动端启动
@@ -120,27 +154,62 @@ flutter run
 
 ## 📚 项目文档
 
-- [项目技术架构](ARCHITECTURE.md) - 详细的系统架构和模块关系
-- [功能模块详解](MODULES.md) - 各功能模块的详细说明
-- [社群功能详解](COMMUNITY_FEATURES.md) - 社群功能的完整介绍
-- [API接口参考](API_REFERENCE.md) - 完整的API接口文档
-- [开发指南](DEVELOPMENT_GUIDE.md) - 开发环境搭建和开发流程
-- [API 设计文档](docs/api_design.md) - 早期API设计文档
-- [数据库设计文档](docs/database_schema.md) - 数据库表结构说明
-- [开发指南](docs/development_guide.md) - 早期开发指南
+### 📖 文档导航（新版）
 
-## 👥 团队
+本项目已建立完整的文档体系，所有文档已按功能和阶段分类整理：
+
+```
+docs/
+├── 00_项目概览/              # 项目总体介绍和技术架构
+├── 01_核心模块文档/          # 各功能模块的详细说明
+├── 02_技术设计文档/          # 技术架构和接口设计
+├── 03_重构与优化报告/        # 重构过程和优化成果
+├── 04_功能实现指南/          # 功能实现的具体指导
+├── 05_项目历史与里程碑/      # 项目演进历程
+├── 06_安全与质量报告/        # 安全修复和配置说明
+└── 07_项目参考/              # 补充参考资料
+```
+
+**快速开始：**
+- 🎯 **新手入门**：阅读 [docs/08_文档索引.md](docs/08_文档索引.md) 查看完整文档导航
+- 🚀 **快速开发**：查看 [docs/00_项目概览/README.md](docs/00_项目概览/README.md) 了解项目概况
+- 🏗️ **技术架构**：阅读 [docs/00_项目概览/02_技术架构.md](docs/00_项目概览/02_技术架构.md) 理解系统架构
+- 🧩 **功能模块**：查看 [docs/01_核心模块文档/01_模块总览.md](docs/01_核心模块文档/01_模块总览.md) 了解功能划分
+
+**按角色查找：**
+- **后端开发者**：从 [技术架构](docs/00_项目概览/02_技术架构.md) → [模块总览](docs/01_核心模块文档/01_模块总览.md) → [API参考](docs/02_技术设计文档/03_API参考.md) → [深度技术讲解](docs/深度技术讲解教案_完整版.md)
+- **前端开发者**：从 [技术架构](docs/00_项目概览/02_技术架构.md) → [UI重构计划](docs/04_功能实现指南/03_UI重构计划.md) → [社群实现指南](docs/04_功能实现指南/01_社群功能实现指南.md) → [深度技术讲解](docs/深度技术讲解教案_完整版.md)
+- **全栈开发者**：从 [项目总览](docs/00_项目概览/01_项目总览.md) → [模块总览](docs/01_核心模块文档/01_模块总览.md) → [知识星图设计](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) → [深度技术讲解](docs/深度技术讲解教案_完整版.md)
+- **项目经理**：从 [项目总览](docs/00_项目概览/01_项目总览.md) → [计划概览](docs/04_功能实现指南/06_计划概览.md) → [项目历史](docs/05_项目历史与里程碑/) → [深度技术讲解](docs/深度技术讲解教案_完整版.md)
+
+### 📁 文档状态说明
+
+**✅ 已完成整理**：所有文档已按新版结构分类归档，旧链接已清理。
+
+**📚 关键文档更新**：
+- **深度技术讲解教案**：[docs/深度技术讲解教案_完整版.md](docs/深度技术讲解教案_完整版.md) - 200+ 知识点的完整技术教程，涵盖架构、实现、优化、生产级特性
+- **多智能体系统**：[docs/01_核心模块文档/多智能体系统模块.md](docs/01_核心模块文档/多智能体系统模块.md)
+- **系统集成指南**：[docs/04_功能实现指南/09_多智能体系统集成指南.md](docs/04_功能实现指南/09_多智能体系统集成指南.md)
+- **生产部署**：[docs/06_安全与质量报告/03_生产部署指南.md](docs/06_安全与质量报告/03_生产部署指南.md)
+- **竞赛演示**：[docs/07_项目参考/09_竞赛加分指南.md](docs/07_项目参考/09_竞赛加分指南.md)
+
+> **💡 深度技术学习**：深度技术讲解教案_完整版.md 包含了从架构设计到生产部署的完整技术栈详解，适合作为高级工程师学习和面试准备的参考资料。
+
+> **提示**：所有文档链接均可点击跳转，如链接失效请查看 [08_文档索引.md](docs/08_文档索引.md) 获取最新导航。
+
+## � 团队
 
 4名大二/大三计算机专业学生
 
-- 擅长：Python、AI 开发工具（Cursor、Claude）
-- 学习中：Dart、Flutter、Go、Java
+- 擅长：Python、AI开发工具（Cursor、Claude）
+- 学习中：Dart、Flutter、Go、gRPC
+- 已掌握：微服务架构、实时通信、跨语言开发
 
-## 📄 License
+## � License
 
 本项目用于大学软件创新大赛
 
-## 🔗 相关链接
+## � 相关链接
 
 - [项目看板](#)
 - [设计稿](#)
@@ -148,14 +217,24 @@ flutter run
 
 ---
 
-**Version**: MVP v0.2.0
-**Last Updated**: 2025-12-18
+**Version**: MVP v0.3.0 (Go重构版)
+**Last Updated**: 2025-12-27
 
-## 🆕 最近更新
+## � 最近更新
 
-- ✅ 知识星图功能上线（遗忘曲线、知识点拓展、向量搜索）
-- ✅ 智能推送系统完成（基于 Persona 的个性化推送）
-- ✅ LLM 宽容模式解析增强至 v2.2
+### ✅ Go后端重构 & Flutter集成完成
+- **架构升级**：从 Python 单体转为 Go + Python 混合架构，显著提升高并发长连接性能。
+- **Go Gateway**：基于 Gin + Gorilla WebSocket 的高性能网关，支持协议转换与鉴权。
+- **Python Agent**：解耦 AI 推理，通过 gRPC 提供 StreamChat 流式服务。
+- **实时状态可视化**：Flutter 端实时显示“思考中”、“正在搜索”、“正在执行工具”等 AI 状态。
+- **对话系统增强**：支持会话恢复（History Loading）、自动重连、打字机效果优化。
+- **认证深度集成**：对话模块与 Auth Provider 完整打通，支持真实用户信息传递。
+
+### ✅ 已完成功能
+- ✅ 知识星图功能（遗忘曲线、知识点拓展、向量搜索）
+- ✅ 智能推送系统（基于Persona的个性化推送）
+- ✅ LLM宽容模式解析增强至v2.2
 - ✅ 游客模式支持
 - ✅ 推送偏好设置和通知权限配置
 - ✅ 社群功能完整实现（好友、群组、打卡、火堆系统）
+- ✅ Flutter客户端WebSocket适配完成

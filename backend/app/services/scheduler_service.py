@@ -13,6 +13,9 @@ from app.schemas.notification import NotificationCreate
 from app.services.decay_service import DecayService
 from app.services.push_service import PushService
 from app.services.cognitive_service import CognitiveService
+from app.services.event_retention_service import EventRetentionService
+from app.config import settings
+from app.services.nightly_review_service import NightlyReviewService
 
 class SchedulerService:
     def __init__(self):
@@ -27,6 +30,12 @@ class SchedulerService:
 
         # 每日行为挖掘 (每天凌晨4点执行)
         self.scheduler.add_job(self.mining_implicit_behaviors_job, 'cron', hour=4, minute=0)
+
+        # 事件保留清理 (每天凌晨2点半执行)
+        self.scheduler.add_job(self.run_event_retention_cleanup, 'cron', hour=2, minute=30)
+
+        # 夜间复盘 (每天凌晨1点执行)
+        self.scheduler.add_job(self.run_nightly_review, 'cron', hour=1, minute=0)
 
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle and daily decay jobs")
@@ -101,6 +110,37 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Error in implicit mining job: {e}", exc_info=True)
+
+    async def run_event_retention_cleanup(self):
+        """
+        清理过期事件与状态快照
+        """
+        logger.info("Starting event retention cleanup...")
+        try:
+            async with AsyncSessionLocal() as db:
+                retention = EventRetentionService(db)
+                events_pruned = await retention.prune_events(settings.EVENT_RETENTION_DAYS)
+                states_pruned = await retention.prune_state_snapshots(settings.STATE_RETENTION_DAYS)
+                logger.info(
+                    f"Event retention cleanup completed: events={events_pruned}, states={states_pruned}"
+                )
+        except Exception as e:
+            logger.error(f"Error in event retention cleanup: {e}", exc_info=True)
+
+    async def run_nightly_review(self):
+        """
+        生成夜间复盘（Nightly Reviewer v1）
+        """
+        logger.info("Starting nightly review job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(User).where(User.is_active == True))
+                users = result.scalars().all()
+                service = NightlyReviewService(db)
+                for user in users:
+                    await service.generate_for_user(user.id, user.timezone)
+        except Exception as e:
+            logger.error(f"Error in nightly review job: {e}", exc_info=True)
 
     async def _send_review_reminders(self, db):
         """

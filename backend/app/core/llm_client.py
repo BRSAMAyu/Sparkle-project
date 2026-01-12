@@ -17,9 +17,17 @@ class LLMClient:
 
     def __init__(self):
         self.provider = settings.LLM_PROVIDER
-        self.api_key = settings.LLM_API_KEY
-        self.base_url = settings.LLM_API_BASE_URL
-        self.model_name = settings.LLM_MODEL_NAME
+        if self.provider == "deepseek":
+            self.api_key = settings.DEEPSEEK_API_KEY
+            self.base_url = settings.DEEPSEEK_BASE_URL
+            self.model_name = settings.DEEPSEEK_CHAT_MODEL
+        else:
+            self.api_key = settings.LLM_API_KEY
+            self.base_url = settings.LLM_API_BASE_URL
+            self.model_name = settings.LLM_MODEL_NAME
+
+        self.chat_model_name = settings.DEEPSEEK_CHAT_MODEL or settings.LLM_MODEL_NAME
+        self.reason_model_name = settings.DEEPSEEK_REASON_MODEL or settings.LLM_REASON_MODEL_NAME
 
     @retry(
         stop=stop_after_attempt(3),
@@ -31,7 +39,8 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         response_format: Optional[Dict[str, str]] = None,
-        stream: bool = False
+        stream: bool = False,
+        model: Optional[str] = None
     ) -> str:
         """
         调用 LLM Chat Completion API
@@ -53,7 +62,7 @@ class LLMClient:
             }
 
             payload = {
-                "model": self.model_name,
+                "model": model or self.chat_model_name or self.model_name,
                 "messages": messages,
                 "temperature": temperature,
             }
@@ -82,6 +91,24 @@ class LLMClient:
                 return data["choices"][0]["message"]["content"]
             else:
                 raise ValueError(f"Unexpected response format from LLM: {data}")
+
+    async def reason_completion(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.2,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, str]] = None
+    ) -> str:
+        """
+        调用 LLM Reasoning 模型
+        """
+        return await self.chat_completion(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format=response_format,
+            model=self.reason_model_name
+        )
 
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """

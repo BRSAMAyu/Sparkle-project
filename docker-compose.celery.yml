@@ -1,0 +1,86 @@
+# Celery Task Queue Services (Standalone)
+# Use with: docker compose -f docker-compose.celery.yml up -d
+
+services:
+  # Celery Worker - uses existing backend image
+  celery_worker:
+    image: sparkle_backend  # Use the backend image
+    container_name: sparkle_celery_worker
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    profiles:
+      - celery
+
+  # Celery Beat - scheduler
+  celery_beat:
+    image: sparkle_backend
+    container_name: sparkle_celery_beat
+    command: celery -A app.core.celery_app beat -l info
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    profiles:
+      - celery
+
+  # Flower - monitoring
+  flower:
+    image: mher/flower:1.2.0
+    container_name: sparkle_flower
+    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    environment:
+      - FLOWER_PURGE_OFFLINE_WORKERS=10
+    profiles:
+      - celery
+
+  # Redis (shared with main stack)
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: sparkle_redis
+    volumes:
+      - ./redis_data:/data
+      - ./redis.conf:/redis-stack.conf
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-change-me}
+    ports:
+      - "6379:6379"
+    profiles:
+      - celery
+
+  # PostgreSQL (shared with main stack)
+  sparkle_db:
+    image: pgvector/pgvector:pg16
+    container_name: sparkle_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-change-me}
+      - POSTGRES_DB=${DB_NAME:-sparkle}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sparkle"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - celery
