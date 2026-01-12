@@ -9,6 +9,7 @@ import 'package:sparkle/core/offline/conflict_resolver.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:uuid/uuid.dart';
 
 class BusinessException implements Exception {
@@ -25,15 +26,18 @@ class UpdateNodeMasteryMessage {
     required this.timestamp,
     required this.requestId,
     required this.revision,
+    required this.traceId,
   });
   final String nodeId;
   final int mastery;
   final DateTime timestamp;
   final String requestId;
   final int revision;
+  final String traceId;
 
   Map<String, dynamic> toJson() => {
         'type': 'update_node_mastery',
+        'trace_id': traceId,
         'payload': {
           'nodeId': nodeId,
           'mastery': mastery,
@@ -179,13 +183,14 @@ class OfflineSyncQueue {
         final reqId = update.requestId ?? _uuid.v4();
 
         // Send to server
-        final message = UpdateNodeMasteryMessage(
-          nodeId: update.nodeId,
-          mastery: update.newMastery,
-          timestamp: update.timestamp,
-          requestId: reqId,
-          revision: update.revision,
-        );
+      final message = UpdateNodeMasteryMessage(
+        nodeId: update.nodeId,
+        mastery: update.newMastery,
+        timestamp: update.timestamp,
+        requestId: reqId,
+        revision: update.revision,
+        traceId: TracingService.instance.createTraceId(),
+      );
 
         final ackFuture = _waitForAck(reqId);
 
