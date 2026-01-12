@@ -413,12 +413,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 payload['subject_code']?.toString() ??
                 type;
             return Padding(
-              padding: EdgeInsets.only(bottom: DS.spacing6),
+              padding: const EdgeInsets.only(bottom: DS.spacing6),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.check_circle_outline,
-                      size: DS.iconSizeXs, color: DS.neutral500),
+                      size: DS.iconSizeXs, color: DS.neutral500,),
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(

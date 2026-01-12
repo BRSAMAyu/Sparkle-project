@@ -10,17 +10,6 @@ enum ShaderQuality {
 }
 
 class GalaxyOptimizationConfig {
-  const GalaxyOptimizationConfig({
-    required this.shaderQuality,
-    required this.maxNodes,
-    required this.enablePhysics,
-    required this.targetFps,
-  });
-
-  final ShaderQuality shaderQuality;
-  final int maxNodes;
-  final bool enablePhysics;
-  final int targetFps;
 
   factory GalaxyOptimizationConfig.fromTier(PerformanceTier tier) {
     switch (tier) {
@@ -56,24 +45,35 @@ class GalaxyOptimizationConfig {
   }
 
   // Fallback if tier is unknown
-  static const GalaxyOptimizationConfig standard = GalaxyOptimizationConfig(
-    shaderQuality: ShaderQuality.medium,
-    maxNodes: 500,
-    enablePhysics: false,
-    targetFps: 30,
-  );
+  factory GalaxyOptimizationConfig.standard() {
+    return const GalaxyOptimizationConfig(
+      shaderQuality: ShaderQuality.medium,
+      maxNodes: 500,
+      enablePhysics: false,
+      targetFps: 30,
+    );
+  }
+  const GalaxyOptimizationConfig({
+    required this.shaderQuality,
+    required this.maxNodes,
+    required this.enablePhysics,
+    required this.targetFps,
+  });
+
+  final ShaderQuality shaderQuality;
+  final int maxNodes;
+  final bool enablePhysics;
+  final int targetFps;
   
   GalaxyOptimizationConfig copyWith({
     ShaderQuality? shaderQuality,
     int? maxNodes,
     bool? enablePhysics,
     int? targetFps,
-  }) {
-    return GalaxyOptimizationConfig(
+  }) => GalaxyOptimizationConfig(
       shaderQuality: shaderQuality ?? this.shaderQuality,
       maxNodes: maxNodes ?? this.maxNodes,
       enablePhysics: enablePhysics ?? this.enablePhysics,
       targetFps: targetFps ?? this.targetFps,
     );
-  }
 }

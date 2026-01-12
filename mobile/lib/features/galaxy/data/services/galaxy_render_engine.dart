@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 
 class GalaxyRenderSettings {
@@ -56,7 +55,7 @@ class GalaxyRenderEngine {
   Timer? _frameTimer;
   final List<GalaxyBurst?> _bursts = List<GalaxyBurst?>.filled(4, null);
   int _burstIndex = 0;
-  DateTime _startTime = DateTime.now();
+  final DateTime _startTime = DateTime.now();
   String? _lastLoggedReason;
 
   Future<void> prewarm() async {
