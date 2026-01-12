@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
 
 void main() async {
@@ -30,6 +31,11 @@ void main() async {
 
     // Initialize ThemeManager
     await ThemeManager().initialize();
+
+    // Initialize OpenTelemetry Tracing
+    const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT', defaultValue: '');
+    final collectorUri = otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
+    await TracingService.instance.initialize(collectorUri: collectorUri);
 
     // Enable Demo Mode via --dart-define=DEMO_MODE=true
     const isDemoMode = bool.fromEnvironment('DEMO_MODE');
