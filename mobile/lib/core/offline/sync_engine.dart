@@ -8,6 +8,7 @@ import 'package:logger/logger.dart';
 import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 
 class SyncEngine {
   SyncEngine(this._localDb, this._wsService);
@@ -133,6 +134,7 @@ class SyncEngine {
 
   Future<void> _sendMasteryUpdate(Map<String, dynamic> payload, OutboxItem item) async {
     // P3: Use Protobuf Binary Protocol
+    final traceId = TracingService.instance.createTraceId();
     final request = UpdateNodeMasteryRequest(
       nodeId: payload['nodeId'] as String,
       mastery: payload['mastery'] as int,
@@ -147,6 +149,7 @@ class SyncEngine {
       payload: request.writeToBuffer(),
       timestamp: Int64(DateTime.now().millisecondsSinceEpoch),
       requestId: item.id.toString(),
+      traceId: traceId,
     );
 
     _wsService.send(wsMsg);
@@ -156,8 +159,10 @@ class SyncEngine {
   }
   
   Future<void> _sendCrdtUpdate(Map<String, dynamic> payload) async {
+      final traceId = TracingService.instance.createTraceId();
       _wsService.send({
         'type': 'crdt_update',
+        'trace_id': traceId,
         'payload': payload,
       });
   }

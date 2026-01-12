@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 
 class FlutterCRDTPersistence {
   FlutterCRDTPersistence(this._localDb, this._wsService);
@@ -22,8 +23,10 @@ class FlutterCRDTPersistence {
 
     // 2. 尝试同步到服务器 (Try to sync to server)
     if (await _isOnline()) {
+      final traceId = TracingService.instance.createTraceId();
       _wsService.send({
         'type': 'collaborative_update',
+        'trace_id': traceId,
         'galaxy_id': galaxyId,
         'update': update, // List<int> will be encoded by WebSocketService
         'timestamp': DateTime.now().millisecondsSinceEpoch,
