@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/chat.dart';
 
 // 生成 Mock 类

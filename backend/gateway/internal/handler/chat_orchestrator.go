@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
@@ -28,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -169,12 +171,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
 	for {
 		// Read message from WebSocket client
-		_, msg, err := conn.ReadMessage()
+		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
 			}
 			break
+		}
+
+		// P2: Support Binary Protobuf Protocol
+		if msgType == websocket.BinaryMessage {
+			h.handleProtobufMessage(conn, msg, userID, tracer, c.Request.Context())
+			continue
 		}
 
 		shouldClose := func() bool {
@@ -329,6 +337,93 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	log.Printf("WebSocket disconnected for user: %s", userID)
 }
 
+func (h *ChatOrchestrator) handleProtobufMessage(conn *websocket.Conn, msg []byte, userID string, tracer trace.Tracer, baseCtx context.Context) {
+	wsMsg := &pbws.WebSocketMessage{}
+	if err := proto.Unmarshal(msg, wsMsg); err != nil {
+		log.Printf("Failed to unmarshal protobuf message: %v", err)
+		return
+	}
+
+	// Extract trace context
+	// TODO: Map TraceId from proto to OpenTelemetry context if it's a valid traceparent
+	ctx := baseCtx
+	ctx, span := tracer.Start(ctx, "HandleMessage.Proto")
+	span.SetAttributes(
+		attribute.String("user_id", userID),
+		attribute.String("message_id", wsMsg.RequestId), // using RequestId as ID for now
+		attribute.String("type", wsMsg.Type),
+	)
+	defer span.End()
+
+	responder := newProtobufResponder(conn, wsMsg, ctx)
+
+	switch wsMsg.Type {
+	case "chat":
+		chatMsg := &pbws.ChatMessage{}
+		if err := proto.Unmarshal(wsMsg.Payload, chatMsg); err != nil {
+			log.Printf("Failed to unmarshal ChatMessage: %v", err)
+			responder.SendError("invalid_argument", "Invalid ChatMessage payload", false)
+			return
+		}
+
+		input := chatInputPool.Get().(*chatInput)
+		input.Reset()
+		defer func() {
+			input.Reset()
+			chatInputPool.Put(input)
+		}()
+
+		input.Message = chatMsg.Message
+		input.SessionID = chatMsg.SessionId
+		// Map other fields if ChatMessage has them (e.g. UserProfile)
+
+		h.handleChatMessage(ctx, responder, userID, input, wsMsg.RequestId)
+
+	case "update_node_mastery":
+		req := &pbws.UpdateNodeMasteryRequest{}
+		if err := proto.Unmarshal(wsMsg.Payload, req); err != nil {
+			log.Printf("Failed to unmarshal UpdateNodeMasteryRequest: %v", err)
+			responder.SendError("invalid_argument", "Invalid UpdateNodeMastery payload", false)
+			return
+		}
+		h.handleUpdateNodeMasteryProto(ctx, responder, req, userID)
+
+	default:
+		log.Printf("Unknown protobuf message type: %s", wsMsg.Type)
+		responder.SendError("invalid_argument", "Unknown message type", false)
+	}
+}
+
+func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, responder *protobufResponder, req *pbws.UpdateNodeMasteryRequest, userID string) {
+	log.Printf("Received mastery update (proto) for user %s, node %s, mastery %d", userID, req.NodeId, req.Mastery)
+
+	if h.galaxyClient == nil {
+		log.Printf("Galaxy gRPC client not initialized")
+		responder.SendUpdateNodeError(req.NodeId, fmt.Sprintf("%d", req.Timestamp), "Internal service error")
+		return
+	}
+
+	// Convert timestamp (int64 millis) to time.Time
+	version := time.UnixMilli(req.Timestamp)
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	resp, err := h.galaxyClient.UpdateNodeMastery(ctx, userID, req.NodeId, req.Mastery, version, "offline_sync_proto")
+
+	if err != nil {
+		log.Printf("gRPC mastery update failed: %v", err)
+		responder.SendUpdateNodeError(req.NodeId, fmt.Sprintf("%d", req.Timestamp), "Sync service unavailable")
+		return
+	}
+
+	if resp.Success {
+		responder.SendUpdateNodeMasteryAck(req.NodeId, fmt.Sprintf("%d", req.Timestamp), true)
+	} else {
+		responder.SendUpdateNodeError(req.NodeId, fmt.Sprintf("%d", req.Timestamp), resp.Reason)
+	}
+}
+
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	result := map[string]interface{}{
@@ -448,20 +543,20 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 				}
 			}
 			intervention = map[string]interface{}{
-				"id":              req.Id,
-				"dedupe_key":      req.DedupeKey,
-				"topic":           req.Topic,
-				"created_at_ms":   req.CreatedAtMs,
-				"expires_at_ms":   req.ExpiresAtMs,
-				"is_retractable":  req.IsRetractable,
-				"supersedes_id":   req.SupersedesId,
-				"schema_version":  req.SchemaVersion,
-				"policy_version":  req.PolicyVersion,
-				"model_version":   req.ModelVersion,
-				"reason":          reason,
-				"level":           req.Level.String(),
-				"on_reject":       cooldown,
-				"content":         contentMap,
+				"id":             req.Id,
+				"dedupe_key":     req.DedupeKey,
+				"topic":          req.Topic,
+				"created_at_ms":  req.CreatedAtMs,
+				"expires_at_ms":  req.ExpiresAtMs,
+				"is_retractable": req.IsRetractable,
+				"supersedes_id":  req.SupersedesId,
+				"schema_version": req.SchemaVersion,
+				"policy_version": req.PolicyVersion,
+				"model_version":  req.ModelVersion,
+				"reason":         reason,
+				"level":          req.Level.String(),
+				"on_reject":      cooldown,
+				"content":        contentMap,
 			}
 		}
 		result["intervention"] = intervention
@@ -492,8 +587,8 @@ func (r *envelopeResponder) SendAck() {
 	traceparent := traceparentFromContext(r.ctx)
 	payload := map[string]json.RawMessage{}
 	ack := map[string]interface{}{
-		"request_id": r.envelope.RequestID,
-		"server_ts":  time.Now().UnixMilli(),
+		"request_id":  r.envelope.RequestID,
+		"server_ts":   time.Now().UnixMilli(),
 		"traceparent": traceparent,
 	}
 	raw, err := json.Marshal(ack)
@@ -640,6 +735,120 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 	return r.conn.WriteMessage(websocket.TextMessage, data)
 }
 
+// protobufResponder implements the responder interfaces for Binary/Protobuf protocol
+type protobufResponder struct {
+	conn *websocket.Conn
+	msg  *pbws.WebSocketMessage
+	ctx  context.Context
+}
+
+func newProtobufResponder(conn *websocket.Conn, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
+	return &protobufResponder{
+		conn: conn,
+		msg:  msg,
+		ctx:  ctx,
+	}
+}
+
+func (r *protobufResponder) SendAck() {
+	// For P2, we can define a dedicated Ack message or just use status
+	// Using generic WebSocketMessage for Ack
+	// Payload could be empty or a simple status proto
+	r.sendProto("ack", nil)
+}
+
+func (r *protobufResponder) SendError(code, message string, retryable bool) {
+	// TODO: Define Error proto in websocket.proto
+	// For now, sending JSON error inside protobuf wrapper to be compatible with clients expecting structured error
+	errBody := map[string]interface{}{
+		"code":      code,
+		"message":   message,
+		"retryable": retryable,
+	}
+	raw, _ := json.Marshal(errBody)
+	r.sendProto("error", raw)
+}
+
+func (r *protobufResponder) SendActionStatus(actionID, status string, data map[string]interface{}) {
+	statusMsg := map[string]interface{}{
+		"action_id": actionID,
+		"status":    status,
+		"timestamp": time.Now().Unix(),
+	}
+	for k, v := range data {
+		statusMsg[k] = v
+	}
+	raw, _ := json.Marshal(statusMsg)
+	r.sendProto("action_status", raw)
+}
+
+func (r *protobufResponder) SendInterventionAck(requestID, status, message string) {
+	ack := map[string]interface{}{
+		"request_id": requestID,
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+	}
+	if message != "" {
+		ack["message"] = message
+	}
+	raw, _ := json.Marshal(ack)
+	r.sendProto("intervention_feedback_ack", raw)
+}
+
+func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
+	body := map[string]interface{}{
+		"node_id":   nodeID,
+		"version":   version,
+		"success":   success,
+		"timestamp": time.Now().Unix(),
+	}
+	raw, _ := json.Marshal(body)
+	r.sendProto("ack_update_node_mastery", raw)
+}
+
+func (r *protobufResponder) SendUpdateNodeError(nodeID, version, message string) {
+	body := map[string]interface{}{
+		"nodeId":  nodeID,
+		"version": version,
+		"error":   message,
+	}
+	raw, _ := json.Marshal(body)
+	r.sendProto("error_update_node_mastery", raw)
+}
+
+func (r *protobufResponder) SendChatResponse(resp *agentv1.ChatResponse) error {
+	// Marshal the ChatResponse to bytes
+	payload, err := proto.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	return r.sendProto("chat_response", payload)
+}
+
+func (r *protobufResponder) SendMeta(meta map[string]interface{}) error {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	return r.sendProto("meta", raw)
+}
+
+func (r *protobufResponder) sendProto(msgType string, payload []byte) error {
+	resp := &pbws.WebSocketMessage{
+		Version:   "2.0",
+		Type:      msgType,
+		Payload:   payload,
+		TraceId:   r.msg.TraceId,
+		RequestId: r.msg.RequestId,
+		Timestamp: time.Now().UnixMilli(),
+	}
+	data, err := proto.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	return r.conn.WriteMessage(websocket.BinaryMessage, data)
+}
+
 func parseEnvelopeJSON(msg []byte) (*wsEnvelopeIn, bool) {
 	raw := map[string]json.RawMessage{}
 	if err := json.Unmarshal(msg, &raw); err != nil {
@@ -744,6 +953,7 @@ func generateRequestID() string {
 }
 
 func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder interface{}, userID string, input *chatInput, requestID string) bool {
+	tracer := otel.Tracer("chat-orchestrator")
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("session_id", input.SessionID),
@@ -762,19 +972,61 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		go h.saveMessage(userID, sessionID, "user", message)
 	}
 
-	// Canonicalize Input (Semantic Cache Prep)
-	_ = h.semantic.Canonicalize(input.Message)
-	// TODO: Use canonicalized input for semantic search or caching in future
-
 	startTime := time.Now()
+	isCacheHit := false
+
+	// P0: Semantic Cache Check
+	if h.semantic != nil {
+		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
+		cachedResp, err := h.semantic.SearchExact(cacheCtx, input.Message)
+		cacheSpan.End()
+
+		if err == nil && cachedResp != "" {
+			isCacheHit = true
+			log.Printf("Semantic cache hit for user=%s", userID)
+
+			// Construct cached response
+			resp := &agentv1.ChatResponse{
+				ResponseId:   fmt.Sprintf("resp_cache_%d", time.Now().UnixNano()),
+				CreatedAt:    int64(time.Now().Unix()),
+				RequestId:    requestID,
+				Content:      &agentv1.ChatResponse_FullText{FullText: cachedResp},
+				FinishReason: agentv1.FinishReason_STOP,
+			}
+
+			// Send response
+			switch r := responder.(type) {
+			case *envelopeResponder:
+				_ = r.SendChatResponse(resp)
+				_ = r.SendMeta(map[string]interface{}{
+					"latency_ms":   time.Since(startTime).Milliseconds(),
+					"is_cache_hit": true,
+				})
+			default:
+				conn := responder.(*websocket.Conn)
+				conn.WriteJSON(convertResponseToJSON(resp))
+				conn.WriteJSON(gin.H{
+					"type": "meta",
+					"meta": map[string]interface{}{
+						"latency_ms":   time.Since(startTime).Milliseconds(),
+						"is_cache_hit": true,
+					},
+				})
+			}
+
+			return true
+		}
+	}
 
 	// P0: Fetch user context (pending tasks, active plans, focus stats, recent progress)
 	userContextJSON := ""
 	var contextFetchLatency time.Duration
 	if h.userContext != nil {
+		ucCtx, ucSpan := tracer.Start(ctx, "user_context.fetch")
 		contextFetchStart := time.Now()
-		contextData, err := h.userContext.GetUserContextData(ctx, uuid.MustParse(userID))
+		contextData, err := h.userContext.GetUserContextData(ucCtx, uuid.MustParse(userID))
 		contextFetchLatency = time.Since(contextFetchStart)
+		ucSpan.End()
 
 		if err != nil {
 			log.Printf("[CONTEXT] Failed to fetch user context for user=%s, latency=%dms, error=%v",
@@ -834,7 +1086,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 
 	if h.quota != nil {
-		remaining, err := h.quota.ReserveRequest(ctx, userID, reqID, 24*time.Hour)
+		quotaCtx, quotaSpan := tracer.Start(ctx, "quota.reserve")
+		remaining, err := h.quota.ReserveRequest(quotaCtx, userID, reqID, 24*time.Hour)
+		quotaSpan.End()
+
 		if err != nil {
 			if err == service.ErrQuotaInsufficient {
 				log.Printf("Quota exhausted for user=%s request=%s", userID, reqID)
@@ -890,7 +1145,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 
 	// Call Python Agent via gRPC (server-side streaming)
-	stream, err := h.agentClient.StreamChat(ctx, req)
+	grpcCtx, grpcSpan := tracer.Start(ctx, "grpc.agent_call")
+	stream, err := h.agentClient.StreamChat(grpcCtx, req)
+	grpcSpan.End()
+
 	if err != nil {
 		log.Printf("Failed to call StreamChat: %v", err)
 		switch r := responder.(type) {
@@ -1022,7 +1280,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	meta := map[string]interface{}{
 		"latency_ms":     latency,
-		"is_cache_hit":   false, // Set to true if semantic cache hit (to be implemented)
+		"is_cache_hit":   isCacheHit,
 		"cost_saved":     0.0,
 		"breaker_status": "closed",
 	}
@@ -1042,13 +1300,22 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		})
 	}
 
-	// Persist completed message to database (async)
+	// Persist completed message to database and cache (async)
 	if fullText != "" && input.SessionID != "" {
 		// Capture values for goroutine before returning input to pool
 		sessionID := input.SessionID
 		result := fullText
-		go h.saveMessage(userID, sessionID, "assistant", result)
 
+		go func() {
+			// Update Semantic Cache
+			if h.semantic != nil {
+				if err := h.semantic.SetExact(context.Background(), input.Message, result); err != nil {
+					log.Printf("Failed to update cache: %v", err)
+				}
+			}
+			// Save to History
+			h.saveMessage(userID, sessionID, "assistant", result)
+		}()
 	}
 
 	return false
@@ -1096,6 +1363,10 @@ type interventionResponder interface {
 
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
+	tracer := otel.Tracer("chat-orchestrator")
+	ctx, span := tracer.Start(context.Background(), "redis.save_message")
+	defer span.End()
+
 	payload := map[string]string{
 		"session_id": sessionID,
 		"user_id":    userID,
@@ -1105,7 +1376,6 @@ func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) 
 	}
 	data, _ := json.Marshal(payload)
 
-	ctx := context.Background()
 	// Use the new reliable double-write mechanism
 	if err := h.chatHistory.SaveMessage(ctx, sessionID, data); err != nil {
 		log.Printf("Failed to save chat message: %v", err)
@@ -1373,9 +1643,9 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 		return
 	}
 
-	metadata := map[string]interface{}{}
-	if raw, ok := msgMap["metadata"].(map[string]interface{}); ok {
-		metadata = raw
+	extraData := map[string]interface{}{}
+	if raw, ok := msgMap["extra_data"].(map[string]interface{}); ok {
+		extraData = raw
 	}
 
 	if h.backendURL == "" || authToken == "" {
@@ -1386,7 +1656,7 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 
 	payload := map[string]interface{}{
 		"feedback_type": feedbackType,
-		"metadata":      metadata,
+		"extra_data":    extraData,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

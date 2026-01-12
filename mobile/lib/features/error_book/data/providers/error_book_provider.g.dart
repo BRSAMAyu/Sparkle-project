@@ -27,7 +27,7 @@ final errorBookRepositoryProvider =
 );
 
 typedef ErrorBookRepositoryRef = AutoDisposeProviderRef<ErrorBookRepository>;
-String _$errorListHash() => r'92a6d7652f9cddadea9c94739ac6557addf3d4a6';
+String _$errorListHash() => r'57cef2b8629c4f59174ef2f91ba2d87e4f40e48b';
 
 /// Copied from Dart SDK
 class _SystemHash {

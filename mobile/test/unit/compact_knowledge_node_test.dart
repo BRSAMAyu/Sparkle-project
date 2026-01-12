@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sparkle/data/models/compact_knowledge_node.dart';
+import 'package:sparkle/features/knowledge/data/models/compact_knowledge_node.dart';
 
 void main() {
   group('CompactKnowledgeNode', () {

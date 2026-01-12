@@ -178,13 +178,13 @@ class InterventionService:
         request: InterventionRequest,
         user_id: UUID,
         feedback_type: InterventionFeedbackType,
-        metadata: Optional[Dict[str, Any]],
+        extra_data: Optional[Dict[str, Any]],
     ) -> InterventionFeedback:
         feedback = InterventionFeedback(
             request_id=request.id,
             user_id=user_id,
             feedback_type=feedback_type.value,
-            metadata=metadata,
+            extra_data=extra_data,
         )
         self.db.add(feedback)
 

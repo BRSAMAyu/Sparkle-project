@@ -42,6 +42,8 @@ from app.orchestration.validator import RequestValidator, ValidationResult
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.token_tracker import TokenTracker
+from app.orchestration.collaboration_workflows import create_collaboration_workflow, WorkflowState
+from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.gen.agent.v1 import agent_service_pb2
 from app.config import settings
 
@@ -52,6 +54,7 @@ STATE_GENERATING = "GENERATING"
 STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
+
 
 # Prometheus Metrics (if available)
 if PROMETHEUS_AVAILABLE:
@@ -246,6 +249,9 @@ class ProductionChatOrchestrator:
                 f"circuit_breaker={enable_circuit_breaker}, "
                 f"max_concurrent={max_concurrent_sessions}"
             )
+        
+        # Initialize Workflow Engine
+        self.workflow = create_collaboration_workflow()
 
         # 工具注册
         self._ensure_tools_registered()
@@ -562,6 +568,20 @@ class ProductionChatOrchestrator:
                 user_context_data = await self._build_user_context(user_id, active_db)
                 conversation_context = await self._build_conversation_context(session_id, user_id)
 
+                # P4: Tool Preference Routing
+                preferred_tools_hint = ""
+                try:
+                    if active_db and user_id:
+                        # Convert user_id string to UUID
+                        user_uuid = uuid.UUID(user_id)
+                        router = ToolPreferenceRouter(active_db, user_uuid, self.redis)
+                        preferred_tools = await router.get_preferred_tools(limit=3)
+                        if preferred_tools:
+                            preferred_tools_hint = f"\n\n## 工具偏好\n根据历史习惯，用户倾向于使用以下工具: {', '.join(preferred_tools)}"
+                            logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
+                except Exception as e:
+                    logger.warning(f"Failed to get tool preferences: {e}")
+
                 # GraphRAG 检索（增强版，带降级）
                 knowledge_context = ""
                 try:
@@ -611,8 +631,92 @@ class ProductionChatOrchestrator:
                 conversation_history=conversation_context
             )
 
+            if preferred_tools_hint:
+                base_system_prompt += preferred_tools_hint
+
             if knowledge_context:
                 base_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"
+
+            # ------------------------------------------------------------------
+            # P2: Workflow Engine Integration
+            # ------------------------------------------------------------------
+            use_workflow = False
+            if request.HasField("extra_context"):
+                try:
+                    # extra_context is a Struct, converted to dict earlier if needed, 
+                    # but here we access the proto Struct directly or Convert
+                    # Actually request.extra_context is a google.protobuf.Struct
+                    # We can helper convert it or access fields if we know how.
+                    # Easier: check fields map.
+                    if "use_workflow" in request.extra_context.fields:
+                         if request.extra_context.fields["use_workflow"].bool_value:
+                             use_workflow = True
+                except Exception:
+                    pass
+
+            if use_workflow:
+                logger.info(f"🚀 Triggering Collaboration Workflow for session {session_id}")
+                
+                # Yield initial status
+                yield agent_service_pb2.ChatResponse(
+                    response_id=f"resp_{uuid.uuid4()}",
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING,
+                        details="Initializing multi-agent workflow..."
+                    )
+                )
+
+                # Initialize State
+                initial_state = WorkflowState()
+                user_msg = request.message if request.HasField("message") else "Proceed"
+                initial_state.append_message("user", user_msg)
+                initial_state.context_data["user_id"] = user_id
+                initial_state.context_data["session_id"] = session_id
+                
+                # Run Workflow
+                final_state = await self.workflow.invoke(initial_state)
+                
+                # Process Results
+                # Yield execution logs as status updates or partials?
+                # For now, just yield the final "assistant" messages added by the workflow.
+                
+                # Send "Done" status
+                yield agent_service_pb2.ChatResponse(
+                    response_id=f"resp_{uuid.uuid4()}",
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.DONE,
+                        details="Workflow completed"
+                    )
+                )
+
+                # Send all new assistant messages
+                for msg in final_state.messages:
+                    if msg["role"] == "assistant":
+                         # We can stream these or send as full text.
+                         # Since workflow is done, sending as full text chunks is fine.
+                         content = msg["content"]
+                         prefix = f"**[{msg.get('name', 'Agent')}]**: "
+                         yield agent_service_pb2.ChatResponse(
+                            response_id=f"resp_{uuid.uuid4()}",
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            full_text=prefix + content
+                        )
+
+                # Record metrics and log success
+                if self.enable_metrics:
+                    REQUEST_COUNTER.labels(status="success_workflow", session_id=session_id).inc()
+                self._log_request(session_id, request_id, user_id, time.time() - start_time, "success_workflow")
+                
+                # Release lock and return
+                await self._release_session_lock(session_id, request_id)
+                await self._track_session(session_id, add=False)
+                return
+            # ------------------------------------------------------------------
 
             # 发送思考状态
             yield agent_service_pb2.ChatResponse(

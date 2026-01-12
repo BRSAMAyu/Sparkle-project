@@ -250,9 +250,9 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           ),
         );
       },
-      loading: () => const Scaffold(
+      loading: () => Scaffold(
         backgroundColor: DS.deepSpaceStart,
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (err, stack) => Scaffold(
         backgroundColor: DS.deepSpaceStart,

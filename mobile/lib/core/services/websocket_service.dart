@@ -4,7 +4,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -54,7 +56,26 @@ class WebSocketService {
 
       _channel!.stream.listen(
         (data) {
-          _controller.add(data);
+          if (data is List<int>) {
+            try {
+              final msg = WebSocketMessage.fromBuffer(data);
+              _controller.add(msg);
+            } catch (e) {
+              debugPrint('Failed to parse Protobuf message: $e');
+              // Fallback: emit raw binary if it wasn't a valid WebSocketMessage (unlikely)
+              _controller.add(data);
+            }
+          } else {
+            // Text/JSON message
+            try {
+              // Try to decode JSON to Map if possible, for easier consumption
+              final decoded = jsonDecode(data as String);
+              _controller.add(decoded);
+            } catch (_) {
+              // Not JSON, just emit string
+              _controller.add(data);
+            }
+          }
           _reconnectAttempts = 0; // Reset on success
         },
         onError: (Object error) {
@@ -112,7 +133,11 @@ class WebSocketService {
 
   void send(dynamic data) {
     if (_channel != null && _isConnected) {
-      if (data is Map || data is List) {
+      if (data is WebSocketMessage) {
+        _channel!.sink.add(data.writeToBuffer());
+      } else if (data is List<int>) {
+        _channel!.sink.add(data);
+      } else if (data is Map || data is List) {
         _channel!.sink.add(jsonEncode(data));
       } else {
         _channel!.sink.add(data);

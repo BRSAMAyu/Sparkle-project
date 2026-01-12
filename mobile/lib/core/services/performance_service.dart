@@ -56,7 +56,7 @@ class PerformanceService extends ChangeNotifier {
   final ValueNotifier<PerformanceTier> currentTier =
       ValueNotifier(defaultPerformanceTier());
   final ValueNotifier<double> currentDpr =
-      ValueNotifier(window.devicePixelRatio);
+      ValueNotifier(PlatformDispatcher.instance.views.first.devicePixelRatio);
 
   // --- Configuration ---
   static const Duration _targetWindowDuration = Duration(seconds: 1);
@@ -86,6 +86,8 @@ class PerformanceService extends ChangeNotifier {
       currentTier.value == PerformanceTier.ultra ||
       currentTier.value == PerformanceTier.high;
   bool get enableAntialiasing => currentTier.value != PerformanceTier.low;
+  bool get enableFocusTwinkle => currentTier.value == PerformanceTier.ultra ||
+      currentTier.value == PerformanceTier.high;
   
   // Focus Mode configuration
   int get focusStarCount {
@@ -186,10 +188,11 @@ class PerformanceService extends ChangeNotifier {
 
   void _onFrameTiming(List<FrameTiming> timings) {
     for (final timing in timings) {
-      _frameTimestamps.add(timing.rasterFinish);
+      final rasterFinish = Duration(microseconds: timing.timestampInMicroseconds(FramePhase.rasterFinish));
+      _frameTimestamps.add(rasterFinish);
       _frameSamples.add(
         _FrameSample(
-          timing.rasterFinish,
+          rasterFinish,
           timing.totalSpan.inMicroseconds / 1000.0,
         ),
       );
@@ -290,7 +293,7 @@ class PerformanceService extends ChangeNotifier {
     // 1. DPR Downsampling (Simulated or via Widget Scaling)
     // We allow dropping DPR down to 0.5 * Device Ratio or 1.0 absolute, whichever is higher,
     // to prevent complete blurriness.
-    final targetDpr = (currentDpr.value * 0.7).clamp(1.0, window.devicePixelRatio);
+    final targetDpr = (currentDpr.value * 0.7).clamp(1.0, PlatformDispatcher.instance.views.first.devicePixelRatio);
     
     if (currentDpr.value > targetDpr + 0.1) { // Floating point tolerance
        currentDpr.value = targetDpr;
@@ -315,8 +318,8 @@ class PerformanceService extends ChangeNotifier {
       notifyListeners();
     } else {
       // 2. DPR Restoration
-      if (currentDpr.value < window.devicePixelRatio) {
-        currentDpr.value = window.devicePixelRatio;
+      if (currentDpr.value < PlatformDispatcher.instance.views.first.devicePixelRatio) {
+        currentDpr.value = PlatformDispatcher.instance.views.first.devicePixelRatio;
         notifyListeners();
       }
     }

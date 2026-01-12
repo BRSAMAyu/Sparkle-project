@@ -247,8 +247,7 @@ class ErrorDetailScreen extends ConsumerWidget {
   Widget _buildSemanticSummarySection(
     BuildContext context,
     AsyncValue<ErrorSemanticSummary> summaryAsync,
-  ) {
-    return summaryAsync.when(
+  ) => summaryAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (summary) {
@@ -307,7 +306,6 @@ class ErrorDetailScreen extends ConsumerWidget {
         );
       },
     );
-  }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     final theme = Theme.of(context);

@@ -65,6 +65,26 @@ class LocalCRDTSnapshot {
   late bool synced;
 }
 
+@collection
+class OutboxItem {
+  Id id = Isar.autoIncrement;
+
+  @Index()
+  late String type; // e.g. 'mastery_update', 'spark_creation'
+
+  late String payloadJson; // Serialized JSON payload
+
+  @Index()
+  late DateTime createdAt;
+
+  int retryCount = 0;
+
+  @enumerated
+  SyncStatus status = SyncStatus.pending;
+
+  String? error;
+}
+
 class LocalDatabase {
   factory LocalDatabase() => _instance;
 
@@ -79,7 +99,7 @@ class LocalDatabase {
     // final encryptionKey = await secureStorage.read(key: 'db_key');
 
     isar = await Isar.open(
-      [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema],
+      [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema, OutboxItemSchema],
       directory: dir.path,
     );
   }

@@ -8,6 +8,7 @@ Tool History Service - 工具执行历史记录和学习服务
 4. 性能监控
 """
 import json
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from sqlalchemy import select, and_, desc, func
@@ -25,7 +26,7 @@ class ToolHistoryService:
 
     async def record_tool_execution(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         tool_name: str,
         success: bool,
         execution_time_ms: Optional[int] = None,
@@ -84,7 +85,7 @@ class ToolHistoryService:
 
     async def get_tool_success_rate(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         tool_name: str,
         days: int = 30
     ) -> float:
@@ -127,7 +128,7 @@ class ToolHistoryService:
 
     async def get_user_preferred_tools(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         limit: int = 10,
         days: int = 30
     ) -> List[UserToolPreference]:
@@ -192,7 +193,7 @@ class ToolHistoryService:
 
     async def get_tool_statistics(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         tool_name: str,
         days: int = 30
     ) -> ToolSuccessRateView:
@@ -253,7 +254,7 @@ class ToolHistoryService:
 
     async def get_recent_failed_tools(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         limit: int = 5
     ) -> List[Dict[str, Any]]:
         """

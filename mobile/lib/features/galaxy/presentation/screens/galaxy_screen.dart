@@ -302,7 +302,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _renderEngine.addBurst(
       screenPosition: targetScreenPos,
       screenSize: MediaQuery.of(context).size,
-      strength: 1.0,
     );
 
     final successKey = UniqueKey();

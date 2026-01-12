@@ -352,6 +352,13 @@ cd backend && alembic upgrade head
 # Verify: alembic current
 ```
 
+#### Step 1.5: Redis Search Index Initialization (14:10)
+```bash
+# Required for RAG and Semantic Cache
+python backend/scripts/init_redis_index.py
+python backend/scripts/init_semantic_cache_index.py
+```
+
 #### Step 2: Start Infrastructure (14:15)
 ```bash
 # Redis

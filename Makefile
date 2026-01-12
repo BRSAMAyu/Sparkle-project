@@ -82,6 +82,11 @@ proto-gen-legacy:
 	       --go_out=backend/gateway/gen/galaxy/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/galaxy/v1 --go-grpc_opt=paths=source_relative \
 	       proto/galaxy_service.proto
+	@echo "  → WebSocket..."
+	mkdir -p backend/gateway/gen/ws
+	protoc --proto_path=proto \
+	       --go_out=backend/gateway/gen/ws --go_opt=paths=source_relative \
+	       proto/websocket.proto
 	@echo "  → Python..."
 	mkdir -p backend/app/gen/agent/v1
 	mkdir -p backend/app/gen/galaxy/v1

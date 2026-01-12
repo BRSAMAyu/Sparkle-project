@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 
 /// Model representing a single energy particle in the transfer animation

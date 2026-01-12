@@ -331,13 +331,13 @@ class WebSocketChatServiceV2 {
   void sendInterventionFeedback({
     required String requestId,
     required String feedbackType,
-    Map<String, dynamic>? metadata,
+    Map<String, dynamic>? extraData,
   }) {
     final feedback = {
       'type': 'intervention_feedback',
       'request_id': requestId,
       'feedback_type': feedbackType,
-      if (metadata != null) 'metadata': metadata,
+      if (extraData != null) 'extra_data': extraData,
       'timestamp': DateTime.now().toIso8601String(),
     };
 

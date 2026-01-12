@@ -25,6 +25,7 @@ from app.orchestration.validator import RequestValidator, ValidationResult
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.token_tracker import TokenTracker
+from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.gen.agent.v1 import agent_service_pb2
 from app.config import settings
 from app.core.metrics import (
@@ -36,6 +37,7 @@ from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
+from opentelemetry import trace
 
 # FSM States
 STATE_INIT = "INIT"
@@ -477,14 +479,6 @@ class ChatOrchestrator:
             logger.error(f"Failed to get tools schema: {e}")
             return []
 
-    async def _get_tools_schema(self) -> List[Dict[str, Any]]:
-        """Get tools from dynamic registry"""
-        try:
-            return dynamic_tool_registry.get_openai_tools_schema()
-        except Exception as e:
-            logger.error(f"Failed to get tools schema: {e}")
-            return []
-
     async def process_stream(
         self,
         request: agent_service_pb2.ChatRequest,
@@ -494,286 +488,313 @@ class ChatOrchestrator:
         """
         Process the incoming chat request with enhanced features
         """
-        start_time = time.time()
-        ACTIVE_SESSIONS.inc()
-        request_id = request.request_id
-        session_id = request.session_id
-        user_id = request.user_id
+        tracer = trace.get_tracer(__name__)
         
-        # Use provided session or instance session
-        active_db = db_session or self.db_session
-        
-        # Step 0: Request Validation (with quota check)
-        if self.validator:
-            validation_result = await self.validator.validate_chat_request(request)
-            if not validation_result.is_valid:
-                logger.error(f"Validation failed: {validation_result.error_message}")
+        # Start Root Span
+        with tracer.start_as_current_span("orchestrator.process_stream") as span:
+            span.set_attribute("session_id", request.session_id)
+            span.set_attribute("user_id", request.user_id)
+            span.set_attribute("request_id", request.request_id)
+
+            start_time = time.time()
+            ACTIVE_SESSIONS.inc()
+            request_id = request.request_id
+            session_id = request.session_id
+            user_id = request.user_id
+            
+            # Use provided session or instance session
+            active_db = db_session or self.db_session
+            
+            # Step 0: Request Validation (with quota check)
+            if self.validator:
+                validation_result = await self.validator.validate_chat_request(request)
+                if not validation_result.is_valid:
+                    logger.error(f"Validation failed: {validation_result.error_message}")
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=f"resp_{uuid.uuid4()}",
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        error=agent_service_pb2.Error(
+                            code="VALIDATION_ERROR",
+                            message=validation_result.error_message,
+                            retryable=False
+                        ),
+                        finish_reason=agent_service_pb2.ERROR
+                    )
+                    return
+
+            # Step 1: Check Idempotency
+            cached_response = await self._check_idempotency(session_id, request_id)
+            if cached_response:
+                logger.info(f"Cache hit for session {session_id}, request {request_id}")
+                # Return cached response
+                yield agent_service_pb2.ChatResponse(
+                    response_id=f"resp_{uuid.uuid4()}",
+                    created_at=int(datetime.now().timestamp()),
+                    request_id=request_id,
+                    full_text=cached_response.get("full_text", ""),
+                    finish_reason=agent_service_pb2.STOP
+                )
+                return
+
+            # Step 2: Acquire Distributed Lock
+            with tracer.start_as_current_span("redis.acquire_lock"):
+                lock_acquired = await self._acquire_session_lock(session_id, request_id)
+            
+            if not lock_acquired:
                 yield agent_service_pb2.ChatResponse(
                     response_id=f"resp_{uuid.uuid4()}",
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(
-                        code="VALIDATION_ERROR",
-                        message=validation_result.error_message,
-                        retryable=False
+                        code="CONFLICT",
+                        message="Another request is processing for this session",
+                        retryable=True
                     ),
                     finish_reason=agent_service_pb2.ERROR
                 )
                 return
 
-        # Step 1: Check Idempotency
-        cached_response = await self._check_idempotency(session_id, request_id)
-        if cached_response:
-            logger.info(f"Cache hit for session {session_id}, request {request_id}")
-            # Return cached response
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                full_text=cached_response.get("full_text", ""),
-                finish_reason=agent_service_pb2.STOP
-            )
-            return
+            total_prompt_tokens = 0
+            total_completion_tokens = 0
 
-        # Step 2: Acquire Distributed Lock
-        lock_acquired = await self._acquire_session_lock(session_id, request_id)
-        if not lock_acquired:
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                error=agent_service_pb2.Error(
-                    code="CONFLICT",
-                    message="Another request is processing for this session",
-                    retryable=True
-                ),
-                finish_reason=agent_service_pb2.ERROR
-            )
-            return
+            try:
+                # Step 3: Initialize Workflow State
+                await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
 
-        total_prompt_tokens = 0
-        total_completion_tokens = 0
+                user_message = ""
+                if request.HasField("message"):
+                    user_message = request.message
+                elif request.HasField("tool_result"):
+                    tool_result = request.tool_result
+                    user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
 
-        try:
-            # Step 3: Initialize Workflow State
-            await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+                # P0: Build user + conversation context
+                # First, try to merge extra_context from gRPC (from Go Gateway)
+                grpc_context = {}
+                if request.user_profile and request.user_profile.extra_context:
+                    try:
+                        grpc_context = json.loads(request.user_profile.extra_context)
+                        logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse extra_context JSON: {e}")
 
-            user_message = ""
-            if request.HasField("message"):
-                user_message = request.message
-            elif request.HasField("tool_result"):
-                tool_result = request.tool_result
-                user_message = f"Tool '{tool_result.tool_name}' execution result: {tool_result.result_json}"
+                request_context = {}
+                if request.HasField("extra_context"):
+                    try:
+                        request_context = MessageToDict(request.extra_context)
+                        if request_context:
+                            logger.debug(f"Parsed request extra_context: {list(request_context.keys())}")
+                    except Exception as e:
+                        logger.warning(f"Failed to parse request extra_context: {e}")
 
-            # P0: Build user + conversation context
-            # First, try to merge extra_context from gRPC (from Go Gateway)
-            grpc_context = {}
-            if request.user_profile and request.user_profile.extra_context:
-                try:
-                    grpc_context = json.loads(request.user_profile.extra_context)
-                    logger.debug(f"Parsed extra_context from gRPC: {list(grpc_context.keys())}")
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse extra_context JSON: {e}")
+                if request_context:
+                    grpc_context = {**grpc_context, **request_context}
 
-            request_context = {}
-            if request.HasField("extra_context"):
-                try:
-                    request_context = MessageToDict(request.extra_context)
-                    if request_context:
-                        logger.debug(f"Parsed request extra_context: {list(request_context.keys())}")
-                except Exception as e:
-                    logger.warning(f"Failed to parse request extra_context: {e}")
+                user_context_payload = None
+                conversation_context = None
+                
+                with tracer.start_as_current_span("db.build_context"):
+                    if active_db and user_id:
+                        local_context = await self._build_user_context(user_id, active_db)
+                        # P0: Merge contexts - prioritize gRPC context (more recent) over local context
+                        user_context_payload = self._merge_user_contexts(local_context, grpc_context)
+                        logger.info(f"Merged user context: {user_context_payload is not None}")
 
-            if request_context:
-                grpc_context = {**grpc_context, **request_context}
+                        # P4: Tool Preference Routing
+                        try:
+                            # Convert user_id string to UUID
+                            user_uuid = uuid.UUID(user_id)
+                            router = ToolPreferenceRouter(active_db, user_uuid, self.redis)
+                            preferred_tools = await router.get_preferred_tools(limit=3)
+                            if preferred_tools:
+                                if user_context_payload is not None:
+                                    user_context_payload["preferred_tools"] = preferred_tools
+                                logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
+                        except Exception as e:
+                            logger.warning(f"Failed to get tool preferences: {e}")
+                    elif grpc_context:
+                        # If no DB session but have gRPC context, use it
+                        user_context_payload = grpc_context
+                        logger.info("Using gRPC context without local DB context")
 
-            user_context_payload = None
-            conversation_context = None
-            if active_db and user_id:
-                local_context = await self._build_user_context(user_id, active_db)
-                # P0: Merge contexts - prioritize gRPC context (more recent) over local context
-                user_context_payload = self._merge_user_contexts(local_context, grpc_context)
-                logger.info(f"Merged user context: {user_context_payload is not None}")
-            elif grpc_context:
-                # If no DB session but have gRPC context, use it
-                user_context_payload = grpc_context
-                logger.info("Using gRPC context without local DB context")
+                self._log_context_injection(user_id, user_context_payload)
 
-            self._log_context_injection(user_id, user_context_payload)
+                if self.context_pruner:
+                    conversation_context = await self._build_conversation_context(session_id, user_id)
 
-            if self.context_pruner:
-                conversation_context = await self._build_conversation_context(session_id, user_id)
+                # Prepare initial state
+                state = WorkflowState()
+                state.append_message("user", user_message)
+                
+                # Get tools
+                tools = await self._get_tools_schema()
+                
+                # Prepare queue for streaming
+                queue = asyncio.Queue()
+                
+                async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                    # Augment response with IDs
+                    if not resp.response_id:
+                        resp.response_id = f"resp_{uuid.uuid4()}"
+                    resp.created_at = int(datetime.now().timestamp())
+                    resp.request_id = request_id
+                    await queue.put(resp)
 
-            # Prepare initial state
-            state = WorkflowState()
-            state.append_message("user", user_message)
-            
-            # Get tools
-            tools = await self._get_tools_schema()
-            
-            # Prepare queue for streaming
-            queue = asyncio.Queue()
-            
-            async def stream_callback(resp: agent_service_pb2.ChatResponse):
-                # Augment response with IDs
-                if not resp.response_id:
-                    resp.response_id = f"resp_{uuid.uuid4()}"
-                resp.created_at = int(datetime.now().timestamp())
-                resp.request_id = request_id
-                await queue.put(resp)
+                # Inject Dependencies
+                if active_db:
+                    state.context_data["db_session"] = active_db
+                
+                state.context_data.update({
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "stream_callback": stream_callback,
+                    "tools_schema": tools,
+                    "redis_client": self.redis,
+                    "user_context": user_context_payload,
+                    "conversation_context": conversation_context,
+                    "file_ids": list(request.file_ids),
+                    "include_references": bool(request.include_references),
+                })
 
-            # Inject Dependencies
-            if active_db:
-                state.context_data["db_session"] = active_db
-            
-            state.context_data.update({
-                "user_id": user_id,
-                "session_id": session_id,
-                "stream_callback": stream_callback,
-                "tools_schema": tools,
-                "redis_client": self.redis,
-                "user_context": user_context_payload,
-                "conversation_context": conversation_context,
-                "file_ids": list(request.file_ids),
-                "include_references": bool(request.include_references),
-            })
-
-            # Launch Graph Execution in Background (Managed)
-            logger.info("🚀 Launching StateGraph Execution")
-            graph_task = await task_manager.spawn(
-                self.graph.invoke(state),
-                task_name="orchestrator_graph",
-                user_id=str(user_id)
-            )
-            
-            # Stream from queue
-            while not graph_task.done() or not queue.empty():
-                try:
-                    # Wait for next item with timeout to check task status
-                    item = await asyncio.wait_for(queue.get(), timeout=0.1)
+                # Launch Graph Execution in Background (Managed)
+                logger.info("🚀 Launching StateGraph Execution")
+                
+                with tracer.start_as_current_span("agent_graph.invoke"):
+                    graph_task = await task_manager.spawn(
+                        self.graph.invoke(state),
+                        task_name="orchestrator_graph",
+                        user_id=str(user_id)
+                    )
                     
-                    # Track token usage if present
-                    if item.HasField("usage"):
-                        total_prompt_tokens = item.usage.prompt_tokens
-                        total_completion_tokens = item.usage.completion_tokens
-                        # Also track to Prometheus immediately
-                        if self.token_tracker:
-                             TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
-                             TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
+                    # Stream from queue
+                    while not graph_task.done() or not queue.empty():
+                        try:
+                            # Wait for next item with timeout to check task status
+                            item = await asyncio.wait_for(queue.get(), timeout=0.1)
+                            
+                            # Track token usage if present
+                            if item.HasField("usage"):
+                                total_prompt_tokens = item.usage.prompt_tokens
+                                total_completion_tokens = item.usage.completion_tokens
+                                # Also track to Prometheus immediately
+                                if self.token_tracker:
+                                    TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
+                                    TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
 
-                    yield item
-                    queue.task_done()
-                except asyncio.TimeoutError:
-                    if graph_task.done():
-                        break
+                            yield item
+                            queue.task_done()
+                        except asyncio.TimeoutError:
+                            if graph_task.done():
+                                break
             
-            # Check for exceptions
-            if graph_task.done():
-                exc = graph_task.exception()
-                if exc:
-                    raise exc
+                # Check for exceptions
+                if graph_task.done():
+                    exc = graph_task.exception()
+                    if exc:
+                        raise exc
+                    
+                    # Get final state
+                    final_state = graph_task.result()
+                    
+                    # Get full response from state history
+                    full_response = ""
+                    # Find the last assistant message
+                    for msg in reversed(final_state.messages):
+                        if msg["role"] == "assistant":
+                            full_response = msg["content"]
+                            break
+                    
+                    # Compose Final Response (Idempotency Cache)
+                    # Note: Tool results are already in history, but ResponseComposer might need them separate.
+                    # For now, we trust full_response is sufficient or we can extract from context.
+                    
+                    final_response_data = {
+                        "message": full_response,
+                        "tool_results": [] 
+                    }
+                    await self._cache_response(session_id, request_id, final_response_data)
+                    
+                    # Yield final full_text if not already streamed complete?
+                    # Actually, standard_workflow streams delta. Client might need full_text signal.
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=f"resp_{uuid.uuid4()}",
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        full_text=full_response,
+                        finish_reason=agent_service_pb2.STOP
+                    )
+
+                REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                 
-                # Get final state
-                final_state = graph_task.result()
+                COLLABORATION_SUCCESS.labels(
+                    workflow_type="standard_chat",
+                    agents_used="orchestrator",
+                    outcome="success"
+                ).inc()
+
+            except Exception as e:
+                REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
                 
-                # Get full response from state history
-                full_response = ""
-                # Find the last assistant message
-                for msg in reversed(final_state.messages):
-                    if msg["role"] == "assistant":
-                        full_response = msg["content"]
-                        break
-                
-                # Compose Final Response (Idempotency Cache)
-                # Note: Tool results are already in history, but ResponseComposer might need them separate.
-                # For now, we trust full_response is sufficient or we can extract from context.
-                
-                final_response_data = {
-                    "message": full_response,
-                    "tool_results": [] 
-                }
-                await self._cache_response(session_id, request_id, final_response_data)
-                
-                # Yield final full_text if not already streamed complete?
-                # Actually, standard_workflow streams delta. Client might need full_text signal.
+                COLLABORATION_SUCCESS.labels(
+                    workflow_type="standard_chat",
+                    agents_used="orchestrator",
+                    outcome="error"
+                ).inc()
+                logger.error(f"Orchestration Error: {e}", exc_info=True)
+                await self._update_state(session_id, STATE_FAILED, str(e))
                 yield agent_service_pb2.ChatResponse(
                     response_id=f"resp_{uuid.uuid4()}",
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
-                    full_text=full_response,
-                    finish_reason=agent_service_pb2.STOP
+                    error=agent_service_pb2.Error(
+                        code="INTERNAL_ERROR",
+                        message=str(e),
+                        retryable=True
+                    ),
+                    finish_reason=agent_service_pb2.ERROR
                 )
-
-            REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
             
-            COLLABORATION_SUCCESS.labels(
-                workflow_type="standard_chat",
-                agents_used="orchestrator",
-                outcome="success"
-            ).inc()
+            finally:
+                ACTIVE_SESSIONS.dec()
+                latency = time.time() - start_time
+                REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
+                COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
+                
+                # Always release lock
+                await self._release_session_lock(session_id, request_id)
 
-        except Exception as e:
-            REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
-            
-            COLLABORATION_SUCCESS.labels(
-                workflow_type="standard_chat",
-                agents_used="orchestrator",
-                outcome="error"
-            ).inc()
-            logger.error(f"Orchestration Error: {e}", exc_info=True)
-            await self._update_state(session_id, STATE_FAILED, str(e))
-            yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
-                created_at=int(datetime.now().timestamp()),
-                request_id=request_id,
-                error=agent_service_pb2.Error(
-                    code="INTERNAL_ERROR",
-                    message=str(e),
-                    retryable=True
-                ),
-                finish_reason=agent_service_pb2.ERROR
-            )
-        
-        finally:
-            ACTIVE_SESSIONS.dec()
-            latency = time.time() - start_time
-            REQUEST_LATENCY.labels(module="orchestration", method="process_stream").observe(latency)
-            COLLABORATION_LATENCY.labels(workflow_type="standard_chat").observe(latency)
-            
-            # Always release lock
-            await self._release_session_lock(session_id, request_id)
-
-            # Record token usage (async, non-blocking)
-            if self.token_tracker and total_prompt_tokens > 0:
-                try:
-                    # Estimate cost
-                    estimated_cost = await self.token_tracker.estimate_cost(
-                        prompt_tokens=total_prompt_tokens,
-                        completion_tokens=total_completion_tokens,
-                        model="gpt-4"
-                    )
-
-                    # Record usage (async - managed)
-                    await task_manager.spawn(
-                        self.token_tracker.record_usage(
-                            user_id=user_id,
-                            session_id=session_id,
-                            request_id=request_id,
+                # Record token usage (async, non-blocking)
+                if self.token_tracker and total_prompt_tokens > 0:
+                    try:
+                        # Estimate cost
+                        estimated_cost = await self.token_tracker.estimate_cost(
                             prompt_tokens=total_prompt_tokens,
                             completion_tokens=total_completion_tokens,
-                            model="gpt-4",
-                            cost=estimated_cost
-                        ),
-                        task_name="token_usage_record",
-                        user_id=str(user_id)
-                    )
+                            model="gpt-4"
+                        )
 
-                    logger.info(
-                        f"Token usage recorded for user {user_id}: "
-                        f"{total_prompt_tokens} + {total_completion_tokens} = "
-                        f"{total_prompt_tokens + total_completion_tokens} tokens, "
-                        f"est. cost: ${estimated_cost:.6f}"
-                    )
+                        # Record usage (async - managed)
+                        await task_manager.spawn(
+                            self.token_tracker.record_usage(
+                                user_id=user_id,
+                                session_id=session_id,
+                                request_id=request_id,
+                                prompt_tokens=total_prompt_tokens,
+                                completion_tokens=total_completion_tokens,
+                                model="gpt-4",
+                                cost=estimated_cost
+                            ),
+                            task_name="token_usage_record",
+                            user_id=str(user_id)
+                        )
 
-                except Exception as e:
-                    logger.error(f"Failed to record token usage: {e}")
+                        logger.info(
+                            f"Token usage recorded for user {user_id}: "
+                            f"{total_prompt_tokens} + {total_completion_tokens} = "
+                            f"{total_prompt_tokens + total_completion_tokens} tokens, "
+                            f"est. cost: ${estimated_cost:.6f}"
+                        )
+
+                    except Exception as e:
+                        logger.error(f"Failed to record token usage: {e}")

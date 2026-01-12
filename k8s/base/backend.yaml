@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sparkle-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sparkle-backend
+  template:
+    metadata:
+      labels:
+        app: sparkle-backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/sparkle/backend:latest
+        ports:
+        - containerPort: 50051
+          name: grpc
+        - containerPort: 8000
+          name: http
+        envFrom:
+        - secretRef:
+            name: backend-secrets
+        - configMapRef:
+            name: backend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sparkle-backend
+spec:
+  selector:
+    app: sparkle-backend
+  ports:
+  - port: 50051
+    targetPort: 50051
+    name: grpc
+  - port: 80
+    targetPort: 8000
+    name: http
+  type: ClusterIP

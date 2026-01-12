@@ -1,8 +1,9 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 
 /// ---------------------------------------------------------------------------
 /// 1. THE RECIPE (Pure Data)

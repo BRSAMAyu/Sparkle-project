@@ -19,18 +19,23 @@ class TaskDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final taskAsync = ref.watch(taskDetailProvider(taskId));
 
-    return Scaffold(
-      body: taskAsync.when(
-        data: (task) => _TaskDetailView(task: task),
-        loading: () => Center(
-          child: LoadingIndicator.circular(
-            showText: true,
-            loadingText: '加载任务详情...',
+    // P1: Design System Adoption - Wrap screen in NeoGlass material
+    return MaterialStyler(
+      material: AppMaterials.neoGlass,
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Allow glass effect to show
+        body: taskAsync.when(
+          data: (task) => _TaskDetailView(task: task),
+          loading: () => Center(
+            child: LoadingIndicator.circular(
+              showText: true,
+              loadingText: '加载任务详情...',
+            ),
           ),
-        ),
-        error: (err, stack) => CustomErrorWidget.page(
-          message: '任务加载失败：$err',
-          onRetry: () => ref.refresh(taskDetailProvider(taskId)),
+          error: (err, stack) => CustomErrorWidget.page(
+            message: '任务加载失败：$err',
+            onRetry: () => ref.refresh(taskDetailProvider(taskId)),
+          ),
         ),
       ),
     );
@@ -337,27 +342,15 @@ class _InfoTileCardState extends State<_InfoTileCard>
         onTapCancel: () => _controller.reverse(),
         child: ScaleTransition(
           scale: _scaleAnimation,
-          child: Container(
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary,
-              borderRadius: DS.borderRadius12,
-              boxShadow: [
-                BoxShadow(
-                  color: widget.gradient.colors.first.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: DS.brandPrimary.withValues(alpha: 0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-              border: Border.all(
-                color: widget.gradient.colors.first.withValues(alpha: 0.1),
-              ),
+          child: MaterialStyler(
+            material: AppMaterials.ceramic.copyWith(
+              // Inject the gradient tint into the ceramic material
+              backgroundColor:
+                  widget.gradient.colors.first.withValues(alpha: 0.1),
+              borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
             ),
+            borderRadius: DS.borderRadius12,
+            padding: const EdgeInsets.all(DS.spacing16),
             child: Row(
               children: [
                 Container(

@@ -180,6 +180,11 @@ def format_user_context(context: dict) -> str:
         for plan in context["active_plans"][:3]:
             lines.append(f"- {plan.get('title')} ({plan.get('type')}, 进度 {plan.get('progress', 0):.0%})")
 
+    # 工具偏好 (P4)
+    if context.get("preferred_tools"):
+        lines.append("-" * 20)
+        lines.append(f"工具偏好 (用户历史常用): {', '.join(context['preferred_tools'])}")
+
     # 考试紧迫度
     if isinstance(context.get("exam_urgency"), dict):
         urgency = context["exam_urgency"]

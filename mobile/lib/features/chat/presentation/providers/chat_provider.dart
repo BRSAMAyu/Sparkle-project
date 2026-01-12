@@ -536,7 +536,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'accept',
-        metadata: {'widget_type': action.type},
+        extraData: {'widget_type': action.type},
       );
       debugPrint('✅ Intervention accepted: $interventionId');
       return;
@@ -580,7 +580,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'reject',
-        metadata: {'widget_type': action.type},
+        extraData: {'widget_type': action.type},
       );
       debugPrint('❌ Intervention dismissed: $interventionId');
       return;
@@ -611,7 +611,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   Future<void> _markNightlyReviewed(String reviewId) async {
     try {
-      await ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);
+      await _ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);
       debugPrint('✅ Nightly review marked as reviewed: $reviewId');
     } catch (e) {
       debugPrint('❌ Nightly review feedback failed: $e');

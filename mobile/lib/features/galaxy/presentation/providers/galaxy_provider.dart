@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -210,17 +211,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     super.dispose();
   }
 
-  GalaxyPerformanceTier _mapPerformanceTier(PerformanceTier tier) {
-    switch (tier) {
-      case PerformanceTier.low:
-        return GalaxyPerformanceTier.lite;
-      case PerformanceTier.medium:
-        return GalaxyPerformanceTier.standard;
-      case PerformanceTier.high:
-        return GalaxyPerformanceTier.standard;
-      case PerformanceTier.ultra:
-        return GalaxyPerformanceTier.ultra;
-    }
+  PerformanceTier _mapPerformanceTier(PerformanceTier tier) {
+    return tier;
   }
 
   void _initEventsListener() {

@@ -74,7 +74,7 @@ class InterventionFeedback(BaseModel):
     request_id = Column(GUID(), ForeignKey("intervention_requests.id"), nullable=False, index=True)
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     feedback_type = Column(String(40), nullable=False, index=True)
-    metadata = Column(JSON, nullable=True)
+    extra_data = Column(JSON, nullable=True)
 
     request = relationship("InterventionRequest", back_populates="feedback")
     user = relationship("User", back_populates="intervention_feedback")

@@ -4,6 +4,7 @@ Tool Preference Router - 工具偏好路由
 基于工具执行历史，学习用户的工具偏好，
 优化后续工具选择和工作流路由
 """
+import uuid
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from loguru import logger
@@ -18,7 +19,7 @@ from app.learning.bayesian_learner import BayesianLearner
 class ToolPreferenceRouter:
     """基于工具历史的偏好路由器"""
 
-    def __init__(self, db_session: AsyncSession, user_id: int, redis_client=None):
+    def __init__(self, db_session: AsyncSession, user_id: uuid.UUID, redis_client=None):
         self.db_session = db_session
         self.user_id = user_id
         self.history_service = ToolHistoryService(db_session)

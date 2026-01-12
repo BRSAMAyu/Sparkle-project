@@ -123,7 +123,7 @@ class InterventionSettingsResponse(BaseModel):
 
 class InterventionFeedbackRequest(BaseModel):
     feedback_type: InterventionFeedbackType
-    metadata: Optional[Dict[str, Any]] = None
+    extra_data: Optional[Dict[str, Any]] = None
 
 
 class InterventionFeedbackResponse(BaseModel):
@@ -131,7 +131,7 @@ class InterventionFeedbackResponse(BaseModel):
     request_id: UUID
     user_id: UUID
     feedback_type: InterventionFeedbackType
-    metadata: Optional[Dict[str, Any]] = None
+    extra_data: Optional[Dict[str, Any]] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

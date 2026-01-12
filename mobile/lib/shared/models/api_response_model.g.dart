@@ -14,9 +14,7 @@ ApiResponse<T> _$ApiResponseFromJson<T>(
       success: json['success'] as bool,
       data: _$nullableGenericFromJson(json['data'], fromJsonT),
       message: json['message'] as String?,
-      error: json['error'] == null
-          ? null
-          : ErrorResponse.fromJson(json['error'] as Map<String, dynamic>),
+      error: json['error'] as String?,
     );
 
 Map<String, dynamic> _$ApiResponseToJson<T>(
@@ -47,10 +45,10 @@ PaginatedResponse<T> _$PaginatedResponseFromJson<T>(
   T Function(Object? json) fromJsonT,
 ) =>
     PaginatedResponse<T>(
+      items: (json['items'] as List<dynamic>).map(fromJsonT).toList(),
       total: (json['total'] as num).toInt(),
       page: (json['page'] as num).toInt(),
-      pageSize: (json['pageSize'] as num).toInt(),
-      items: (json['items'] as List<dynamic>).map(fromJsonT).toList(),
+      pageSize: (json['page_size'] as num).toInt(),
     );
 
 Map<String, dynamic> _$PaginatedResponseToJson<T>(
@@ -58,38 +56,8 @@ Map<String, dynamic> _$PaginatedResponseToJson<T>(
   Object? Function(T value) toJsonT,
 ) =>
     <String, dynamic>{
+      'items': instance.items.map(toJsonT).toList(),
       'total': instance.total,
       'page': instance.page,
-      'pageSize': instance.pageSize,
-      'items': instance.items.map(toJsonT).toList(),
-    };
-
-TokenResponse _$TokenResponseFromJson(Map<String, dynamic> json) =>
-    TokenResponse(
-      accessToken: json['access_token'] as String,
-      refreshToken: json['refresh_token'] as String,
-      tokenType: json['token_type'] as String,
-      expiresIn: (json['expires_in'] as num).toInt(),
-    );
-
-Map<String, dynamic> _$TokenResponseToJson(TokenResponse instance) =>
-    <String, dynamic>{
-      'access_token': instance.accessToken,
-      'refresh_token': instance.refreshToken,
-      'token_type': instance.tokenType,
-      'expires_in': instance.expiresIn,
-    };
-
-ErrorResponse _$ErrorResponseFromJson(Map<String, dynamic> json) =>
-    ErrorResponse(
-      code: json['code'] as String,
-      message: json['message'] as String,
-      details: json['details'] as Map<String, dynamic>?,
-    );
-
-Map<String, dynamic> _$ErrorResponseToJson(ErrorResponse instance) =>
-    <String, dynamic>{
-      'code': instance.code,
-      'message': instance.message,
-      'details': instance.details,
+      'page_size': instance.pageSize,
     };

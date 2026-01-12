@@ -87,6 +87,6 @@ async def submit_feedback(
         request=request,
         user_id=current_user.id,
         feedback_type=payload.feedback_type,
-        metadata=payload.metadata,
+        extra_data=payload.extra_data,
     )
     return feedback

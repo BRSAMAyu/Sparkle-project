@@ -1,5 +1,6 @@
 import json
 import time
+import uuid
 from typing import Any, Dict, List, Optional
 from pydantic import ValidationError
 from loguru import logger
@@ -198,15 +199,19 @@ class ToolExecutor:
             input_args: 输入参数
             output_summary: 输出摘要
         """
-        # 转换user_id为int（如果需要）
-        user_id_int = int(user_id) if isinstance(user_id, str) else user_id
+        # 转换user_id为UUID（如果需要）
+        try:
+            user_id_uuid = uuid.UUID(str(user_id)) if not isinstance(user_id, uuid.UUID) else user_id
+        except ValueError:
+            logger.warning(f"Invalid user_id for history recording: {user_id}")
+            return
 
         if use_separate_session:
             async with AsyncSessionLocal() as history_session:
                 try:
                     history_service = ToolHistoryService(history_session)
                     await history_service.record_tool_execution(
-                        user_id=user_id_int,
+                        user_id=user_id_uuid,
                         tool_name=tool_name,
                         success=success,
                         execution_time_ms=execution_time_ms,
@@ -225,7 +230,7 @@ class ToolExecutor:
         try:
             history_service = ToolHistoryService(db_session)
             await history_service.record_tool_execution(
-                user_id=user_id_int,
+                user_id=user_id_uuid,
                 tool_name=tool_name,
                 success=success,
                 execution_time_ms=execution_time_ms,

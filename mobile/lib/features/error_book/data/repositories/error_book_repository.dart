@@ -251,7 +251,7 @@ class ErrorBookRepository {
       final response =
           await _dio.get<Map<String, dynamic>>('$_basePath/$errorId/semantic');
       return ErrorSemanticSummary.fromJson(
-          response.data ?? <String, dynamic>{});
+          response.data ?? <String, dynamic>{},);
     } on DioException catch (e) {
       throw _handleError(e, '获取语义摘要失败');
     }

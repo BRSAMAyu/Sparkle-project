@@ -137,12 +137,12 @@ class ChatRepository {
   void sendInterventionFeedback({
     required String requestId,
     required String feedbackType,
-    Map<String, dynamic>? metadata,
+    Map<String, dynamic>? extraData,
   }) {
     _wsService.sendInterventionFeedback(
       requestId: requestId,
       feedbackType: feedbackType,
-      metadata: metadata,
+      extraData: extraData,
     );
   }
 

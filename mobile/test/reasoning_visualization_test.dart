@@ -1,8 +1,8 @@
 // ignore_for_file: unused_field
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/data/models/chat_message_model.dart';
-import 'package:sparkle/data/models/reasoning_step_model.dart';
+import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
+import 'package:sparkle/features/knowledge/data/models/reasoning_step_model.dart';
 import 'package:sparkle/presentation/widgets/chat/agent_reasoning_bubble_v2.dart';
 
 /// Mock Data Test for Chain of Thought Visualization

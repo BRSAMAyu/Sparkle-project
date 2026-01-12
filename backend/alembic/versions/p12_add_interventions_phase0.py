@@ -108,7 +108,7 @@ def upgrade():
         sa.Column("request_id", GUID(), nullable=False),
         sa.Column("user_id", GUID(), nullable=False),
         sa.Column("feedback_type", sa.String(length=40), nullable=False),
-        sa.Column("metadata", json_type, nullable=True),
+        sa.Column("extra_data", json_type, nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),

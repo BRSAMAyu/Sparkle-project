@@ -1,0 +1,103 @@
+name: Kubernetes CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=ref,event=tag
+
+      - name: Build and push Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/gateway/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/sparkle-gateway:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/sparkle-backend:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-staging:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+      - name: Deploy to Staging
+        run: |
+          # Update images in kustomization
+          cd k8s/base
+          kustomize edit set image ghcr.io/sparkle/gateway=ghcr.io/${{ github.repository_owner }}/sparkle-gateway:${{ github.sha }}
+          kustomize edit set image ghcr.io/sparkle/backend=ghcr.io/${{ github.repository_owner }}/sparkle-backend:${{ github.sha }}
+          cd ../..
+          
+          ./scripts/deploy_k8s.sh staging
+
+  deploy-production:
+    needs: deploy-staging
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+
+      - name: Deploy to Production
+        run: |
+          # Update images in kustomization
+          cd k8s/base
+          kustomize edit set image ghcr.io/sparkle/gateway=ghcr.io/${{ github.repository_owner }}/sparkle-gateway:${{ github.sha }}
+          kustomize edit set image ghcr.io/sparkle/backend=ghcr.io/${{ github.repository_owner }}/sparkle-backend:${{ github.sha }}
+          cd ../..
+          
+          ./scripts/deploy_k8s.sh production

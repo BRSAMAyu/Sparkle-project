@@ -7,15 +7,13 @@ class ErrorSemanticSummary {
     this.similarErrors = const [],
   });
 
-  factory ErrorSemanticSummary.fromJson(Map<String, dynamic> json) {
-    return ErrorSemanticSummary(
+  factory ErrorSemanticSummary.fromJson(Map<String, dynamic> json) => ErrorSemanticSummary(
       errorId: json['error_id'] as String,
       rootCause: json['root_cause'] as String?,
       linkedConcepts: _parseConcepts(json['linked_concepts']),
       strategies: _parseStrategies(json['strategies']),
       similarErrors: _parseSimilarErrors(json['similar_errors']),
     );
-  }
 
   final String errorId;
   final String? rootCause;
@@ -55,13 +53,11 @@ class ConceptBrief {
     this.description,
   });
 
-  factory ConceptBrief.fromJson(Map<String, dynamic> json) {
-    return ConceptBrief(
+  factory ConceptBrief.fromJson(Map<String, dynamic> json) => ConceptBrief(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
     );
-  }
 
   final String id;
   final String name;
@@ -77,15 +73,13 @@ class StrategyBrief {
     this.tags = const [],
   });
 
-  factory StrategyBrief.fromJson(Map<String, dynamic> json) {
-    return StrategyBrief(
+  factory StrategyBrief.fromJson(Map<String, dynamic> json) => StrategyBrief(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
       subjectCode: json['subject_code'] as String?,
       tags: (json['tags'] as List?)?.whereType<String>().toList() ?? const [],
     );
-  }
 
   final String id;
   final String title;
@@ -102,14 +96,12 @@ class SimilarErrorBrief {
     this.createdAt,
   });
 
-  factory SimilarErrorBrief.fromJson(Map<String, dynamic> json) {
-    return SimilarErrorBrief(
+  factory SimilarErrorBrief.fromJson(Map<String, dynamic> json) => SimilarErrorBrief(
       id: json['id'] as String,
       subjectCode: json['subject_code'] as String? ?? '',
       rootCause: json['root_cause'] as String?,
       createdAt: json['created_at'] as String?,
     );
-  }
 
   final String id;
   final String subjectCode;
