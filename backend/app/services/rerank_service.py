@@ -35,7 +35,7 @@ class RerankService:
     async def _load_model(self):
         """Load Cross-Encoder model in background"""
         try:
-            logger.info("⏳ Loading Reranker model (cross-encoder/ms-marco-MiniLM-L-6-v2)...")
+            logger.info(f"⏳ Loading Reranker model ({settings.RERANK_MODEL})...")
             # Run in executor to avoid blocking loop
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(self.executor, self._init_transformer)
@@ -45,8 +45,8 @@ class RerankService:
 
     def _init_transformer(self):
         from sentence_transformers import CrossEncoder
-        # Use a lightweight model for speed/cpu
-        self.model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', max_length=512)
+        # Use configured model (default: BAAI/bge-reranker-base)
+        self.model = CrossEncoder(settings.RERANK_MODEL, max_length=512)
 
     def reciprocal_rank_fusion(self, search_results_list: List[List[Any]], k: int = 60) -> List[tuple]:
         """
