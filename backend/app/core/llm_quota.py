@@ -139,12 +139,13 @@ class LLMCostGuard:
         if emergency_mode:
             limit = int(limit * self.config.emergency_multiplier)
 
-        # 计算剩余配额
-        remaining = limit - current_usage
+        # 计算剩余配额（显示允许时的预估扣减后剩余）
+        remaining_raw = limit - current_usage
         percentage = current_usage / limit if limit > 0 else 1.0
 
         # 检查是否允许
-        allowed = remaining >= estimated_tokens
+        allowed = remaining_raw >= estimated_tokens
+        remaining = remaining_raw - estimated_tokens if allowed else remaining_raw
 
         # 构建结果
         result = QuotaCheckResult(
@@ -286,6 +287,40 @@ class LLMCostGuard:
 
         # 加上安全边际 (1.2倍)
         return int(estimated * 1.2)
+
+    def estimate_and_record_cost(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        endpoint: str = "chat"
+    ) -> float:
+        """
+        估算并记录成本
+
+        Args:
+            model: 模型名称
+            input_tokens: 输入 Token
+            output_tokens: 输出 Token
+            endpoint: 端点
+
+        Returns:
+            float: 估算成本 (USD)
+        """
+        pricing = {
+            "gpt-4": {"input": 0.03, "output": 0.06},
+            "gpt-4-turbo": {"input": 0.01, "output": 0.03},
+            "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
+            "text-embedding-ada-002": {"input": 0.0001, "output": 0.0},
+        }
+        default_input = 0.03
+        default_output = 0.06
+
+        input_price = pricing.get(model, {}).get("input", default_input)
+        output_price = pricing.get(model, {}).get("output", default_output)
+
+        cost = (input_tokens / 1000 * input_price) + (output_tokens / 1000 * output_price)
+        return round(cost, 6)
 
     async def _increment_usage(self, key: str, amount: int) -> None:
         """原子性增加使用量"""

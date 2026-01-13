@@ -19,7 +19,8 @@ class GraphSyncWorker:
 
     def __init__(self):
         self.age_client = get_age_client()
-        self.redis = None
+        # Allow tests to inject a mocked cache_service before instantiation.
+        self.redis = cache_service.redis
         self.running = False
         self.stream_key = "stream:graph_sync"
         self.group_name = "graph_sync_group"
@@ -112,8 +113,11 @@ class GraphSyncWorker:
                 logger.warning(f"未知消息类型: {msg_type}")
 
             # 确认消息已处理
-            await self.redis.xack(self.stream_key, self.group_name, msg_id)
-            logger.debug(f"消息已确认: {msg_id}")
+            if self.redis:
+                await self.redis.xack(self.stream_key, self.group_name, msg_id)
+                logger.debug(f"消息已确认: {msg_id}")
+            else:
+                logger.warning("Redis 未初始化，跳过消息确认")
 
         except Exception as e:
             logger.error(f"处理消息 {msg_type} 失败: {e}")

@@ -9,6 +9,13 @@ from app.gen.agent.v1 import agent_service_pb2
 async def test_orchestrator_basic_flow():
     # Mock dependencies
     mock_db = AsyncMock()
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_redis.set.return_value = True
+    mock_redis.setex.return_value = True
+    mock_redis.incrby.return_value = 1
+    mock_redis.expire.return_value = True
+    mock_redis.eval.return_value = 1
     
     # Mock LLM Service stream
     mock_chunk = MagicMock()
@@ -18,15 +25,16 @@ async def test_orchestrator_basic_flow():
     async def mock_stream(*args, **kwargs):
         yield mock_chunk
 
-    with patch("app.orchestration.orchestrator.llm_service") as mock_llm:
+    with patch("app.agents.standard_workflow.llm_service") as mock_llm:
         mock_llm.chat_stream_with_tools = mock_stream
+        mock_llm.chat_json = AsyncMock(return_value={})
         
         # Mock KnowledgeService
-        with patch("app.orchestration.orchestrator.KnowledgeService") as mock_ks_cls:
+        with patch("app.agents.standard_workflow.KnowledgeService") as mock_ks_cls:
             mock_ks = mock_ks_cls.return_value
             mock_ks.retrieve_context = AsyncMock(return_value="Mocked Context")
             
-            orchestrator = ChatOrchestrator(db_session=mock_db)
+            orchestrator = ChatOrchestrator(db_session=mock_db, redis_client=mock_redis)
             
             request = agent_service_pb2.ChatRequest(
                 request_id="test_req",

@@ -69,7 +69,7 @@ class BackgroundTaskManager:
         stats = TaskStats(
             task_id=task_id,
             task_name=task_name,
-            status="running",
+            status="queued",
             created_at=datetime.now()
         )
         self._stats[task_id] = stats
@@ -78,10 +78,11 @@ class BackgroundTaskManager:
         async def _wrapped():
             async with self._semaphore:
                 stats.started_at = datetime.now()
+                stats.status = "running"
                 start_time = time.time()
 
                 try:
-                    await coro
+                    result = await coro
                     stats.status = "completed"
                     stats.completed_at = datetime.now()
                     stats.duration_ms = (time.time() - start_time) * 1000
@@ -91,6 +92,7 @@ class BackgroundTaskManager:
                         f"✅ Task completed: {task_name} (ID: {task_id}, "
                         f"Duration: {stats.duration_ms:.2f}ms)"
                     )
+                    return result
 
                 except asyncio.CancelledError:
                     stats.status = "cancelled"
@@ -139,7 +141,7 @@ class BackgroundTaskManager:
 
     async def spawn_with_retry(
         self,
-        coro: Coroutine[Any, Any, Any],
+        coro_factory,
         task_name: str,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -152,10 +154,13 @@ class BackgroundTaskManager:
             max_retries: 最大重试次数
             retry_delay: 重试延迟(秒)
         """
+        if asyncio.iscoroutine(coro_factory):
+            raise ValueError("spawn_with_retry requires a coroutine factory, not a coroutine instance")
+
         async def _wrapped_with_retry():
             for attempt in range(max_retries + 1):
                 try:
-                    await coro
+                    await coro_factory()
                     return
                 except Exception as e:
                     if attempt == max_retries:
@@ -170,7 +175,7 @@ class BackgroundTaskManager:
 
     def get_stats(self) -> Dict[str, Any]:
         """获取任务管理器统计信息"""
-        running = len(self._tasks)
+        running = len([s for s in self._stats.values() if s.status == "running"])
         completed_tasks = [s for s in self._stats.values() if s.status == "completed"]
         failed_tasks = [s for s in self._stats.values() if s.status == "failed"]
 
@@ -214,7 +219,7 @@ class BackgroundTaskManager:
         return {
             task_id: task.get_name()
             for task_id, task in self._tasks.items()
-            if not task.done()
+            if not task.done() and self._stats.get(task_id, TaskStats("", "", "", datetime.now())).status == "running"
         }
 
     async def wait_for_task(self, task_id: str, timeout: Optional[float] = None) -> bool:

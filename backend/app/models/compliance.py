@@ -9,6 +9,8 @@ from datetime import datetime
 
 from app.models.base import BaseModel, GUID
 
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+
 
 class LegalHold(BaseModel):
     """
@@ -56,7 +58,7 @@ class CryptoShreddingCertificate(BaseModel):
     key_id = Column(String(128), nullable=False)
     destruction_time = Column(DateTime, default=datetime.utcnow, nullable=False)
     cloud_provider_ack = Column(Text, nullable=True)
-    certificate_data = Column(JSONB, nullable=True)
+    certificate_data = Column(JSONBCompat, nullable=True)
 
     user = relationship("User")
 
@@ -87,6 +89,6 @@ class PersonaSnapshot(BaseModel):
     persona_version = Column(String(50), nullable=False, index=True)
     audit_token = Column(String(128), nullable=True, index=True)
     source_event_id = Column(String(64), nullable=True, index=True)
-    snapshot_data = Column(JSONB, nullable=False)
+    snapshot_data = Column(JSONBCompat, nullable=False)
 
     user = relationship("User")

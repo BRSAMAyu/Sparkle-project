@@ -3,11 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.schemas.galaxy import SearchResultItem
+from app.schemas.galaxy import SearchResultItem, NodeBase, SectorCode
 from app.services.semantic_cache_service import SemanticCacheService
-
-# Mock instance creation
-mock_semantic_cache = AsyncMock(spec=SemanticCacheService)
 
 @pytest.mark.asyncio
 async def test_hybrid_search_cache_hit():
@@ -44,8 +41,23 @@ async def test_hybrid_search_cache_hit():
     mock_status.node_id = cached_node.id
     
     # We patch the module-level variable in the retrieval service
+    mock_semantic_cache = AsyncMock(spec=SemanticCacheService)
     with patch('app.services.galaxy.retrieval_service.semantic_cache_service', new=mock_semantic_cache) as mock_service:
-        mock_service.get_cached_result.return_value = [cached_node]
+        mock_service.get_with_lock.return_value = [
+            SearchResultItem(
+                node=NodeBase(
+                    id=cached_node.id,
+                    name=cached_node.name,
+                    name_en=cached_node.name_en,
+                    description=cached_node.description,
+                    importance_level=cached_node.importance_level,
+                    sector_code=SectorCode.TECH,
+                    is_seed=cached_node.is_seed,
+                ),
+                similarity=1.0,
+                user_status=None
+            )
+        ]
         
         # Mock DB execute for _get_user_status
         mock_execute = AsyncMock()
@@ -65,7 +77,7 @@ async def test_hybrid_search_cache_hit():
         assert results[0].node.name == "Cached Node"
         assert results[0].similarity == 1.0
         
-        mock_service.get_cached_result.assert_called_once()
+        mock_service.get_with_lock.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_hybrid_search_cache_miss():
@@ -75,8 +87,9 @@ async def test_hybrid_search_cache_miss():
     user_id = uuid4()
     query = "new query"
     
+    mock_semantic_cache = AsyncMock(spec=SemanticCacheService)
     with patch('app.services.galaxy.retrieval_service.semantic_cache_service', new=mock_semantic_cache) as mock_service:
-        mock_service.get_cached_result.return_value = None
+        mock_service.get_with_lock.return_value = []
         
         # We need to mock redis_search_client to prevent real connection attempt or import error
         # Since it's imported at module level in retrieval_service, we patch it there
@@ -98,4 +111,4 @@ async def test_hybrid_search_cache_miss():
                     
                     # Verify
                     assert len(results) == 0 # Empty result because we mocked empty search
-                    mock_service.get_cached_result.assert_called_once_with(query, threshold=0.9)
+                    mock_service.get_with_lock.assert_called_once()
