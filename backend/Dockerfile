@@ -44,6 +44,12 @@ RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 # Install runtime dependencies (libpq5 for PostgreSQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libfontconfig1 \
+    libfreetype6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed python packages from builder

@@ -74,6 +74,13 @@ func main() {
 	}
 	defer conn.Close(ctx)
 
+	// Initialize standard sql.DB for components that need it (like OutboxRelay)
+	sqlDB, err := sql.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Unable to open database connection: %v", err)
+	}
+	defer sqlDB.Close()
+
 	// Initialize Chaos Manager (Wraps DB Connection)
 	chaosManager := chaos.NewManager(conn)
 	queries := db.New(chaosManager)

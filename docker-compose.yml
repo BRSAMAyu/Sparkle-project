@@ -7,7 +7,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
       POSTGRES_DB: ${DB_NAME:-sparkle}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
@@ -47,20 +47,50 @@ services:
     volumes:
       - ./minio_data:/data
 
-  sparkle_backend:
+  sparkle_api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sparkle_backend
+    container_name: sparkle_api
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/2
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+    volumes:
+      - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  sparkle_agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_agent
+    command: python grpc_server.py
+    ports:
+      - "50051:50051"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+    volumes:
+      - ./backend:/app
     deploy:
       resources:
         limits:
@@ -84,7 +114,7 @@ services:
         - BUILDKIT_INLINE_CACHE=1
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
@@ -106,7 +136,7 @@ services:
     container_name: sparkle_celery_beat
     command: celery -A app.core.celery_app beat -l info
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
@@ -138,15 +168,16 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
+      - GRPC_TIMEOUT_SECONDS=30
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
       - REDIS_URL=sparkle_redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-change-me}
-      - AGENT_ADDRESS=sparkle_backend:50051
-      - BACKEND_URL=http://sparkle_backend:8000
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+      - AGENT_ADDRESS=sparkle_agent:50051
+      - BACKEND_URL=http://sparkle_api:8000
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=sparkle_tempo:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
-      - MINIO_ENDPOINT=sparkle_minio:9000
+      - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
@@ -158,7 +189,9 @@ services:
       - FILE_GC_GRACE_HOURS=24
       - FILE_GC_BATCH_SIZE=200
     depends_on:
-      sparkle_backend:
+      sparkle_api:
+        condition: service_started
+      sparkle_agent:
         condition: service_started
       sparkle_db:
         condition: service_healthy

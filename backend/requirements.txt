@@ -68,6 +68,7 @@ networkx>=3.2.1
 # gRPC
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
+grpcio-reflection>=1.60.0
 protobuf>=4.25.0
 
 # PDF Generation & Reporting
