@@ -4,7 +4,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
-import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
+import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/presentation/screens/community_screen.dart';
@@ -130,6 +131,38 @@ class _DashboardScreen extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardProvider);
     final l10n = AppLocalizations.of(context)!;
 
+    // Listen for Edge AI Nudges
+    ref.listen(edgeAIStateProvider, (previous, next) {
+      next.whenData((state) {
+        if (state != null && state.shouldInterrupt) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.auto_awesome, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Sparkle AI: ${state.nudgeTone == 'gentle' ? '休息一下吧，效率会更高哦' : '保持专注，你正在状态！'}',
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: DS.brandPrimary,
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: '查看',
+                textColor: Colors.white,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EdgeAIStatusScreen()),
+                ),
+              ),
+            ),
+          );
+        }
+      });
+    });
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
@@ -250,6 +283,18 @@ class _DashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+            const Spacer(),
+            // Edge AI Entry Point
+            IconButton(
+              icon: const Icon(Icons.psychology_outlined),
+              color: DS.brandPrimary,
+              tooltip: 'Qwen3 认知状态',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EdgeAIStatusScreen()),
+                );
+              },
             ),
           ],
         ),
