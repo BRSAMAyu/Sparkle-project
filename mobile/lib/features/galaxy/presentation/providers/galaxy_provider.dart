@@ -211,9 +211,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     super.dispose();
   }
 
-  PerformanceTier _mapPerformanceTier(PerformanceTier tier) {
-    return tier;
-  }
+  PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
   void _initEventsListener() {
     _eventsSubscription?.cancel();
@@ -300,7 +298,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         return;
       }
 
-      final response = result.data!;
+      final response = result.data;
       final aggregationLevel = _levelForScale(state.currentScale);
       final selectedNodeId = state.selectedNodeId;
       final predictedNodeId = state.predictedNodeId;
@@ -410,12 +408,12 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _viewportThrottleTimer = Timer(const Duration(milliseconds: 100), () {
       if (_pendingViewport == null) return;
 
-      final viewport = _pendingViewport!;
+      final viewport = _pendingViewport;
       _pendingViewport = null;
 
       // Only update if viewport changed significantly
       if (state.viewport != null) {
-        final old = state.viewport!;
+        final old = state.viewport;
         final dx = (old.center.dx - viewport.center.dx).abs();
         final dy = (old.center.dy - viewport.center.dy).abs();
         final dw = (old.width - viewport.width).abs();
@@ -477,7 +475,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   Future<GalaxyError?> sparkNode(String id) async {
     final result = await _repository.sparkNode(id);
     if (result.error != null) {
-      final error = result.error!;
+      final error = result.error;
       final galaxyError =
           error is GalaxyError ? error : GalaxyError.unknown(error.toString());
       state = state.copyWith(lastError: galaxyError);
@@ -673,7 +671,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     // Always include selected node and its neighbors if any
     if (state.selectedNodeId != null) {
-      final selectedId = state.selectedNodeId!;
+      final selectedId = state.selectedNodeId;
       final extras = nodes.where((n) =>
           n.id == selectedId || state.expandedEdgeNodeIds.contains(n.id),);
       // Merge effectively

@@ -121,7 +121,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     final isCompleted =
         !widget.isThinking && widget.steps.every((s) => s.isCompleted);
 
-    final Widget headerContent = InkWell(
+    final headerContent = InkWell(
       onTap: _toggleExpand,
       borderRadius: BorderRadius.circular(16),
       child: Padding(

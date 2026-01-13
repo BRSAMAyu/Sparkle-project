@@ -304,7 +304,7 @@ class _HandoffPainter extends CustomPainter {
     final currentY = centerY - 30 * math.sin(progress * math.pi); // 曲线运动
 
     final dotPaint = Paint()
-      ..color = Color.lerp(fromColor, toColor, progress)!
+      ..color = Color.lerp(fromColor, toColor, progress)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(currentX, currentY), 6, dotPaint);

@@ -16,7 +16,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     if (user == null) return const SizedBox.shrink();
 
@@ -213,7 +213,7 @@ class ProfileScreen extends ConsumerWidget {
       );
 
   void _showLanguageDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final currentLocale = ref.read(localeProvider);
 
     showDialog(

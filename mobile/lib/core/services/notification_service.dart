@@ -84,7 +84,7 @@ class NotificationService {
           // Since we are inside a callback, we might need the context or router
           // We use the global navigatorKey context if available
           if (navigatorKey.currentContext != null) {
-            final context = navigatorKey.currentContext!;
+            final context = navigatorKey.currentContext;
             // Parse taskId from payload
             final taskId = payload['taskId'] as String?;
             if (taskId != null) {

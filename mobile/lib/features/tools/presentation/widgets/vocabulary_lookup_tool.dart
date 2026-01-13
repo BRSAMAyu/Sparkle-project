@@ -258,7 +258,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       );
     }
 
-    final result = state.lookupResult!;
+    final result = state.lookupResult;
     final word = result['word'] as String? ?? '';
     final phonetic = result['phonetic'] as String?;
     final pos = result['pos'] as String?;

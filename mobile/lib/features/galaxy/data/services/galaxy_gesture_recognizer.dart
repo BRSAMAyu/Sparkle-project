@@ -102,7 +102,7 @@ class GalaxyGestureRecognizer {
       if (enableHaptics) {
         unawaited(HapticFeedback.mediumImpact());
       }
-      onLongPress?.call(_longPressPosition!);
+      onLongPress?.call(_longPressPosition);
     });
 
     // Cancel inertia

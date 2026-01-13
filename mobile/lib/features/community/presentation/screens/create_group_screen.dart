@@ -193,7 +193,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     ],
                     onChanged: (value) {
                       setState(() {
-                        _type = value!;
+                        _type = value;
                       });
                     },
                   ),

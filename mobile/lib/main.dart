@@ -33,7 +33,7 @@ void main() async {
     await ThemeManager().initialize();
 
     // Initialize OpenTelemetry Tracing
-    const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT', defaultValue: '');
+    const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');
     final collectorUri = otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
     await TracingService.instance.initialize(collectorUri: collectorUri);
 

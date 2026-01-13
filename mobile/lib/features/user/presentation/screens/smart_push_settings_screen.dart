@@ -37,7 +37,7 @@ class _SmartPushSettingsScreenState
   void _loadPreferences() {
     final user = ref.read(authProvider).user;
     if (user != null && user.pushPreferences != null) {
-      final prefs = user.pushPreferences!;
+      final prefs = user.pushPreferences;
       setState(() {
         _persona = prefs.personaType;
         _dailyCap = prefs.dailyCap;
