@@ -24,7 +24,7 @@ class _SchedulePreferencesScreenState
     // Initialize controllers from current user data
     final user = ref.read(currentUserProvider);
     if (user != null && user.schedulePreferences != null) {
-      final prefs = user.schedulePreferences!;
+      final prefs = user.schedulePreferences;
       if (prefs['commute'] != null) {
         final commute = prefs['commute'] as List;
         if (commute.length == 2) {

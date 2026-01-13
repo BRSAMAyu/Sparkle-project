@@ -22,7 +22,7 @@ class DailyDetailScreen extends ConsumerWidget {
     final allTasks = ref.watch(taskListProvider).tasks;
     final dayTasks = allTasks.where((task) {
       if (task.dueDate == null) return false;
-      final d = task.dueDate!;
+      final d = task.dueDate;
       return d.year == date.year && d.month == date.month && d.day == date.day;
     }).toList();
 

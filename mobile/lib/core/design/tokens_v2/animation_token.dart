@@ -118,7 +118,7 @@ class AnimationConfig {
       AnimatedBuilder(
         animation: controller,
         builder: (context, child) {
-          var result = child!;
+          var result = child;
 
           if (scale != null) {
             final scaleTween = Tween<double>(begin: 1.0, end: scale);

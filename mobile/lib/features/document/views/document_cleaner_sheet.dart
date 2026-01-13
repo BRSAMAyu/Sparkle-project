@@ -101,7 +101,7 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
                   taskStatus.status == 'processing') {
                 return _buildProgress(taskStatus, isDark);
               } else if (taskStatus.status == 'completed') {
-                return _buildSuccess(taskStatus.result!, isDark);
+                return _buildSuccess(taskStatus.result, isDark);
               } else {
                 return _buildError(taskStatus.message, isDark);
               }

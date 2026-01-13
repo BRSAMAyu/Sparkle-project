@@ -185,7 +185,7 @@ class StarMapPainter extends CustomPainter {
 
     _processedNodes = [];
     for (final node in nodes) {
-      final pos = _positionCache[node.idHash]!;
+      final pos = _positionCache[node.idHash];
       final color = _colorCache[node.idHash] ?? DS.brandPrimary;
       final radius = 3.0 + node.importance * 2.0;
 
@@ -296,7 +296,7 @@ class StarMapPainter extends CustomPainter {
     // Selection Highlight (Always visible if selected and node is visible)
     if (selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
-      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]!);
+      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]);
     }
   }
 

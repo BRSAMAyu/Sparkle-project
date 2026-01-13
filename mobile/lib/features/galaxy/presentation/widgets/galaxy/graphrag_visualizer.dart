@@ -104,7 +104,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       return const SizedBox.shrink();
     }
 
-    final trace = widget.trace!;
+    final trace = widget.trace;
 
     return Align(
       alignment: widget.alignment,

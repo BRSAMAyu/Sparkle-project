@@ -39,7 +39,7 @@ class GalaxyRoutes {
           path: knowledgeDetail,
           name: 'knowledgeDetail',
           pageBuilder: (context, state) {
-            final nodeId = state.pathParameters['id']!;
+            final nodeId = state.pathParameters['id'];
             return _buildTransitionPage(
               state: state,
               child: KnowledgeDetailScreen(nodeId: nodeId),

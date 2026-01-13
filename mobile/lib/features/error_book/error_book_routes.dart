@@ -55,7 +55,7 @@ class ErrorBookRoutes {
         path: '/errors/:id',
         name: 'errorDetail',
         pageBuilder: (context, state) {
-          final errorId = state.pathParameters['id']!;
+          final errorId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: ErrorDetailScreen(errorId: errorId),

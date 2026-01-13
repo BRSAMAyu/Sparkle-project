@@ -45,9 +45,7 @@ class _GalaxyEntranceAnimationState extends State<GalaxyEntranceAnimation>
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 60),
     ]).animate(_mainController);
 
-    _mainController.forward().whenComplete(() {
-      widget.onComplete();
-    });
+    _mainController.forward().whenComplete(widget.onComplete);
   }
 
   @override

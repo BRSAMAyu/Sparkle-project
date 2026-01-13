@@ -65,12 +65,10 @@ class GalaxyPerformanceMonitor extends ChangeNotifier {
     // but we can simulate or just provide a placeholder.
   }
 
-  PerformanceReport getPerformanceReport() {
-    return PerformanceReport(
+  PerformanceReport getPerformanceReport() => PerformanceReport(
       averageFps: 60.0, // Placeholder
       frameCount: 100,
     );
-  }
 
   void reset() {
     // Reset performance data

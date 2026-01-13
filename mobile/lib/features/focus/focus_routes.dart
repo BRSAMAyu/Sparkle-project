@@ -36,7 +36,7 @@ class FocusRoutes {
         path: '/focus/mindfulness/:id',
         name: 'mindfulness',
         pageBuilder: (context, state) {
-          final taskId = state.pathParameters['id']!;
+          final taskId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: MindfulnessModeScreen(taskId: taskId),

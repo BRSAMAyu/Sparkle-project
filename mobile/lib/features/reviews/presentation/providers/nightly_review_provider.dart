@@ -7,7 +7,7 @@ final nightlyReviewProvider = FutureProvider<NightlyReviewPayload?>((ref) async 
   return repository.getLatest();
 });
 
-final nightlyReviewActionsProvider = Provider<NightlyReviewActions>((ref) => NightlyReviewActions(ref));
+final nightlyReviewActionsProvider = Provider<NightlyReviewActions>(NightlyReviewActions.new);
 
 class NightlyReviewActions {
   NightlyReviewActions(this._ref);

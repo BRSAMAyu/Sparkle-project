@@ -5,8 +5,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 

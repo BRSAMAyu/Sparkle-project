@@ -53,8 +53,8 @@ void main() {
         // 验证节点之间有最小间距
         for (var i = 0; i < testNodes.length; i++) {
           for (var j = i + 1; j < testNodes.length; j++) {
-            final pos1 = positions[testNodes[i].id]!;
-            final pos2 = positions[testNodes[j].id]!;
+            final pos1 = positions[testNodes[i].id];
+            final pos2 = positions[testNodes[j].id];
             final distance = (pos1 - pos2).distance;
 
             // 间距应该大于0（不完全重叠）
@@ -114,7 +114,7 @@ void main() {
         // 按星域分组节点
         final sectorPositions = <SectorEnum, List<Offset>>{};
         for (final node in testNodes) {
-          final pos = positions[node.id]!;
+          final pos = positions[node.id];
           sectorPositions.putIfAbsent(node.sector, () => []);
           sectorPositions[node.sector]!.add(pos);
         }

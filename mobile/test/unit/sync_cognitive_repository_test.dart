@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/features/knowledge/data/models/behavior_pattern_model.dart';
-import 'package:sparkle/features/knowledge/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/data/repositories/cognitive_repository.dart';
 import 'package:sparkle/data/repositories/local_cognitive_repository.dart';
 import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
+import 'package:sparkle/features/knowledge/data/models/behavior_pattern_model.dart';
+import 'package:sparkle/features/knowledge/data/models/cognitive_fragment_model.dart';
 
 // Manual Mocks
 class MockApiCognitiveRepository extends Mock
