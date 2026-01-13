@@ -12,7 +12,7 @@ from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
 from orchestration.graph_rag import GraphRAGRetriever, GraphRAGResult
-from services.graph_knowledge_service import GraphKnowledgeService
+from app.services.graph_knowledge_service import GraphKnowledgeService
 from workers.graph_sync_worker import GraphSyncWorker
 
 
