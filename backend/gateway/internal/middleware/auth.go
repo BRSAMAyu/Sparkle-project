@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -20,13 +22,28 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 			}
-		} else if isWebSocketRequest(c) {
+		}
+
+		if tokenString == "" && isWebSocketRequest(c) {
 			tokenString = c.Query("token")
 		}
 
 		if tokenString == "" {
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
+			log.Printf("Auth failed: missing token")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
 			return
+		}
+
+		if cfg.IsDevelopment() {
+			if len(tokenString) >= 16 {
+				log.Printf("Auth token received: len=%d prefix=%s suffix=%s", len(tokenString), tokenString[:8], tokenString[len(tokenString)-8:])
+			} else {
+				log.Printf("Auth token received: len=%d", len(tokenString))
+			}
 		}
 
 		// Parse and validate token
@@ -38,6 +55,11 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			if cfg.IsDevelopment() {
+				secretHash := sha256.Sum256([]byte(cfg.JWTSecret))
+				log.Printf("Auth secret debug: len=%d sha256=%x", len(cfg.JWTSecret), secretHash)
+			}
+			log.Printf("Auth failed: invalid token (err=%v, valid=%v)", err, token != nil && token.Valid)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
 		}

@@ -126,7 +126,7 @@ func (h *CommunityProjectionHandler) handlePostCreated(ctx context.Context, evt 
 	view := service.PostView{
 		ID:        postIDStr,
 		UserID:    userID.String(),
-		Content:   post.Content,
+		Content:   post.Content.String,
 		ImageURLs: imageUrls,
 		Topic:     post.Topic.String,
 		LikeCount: 0,

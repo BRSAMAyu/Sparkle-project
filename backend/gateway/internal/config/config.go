@@ -139,6 +139,49 @@ func matchWildcardHost(host string, domain string) bool {
 }
 
 func Load() *Config {
+	envKeys := []string{
+		"PORT",
+		"DATABASE_URL",
+		"AGENT_ADDRESS",
+		"AGENT_TLS_ENABLED",
+		"AGENT_TLS_CA_CERT",
+		"AGENT_TLS_SERVER_NAME",
+		"AGENT_TLS_INSECURE",
+		"GRPC_TIMEOUT_SECONDS",
+		"JWT_SECRET",
+		"REDIS_URL",
+		"REDIS_PASSWORD",
+		"BACKEND_URL",
+		"APPLE_CLIENT_ID",
+		"ADMIN_SECRET",
+		"RABBITMQ_URL",
+		"INTERNAL_API_KEY",
+		"CHAOS_ENABLED",
+		"CHAOS_ALLOW_PROD",
+		"TOXIPROXY_URL",
+		"MINIO_ENDPOINT",
+		"MINIO_ACCESS_KEY",
+		"MINIO_SECRET_KEY",
+		"MINIO_BUCKET",
+		"MINIO_REGION",
+		"MINIO_USE_SSL",
+		"MINIO_AUTO_CREATE_BUCKET",
+		"FILE_MAX_UPLOAD_SIZE",
+		"FILE_PRESIGN_EXPIRES_SECONDS",
+		"FILE_GC_INTERVAL_MINUTES",
+		"FILE_GC_GRACE_HOURS",
+		"FILE_GC_BATCH_SIZE",
+		"ENVIRONMENT",
+		"ALLOWED_ORIGINS",
+		"CORS_ENABLED",
+	}
+
+	for _, key := range envKeys {
+		if err := viper.BindEnv(key); err != nil {
+			log.Printf("Failed to bind env key %s: %v", key, err)
+		}
+	}
+
 	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("DATABASE_URL", "postgres://postgres:password@localhost:5432/sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")

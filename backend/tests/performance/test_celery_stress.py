@@ -46,6 +46,12 @@ class PerformanceMetrics:
     cpu_percent: float
     timestamp: str
 
+    @property
+    def success_rate(self) -> float:
+        if self.task_count == 0:
+            return 0.0
+        return self.success_count / self.task_count
+
     def to_dict(self):
         return asdict(self)
 
@@ -268,7 +274,7 @@ class CeleryStressTester:
         tasks = []
         for i in range(task_count):
             task = await task_manager.spawn_with_retry(
-                flaky_task(i),
+                lambda i=i: flaky_task(i),
                 task_name=f"flaky_{i}",
                 max_retries=3,
                 retry_delay=0.05,

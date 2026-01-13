@@ -80,7 +80,7 @@ func (s *UserContextService) GetPendingTasks(ctx context.Context, userID uuid.UU
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, title, type, estimated_minutes, priority, due_date
 		FROM tasks
-		WHERE user_id = $1 AND status = 'pending'
+		WHERE user_id = $1 AND status = 'PENDING'
 		ORDER BY priority DESC, due_date ASC, created_at DESC
 		LIMIT $2
 	`, userID, limit)
@@ -203,7 +203,7 @@ func (s *UserContextService) GetRecentProgress(ctx context.Context, userID uuid.
 			t.completed_at,
 			COALESCE(t.estimated_minutes, 0) as time_spent_min
 		FROM tasks t
-		WHERE t.user_id = $1 AND t.status = 'completed' AND t.completed_at >= $2
+		WHERE t.user_id = $1 AND t.status = 'COMPLETED' AND t.completed_at >= $2
 		ORDER BY t.completed_at DESC
 		LIMIT 10
 	`, userID, sinceTime)

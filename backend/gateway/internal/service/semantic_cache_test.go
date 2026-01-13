@@ -235,9 +235,10 @@ func TestSearchPlaceholder(t *testing.T) {
 	ctx := context.Background()
 	vector := []float32{0.1, 0.2, 0.3}
 
-	result, err := scs.Search(ctx, vector, "en", "user", "gpt-4")
-	assert.NoError(t, err)
-	assert.Equal(t, "", result)
+	// miniredis doesn't support FT.SEARCH, so we expect an error
+	_, err := scs.Search(ctx, vector, "en", "user", "gpt-4")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown command")
 }
 
 // BenchmarkCanonicalize benchmarks canonicalization performance

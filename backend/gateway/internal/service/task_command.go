@@ -105,7 +105,7 @@ func (s *TaskCommandService) CreateTask(ctx context.Context, req CreateTaskReque
 				tool_result_id,
 				created_at, updated_at
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, true, $13, NOW(), NOW())
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING', $10, $11, $12, true, $13, NOW(), NOW())
 			RETURNING id, user_id, plan_id, title, type, tags,
 			          estimated_minutes, difficulty, energy_cost,
 			          guide_content, status, started_at, completed_at,
@@ -195,8 +195,8 @@ func (s *TaskCommandService) StartTask(ctx context.Context, userID, taskID uuid.
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
-			SET status = 'in_progress', started_at = NOW(), updated_at = NOW()
-			WHERE id = $1 AND user_id = $2 AND status = 'pending' AND deleted_at IS NULL
+			SET status = 'IN_PROGRESS', started_at = NOW(), updated_at = NOW()
+			WHERE id = $1 AND user_id = $2 AND status = 'PENDING' AND deleted_at IS NULL
 		`, pgtype.UUID{Bytes: taskID, Valid: true}, pgtype.UUID{Bytes: userID, Valid: true})
 
 		if err != nil {
@@ -234,9 +234,9 @@ func (s *TaskCommandService) CompleteTask(ctx context.Context, userID, taskID uu
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
-			SET status = 'completed', completed_at = NOW(), updated_at = NOW(),
+			SET status = 'COMPLETED', completed_at = NOW(), updated_at = NOW(),
 			    actual_minutes = $3, user_note = $4
-			WHERE id = $1 AND user_id = $2 AND status = 'in_progress' AND deleted_at IS NULL
+			WHERE id = $1 AND user_id = $2 AND status = 'IN_PROGRESS' AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: taskID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
@@ -280,9 +280,9 @@ func (s *TaskCommandService) AbandonTask(ctx context.Context, userID, taskID uui
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
-			SET status = 'abandoned', completed_at = NOW(), updated_at = NOW(),
+			SET status = 'ABANDONED', completed_at = NOW(), updated_at = NOW(),
 			    user_note = $3
-			WHERE id = $1 AND user_id = $2 AND status IN ('pending', 'in_progress') AND deleted_at IS NULL
+			WHERE id = $1 AND user_id = $2 AND status IN ('PENDING', 'IN_PROGRESS') AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: taskID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
@@ -445,8 +445,8 @@ func (s *TaskCommandService) ConfirmGeneratedTasks(ctx context.Context, userID u
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
-			SET status = 'in_progress', confirmed_at = NOW(), updated_at = NOW()
-			WHERE user_id = $1 AND tool_result_id = $2 AND status = 'pending' AND deleted_at IS NULL
+			SET status = 'IN_PROGRESS', confirmed_at = NOW(), updated_at = NOW()
+			WHERE user_id = $1 AND tool_result_id = $2 AND status = 'PENDING' AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: userID, Valid: true},
 			pgtype.Text{String: toolResultID, Valid: true},

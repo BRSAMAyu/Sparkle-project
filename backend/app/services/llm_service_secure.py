@@ -71,7 +71,7 @@ class SecureLLMService:
             base_url=base_url
         )
         self.default_model = settings.LLM_MODEL_NAME
-        self.demo_mode = getattr(settings, 'DEMO_MODE', False)
+        self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False) or not api_key)
 
         # 安全包装器
         security_config = SecurityConfig(

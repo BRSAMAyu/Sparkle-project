@@ -984,13 +984,12 @@ func (q *Queries) GetUserNodeStatus(ctx context.Context, arg GetUserNodeStatusPa
 const insertEventStoreEntry = `-- name: InsertEventStoreEntry :exec
 
 INSERT INTO event_store (
-    id, aggregate_type, aggregate_id, event_type,
+    aggregate_type, aggregate_id, event_type,
     event_version, sequence_number, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertEventStoreEntryParams struct {
-	ID             int64            `json:"id"`
 	AggregateType  string           `json:"aggregate_type"`
 	AggregateID    string           `json:"aggregate_id"`
 	EventType      string           `json:"event_type"`
@@ -1006,7 +1005,6 @@ type InsertEventStoreEntryParams struct {
 // =====================
 func (q *Queries) InsertEventStoreEntry(ctx context.Context, arg InsertEventStoreEntryParams) error {
 	_, err := q.db.Exec(ctx, insertEventStoreEntry,
-		arg.ID,
 		arg.AggregateType,
 		arg.AggregateID,
 		arg.EventType,

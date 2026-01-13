@@ -5,7 +5,7 @@ Application Configuration Management
 import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, model_validator
+from pydantic import field_validator, model_validator, Field, AliasChoices
 from dotenv import load_dotenv
 
 # 获取当前文件的绝对路径
@@ -30,7 +30,10 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool | None = None
-    SECRET_KEY: str = ""
+    
+    # Security
+    # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
+    SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
 
     # Database
     DATABASE_URL: str = ""
