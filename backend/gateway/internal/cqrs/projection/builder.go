@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
@@ -137,19 +136,19 @@ func (b *Builder) RebuildFromEventStore(
 		for _, evt := range events {
 			eventData, err := json.Marshal(evt)
 			if err != nil {
-				eventID, _ := uuid.FromBytes(evt.ID.Bytes[:])
+				eventID := fmt.Sprintf("%d", evt.ID)
 				b.logger.Error("Failed to marshal event",
 					zap.Error(err),
-					zap.String("event_id", eventID.String()),
+					zap.String("event_id", eventID),
 				)
 				continue
 			}
 
 			if err := handler.HandleEvent(ctx, eventData); err != nil {
-				eventID, _ := uuid.FromBytes(evt.ID.Bytes[:])
+				eventID := fmt.Sprintf("%d", evt.ID)
 				b.logger.Error("Failed to handle event during rebuild",
 					zap.Error(err),
-					zap.String("event_id", eventID.String()),
+					zap.String("event_id", eventID),
 				)
 				// Continue processing other events
 			}
@@ -164,7 +163,7 @@ func (b *Builder) RebuildFromEventStore(
 		}
 
 		// Update position
-		if err := b.manager.UpdatePosition(ctx, projectionName, fmt.Sprintf("%d", lastSequence)); err != nil {
+		if err := b.manager.UpdatePosition(ctx, projectionName, lastSequence); err != nil {
 			b.logger.Warn("Failed to update position", zap.Error(err))
 		}
 
@@ -218,14 +217,11 @@ func (b *Builder) RebuildFromSnapshot(
 
 	b.logger.Info("Found snapshot, rebuilding from position",
 		zap.String("projection", projectionName),
-		zap.String("position", snapshot.StreamPosition),
+		zap.Int64("position", snapshot.StreamPosition),
 	)
 
 	// Parse stream position to sequence number
-	var fromSequence int64
-	_, _ = fmt.Sscanf(snapshot.StreamPosition, "%d", &fromSequence)
-
-	opts.FromSequence = fromSequence
+	opts.FromSequence = snapshot.StreamPosition
 	return b.RebuildFromEventStore(ctx, projectionName, aggregateType, opts)
 }
 
@@ -290,7 +286,7 @@ func (b *Builder) CreateSnapshot(
 
 	b.logger.Info("Snapshot created",
 		zap.String("projection", projectionName),
-		zap.String("position", info.LastProcessedPosition),
+		zap.Int64("position", info.LastProcessedPosition),
 	)
 
 	return nil

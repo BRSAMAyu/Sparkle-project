@@ -4,9 +4,12 @@
 """
 import asyncio
 import grpc
+import os
 from loguru import logger
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
+from app.core.security import create_access_token
+from app.config import settings
 
 
 async def test_demo_mode():
@@ -31,9 +34,18 @@ async def test_demo_mode():
             request_id="demo_req_001"
         )
 
+        token = create_access_token({"sub": "demo_user"})
+        
+        # Use Internal API Key to bypass JWT secret mismatch issues in dev environment
+        # This matches how Gateway calls Agent
+        # Use settings.INTERNAL_API_KEY which is loaded from .env by Pydantic
+        internal_key = settings.INTERNAL_API_KEY
+        
         metadata = (
+            ("authorization", f"Bearer {token}"),
             ("user-id", "demo_user"),
             ("x-trace-id", "demo_trace_001"),
+            ("x-internal-api-key", internal_key), # Add internal key
         )
 
         try:

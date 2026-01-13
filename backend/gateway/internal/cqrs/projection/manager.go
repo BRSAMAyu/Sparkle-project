@@ -29,7 +29,7 @@ const (
 type ProjectionInfo struct {
 	Name                  string           `json:"name"`
 	Status                ProjectionStatus `json:"status"`
-	LastProcessedPosition string           `json:"last_processed_position,omitempty"`
+	LastProcessedPosition int64            `json:"last_processed_position,omitempty"`
 	LastProcessedAt       *time.Time       `json:"last_processed_at,omitempty"`
 	Version               int              `json:"version"`
 	ErrorMessage          string           `json:"error_message,omitempty"`
@@ -111,8 +111,8 @@ func (m *Manager) GetProjectionInfo(ctx context.Context, name string) (*Projecti
 		UpdatedAt: meta.UpdatedAt.Time,
 	}
 
-	if meta.LastProcessedPosition.Valid {
-		info.LastProcessedPosition = meta.LastProcessedPosition.String
+	if meta.LastProcessedPosition > 0 {
+		info.LastProcessedPosition = meta.LastProcessedPosition
 	}
 
 	if meta.LastProcessedAt.Valid {
@@ -143,8 +143,8 @@ func (m *Manager) GetAllProjections(ctx context.Context) ([]ProjectionInfo, erro
 			UpdatedAt: meta.UpdatedAt.Time,
 		}
 
-		if meta.LastProcessedPosition.Valid {
-			info.LastProcessedPosition = meta.LastProcessedPosition.String
+		if meta.LastProcessedPosition > 0 {
+			info.LastProcessedPosition = meta.LastProcessedPosition
 		}
 
 		if meta.LastProcessedAt.Valid {
@@ -162,10 +162,10 @@ func (m *Manager) GetAllProjections(ctx context.Context) ([]ProjectionInfo, erro
 }
 
 // UpdatePosition updates the last processed position for a projection.
-func (m *Manager) UpdatePosition(ctx context.Context, name, position string) error {
+func (m *Manager) UpdatePosition(ctx context.Context, name string, position int64) error {
 	return m.queries.UpdateProjectionPosition(ctx, db.UpdateProjectionPositionParams{
 		ProjectionName:        name,
-		LastProcessedPosition: pgtype.Text{String: position, Valid: true},
+		LastProcessedPosition: position,
 	})
 }
 
@@ -212,7 +212,7 @@ func (m *Manager) ResetProjection(ctx context.Context, name string) error {
 	// Clear position
 	if err := m.queries.UpdateProjectionPosition(ctx, db.UpdateProjectionPositionParams{
 		ProjectionName:        name,
-		LastProcessedPosition: pgtype.Text{},
+		LastProcessedPosition: 0,
 	}); err != nil {
 		return fmt.Errorf("failed to clear position: %w", err)
 	}
@@ -248,20 +248,20 @@ type Snapshot struct {
 	ProjectionName string
 	AggregateID    *uuid.UUID
 	Data           map[string]interface{}
-	StreamPosition string
+	StreamPosition int64
 	CreatedAt      time.Time
 }
 
 // SaveSnapshot saves a snapshot for a projection.
-func (s *SnapshotManager) SaveSnapshot(ctx context.Context, projectionName string, aggregateID *uuid.UUID, data map[string]interface{}, streamPosition string) error {
+func (s *SnapshotManager) SaveSnapshot(ctx context.Context, projectionName string, aggregateID *uuid.UUID, data map[string]interface{}, streamPosition int64) error {
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal snapshot data: %w", err)
 	}
 
-	aggID := pgtype.UUID{}
+	aggID := pgtype.Text{}
 	if aggregateID != nil {
-		aggID = pgtype.UUID{Bytes: *aggregateID, Valid: true}
+		aggID = pgtype.Text{String: aggregateID.String(), Valid: true}
 	}
 
 	return s.queries.SaveSnapshot(ctx, db.SaveSnapshotParams{
@@ -275,9 +275,9 @@ func (s *SnapshotManager) SaveSnapshot(ctx context.Context, projectionName strin
 
 // GetLatestSnapshot retrieves the latest snapshot for a projection.
 func (s *SnapshotManager) GetLatestSnapshot(ctx context.Context, projectionName string, aggregateID *uuid.UUID) (*Snapshot, error) {
-	aggID := pgtype.UUID{}
+	aggID := pgtype.Text{}
 	if aggregateID != nil {
-		aggID = pgtype.UUID{Bytes: *aggregateID, Valid: true}
+		aggID = pgtype.Text{String: aggregateID.String(), Valid: true}
 	}
 
 	row, err := s.queries.GetLatestSnapshot(ctx, db.GetLatestSnapshotParams{
@@ -304,8 +304,9 @@ func (s *SnapshotManager) GetLatestSnapshot(ctx context.Context, projectionName 
 	}
 
 	if row.AggregateID.Valid {
-		aggUUID, _ := uuid.FromBytes(row.AggregateID.Bytes[:])
-		snapshot.AggregateID = &aggUUID
+		if aggUUID, err := uuid.Parse(row.AggregateID.String); err == nil {
+			snapshot.AggregateID = &aggUUID
+		}
 	}
 
 	return snapshot, nil

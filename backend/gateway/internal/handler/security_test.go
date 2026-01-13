@@ -23,8 +23,10 @@ func (sc *SecurityChecker) IsSQLInjection(input string) bool {
 	patterns := []string{
 		`['"].*?(OR|AND|UNION|SELECT|INSERT|UPDATE|DELETE|DROP)`,
 		`;.*?(DROP|DELETE|UPDATE|INSERT)`,
-		`--.*\n`,
+		`--`,         // Simple comment check
 		`/\*.*\*/`,
+		`\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP)\s+`, // Raw keywords
+		`WAITFOR\s+DELAY`,
 	}
 
 	for _, pattern := range patterns {
@@ -74,10 +76,10 @@ func (sc *SecurityChecker) IsCommandInjection(input string) bool {
 func (sc *SecurityChecker) ContainsSensitiveData(output string) bool {
 	// Check for sensitive data patterns in output
 	patterns := []string{
-		`password\s*[:=]`,
-		`api[_-]?key\s*[:=]`,
-		`secret\s*[:=]`,
-		`token\s*[:=]`,
+		`["']?password["']?\s*[:=]`,
+		`["']?api[_-]?key["']?\s*[:=]`,
+		`["']?secret["']?\s*[:=]`,
+		`["']?token["']?\s*[:=]`,
 		`credit[_-]?card`,
 	}
 
@@ -403,6 +405,9 @@ func TestSensitiveDataDetection(t *testing.T) {
 func TestCSRFProtectionExpanded(t *testing.T) {
 	// 模拟 CSRF Token 验证逻辑
 	validateCSRF := func(sessionToken, requestToken string) bool {
+		if sessionToken == "" {
+			return false
+		}
 		return sessionToken == requestToken
 	}
 

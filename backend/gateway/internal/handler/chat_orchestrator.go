@@ -1080,9 +1080,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	var dailyLimit int64
 	var dailyUsageStart int64
+	skipQuota := false
 	if h.quota != nil {
 		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
-		if dailyLimit > 0 {
+		if dailyLimit <= 0 || isDevelopmentEnv() {
+			skipQuota = true
+		} else {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
 			} else {
@@ -1091,7 +1094,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
-	if h.quota != nil {
+	if h.quota != nil && !skipQuota {
 		quotaCtx, quotaSpan := tracer.Start(ctx, "quota.reserve")
 		remaining, err := h.quota.ReserveRequest(quotaCtx, userID, reqID, 24*time.Hour)
 		quotaSpan.End()
@@ -1352,6 +1355,11 @@ func getEnvInt64(key string, fallback int64) int64 {
 		return fallback
 	}
 	return val
+}
+
+func isDevelopmentEnv() bool {
+	env := strings.TrimSpace(strings.ToLower(os.Getenv("ENVIRONMENT")))
+	return env == "" || env == "dev" || env == "development"
 }
 
 type actionStatusSender interface {

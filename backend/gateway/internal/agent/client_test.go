@@ -48,8 +48,8 @@ func TestClientNewClient(t *testing.T) {
 				AgentAddress:   "localhost:50051",
 				AgentTLSEnabled: false,
 			},
-			expectErr: true, // Will fail because server is not running
-			desc:      "Should attempt connection to agent service",
+			expectErr: false, // gRPC NewClient is non-blocking, so it succeeds even if server is offline
+			desc:      "Should return client object (connection happens in background)",
 		},
 		{
 			name: "invalid_address",

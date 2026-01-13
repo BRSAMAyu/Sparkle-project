@@ -113,9 +113,9 @@ SELECT COUNT(*) FROM event_outbox WHERE published_at IS NULL;
 
 -- name: InsertEventStoreEntry :exec
 INSERT INTO event_store (
-    id, aggregate_type, aggregate_id, event_type,
+    aggregate_type, aggregate_id, event_type,
     event_version, sequence_number, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: GetEventsByAggregate :many
 SELECT id, aggregate_type, aggregate_id, event_type,
