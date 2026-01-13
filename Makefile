@@ -52,7 +52,9 @@ db-dump: db-validate
 	@echo "🧾 Dumping Schema (Structure Only)..."
 	mkdir -p backend/gateway/internal/db
 	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | \
-		grep -v '^\\' > backend/gateway/internal/db/schema.sql
+		grep -v '^\\' | \
+		sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public', false);/g" | \
+		sed "s/public\.//g" > backend/gateway/internal/db/schema.sql
 
 db-sqlc:
 	@echo "⚡ Generating Go Code via SQLC..."

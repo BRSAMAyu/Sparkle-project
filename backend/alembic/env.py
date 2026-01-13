@@ -28,7 +28,7 @@ from app.models import (
     KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord, NodeExpansionQueue, ExpansionFeedback,
     # Community models
     Friendship, Group, GroupMember, GroupMessage, GroupTask,
-    GroupTaskClaim, SharedResource, PrivateMessage,
+    GroupTaskClaim, SharedResource, PrivateMessage, Post, PostLike,
     # Cognitive models
     CognitiveFragment, BehaviorPattern,
     # Analytics models

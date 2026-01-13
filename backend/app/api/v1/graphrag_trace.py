@@ -124,42 +124,42 @@ def cache_trace(trace: RetrievalTrace):
     logger.debug(f"缓存追踪信息: {trace.trace_id}, 当前缓存大小: {len(_trace_cache)}")
 
 
-@router.post("/test-retrieval", response_model=None)
-async def test_graphrag_retrieval(
-    query: str,
-    current_user: User = Depends(get_current_user),
-    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
-    """
-    测试端点：执行 GraphRAG 检索并返回追踪信息
-
-    用于开发和演示
-    """
-    try:
-        retriever = GraphRAGRetriever(knowledge_service)
-        result = await retriever.retrieve(
-            query=query,
-            user_id=str(current_user.id),
-            enable_trace=True
-        )
-
-        if result.trace:
-            # 缓存追踪信息
-            cache_trace(result.trace)
-
-            return {
-                "trace_id": result.trace.trace_id,
-                "query": query,
-                "nodes_count": len(result.trace.nodes_retrieved),
-                "vector_count": len(result.trace.vector_search_results),
-                "graph_count": len(result.trace.graph_search_results),
-                "relationships_count": len(result.trace.relationships),
-                "timing": result.trace.timing,
-                "fused_context_preview": result.fused_context[:200] + "..."
-            }
-        else:
-            return {"error": "Trace not enabled"}
-
-    except Exception as e:
-        logger.error(f"GraphRAG 测试检索失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# @router.post("/test-retrieval", response_model=None)
+# async def test_graphrag_retrieval(
+#     query: str,
+#     current_user: User = Depends(get_current_user),
+#     knowledge_service: KnowledgeService = Depends()
+# ):
+#     """
+#     测试端点：执行 GraphRAG 检索并返回追踪信息
+#
+#     用于开发和演示
+#     """
+#     try:
+#         retriever = GraphRAGRetriever(knowledge_service)
+#         result = await retriever.retrieve(
+#             query=query,
+#             user_id=str(current_user.id),
+#             enable_trace=True
+#         )
+#
+#         if result.trace:
+#             # 缓存追踪信息
+#             cache_trace(result.trace)
+#
+#             return {
+#                 "trace_id": result.trace.trace_id,
+#                 "query": query,
+#                 "nodes_count": len(result.trace.nodes_retrieved),
+#                 "vector_count": len(result.trace.vector_search_results),
+#                 "graph_count": len(result.trace.graph_search_results),
+#                 "relationships_count": len(result.trace.relationships),
+#                 "timing": result.trace.timing,
+#                 "fused_context_preview": result.fused_context[:200] + "..."
+#             }
+#         else:
+#             return {"error": "Trace not enabled"}
+#
+#     except Exception as e:
+#         logger.error(f"GraphRAG 测试检索失败: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
