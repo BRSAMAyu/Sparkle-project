@@ -5,7 +5,7 @@ Agent Execution Statistics Service
 """
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
-from sqlalchemy import select, func, and_, desc
+from sqlalchemy import select, func, and_, desc, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
@@ -116,10 +116,8 @@ class AgentStatsService:
             func.avg(AgentExecutionStats.duration_ms).label('avg_duration'),
             func.max(AgentExecutionStats.duration_ms).label('max_duration'),
             func.count(
-                func.case(
-                    [
-                        (AgentExecutionStats.status == 'success', 1)
-                    ],
+                case(
+                    (AgentExecutionStats.status == 'success', 1),
                     else_=None
                 )
             ).label('success_count')
@@ -255,18 +253,14 @@ class AgentStatsService:
             func.avg(AgentExecutionStats.duration_ms).label('avg_duration'),
             func.max(AgentExecutionStats.duration_ms).label('max_duration'),
             func.count(
-                func.case(
-                    [
-                        (AgentExecutionStats.status == 'success', 1)
-                    ],
+                case(
+                    (AgentExecutionStats.status == 'success', 1),
                     else_=None
                 )
             ).label('success_count'),
             func.count(
-                func.case(
-                    [
-                        (AgentExecutionStats.status == 'failed', 1)
-                    ],
+                case(
+                    (AgentExecutionStats.status == 'failed', 1),
                     else_=None
                 )
             ).label('failure_count')
@@ -279,12 +273,29 @@ class AgentStatsService:
         success_count = row.success_count or 0
         failure_count = row.failure_count or 0
 
+        # Fetch durations for percentile metrics (SQLite-compatible)
+        durations_query = select(AgentExecutionStats.duration_ms).where(and_(*filters))
+        durations_result = await self.db.execute(durations_query)
+        durations = [d[0] for d in durations_result.fetchall() if d[0] is not None]
+        durations.sort()
+
+        median = 0
+        p95 = 0
+        if durations:
+            mid = len(durations) // 2
+            if len(durations) % 2 == 0:
+                median = int((durations[mid - 1] + durations[mid]) / 2)
+            else:
+                median = int(durations[mid])
+            p95_index = max(int(len(durations) * 0.95) - 1, 0)
+            p95 = int(durations[p95_index])
+
         return {
             'period_days': days,
             'total_executions': total,
             'avg_duration_ms': int(row.avg_duration) if row.avg_duration else 0,
-            'median_duration_ms': int(row.median_duration) if row.median_duration else 0,
-            'p95_duration_ms': int(row.p95_duration) if row.p95_duration else 0,
+            'median_duration_ms': median,
+            'p95_duration_ms': p95,
             'max_duration_ms': row.max_duration or 0,
             'success_rate': (success_count / total * 100) if total > 0 else 0,
             'failure_rate': (failure_count / total * 100) if total > 0 else 0

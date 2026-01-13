@@ -12,6 +12,8 @@ from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
 
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+
 class TaskType(str, enum.Enum):
     LEARNING = "LEARNING"
     TRAINING = "TRAINING"
@@ -36,7 +38,7 @@ class Task(BaseModel):
     # 任务基本信息
     title = Column(String(255), nullable=False)
     type = Column(Enum(TaskType), nullable=False)
-    tags = Column(JSONB, default=list, nullable=False)  # 标签列表 (使用 JSONB)
+    tags = Column(JSONBCompat, default=list, nullable=False)  # 标签列表 (使用 JSONB)
 
     # 时间和难度
     estimated_minutes = Column(Integer, nullable=False)

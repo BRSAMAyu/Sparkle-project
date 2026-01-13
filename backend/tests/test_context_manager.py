@@ -4,6 +4,7 @@ import uuid
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from app.core.context_manager import ContextOrchestrator, CognitiveContext
+from app.services.focus_service import FocusService
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.models.galaxy import KnowledgeNode
 from app.models.task import Task, TaskStatus
@@ -47,7 +48,7 @@ async def test_context_orchestrator_aggregation():
             return {"focus_minutes": 120}
         
         # Correctly patch the static method on the FocusService class
-        m.setattr("app.services.focus_service.FocusService.get_today_stats", mock_focus)
+        m.setattr(FocusService, "get_today_stats", mock_focus)
 
         # Execute
         user_id = str(uuid.uuid4())

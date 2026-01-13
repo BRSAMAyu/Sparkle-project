@@ -12,6 +12,8 @@ from pgvector.sqlalchemy import Vector
 from app.db.session import Base
 from app.models.base import BaseModel, GUID
 
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+VectorCompat = Vector(1536).with_variant(JSON(), "sqlite")
 
 class CollaborativeGalaxy(BaseModel):
     """
@@ -84,7 +86,7 @@ class CRDTOperationLog(Base):
     
     # 操作类型: add_node, update_mastery, delete_node, etc.
     operation_type = Column(String(50))
-    operation_data = Column(JSONB)
+    operation_data = Column(JSONBCompat)
     
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
@@ -110,7 +112,7 @@ class KnowledgeNode(BaseModel):
     description = Column(Text, nullable=True)
     
     # 关键词 (使用 JSONB 优化搜索)
-    keywords = Column(JSONB, default=list, nullable=True)
+    keywords = Column(JSONBCompat, default=list, nullable=True)
     
     # 重要性等级 (1-5), 决定星星大小
     importance_level = Column(Integer, default=1, nullable=False)
@@ -127,7 +129,7 @@ class KnowledgeNode(BaseModel):
 
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
-    embedding = Column(Vector(1536), nullable=True)
+    embedding = Column(VectorCompat, nullable=True)
     
     # Layout Coordinates (for Viewport Query)
     position_x = Column(Float, nullable=True, index=True)

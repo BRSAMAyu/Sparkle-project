@@ -42,15 +42,32 @@ class LLMSafetyService:
     DANGEROUS_PATTERNS = [
         # 忽略指令类
         r"ignore\s+(all\s+)?previous\s+instructions?",
+        r"ignore\s+all\b",
         r"disregard\s+(all\s+)?previous\s+instructions?",
         r"forget\s+(everything|previous|all)",
         r"reset\s+(all|previous|instructions)",
+        r"忽略(所有)?之前(的)?指令",
+        r"忽略(所有)?(的)?指令",
+        r"忽略(所有)?规则",
+        r"无视(所有)?之前(的)?指令",
+        r"忘记(之前|过去)(的)?(一切)?",
+        r"忘记.*限制",
+        r"重置(所有)?(指令|规则)",
 
         # 角色扮演类
         r"you\s+are\s+now\s+a",
         r"act\s+as\s+a?",
         r"pretend\s+to\s+be",
         r"become\s+a?",
+        r"你现在是(一个)?",
+        r"你是一个.*(AI|人工智能|助手|系统)",
+        r"你是.*助手",
+        r"你是.*黑客",
+        r"从现在开始",
+        r"你被赋予.*角色",
+        r"扮演(一个)?",
+        r"假装(你)?(是)?",
+        r"执行这个命令",
 
         # 系统操作类
         r"system\s*[:：]\s*delete",
@@ -59,18 +76,18 @@ class LLMSafetyService:
         r"disable\s+(safety|filter|security)",
 
         # 数据访问类
-        r"show\s+(all\s+)?(password|secret|key|token|credential)",
-        r"print\s+(all\s+)?(password|secret|key|token|credential)",
-        r"list\s+(all\s+)?(password|secret|key|token|credential)",
+        r"show\s+(all\s+)?(passwords?|secrets?|api\s*keys?|keys?|tokens?|credentials?)",
+        r"print\s+(all\s+)?(passwords?|secrets?|api\s*keys?|keys?|tokens?|credentials?)",
+        r"list\s+(all\s+)?(passwords?|secrets?|api\s*keys?|keys?|tokens?|credentials?)",
 
         # 代码执行类
         r"exec\s*\(",
         r"eval\s*\(",
         r"os\.system",
         r"subprocess\.",
+        r"rm\s+-rf\s*/",
 
         # 格式绕过类
-        r"<script",
         r"javascript:",
         r"data:text/html",
     ]
@@ -90,10 +107,11 @@ class LLMSafetyService:
     # 敏感信息泄露模式
     SENSITIVE_PATTERNS = [
         # 密钥类
-        r"api[_-]?key\s*[:：]\s*[A-Za-z0-9]{20,}",
-        r"secret\s*[:：]\s*[A-Za-z0-9]{20,}",
-        r"token\s*[:：]\s*[A-Za-z0-9]{20,}",
+        r"api[_-]?\s*key\s*(?:[:：]|是)\s*\S{5,}",
+        r"secret\s*[:：]\s*\S{5,}",
+        r"token\s*[:：]\s*\S{5,}",
         r"password\s*[:：]\s*\S{8,}",
+        r"密码\s*[:：]\s*\S{6,}",
 
         # 金融类
         r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b",  # 信用卡
@@ -163,6 +181,9 @@ class LLMSafetyService:
         if injection_risk.detected:
             violations.append(f"提示注入风险: {injection_risk.pattern}")
             risk_score += 0.4
+            if re.search(r"(你是|你被赋予|角色|扮演|act\s+as|pretend|you\s+are)", injection_risk.pattern, re.IGNORECASE):
+                violations.append("角色扮演风险: 注入模式包含角色指令")
+                risk_score += 0.2
             text = injection_risk.sanitized_text
 
         # Layer 3: XSS 过滤
@@ -180,7 +201,9 @@ class LLMSafetyService:
             text = sensitive_risk.sanitized_text
 
         # Layer 5: 深度语义分析 (可选)
-        if self.enable_deep_analysis and risk_score > 0.5:
+        if self.enable_deep_analysis and (
+            risk_score >= self.MEDIUM_RISK_THRESHOLD or self._has_unicode_suspicious(text)
+        ):
             semantic_risk = self._deep_semantic_analysis(text)
             if semantic_risk.detected:
                 violations.append(f"语义风险: {semantic_risk.reason}")
@@ -198,7 +221,7 @@ class LLMSafetyService:
                 f"Original: {original_length} chars"
             )
 
-        is_safe = risk_score < self.HIGH_RISK_THRESHOLD
+        is_safe = not violations and risk_score < self.HIGH_RISK_THRESHOLD
 
         return SafetyCheckResult(
             is_safe=is_safe,
@@ -279,6 +302,7 @@ class LLMSafetyService:
         role_patterns = [
             r"你(现在|此刻|从现在开始|以后)",
             r"从现在起",
+            r"从现在开始",
             r"从这一刻起",
             r"你被赋予.*?角色",
             r"扮演.*?角色",

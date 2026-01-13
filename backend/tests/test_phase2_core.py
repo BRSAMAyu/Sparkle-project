@@ -107,7 +107,7 @@ async def test_request_validator():
         message="Hello, world!"
     )
     
-    result = validator.validate_chat_request(request)
+    result = await validator.validate_chat_request(request)
     assert result.is_valid is True
     
     # 测试无效用户 ID
@@ -118,7 +118,7 @@ async def test_request_validator():
         message="Hello"
     )
     
-    result = validator.validate_chat_request(request_invalid)
+    result = await validator.validate_chat_request(request_invalid)
     assert result.is_valid is False
     assert "user_id is required" in result.error_message
     
@@ -131,7 +131,7 @@ async def test_request_validator():
         message=long_message
     )
     
-    result = validator.validate_chat_request(request_long)
+    result = await validator.validate_chat_request(request_long)
     assert result.is_valid is False
     
     print("✅ Request Validator test passed")
@@ -168,6 +168,7 @@ async def test_user_service():
     db_mock.execute.return_value = mock_result
     
     user_service = UserService(db_mock)
+    user_service._get_push_preference = AsyncMock(return_value=None)
     
     # Test get_context
     user_id = uuid4()
@@ -281,15 +282,14 @@ async def test_orchestrator_integration():
     )
     
     # Mock the LLM service to avoid actual calls
-    import app.services.llm_service as llm_service_module
-    original_chat_stream = llm_service_module.llm_service.chat_stream_with_tools
+    from app.services.llm_service import llm_service, StreamChunk
+    original_chat_stream = llm_service.chat_stream_with_tools
     
     async def mock_chat_stream(*args, **kwargs):
         # Yield a text chunk
-        from app.services.llm.service import StreamChunk
         yield StreamChunk(type="text", content="Test response")
     
-    llm_service_module.llm_service.chat_stream_with_tools = mock_chat_stream
+    llm_service.chat_stream_with_tools = mock_chat_stream
     
     try:
         # Process stream
@@ -307,7 +307,7 @@ async def test_orchestrator_integration():
         
     finally:
         # Restore original
-        llm_service_module.llm_service.chat_stream_with_tools = original_chat_stream
+        llm_service.chat_stream_with_tools = original_chat_stream
 
 
 # Run all tests

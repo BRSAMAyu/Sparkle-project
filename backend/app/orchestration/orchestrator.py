@@ -112,12 +112,14 @@ class ChatOrchestrator:
     6. Response composition
     """
 
-    def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None):
+    def __init__(self, db_session: Optional[AsyncSession] = None, redis_client=None, user_id: Optional[str] = None):
         if redis_client is None:
             logger.error("ChatOrchestrator requires Redis, but no redis_client was provided")
-            raise ValueError("Redis client is required for ChatOrchestrator")
+            raise ValueError("redis_client is required for ChatOrchestrator")
         self.db_session = db_session
         self.redis = redis_client
+        self.redis_client = redis_client
+        self.user_id = user_id
 
         # Initialize components
         self.state_manager = SessionStateManager(redis_client)
@@ -640,6 +642,13 @@ class ChatOrchestrator:
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
                     await queue.put(resp)
+
+                # Emit initial thinking status
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    status_update=agent_service_pb2.AgentStatus(
+                        state=agent_service_pb2.AgentStatus.THINKING
+                    )
+                ))
 
                 # Inject Dependencies
                 if active_db:

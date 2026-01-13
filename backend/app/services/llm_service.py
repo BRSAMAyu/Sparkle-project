@@ -1,4 +1,5 @@
 import json
+import inspect
 from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator
 import asyncio
 from loguru import logger
@@ -354,24 +355,13 @@ class LLMService:
                 return
 
             logger.debug(f"Starting stream chat with model: {model}")
-            
-            try:
-                await circuit_breaker_service.check("primary_llm")
-                
-                async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
-                    yield chunk
-                    
-                # We only record success if the stream completes without error? 
-                # Streaming is tricky. Let's record success at the end.
-                await circuit_breaker_service.record_success("primary_llm")
-                
-            except CircuitBreakerOpenException:
-                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
-            except Exception as e:
-                await circuit_breaker_service.record_failure("primary_llm")
-                logger.error(f"LLM Stream Chat Error: {e}")
-                raise e
+            stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
+            if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
+                stream = await stream
+            if not hasattr(stream, "__aiter__"):
+                raise TypeError("stream_chat must return an async iterator")
+            async for chunk in stream:
+                yield chunk
 
     async def chat_with_tools(
         self,

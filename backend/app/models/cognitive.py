@@ -10,6 +10,7 @@ from pgvector.sqlalchemy import Vector
 
 from app.models.base import BaseModel, GUID
 
+VectorCompat = Vector(1536).with_variant(JSON(), "sqlite")
 class AnalysisStatus(str, enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
@@ -61,7 +62,7 @@ class CognitiveFragment(BaseModel):
     severity = Column(Integer, default=1, nullable=False) # 1-5
 
     # 语义向量
-    embedding = Column(Vector(1536), nullable=True)
+    embedding = Column(VectorCompat, nullable=True)
 
     # 关系
     user = relationship("User", backref="cognitive_fragments")
