@@ -1097,7 +1097,7 @@ func (q *Queries) IsGroupMember(ctx context.Context, arg IsGroupMemberParams) (b
 const markEventProcessed = `-- name: MarkEventProcessed :exec
 INSERT INTO processed_events (event_id, consumer_group, processed_at)
 VALUES ($1, $2, NOW())
-ON CONFLICT (event_id) DO NOTHING
+ON CONFLICT (event_id, consumer_group) DO NOTHING
 `
 
 type MarkEventProcessedParams struct {
