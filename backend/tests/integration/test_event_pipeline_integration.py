@@ -8,6 +8,7 @@ import redis.asyncio as redis
 from sqlalchemy import delete
 
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
@@ -77,7 +78,8 @@ async def test_ingest_stream_worker_state_summary():
         )
         assert result_dupe["deduped"] == 1
 
-        redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+        redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True, password=resolved_password)
         stream = "stream:tracking_events"
         group = f"test_group_{uuid4().hex[:6]}"
         consumer = f"consumer_{uuid4().hex[:6]}"

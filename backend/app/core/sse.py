@@ -1,6 +1,7 @@
 """
 Server-Sent Events (SSE) Manager
 用于实时推送事件到前端
+支持断点续传和事件重放
 """
 import asyncio
 import json
@@ -11,6 +12,7 @@ from fastapi import Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from app.core.cache import cache_service
+from app.config.phase5_config import phase5_config
 
 
 class SSEManager:
@@ -50,10 +52,10 @@ class SSEManager:
                 # Get last N events (simple approach: get all and filter)
                 # In production with large lists, use LRANGE carefully or Redis Stream
                 events = await cache_service.redis.lrange(history_key, 0, -1)
-                
+
                 last_seq_int = int(last_event_id)
                 replayed_count = 0
-                
+
                 # Events are stored in order. We need to find where last_seq is.
                 # NOTE: lrange returns list, we assume appending order.
                 for event_raw in events:
@@ -64,9 +66,16 @@ class SSEManager:
                             # This is a missed event
                             await queue.put(event)
                             replayed_count += 1
+                            # 限制重放数量，防止过大的重放
+                            if replayed_count >= phase5_config.SSE_REPLAY_MAX_EVENTS:
+                                logger.warning(
+                                    f"Replay limit reached ({phase5_config.SSE_REPLAY_MAX_EVENTS}) "
+                                    f"for user {user_id}"
+                                )
+                                break
                     except Exception:
                         continue
-                
+
                 if replayed_count > 0:
                     logger.info(f"Replayed {replayed_count} events for user {user_id} since {last_event_id}")
             except Exception as e:
@@ -107,14 +116,20 @@ class SSEManager:
             "done": is_done
         }
         
-        # 1. Store in Redis for Replay (Buffer 60s or 100 items)
+        # 1. Store in Redis for Replay (使用配置的缓冲区大小和 TTL)
         if cache_service.redis:
             try:
                 history_key = f"sse:history:{user_id_str}"
                 raw = json.dumps(event_data, ensure_ascii=False)
                 await cache_service.redis.rpush(history_key, raw)
-                await cache_service.redis.ltrim(history_key, -100, -1) # Keep last 100
-                await cache_service.redis.expire(history_key, 60) # TTL 60s
+                # 保留最近 N 条事件
+                await cache_service.redis.ltrim(
+                    history_key,
+                    -phase5_config.SSE_BUFFER_SIZE,
+                    -1
+                )
+                # 设置 TTL
+                await cache_service.redis.expire(history_key, phase5_config.SSE_BUFFER_TTL)
             except Exception as e:
                 logger.error(f"Failed to buffer SSE event: {e}")
 

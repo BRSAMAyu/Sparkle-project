@@ -319,8 +319,11 @@ def create_summarization_worker(
         SummarizationWorker 实例
     """
     import redis.asyncio as redis
+    from app.config import settings
+    from app.core.redis_utils import resolve_redis_password
 
-    redis_client = redis.from_url(redis_url, decode_responses=False)
+    resolved_password, _ = resolve_redis_password(redis_url, settings.REDIS_PASSWORD)
+    redis_client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
     return SummarizationWorker(redis_client, worker_id=worker_id, **kwargs)
 
 

@@ -25,6 +25,10 @@ import argparse
 from pathlib import Path
 import asyncio
 
+backend_path = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_path))
+
+from app.core.redis_utils import resolve_redis_password
 
 class SecuritySetup:
     """安全系统设置类"""
@@ -102,7 +106,8 @@ class SecuritySetup:
             else:
                 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
-            client = redis.from_url(redis_url, socket_connect_timeout=2)
+            resolved_password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD"))
+            client = redis.from_url(redis_url, socket_connect_timeout=2, password=resolved_password)
             client.ping()
             self.print_success(f"Redis 连接成功: {redis_url}")
             return True

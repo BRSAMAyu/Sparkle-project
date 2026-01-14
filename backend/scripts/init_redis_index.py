@@ -9,13 +9,15 @@ from redis.asyncio import Redis
 from redis.commands.search.field import TextField, NumericField, VectorField, TagField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 from loguru import logger
 
 async def init_index():
     """Initialize Redis Search Index for RAG v2.0"""
     logger.info("Connecting to Redis...")
     # Ensure decode_responses=True for text handling
-    redis = Redis.from_url(settings.REDIS_URL, password=settings.REDIS_PASSWORD, decode_responses=True)
+    resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    redis = Redis.from_url(settings.REDIS_URL, password=resolved_password, decode_responses=True)
     
     index_name = "idx:knowledge"
     

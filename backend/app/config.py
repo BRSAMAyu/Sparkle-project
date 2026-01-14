@@ -3,7 +3,7 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator
 from dotenv import load_dotenv
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_PASSWORD: str = "devpassword"
+    REDIS_PASSWORD: Optional[str] = None
 
     # Database Pool Settings (for PostgreSQL)
     DB_POOL_SIZE: int = 20  # 连接池大小
@@ -202,10 +202,6 @@ class Settings(BaseSettings):
 
         if env in ("prod", "production") and not self.DATABASE_URL:
             raise ValueError("DATABASE_URL must be set in production")
-
-        if env in ("prod", "production"):
-            if not self.REDIS_PASSWORD or self.REDIS_PASSWORD == "devpassword":
-                raise ValueError("REDIS_PASSWORD must be set to a non-default value in production")
 
         if env in ("prod", "production") and "*" in self.BACKEND_CORS_ORIGINS:
             raise ValueError("BACKEND_CORS_ORIGINS cannot include '*' in production")

@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 from loguru import logger
 
 async def init_semantic_cache_index():
@@ -15,7 +16,8 @@ async def init_semantic_cache_index():
     logger.info("Connecting to Redis...")
     # decode_responses=False is important for vector binary data, but for commands we might need mixed.
     # The redis-py client handles arguments well usually.
-    redis = Redis.from_url(settings.REDIS_URL, password=settings.REDIS_PASSWORD, decode_responses=False)
+    resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    redis = Redis.from_url(settings.REDIS_URL, password=resolved_password, decode_responses=False)
     
     index_name = "idx:embeddings"
     

@@ -2,6 +2,7 @@ import time
 from typing import Optional
 from loguru import logger
 from app.core.cache import cache_service
+from app.config.phase5_config import phase5_config
 
 class CircuitBreakerOpenException(Exception):
     def __init__(self, provider: str, reset_at: float):
@@ -13,10 +14,22 @@ class RedisCircuitBreaker:
     """
     Redis-backed Circuit Breaker for distributed rate limiting protection.
     Shared state across multiple workers/instances.
+
+    Configuration (from phase5_config):
+    - CIRCUIT_BREAKER_FAILURE_THRESHOLD: 失败次数阈值
+    - CIRCUIT_BREAKER_RECOVERY_TIMEOUT: 熔断恢复时间（秒）
+    - CIRCUIT_BREAKER_FAILURE_WINDOW: 失败窗口时间（秒）
     """
-    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
+    def __init__(self,
+                 failure_threshold: Optional[int] = None,
+                 recovery_timeout: Optional[int] = None,
+                 failure_window: Optional[int] = None):
+        self.failure_threshold = failure_threshold or phase5_config.CIRCUIT_BREAKER_FAILURE_THRESHOLD
+        self.recovery_timeout = recovery_timeout or phase5_config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT
+        self.failure_window = failure_window or phase5_config.CIRCUIT_BREAKER_FAILURE_WINDOW
+
+        logger.info(f"Circuit Breaker initialized: threshold={self.failure_threshold}, "
+                   f"recovery={self.recovery_timeout}s, window={self.failure_window}s")
 
     async def check(self, provider: str):
         """
@@ -50,10 +63,10 @@ class RedisCircuitBreaker:
 
         # Increment failure count
         count = await cache_service.redis.incr(fail_key)
-        
+
         # Set expiry for the window if new
         if count == 1:
-            await cache_service.redis.expire(fail_key, 60) # 1 minute window
+            await cache_service.redis.expire(fail_key, self.failure_window)
 
         if count >= self.failure_threshold:
             # Open the circuit

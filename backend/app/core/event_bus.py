@@ -7,6 +7,8 @@ from datetime import datetime
 from loguru import logger
 import redis.asyncio as redis
 from redis.exceptions import ResponseError
+from app.config import settings
+from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
 
 class Event(ABC):
     """Event base class"""
@@ -82,11 +84,7 @@ class EventBus:
         """Establish Redis connection"""
         if not self.redis:
             try:
-                # Sanitize password
-                password = os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD)
-                if password in ["<password>", "changeme", ""]:
-                    password = None
-                
+                password, password_source = resolve_redis_password(self.redis_url, settings.REDIS_PASSWORD)
                 kwargs = {
                     "encoding": "utf-8",
                     "decode_responses": True
@@ -99,7 +97,13 @@ class EventBus:
                     **kwargs
                 )
                 await self.redis.ping()
-                logger.info(f"Successfully connected to Redis Event Bus (Password={'Yes' if password else 'No'})")
+                logger.info(
+                    "Successfully connected to Redis Event Bus: {}, Password={}, PasswordSource={}".format(
+                        format_redis_url_for_log(self.redis_url),
+                        "Yes" if password else "No",
+                        password_source,
+                    )
+                )
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 self.redis = None

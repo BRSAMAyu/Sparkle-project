@@ -15,6 +15,7 @@ import redis.asyncio as redis
 from loguru import logger
 from pydantic import BaseModel
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
 
 from contextlib import asynccontextmanager
 
@@ -25,11 +26,7 @@ class CacheService:
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
-        # Sanitize password: treat placeholders as None
-        password = settings.REDIS_PASSWORD
-        if password in ["<password>", "changeme", ""]:
-            password = None
-            
+        password, password_source = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
         kwargs = {
             "encoding": "utf-8",
             "decode_responses": True,
@@ -38,13 +35,14 @@ class CacheService:
             kwargs["password"] = password
 
         # Log connection attempt (masked)
-        masked_url = settings.REDIS_URL
-        if "@" in masked_url:
-            # Simple mask for logging
-            parts = masked_url.split("@")
-            masked_url = f"redis://****@{parts[-1]}"
-            
-        logger.info(f"Connecting to Redis Cache: {masked_url}, Password={'Yes' if password else 'No'}")
+        safe_url = format_redis_url_for_log(settings.REDIS_URL)
+        logger.info(
+            "Connecting to Redis Cache: {}, Password={}, PasswordSource={}".format(
+                safe_url,
+                "Yes" if password else "No",
+                password_source,
+            )
+        )
 
         self.redis = redis.from_url(
             settings.REDIS_URL, 

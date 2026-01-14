@@ -26,6 +26,7 @@ from loguru import logger
 from app.services.user_service import UserService
 from app.models.user import User, PushPreference, UserStatus
 from app.models.base import Base
+from app.core.redis_utils import resolve_redis_password
 
 
 # Test configuration
@@ -47,7 +48,8 @@ class UserServiceCacheTestSuite:
         logger.info("Setting up test environment...")
 
         # 连接 Redis
-        self.redis_client = redis.from_url(REDIS_URL, decode_responses=False)
+        resolved_password, _ = resolve_redis_password(REDIS_URL, None)
+        self.redis_client = redis.from_url(REDIS_URL, decode_responses=False, password=resolved_password)
         try:
             await self.redis_client.ping()
             logger.info("✓ Redis connected")

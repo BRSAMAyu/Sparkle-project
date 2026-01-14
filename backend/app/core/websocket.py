@@ -9,6 +9,7 @@ import asyncio
 from loguru import logger
 import redis.asyncio as redis
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
 
 class ConnectionManager:
     def __init__(self):
@@ -29,10 +30,7 @@ class ConnectionManager:
 
     async def init_redis(self):
         """Initialize Redis connection for Pub/Sub"""
-        # Sanitize password
-        password = settings.REDIS_PASSWORD
-        if password in ["<password>", "changeme", ""]:
-            password = None
+        password, password_source = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
 
         kwargs = {
             "encoding": "utf-8",
@@ -52,7 +50,13 @@ class ConnectionManager:
             await self.pubsub.psubscribe("visualize:*")
             
             self.listener_task = asyncio.create_task(self._redis_listener())
-            logger.info(f"WebSocket Redis Pub/Sub initialized (Password={'Yes' if password else 'No'})")
+            logger.info(
+                "WebSocket Redis Pub/Sub initialized: {}, Password={}, PasswordSource={}".format(
+                    format_redis_url_for_log(settings.REDIS_URL),
+                    "Yes" if password else "No",
+                    password_source,
+                )
+            )
         except Exception as e:
             logger.warning(f"WebSocket Redis unavailable; realtime sync disabled: {e}")
             logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")

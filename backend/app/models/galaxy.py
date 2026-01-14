@@ -117,8 +117,13 @@ class KnowledgeNode(BaseModel):
 
     # 节点来源
     is_seed = Column(Boolean, default=False)
-    source_type = Column(String(20), default='seed') # seed | user_created | llm_expanded
-    source_task_id = Column(GUID(), nullable=True) # 来源任务ID (这里不强关联 Task 表以免循环依赖，或者使用字符串)
+    source_type = Column(String(20), default='seed') # seed | user_created | llm_expanded | document_import
+    source_task_id = Column(GUID(), nullable=True) # 来源任务ID
+    
+    # Phase 5B: Document Engine Traceability
+    source_file_id = Column(GUID(), ForeignKey("stored_files.id"), nullable=True)
+    chunk_refs = Column(JSONB, nullable=True) # List of chunk IDs or {chunk_id: score}
+    status = Column(String(20), default='published', index=True) # draft | published | needs_review
 
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
@@ -133,6 +138,7 @@ class KnowledgeNode(BaseModel):
 
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")
+    source_file = relationship("StoredFile", backref="knowledge_nodes")
     parent = relationship("KnowledgeNode", remote_side="KnowledgeNode.id", backref="children")
     user_statuses = relationship("UserNodeStatus", back_populates="node", cascade="all, delete-orphan")
     source_relations = relationship("NodeRelation", foreign_keys="NodeRelation.source_node_id", back_populates="source_node", cascade="all, delete-orphan")
