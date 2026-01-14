@@ -52,8 +52,9 @@ from app.models import (
 config = context.config
 
 # Override sqlalchemy.url from settings
-# Convert asyncpg URL to sync driver for Alembic migrations
-database_url = to_sync_database_url(settings.DATABASE_URL)
+# Convert asyncpg URL to psycopg2 for Alembic migrations
+database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+# Fix for configparser interpolation error when using special characters like %
 database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
