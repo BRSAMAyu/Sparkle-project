@@ -16,11 +16,25 @@ branch_labels = None
 depends_on = None
 
 def upgrade() -> None:
-    op.add_column('error_records', sa.Column('cognitive_tags', postgresql.ARRAY(sa.String()), server_default='{}', nullable=True))
-    op.add_column('error_records', sa.Column('ai_analysis_summary', sa.Text(), nullable=True))
-    op.create_index('idx_error_records_cognitive_tags', 'error_records', ['cognitive_tags'], unique=False, postgresql_using='gin')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("error_records")}
+
+    if "cognitive_tags" not in columns:
+        op.add_column('error_records', sa.Column('cognitive_tags', postgresql.ARRAY(sa.String()), server_default='{}', nullable=True))
+    if "ai_analysis_summary" not in columns:
+        op.add_column('error_records', sa.Column('ai_analysis_summary', sa.Text(), nullable=True))
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_error_records_cognitive_tags "
+        "ON error_records USING gin (cognitive_tags)"
+    )
 
 def downgrade() -> None:
-    op.drop_index('idx_error_records_cognitive_tags', table_name='error_records')
-    op.drop_column('error_records', 'ai_analysis_summary')
-    op.drop_column('error_records', 'cognitive_tags')
+    op.execute("DROP INDEX IF EXISTS idx_error_records_cognitive_tags")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("error_records")}
+    if "ai_analysis_summary" in columns:
+        op.drop_column('error_records', 'ai_analysis_summary')
+    if "cognitive_tags" in columns:
+        op.drop_column('error_records', 'cognitive_tags')
