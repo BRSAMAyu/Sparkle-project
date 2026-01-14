@@ -120,6 +120,9 @@ class Settings(BaseSettings):
     # Demo Mode (演示模式 - 用于竞赛演示，确保关键流程稳定)
     DEMO_MODE: bool = False  # 生产环境应设为 False
 
+    # Optional Agent Graph V2
+    ENABLE_AGENT_GRAPH_V2: bool = False
+
     # Idempotency Store
     IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
 

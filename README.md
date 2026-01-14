@@ -133,6 +133,7 @@ pip install -r requirements.txt
 pip install -r requirements-llm.txt            # 可选：LLM/向量检索相关功能
 pip install -r requirements-ingestion.txt      # 可选：文档解析（PDF/DOCX/PPTX）
 pip install -r requirements-reporting.txt      # 可选：报告/PDF 生成
+pip install -r requirements-agent-graph.txt    # 可选：V2 Agent Graph (langgraph)
 cp .env.example .env
 # 编辑 .env 配置数据库和API密钥
 alembic upgrade head

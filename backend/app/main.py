@@ -3,7 +3,7 @@ Sparkle Backend - FastAPI Application Entry Point
 """
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request, HTTPException, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -20,7 +20,6 @@ from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
-from app.api.v2.agent_graph import router as agent_graph_router  # New V2 Agent Router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
 from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
@@ -187,7 +186,25 @@ async def health_check():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
-app.include_router(agent_graph_router, prefix="/api/v2/agent", tags=["Agent V2"])
+if settings.ENABLE_AGENT_GRAPH_V2:
+    try:
+        from importlib import import_module
+        agent_graph_router = import_module("app.api.v2.agent_graph").router
+        app.include_router(agent_graph_router, prefix="/api/v2/agent", tags=["Agent V2"])
+    except Exception as exc:
+        logger.warning(f"Agent Graph V2 disabled (import failed): {exc}")
+        placeholder_router = APIRouter()
+
+        @placeholder_router.get("/status")
+        async def agent_graph_v2_unavailable():
+            raise HTTPException(
+                status_code=501,
+                detail="Agent Graph V2 dependencies not installed (langgraph/langchain)."
+            )
+
+        app.include_router(placeholder_router, prefix="/api/v2/agent", tags=["Agent V2"])
+else:
+    logger.info("Agent Graph V2 disabled (ENABLE_AGENT_GRAPH_V2=false)")
 
 
 # Mount static files for uploads
