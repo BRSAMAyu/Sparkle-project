@@ -6,6 +6,7 @@ from typing import List, Optional
 from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 
 import uuid
 

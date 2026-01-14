@@ -29,8 +29,20 @@ class ConnectionManager:
 
     async def init_redis(self):
         """Initialize Redis connection for Pub/Sub"""
+        # Sanitize password
+        password = settings.REDIS_PASSWORD
+        if password in ["<password>", "changeme", ""]:
+            password = None
+
+        kwargs = {
+            "encoding": "utf-8",
+            "decode_responses": True,
+        }
+        if password:
+            kwargs["password"] = password
+
         try:
-            self.redis = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+            self.redis = redis.from_url(settings.REDIS_URL, **kwargs)
             self.pubsub = self.redis.pubsub()
             
             # Subscribe to global patterns
@@ -40,7 +52,7 @@ class ConnectionManager:
             await self.pubsub.psubscribe("visualize:*")
             
             self.listener_task = asyncio.create_task(self._redis_listener())
-            logger.info("WebSocket Redis Pub/Sub initialized with pattern subscriptions")
+            logger.info(f"WebSocket Redis Pub/Sub initialized (Password={'Yes' if password else 'No'})")
         except Exception as e:
             logger.warning(f"WebSocket Redis unavailable; realtime sync disabled: {e}")
             logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")

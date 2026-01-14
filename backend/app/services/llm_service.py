@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from app.config import settings
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
+from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -222,8 +223,25 @@ class LLMService:
                 return mock_response
 
             logger.debug(f"Sending chat request to model: {model}")
-            response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
-            return response
+            
+            try:
+                # Circuit Breaker Check
+                await circuit_breaker_service.check("primary_llm")
+                
+                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                
+                # Record Success
+                await circuit_breaker_service.record_success("primary_llm")
+                return response
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                # Optional: Return a degraded response if possible, or re-raise
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                # Record Failure
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Chat Error (Circuit Breaker recording): {e}")
+                raise e
 
     async def reason(
         self,
@@ -336,8 +354,24 @@ class LLMService:
                 return
 
             logger.debug(f"Starting stream chat with model: {model}")
-            async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
-                yield chunk
+            
+            try:
+                await circuit_breaker_service.check("primary_llm")
+                
+                async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                    yield chunk
+                    
+                # We only record success if the stream completes without error? 
+                # Streaming is tricky. Let's record success at the end.
+                await circuit_breaker_service.record_success("primary_llm")
+                
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Stream Chat Error: {e}")
+                raise e
 
     async def chat_with_tools(
         self,

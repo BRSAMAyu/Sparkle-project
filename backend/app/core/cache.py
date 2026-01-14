@@ -25,14 +25,26 @@ class CacheService:
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
-        # If password is provided in settings but not in URL, pass it explicitly
+        # Sanitize password: treat placeholders as None
+        password = settings.REDIS_PASSWORD
+        if password in ["<password>", "changeme", ""]:
+            password = None
+            
         kwargs = {
             "encoding": "utf-8",
             "decode_responses": True,
         }
-        # Only set password if it's explicitly configured and not empty
-        if settings.REDIS_PASSWORD and str(settings.REDIS_PASSWORD).strip():
-            kwargs["password"] = str(settings.REDIS_PASSWORD).strip()
+        if password:
+            kwargs["password"] = password
+
+        # Log connection attempt (masked)
+        masked_url = settings.REDIS_URL
+        if "@" in masked_url:
+            # Simple mask for logging
+            parts = masked_url.split("@")
+            masked_url = f"redis://****@{parts[-1]}"
+            
+        logger.info(f"Connecting to Redis Cache: {masked_url}, Password={'Yes' if password else 'No'}")
 
         self.redis = redis.from_url(
             settings.REDIS_URL, 
@@ -40,9 +52,10 @@ class CacheService:
         )
         try:
             await self.redis.ping()
+            logger.info("Redis Cache initialized successfully")
         except Exception as e:
             self.redis = None
-            logger.warning(f"Redis not available; cache disabled: {e}")
+            logger.warning(f"Redis Cache connection failed: {e}")
             logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")
 
     @asynccontextmanager
