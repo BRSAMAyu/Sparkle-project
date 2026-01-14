@@ -25,3 +25,9 @@ plugins:
     out: backend/app/gen
   - local: protoc-gen-pyi
     out: backend/app/gen
+
+  # Dart code generation (Flutter)
+  - local: protoc-gen-dart
+    out: mobile/lib/gen
+    opt:
+      - grpc

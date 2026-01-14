@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package sparkle.signals.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/sparkle/signals/v1;signalsv1";
+
+message CandidateAction {
+  string id = 1;
+  string type = 2;
+  string trigger = 3;
+  string content_seed = 4;
+  float priority = 5;
+  map<string, string> metadata = 6;
+}
+
+message NextActionsCandidateSet {
+  string request_id = 1;
+  string trace_id = 2;
+  string user_id = 3;
+  string schema_version = 4;
+  string idempotency_key = 5;
+  repeated CandidateAction candidates = 6;
+  map<string, string> metadata = 7;
+}

@@ -21,7 +21,6 @@ from app.api.middleware import IdempotencyMiddleware
 from loguru import logger
 from app.api.v1.router import api_router
 from app.workers.expansion_worker import start_expansion_worker, stop_expansion_worker
-from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
 from app.api.v1.health import set_start_time
 from app.core.websocket import manager
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -64,6 +63,14 @@ async def lifespan(app: FastAPI):
     # Initialize WebSocket Redis
     await manager.init_redis()
 
+    start_sync_worker = None
+    stop_sync_worker = None
+    if settings.ENABLE_GRAPH_SYNC_WORKER:
+        try:
+            from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
+        except ImportError as exc:
+            logger.warning(f"Graph sync worker not available; skipping startup: {exc}")
+
     async with AsyncSessionLocal() as db:
         try:
             # 0. 初始化数据库数据
@@ -84,7 +91,8 @@ async def lifespan(app: FastAPI):
             await start_expansion_worker()
 
             # 5. 启动图同步 Worker (AGE)
-            await start_sync_worker()
+            if start_sync_worker:
+                await start_sync_worker()
         except Exception as e:
             logger.error(f"Startup tasks failed: {e}")
             # 可以在这里决定是否终止启动
@@ -97,7 +105,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Sparkle API Server...")
 
     # 停止图同步 Worker
-    await stop_sync_worker()
+    if stop_sync_worker:
+        await stop_sync_worker()
 
     # 停止知识拓展后台任务
     await stop_expansion_worker()
