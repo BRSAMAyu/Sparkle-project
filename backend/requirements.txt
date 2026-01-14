@@ -70,6 +70,9 @@ grpcio>=1.60.0
 grpcio-tools>=1.60.0
 protobuf>=4.25.0
 
+# PDF Parsing
+pdfplumber>=0.11.0
+
 # PDF Generation & Reporting
 weasyprint>=60.0
 jinja2>=3.1.2

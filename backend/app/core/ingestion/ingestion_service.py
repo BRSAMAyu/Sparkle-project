@@ -1,11 +1,16 @@
 import os
 import re
 from typing import List, Dict, Optional
-import pdfplumber
 from docx import Document
 from pptx import Presentation
 from loguru import logger
 from pydantic import BaseModel
+
+try:
+    import pdfplumber
+    HAS_PDFPLUMBER = True
+except ImportError:
+    HAS_PDFPLUMBER = False
 
 try:
     import pytesseract
@@ -71,6 +76,8 @@ class IngestionService:
                 raise ValueError(f"Invalid ZIP/Office header: {header}")
 
     def _process_pdf(self, path: str) -> List[ExtractedChunk]:
+        if not HAS_PDFPLUMBER:
+            raise RuntimeError("pdfplumber is required for PDF processing but is not installed.")
         chunks = []
         # Use pdfplumber for better layout analysis
         with pdfplumber.open(path) as pdf:
