@@ -16,24 +16,22 @@ class RerankService:
         self.model = None
         self.executor = ThreadPoolExecutor(max_workers=1)
         self._load_model_task = None
-        # Start loading model in background if loop is running
-        try:
-            loop = asyncio.get_running_loop()
-            self._load_model_task = loop.create_task(self._load_model())
-        except RuntimeError:
-            # No running loop (e.g. during import or script start), skip auto-load.
-            # Caller must ensure _load_model is called or model is loaded lazily.
-            pass
+        self.enabled = settings.RERANKER_ENABLED
+        self._load_failed = False
 
     async def ensure_model_loaded(self):
         """Ensure model is loaded (call this if auto-load failed)"""
+        if not self.enabled or self._load_failed:
+            return
         if not self.model and not self._load_model_task:
-             self._load_model_task = asyncio.create_task(self._load_model())
+            self._load_model_task = asyncio.create_task(self._load_model())
         if self._load_model_task:
             await self._load_model_task
 
     async def _load_model(self):
         """Load Cross-Encoder model in background"""
+        if not self.enabled or self._load_failed:
+            return
         try:
             logger.info("⏳ Loading Reranker model (cross-encoder/ms-marco-MiniLM-L-6-v2)...")
             # Run in executor to avoid blocking loop
@@ -41,7 +39,8 @@ class RerankService:
             await loop.run_in_executor(self.executor, self._init_transformer)
             logger.success("✅ Reranker model loaded.")
         except Exception as e:
-            logger.error(f"❌ Failed to load Reranker model: {e}")
+            self._load_failed = True
+            logger.warning(f"⚠️ Failed to load Reranker model, disabling reranker: {e}")
 
     def _init_transformer(self):
         from sentence_transformers import CrossEncoder
@@ -83,7 +82,13 @@ class RerankService:
         """
         if not candidates:
             return []
-            
+
+        if not self.enabled:
+            return candidates[:top_k]
+
+        if not self.model and not self._load_failed:
+            await self.ensure_model_loaded()
+
         if not self.model:
             # If model not ready or failed, return original top_k
             logger.warning("Reranker model not ready, returning original order.")

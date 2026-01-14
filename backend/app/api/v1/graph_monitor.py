@@ -16,7 +16,13 @@ from app.db.session import get_db
 from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
 from app.config import settings
-from app.services.graph_knowledge_service import GraphKnowledgeService
+try:
+    from app.services.graph_knowledge_service import GraphKnowledgeService
+    GRAPH_SERVICE_AVAILABLE = True
+except ModuleNotFoundError as exc:
+    GraphKnowledgeService = None
+    GRAPH_SERVICE_AVAILABLE = False
+    logger.warning(f"GraphKnowledgeService unavailable: {exc}")
 
 # Prometheus metrics
 try:
@@ -62,6 +68,16 @@ if PROMETHEUS_AVAILABLE:
     )
 
 
+def _require_graph_service(db: AsyncSession) -> "GraphKnowledgeService":
+    if not GRAPH_SERVICE_AVAILABLE or GraphKnowledgeService is None:
+        logger.warning("GraphRAG service not available; returning 501 for graph monitor endpoints.")
+        raise HTTPException(
+            status_code=501,
+            detail="GraphRAG service is not available in this deployment."
+        )
+    return GraphKnowledgeService(db)
+
+
 @router.get("/health", response_model=Dict[str, Any])
 async def graph_rag_health(
     db: AsyncSession = Depends(get_db)
@@ -84,7 +100,7 @@ async def graph_rag_health(
     }
 
     try:
-        graph_ks = GraphKnowledgeService(db)
+        graph_ks = _require_graph_service(db)
 
         # 1. 检查图数据库连接
         with GRAPH_RAG_DURATION.labels(operation="health_check").time():
@@ -223,7 +239,7 @@ async def graph_statistics(
     - 同步状态
     """
     try:
-        graph_ks = GraphKnowledgeService(db)
+        graph_ks = _require_graph_service(db)
 
         with GRAPH_RAG_DURATION.labels(operation="statistics").time():
             stats = await graph_ks.get_detailed_statistics()
@@ -385,7 +401,7 @@ async def test_query(
     start_time = time.time()
 
     try:
-        graph_ks = GraphKnowledgeService(db)
+        graph_ks = _require_graph_service(db)
 
         result = await graph_ks.graph_rag_search(
             query=query,
@@ -470,7 +486,7 @@ async def detailed_health_check(
     }
 
     try:
-        graph_ks = GraphKnowledgeService(db)
+        graph_ks = _require_graph_service(db)
 
         # 1. 图数据库健康
         graph_start = time.time()
