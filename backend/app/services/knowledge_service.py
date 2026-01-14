@@ -53,17 +53,62 @@ class KnowledgeService:
         """
         Retrieve relevant knowledge context for the LLM using Hybrid Search (RAG v2.0).
         Returns a formatted string of knowledge nodes.
+        Implements Parallel Execution and Stability Guardrails (PR-9).
         """
         try:
             strategy = RagRouter().select(query)
+            
+            # LATENCY_BUDGET: Total time allowed for retrieval
+            # We reserve 0.5s for the actual vector search and ranking, 
+            # so HyDE gen must complete within budget - 0.5s
+            LATENCY_BUDGET = 1.5
+            HYDE_TIMEOUT = max(0.5, LATENCY_BUDGET - 0.5)
 
             vector_query = None
-            if strategy.enable_hyde:
-                vector_query = await self._generate_hypothetical_answer(query)
-                logger.debug(f"HyDE generated: {vector_query[:100]}...")
+            
+            # --- HyDE Guardrails & Parallelization ---
+            
+            async def _run_raw():
+                # Raw path is always executed
+                return query
 
-            # 2. Hybrid Search
-            # Use vector_query when enabled; otherwise default to original query.
+            async def _run_hyde():
+                # HyDE path
+                return await self._generate_hypothetical_answer(query)
+
+            # HyDE Gate: Check if we should even attempt HyDE
+            # Skip if strategy disabled or query too specific/long (likely has entities)
+            should_run_hyde = strategy.enable_hyde and len(query) < 100
+
+            if should_run_hyde:
+                # Run Parallel: Raw Retrieval (implicit) vs HyDE Generation
+                # Note: We need the vector_query string before we can search.
+                # So we are parallelizing the *generation* of HyDE against the *wait time*.
+                # Ideally we would parallelize Raw-Search vs HyDE-Search, but HyDE-Search depends on Gen.
+                # PR-9 optimization: We treat Raw Search as a fallback that is always ready.
+                
+                # Start HyDE Generation
+                hyde_task = asyncio.create_task(_run_hyde())
+                
+                try:
+                    # Wait for HyDE with timeout
+                    # If it finishes, we use it. If not, we downgrade.
+                    vector_query = await asyncio.wait_for(hyde_task, timeout=HYDE_TIMEOUT)
+                    logger.debug(f"HyDE generated within budget: {vector_query[:50]}...")
+                except asyncio.TimeoutError:
+                    # Cancel the phantom request to save tokens (if provider supports it) and resources
+                    hyde_task.cancel()
+                    logger.warning(f"HyDE timed out ({HYDE_TIMEOUT}s), downgraded to Raw strategy")
+                    # vector_query remains None, falling back to query
+                except Exception as e:
+                    logger.error(f"HyDE generation failed: {e}")
+                    # vector_query remains None
+            
+            # --- End Guardrails ---
+
+            # 2. Hybrid Search (Network Call)
+            # Use vector_query when available; otherwise default to original query.
+            # This step is the "Retrieval" part.
             results: List[SearchResultItem] = await self.galaxy_service.hybrid_search(
                 user_id=user_id,
                 query=query,
@@ -83,7 +128,7 @@ class KnowledgeService:
                 request_id=request_id,
                 trace_id=trace_id,
                 query=query,
-                strategy_name=strategy.name,
+                strategy_name=strategy.name + ("_downgraded" if strategy.enable_hyde and vector_query is None else ""),
             )
             await sse_manager.send_to_user(
                 str(user_id),

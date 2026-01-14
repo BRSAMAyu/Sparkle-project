@@ -102,6 +102,7 @@ class StarMapPainter extends CustomPainter {
     this.center = Offset.zero,
     this.selectedNodeIdHash,
     this.highlightedNodeIdHashes = const {},
+    this.highlightRevision = 0,
     this.expandedEdgeNodeIdHashes = const {},
     this.nodeAnimationProgress = const {},
     this.selectionPulse = 0.0,
@@ -120,6 +121,7 @@ class StarMapPainter extends CustomPainter {
   final Offset center;
   final int? selectedNodeIdHash;
   final Set<int> highlightedNodeIdHashes;
+  final int highlightRevision;
   final Set<int> expandedEdgeNodeIdHashes;
   final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
@@ -594,6 +596,5 @@ class StarMapPainter extends CustomPainter {
       !identical(old.nodes, nodes) ||
       old.selectionPulse != selectionPulse ||
       old.selectedNodeIdHash != selectedNodeIdHash ||
-      old.highlightedNodeIdHashes.length != highlightedNodeIdHashes.length ||
-      old.highlightedNodeIdHashes.difference(highlightedNodeIdHashes).isNotEmpty;
+      old.highlightRevision != highlightRevision;
 }

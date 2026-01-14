@@ -48,10 +48,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   final List<_ActiveSuccessAnimation> _activeSuccessAnimations = [];
 
   // Canvas constants
-  static const double _canvasPadding = 400.0;
-  static const double _canvasSize =
-      GalaxyLayoutEngine.outerRadius * 2 + _canvasPadding * 2;
-  static const double _canvasCenter = _canvasSize / 2;
   static const double _centralFlameSize = 60.0;
 
   // Track last scale to avoid unnecessary updates
@@ -77,8 +73,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Start Performance Monitoring
     PerformanceService.instance.startMonitoring();
 
-    _focusSubscription = ref.listen<GalaxyState>(galaxyProvider,
-        (previous, next) {
+    _focusSubscription =
+        ref.listen<GalaxyState>(galaxyProvider, (previous, next) {
+      final focusBounds = next.focusBounds;
+      if (focusBounds != null && focusBounds != previous?.focusBounds) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _animateToBounds(focusBounds);
+          ref.read(galaxyProvider.notifier).clearFocusBounds();
+          ref.read(galaxyProvider.notifier).clearFocusNode();
+        });
+        return;
+      }
+
       final focusId = next.focusNodeId;
       if (focusId != null && focusId != previous?.focusNodeId) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,13 +99,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = MediaQuery.of(context).size;
+      final canvasCenter = ref.read(galaxyProvider).canvasCenter;
 
       // Start at 0.15 scale (Universe View) centered
       const initialScale = 0.15;
-      // To center canvas point (_canvasCenter, _canvasCenter) at screen center (w/2, h/2) with scale S:
-      // Tx = w/2 - _canvasCenter * S
-      final tx = size.width / 2 - _canvasCenter * initialScale;
-      final ty = size.height / 2 - _canvasCenter * initialScale;
+      // To center canvas point at screen center (w/2, h/2) with scale S:
+      // Tx = w/2 - canvasCenter * S
+      final tx = size.width / 2 - canvasCenter * initialScale;
+      final ty = size.height / 2 - canvasCenter * initialScale;
 
       _transformationController.value = Matrix4.identity()
         ..translate(tx, ty)
@@ -116,6 +124,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       controller.dispose();
     }
     _transientControllers.clear();
+    ref.read(galaxyProvider.notifier).clearEvidenceHighlight();
+    ref.read(galaxyProvider.notifier).clearFocusBounds();
+    ref.read(galaxyProvider.notifier).clearFocusNode();
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
@@ -145,8 +156,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       inverseMatrix,
       Offset(size.width, size.height),
     );
+    final canvasCenter = ref.read(galaxyProvider).canvasCenter;
     final viewport = Rect.fromPoints(topLeft, bottomRight)
-        .shift(const Offset(-_canvasCenter, -_canvasCenter));
+        .shift(Offset(-canvasCenter, -canvasCenter));
     ref.read(galaxyProvider.notifier).updateViewport(viewport);
   }
 
@@ -179,6 +191,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     final galaxyState = ref.read(galaxyProvider);
     if (galaxyState.nodes.isEmpty) return;
+    final canvasCenter = galaxyState.canvasCenter;
 
     // Convert screen tap to canvas coordinates
     final canvasTap = _screenToCanvas(details.localPosition);
@@ -198,7 +211,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       if (nodePos == null) continue;
 
       // Add canvas center offset to get actual position
-      final actualPos = nodePos + const Offset(_canvasCenter, _canvasCenter);
+      final actualPos = nodePos + Offset(canvasCenter, canvasCenter);
       final distance = (canvasTap - actualPos).distance;
 
       // Hit test
@@ -222,6 +235,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (_hasDragged) return;
 
     final galaxyState = ref.read(galaxyProvider);
+    final canvasCenter = galaxyState.canvasCenter;
     final canvasTap = _screenToCanvas(details.localPosition);
     final scale = _transformationController.value.getMaxScaleOnAxis();
     final hitRadius = 30 / scale;
@@ -233,7 +247,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     for (final node in searchNodes) {
       final nodePos = galaxyState.nodePositions[node.id];
       if (nodePos == null) continue;
-      final actualPos = nodePos + const Offset(_canvasCenter, _canvasCenter);
+      final actualPos = nodePos + Offset(canvasCenter, canvasCenter);
 
       if ((canvasTap - actualPos).distance <
           hitRadius + (node.importance * 2)) {
@@ -260,6 +274,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   /// Start the energy transfer animation to a specific node
   void _sparkNodeWithAnimation(String nodeId) {
     final galaxyState = ref.read(galaxyProvider);
+    final canvasCenter = galaxyState.canvasCenter;
     final nodeIndex = galaxyState.nodes.indexWhere((n) => n.id == nodeId);
     if (nodeIndex == -1) return;
     final node = galaxyState.nodes[nodeIndex];
@@ -270,8 +285,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     // Convert to screen coordinates
     // Note: nodePositions are relative to canvas center, we need to add the center offset
-    final centeredCanvasPos =
-        nodeCanvasPosition + const Offset(_canvasCenter, _canvasCenter);
+    final centeredCanvasPos = nodeCanvasPosition + Offset(canvasCenter, canvasCenter);
     final targetScreenPos = _canvasToScreen(centeredCanvasPos);
     final sourceScreenPos = _getScreenCenter();
 
@@ -307,9 +321,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final galaxyState = ref.read(galaxyProvider);
     final nodeCanvasPosition = galaxyState.nodePositions[transfer.nodeId];
     if (nodeCanvasPosition == null) return;
+    final canvasCenter = galaxyState.canvasCenter;
 
-    final centeredCanvasPos =
-        nodeCanvasPosition + const Offset(_canvasCenter, _canvasCenter);
+    final centeredCanvasPos = nodeCanvasPosition + Offset(canvasCenter, canvasCenter);
     final targetScreenPos = _canvasToScreen(centeredCanvasPos);
 
     // Start success animation at target location
@@ -365,6 +379,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (nodePos == null) return;
 
     final screenSize = MediaQuery.of(context).size;
+    final canvasCenter = galaxyState.canvasCenter;
 
     // Target scale (zoom in slightly if too far out)
     final currentScale = _transformationController.value.getMaxScaleOnAxis();
@@ -372,8 +387,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     // Node position in canvas coordinates (0,0 is top-left of the star map canvas)
     // Provider positions are relative to center (0,0), so add offset
-    final canvasX = nodePos.dx + _canvasCenter;
-    final canvasY = nodePos.dy + _canvasCenter;
+    final canvasX = nodePos.dx + canvasCenter;
+    final canvasY = nodePos.dy + canvasCenter;
 
     // Calculate translation to center the node
     // Tx = ScreenCenterX - NodeCanvasX * Scale
@@ -434,6 +449,63 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  void _animateToBounds(Rect bounds) {
+    if (bounds.isEmpty) return;
+    final screenSize = MediaQuery.of(context).size;
+    final padded = bounds.inflate(80);
+
+    final targetWidth = padded.width;
+    final targetHeight = padded.height;
+    if (targetWidth <= 0 || targetHeight <= 0) return;
+
+    final scaleX = screenSize.width / targetWidth;
+    final scaleY = screenSize.height / targetHeight;
+    double targetScale = scaleX < scaleY ? scaleX : scaleY;
+    final galaxyState = ref.read(galaxyProvider);
+    final minScale =
+        galaxyState.aggregationLevel == AggregationLevel.universe ? 0.1 : 0.15;
+    targetScale = targetScale.clamp(minScale, 1.5);
+
+    final canvasCenter = galaxyState.canvasCenter;
+    final centeredBounds = padded.shift(Offset(canvasCenter, canvasCenter));
+    final boundsCenter = centeredBounds.center;
+
+    final tx = screenSize.width / 2 - boundsCenter.dx * targetScale;
+    final ty = screenSize.height / 2 - boundsCenter.dy * targetScale;
+
+    final targetMatrix = Matrix4.identity()..setTranslationRaw(tx, ty, 0.0);
+    targetMatrix[0] = targetScale;
+    targetMatrix[5] = targetScale;
+    targetMatrix[10] = 1.0;
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _transientControllers.add(controller);
+
+    final animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: targetMatrix,
+    ).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+
+    animation.addListener(() {
+      _transformationController.value = animation.value;
+    });
+
+    controller.forward().whenComplete(() {
+      if (_isDisposing) return;
+      if (_transientControllers.remove(controller)) {
+        controller.dispose();
+      }
+    });
+  }
+
   void _showSearchDialog() {
     showDialog(
       context: context,
@@ -448,6 +520,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   @override
   Widget build(BuildContext context) {
     final galaxyState = ref.watch(galaxyProvider);
+    final canvasSize = galaxyState.canvasSize;
+    final canvasCenter = galaxyState.canvasCenter;
     final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
@@ -500,8 +574,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               maxScale: 3.0,
               constrained: false, // Infinite canvas
               child: SizedBox(
-                width: _canvasSize,
-                height: _canvasSize,
+                width: canvasSize,
+                height: canvasSize,
                 child: AnimatedBuilder(
                   animation: Listenable.merge([
                     _transformationController,
@@ -524,23 +598,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     );
                     final viewport =
                         Rect.fromPoints(topLeft, bottomRight).shift(
-                            const Offset(
-                                -_canvasCenter, -_canvasCenter,),);
+                            Offset(-canvasCenter, -canvasCenter));
 
                     // Convert to Compact models with centered positions for rendering
                     final compactNodes =
                         galaxyState.visibleNodes.map((node) {
                       final pos = galaxyState.nodePositions[node.id] ??
                           Offset.zero;
-                      return node.toCompact(pos.dx + _canvasCenter,
-                          pos.dy + _canvasCenter,);
+                      return node.toCompact(
+                        pos.dx + canvasCenter,
+                        pos.dy + canvasCenter,
+                      );
                     }).toList();
 
                     final selectedHash =
                         galaxyState.selectedNodeId?.hashCode;
-                    final highlightedHashes = galaxyState.highlightedNodeIds
-                        .map((id) => id.hashCode)
-                        .toSet();
+                    final highlightedHashes =
+                        galaxyState.highlightedNodeIdHashes;
                     final expandedHashes = galaxyState
                         .expandedEdgeNodeIds
                         .map((id) => id.hashCode)
@@ -556,13 +630,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       performanceTier: PerformanceService.instance.currentTier.value,
                       currentDpr: PerformanceService.instance.currentDpr.value,
                       aggregationLevel: galaxyState.aggregationLevel,
-                      clusters: _centerClusters(galaxyState.clusters,
-                          _canvasCenter, _canvasCenter,),
+                      clusters: _centerClusters(
+                        galaxyState.clusters,
+                        canvasCenter,
+                        canvasCenter,
+                      ),
                       viewport: viewport,
-                      center:
-                          const Offset(_canvasCenter, _canvasCenter),
+                      center: Offset(canvasCenter, canvasCenter),
                       selectedNodeIdHash: selectedHash,
                       highlightedNodeIdHashes: highlightedHashes,
+                      highlightRevision: galaxyState.highlightRevision,
                       expandedEdgeNodeIdHashes: expandedHashes,
                       nodeAnimationProgress: animationHashes,
                       selectionPulse: _selectionPulseController.value,
@@ -573,15 +650,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         // 1. Background: Sector nebula and stars (Static, Cached)
                         const Positioned.fill(
                           child: TiledSectorBackground(
-                            width: _canvasSize,
-                            height: _canvasSize,
+                            width: canvasSize,
+                            height: canvasSize,
                           ),
                         ),
 
                         // 2. Central Flame at canvas center (Static position)
                         Positioned(
-                          left: _canvasCenter - _centralFlameSize / 2,
-                          top: _canvasCenter - _centralFlameSize / 2,
+                          left: canvasCenter - _centralFlameSize / 2,
+                          top: canvasCenter - _centralFlameSize / 2,
                           child: Opacity(
                             opacity: _isEntering ? 0.0 : 1.0,
                             child: CentralFlame(
@@ -617,13 +694,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       transformHitTests: false,
                       child: RepaintBoundary(
                         child: SizedBox(
-                          width: _canvasSize * renderScale,
-                          height: _canvasSize * renderScale,
+                          width: canvasSize * renderScale,
+                          height: canvasSize * renderScale,
                           child: FittedBox(
                             fit: BoxFit.fill,
                             child: SizedBox(
-                              width: _canvasSize,
-                              height: _canvasSize,
+                              width: canvasSize,
+                              height: canvasSize,
                               child: content,
                             ),
                           ),
@@ -654,8 +731,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 // Calculate target matrix for 0.25 scale (still centered)
                 final size = MediaQuery.of(context).size;
                 const targetScale = 0.25;
-                final tx = size.width / 2 - _canvasCenter * targetScale;
-                final ty = size.height / 2 - _canvasCenter * targetScale;
+                final tx = size.width / 2 - canvasCenter * targetScale;
+                final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
                   ..translate(tx, ty)
                   ..scale(targetScale);
@@ -766,7 +843,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               left: 20,
               child: GalaxyMiniMap(
                 transformationController: _transformationController,
-                canvasSize: _canvasSize,
+                canvasSize: canvasSize,
                 screenSize: MediaQuery.of(context).size,
               ),
             ),
