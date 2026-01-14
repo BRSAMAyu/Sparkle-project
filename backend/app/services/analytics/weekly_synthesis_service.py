@@ -14,7 +14,7 @@ except ImportError:
 try:
     import weasyprint
     HAS_WEASYPRINT = True
-except ImportError:
+except (ImportError, OSError):
     weasyprint = None
     HAS_WEASYPRINT = False
 

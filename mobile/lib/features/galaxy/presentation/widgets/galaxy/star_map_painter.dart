@@ -329,7 +329,7 @@ class StarMapPainter extends CustomPainter {
   }
 
   void _drawEvidenceHighlights(Canvas canvas) {
-    final baseRadius = 24.0;
+    const baseRadius = 24.0;
     final pulseRadius = baseRadius + (selectionPulse * 4.0);
     final paint = Paint()
       ..style = PaintingStyle.stroke

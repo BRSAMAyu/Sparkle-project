@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/performance_service.dart';
-import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_render_engine.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/central_flame.dart';
@@ -460,7 +459,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     final scaleX = screenSize.width / targetWidth;
     final scaleY = screenSize.height / targetHeight;
-    double targetScale = scaleX < scaleY ? scaleX : scaleY;
+    var targetScale = scaleX < scaleY ? scaleX : scaleY;
     final galaxyState = ref.read(galaxyProvider);
     final minScale =
         galaxyState.aggregationLevel == AggregationLevel.universe ? 0.1 : 0.15;
@@ -598,7 +597,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     );
                     final viewport =
                         Rect.fromPoints(topLeft, bottomRight).shift(
-                            Offset(-canvasCenter, -canvasCenter));
+                            Offset(-canvasCenter, -canvasCenter),);
 
                     // Convert to Compact models with centered positions for rendering
                     final compactNodes =

@@ -51,7 +51,7 @@ class ExpansionWorker:
 
     async def _process_pending_tasks(self):
         """处理所有待处理的任务"""
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             # 查询待处理任务
             query = select(NodeExpansionQueue).where(
                 NodeExpansionQueue.status == 'pending'

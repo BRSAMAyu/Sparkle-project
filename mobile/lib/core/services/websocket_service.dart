@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';

@@ -26,14 +26,13 @@ class CacheService:
     async def init_redis(self):
         """Initialize Redis connection pool"""
         # If password is provided in settings but not in URL, pass it explicitly
-        # Note: If URL has password, redis-py uses it. If kwargs has password, it might override or be used.
-        # We pass it as kwarg if available.
         kwargs = {
             "encoding": "utf-8",
             "decode_responses": True,
         }
-        if settings.REDIS_PASSWORD:
-            kwargs["password"] = settings.REDIS_PASSWORD
+        # Only set password if it's explicitly configured and not empty
+        if settings.REDIS_PASSWORD and str(settings.REDIS_PASSWORD).strip():
+            kwargs["password"] = str(settings.REDIS_PASSWORD).strip()
 
         self.redis = redis.from_url(
             settings.REDIS_URL, 
