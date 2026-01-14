@@ -21,6 +21,14 @@ def _table_exists(inspector: sa.Inspector, table_name: str, schema: str = "publi
 def _column_names(inspector: sa.Inspector, table_name: str, schema: str = "public") -> set[str]:
     return {column["name"] for column in inspector.get_columns(table_name, schema=schema)}
 
+def _unique_constraint_exists(
+    inspector: sa.Inspector, table_name: str, constraint_name: str, schema: str = "public"
+) -> bool:
+    return any(
+        constraint.get("name") == constraint_name
+        for constraint in inspector.get_unique_constraints(table_name, schema=schema)
+    )
+
 def _should_rebuild_error_records(inspector: sa.Inspector) -> bool:
     if not _table_exists(inspector, "error_records"):
         return True
@@ -46,6 +54,7 @@ def _should_rebuild_error_records(inspector: sa.Inspector) -> bool:
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    rebuilt_error_records = False
 
     # ============================================
     # 表1: error_records (错题主表)
@@ -84,9 +93,13 @@ def upgrade():
             # 软删除
             sa.Column('is_deleted', sa.Boolean, default=False),
         )
+        rebuilt_error_records = True
     
+    if rebuilt_error_records:
+        inspector = sa.inspect(bind)
+
     # Check if table exists now (it should) to add indexes safely
-    if _table_exists(sa.inspect(bind), "error_records"):
+    if _table_exists(inspector, "error_records"):
         op.execute("CREATE INDEX IF NOT EXISTS idx_errors_user_subject ON error_records (user_id, subject)")
         op.execute("CREATE INDEX IF NOT EXISTS idx_errors_next_review ON error_records (user_id, next_review_at)")
         # Note: Full text search index usually requires specific DB setup, skipping manual SQL execution inside python script if not essential or use op.execute properly
@@ -95,6 +108,8 @@ def upgrade():
             USING GIN (to_tsvector('simple', question_text))
         """)
     
+    inspector = sa.inspect(bind)
+
     # ============================================
     # 表2: error_analyses (AI分析结果表)
     # ============================================
@@ -156,19 +171,15 @@ def upgrade():
             sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
         )
     
-    # We can't easily check constraints in a portable way with plain SQL string or inspector in all cases, 
-    # but inspector.get_unique_constraints works.
-    constraints = inspector.get_unique_constraints("error_knowledge_links")
-    if not any(c['name'] == 'uq_error_knowledge' for c in constraints):
+    if _table_exists(inspector, "error_knowledge_links") and not _unique_constraint_exists(
+        inspector, "error_knowledge_links", "uq_error_knowledge"
+    ):
         op.create_unique_constraint('uq_error_knowledge', 'error_knowledge_links', ['error_id', 'knowledge_node_id'])
 
     op.execute("CREATE INDEX IF NOT EXISTS idx_ekl_knowledge ON error_knowledge_links (knowledge_node_id)")
 
 
 def downgrade():
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
-
     op.execute("DROP TABLE IF EXISTS public.error_knowledge_links CASCADE")
     op.execute("DROP TABLE IF EXISTS public.error_reviews CASCADE")
     op.execute("DROP TABLE IF EXISTS public.error_analyses CASCADE")
