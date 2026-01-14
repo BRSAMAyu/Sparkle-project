@@ -1,11 +1,6 @@
 # buf.gen.yaml - Buf Code Generation Configuration
 # P1: Unified code generation for Go and Python from Protobuf definitions
 version: v2
-managed:
-  enabled: true
-  override:
-    - file_option: go_package_prefix
-      value: github.com/sparkle/gateway/gen
 plugins:
   # Go code generation
   - remote: buf.build/protocolbuffers/go
