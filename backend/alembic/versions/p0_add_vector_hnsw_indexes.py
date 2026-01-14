@@ -11,6 +11,7 @@ Create Date: 2025-12-28
 
 """
 from alembic import op
+from app.utils.migration_helpers import get_inspector, table_exists
 
 # revision identifiers, used by Alembic.
 revision = 'p0_vector_indexes'
@@ -20,30 +21,34 @@ depends_on = None
 
 
 def upgrade():
+    inspector = get_inspector()
     # P0: CRITICAL - Add HNSW index for knowledge_nodes embedding
     # This prevents O(N) full table scans during vector similarity search
     # Parameters: m=16 (connections per layer), ef_construction=64 (build quality)
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_embedding_hnsw
-        ON public.knowledge_nodes
-        USING hnsw (embedding vector_cosine_ops)
-        WITH (m = 16, ef_construction = 64);
-    """)
+    if table_exists(inspector, "knowledge_nodes"):
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_embedding_hnsw
+            ON public.knowledge_nodes
+            USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64);
+        """)
 
     # P0: Add HNSW index for cognitive_fragments embedding (same pattern)
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_cognitive_fragments_embedding_hnsw
-        ON public.cognitive_fragments
-        USING hnsw (embedding vector_cosine_ops)
-        WITH (m = 16, ef_construction = 64);
-    """)
+    if table_exists(inspector, "cognitive_fragments"):
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS idx_cognitive_fragments_embedding_hnsw
+            ON public.cognitive_fragments
+            USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64);
+        """)
 
     # P2: Composite index for chat_messages history pagination
     # Optimizes: SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created
-        ON public.chat_messages (session_id, created_at DESC);
-    """)
+    if table_exists(inspector, "chat_messages"):
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created
+            ON public.chat_messages (session_id, created_at DESC);
+        """)
 
 
 def downgrade():
