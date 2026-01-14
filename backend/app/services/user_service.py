@@ -18,6 +18,7 @@ from sqlalchemy import select
 from app.models.user import User, PushPreference
 from app.schemas.user import UserContext, UserPreferences
 from app.core.metrics import CACHE_HIT_COUNT
+from app.core.security import get_password_hash
 
 
 class UserService:
@@ -36,6 +37,32 @@ class UserService:
         self.redis = redis_client
         self.cache_ttl = 1800  # 30分钟
         logger.info("UserService initialized with cache support")
+
+    @staticmethod
+    async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
+        try:
+            result = await db.execute(
+                select(User).where(User.email == email)
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Failed to get user by email {email}: {e}")
+            return None
+
+    @staticmethod
+    async def create(db: AsyncSession, user_in) -> User:
+        user = User(
+            username=user_in.username,
+            email=user_in.email,
+            hashed_password=get_password_hash(user_in.password),
+            nickname=getattr(user_in, "nickname", None) or user_in.username,
+            registration_source="email",
+            is_active=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return user
 
     async def get_user_by_id(self, user_id: UUID) -> Optional[User]:
         """

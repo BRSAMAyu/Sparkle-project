@@ -42,7 +42,8 @@ class ConnectionManager:
             self.listener_task = asyncio.create_task(self._redis_listener())
             logger.info("WebSocket Redis Pub/Sub initialized with pattern subscriptions")
         except Exception as e:
-            logger.error(f"Failed to init WebSocket Redis: {e}")
+            logger.warning(f"WebSocket Redis unavailable; realtime sync disabled: {e}")
+            logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")
 
     async def close_redis(self):
         """Close Redis connection"""

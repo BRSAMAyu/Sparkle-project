@@ -17,13 +17,10 @@ plugins:
     opt:
       - paths=source_relative
 
-  # Python code generation (using local plugins)
-  - local: protoc-gen-python
+  # Python code generation (remote plugins)
+  - remote: buf.build/protocolbuffers/python
     out: backend/app/gen
-  - local: protoc-gen-grpc_python
-    protoc_path: grpc_python_plugin
-    out: backend/app/gen
-  - local: protoc-gen-pyi
+  - remote: buf.build/grpc/python
     out: backend/app/gen
 
   # Dart code generation (Flutter)
