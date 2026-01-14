@@ -21,7 +21,8 @@ class StoredFile(BaseModel):
     bucket = Column(String(128), nullable=False)
     object_key = Column(String(512), nullable=False, unique=True)
     status = Column(String(32), default="uploading", nullable=False)
-    visibility = Column(String(32), default="private", nullable=False)
+    visibility = Column(String(32), default="private", nullable=False) # Maps to ArtifactScope
+    retention_policy = Column(String(32), default="ephemeral", nullable=False) # ephemeral, keep
     error_message = Column(String(255), nullable=True)
 
     user = relationship("User")

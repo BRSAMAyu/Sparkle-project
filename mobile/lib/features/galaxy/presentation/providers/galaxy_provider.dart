@@ -571,11 +571,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       predictedNodeId: state.predictedNodeId,
       lastError: state.lastError,
       isUsingCache: state.isUsingCache,
-      selectedNodeId: null,
-      focusNodeId: null,
-      focusBounds: null,
-      highlightedNodeIds: const {},
-      highlightedNodeIdHashes: const {},
       highlightRevision: state.highlightRevision + 1,
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,

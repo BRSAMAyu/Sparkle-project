@@ -20,6 +20,7 @@ class DocumentChunk(BaseModel):
     chunk_index = Column(Integer, nullable=False)
     page_number = Column(Integer, nullable=True)
     section_title = Column(String(255), nullable=True)
+    bbox = Column(String, nullable=True) # JSON stored as String or JSONB depending on DB
     content = Column(Text, nullable=False)
     embedding = Column(Vector(1536), nullable=True)
 

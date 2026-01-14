@@ -53,6 +53,13 @@ enum ErrorReason {
   TIMEOUT = 5;
 }
 
+enum ArtifactScope {
+  ARTIFACT_SCOPE_UNSPECIFIED = 0;
+  PRIVATE = 1;
+  SHARED = 2;
+  PUBLIC = 3;
+}
+
 message Message {
   string role = 1;
   string content = 2;
@@ -85,6 +92,8 @@ message InferenceRequest {
   repeated ToolDefinition tools = 12;
   ResponseFormat response_format = 13;
   map<string, string> metadata = 14;
+  repeated string file_ids = 15;
+  ArtifactScope artifact_scope = 16;
 }
 
 message InferenceResponse {

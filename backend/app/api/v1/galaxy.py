@@ -6,7 +6,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
