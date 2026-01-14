@@ -1,8 +1,11 @@
 import os
-from typing import Optional, Dict, Any
-from langchain_openai import ChatOpenAI
-from langchain_core.language_models.chat_models import BaseChatModel
+from typing import Optional, Dict, Any, TYPE_CHECKING
 from app.config import settings
+
+if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
+else:
+    BaseChatModel = Any
 
 class LLMFactory:
     """
@@ -80,6 +83,13 @@ class LLMFactory:
         api_key = config.pop("api_key", None)
         
         # 3. 实例化 LangChain ChatModel
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "langchain_openai is required for LLM usage. Install with the llm extras."
+            ) from exc
+
         # 如果是 DeepSeek 或自定义 endpoint
         if base_url:
             return ChatOpenAI(

@@ -1,6 +1,14 @@
 from typing import AsyncGenerator, List, Dict, Any
-from openai import AsyncOpenAI, APIError
+from fastapi import HTTPException
 from loguru import logger
+
+try:
+    from openai import AsyncOpenAI, APIError
+    HAS_OPENAI = True
+except ImportError:
+    AsyncOpenAI = None
+    APIError = Exception
+    HAS_OPENAI = False
 
 from app.services.llm.base import LLMProvider
 
@@ -9,6 +17,11 @@ class OpenAICompatibleProvider(LLMProvider):
     Provider for OpenAI-compatible APIs (OpenAI, DeepSeek, Qwen, etc.)
     """
     def __init__(self, api_key: str, base_url: str):
+        if not HAS_OPENAI:
+            raise HTTPException(
+                status_code=501,
+                detail="OpenAI client not installed. Install llm extras to enable LLM features."
+            )
         self.client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
