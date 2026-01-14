@@ -21,6 +21,9 @@ class GalaxyLayoutEngine {
   static const double innerRadius = 150.0; // 核心区域半径扩大
   static const double outerRadius = 2500.0; // 宇宙边界扩大
   static const double sectorPadding = 5.0;
+  static const double canvasPadding = 400.0;
+  static const double canvasSize = outerRadius * 2 + canvasPadding * 2;
+  static const double canvasCenter = canvasSize / 2;
 
   /// 计算初始布局（快速，在主线程）
   static Map<String, Offset> calculateInitialLayout({
@@ -245,10 +248,10 @@ class GalaxyLayoutEngine {
       // 构建四叉树
       final tree = QuadTree<_LayoutNode>(
         bounds: const Rect.fromLTWH(
-          -outerRadius * 1.5,
-          -outerRadius * 1.5,
-          outerRadius * 3,
-          outerRadius * 3,
+          -canvasCenter,
+          -canvasCenter,
+          canvasSize,
+          canvasSize,
         ),
         capacity: 8,
       );

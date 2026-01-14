@@ -10,6 +10,7 @@ from app.core.cache import cache_service
 from app.config import settings
 from app.services.llm_service import llm_service
 from app.services.quota import get_rate_limiter
+from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 from app.gen.sparkle.inference.v1 import inference_pb2
 
 
@@ -64,31 +65,51 @@ class LLMDispatcher:
                 "Quota exceeded",
             )
 
+        provider_name = settings_provider_name()
         try:
+            # 1. Check Circuit Breaker
+            await circuit_breaker_service.check(provider_name)
+
             model_id = self._select_model(request)
             messages = [
                 {"role": msg.role, "content": msg.content}
                 for msg in request.messages
             ]
+            
+            # 2. Call LLM
             content = await llm_service.chat(messages, model=model_id)
+            
+            # 3. Record Success
+            await circuit_breaker_service.record_success(provider_name)
+
             response = inference_pb2.InferenceResponse(
                 request_id=request.request_id,
                 trace_id=request.trace_id,
                 ok=True,
-                provider=settings_provider_name(),
+                provider=provider_name,
                 model_id=model_id,
                 content=content,
             )
             await self._cache_set(cache_key, {"content": content, "model_id": model_id}, request)
             return response
+
+        except CircuitBreakerOpenException as exc:
+            logger.warning(f"Circuit open for {provider_name}")
+            return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, "Service temporarily unavailable (Circuit Open)")
         except InferenceException as exc:
             return self._error_response(request, exc.reason, exc.message)
         except grpc.RpcError as exc:
+            # Record failure for network/availability issues
+            await circuit_breaker_service.record_failure(provider_name)
+            
             reason = inference_pb2.PROVIDER_UNAVAILABLE
             if exc.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                 reason = inference_pb2.TIMEOUT
             return self._error_response(request, reason, exc.details() or "gRPC error")
         except Exception as exc:
+            # Record failure for unknown exceptions (likely provider issues)
+            await circuit_breaker_service.record_failure(provider_name)
+            
             logger.exception("Inference failed")
             return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, str(exc))
 

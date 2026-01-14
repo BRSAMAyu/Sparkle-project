@@ -344,6 +344,7 @@ async def get_galaxy_stats(
 
 @router.get("/events")
 async def galaxy_events_stream(
+    request: Request,
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -353,12 +354,16 @@ async def galaxy_events_stream(
     - nodes_expanded: 新节点涌现
     - node_sparked: 节点被点亮
     - decay_warning: 衰减警告
+    - evidence_pack: RAG 证据
     """
     from fastapi.responses import StreamingResponse
     from app.core.sse import sse_manager, event_generator
 
-    # 创建连接
-    queue = await sse_manager.connect(user_id)
+    # 支持断点续传
+    last_event_id = request.headers.get("Last-Event-ID")
+
+    # 创建连接 (带 Replay 支持)
+    queue = await sse_manager.connect(user_id, last_event_id=last_event_id)
 
     async def cleanup():
         """清理连接"""
