@@ -1,5 +1,6 @@
 import ast
 import importlib
+import os
 from pathlib import Path
 
 
@@ -27,6 +28,10 @@ def main() -> int:
 
     modules = ["app.main", "app.api.v1.router"]
     modules += [f"app.api.v1.{name}" for name in _load_v1_modules(router_path)]
+
+    enable_agent_graph = str(os.getenv("ENABLE_AGENT_GRAPH_V2", "")).lower() in ("1", "true", "yes")
+    if enable_agent_graph:
+        modules.append("app.api.v2.agent_graph")
 
     errors: list[tuple[str, Exception]] = []
     for module in modules:

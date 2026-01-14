@@ -97,6 +97,11 @@ reporting = [
     "jinja2>=3.1.2",
     "matplotlib>=3.8.0",
 ]
+agent_graph = [
+    "langgraph>=0.1.0",
+    "langchain-core>=0.2.0",
+    "langchain-openai>=0.1.8",
+]
 
 [build-system]
 requires = ["hatchling"]
