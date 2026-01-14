@@ -13,6 +13,7 @@ import redis.asyncio as redis
 from app.models.idempotency_key import IdempotencyKey
 from app.db.session import AsyncSessionLocal
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 from loguru import logger
 
 class IdempotencyStore:
@@ -74,7 +75,12 @@ class RedisIdempotencyStore(IdempotencyStore):
     """
 
     def __init__(self, redis_url: Optional[str] = None, prefix: str = "idempotency"):
-        self._redis = redis.from_url(redis_url or settings.REDIS_URL, decode_responses=True)
+        resolved_password, _ = resolve_redis_password(redis_url or settings.REDIS_URL, settings.REDIS_PASSWORD)
+        self._redis = redis.from_url(
+            redis_url or settings.REDIS_URL,
+            decode_responses=True,
+            password=resolved_password,
+        )
         self._prefix = prefix
         self._lock_tokens: Dict[str, str] = {}
         self._lock_ttl = 30  # seconds

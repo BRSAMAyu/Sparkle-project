@@ -4,18 +4,16 @@ from redis.asyncio import Redis
 from redis.commands.search.query import Query
 from loguru import logger
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 class RedisSearchClient:
     """
     Wrapper for Redis Search (RediSearch)
     Handles Vector Search + Hybrid Search
     """
-    def __init__(self, redis_url: str = settings.REDIS_URL, password: str = settings.REDIS_PASSWORD):
-        # Sanitize password
-        if password in ["<password>", "changeme", ""]:
-            password = None
-            
-        self.redis = Redis.from_url(redis_url, password=password, decode_responses=True)
+    def __init__(self, redis_url: str = settings.REDIS_URL, password: Optional[str] = settings.REDIS_PASSWORD):
+        resolved_password, _ = resolve_redis_password(redis_url, password)
+        self.redis = Redis.from_url(redis_url, password=resolved_password, decode_responses=True)
         self.index_name = "idx:knowledge"
 
     async def search(self, query: Query, query_params: Optional[Dict[str, Any]] = None):

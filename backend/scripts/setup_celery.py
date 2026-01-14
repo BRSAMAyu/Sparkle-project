@@ -25,6 +25,7 @@ from loguru import logger
 import redis.asyncio as redis
 from app.core.celery_app import celery_app, get_celery_status
 from app.core.task_manager import task_manager
+from app.core.redis_utils import resolve_redis_password
 
 
 class CelerySetup:
@@ -40,7 +41,8 @@ class CelerySetup:
         logger.info("🔍 检查 Redis 连接...")
 
         try:
-            client = redis.from_url(self.redis_url)
+            resolved_password, _ = resolve_redis_password(self.redis_url, os.getenv("REDIS_PASSWORD"))
+            client = redis.from_url(self.redis_url, password=resolved_password)
             await client.ping()
             info = await client.info()
 

@@ -19,6 +19,7 @@ class TaskType(str, enum.Enum):
     REFLECTION = "REFLECTION"
     SOCIAL = "SOCIAL"
     PLANNING = "PLANNING"
+    OCR = "OCR"
 
 class TaskStatus(str, enum.Enum):
     PENDING = "PENDING"

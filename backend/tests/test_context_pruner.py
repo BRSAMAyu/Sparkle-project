@@ -21,6 +21,7 @@ import redis.asyncio as redis
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.summarization_worker import SummarizationWorker
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.core.redis_utils import resolve_redis_password
 
 
 class TestContextPruner:
@@ -29,7 +30,9 @@ class TestContextPruner:
     @pytest.fixture
     async def redis_client(self):
         """创建测试用的 Redis 客户端"""
-        client = redis.from_url("redis://localhost:6379/15", decode_responses=False)
+        redis_url = "redis://localhost:6379/15"
+        resolved_password, _ = resolve_redis_password(redis_url, None)
+        client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
         try:
             await client.ping()
             yield client
@@ -180,7 +183,9 @@ class TestSummarizationWorker:
     @pytest.fixture
     async def redis_client(self):
         """创建测试用的 Redis 客户端"""
-        client = redis.from_url("redis://localhost:6379/15", decode_responses=False)
+        redis_url = "redis://localhost:6379/15"
+        resolved_password, _ = resolve_redis_password(redis_url, None)
+        client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
         try:
             await client.ping()
             yield client
@@ -233,7 +238,9 @@ class TestOrchestratorIntegration:
     @pytest.fixture
     async def redis_client(self):
         """创建测试用的 Redis 客户端"""
-        client = redis.from_url("redis://localhost:6379/15", decode_responses=False)
+        redis_url = "redis://localhost:6379/15"
+        resolved_password, _ = resolve_redis_password(redis_url, None)
+        client = redis.from_url(redis_url, decode_responses=False, password=resolved_password)
         try:
             await client.ping()
             yield client
@@ -294,7 +301,9 @@ async def run_all_tests():
 
     # 检查 Redis
     try:
-        client = redis.from_url("redis://localhost:6379/15")
+        redis_url = "redis://localhost:6379/15"
+        resolved_password, _ = resolve_redis_password(redis_url, None)
+        client = redis.from_url(redis_url, password=resolved_password)
         await client.ping()
         print("✅ Redis 连接正常")
     except:

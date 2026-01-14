@@ -10,6 +10,7 @@ from typing import Dict, List
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 app = FastAPI(title="Sparkle Visualization Service", version="1.0.0")
 
@@ -35,7 +36,13 @@ class VisualizationManager:
                     del self.active_connections[session_id]
 
     async def init_redis(self):
-        self.redis = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+        resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+        self.redis = redis.from_url(
+            settings.REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            password=resolved_password,
+        )
         self.pubsub = self.redis.pubsub()
         await self.pubsub.psubscribe("visualize:*")
         self.listener_task = asyncio.create_task(self._redis_listener())

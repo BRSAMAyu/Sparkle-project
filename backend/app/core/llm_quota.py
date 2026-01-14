@@ -25,6 +25,8 @@ except ImportError:
             return func
         return decorator
 import redis.asyncio as redis
+from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +395,8 @@ cost_guard: Optional[LLMCostGuard] = None
 async def init_cost_guard(redis_url: str = "redis://localhost:6379/1"):
     """初始化成本守卫"""
     global cost_guard
-    redis_client = redis.from_url(redis_url)
+    resolved_password, _ = resolve_redis_password(redis_url, settings.REDIS_PASSWORD)
+    redis_client = redis.from_url(redis_url, password=resolved_password)
     cost_guard = LLMCostGuard(redis_client)
     return cost_guard
 
