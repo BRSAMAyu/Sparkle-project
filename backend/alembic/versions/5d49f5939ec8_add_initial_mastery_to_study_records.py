@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from app.utils.migration_helpers import column_exists, get_inspector, table_exists
 
 
 # revision identifiers, used by Alembic.
@@ -20,7 +21,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add initial_mastery column to study_records
-    op.add_column('study_records', sa.Column('initial_mastery', sa.Float(), nullable=True))
+    inspector = get_inspector()
+    if table_exists(inspector, "study_records") and not column_exists(inspector, "study_records", "initial_mastery"):
+        op.add_column('study_records', sa.Column('initial_mastery', sa.Float(), nullable=True))
     
     # Optional: Fill existing data with a default or calculated value if needed
     # For now, we leave it as NULL for old records since we can't accurately reconstruct it without auditing history
@@ -28,4 +31,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Remove initial_mastery column
-    op.drop_column('study_records', 'initial_mastery')
+    inspector = get_inspector()
+    if table_exists(inspector, "study_records") and column_exists(inspector, "study_records", "initial_mastery"):
+        op.drop_column('study_records', 'initial_mastery')
