@@ -44,10 +44,9 @@ def upgrade():
     
     # 2. Alter error_records table
     # Rename subject -> subject_code
-    if _table_exists(inspector, "error_records"):
-        columns = _column_names(inspector, "error_records")
-    else:
-        columns = set()
+    if not _table_exists(inspector, "error_records"):
+        return
+    columns = _column_names(inspector, "error_records")
 
     if "subject" in columns and "subject_code" not in columns:
         op.alter_column('error_records', 'subject', new_column_name='subject_code')
@@ -137,6 +136,8 @@ def downgrade():
         op.alter_column('error_records', 'question_text', nullable=False)
     
     # 4. Recreate old tables
+    if not _table_exists(inspector, "error_records"):
+        return
     
     # error_analyses
     if not _table_exists(inspector, "error_analyses"):

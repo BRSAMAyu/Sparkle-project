@@ -18,6 +18,8 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    if "error_records" not in inspector.get_table_names():
+        return
     columns = {column["name"] for column in inspector.get_columns("error_records")}
 
     if "cognitive_tags" not in columns:
@@ -33,6 +35,8 @@ def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_error_records_cognitive_tags")
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    if "error_records" not in inspector.get_table_names():
+        return
     columns = {column["name"] for column in inspector.get_columns("error_records")}
     if "ai_analysis_summary" in columns:
         op.drop_column('error_records', 'ai_analysis_summary')
