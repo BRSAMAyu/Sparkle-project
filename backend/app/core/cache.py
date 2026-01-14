@@ -12,6 +12,7 @@ from typing import Any, Optional, Callable, Union
 from uuid import UUID
 
 import redis.asyncio as redis
+from loguru import logger
 from pydantic import BaseModel
 from app.config import settings
 
@@ -38,6 +39,12 @@ class CacheService:
             settings.REDIS_URL, 
             **kwargs
         )
+        try:
+            await self.redis.ping()
+        except Exception as e:
+            self.redis = None
+            logger.warning(f"Redis not available; cache disabled: {e}")
+            logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")
 
     @asynccontextmanager
     async def distributed_lock(self, lock_key: str, expire: int = 10):
