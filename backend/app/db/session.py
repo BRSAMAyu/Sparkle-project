@@ -6,11 +6,23 @@ Database Session Management
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
+from sqlalchemy.engine import make_url
 
 from app.config import settings
 
 
-def _get_engine_kwargs():
+def _sanitize_asyncpg_url(url: str) -> tuple[str, str | None]:
+    if not url.startswith("postgresql+asyncpg"):
+        return url, None
+    parsed = make_url(url)
+    query = dict(parsed.query)
+    sslmode = query.pop("sslmode", None)
+    if sslmode is None:
+        return url, None
+    return str(parsed.set(query=query)), sslmode
+
+
+def _get_engine_kwargs(sslmode: str | None):
     """
     根据数据库类型返回适当的引擎配置
     PostgreSQL 使用连接池，SQLite 使用 NullPool
@@ -27,8 +39,12 @@ def _get_engine_kwargs():
     else:
         # PostgreSQL 使用连接池配置
         connect_args = {}
-        # 🆕 如果是非 SQLite 数据库，通常建议在生产环境中强制使用 SSL
-        if not settings.DEBUG:
+        if sslmode:
+            if sslmode == "disable":
+                connect_args["ssl"] = False
+            elif sslmode in ("require", "verify-ca", "verify-full"):
+                connect_args["ssl"] = True
+        elif not settings.DEBUG:
             connect_args["ssl"] = "require"
 
         return {
@@ -43,10 +59,10 @@ def _get_engine_kwargs():
         }
 
 
-# Create async engine with appropriate configuration
+_async_db_url, _sslmode = _sanitize_asyncpg_url(settings.DATABASE_URL)
 engine = create_async_engine(
-    settings.DATABASE_URL,
-    **_get_engine_kwargs(),
+    _async_db_url,
+    **_get_engine_kwargs(_sslmode),
 )
 
 # Create async session factory

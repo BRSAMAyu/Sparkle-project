@@ -126,6 +126,7 @@ func main() {
 	// Initialize Handlers
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	fileEventHub := service.NewFileEventHub()
+	signalHub := service.NewSignalHub()
 	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
@@ -139,7 +140,9 @@ func main() {
 		userContextService, // P0: Pass user context service
 		taskCommandService, // P0: Pass task command service
 		cfg.BackendURL,
+		signalHub,
 	)
+	signalPushHandler := handler.NewSignalPushHandler(cfg, signalHub)
 	groupChatHandler := handler.NewGroupChatHandler(queries)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService, cfg.ToxiproxyURL)
@@ -373,6 +376,12 @@ func main() {
 
 		// File Routes
 		fileHandler.RegisterRoutes(api, authMiddleware)
+	}
+
+	// Internal Routes (Gateway <-> Backend)
+	internal := r.Group("/internal")
+	{
+		internal.POST("/signals/push", signalPushHandler.HandlePush)
 	}
 
 	// Swagger UI

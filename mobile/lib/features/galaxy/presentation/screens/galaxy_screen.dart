@@ -37,6 +37,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final GalaxyRenderEngine _renderEngine;
   late final AnimationController _selectionPulseController;
   final List<AnimationController> _transientControllers = [];
+  ProviderSubscription<GalaxyState>? _focusSubscription;
   bool _isDisposing = false;
 
   // State
@@ -76,6 +77,18 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Start Performance Monitoring
     PerformanceService.instance.startMonitoring();
 
+    _focusSubscription = ref.listen<GalaxyState>(galaxyProvider,
+        (previous, next) {
+      final focusId = next.focusNodeId;
+      if (focusId != null && focusId != previous?.focusNodeId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _animateToNode(focusId);
+          ref.read(galaxyProvider.notifier).clearFocusNode();
+        });
+      }
+    });
+
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = MediaQuery.of(context).size;
@@ -106,6 +119,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _selectionPulseController.dispose();
     _transformationController.removeListener(_onTransformChanged);
     _transformationController.dispose();
+    _focusSubscription?.close();
     _renderEngine.dispose();
     PerformanceService.instance.stopMonitoring();
     super.dispose();
@@ -524,6 +538,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
                     final selectedHash =
                         galaxyState.selectedNodeId?.hashCode;
+                    final highlightedHashes = galaxyState.highlightedNodeIds
+                        .map((id) => id.hashCode)
+                        .toSet();
                     final expandedHashes = galaxyState
                         .expandedEdgeNodeIds
                         .map((id) => id.hashCode)
@@ -545,6 +562,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       center:
                           const Offset(_canvasCenter, _canvasCenter),
                       selectedNodeIdHash: selectedHash,
+                      highlightedNodeIdHashes: highlightedHashes,
                       expandedEdgeNodeIdHashes: expandedHashes,
                       nodeAnimationProgress: animationHashes,
                       selectionPulse: _selectionPulseController.value,

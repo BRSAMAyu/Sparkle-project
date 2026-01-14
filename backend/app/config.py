@@ -113,6 +113,7 @@ class Settings(BaseSettings):
 
     # Internal API
     INTERNAL_API_KEY: str = ""
+    GATEWAY_URL: str = "http://localhost:8080"
 
     # Logging
     LOG_LEVEL: str = "INFO"

@@ -7,9 +7,14 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import uuid
+
 from app.services.galaxy_service import GalaxyService
 from app.services.llm_service import llm_service
 from app.schemas.galaxy import SearchResultItem
+from app.services.galaxy.rag_router import RagRouter
+from app.core.sse import sse_manager
+from google.protobuf import json_format
 
 class KnowledgeService:
     def __init__(self, db_session: AsyncSession):
@@ -50,23 +55,45 @@ class KnowledgeService:
         Returns a formatted string of knowledge nodes.
         """
         try:
-            # 1. Query Expansion / HyDE
-            # Generate a hypothetical answer to improve vector search alignment
-            hypothetical_answer = await self._generate_hypothetical_answer(query)
-            logger.debug(f"HyDE generated: {hypothetical_answer[:100]}...")
+            strategy = RagRouter().select(query)
+
+            vector_query = None
+            if strategy.enable_hyde:
+                vector_query = await self._generate_hypothetical_answer(query)
+                logger.debug(f"HyDE generated: {vector_query[:100]}...")
 
             # 2. Hybrid Search
-            # Use hypothetical_answer for vector search, original query for keyword search & reranking
+            # Use vector_query when enabled; otherwise default to original query.
             results: List[SearchResultItem] = await self.galaxy_service.hybrid_search(
                 user_id=user_id,
                 query=query,
-                vector_query=hypothetical_answer,
+                vector_query=vector_query,
                 limit=limit,
-                threshold=0.4 # Slightly looser for hybrid search
+                threshold=0.4,
+                use_reranker=strategy.use_reranker,
             )
             
             if not results:
                 return ""
+
+            request_id = str(uuid.uuid4())
+            trace_id = str(uuid.uuid4())
+            evidence_pack = self.galaxy_service.build_evidence_pack(
+                results,
+                request_id=request_id,
+                trace_id=trace_id,
+                query=query,
+                strategy_name=strategy.name,
+            )
+            await sse_manager.send_to_user(
+                str(user_id),
+                "evidence_pack",
+                json_format.MessageToDict(
+                    evidence_pack,
+                    preserving_proto_field_name=True,
+                    including_default_value_fields=False,
+                ),
+            )
             
             # Format as context string
             context_lines = ["Relevant Knowledge Base (Graph Augmented):"]
@@ -86,16 +113,16 @@ class KnowledgeService:
                 if node.parent_name:
                     line += f" (Parent: {node.parent_name})"
                 
-                # [Graph RAG] Fetch Neighbors
-                try:
-                    neighbors = await self.galaxy_service.get_node_neighbors(node.id, limit=5)
-                    if neighbors:
-                        # Limit to top 3 related nodes to save tokens
-                        top_neighbors = neighbors[:3]
-                        neighbor_names = [n.name for n in top_neighbors]
-                        line += f" [Related: {', '.join(neighbor_names)}]"
-                except Exception as e:
-                    logger.warning(f"Failed to fetch neighbors for {node.id}: {e}")
+                if strategy.enable_graph:
+                    try:
+                        neighbors = await self.galaxy_service.get_node_neighbors(node.id, limit=5)
+                        if neighbors:
+                            # Limit to top 3 related nodes to save tokens
+                            top_neighbors = neighbors[:3]
+                            neighbor_names = [n.name for n in top_neighbors]
+                            line += f" [Related: {', '.join(neighbor_names)}]"
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch neighbors for {node.id}: {e}")
 
                 context_lines.append(line)
             

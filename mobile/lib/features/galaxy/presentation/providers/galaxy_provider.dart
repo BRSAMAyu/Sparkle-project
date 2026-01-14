@@ -39,6 +39,8 @@ class GalaxyState {
     this.lastError,
     this.isUsingCache = false,
     this.selectedNodeId,
+    this.focusNodeId,
+    this.highlightedNodeIds = const {},
     this.expandedEdgeNodeIds = const {},
     this.nodeAnimationProgress = const {},
     this.optimizationConfig = GalaxyOptimizationConfig.standard,
@@ -67,6 +69,8 @@ class GalaxyState {
 
   // Interaction state
   final String? selectedNodeId;
+  final String? focusNodeId;
+  final Set<String> highlightedNodeIds;
   final Set<String>
       expandedEdgeNodeIds; // Nodes whose connections should be fully visible
   final Map<String, double>
@@ -92,6 +96,8 @@ class GalaxyState {
     Object? lastError = _noChange,
     bool? isUsingCache,
     String? selectedNodeId,
+    Object? focusNodeId = _noChange,
+    Set<String>? highlightedNodeIds,
     Set<String>? expandedEdgeNodeIds,
     Map<String, double>? nodeAnimationProgress,
     GalaxyOptimizationConfig? optimizationConfig,
@@ -115,6 +121,10 @@ class GalaxyState {
             : lastError as GalaxyError?,
         isUsingCache: isUsingCache ?? this.isUsingCache,
         selectedNodeId: selectedNodeId ?? this.selectedNodeId,
+        focusNodeId: identical(focusNodeId, _noChange)
+            ? this.focusNodeId
+            : focusNodeId as String?,
+        highlightedNodeIds: highlightedNodeIds ?? this.highlightedNodeIds,
         expandedEdgeNodeIds: expandedEdgeNodeIds ?? this.expandedEdgeNodeIds,
         nodeAnimationProgress:
             nodeAnimationProgress ?? this.nodeAnimationProgress,
@@ -221,6 +231,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           _handleNodesExpanded(event.jsonData);
         } else if (event.event == 'galaxy.node.updated') {
           _handleNodeUpdated(event.jsonData);
+        } else if (event.event == 'evidence_pack') {
+          _handleEvidencePack(event.jsonData);
         }
       },
       onError: (error, stack) {
@@ -275,6 +287,51 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     
     // Recalculate visibility in case mastery affects filtering (though currently it mostly doesn't)
     _recalculateVisibility();
+  }
+
+  void _handleEvidencePack(Map<String, dynamic>? data) {
+    if (data == null) return;
+    final nodes = data['nodes'] as List<dynamic>?;
+    if (nodes == null || nodes.isEmpty) return;
+
+    final first = nodes.first as Map<String, dynamic>?;
+    if (first == null) return;
+    final nodeId = first['node_id'] as String?;
+    if (nodeId == null || nodeId.isEmpty) return;
+    final ids = nodes
+        .map((item) => (item as Map<String, dynamic>?)?['node_id'] as String?)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    setEvidenceHighlight(ids, focusId: nodeId);
+  }
+
+  void setFocusNode(String nodeId) {
+    final expanded = _collectExpandedEdges(nodeId, state.edges);
+    state = state.copyWith(
+      selectedNodeId: nodeId,
+      focusNodeId: nodeId,
+      expandedEdgeNodeIds: expanded,
+    );
+    _recalculateVisibility();
+  }
+
+  void setEvidenceHighlight(Set<String> nodeIds, {String? focusId}) {
+    final focus = focusId ?? (nodeIds.isNotEmpty ? nodeIds.first : null);
+    final expanded =
+        focus != null ? _collectExpandedEdges(focus, state.edges) : null;
+    state = state.copyWith(
+      highlightedNodeIds: nodeIds,
+      selectedNodeId: focus ?? state.selectedNodeId,
+      focusNodeId: focus,
+      expandedEdgeNodeIds: expanded ?? state.expandedEdgeNodeIds,
+    );
+    _recalculateVisibility();
+  }
+
+  void clearFocusNode() {
+    if (state.focusNodeId == null) return;
+    state = state.copyWith(focusNodeId: null);
   }
 
   Future<void> loadGalaxy({bool forceRefresh = false}) async {

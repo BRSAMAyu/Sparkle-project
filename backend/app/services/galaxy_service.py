@@ -26,6 +26,7 @@ from app.services.expansion_service import ExpansionService
 from app.services.embedding_service import embedding_service
 from app.core.cache import cached
 from app.core.event_bus import event_bus, KnowledgeNodeUpdated
+from app.gen.sparkle.rag.v1 import evidence_pb2
 
 class GalaxyService:
     def __init__(self, db: AsyncSession):
@@ -271,6 +272,47 @@ class GalaxyService:
         threshold: float = 0.3
     ) -> List[KnowledgeNode]:
         return await self.retrieval.semantic_search_nodes(query, subject_id, limit, threshold)
+
+    def build_evidence_pack(
+        self,
+        results: List[SearchResultItem],
+        request_id: str,
+        trace_id: str,
+        query: str,
+        strategy_name: str,
+    ) -> evidence_pb2.EvidencePack:
+        nodes = []
+        for result in results:
+            node = result.node
+            snippet = (node.description or node.name or "")[:400]
+            metadata = {
+                "name": node.name or "",
+                "sector_code": str(node.sector_code),
+                "parent_name": node.parent_name or "",
+                "strategy": strategy_name,
+            }
+            nodes.append(
+                evidence_pb2.EvidenceNode(
+                    node_id=str(node.id),
+                    source_id=str(node.id),
+                    snippet=snippet,
+                    score=float(result.similarity),
+                    source_uri=f"galaxy://node/{node.id}",
+                    source_type="hybrid",
+                    metadata=metadata,
+                )
+            )
+
+        pack = evidence_pb2.EvidencePack(
+            request_id=request_id,
+            trace_id=trace_id,
+            nodes=nodes,
+            metadata={
+                "query": query,
+                "strategy": strategy_name,
+            },
+        )
+        return pack
 
     async def auto_classify_task(
         self,

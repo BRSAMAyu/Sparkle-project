@@ -27,19 +27,20 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 	// 2. Setup ChatOrchestrator with mostly nil dependencies
 	// We only care about the Quota check which happens EARLY in the flow.
 	orchestrator := NewChatOrchestrator(
-		nil, // agentClient
-		nil, // galaxyClient
-		nil, // queries
+		nil,        // agentClient
+		nil,        // galaxyClient
+		nil,        // queries
 		historySvc, // Mock/Nil history
 		quotaSvc,
 		&service.SemanticCacheService{}, // Mock/Nil semantic
-		nil, // cost
-		nil, // wsFactory
-		nil, // userContext
-		nil, // taskCommand
+		nil,                             // cost
+		nil,                             // wsFactory
+		nil,                             // userContext
+		nil,                             // taskCommand
 		"http://mock-backend",
+		nil, // signalHub
 	)
-	
+
 	// 3. Setup Gin & WebSocket
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

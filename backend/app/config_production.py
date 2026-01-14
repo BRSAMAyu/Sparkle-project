@@ -34,6 +34,7 @@ class ProductionSettings(BaseSettings):
     GRPC_PORT: int = Field(default=50051, env="GRPC_PORT")
     HTTP_PORT: int = Field(default=8000, env="HTTP_PORT")
     GATEWAY_PORT: int = Field(default=8080, env="GATEWAY_PORT")
+    GATEWAY_URL: str = Field(default="http://localhost:8080", env="GATEWAY_URL")
 
     BACKEND_CORS_ORIGINS: List[str] = Field(
         default=["*"],
