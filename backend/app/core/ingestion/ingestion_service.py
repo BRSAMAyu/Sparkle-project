@@ -1,8 +1,7 @@
 import os
 import re
 from typing import List, Dict, Optional
-from docx import Document
-from pptx import Presentation
+from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
@@ -11,6 +10,20 @@ try:
     HAS_PDFPLUMBER = True
 except ImportError:
     HAS_PDFPLUMBER = False
+
+try:
+    from docx import Document
+    HAS_DOCX = True
+except ImportError:
+    Document = None
+    HAS_DOCX = False
+
+try:
+    from pptx import Presentation
+    HAS_PPTX = True
+except ImportError:
+    Presentation = None
+    HAS_PPTX = False
 
 try:
     import pytesseract
@@ -77,7 +90,10 @@ class IngestionService:
 
     def _process_pdf(self, path: str) -> List[ExtractedChunk]:
         if not HAS_PDFPLUMBER:
-            raise RuntimeError("pdfplumber is required for PDF processing but is not installed.")
+            raise HTTPException(
+                status_code=501,
+                detail="PDF processing requires pdfplumber, which is not installed."
+            )
         chunks = []
         # Use pdfplumber for better layout analysis
         with pdfplumber.open(path) as pdf:
@@ -152,6 +168,11 @@ class IngestionService:
             return ""
 
     def _process_docx(self, path: str) -> List[ExtractedChunk]:
+        if not HAS_DOCX:
+            raise HTTPException(
+                status_code=501,
+                detail="DOCX processing requires python-docx, which is not installed."
+            )
         doc = Document(path)
         chunks = []
         for i, para in enumerate(doc.paragraphs):
@@ -183,6 +204,11 @@ class IngestionService:
         return chunks
 
     def _process_pptx(self, path: str) -> List[ExtractedChunk]:
+        if not HAS_PPTX:
+            raise HTTPException(
+                status_code=501,
+                detail="PPTX processing requires python-pptx, which is not installed."
+            )
         prs = Presentation(path)
         chunks = []
         for i, slide in enumerate(prs.slides):
