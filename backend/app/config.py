@@ -123,6 +123,9 @@ class Settings(BaseSettings):
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
 
+    # Optional Graph Sync Worker
+    ENABLE_GRAPH_SYNC_WORKER: bool = False
+
     # Idempotency Store
     IDEMPOTENCY_STORE: str = "memory"  # 'memory' | 'redis' | 'database'
 

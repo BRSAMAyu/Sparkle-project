@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package sparkle.rag.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/sparkle/rag/v1;ragv1";
+
+message EvidenceNode {
+  string node_id = 1;
+  string source_id = 2;
+  string snippet = 3;
+  float score = 4;
+  string source_uri = 5;
+  map<string, string> metadata = 6;
+  string source_type = 7;
+}
+
+message EvidencePack {
+  string request_id = 1;
+  string trace_id = 2;
+  repeated EvidenceNode nodes = 3;
+  map<string, string> metadata = 4;
+}

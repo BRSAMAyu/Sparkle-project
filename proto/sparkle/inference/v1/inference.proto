@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package sparkle.inference.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/sparkle/gateway/gen/sparkle/inference/v1;inferencev1";
+
+// Authorization is required for all RPCs. Clients must send either:
+// - authorization: Bearer <token>
+// - x-internal-api-key: <key>
+service InferenceService {
+  rpc RunInference(InferenceRequest) returns (InferenceResponse) {
+    option (google.api.http) = {
+      post: "/v1/inference:run"
+      body: "*"
+    };
+  }
+}
+
+enum TaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  SHORT_INFERENCE = 1;
+  HEAVY_JOB = 2;
+  SIGNAL_EXTRACTION = 3;
+  OCR = 4;
+  TRANSLATE = 5;
+  EMBEDDING = 6;
+  RERANK = 7;
+  PREDICT_NEXT_ACTIONS = 8;
+  VERIFY_PLAN = 9;
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  P0 = 1;
+  P1 = 2;
+  P2 = 3;
+}
+
+enum ResponseFormat {
+  RESPONSE_FORMAT_UNSPECIFIED = 0;
+  JSON_OBJECT = 1;
+  TEXT = 2;
+}
+
+enum ErrorReason {
+  ERROR_REASON_UNSPECIFIED = 0;
+  QUOTA_EXCEEDED = 1;
+  PROVIDER_UNAVAILABLE = 2;
+  SCHEMA_VIOLATION = 3;
+  BUDGET_EXHAUSTED = 4;
+  TIMEOUT = 5;
+}
+
+message Message {
+  string role = 1;
+  string content = 2;
+}
+
+message ToolDefinition {
+  string name = 1;
+  string description = 2;
+  string schema_json = 3;
+}
+
+message Budgets {
+  uint32 max_output_tokens = 1;
+  uint32 max_input_tokens = 2;
+  string max_cost_level = 3;
+}
+
+message InferenceRequest {
+  string request_id = 1;
+  string trace_id = 2;
+  string user_id = 3;
+  TaskType task_type = 4;
+  Priority priority = 5;
+  string schema_version = 6;
+  string output_schema = 7;
+  string prompt_version = 8;
+  string idempotency_key = 9;
+  Budgets budgets = 10;
+  repeated Message messages = 11;
+  repeated ToolDefinition tools = 12;
+  ResponseFormat response_format = 13;
+  map<string, string> metadata = 14;
+}
+
+message InferenceResponse {
+  string request_id = 1;
+  string trace_id = 2;
+  bool ok = 3;
+  string provider = 4;
+  string model_id = 5;
+  string content = 6;
+  ErrorReason error_reason = 7;
+  string error_message = 8;
+  uint32 prompt_tokens = 9;
+  uint32 completion_tokens = 10;
+}
