@@ -4,6 +4,7 @@ import asyncio
 from loguru import logger
 from dataclasses import dataclass
 from opentelemetry import trace
+from fastapi import HTTPException
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
@@ -146,10 +147,16 @@ class LLMService:
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
             
-        self.provider: LLMProvider = OpenAICompatibleProvider(
-            api_key=api_key,
-            base_url=base_url
-        )
+        self._provider_error: Optional[str] = None
+        try:
+            self.provider = OpenAICompatibleProvider(
+                api_key=api_key,
+                base_url=base_url
+            )
+        except Exception as e:
+            self.provider = None
+            self._provider_error = str(e)
+            logger.warning(f"LLM provider unavailable; LLM features disabled: {e}")
         self.default_model = self.chat_model
         self.demo_mode = getattr(settings, 'DEMO_MODE', False)
 
@@ -196,6 +203,11 @@ class LLMService:
         """
         Send a chat request to the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
@@ -223,6 +235,11 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", model)
@@ -296,6 +313,11 @@ class LLMService:
         """
         Stream chat response from the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_stream_chat") as span:
             span.set_attribute("llm.model", model)
@@ -333,6 +355,12 @@ class LLMService:
             messages.extend(conversation_history)
         
         messages.append({"role": "user", "content": user_message})
+
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_with_tools") as span:
@@ -388,6 +416,12 @@ class LLMService:
                 "content": json.dumps(result, ensure_ascii=False)
             })
         
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
+
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_continue_after_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
@@ -426,6 +460,12 @@ class LLMService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
+
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:

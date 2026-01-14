@@ -1,10 +1,8 @@
 import asyncio
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any
+from fastapi import HTTPException
 from app.core.ingestion.ingestion_service import ingestion_service
-from app.agents.graph.llm_factory import LLMFactory
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from loguru import logger
 from app.core.cache import cache_service
 
@@ -125,6 +123,15 @@ class DocumentService:
     async def _generate_quick_summary(self, text: str) -> str:
         """Single-shot summary for small files."""
         try:
+            try:
+                from app.agents.graph.llm_factory import LLMFactory
+                from langchain_core.prompts import ChatPromptTemplate
+            except ImportError as exc:
+                raise HTTPException(
+                    status_code=501,
+                    detail="LLM summarization requires langchain dependencies (llm extras)."
+                ) from exc
+
             llm = LLMFactory.get_llm("galaxy_guide", override_model="gpt-4o-mini")
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "Summarize this document in markdown. Include Key Concepts and Exam Hints."),
@@ -160,6 +167,15 @@ class DocumentService:
 
     async def _extract_section_summary(self, index: int, text: str) -> str:
         try:
+            try:
+                from app.agents.graph.llm_factory import LLMFactory
+                from langchain_core.prompts import ChatPromptTemplate
+            except ImportError as exc:
+                raise HTTPException(
+                    status_code=501,
+                    detail="LLM summarization requires langchain dependencies (llm extras)."
+                ) from exc
+
             llm = LLMFactory.get_llm("galaxy_guide", override_model="gpt-4o-mini")
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "Analyze this section. Output compact Markdown."),
@@ -191,6 +207,14 @@ class DocumentService:
         chunks = await asyncio.to_thread(ingestion_service.process_file, file_path)
         if not chunks:
             return []
+
+        try:
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=501,
+                detail="Vector chunking requires langchain-text-splitters (llm extras)."
+            ) from exc
 
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
