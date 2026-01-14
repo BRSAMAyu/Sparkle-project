@@ -55,6 +55,7 @@ config = context.config
 # Override sqlalchemy.url from settings
 # Convert asyncpg URL to psycopg2 for Alembic migrations
 database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
