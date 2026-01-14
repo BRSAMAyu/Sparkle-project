@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     SEMANTIC_CACHE_SIM_THRESHOLD: float = 0.9
     SEMANTIC_CACHE_MAX_CANDIDATES: int = 200
 
+    # Reranker
+    RERANKER_ENABLED: bool = True
+
     # Expansion Feedback Loop
     EXPANSION_AB_TEST_ENABLED: bool = True
     EXPANSION_SEMANTIC_DEDUP_ENABLED: bool = True
