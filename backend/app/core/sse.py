@@ -90,7 +90,7 @@ class SSEManager:
 
         logger.info(f"SSE connection closed for user {user_id}")
 
-    async def send_to_user(self, user_id: str, event_type: str, data: dict):
+    async def send_to_user(self, user_id: str, event_type: str, data: dict, trace_id: Optional[str] = None, is_done: bool = False):
         """
         向特定用户推送事件
         """
@@ -102,7 +102,9 @@ class SSEManager:
         event_data = {
             "type": event_type,
             "data": data,
-            "seq": seq
+            "seq": seq,
+            "trace_id": trace_id,
+            "done": is_done
         }
         
         # 1. Store in Redis for Replay (Buffer 60s or 100 items)
@@ -127,7 +129,7 @@ class SSEManager:
             except Exception as e:
                 logger.error(f"Error sending SSE event to user {user_id_str}: {e}")
 
-        logger.debug(f"Sent SSE event '{event_type}' (seq={seq}) to user {user_id_str}")
+        logger.debug(f"Sent SSE event '{event_type}' (seq={seq}, done={is_done}) to user {user_id_str}")
 
     async def broadcast(self, event_type: str, data: dict):
         """

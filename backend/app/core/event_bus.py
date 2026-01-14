@@ -82,13 +82,24 @@ class EventBus:
         """Establish Redis connection"""
         if not self.redis:
             try:
+                # Sanitize password
+                password = os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD)
+                if password in ["<password>", "changeme", ""]:
+                    password = None
+                
+                kwargs = {
+                    "encoding": "utf-8",
+                    "decode_responses": True
+                }
+                if password:
+                    kwargs["password"] = password
+
                 self.redis = redis.from_url(
                     self.redis_url,
-                    encoding="utf-8",
-                    decode_responses=True
+                    **kwargs
                 )
                 await self.redis.ping()
-                logger.info("Successfully connected to Redis Event Bus")
+                logger.info(f"Successfully connected to Redis Event Bus (Password={'Yes' if password else 'No'})")
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 self.redis = None

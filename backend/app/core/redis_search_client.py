@@ -11,6 +11,10 @@ class RedisSearchClient:
     Handles Vector Search + Hybrid Search
     """
     def __init__(self, redis_url: str = settings.REDIS_URL, password: str = settings.REDIS_PASSWORD):
+        # Sanitize password
+        if password in ["<password>", "changeme", ""]:
+            password = None
+            
         self.redis = Redis.from_url(redis_url, password=password, decode_responses=True)
         self.index_name = "idx:knowledge"
 
