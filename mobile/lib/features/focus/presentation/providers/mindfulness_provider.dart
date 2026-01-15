@@ -3,8 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/context_service.dart';
+import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
@@ -41,6 +44,7 @@ class MindfulnessState {
     this.isPaused = false,
     this.translationRequestCount = 0,
     this.lastTranslationGranularity = 'word',
+    this.candidateActions = const [],
   });
   final bool isActive;
   final DateTime? startTime;
@@ -53,6 +57,7 @@ class MindfulnessState {
   final bool isPaused;
   final int translationRequestCount; // Translation requests in this session
   final String lastTranslationGranularity; // 'word', 'sentence', 'page'
+  final List<CandidateActionModel> candidateActions; // Predicted actions from signals pipeline
 
   MindfulnessState copyWith({
     bool? isActive,
@@ -66,6 +71,7 @@ class MindfulnessState {
     bool? isPaused,
     int? translationRequestCount,
     String? lastTranslationGranularity,
+    List<CandidateActionModel>? candidateActions,
     bool clearTask = false,
     bool clearStartTime = false,
   }) =>
@@ -81,14 +87,17 @@ class MindfulnessState {
         isPaused: isPaused ?? this.isPaused,
         translationRequestCount: translationRequestCount ?? this.translationRequestCount,
         lastTranslationGranularity: lastTranslationGranularity ?? this.lastTranslationGranularity,
+        candidateActions: candidateActions ?? this.candidateActions,
       );
 }
 
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
-  MindfulnessNotifier(this._focusRepository) : super(const MindfulnessState());
+  MindfulnessNotifier(this._focusRepository, this._predictionService)
+      : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
+  final PredictionService _predictionService;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -212,29 +221,17 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
             'translations=${state.translationRequestCount}, '
             'completion=${envelope['focus']['completion']}');
 
-        // TODO: Call /inference/run API with PREDICT_NEXT_ACTIONS
-        // This requires adding dio or http client dependency
-        // For now, log the envelope that would be sent
-        debugPrint('🚀 Would send context envelope: ${jsonEncode(envelope)}');
+        // PR-15: Call prediction API and store candidates in state
+        final candidates = await _predictionService.requestPredictions(
+          userId: state.currentTask?.userId ?? 'unknown', // TODO: Get actual user ID from auth
+          contextEnvelope: envelope,
+        );
 
-        // Future implementation:
-        // final response = await dio.post('/inference/run', data: {
-        //   'task_type': 'PREDICT_NEXT_ACTIONS',
-        //   'user_id': userId,
-        //   'metadata': {
-        //     'context_envelope': jsonEncode(envelope),
-        //   },
-        //   'priority': 'P0',
-        //   'budgets': {
-        //     'max_output_tokens': 300,
-        //     'max_cost_level': 'free_only',
-        //   },
-        // });
-        //
-        // final candidates = response.data['content']['candidates'] as List;
-        // if (candidates.isNotEmpty) {
-        //   _showCandidateSheet(candidates);
-        // }
+        if (candidates.isNotEmpty) {
+          // Store candidates in state for UI to display
+          state = state.copyWith(candidateActions: candidates);
+          debugPrint('✨ ${candidates.length} candidates stored in state');
+        }
       } catch (e) {
         // Log error but don't block exit
         debugPrint('❌ Failed to generate prediction: $e');
@@ -284,9 +281,16 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   }
 }
 
+/// Prediction Service Provider
+final predictionServiceProvider = Provider<PredictionService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return PredictionService(apiClient.dio);
+});
+
 /// 正念模式 Provider
 final mindfulnessProvider =
     StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
   final focusRepository = ref.watch(focusRepositoryProvider);
-  return MindfulnessNotifier(focusRepository);
+  final predictionService = ref.watch(predictionServiceProvider);
+  return MindfulnessNotifier(focusRepository, predictionService);
 });
