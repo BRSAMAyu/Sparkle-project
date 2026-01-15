@@ -108,3 +108,45 @@ message InferenceResponse {
   uint32 prompt_tokens = 9;
   uint32 completion_tokens = 10;
 }
+
+// ========================================
+// Translation Messages (Focus Translate v2)
+// ========================================
+
+message TranslationSegment {
+  string id = 1;                       // Segment ID for tracking ("s1", "s2", ...)
+  string text = 2;                     // Text to translate
+}
+
+message TranslationInput {
+  repeated TranslationSegment segments = 1;
+  string source_lang = 2;              // Source language code ("en", "zh-CN")
+  string target_lang = 3;              // Target language code ("en", "zh-CN")
+  string domain = 4;                   // Domain: "cs", "math", "business", "general"
+  string style = 5;                    // Style: "concise", "literal", "natural"
+  string glossary_id = 6;              // Optional glossary for terminology
+  string segmenter_version = 7;        // Segmenter version for cache key stability
+}
+
+message AlignmentSpan {
+  int32 source_start = 1;              // Source text start position
+  int32 source_end = 2;                // Source text end position
+  int32 target_start = 3;              // Target text start position
+  int32 target_end = 4;                // Target text end position
+  string type = 5;                     // Span type: "phrase", "term", "sentence"
+}
+
+message TranslatedSegment {
+  string id = 1;                       // Segment ID matching input
+  string translation = 2;              // Translated text
+  repeated string notes = 3;           // Terminology notes
+  repeated AlignmentSpan spans = 4;    // Optional phrase alignment
+}
+
+message TranslationOutput {
+  repeated TranslatedSegment segments = 1;
+  string provider = 2;                 // Translation provider
+  string model_id = 3;                 // Model used
+  bool cache_hit = 4;                  // Whether result from cache
+  int32 latency_ms = 5;                // Total latency in milliseconds
+}

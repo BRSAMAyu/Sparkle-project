@@ -36,7 +36,8 @@ class ExtractedChunk(BaseModel):
     text: str
     page_num: int
     source: str
-    metadata: Dict = {} # bold, header, color, etc.
+    metadata: Dict = {}  # bold, header, color, etc.
+    ocr_confidence: Optional[float] = None  # 0.0-1.0, None if not from OCR
 
 class IngestionService:
     """
@@ -99,73 +100,105 @@ class IngestionService:
         with pdfplumber.open(path) as pdf:
             for i, page in enumerate(pdf.pages):
                 text = page.extract_text() or ""
-                
+                ocr_confidence = None
+
                 # --- OCR Fallback Strategy ---
                 # If text is empty or suspiciously short (scanned page), try OCR
                 if len(text.strip()) < 50:
                     logger.info(f"Page {i+1} has low text content ({len(text.strip())} chars). Attempting OCR...")
-                    ocr_text = self._attempt_ocr(page)
+                    ocr_text, ocr_confidence = self._attempt_ocr(page)
                     if ocr_text:
                         text = ocr_text
-                        logger.info(f"OCR recovered {len(text)} chars from Page {i+1}")
+                        logger.info(
+                            f"OCR recovered {len(text)} chars from Page {i+1} "
+                            f"(confidence: {ocr_confidence:.2f})" if ocr_confidence else
+                            f"OCR recovered {len(text)} chars from Page {i+1}"
+                        )
                     else:
                         logger.warning(f"OCR failed or produced no text for Page {i+1}")
 
                 if not text:
                     continue
-                
-                # Metadata extraction (basic header detection via font size could go here)
+
                 # Cleaning
                 clean_text = self._clean_text(text)
-                
-                if len(clean_text) < 20: # Skip empty/noise pages
+
+                if len(clean_text) < 20:  # Skip empty/noise pages
                     continue
 
                 chunks.append(ExtractedChunk(
                     text=clean_text,
                     page_num=i + 1,
                     source="pdf",
-                    metadata={"raw_len": len(text)}
+                    metadata={"raw_len": len(text)},
+                    ocr_confidence=ocr_confidence
                 ))
         return chunks
 
-    def _attempt_ocr(self, page) -> str:
+    def _attempt_ocr(self, page) -> tuple[str, Optional[float]]:
         """
         Helper to run Tesseract on a pdfplumber page object with image preprocessing.
+
+        Returns:
+            tuple: (extracted_text, confidence_score)
+                - confidence_score is 0.0-1.0, None if OCR failed
         """
         if not HAS_OCR:
             logger.warning("OCR requested but pytesseract/Pillow not installed.")
-            return ""
-        
+            return "", None
+
         try:
-            # 2. Convert page to image (Resolution 300 DPI for better OCR)
-            # pdfplumber to_image returns a PageImage, .original gives PIL Image
+            # Convert page to image (Resolution 300 DPI for better OCR)
             im = page.to_image(resolution=300).original
-            
+
             # --- Image Preprocessing for Accuracy ---
             # 1. Convert to grayscale
             im = im.convert('L')
 
             # 2. Auto-contrast (stretch histogram)
             im = ImageOps.autocontrast(im)
-            
+
             # 3. Simple Binarization (Thresholding)
-            # This helps remove gray background noise typical in scans
-            threshold = 200 
+            threshold = 200
             im = im.point(lambda p: 255 if p > threshold else 0)
-            
-            # 3. Run OCR
+
+            # Run OCR with confidence data
             try:
-                # Add --psm 6 (Assume a single uniform block of text)
                 config = r'--oem 3 --psm 6'
-                return pytesseract.image_to_string(im, lang='chi_sim+eng', config=config)
+                # Get detailed data including confidence
+                ocr_data = pytesseract.image_to_data(
+                    im, lang='chi_sim+eng', config=config, output_type=pytesseract.Output.DICT
+                )
             except pytesseract.TesseractError:
                 config = r'--oem 3 --psm 6'
-                return pytesseract.image_to_string(im, lang='eng', config=config)
-                
+                ocr_data = pytesseract.image_to_data(
+                    im, lang='eng', config=config, output_type=pytesseract.Output.DICT
+                )
+
+            # Extract text and calculate average confidence
+            texts = []
+            confidences = []
+
+            for i, text in enumerate(ocr_data.get('text', [])):
+                text = text.strip()
+                conf = ocr_data.get('conf', [])[i]
+
+                if text and conf != -1:  # -1 means no confidence available
+                    texts.append(text)
+                    confidences.append(conf)
+
+            full_text = ' '.join(texts)
+
+            # Calculate average confidence (0-100 scale -> 0-1 scale)
+            avg_confidence = None
+            if confidences:
+                avg_confidence = sum(confidences) / len(confidences) / 100.0
+
+            return full_text, avg_confidence
+
         except Exception as e:
             logger.warning(f"OCR Error: {e}")
-            return ""
+            return "", None
 
     def _process_docx(self, path: str) -> List[ExtractedChunk]:
         if not HAS_DOCX:

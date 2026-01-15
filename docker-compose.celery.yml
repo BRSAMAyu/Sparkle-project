@@ -8,10 +8,10 @@ services:
     container_name: sparkle_celery_worker
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/2}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       - redis
@@ -26,9 +26,9 @@ services:
     container_name: sparkle_celery_beat
     command: celery -A app.core.celery_app beat -l info
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-change-me}@sparkle_db:5432/${DB_NAME:-sparkle}}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       - redis
@@ -39,17 +39,20 @@ services:
 
   # Flower - monitoring
   flower:
-    image: mher/flower:1.2.0
+    image: ${FLOWER_IMAGE:-mher/flower:1.2.0}
     container_name: sparkle_flower
-    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555
+    command: celery --broker=redis://:${REDIS_PASSWORD:-change-me}@sparkle_redis:6379/1 flower --port=5555 --persistent=True --db=/flower_data/flower.db
     ports:
       - "5555:5555"
     depends_on:
       - redis
     environment:
       - FLOWER_PURGE_OFFLINE_WORKERS=10
+    volumes:
+      - ./flower_data:/flower_data
     profiles:
       - celery
+      - flower
 
   # Redis (shared with main stack)
   redis:
@@ -62,6 +65,11 @@ services:
       - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-change-me}
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-change-me}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     profiles:
       - celery
 
@@ -78,7 +86,7 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d sparkle"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-sparkle}"]
       interval: 5s
       timeout: 5s
       retries: 5
