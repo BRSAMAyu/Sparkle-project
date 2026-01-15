@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
+import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
 
 /// Lightweight popover for word/phrase translation
 ///
@@ -13,8 +15,8 @@ class TranslationPopover extends ConsumerStatefulWidget {
     this.sourceLang = 'en',
     this.targetLang = 'zh-CN',
     this.domain = 'general',
-    this.onAddToGlossary,
-    this.onSaveToKnowledge,
+    this.readingContext,
+    this.onSaved,
     super.key,
   });
 
@@ -22,8 +24,8 @@ class TranslationPopover extends ConsumerStatefulWidget {
   final String sourceLang;
   final String targetLang;
   final String domain;
-  final VoidCallback? onAddToGlossary;
-  final VoidCallback? onSaveToKnowledge;
+  final String? readingContext;
+  final VoidCallback? onSaved;
 
   @override
   ConsumerState<TranslationPopover> createState() => _TranslationPopoverState();
@@ -33,6 +35,8 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
   TranslationResult? _result;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isSaving = false;
+  bool _saved = false;
 
   @override
   void initState() {
@@ -68,6 +72,80 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           _errorMessage = e.toString();
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _saveToKnowledgeGraph() async {
+    if (_result == null || _isSaving || _saved) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final knowledgeService = KnowledgeIntegrationService(apiClient.dio);
+
+      final result = await knowledgeService.createVocabularyNode(
+        sourceText: widget.sourceText,
+        translation: _result!.translation,
+        context: widget.readingContext ?? widget.sourceText,
+        language: widget.sourceLang,
+        domain: widget.domain,
+      );
+
+      if (result != null && result.success) {
+        if (mounted) {
+          setState(() {
+            _saved = true;
+            _isSaving = false;
+          });
+
+          // Show success feedback
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ 已加入生词卡，24小时后复习'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Call callback
+          widget.onSaved?.call();
+
+          // Auto-close after 1 second
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ 保存失败，请重试'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ 保存失败: ${e.toString()}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
@@ -119,18 +197,23 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (widget.onSaveToKnowledge != null)
-                  TextButton.icon(
-                    icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                    label: const Text('生词卡', style: TextStyle(fontSize: 13)),
-                    onPressed: widget.onSaveToKnowledge,
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.sm,
-                        vertical: 4,
-                      ),
+                TextButton.icon(
+                  icon: Icon(
+                    _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    _saved ? '已保存' : (_isSaving ? '保存中...' : '生词卡'),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  onPressed: _saved || _isSaving ? null : _saveToKnowledgeGraph,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.sm,
+                      vertical: 4,
                     ),
                   ),
+                ),
               ],
             ),
           ],
@@ -241,7 +324,8 @@ void showTranslationPopover(
   String sourceLang = 'en',
   String targetLang = 'zh-CN',
   String domain = 'general',
-  VoidCallback? onSaveToKnowledge,
+  String? readingContext,
+  VoidCallback? onSaved,
 }) {
   showDialog(
     context: context,
@@ -255,7 +339,8 @@ void showTranslationPopover(
         sourceLang: sourceLang,
         targetLang: targetLang,
         domain: domain,
-        onSaveToKnowledge: onSaveToKnowledge,
+        readingContext: readingContext,
+        onSaved: onSaved,
       ),
     ),
   );
