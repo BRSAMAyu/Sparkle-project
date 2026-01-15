@@ -3,7 +3,8 @@ Translation API
 Provides text translation with segmentation, caching, and glossary support
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from loguru import logger
@@ -16,6 +17,7 @@ from app.services.translation_service import (
     TranslationSegment,
     TranslationResult
 )
+from app.services.learning_asset_service import learning_asset_service
 
 router = APIRouter()
 
@@ -44,6 +46,12 @@ class TranslateRequest(BaseModel):
         default=None,
         description="Optional glossary ID for terminology consistency (e.g., 'cs_terms_v1')"
     )
+    # v2 Context Fields
+    fingerprint: Optional[str] = Field(None, description="Hash of (text + context + page) for signal tracking")
+    context_before: Optional[str] = Field(None, description="Text preceding the selection", max_length=500)
+    context_after: Optional[str] = Field(None, description="Text following the selection", max_length=500)
+    page_no: Optional[int] = Field(None, description="Page number if applicable")
+    source_file_id: Optional[str] = Field(None, description="Source document ID if applicable")
 
 
 class SegmentData(BaseModel):
@@ -53,11 +61,28 @@ class SegmentData(BaseModel):
     notes: List[str] = []
 
 
+class Recommendation(BaseModel):
+    """System recommendation for learning actions"""
+    should_create_card: bool = False
+    reason: Optional[str] = None
+    daily_quota_remaining: int = 0
+
+
+class AssetSuggestion(BaseModel):
+    """Suggestion to create a learning asset"""
+    suggest_asset: bool = False
+    suggestion_log_id: Optional[str] = None
+    selection_fp: Optional[str] = None
+    reason: Optional[str] = None
+
+
 class TranslateResponse(BaseModel):
     """Response schema for translation"""
     success: bool
     translation: str
     segments: List[SegmentData]
+    recommendation: Optional[Recommendation] = None
+    asset_suggestion: Optional[AssetSuggestion] = None
     meta: dict
 
 
@@ -67,7 +92,8 @@ class TranslateResponse(BaseModel):
 async def translate_text(
     request: TranslateRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    x_session_id: Optional[str] = Header(None, alias="X-Session-ID"),
 ):
     """
     Translate text with automatic segmentation and caching
@@ -110,7 +136,11 @@ async def translate_text(
             domain=request.domain,
             style=request.style,
             glossary_id=request.glossary_id,
-            timeout=5.0  # 5 seconds per segment
+            timeout=5.0,  # 5 seconds per segment
+            # v2 Signals
+            user_id=current_user.id,
+            fingerprint=request.fingerprint,
+            db=db
         )
 
         # 3. Combine segments into full translation
@@ -132,10 +162,53 @@ async def translate_text(
             f"latency={result.latency_ms}ms"
         )
 
+        # Build recommendation object if present
+        rec_obj = None
+        if result.recommendation:
+            rec_obj = Recommendation(
+                should_create_card=result.recommendation.get("should_create_card", False),
+                reason=result.recommendation.get("reason"),
+                daily_quota_remaining=result.recommendation.get("daily_quota_remaining", 0)
+            )
+
+        # 5. Record lookup and evaluate asset suggestion
+        asset_suggestion_obj = None
+        if x_session_id:
+            try:
+                source_file_uuid = UUID(request.source_file_id) if request.source_file_id else None
+                suggestion_result = await learning_asset_service.record_lookup(
+                    db=db,
+                    user_id=current_user.id,
+                    session_id=x_session_id,
+                    selected_text=request.text,
+                    translation=full_translation,
+                    source_file_id=source_file_uuid,
+                )
+
+                if suggestion_result.get("suggest_asset"):
+                    asset_suggestion_obj = AssetSuggestion(
+                        suggest_asset=True,
+                        suggestion_log_id=suggestion_result.get("suggestion_log_id"),
+                        selection_fp=suggestion_result.get("selection_fp"),
+                        reason=suggestion_result.get("reason"),
+                    )
+                else:
+                    asset_suggestion_obj = AssetSuggestion(
+                        suggest_asset=False,
+                        reason=suggestion_result.get("reason"),
+                    )
+
+                await db.commit()
+            except Exception as e:
+                logger.warning(f"Asset suggestion evaluation failed (graceful degradation): {e}")
+                # Graceful degradation - translation still succeeds
+
         return TranslateResponse(
             success=True,
             translation=full_translation,
             segments=segments_data,
+            recommendation=rec_obj,
+            asset_suggestion=asset_suggestion_obj,
             meta={
                 "provider": result.provider,
                 "model_id": result.model_id,

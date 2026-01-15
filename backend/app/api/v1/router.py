@@ -5,6 +5,7 @@ API v1 Router
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    assets,
     auth,
     users,
     galaxy,
@@ -70,6 +71,7 @@ api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(translation.router, prefix="/translation", tags=["translation"])
+api_router.include_router(assets.router)  # Prefix "/assets" defined in router
 api_router.include_router(signals.router)  # Prefix "/signals" defined in router
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
 api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])

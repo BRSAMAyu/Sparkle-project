@@ -26,7 +26,7 @@ if ! command -v python &> /dev/null; then
 fi
 
 # 检查是否在 backend 目录
-if [ ! -f "app/config.py" ]; then
+if [ ! -f "app/config/__init__.py" ]; then
     echo -e "${YELLOW}⚠ 请在 backend 目录下运行此脚本${NC}"
     echo "cd backend && ./scripts/demo_phase5.sh"
     exit 1

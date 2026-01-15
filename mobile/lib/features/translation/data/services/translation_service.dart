@@ -31,17 +31,40 @@ class TranslationSegmentData {
   }
 }
 
+/// Translation recommendation data
+class TranslationRecommendation {
+  final bool shouldCreateCard;
+  final String? reason;
+  final int dailyQuotaRemaining;
+
+  TranslationRecommendation({
+    required this.shouldCreateCard,
+    this.reason,
+    required this.dailyQuotaRemaining,
+  });
+
+  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) {
+    return TranslationRecommendation(
+      shouldCreateCard: json['should_create_card'] as bool? ?? false,
+      reason: json['reason'] as String?,
+      dailyQuotaRemaining: json['daily_quota_remaining'] as int? ?? 0,
+    );
+  }
+}
+
 /// Translation result
 class TranslationResult {
   final bool success;
   final String translation;
   final List<TranslationSegmentData> segments;
+  final TranslationRecommendation? recommendation;
   final Map<String, dynamic> meta;
 
   TranslationResult({
     required this.success,
     required this.translation,
     required this.segments,
+    this.recommendation,
     required this.meta,
   });
 
@@ -52,12 +75,17 @@ class TranslationResult {
       segments: (json['segments'] as List<dynamic>)
           .map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
           .toList(),
+      recommendation: json['recommendation'] != null
+          ? TranslationRecommendation.fromJson(
+              json['recommendation'] as Map<String, dynamic>)
+          : null,
       meta: json['meta'] as Map<String, dynamic>,
     );
   }
 
   /// Check if result was from cache
   bool get isCacheHit => meta['cache_hit'] == true;
+
 
   /// Get provider name
   String get provider => meta['provider'] as String? ?? 'unknown';
@@ -86,6 +114,11 @@ class TranslationService {
   /// [domain] - Domain for terminology: 'cs', 'math', 'business', 'general'
   /// [style] - Translation style: 'concise', 'literal', 'natural'
   /// [glossaryId] - Optional glossary ID for terminology consistency
+  /// [fingerprint] - Optional context fingerprint for signal tracking
+  /// [contextBefore] - Text preceding selection
+  /// [contextAfter] - Text following selection
+  /// [pageNo] - Page number in document
+  /// [sourceFileId] - Document identifier
   Future<TranslationResult> translate({
     required String text,
     String sourceLang = 'en',
@@ -93,6 +126,11 @@ class TranslationService {
     String domain = 'general',
     String style = 'natural',
     String? glossaryId,
+    String? fingerprint,
+    String? contextBefore,
+    String? contextAfter,
+    int? pageNo,
+    String? sourceFileId,
   }) async {
     final response = await _apiClient.post(
       '/translation/translate',
@@ -103,6 +141,12 @@ class TranslationService {
         'domain': domain,
         'style': style,
         if (glossaryId != null) 'glossary_id': glossaryId,
+        // v2 Signals
+        if (fingerprint != null) 'fingerprint': fingerprint,
+        if (contextBefore != null) 'context_before': contextBefore,
+        if (contextAfter != null) 'context_after': contextAfter,
+        if (pageNo != null) 'page_no': pageNo,
+        if (sourceFileId != null) 'source_file_id': sourceFileId,
       },
     );
 
