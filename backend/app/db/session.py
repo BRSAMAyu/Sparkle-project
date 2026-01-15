@@ -50,7 +50,7 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
             elif sslmode in ("require", "verify-ca", "verify-full"):
                 connect_args["ssl"] = True
         elif not settings.DEBUG:
-            connect_args["ssl"] = "require"
+            connect_args["ssl"] = True
 
         return {
             "pool_size": settings.DB_POOL_SIZE,
