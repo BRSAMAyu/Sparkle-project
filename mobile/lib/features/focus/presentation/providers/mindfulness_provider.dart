@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
@@ -37,6 +39,8 @@ class MindfulnessState {
     this.currentTask,
     this.exitConfirmationStep = 0,
     this.isPaused = false,
+    this.translationRequestCount = 0,
+    this.lastTranslationGranularity = 'word',
   });
   final bool isActive;
   final DateTime? startTime;
@@ -47,6 +51,8 @@ class MindfulnessState {
   final TaskModel? currentTask;
   final int exitConfirmationStep; // 0: 未开始, 1-3: 三重确认步骤
   final bool isPaused;
+  final int translationRequestCount; // Translation requests in this session
+  final String lastTranslationGranularity; // 'word', 'sentence', 'page'
 
   MindfulnessState copyWith({
     bool? isActive,
@@ -58,6 +64,8 @@ class MindfulnessState {
     TaskModel? currentTask,
     int? exitConfirmationStep,
     bool? isPaused,
+    int? translationRequestCount,
+    String? lastTranslationGranularity,
     bool clearTask = false,
     bool clearStartTime = false,
   }) =>
@@ -71,6 +79,8 @@ class MindfulnessState {
         currentTask: clearTask ? null : (currentTask ?? this.currentTask),
         exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
         isPaused: isPaused ?? this.isPaused,
+        translationRequestCount: translationRequestCount ?? this.translationRequestCount,
+        lastTranslationGranularity: lastTranslationGranularity ?? this.lastTranslationGranularity,
       );
 }
 
@@ -185,11 +195,65 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
         // Log error but don't block exit
         debugPrint('❌ Failed to log focus session: $e');
       }
+
+      // PR-14: Trigger prediction after focus session
+      try {
+        debugPrint('🔮 Generating context envelope for prediction...');
+
+        // Generate context envelope
+        final envelope = await contextService.generateContextEnvelope(
+          focusState: state,
+          translationRequests: state.translationRequestCount,
+          translationGranularity: state.lastTranslationGranularity,
+          unknownTermsSaved: 0, // TODO: Track from translation saves
+        );
+
+        debugPrint('📊 Context: interruptions=${state.interruptionCount}, '
+            'translations=${state.translationRequestCount}, '
+            'completion=${envelope['focus']['completion']}');
+
+        // TODO: Call /inference/run API with PREDICT_NEXT_ACTIONS
+        // This requires adding dio or http client dependency
+        // For now, log the envelope that would be sent
+        debugPrint('🚀 Would send context envelope: ${jsonEncode(envelope)}');
+
+        // Future implementation:
+        // final response = await dio.post('/inference/run', data: {
+        //   'task_type': 'PREDICT_NEXT_ACTIONS',
+        //   'user_id': userId,
+        //   'metadata': {
+        //     'context_envelope': jsonEncode(envelope),
+        //   },
+        //   'priority': 'P0',
+        //   'budgets': {
+        //     'max_output_tokens': 300,
+        //     'max_cost_level': 'free_only',
+        //   },
+        // });
+        //
+        // final candidates = response.data['content']['candidates'] as List;
+        // if (candidates.isNotEmpty) {
+        //   _showCandidateSheet(candidates);
+        // }
+      } catch (e) {
+        // Log error but don't block exit
+        debugPrint('❌ Failed to generate prediction: $e');
+      }
     }
 
     _timer?.cancel();
     _timer = null;
     state = const MindfulnessState();
+  }
+
+  /// Record translation request (called by translation widgets)
+  void recordTranslationRequest(String granularity) {
+    state = state.copyWith(
+      translationRequestCount: state.translationRequestCount + 1,
+      lastTranslationGranularity: granularity,
+    );
+    debugPrint('📝 Translation request recorded: granularity=$granularity, '
+        'total=${state.translationRequestCount}');
   }
 
   /// 切换勿扰模式

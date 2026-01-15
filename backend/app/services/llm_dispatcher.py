@@ -12,6 +12,9 @@ from app.services.llm_service import llm_service
 from app.services.quota import get_rate_limiter
 from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 from app.gen.sparkle.inference.v1 import inference_pb2
+from app.services.feature_extraction_service import feature_extraction_service
+from app.services.signal_generation_service import signal_generation_service
+from app.services.candidate_generation_service import candidate_generation_service
 
 
 @dataclass
@@ -43,6 +46,11 @@ class LLMDispatcher:
 
     async def run(self, request: inference_pb2.InferenceRequest) -> inference_pb2.InferenceResponse:
         self._validate_request(request)
+
+        # Special handling for PREDICT_NEXT_ACTIONS
+        if request.task_type == inference_pb2.PREDICT_NEXT_ACTIONS:
+            return await self._handle_predict_next_actions(request)
+
         cache_key = self._cache_key(request)
         cached = await self._cache_get(cache_key)
         if cached:
@@ -112,6 +120,99 @@ class LLMDispatcher:
             
             logger.exception("Inference failed")
             return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, str(exc))
+
+    async def _handle_predict_next_actions(
+        self,
+        request: inference_pb2.InferenceRequest
+    ) -> inference_pb2.InferenceResponse:
+        """
+        Handle PREDICT_NEXT_ACTIONS task type.
+
+        Pipeline:
+        1. Parse ContextEnvelope from metadata
+        2. Feature extraction (objective metrics)
+        3. Signal generation (decision-ready signals)
+        4. Candidate generation (actionable suggestions with constraints)
+
+        Args:
+            request: InferenceRequest with ContextEnvelope in metadata
+
+        Returns:
+            InferenceResponse with candidate actions in content (JSON)
+        """
+        try:
+            # 1. Parse ContextEnvelope from metadata
+            envelope_json = request.metadata.get("context_envelope")
+            if not envelope_json:
+                return self._error_response(
+                    request,
+                    inference_pb2.SCHEMA_VIOLATION,
+                    "Missing context_envelope in metadata"
+                )
+
+            try:
+                envelope = json.loads(envelope_json)
+            except json.JSONDecodeError as e:
+                return self._error_response(
+                    request,
+                    inference_pb2.SCHEMA_VIOLATION,
+                    f"Invalid context_envelope JSON: {str(e)}"
+                )
+
+            logger.info(
+                f"PREDICT_NEXT_ACTIONS request: user={request.user_id}, "
+                f"window={envelope.get('window', 'unknown')}"
+            )
+
+            # 2. Feature extraction
+            features = feature_extraction_service.extract(envelope)
+            logger.debug(
+                f"Features extracted: rhythm.deviating={features.rhythm.deviating_from_plan}, "
+                f"friction.density={features.friction.translation_density}, "
+                f"energy.fatigue={features.energy.late_night_fatigue}"
+            )
+
+            # 3. Signal generation
+            signals = signal_generation_service.generate(features)
+            logger.info(
+                f"Signals generated: count={len(signals.signals)}, "
+                f"types={[s.type for s in signals.signals]}"
+            )
+
+            # 4. Candidate generation with constraints
+            candidates = await candidate_generation_service.generate_candidates(
+                user_id=request.user_id,
+                signals=signals
+            )
+            logger.info(
+                f"Candidates generated: count={len(candidates)}, "
+                f"types={[c.action_type for c in candidates]}"
+            )
+
+            # 5. Format response
+            response_data = {
+                "candidates": [c.to_dict() for c in candidates],
+                "features": features.to_dict(),
+                "signals": signals.to_dict(),
+                "pipeline_version": "v2",
+            }
+
+            return inference_pb2.InferenceResponse(
+                request_id=request.request_id,
+                trace_id=request.trace_id,
+                ok=True,
+                provider="signals_pipeline",
+                model_id="sig_v2",
+                content=json.dumps(response_data, ensure_ascii=False),
+            )
+
+        except Exception as exc:
+            logger.exception("PREDICT_NEXT_ACTIONS failed")
+            return self._error_response(
+                request,
+                inference_pb2.PROVIDER_UNAVAILABLE,
+                f"Signal generation failed: {str(exc)}"
+            )
 
     def _validate_request(self, request: inference_pb2.InferenceRequest) -> None:
         if not request.request_id or not request.trace_id:
