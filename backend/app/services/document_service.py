@@ -16,9 +16,10 @@ import unicodedata
 @dataclass
 class VectorChunk:
     content: str
-    page_numbers: List[int] # Changed to list
+    page_numbers: List[int]  # Changed to list
     section_title: Optional[str]
     metadata: Dict = field(default_factory=dict)
+    ocr_confidence: Optional[float] = None  # 0.0-1.0, None if not from OCR
 
 @dataclass
 class QualityResult:
@@ -194,6 +195,44 @@ class DocumentService:
 
         return max(structure_score, 0.0), issues
 
+    def _check_ocr_confidence(self, chunks: List[VectorChunk]) -> tuple[float, List[str]]:
+        """
+        检查 OCR 置信度
+        Returns: (avg_confidence, issues)
+        """
+        issues = []
+
+        # 收集所有 OCR 置信度
+        ocr_confidences = [
+            c.ocr_confidence for c in chunks
+            if c.ocr_confidence is not None
+        ]
+
+        if not ocr_confidences:
+            # 没有 OCR 内容，返回满分
+            return 1.0, []
+
+        avg_confidence = sum(ocr_confidences) / len(ocr_confidences)
+
+        # 检查是否低于阈值
+        threshold = phase5_config.DOC_QUALITY_OCR_CONFIDENCE_THRESHOLD
+
+        if avg_confidence < threshold:
+            issues.append(
+                f"Low OCR confidence ({avg_confidence:.2%}), "
+                f"threshold is {threshold:.2%}. "
+                f"Document may contain poor scan quality or handwriting."
+            )
+
+        # 检查个别页面置信度过低
+        low_conf_pages = sum(1 for c in ocr_confidences if c < 0.5)
+        if low_conf_pages > 0:
+            issues.append(
+                f"{low_conf_pages} page(s) have very low OCR confidence (<50%)"
+            )
+
+        return avg_confidence, issues
+
     def check_quality(
         self,
         chunks: List[VectorChunk],
@@ -207,6 +246,7 @@ class DocumentService:
         2. 字符检查：乱码率
         3. 语言检查：中英文一致性
         4. 结构检查：切片分布、重复内容
+        5. OCR 置信度检查
 
         Args:
             chunks: 文档切片列表
@@ -219,6 +259,7 @@ class DocumentService:
 
         # 0. 基础检查
         if not chunks:
+            self._report_metrics("unknown", False, 0.0, 0.0, None, ["no_content"])
             return QualityResult(
                 passed=False,
                 score=0.0,
@@ -229,6 +270,7 @@ class DocumentService:
         total_len = len(total_text)
 
         if total_len < phase5_config.DOC_QUALITY_MIN_LENGTH:
+            self._report_metrics("unknown", False, 0.1, 0.0, None, ["too_short"])
             return QualityResult(
                 passed=False,
                 score=0.1,
@@ -256,25 +298,32 @@ class DocumentService:
         structure_score, structure_issues = self._check_content_structure(chunks)
         issues.extend(structure_issues)
 
-        # 5. 综合评分
-        # 权重：乱码率 40%，语言一致性 30%，结构 30%
+        # 5. OCR 置信度检测
+        ocr_confidence, ocr_issues = self._check_ocr_confidence(chunks)
+        issues.extend(ocr_issues)
+
+        # 6. 综合评分
+        # 权重：乱码率 35%，语言一致性 25%，结构 25%，OCR 置信度 15%
         garbled_score = 1.0 - garbled_ratio
         final_score = (
-            0.4 * garbled_score +
-            0.3 * lang_score +
-            0.3 * structure_score
+            0.35 * garbled_score +
+            0.25 * lang_score +
+            0.25 * structure_score +
+            0.15 * ocr_confidence
         )
 
-        # 6. 判定通过条件
+        # 7. 判定通过条件
         threshold = get_quality_threshold_for_doc_type(doc_type)
-        # 转换阈值：乱码率阈值 -> 整体分数阈值
-        # 如果乱码率阈值是 0.05，则要求乱码分数 > 0.95
-        # 整体分数阈值设为 0.7（考虑到多维度检测）
         pass_threshold = 0.7
+
+        # OCR 置信度过低也应该失败
+        ocr_threshold = phase5_config.DOC_QUALITY_OCR_CONFIDENCE_THRESHOLD
+        ocr_passed = ocr_confidence >= ocr_threshold
 
         passed = (
             final_score >= pass_threshold and
-            garbled_ratio <= threshold
+            garbled_ratio <= threshold and
+            ocr_passed
         )
 
         logger.info(
@@ -282,7 +331,19 @@ class DocumentService:
             f"garbled={garbled_ratio:.3f}, "
             f"lang={lang_score:.3f}, "
             f"structure={structure_score:.3f}, "
+            f"ocr_conf={ocr_confidence:.3f}, "
             f"passed={passed}"
+        )
+
+        # 8. 上报指标
+        issue_types = self._categorize_issues(issues)
+        self._report_metrics(
+            doc_type=doc_type,
+            passed=passed,
+            score=final_score,
+            garbled_ratio=garbled_ratio,
+            ocr_confidence=ocr_confidence if ocr_confidence < 1.0 else None,
+            issue_types=issue_types
         )
 
         return QualityResult(
@@ -290,6 +351,67 @@ class DocumentService:
             score=final_score,
             issues=issues if not passed else []
         )
+
+    def _categorize_issues(self, issues: List[str]) -> List[str]:
+        """将问题列表分类为指标标签"""
+        categories = []
+        issue_text = " ".join(issues).lower()
+
+        if "garbled" in issue_text:
+            categories.append("garbled")
+        if "short" in issue_text:
+            categories.append("too_short")
+        if "chinese" in issue_text:
+            categories.append("low_chinese_ratio")
+        if "repeated" in issue_text or "headers" in issue_text:
+            categories.append("repeated_headers")
+        if "ocr" in issue_text or "confidence" in issue_text:
+            categories.append("low_ocr_confidence")
+
+        return categories
+
+    def _report_metrics(
+        self,
+        doc_type: str,
+        passed: bool,
+        score: float,
+        garbled_ratio: float,
+        ocr_confidence: Optional[float],
+        issue_types: List[str]
+    ) -> None:
+        """上报文档质量指标到 Prometheus"""
+        try:
+            from app.core.metrics import (
+                DOC_QUALITY_CHECK_COUNT,
+                DOC_QUALITY_SCORE,
+                DOC_GARBLED_RATIO,
+                DOC_OCR_CONFIDENCE,
+                DOC_QUALITY_ISSUES
+            )
+
+            # 1. 检测计数
+            result = "passed" if passed else "failed"
+            DOC_QUALITY_CHECK_COUNT.labels(doc_type=doc_type, result=result).inc()
+
+            # 2. 质量分数分布
+            DOC_QUALITY_SCORE.labels(doc_type=doc_type).observe(score)
+
+            # 3. 乱码率分布
+            DOC_GARBLED_RATIO.labels(doc_type=doc_type).observe(garbled_ratio)
+
+            # 4. OCR 置信度分布（仅当有 OCR 内容时）
+            if ocr_confidence is not None:
+                DOC_OCR_CONFIDENCE.observe(ocr_confidence)
+
+            # 5. 问题类型计数
+            for issue_type in issue_types:
+                DOC_QUALITY_ISSUES.labels(issue_type=issue_type).inc()
+
+        except ImportError:
+            # 指标模块未安装，静默跳过
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to report quality metrics: {e}")
 
     async def draft_knowledge_nodes(self, db_session, file_id: UUID, user_id: UUID, chunks: List[VectorChunk]):
         """
@@ -569,6 +691,7 @@ class DocumentService:
                     content=content,
                     page_numbers=[chunk.page_num] if chunk.page_num else [],
                     section_title=chunk.metadata.get("title") if chunk.metadata else None,
+                    ocr_confidence=chunk.ocr_confidence,
                 ))
 
         return results

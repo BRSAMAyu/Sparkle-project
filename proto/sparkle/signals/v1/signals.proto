@@ -4,6 +4,10 @@ package sparkle.signals.v1;
 
 option go_package = "github.com/sparkle/gateway/gen/sparkle/signals/v1;signalsv1";
 
+// ========================================
+// Legacy Messages (MVP)
+// ========================================
+
 message CandidateAction {
   string id = 1;
   string type = 2;
@@ -21,4 +25,96 @@ message NextActionsCandidateSet {
   string idempotency_key = 5;
   repeated CandidateAction candidates = 6;
   map<string, string> metadata = 7;
+}
+
+// ========================================
+// Signals Plane v2 Messages
+// ========================================
+
+// Mobile sends compressed context, not raw events
+message ContextEnvelope {
+  string context_version = 1;          // "ce_v1"
+  string window = 2;                   // "last_30min"
+  FocusMetrics focus = 3;
+  ComprehensionMetrics comprehension = 4;
+  TimeContext time = 5;
+  ContentContext content = 6;
+  bool pii_scrubbed = 7;
+}
+
+message FocusMetrics {
+  int32 planned_min = 1;
+  int32 actual_min = 2;
+  int32 interruptions = 3;
+  float completion = 4;                // 0.0-1.0
+}
+
+message ComprehensionMetrics {
+  int32 translation_requests = 1;
+  string translation_granularity = 2;  // "word", "sentence", "page"
+  int32 unknown_terms_saved = 3;
+}
+
+message TimeContext {
+  int32 local_hour = 1;                // 0-23
+  string day_of_week = 2;              // "monday"
+}
+
+message ContentContext {
+  string language = 1;                 // "en", "zh"
+  string domain = 2;                   // "cs", "math"
+}
+
+// Feature extraction output (objective)
+message FeatureExtractResult {
+  string version = 1;                  // "fer_v1"
+  LearningRhythm rhythm = 2;
+  UnderstandingFriction friction = 3;
+  EnergyState energy = 4;
+  TaskRisk risk = 5;
+}
+
+message LearningRhythm {
+  bool deviating_from_plan = 1;
+  int32 interruption_frequency = 2;    // per hour
+}
+
+message UnderstandingFriction {
+  int32 translation_density = 1;       // requests per 10min
+  bool escalating_granularity = 2;     // word → sentence → page
+}
+
+message EnergyState {
+  bool late_night_fatigue = 1;
+  bool short_session_trend = 2;
+}
+
+message TaskRisk {
+  bool consecutive_failures = 1;
+  bool procrastination_detected = 2;
+}
+
+// Signal generation (decision-ready)
+message Signals {
+  string version = 1;                  // "sig_v1"
+  repeated Signal signals = 2;
+}
+
+message Signal {
+  string type = 1;                     // "risk_dropout_soon", "needs_break"
+  float confidence = 2;                // 0.0-1.0
+  string reason = 3;                   // Explainable reason
+  map<string, string> metadata = 4;
+}
+
+// Enhanced candidate action (v2)
+message CandidateActionV2 {
+  string id = 1;
+  string action_type = 2;              // "break", "review", "clarify", "plan_split"
+  string title = 3;
+  string reason = 4;                   // "因为你刚刚..."
+  float confidence = 5;
+  string timing_hint = 6;              // "now", "in_5min", "after_current_task"
+  string payload_seed = 7;             // For strong model expansion
+  map<string, string> metadata = 8;
 }

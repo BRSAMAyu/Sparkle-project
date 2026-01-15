@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.api import annotations_pb2 as google_dot_api_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$sparkle/inference/v1/inference.proto\x12\x14sparkle.inference.v1\x1a\x1cgoogle/api/annotations.proto\"7\n\x07Message\x12\x12\n\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n\x07\x63ontent\x18\x02 \x01(\tR\x07\x63ontent\"g\n\x0eToolDefinition\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12\x1f\n\x0bschema_json\x18\x03 \x01(\tR\nschemaJson\"\x85\x01\n\x07\x42udgets\x12*\n\x11max_output_tokens\x18\x01 \x01(\rR\x0fmaxOutputTokens\x12(\n\x10max_input_tokens\x18\x02 \x01(\rR\x0emaxInputTokens\x12$\n\x0emax_cost_level\x18\x03 \x01(\tR\x0cmaxCostLevel\"\x88\x06\n\x10InferenceRequest\x12\x1d\n\nrequest_id\x18\x01 \x01(\tR\trequestId\x12\x19\n\x08trace_id\x18\x02 \x01(\tR\x07traceId\x12\x17\n\x07user_id\x18\x03 \x01(\tR\x06userId\x12;\n\ttask_type\x18\x04 \x01(\x0e\x32\x1e.sparkle.inference.v1.TaskTypeR\x08taskType\x12:\n\x08priority\x18\x05 \x01(\x0e\x32\x1e.sparkle.inference.v1.PriorityR\x08priority\x12%\n\x0eschema_version\x18\x06 \x01(\tR\rschemaVersion\x12#\n\routput_schema\x18\x07 \x01(\tR\x0coutputSchema\x12%\n\x0eprompt_version\x18\x08 \x01(\tR\rpromptVersion\x12\'\n\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x12\x37\n\x07\x62udgets\x18\n \x01(\x0b\x32\x1d.sparkle.inference.v1.BudgetsR\x07\x62udgets\x12\x39\n\x08messages\x18\x0b \x03(\x0b\x32\x1d.sparkle.inference.v1.MessageR\x08messages\x12:\n\x05tools\x18\x0c \x03(\x0b\x32$.sparkle.inference.v1.ToolDefinitionR\x05tools\x12M\n\x0fresponse_format\x18\r \x01(\x0e\x32$.sparkle.inference.v1.ResponseFormatR\x0eresponseFormat\x12P\n\x08metadata\x18\x0e \x03(\x0b\x32\x34.sparkle.inference.v1.InferenceRequest.MetadataEntryR\x08metadata\x1a;\n\rMetadataEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\xeb\x02\n\x11InferenceResponse\x12\x1d\n\nrequest_id\x18\x01 \x01(\tR\trequestId\x12\x19\n\x08trace_id\x18\x02 \x01(\tR\x07traceId\x12\x0e\n\x02ok\x18\x03 \x01(\x08R\x02ok\x12\x1a\n\x08provider\x18\x04 \x01(\tR\x08provider\x12\x19\n\x08model_id\x18\x05 \x01(\tR\x07modelId\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12\x44\n\x0c\x65rror_reason\x18\x07 \x01(\x0e\x32!.sparkle.inference.v1.ErrorReasonR\x0b\x65rrorReason\x12#\n\rerror_message\x18\x08 \x01(\tR\x0c\x65rrorMessage\x12#\n\rprompt_tokens\x18\t \x01(\rR\x0cpromptTokens\x12+\n\x11\x63ompletion_tokens\x18\n \x01(\rR\x10\x63ompletionTokens*\xbe\x01\n\x08TaskType\x12\x19\n\x15TASK_TYPE_UNSPECIFIED\x10\x00\x12\x13\n\x0fSHORT_INFERENCE\x10\x01\x12\r\n\tHEAVY_JOB\x10\x02\x12\x15\n\x11SIGNAL_EXTRACTION\x10\x03\x12\x07\n\x03OCR\x10\x04\x12\r\n\tTRANSLATE\x10\x05\x12\r\n\tEMBEDDING\x10\x06\x12\n\n\x06RERANK\x10\x07\x12\x18\n\x14PREDICT_NEXT_ACTIONS\x10\x08\x12\x0f\n\x0bVERIFY_PLAN\x10\t*<\n\x08Priority\x12\x18\n\x14PRIORITY_UNSPECIFIED\x10\x00\x12\x06\n\x02P0\x10\x01\x12\x06\n\x02P1\x10\x02\x12\x06\n\x02P2\x10\x03*L\n\x0eResponseFormat\x12\x1f\n\x1bRESPONSE_FORMAT_UNSPECIFIED\x10\x00\x12\x0f\n\x0bJSON_OBJECT\x10\x01\x12\x08\n\x04TEXT\x10\x02*\x92\x01\n\x0b\x45rrorReason\x12\x1c\n\x18\x45RROR_REASON_UNSPECIFIED\x10\x00\x12\x12\n\x0eQUOTA_EXCEEDED\x10\x01\x12\x18\n\x14PROVIDER_UNAVAILABLE\x10\x02\x12\x14\n\x10SCHEMA_VIOLATION\x10\x03\x12\x14\n\x10\x42UDGET_EXHAUSTED\x10\x04\x12\x0b\n\x07TIMEOUT\x10\x05\x32\x91\x01\n\x10InferenceService\x12}\n\x0cRunInference\x12&.sparkle.inference.v1.InferenceRequest\x1a\'.sparkle.inference.v1.InferenceResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\"\x11/v1/inference:run:\x01*BAZ?github.com/sparkle/gateway/gen/sparkle/inference/v1;inferencev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$sparkle/inference/v1/inference.proto\x12\x14sparkle.inference.v1\x1a\x1cgoogle/api/annotations.proto\"7\n\x07Message\x12\x12\n\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n\x07\x63ontent\x18\x02 \x01(\tR\x07\x63ontent\"g\n\x0eToolDefinition\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12\x1f\n\x0bschema_json\x18\x03 \x01(\tR\nschemaJson\"\x85\x01\n\x07\x42udgets\x12*\n\x11max_output_tokens\x18\x01 \x01(\rR\x0fmaxOutputTokens\x12(\n\x10max_input_tokens\x18\x02 \x01(\rR\x0emaxInputTokens\x12$\n\x0emax_cost_level\x18\x03 \x01(\tR\x0cmaxCostLevel\"\xef\x06\n\x10InferenceRequest\x12\x1d\n\nrequest_id\x18\x01 \x01(\tR\trequestId\x12\x19\n\x08trace_id\x18\x02 \x01(\tR\x07traceId\x12\x17\n\x07user_id\x18\x03 \x01(\tR\x06userId\x12;\n\ttask_type\x18\x04 \x01(\x0e\x32\x1e.sparkle.inference.v1.TaskTypeR\x08taskType\x12:\n\x08priority\x18\x05 \x01(\x0e\x32\x1e.sparkle.inference.v1.PriorityR\x08priority\x12%\n\x0eschema_version\x18\x06 \x01(\tR\rschemaVersion\x12#\n\routput_schema\x18\x07 \x01(\tR\x0coutputSchema\x12%\n\x0eprompt_version\x18\x08 \x01(\tR\rpromptVersion\x12\'\n\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x12\x37\n\x07\x62udgets\x18\n \x01(\x0b\x32\x1d.sparkle.inference.v1.BudgetsR\x07\x62udgets\x12\x39\n\x08messages\x18\x0b \x03(\x0b\x32\x1d.sparkle.inference.v1.MessageR\x08messages\x12:\n\x05tools\x18\x0c \x03(\x0b\x32$.sparkle.inference.v1.ToolDefinitionR\x05tools\x12M\n\x0fresponse_format\x18\r \x01(\x0e\x32$.sparkle.inference.v1.ResponseFormatR\x0eresponseFormat\x12P\n\x08metadata\x18\x0e \x03(\x0b\x32\x34.sparkle.inference.v1.InferenceRequest.MetadataEntryR\x08metadata\x12\x19\n\x08\x66ile_ids\x18\x0f \x03(\tR\x07\x66ileIds\x12J\n\x0e\x61rtifact_scope\x18\x10 \x01(\x0e\x32#.sparkle.inference.v1.ArtifactScopeR\rartifactScope\x1a;\n\rMetadataEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\xeb\x02\n\x11InferenceResponse\x12\x1d\n\nrequest_id\x18\x01 \x01(\tR\trequestId\x12\x19\n\x08trace_id\x18\x02 \x01(\tR\x07traceId\x12\x0e\n\x02ok\x18\x03 \x01(\x08R\x02ok\x12\x1a\n\x08provider\x18\x04 \x01(\tR\x08provider\x12\x19\n\x08model_id\x18\x05 \x01(\tR\x07modelId\x12\x18\n\x07\x63ontent\x18\x06 \x01(\tR\x07\x63ontent\x12\x44\n\x0c\x65rror_reason\x18\x07 \x01(\x0e\x32!.sparkle.inference.v1.ErrorReasonR\x0b\x65rrorReason\x12#\n\rerror_message\x18\x08 \x01(\tR\x0c\x65rrorMessage\x12#\n\rprompt_tokens\x18\t \x01(\rR\x0cpromptTokens\x12+\n\x11\x63ompletion_tokens\x18\n \x01(\rR\x10\x63ompletionTokens\"8\n\x12TranslationSegment\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04text\x18\x02 \x01(\tR\x04text\"\x96\x02\n\x10TranslationInput\x12\x44\n\x08segments\x18\x01 \x03(\x0b\x32(.sparkle.inference.v1.TranslationSegmentR\x08segments\x12\x1f\n\x0bsource_lang\x18\x02 \x01(\tR\nsourceLang\x12\x1f\n\x0btarget_lang\x18\x03 \x01(\tR\ntargetLang\x12\x16\n\x06\x64omain\x18\x04 \x01(\tR\x06\x64omain\x12\x14\n\x05style\x18\x05 \x01(\tR\x05style\x12\x1f\n\x0bglossary_id\x18\x06 \x01(\tR\nglossaryId\x12+\n\x11segmenter_version\x18\x07 \x01(\tR\x10segmenterVersion\"\xa7\x01\n\rAlignmentSpan\x12!\n\x0csource_start\x18\x01 \x01(\x05R\x0bsourceStart\x12\x1d\n\nsource_end\x18\x02 \x01(\x05R\tsourceEnd\x12!\n\x0ctarget_start\x18\x03 \x01(\x05R\x0btargetStart\x12\x1d\n\ntarget_end\x18\x04 \x01(\x05R\ttargetEnd\x12\x12\n\x04type\x18\x05 \x01(\tR\x04type\"\x96\x01\n\x11TranslatedSegment\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12 \n\x0btranslation\x18\x02 \x01(\tR\x0btranslation\x12\x14\n\x05notes\x18\x03 \x03(\tR\x05notes\x12\x39\n\x05spans\x18\x04 \x03(\x0b\x32#.sparkle.inference.v1.AlignmentSpanR\x05spans\"\xcb\x01\n\x11TranslationOutput\x12\x43\n\x08segments\x18\x01 \x03(\x0b\x32\'.sparkle.inference.v1.TranslatedSegmentR\x08segments\x12\x1a\n\x08provider\x18\x02 \x01(\tR\x08provider\x12\x19\n\x08model_id\x18\x03 \x01(\tR\x07modelId\x12\x1b\n\tcache_hit\x18\x04 \x01(\x08R\x08\x63\x61\x63heHit\x12\x1d\n\nlatency_ms\x18\x05 \x01(\x05R\tlatencyMs*\xbe\x01\n\x08TaskType\x12\x19\n\x15TASK_TYPE_UNSPECIFIED\x10\x00\x12\x13\n\x0fSHORT_INFERENCE\x10\x01\x12\r\n\tHEAVY_JOB\x10\x02\x12\x15\n\x11SIGNAL_EXTRACTION\x10\x03\x12\x07\n\x03OCR\x10\x04\x12\r\n\tTRANSLATE\x10\x05\x12\r\n\tEMBEDDING\x10\x06\x12\n\n\x06RERANK\x10\x07\x12\x18\n\x14PREDICT_NEXT_ACTIONS\x10\x08\x12\x0f\n\x0bVERIFY_PLAN\x10\t*<\n\x08Priority\x12\x18\n\x14PRIORITY_UNSPECIFIED\x10\x00\x12\x06\n\x02P0\x10\x01\x12\x06\n\x02P1\x10\x02\x12\x06\n\x02P2\x10\x03*L\n\x0eResponseFormat\x12\x1f\n\x1bRESPONSE_FORMAT_UNSPECIFIED\x10\x00\x12\x0f\n\x0bJSON_OBJECT\x10\x01\x12\x08\n\x04TEXT\x10\x02*\x92\x01\n\x0b\x45rrorReason\x12\x1c\n\x18\x45RROR_REASON_UNSPECIFIED\x10\x00\x12\x12\n\x0eQUOTA_EXCEEDED\x10\x01\x12\x18\n\x14PROVIDER_UNAVAILABLE\x10\x02\x12\x14\n\x10SCHEMA_VIOLATION\x10\x03\x12\x14\n\x10\x42UDGET_EXHAUSTED\x10\x04\x12\x0b\n\x07TIMEOUT\x10\x05*T\n\rArtifactScope\x12\x1e\n\x1a\x41RTIFACT_SCOPE_UNSPECIFIED\x10\x00\x12\x0b\n\x07PRIVATE\x10\x01\x12\n\n\x06SHARED\x10\x02\x12\n\n\x06PUBLIC\x10\x03\x32\x91\x01\n\x10InferenceService\x12}\n\x0cRunInference\x12&.sparkle.inference.v1.InferenceRequest\x1a\'.sparkle.inference.v1.InferenceResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\"\x11/v1/inference:run:\x01*BAZ?github.com/sparkle/gateway/gen/sparkle/inference/v1;inferencev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,14 +37,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_INFERENCEREQUEST_METADATAENTRY']._serialized_options = b'8\001'
   _globals['_INFERENCESERVICE'].methods_by_name['RunInference']._loaded_options = None
   _globals['_INFERENCESERVICE'].methods_by_name['RunInference']._serialized_options = b'\202\323\344\223\002\026\"\021/v1/inference:run:\001*'
-  _globals['_TASKTYPE']._serialized_start=1536
-  _globals['_TASKTYPE']._serialized_end=1726
-  _globals['_PRIORITY']._serialized_start=1728
-  _globals['_PRIORITY']._serialized_end=1788
-  _globals['_RESPONSEFORMAT']._serialized_start=1790
-  _globals['_RESPONSEFORMAT']._serialized_end=1866
-  _globals['_ERRORREASON']._serialized_start=1869
-  _globals['_ERRORREASON']._serialized_end=2015
+  _globals['_TASKTYPE']._serialized_start=2507
+  _globals['_TASKTYPE']._serialized_end=2697
+  _globals['_PRIORITY']._serialized_start=2699
+  _globals['_PRIORITY']._serialized_end=2759
+  _globals['_RESPONSEFORMAT']._serialized_start=2761
+  _globals['_RESPONSEFORMAT']._serialized_end=2837
+  _globals['_ERRORREASON']._serialized_start=2840
+  _globals['_ERRORREASON']._serialized_end=2986
+  _globals['_ARTIFACTSCOPE']._serialized_start=2988
+  _globals['_ARTIFACTSCOPE']._serialized_end=3072
   _globals['_MESSAGE']._serialized_start=92
   _globals['_MESSAGE']._serialized_end=147
   _globals['_TOOLDEFINITION']._serialized_start=149
@@ -52,11 +54,21 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_BUDGETS']._serialized_start=255
   _globals['_BUDGETS']._serialized_end=388
   _globals['_INFERENCEREQUEST']._serialized_start=391
-  _globals['_INFERENCEREQUEST']._serialized_end=1167
-  _globals['_INFERENCEREQUEST_METADATAENTRY']._serialized_start=1108
-  _globals['_INFERENCEREQUEST_METADATAENTRY']._serialized_end=1167
-  _globals['_INFERENCERESPONSE']._serialized_start=1170
-  _globals['_INFERENCERESPONSE']._serialized_end=1533
-  _globals['_INFERENCESERVICE']._serialized_start=2018
-  _globals['_INFERENCESERVICE']._serialized_end=2163
+  _globals['_INFERENCEREQUEST']._serialized_end=1270
+  _globals['_INFERENCEREQUEST_METADATAENTRY']._serialized_start=1211
+  _globals['_INFERENCEREQUEST_METADATAENTRY']._serialized_end=1270
+  _globals['_INFERENCERESPONSE']._serialized_start=1273
+  _globals['_INFERENCERESPONSE']._serialized_end=1636
+  _globals['_TRANSLATIONSEGMENT']._serialized_start=1638
+  _globals['_TRANSLATIONSEGMENT']._serialized_end=1694
+  _globals['_TRANSLATIONINPUT']._serialized_start=1697
+  _globals['_TRANSLATIONINPUT']._serialized_end=1975
+  _globals['_ALIGNMENTSPAN']._serialized_start=1978
+  _globals['_ALIGNMENTSPAN']._serialized_end=2145
+  _globals['_TRANSLATEDSEGMENT']._serialized_start=2148
+  _globals['_TRANSLATEDSEGMENT']._serialized_end=2298
+  _globals['_TRANSLATIONOUTPUT']._serialized_start=2301
+  _globals['_TRANSLATIONOUTPUT']._serialized_end=2504
+  _globals['_INFERENCESERVICE']._serialized_start=3075
+  _globals['_INFERENCESERVICE']._serialized_end=3220
 # @@protoc_insertion_point(module_scope)

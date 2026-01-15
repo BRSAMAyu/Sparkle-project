@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+import 'package:sparkle/features/focus/data/services/context_service.dart';
+import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// 分心事件类型
@@ -37,6 +42,9 @@ class MindfulnessState {
     this.currentTask,
     this.exitConfirmationStep = 0,
     this.isPaused = false,
+    this.translationRequestCount = 0,
+    this.lastTranslationGranularity = 'word',
+    this.candidateActions = const [],
   });
   final bool isActive;
   final DateTime? startTime;
@@ -47,6 +55,9 @@ class MindfulnessState {
   final TaskModel? currentTask;
   final int exitConfirmationStep; // 0: 未开始, 1-3: 三重确认步骤
   final bool isPaused;
+  final int translationRequestCount; // Translation requests in this session
+  final String lastTranslationGranularity; // 'word', 'sentence', 'page'
+  final List<CandidateActionModel> candidateActions; // Predicted actions from signals pipeline
 
   MindfulnessState copyWith({
     bool? isActive,
@@ -58,6 +69,9 @@ class MindfulnessState {
     TaskModel? currentTask,
     int? exitConfirmationStep,
     bool? isPaused,
+    int? translationRequestCount,
+    String? lastTranslationGranularity,
+    List<CandidateActionModel>? candidateActions,
     bool clearTask = false,
     bool clearStartTime = false,
   }) =>
@@ -71,14 +85,19 @@ class MindfulnessState {
         currentTask: clearTask ? null : (currentTask ?? this.currentTask),
         exitConfirmationStep: exitConfirmationStep ?? this.exitConfirmationStep,
         isPaused: isPaused ?? this.isPaused,
+        translationRequestCount: translationRequestCount ?? this.translationRequestCount,
+        lastTranslationGranularity: lastTranslationGranularity ?? this.lastTranslationGranularity,
+        candidateActions: candidateActions ?? this.candidateActions,
       );
 }
 
 /// 正念模式状态管理器
 class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
-  MindfulnessNotifier(this._focusRepository) : super(const MindfulnessState());
+  MindfulnessNotifier(this._focusRepository, this._predictionService)
+      : super(const MindfulnessState());
 
   final FocusRepository _focusRepository;
+  final PredictionService _predictionService;
   Timer? _timer;
   // ignore: unused_field - used for pause tracking
   DateTime? _lastPauseTime;
@@ -185,11 +204,53 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
         // Log error but don't block exit
         debugPrint('❌ Failed to log focus session: $e');
       }
+
+      // PR-14: Trigger prediction after focus session
+      try {
+        debugPrint('🔮 Generating context envelope for prediction...');
+
+        // Generate context envelope
+        final envelope = await contextService.generateContextEnvelope(
+          focusState: state,
+          translationRequests: state.translationRequestCount,
+          translationGranularity: state.lastTranslationGranularity,
+          unknownTermsSaved: 0, // TODO: Track from translation saves
+        );
+
+        debugPrint('📊 Context: interruptions=${state.interruptionCount}, '
+            'translations=${state.translationRequestCount}, '
+            'completion=${envelope['focus']['completion']}');
+
+        // PR-15: Call prediction API and store candidates in state
+        final candidates = await _predictionService.requestPredictions(
+          userId: state.currentTask?.userId ?? 'unknown', // TODO: Get actual user ID from auth
+          contextEnvelope: envelope,
+        );
+
+        if (candidates.isNotEmpty) {
+          // Store candidates in state for UI to display
+          state = state.copyWith(candidateActions: candidates);
+          debugPrint('✨ ${candidates.length} candidates stored in state');
+        }
+      } catch (e) {
+        // Log error but don't block exit
+        debugPrint('❌ Failed to generate prediction: $e');
+      }
     }
 
     _timer?.cancel();
     _timer = null;
     state = const MindfulnessState();
+  }
+
+  /// Record translation request (called by translation widgets)
+  void recordTranslationRequest(String granularity) {
+    state = state.copyWith(
+      translationRequestCount: state.translationRequestCount + 1,
+      lastTranslationGranularity: granularity,
+    );
+    debugPrint('📝 Translation request recorded: granularity=$granularity, '
+        'total=${state.translationRequestCount}');
   }
 
   /// 切换勿扰模式
@@ -220,9 +281,16 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
   }
 }
 
+/// Prediction Service Provider
+final predictionServiceProvider = Provider<PredictionService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return PredictionService(apiClient.dio);
+});
+
 /// 正念模式 Provider
 final mindfulnessProvider =
     StateNotifierProvider<MindfulnessNotifier, MindfulnessState>((ref) {
   final focusRepository = ref.watch(focusRepositoryProvider);
-  return MindfulnessNotifier(focusRepository);
+  final predictionService = ref.watch(predictionServiceProvider);
+  return MindfulnessNotifier(focusRepository, predictionService);
 });

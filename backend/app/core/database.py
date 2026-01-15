@@ -5,14 +5,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
+from app.db.url import to_sync_database_url
 
 
 def _sync_database_url(url: str) -> str:
-    if url.startswith("postgresql+asyncpg"):
-        return url.replace("postgresql+asyncpg", "postgresql", 1)
-    if url.startswith("postgresql+psycopg"):
-        return url.replace("postgresql+psycopg", "postgresql", 1)
-    return url
+    return to_sync_database_url(url)
 
 
 SessionLocal = None
