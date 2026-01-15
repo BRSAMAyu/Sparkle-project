@@ -40,44 +40,60 @@ class KnowledgeIntegrationService:
         source_text: str,
         translation: str,
         context: str,
+        source_url: Optional[str] = None,
+        source_document_id: Optional[UUID] = None,
         language: str = "en",
         domain: Optional[str] = None,
         subject_id: Optional[int] = None,
     ) -> KnowledgeNode:
         """
-        Create a vocabulary knowledge node from a translation.
+        Create or update a vocabulary knowledge node from a translation.
 
-        The node starts in 'draft' status for user review and can be:
-        - Published to the main knowledge graph
-        - Edited before publishing
-        - Deleted if not needed
+        If the node already exists (same name), it will be linked to the user
+        and the new context will be appended.
 
         Args:
-            user_id: User who created the node
+            user_id: User who created/updated the node
             source_text: Original text (e.g., "polymorphism")
             translation: Translated text (e.g., "多态性")
             context: Context where the word appeared
+            source_url: Source URL where the word appeared
+            source_document_id: Source document ID
             language: Source language (e.g., "en", "zh")
             domain: Domain for subject linking ("cs", "math", "business", etc.)
             subject_id: Optional explicit subject ID
 
         Returns:
-            KnowledgeNode: The created draft node
+            KnowledgeNode: The created or updated node
         """
         try:
-            # Create node
+            # 1. Check if node already exists (Idempotency)
+            result = await self.db.execute(
+                select(KnowledgeNode).where(KnowledgeNode.name == source_text)
+            )
+            existing_node = result.scalar_one_or_none()
+
+            if existing_node:
+                return await self._handle_existing_vocabulary_node(
+                    existing_node, user_id, context, source_url
+                )
+
+            # 2. Create new node
+            description = self._format_vocabulary_description(
+                source_text, translation, context, language, source_url
+            )
+            
             node = KnowledgeNode(
                 id=uuid.uuid4(),
                 name=source_text,
                 name_en=source_text if language == "en" else None,
-                description=self._format_vocabulary_description(
-                    source_text, translation, context, language
-                ),
+                description=description,
                 keywords=[source_text, translation, domain] if domain else [source_text, translation],
-                importance_level=1,  # Start with lowest importance
+                importance_level=1,
                 is_seed=False,
                 source_type="translation",
-                status="draft",  # Draft status for review
+                source_file_id=source_document_id,
+                status="published",  # Active immediately (no draft)
                 subject_id=subject_id,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
@@ -93,7 +109,7 @@ class KnowledgeIntegrationService:
                 user_id=user_id,
                 node_id=node.id,
                 mastery_score=0.0,
-                is_unlocked=True,  # Automatically unlocked since user created it
+                is_unlocked=True,
                 first_unlock_at=datetime.utcnow(),
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
@@ -107,7 +123,7 @@ class KnowledgeIntegrationService:
             await self.db.commit()
             await self.db.refresh(node)
 
-            # Generate embedding asynchronously (don't block)
+            # Generate embedding asynchronously
             await self._generate_embedding_async(node.id, node.name, node.description)
 
             return node
@@ -117,12 +133,60 @@ class KnowledgeIntegrationService:
             await self.db.rollback()
             raise
 
+    async def _handle_existing_vocabulary_node(
+        self,
+        node: KnowledgeNode,
+        user_id: UUID,
+        context: str,
+        source_url: Optional[str]
+    ) -> KnowledgeNode:
+        """Handle logic when vocabulary node already exists."""
+        # 1. Ensure User Status Exists
+        result = await self.db.execute(
+            select(UserNodeStatus)
+            .where(UserNodeStatus.node_id == node.id)
+            .where(UserNodeStatus.user_id == user_id)
+        )
+        user_status = result.scalar_one_or_none()
+
+        if not user_status:
+            # User hasn't unlocked this node yet, subscribe them
+            user_status = UserNodeStatus(
+                user_id=user_id,
+                node_id=node.id,
+                mastery_score=0.0,
+                is_unlocked=True,
+                first_unlock_at=datetime.utcnow(),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            self.db.add(user_status)
+            await self._schedule_first_review(user_status)
+            logger.info(f"🔗 Linked user {user_id} to existing node {node.id}")
+
+        # 2. Append Context (if not already present)
+        if context and (not node.description or context not in node.description):
+            # Check length to prevent massive descriptions
+            if node.description and len(node.description) < 2000:
+                append_text = f"\n\n**其他场景**:\n{context}"
+                if source_url:
+                    append_text += f"\n*来源: {source_url}*"
+                
+                node.description += append_text
+                node.updated_at = datetime.utcnow()
+                logger.info(f"📝 Appended context to node {node.id}")
+        
+        await self.db.commit()
+        await self.db.refresh(node)
+        return node
+
     def _format_vocabulary_description(
         self,
         source_text: str,
         translation: str,
         context: str,
-        language: str
+        language: str,
+        source_url: Optional[str] = None
     ) -> str:
         """Format node description with translation and context."""
         description_parts = []
@@ -141,6 +205,9 @@ class KnowledgeIntegrationService:
                 f"**{source_text}**"
             )
             description_parts.append(f"\n**使用场景**:\n{highlighted_context}")
+            
+        if source_url:
+            description_parts.append(f"\n*来源: {source_url}*")
 
         # Source indicator
         description_parts.append("\n\n*此节点由翻译功能自动创建*")

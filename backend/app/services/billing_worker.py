@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.chat import TokenUsage
 from app.config import settings
+from app.db.url import to_async_database_url
 from app.core.redis_utils import resolve_redis_password
 
 class BillingWorker:
@@ -43,7 +44,7 @@ class BillingWorker:
         self.redis = redis.from_url(redis_url, password=resolved_password)
         
         # 初始化数据库引擎和会话工厂
-        self.engine = create_async_engine(db_url)
+        self.engine = create_async_engine(to_async_database_url(db_url))
         self.async_session_factory = sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )

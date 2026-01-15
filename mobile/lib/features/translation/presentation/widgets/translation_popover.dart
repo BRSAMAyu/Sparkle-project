@@ -16,6 +16,8 @@ class TranslationPopover extends ConsumerStatefulWidget {
     this.targetLang = 'zh-CN',
     this.domain = 'general',
     this.readingContext,
+    this.sourceUrl,
+    this.sourceDocumentId,
     this.onSaved,
     super.key,
   });
@@ -25,6 +27,8 @@ class TranslationPopover extends ConsumerStatefulWidget {
   final String targetLang;
   final String domain;
   final String? readingContext;
+  final String? sourceUrl;
+  final String? sourceDocumentId;
   final VoidCallback? onSaved;
 
   @override
@@ -91,6 +95,8 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         sourceText: widget.sourceText,
         translation: _result!.translation,
         context: widget.readingContext ?? widget.sourceText,
+        sourceUrl: widget.sourceUrl,
+        sourceDocumentId: widget.sourceDocumentId,
         language: widget.sourceLang,
         domain: widget.domain,
       );
@@ -134,7 +140,8 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           );
         }
       }
-    } catch (e) {
+    } on ServiceUnavailableException catch (e) {
+      // 503 - Circuit breaker open
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -142,7 +149,80 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ 保存失败: ${e.toString()}'),
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(e.message)),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: '了解',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } on RateLimitException catch (e) {
+      // 429 - Rate limited
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.speed, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(e.toString())),
+              ],
+            ),
+            backgroundColor: Colors.amber.shade700,
+            duration: Duration(seconds: e.retryAfter ?? 3),
+          ),
+        );
+      }
+    } on NetworkException catch (e) {
+      // Network errors (timeout, connection failed)
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(e.message)),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: '重试',
+              textColor: Colors.white,
+              onPressed: _saveToKnowledgeGraph,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Unexpected errors
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ 未知错误: ${e.toString()}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -325,6 +405,8 @@ void showTranslationPopover(
   String targetLang = 'zh-CN',
   String domain = 'general',
   String? readingContext,
+  String? sourceUrl,
+  String? sourceDocumentId,
   VoidCallback? onSaved,
 }) {
   showDialog(
@@ -340,6 +422,8 @@ void showTranslationPopover(
         targetLang: targetLang,
         domain: domain,
         readingContext: readingContext,
+        sourceUrl: sourceUrl,
+        sourceDocumentId: sourceDocumentId,
         onSaved: onSaved,
       ),
     ),
