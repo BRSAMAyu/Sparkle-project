@@ -259,5 +259,145 @@ def test_quality_check_with_configuration():
     assert not result.passed
 
 
+def test_quality_check_ocr_confidence():
+    """测试：OCR 置信度检测"""
+    service = DocumentService()
+
+    # 高置信度 OCR 内容
+    high_conf_chunks = [
+        VectorChunk(
+            content="清晰扫描的文本内容",
+            page_numbers=[1],
+            section_title=None,
+            ocr_confidence=0.9
+        ),
+        VectorChunk(
+            content="更多清晰内容",
+            page_numbers=[2],
+            section_title=None,
+            ocr_confidence=0.85
+        )
+    ]
+
+    result = service.check_quality(high_conf_chunks)
+    # 高置信度应该通过
+    assert result.passed
+
+    # 低置信度 OCR 内容
+    low_conf_chunks = [
+        VectorChunk(
+            content="模糊扫描的文本内容",
+            page_numbers=[1],
+            section_title=None,
+            ocr_confidence=0.3
+        ),
+        VectorChunk(
+            content="更多模糊内容",
+            page_numbers=[2],
+            section_title=None,
+            ocr_confidence=0.4
+        )
+    ]
+
+    result = service.check_quality(low_conf_chunks)
+    # 低置信度应该失败或至少有问题
+    has_low_conf_issue = any(
+        "confidence" in issue.lower() or "ocr" in issue.lower()
+        for issue in result.issues
+    )
+    assert has_low_conf_issue or not result.passed
+
+
+def test_quality_check_mixed_ocr_non_ocr():
+    """测试：混合 OCR 和非 OCR 内容"""
+    service = DocumentService()
+
+    chunks = [
+        # 非 OCR 内容（原生 PDF 文本）
+        VectorChunk(
+            content="原生 PDF 文本，高质量",
+            page_numbers=[1],
+            section_title=None,
+            ocr_confidence=None
+        ),
+        # OCR 内容
+        VectorChunk(
+            content="扫描页面的 OCR 文本",
+            page_numbers=[2],
+            section_title=None,
+            ocr_confidence=0.8
+        ),
+        # 低质量 OCR
+        VectorChunk(
+            content="低质量扫描 OCR 文本",
+            page_numbers=[3],
+            section_title=None,
+            ocr_confidence=0.6
+        )
+    ]
+
+    result = service.check_quality(chunks)
+    # 混合内容应该根据平均置信度评估
+    assert result.passed or result.score > 0.5
+
+
+def test_quality_check_ocr_threshold_config():
+    """测试：OCR 置信度阈值配置"""
+    from app.config.phase5_config import phase5_config
+
+    service = DocumentService()
+
+    # 创建刚好低于阈值的 OCR 内容
+    threshold = phase5_config.DOC_QUALITY_OCR_CONFIDENCE_THRESHOLD
+    just_below_threshold = threshold - 0.01
+
+    chunks = [
+        VectorChunk(
+            content=f"OCR 置信度刚好低于阈值 {threshold:.2f}",
+            page_numbers=[1],
+            section_title=None,
+            ocr_confidence=just_below_threshold
+        )
+    ]
+
+    result = service.check_quality(chunks)
+    # 应该报告 OCR 置信度问题
+    has_ocr_issue = any(
+        "confidence" in issue.lower() or "ocr" in issue.lower()
+        for issue in result.issues
+    )
+    assert has_ocr_issue or not result.passed
+
+
+def test_quality_metrics_integration():
+    """测试：质量检测与指标集成"""
+    service = DocumentService()
+
+    # 创建测试数据
+    chunks = [
+        VectorChunk(
+            content="测试文档内容，足够长以通过长度检查",
+            page_numbers=[1],
+            section_title=None,
+            ocr_confidence=0.9
+        )
+    ]
+
+    result = service.check_quality(chunks)
+
+    # 验证返回结果结构
+    assert hasattr(result, "passed")
+    assert hasattr(result, "score")
+    assert hasattr(result, "issues")
+    assert isinstance(result.issues, list)
+
+    # 验证 score 在 0-1 范围内
+    assert 0 <= result.score <= 1
+
+    # 如果是通过的，issues 应该为空
+    if result.passed:
+        assert len(result.issues) == 0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

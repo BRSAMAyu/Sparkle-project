@@ -9,10 +9,14 @@ import json
 import time
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, asdict
+from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
+from app.config.settings import settings
 from app.services.llm_service import llm_service
 from app.core.cache import cache_service
+from app.services.vocabulary_service import vocabulary_service
 
 
 @dataclass
@@ -39,6 +43,7 @@ class TranslationResult:
     model_id: str
     cache_hit: bool
     latency_ms: int
+    recommendation: Optional[Dict[str, Any]] = None
 
 
 class TranslationService:
@@ -68,7 +73,11 @@ class TranslationService:
         domain: str = "general",
         style: str = "natural",
         glossary_id: Optional[str] = None,
-        timeout: float = 5.0
+        timeout: float = 5.0,
+        # v2 Signals
+        user_id: Optional[UUID] = None,
+        fingerprint: Optional[str] = None,
+        db: Optional[AsyncSession] = None
     ) -> TranslationResult:
         """
         Translate text segments with caching and terminology support.
@@ -81,11 +90,22 @@ class TranslationService:
             style: Translation style ("concise", "literal", "natural")
             glossary_id: Optional glossary for terminology consistency
             timeout: Max time per segment (default: 5.0s)
+            user_id: User ID for quota tracking
+            fingerprint: Content hash for signal tracking
+            db: Database session for quota check
 
         Returns:
             TranslationResult with translated segments
         """
         start_time = time.time()
+
+        # 0. Evaluate signals (Async, non-blocking for translation)
+        recommendation = None
+        if user_id and db:
+            try:
+                recommendation = await self._evaluate_signals(user_id, fingerprint, db)
+            except Exception as e:
+                logger.warning(f"Signal evaluation failed: {e}")
 
         # 1. Check L2 cache (by segment hash)
         cache_key = self._generate_cache_key(
@@ -102,7 +122,8 @@ class TranslationService:
                 provider="cache",
                 model_id="cached",
                 cache_hit=True,
-                latency_ms=int((time.time() - start_time) * 1000)
+                latency_ms=int((time.time() - start_time) * 1000),
+                recommendation=recommendation
             )
 
         # 2. Load glossary if specified
@@ -144,7 +165,8 @@ class TranslationService:
             provider="llm",  # Or specific provider
             model_id=llm_service.chat_model,
             cache_hit=False,
-            latency_ms=int((time.time() - start_time) * 1000)
+            latency_ms=int((time.time() - start_time) * 1000),
+            recommendation=recommendation
         )
 
         # Cache for 24 hours
@@ -158,6 +180,46 @@ class TranslationService:
         )
 
         return result
+
+    async def _evaluate_signals(
+        self, 
+        user_id: UUID, 
+        fingerprint: Optional[str], 
+        db: AsyncSession
+    ) -> Dict[str, Any]:
+        """
+        Evaluate user signals to generate recommendations.
+        
+        Rules:
+        1. Daily Quota: Max cards/day (configurable).
+        2. Repetition: If fingerprint seen > 1 times in 1 hour -> Suggest card.
+        """
+        daily_limit = settings.TRANSLATION_DAILY_CARD_LIMIT
+        
+        # 1. Check Quota (Fast DB query)
+        created_today = await vocabulary_service.get_today_creation_count(db, user_id)
+        quota_remaining = max(0, daily_limit - created_today)
+        
+        should_create = False
+        reason = None
+        
+        if quota_remaining > 0 and fingerprint:
+            # 2. Check Repetition (Redis)
+            # Key: translation:signal:freq:{user_id}:{fingerprint}
+            # TTL: 1 hour (short term memory)
+            freq_key = f"translation:signal:freq:{user_id}:{fingerprint}"
+            count = await cache_service.incr(freq_key)
+            await cache_service.expire(freq_key, 3600) 
+            
+            if count >= 2:
+                should_create = True
+                reason = "repeated_query"
+        
+        return {
+            "should_create_card": should_create,
+            "reason": reason,
+            "daily_quota_remaining": quota_remaining
+        }
 
     async def _translate_segment(
         self,

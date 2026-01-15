@@ -34,6 +34,7 @@ dev-preflight:
 	@if [ -d postgres_data ]; then \
 		echo "ℹ️  Detected existing postgres_data. If auth fails, run 'make db-reset'."; \
 	fi
+	@python backend/scripts/check_shadowing.py
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
 sync-db: db-migrate db-dump db-sqlc

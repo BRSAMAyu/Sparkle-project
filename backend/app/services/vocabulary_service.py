@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, func
 
 from app.models.vocabulary import WordBook, DictionaryEntry
 from app.services.llm_service import llm_service
@@ -113,6 +113,20 @@ class VocabularyService:
         
         result = await db.execute(stmt)
         return result.scalars().all()
+
+    @staticmethod
+    async def get_today_creation_count(db: AsyncSession, user_id: UUID) -> int:
+        """Get number of words added today (UTC)"""
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        stmt = select(func.count()).select_from(WordBook).where(
+            and_(
+                WordBook.user_id == user_id,
+                WordBook.created_at >= today_start
+            )
+        )
+        result = await db.execute(stmt)
+        return result.scalar() or 0
 
     @staticmethod
     async def record_review(db: AsyncSession, word_id: UUID, success: bool):

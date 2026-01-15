@@ -103,6 +103,9 @@ class Settings(BaseSettings):
     INTERVENTION_QUIET_HOURS_END: str = "07:00"
     INTERVENTION_BUDGET_TTL_SECONDS: int = 86400
 
+    # Translation Service
+    TRANSLATION_DAILY_CARD_LIMIT: int = 10
+
     # Event Retention
     EVENT_RETENTION_DAYS: int = 30
     STATE_RETENTION_DAYS: int = 30
