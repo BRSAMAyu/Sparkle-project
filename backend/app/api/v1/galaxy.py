@@ -577,7 +577,7 @@ async def get_nodes_in_viewport(
     # Reusing GalaxyGraphResponse for consistency.
     
     # Construct minimal response
-    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo
+    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo, NodeWithStatus
     
     mapped_nodes = []
     for node in nodes:

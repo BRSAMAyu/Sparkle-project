@@ -93,7 +93,7 @@ class KnowledgeIntegrationService:
                 is_seed=False,
                 source_type="translation",
                 source_file_id=source_document_id,
-                status="published",  # Active immediately (no draft)
+                status="draft",  # Allow user review before publishing
                 subject_id=subject_id,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
