@@ -411,7 +411,7 @@ ENTERPRISE_TIER = 1_000_000
 
 如有问题或需要帮助:
 
-1. 查看 [安全防护指南.md](docs/安全防护指南.md)
+1. 查看 [安全防护指南.md](../安全防护指南.md)
 2. 运行 `python backend/scripts/setup_security.py --test`
 3. 检查监控指标: http://localhost:8000/metrics
 4. 查看日志: `docker-compose logs grpc-server`

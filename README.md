@@ -87,19 +87,15 @@ Sparkle 是一款帮助大学生提升学习效率的 AI 助手应用，通过�
 ```
 sparkle/
 ├── backend/
-│   ├── gateway/          # Go Gateway服务 (WebSocket/HTTP入口)
-│   │   ├── cmd/         # 服务器入口
-│   │   ├── internal/    # 内部包(handler/agent/db等)
-│   │   └── go.mod       # Go模块
-│   └── app/             # Python gRPC服务 (AI智能引擎)
-├── mobile/              # Flutter移动端
-├── proto/               # Protobuf接口定义
-├── docs/                # 项目文档
-├── ARCHITECTURE.md      # 项目技术架构
-├── MODULES.md           # 功能模块详解
-├── COMMUNITY_FEATURES.md # 社群功能详解
-├── API_REFERENCE.md     # API接口参考
-└── DEVELOPMENT_GUIDE.md # 开发指南
+│   ├── gateway/          # Go Gateway服务 (WebSocket/HTTP 入口)
+│   ├── app/              # Python gRPC服务 (AI智能引擎)
+│   ├── orchestration/    # AI 工作流编排 (LangGraph)
+│   └── workers/          # Celery 异步任务处理
+├── mobile/               # Flutter 移动端 (Riverpod + Clean Architecture)
+├── proto/                # Protobuf 接口定义 (Go/Python/Dart 共享)
+├── docs/                 # 全量项目文档体系 (详见文档索引)
+├── k8s/                  # 云原生部署配置
+└── scripts/              # 自动化运维工具
 ```
 
 ## 🚀 快速开始
@@ -158,27 +154,19 @@ flutter run
 
 ## 📚 项目文档
 
-### 📖 文档导航（新版）
+### 📖 文档导航
 
-本项目已建立完整的文档体系，所有文档已按功能和阶段分类整理：
+本项目已建立全面且结构化的文档体系，涵盖从架构设计到生产部署的各个维度。
 
-```
-docs/
-├── 00_项目概览/              # 项目总体介绍和技术架构
-├── 01_核心模块文档/          # 各功能模块的详细说明
-├── 02_技术设计文档/          # 技术架构和接口设计
-├── 03_重构与优化报告/        # 重构过程和优化成果
-├── 04_功能实现指南/          # 功能实现的具体指导
-├── 05_项目历史与里程碑/      # 项目演进历程
-├── 06_安全与质量报告/        # 安全修复和配置说明
-└── 07_项目参考/              # 补充参考资料
-```
+**核心入口：**
+- 🎯 **[docs/08_文档索引.md](docs/08_文档索引.md)** - **所有文档的完整指南（推荐从这里开始）**
+- 🧠 **[docs/09_Cognitive_Nexus/](docs/09_Cognitive_Nexus/)** - 认知引擎与用户画像核心设计
+- ⚡ **[docs/03_重构与优化报告/](docs/03_重构与优化报告/)** - 包含最新的 Galaxy 性能优化与 UI 修复报告
 
-**快速开始：**
-- 🎯 **新手入门**：阅读 [docs/08_文档索引.md](docs/08_文档索引.md) 查看完整文档导航
-- 🚀 **快速开发**：查看 [docs/00_项目概览/README.md](docs/00_项目概览/README.md) 了解项目概况
-- 🏗️ **技术架构**：阅读 [docs/00_项目概览/02_技术架构.md](docs/00_项目概览/02_技术架构.md) 理解系统架构
-- 🧩 **功能模块**：查看 [docs/01_核心模块文档/01_模块总览.md](docs/01_核心模块文档/01_模块总览.md) 了解功能划分
+**按需查阅：**
+- 🚀 **[docs/00_项目概览/README.md](docs/00_项目概览/README.md)** - 快速上手与技术架构
+- 🏗️ **[docs/02_技术设计文档/01_技术白皮书.md](docs/02_技术设计文档/01_技术白皮书.md)** - 深度理解系统设计
+- 🧩 **[docs/01_核心模块文档/01_模块总览.md](docs/01_核心模块文档/01_模块总览.md)** - 核心功能模块实现细节
 
 **按角色查找：**
 - **后端开发者**：从 [技术架构](docs/00_项目概览/02_技术架构.md) → [模块总览](docs/01_核心模块文档/01_模块总览.md) → [API参考](docs/02_技术设计文档/03_API参考.md) → [深度技术讲解](docs/深度技术讲解教案_完整版.md)
@@ -226,13 +214,11 @@ docs/
 
 ## � 最近更新
 
-### ✅ Go后端重构 & Flutter集成完成
-- **架构升级**：从 Python 单体转为 Go + Python 混合架构，显著提升高并发长连接性能。
-- **Go Gateway**：基于 Gin + Gorilla WebSocket 的高性能网关，支持协议转换与鉴权。
-- **Python Agent**：解耦 AI 推理，通过 gRPC 提供 StreamChat 流式服务。
-- **实时状态可视化**：Flutter 端实时显示“思考中”、“正在搜索”、“正在执行工具”等 AI 状态。
-- **对话系统增强**：支持会话恢复（History Loading）、自动重连、打字机效果优化。
-- **认证深度集成**：对话模块与 Auth Provider 完整打通，支持真实用户信息传递。
+### ✅ Cognitive Nexus & Galaxy 优化 (2026.01)
+- **认知引擎升级**：实现基于用户画像的 Luminous Cognition 系统，增强 AI 的个性化响应。
+- **知识星图分层优化**：Galaxy 模块引入分层渲染与动态加载，大幅降低低端机型内存占用。
+- **UI/UX 深度打磨**：完成全方位的 UI 修复与视觉一致性优化（Design System V2）。
+- **WebSocket 稳定性**：修复高并发下的安全漏洞与长连接溢出风险。
 
 ### ✅ 已完成功能
 - ✅ 知识星图功能（遗忘曲线、知识点拓展、向量搜索）

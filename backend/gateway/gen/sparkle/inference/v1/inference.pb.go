@@ -251,6 +251,58 @@ func (ErrorReason) EnumDescriptor() ([]byte, []int) {
 	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{3}
 }
 
+type ArtifactScope int32
+
+const (
+	ArtifactScope_ARTIFACT_SCOPE_UNSPECIFIED ArtifactScope = 0
+	ArtifactScope_PRIVATE                    ArtifactScope = 1
+	ArtifactScope_SHARED                     ArtifactScope = 2
+	ArtifactScope_PUBLIC                     ArtifactScope = 3
+)
+
+// Enum value maps for ArtifactScope.
+var (
+	ArtifactScope_name = map[int32]string{
+		0: "ARTIFACT_SCOPE_UNSPECIFIED",
+		1: "PRIVATE",
+		2: "SHARED",
+		3: "PUBLIC",
+	}
+	ArtifactScope_value = map[string]int32{
+		"ARTIFACT_SCOPE_UNSPECIFIED": 0,
+		"PRIVATE":                    1,
+		"SHARED":                     2,
+		"PUBLIC":                     3,
+	}
+)
+
+func (x ArtifactScope) Enum() *ArtifactScope {
+	p := new(ArtifactScope)
+	*p = x
+	return p
+}
+
+func (x ArtifactScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ArtifactScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_sparkle_inference_v1_inference_proto_enumTypes[4].Descriptor()
+}
+
+func (ArtifactScope) Type() protoreflect.EnumType {
+	return &file_sparkle_inference_v1_inference_proto_enumTypes[4]
+}
+
+func (x ArtifactScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ArtifactScope.Descriptor instead.
+func (ArtifactScope) EnumDescriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{4}
+}
+
 type Message struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
@@ -439,6 +491,8 @@ type InferenceRequest struct {
 	Tools          []*ToolDefinition      `protobuf:"bytes,12,rep,name=tools,proto3" json:"tools,omitempty"`
 	ResponseFormat ResponseFormat         `protobuf:"varint,13,opt,name=response_format,json=responseFormat,proto3,enum=sparkle.inference.v1.ResponseFormat" json:"response_format,omitempty"`
 	Metadata       map[string]string      `protobuf:"bytes,14,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	FileIds        []string               `protobuf:"bytes,15,rep,name=file_ids,json=fileIds,proto3" json:"file_ids,omitempty"`
+	ArtifactScope  ArtifactScope          `protobuf:"varint,16,opt,name=artifact_scope,json=artifactScope,proto3,enum=sparkle.inference.v1.ArtifactScope" json:"artifact_scope,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -571,6 +625,20 @@ func (x *InferenceRequest) GetMetadata() map[string]string {
 	return nil
 }
 
+func (x *InferenceRequest) GetFileIds() []string {
+	if x != nil {
+		return x.FileIds
+	}
+	return nil
+}
+
+func (x *InferenceRequest) GetArtifactScope() ArtifactScope {
+	if x != nil {
+		return x.ArtifactScope
+	}
+	return ArtifactScope_ARTIFACT_SCOPE_UNSPECIFIED
+}
+
 type InferenceResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	RequestId        string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -687,6 +755,370 @@ func (x *InferenceResponse) GetCompletionTokens() uint32 {
 	return 0
 }
 
+type TranslationSegment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`     // Segment ID for tracking ("s1", "s2", ...)
+	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"` // Text to translate
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TranslationSegment) Reset() {
+	*x = TranslationSegment{}
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TranslationSegment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TranslationSegment) ProtoMessage() {}
+
+func (x *TranslationSegment) ProtoReflect() protoreflect.Message {
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TranslationSegment.ProtoReflect.Descriptor instead.
+func (*TranslationSegment) Descriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TranslationSegment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TranslationSegment) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+type TranslationInput struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Segments         []*TranslationSegment  `protobuf:"bytes,1,rep,name=segments,proto3" json:"segments,omitempty"`
+	SourceLang       string                 `protobuf:"bytes,2,opt,name=source_lang,json=sourceLang,proto3" json:"source_lang,omitempty"`                   // Source language code ("en", "zh-CN")
+	TargetLang       string                 `protobuf:"bytes,3,opt,name=target_lang,json=targetLang,proto3" json:"target_lang,omitempty"`                   // Target language code ("en", "zh-CN")
+	Domain           string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`                                             // Domain: "cs", "math", "business", "general"
+	Style            string                 `protobuf:"bytes,5,opt,name=style,proto3" json:"style,omitempty"`                                               // Style: "concise", "literal", "natural"
+	GlossaryId       string                 `protobuf:"bytes,6,opt,name=glossary_id,json=glossaryId,proto3" json:"glossary_id,omitempty"`                   // Optional glossary for terminology
+	SegmenterVersion string                 `protobuf:"bytes,7,opt,name=segmenter_version,json=segmenterVersion,proto3" json:"segmenter_version,omitempty"` // Segmenter version for cache key stability
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TranslationInput) Reset() {
+	*x = TranslationInput{}
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TranslationInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TranslationInput) ProtoMessage() {}
+
+func (x *TranslationInput) ProtoReflect() protoreflect.Message {
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TranslationInput.ProtoReflect.Descriptor instead.
+func (*TranslationInput) Descriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *TranslationInput) GetSegments() []*TranslationSegment {
+	if x != nil {
+		return x.Segments
+	}
+	return nil
+}
+
+func (x *TranslationInput) GetSourceLang() string {
+	if x != nil {
+		return x.SourceLang
+	}
+	return ""
+}
+
+func (x *TranslationInput) GetTargetLang() string {
+	if x != nil {
+		return x.TargetLang
+	}
+	return ""
+}
+
+func (x *TranslationInput) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *TranslationInput) GetStyle() string {
+	if x != nil {
+		return x.Style
+	}
+	return ""
+}
+
+func (x *TranslationInput) GetGlossaryId() string {
+	if x != nil {
+		return x.GlossaryId
+	}
+	return ""
+}
+
+func (x *TranslationInput) GetSegmenterVersion() string {
+	if x != nil {
+		return x.SegmenterVersion
+	}
+	return ""
+}
+
+type AlignmentSpan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceStart   int32                  `protobuf:"varint,1,opt,name=source_start,json=sourceStart,proto3" json:"source_start,omitempty"` // Source text start position
+	SourceEnd     int32                  `protobuf:"varint,2,opt,name=source_end,json=sourceEnd,proto3" json:"source_end,omitempty"`       // Source text end position
+	TargetStart   int32                  `protobuf:"varint,3,opt,name=target_start,json=targetStart,proto3" json:"target_start,omitempty"` // Target text start position
+	TargetEnd     int32                  `protobuf:"varint,4,opt,name=target_end,json=targetEnd,proto3" json:"target_end,omitempty"`       // Target text end position
+	Type          string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`                                   // Span type: "phrase", "term", "sentence"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AlignmentSpan) Reset() {
+	*x = AlignmentSpan{}
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AlignmentSpan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AlignmentSpan) ProtoMessage() {}
+
+func (x *AlignmentSpan) ProtoReflect() protoreflect.Message {
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AlignmentSpan.ProtoReflect.Descriptor instead.
+func (*AlignmentSpan) Descriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AlignmentSpan) GetSourceStart() int32 {
+	if x != nil {
+		return x.SourceStart
+	}
+	return 0
+}
+
+func (x *AlignmentSpan) GetSourceEnd() int32 {
+	if x != nil {
+		return x.SourceEnd
+	}
+	return 0
+}
+
+func (x *AlignmentSpan) GetTargetStart() int32 {
+	if x != nil {
+		return x.TargetStart
+	}
+	return 0
+}
+
+func (x *AlignmentSpan) GetTargetEnd() int32 {
+	if x != nil {
+		return x.TargetEnd
+	}
+	return 0
+}
+
+func (x *AlignmentSpan) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+type TranslatedSegment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                   // Segment ID matching input
+	Translation   string                 `protobuf:"bytes,2,opt,name=translation,proto3" json:"translation,omitempty"` // Translated text
+	Notes         []string               `protobuf:"bytes,3,rep,name=notes,proto3" json:"notes,omitempty"`             // Terminology notes
+	Spans         []*AlignmentSpan       `protobuf:"bytes,4,rep,name=spans,proto3" json:"spans,omitempty"`             // Optional phrase alignment
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TranslatedSegment) Reset() {
+	*x = TranslatedSegment{}
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TranslatedSegment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TranslatedSegment) ProtoMessage() {}
+
+func (x *TranslatedSegment) ProtoReflect() protoreflect.Message {
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TranslatedSegment.ProtoReflect.Descriptor instead.
+func (*TranslatedSegment) Descriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TranslatedSegment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TranslatedSegment) GetTranslation() string {
+	if x != nil {
+		return x.Translation
+	}
+	return ""
+}
+
+func (x *TranslatedSegment) GetNotes() []string {
+	if x != nil {
+		return x.Notes
+	}
+	return nil
+}
+
+func (x *TranslatedSegment) GetSpans() []*AlignmentSpan {
+	if x != nil {
+		return x.Spans
+	}
+	return nil
+}
+
+type TranslationOutput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Segments      []*TranslatedSegment   `protobuf:"bytes,1,rep,name=segments,proto3" json:"segments,omitempty"`
+	Provider      string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`                     // Translation provider
+	ModelId       string                 `protobuf:"bytes,3,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`        // Model used
+	CacheHit      bool                   `protobuf:"varint,4,opt,name=cache_hit,json=cacheHit,proto3" json:"cache_hit,omitempty"`    // Whether result from cache
+	LatencyMs     int32                  `protobuf:"varint,5,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"` // Total latency in milliseconds
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TranslationOutput) Reset() {
+	*x = TranslationOutput{}
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TranslationOutput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TranslationOutput) ProtoMessage() {}
+
+func (x *TranslationOutput) ProtoReflect() protoreflect.Message {
+	mi := &file_sparkle_inference_v1_inference_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TranslationOutput.ProtoReflect.Descriptor instead.
+func (*TranslationOutput) Descriptor() ([]byte, []int) {
+	return file_sparkle_inference_v1_inference_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TranslationOutput) GetSegments() []*TranslatedSegment {
+	if x != nil {
+		return x.Segments
+	}
+	return nil
+}
+
+func (x *TranslationOutput) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *TranslationOutput) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *TranslationOutput) GetCacheHit() bool {
+	if x != nil {
+		return x.CacheHit
+	}
+	return false
+}
+
+func (x *TranslationOutput) GetLatencyMs() int32 {
+	if x != nil {
+		return x.LatencyMs
+	}
+	return 0
+}
+
 var File_sparkle_inference_v1_inference_proto protoreflect.FileDescriptor
 
 const file_sparkle_inference_v1_inference_proto_rawDesc = "" +
@@ -703,7 +1135,7 @@ const file_sparkle_inference_v1_inference_proto_rawDesc = "" +
 	"\aBudgets\x12*\n" +
 	"\x11max_output_tokens\x18\x01 \x01(\rR\x0fmaxOutputTokens\x12(\n" +
 	"\x10max_input_tokens\x18\x02 \x01(\rR\x0emaxInputTokens\x12$\n" +
-	"\x0emax_cost_level\x18\x03 \x01(\tR\fmaxCostLevel\"\x88\x06\n" +
+	"\x0emax_cost_level\x18\x03 \x01(\tR\fmaxCostLevel\"\xef\x06\n" +
 	"\x10InferenceRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
@@ -720,7 +1152,9 @@ const file_sparkle_inference_v1_inference_proto_rawDesc = "" +
 	"\bmessages\x18\v \x03(\v2\x1d.sparkle.inference.v1.MessageR\bmessages\x12:\n" +
 	"\x05tools\x18\f \x03(\v2$.sparkle.inference.v1.ToolDefinitionR\x05tools\x12M\n" +
 	"\x0fresponse_format\x18\r \x01(\x0e2$.sparkle.inference.v1.ResponseFormatR\x0eresponseFormat\x12P\n" +
-	"\bmetadata\x18\x0e \x03(\v24.sparkle.inference.v1.InferenceRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x0e \x03(\v24.sparkle.inference.v1.InferenceRequest.MetadataEntryR\bmetadata\x12\x19\n" +
+	"\bfile_ids\x18\x0f \x03(\tR\afileIds\x12J\n" +
+	"\x0eartifact_scope\x18\x10 \x01(\x0e2#.sparkle.inference.v1.ArtifactScopeR\rartifactScope\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xeb\x02\n" +
@@ -736,7 +1170,41 @@ const file_sparkle_inference_v1_inference_proto_rawDesc = "" +
 	"\rerror_message\x18\b \x01(\tR\ferrorMessage\x12#\n" +
 	"\rprompt_tokens\x18\t \x01(\rR\fpromptTokens\x12+\n" +
 	"\x11completion_tokens\x18\n" +
-	" \x01(\rR\x10completionTokens*\xbe\x01\n" +
+	" \x01(\rR\x10completionTokens\"8\n" +
+	"\x12TranslationSegment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\x96\x02\n" +
+	"\x10TranslationInput\x12D\n" +
+	"\bsegments\x18\x01 \x03(\v2(.sparkle.inference.v1.TranslationSegmentR\bsegments\x12\x1f\n" +
+	"\vsource_lang\x18\x02 \x01(\tR\n" +
+	"sourceLang\x12\x1f\n" +
+	"\vtarget_lang\x18\x03 \x01(\tR\n" +
+	"targetLang\x12\x16\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12\x14\n" +
+	"\x05style\x18\x05 \x01(\tR\x05style\x12\x1f\n" +
+	"\vglossary_id\x18\x06 \x01(\tR\n" +
+	"glossaryId\x12+\n" +
+	"\x11segmenter_version\x18\a \x01(\tR\x10segmenterVersion\"\xa7\x01\n" +
+	"\rAlignmentSpan\x12!\n" +
+	"\fsource_start\x18\x01 \x01(\x05R\vsourceStart\x12\x1d\n" +
+	"\n" +
+	"source_end\x18\x02 \x01(\x05R\tsourceEnd\x12!\n" +
+	"\ftarget_start\x18\x03 \x01(\x05R\vtargetStart\x12\x1d\n" +
+	"\n" +
+	"target_end\x18\x04 \x01(\x05R\ttargetEnd\x12\x12\n" +
+	"\x04type\x18\x05 \x01(\tR\x04type\"\x96\x01\n" +
+	"\x11TranslatedSegment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
+	"\vtranslation\x18\x02 \x01(\tR\vtranslation\x12\x14\n" +
+	"\x05notes\x18\x03 \x03(\tR\x05notes\x129\n" +
+	"\x05spans\x18\x04 \x03(\v2#.sparkle.inference.v1.AlignmentSpanR\x05spans\"\xcb\x01\n" +
+	"\x11TranslationOutput\x12C\n" +
+	"\bsegments\x18\x01 \x03(\v2'.sparkle.inference.v1.TranslatedSegmentR\bsegments\x12\x1a\n" +
+	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x19\n" +
+	"\bmodel_id\x18\x03 \x01(\tR\amodelId\x12\x1b\n" +
+	"\tcache_hit\x18\x04 \x01(\bR\bcacheHit\x12\x1d\n" +
+	"\n" +
+	"latency_ms\x18\x05 \x01(\x05R\tlatencyMs*\xbe\x01\n" +
 	"\bTaskType\x12\x19\n" +
 	"\x15TASK_TYPE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fSHORT_INFERENCE\x10\x01\x12\r\n" +
@@ -764,7 +1232,14 @@ const file_sparkle_inference_v1_inference_proto_rawDesc = "" +
 	"\x14PROVIDER_UNAVAILABLE\x10\x02\x12\x14\n" +
 	"\x10SCHEMA_VIOLATION\x10\x03\x12\x14\n" +
 	"\x10BUDGET_EXHAUSTED\x10\x04\x12\v\n" +
-	"\aTIMEOUT\x10\x052\x91\x01\n" +
+	"\aTIMEOUT\x10\x05*T\n" +
+	"\rArtifactScope\x12\x1e\n" +
+	"\x1aARTIFACT_SCOPE_UNSPECIFIED\x10\x00\x12\v\n" +
+	"\aPRIVATE\x10\x01\x12\n" +
+	"\n" +
+	"\x06SHARED\x10\x02\x12\n" +
+	"\n" +
+	"\x06PUBLIC\x10\x032\x91\x01\n" +
 	"\x10InferenceService\x12}\n" +
 	"\fRunInference\x12&.sparkle.inference.v1.InferenceRequest\x1a'.sparkle.inference.v1.InferenceResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/inference:runBAZ?github.com/sparkle/gateway/gen/sparkle/inference/v1;inferencev1b\x06proto3"
 
@@ -780,36 +1255,46 @@ func file_sparkle_inference_v1_inference_proto_rawDescGZIP() []byte {
 	return file_sparkle_inference_v1_inference_proto_rawDescData
 }
 
-var file_sparkle_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_sparkle_inference_v1_inference_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_sparkle_inference_v1_inference_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_sparkle_inference_v1_inference_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_sparkle_inference_v1_inference_proto_goTypes = []any{
-	(TaskType)(0),             // 0: sparkle.inference.v1.TaskType
-	(Priority)(0),             // 1: sparkle.inference.v1.Priority
-	(ResponseFormat)(0),       // 2: sparkle.inference.v1.ResponseFormat
-	(ErrorReason)(0),          // 3: sparkle.inference.v1.ErrorReason
-	(*Message)(nil),           // 4: sparkle.inference.v1.Message
-	(*ToolDefinition)(nil),    // 5: sparkle.inference.v1.ToolDefinition
-	(*Budgets)(nil),           // 6: sparkle.inference.v1.Budgets
-	(*InferenceRequest)(nil),  // 7: sparkle.inference.v1.InferenceRequest
-	(*InferenceResponse)(nil), // 8: sparkle.inference.v1.InferenceResponse
-	nil,                       // 9: sparkle.inference.v1.InferenceRequest.MetadataEntry
+	(TaskType)(0),              // 0: sparkle.inference.v1.TaskType
+	(Priority)(0),              // 1: sparkle.inference.v1.Priority
+	(ResponseFormat)(0),        // 2: sparkle.inference.v1.ResponseFormat
+	(ErrorReason)(0),           // 3: sparkle.inference.v1.ErrorReason
+	(ArtifactScope)(0),         // 4: sparkle.inference.v1.ArtifactScope
+	(*Message)(nil),            // 5: sparkle.inference.v1.Message
+	(*ToolDefinition)(nil),     // 6: sparkle.inference.v1.ToolDefinition
+	(*Budgets)(nil),            // 7: sparkle.inference.v1.Budgets
+	(*InferenceRequest)(nil),   // 8: sparkle.inference.v1.InferenceRequest
+	(*InferenceResponse)(nil),  // 9: sparkle.inference.v1.InferenceResponse
+	(*TranslationSegment)(nil), // 10: sparkle.inference.v1.TranslationSegment
+	(*TranslationInput)(nil),   // 11: sparkle.inference.v1.TranslationInput
+	(*AlignmentSpan)(nil),      // 12: sparkle.inference.v1.AlignmentSpan
+	(*TranslatedSegment)(nil),  // 13: sparkle.inference.v1.TranslatedSegment
+	(*TranslationOutput)(nil),  // 14: sparkle.inference.v1.TranslationOutput
+	nil,                        // 15: sparkle.inference.v1.InferenceRequest.MetadataEntry
 }
 var file_sparkle_inference_v1_inference_proto_depIdxs = []int32{
-	0, // 0: sparkle.inference.v1.InferenceRequest.task_type:type_name -> sparkle.inference.v1.TaskType
-	1, // 1: sparkle.inference.v1.InferenceRequest.priority:type_name -> sparkle.inference.v1.Priority
-	6, // 2: sparkle.inference.v1.InferenceRequest.budgets:type_name -> sparkle.inference.v1.Budgets
-	4, // 3: sparkle.inference.v1.InferenceRequest.messages:type_name -> sparkle.inference.v1.Message
-	5, // 4: sparkle.inference.v1.InferenceRequest.tools:type_name -> sparkle.inference.v1.ToolDefinition
-	2, // 5: sparkle.inference.v1.InferenceRequest.response_format:type_name -> sparkle.inference.v1.ResponseFormat
-	9, // 6: sparkle.inference.v1.InferenceRequest.metadata:type_name -> sparkle.inference.v1.InferenceRequest.MetadataEntry
-	3, // 7: sparkle.inference.v1.InferenceResponse.error_reason:type_name -> sparkle.inference.v1.ErrorReason
-	7, // 8: sparkle.inference.v1.InferenceService.RunInference:input_type -> sparkle.inference.v1.InferenceRequest
-	8, // 9: sparkle.inference.v1.InferenceService.RunInference:output_type -> sparkle.inference.v1.InferenceResponse
-	9, // [9:10] is the sub-list for method output_type
-	8, // [8:9] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	0,  // 0: sparkle.inference.v1.InferenceRequest.task_type:type_name -> sparkle.inference.v1.TaskType
+	1,  // 1: sparkle.inference.v1.InferenceRequest.priority:type_name -> sparkle.inference.v1.Priority
+	7,  // 2: sparkle.inference.v1.InferenceRequest.budgets:type_name -> sparkle.inference.v1.Budgets
+	5,  // 3: sparkle.inference.v1.InferenceRequest.messages:type_name -> sparkle.inference.v1.Message
+	6,  // 4: sparkle.inference.v1.InferenceRequest.tools:type_name -> sparkle.inference.v1.ToolDefinition
+	2,  // 5: sparkle.inference.v1.InferenceRequest.response_format:type_name -> sparkle.inference.v1.ResponseFormat
+	15, // 6: sparkle.inference.v1.InferenceRequest.metadata:type_name -> sparkle.inference.v1.InferenceRequest.MetadataEntry
+	4,  // 7: sparkle.inference.v1.InferenceRequest.artifact_scope:type_name -> sparkle.inference.v1.ArtifactScope
+	3,  // 8: sparkle.inference.v1.InferenceResponse.error_reason:type_name -> sparkle.inference.v1.ErrorReason
+	10, // 9: sparkle.inference.v1.TranslationInput.segments:type_name -> sparkle.inference.v1.TranslationSegment
+	12, // 10: sparkle.inference.v1.TranslatedSegment.spans:type_name -> sparkle.inference.v1.AlignmentSpan
+	13, // 11: sparkle.inference.v1.TranslationOutput.segments:type_name -> sparkle.inference.v1.TranslatedSegment
+	8,  // 12: sparkle.inference.v1.InferenceService.RunInference:input_type -> sparkle.inference.v1.InferenceRequest
+	9,  // 13: sparkle.inference.v1.InferenceService.RunInference:output_type -> sparkle.inference.v1.InferenceResponse
+	13, // [13:14] is the sub-list for method output_type
+	12, // [12:13] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_sparkle_inference_v1_inference_proto_init() }
@@ -822,8 +1307,8 @@ func file_sparkle_inference_v1_inference_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_sparkle_inference_v1_inference_proto_rawDesc), len(file_sparkle_inference_v1_inference_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   6,
+			NumEnums:      5,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
