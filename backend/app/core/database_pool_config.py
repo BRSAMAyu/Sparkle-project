@@ -7,9 +7,11 @@ PostgreSQL Connection Pool Configuration - 连接池优化
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.pool import QueuePool
 from loguru import logger
+import ssl
 from sqlalchemy.engine import make_url
 
 from app.config import settings
+from app.db.url import to_async_database_url
 
 
 def create_optimized_engine() -> AsyncEngine:
@@ -70,12 +72,15 @@ def create_optimized_engine() -> AsyncEngine:
         **pool_config
     }
 
-    db_url = settings.DATABASE_URL
-    if db_url.startswith("postgresql+asyncpg"):
-        parsed = make_url(db_url)
+    db_url = to_async_database_url(settings.DATABASE_URL)
+    parsed = make_url(db_url)
+    if parsed.drivername.startswith("postgresql+asyncpg"):
         query = dict(parsed.query)
         sslmode = query.pop("sslmode", None)
-        if sslmode == "disable":
+        sslrootcert = query.pop("sslrootcert", None)
+        if sslrootcert:
+            engine_config["connect_args"]["ssl"] = ssl.create_default_context(cafile=sslrootcert)
+        elif sslmode == "disable":
             engine_config["connect_args"]["ssl"] = False
         elif sslmode in ("require", "verify-ca", "verify-full"):
             engine_config["connect_args"]["ssl"] = True

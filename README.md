@@ -103,6 +103,9 @@ sparkle/
 ### 一键启动开发环境（推荐）
 
 ```bash
+# 复制 compose 环境变量（仅首次）
+cp .env.example .env
+
 # 查看完整启动指南
 make dev-all
 
@@ -116,6 +119,10 @@ make grpc-server
 # 终端3: 启动Go Gateway
 make gateway-run
 ```
+
+> 全容器栈启动：`make dev-up-all`
+> Flower 监控默认不启动，如需启动：
+> `COMPOSE_PROFILES=flower make dev-up-all` 或 `FLOWER_ENABLE=1 make celery-up`
 
 ### 后端启动（详细步骤）
 
@@ -131,7 +138,8 @@ pip install -r requirements-ingestion.txt      # 可选：文档解析（PDF/DOC
 pip install -r requirements-reporting.txt      # 可选：报告/PDF 生成
 pip install -r requirements-agent-graph.txt    # 可选：V2 Agent Graph (langgraph)
 cp .env.example .env
-# 编辑 .env 配置数据库和API密钥
+# 编辑 .env 配置数据库和API密钥（sync URL 可用，运行时自动转 asyncpg）
+# 例：DATABASE_URL=postgresql://user:pass@localhost:5432/sparkle_db?sslmode=require
 alembic upgrade head
 
 # 3. 启动Python gRPC服务
@@ -143,6 +151,18 @@ go mod tidy
 go build -o bin/gateway ./cmd/server
 ./bin/gateway
 ```
+
+### 本地数据重置（当数据库密码不一致导致认证失败）
+
+```bash
+make db-reset   # 仅清理 postgres_data
+make dev-reset  # 清理 postgres/redis/minio 数据
+```
+
+### 云数据库连接说明（最小路径）
+
+- 本地 Docker DB：`DATABASE_URL` 指向 `localhost:5432`（主机运行）或 `sparkle_db:5432`（容器内）
+- 云 DB：使用标准连接串，并追加 `?sslmode=require`（或 `verify-full` + `sslrootcert=/path/to/ca.pem`）
 
 ### 移动端启动
 

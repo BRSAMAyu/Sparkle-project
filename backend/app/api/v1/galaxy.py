@@ -399,6 +399,8 @@ class CreateVocabularyNodeRequest(BaseModel):
     source_text: str = Field(..., description="原始文本 (e.g., 'polymorphism')")
     translation: str = Field(..., description="译文 (e.g., '多态性')")
     context: str = Field(..., description="上下文场景")
+    source_url: Optional[str] = Field(default=None, description="来源URL")
+    source_document_id: Optional[str] = Field(default=None, description="来源文档ID")
     language: str = Field(default="en", description="源语言 (en, zh)")
     domain: Optional[str] = Field(default=None, description="领域 (cs, math, business)")
     subject_id: Optional[int] = Field(default=None, description="关联科目ID")
@@ -434,6 +436,8 @@ async def create_vocabulary_node(
             source_text=request.source_text,
             translation=request.translation,
             context=request.context,
+            source_url=request.source_url,
+            source_document_id=UUID(request.source_document_id) if request.source_document_id else None,
             language=request.language,
             domain=request.domain,
             subject_id=request.subject_id
@@ -449,37 +453,6 @@ async def create_vocabulary_node(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create vocabulary node: {str(e)}"
-        )
-
-
-@router.post("/node/{node_id}/publish")
-async def publish_draft_node(
-    node_id: UUID,
-    user_id: str = Depends(get_current_user_id),
-    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
-):
-    """
-    发布草稿节点到主知识图谱
-
-    将状态从 'draft' 改为 'published'
-    """
-    try:
-        node = await knowledge_service.publish_node(node_id, UUID(user_id))
-        return {
-            "success": True,
-            "node_id": str(node.id),
-            "status": node.status,
-            "message": f"Node published: {node.name}"
-        }
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to publish node: {str(e)}"
         )
 
 

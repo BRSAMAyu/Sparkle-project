@@ -18,6 +18,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Template only; no-op. Copy this file and set a real revision ID to apply.
+    return
     """
     安全的升级流程：
     1. 添加新列
@@ -123,6 +125,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Template only; no-op. Copy this file and set a real revision ID to apply.
+    return
     """
     降级流程：恢复旧结构
     ⚠️ 注意：降级会丢失多页切片信息（page_numbers 是数组，page_number 是单个值）

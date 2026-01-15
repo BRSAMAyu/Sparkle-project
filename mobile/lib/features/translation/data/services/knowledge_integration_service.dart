@@ -9,12 +9,23 @@ class KnowledgeIntegrationService {
 
   /// Create vocabulary node from translation
   ///
-  /// Sends translation to backend to create a draft knowledge node
-  /// that will be scheduled for spaced repetition review.
+  /// Sends translation to backend to create a knowledge node
+  /// that will be scheduled for spaced repetition review immediately.
+  /// Handles idempotency (if node exists, it updates context).
+  ///
+  /// Returns:
+  /// - VocabularyNodeResult on success
+  /// - null on error (check error type via exception)
+  ///
+  /// Throws:
+  /// - ServiceUnavailableException on 503 (circuit breaker triggered)
+  /// - NetworkException on network errors
   Future<VocabularyNodeResult?> createVocabularyNode({
     required String sourceText,
     required String translation,
     required String context,
+    String? sourceUrl,
+    String? sourceDocumentId,
     String language = 'en',
     String? domain,
     int? subjectId,
@@ -28,6 +39,8 @@ class KnowledgeIntegrationService {
           'source_text': sourceText,
           'translation': translation,
           'context': context,
+          'source_url': sourceUrl,
+          'source_document_id': sourceDocumentId,
           'language': language,
           'domain': domain,
           'subject_id': subjectId,
@@ -35,36 +48,57 @@ class KnowledgeIntegrationService {
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        debugPrint('✅ Vocabulary node created: ${response.data['node_id']}');
+        debugPrint('✅ Vocabulary node created/updated: ${response.data['node_id']}');
         return VocabularyNodeResult.fromJson(response.data);
       } else {
         debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
         return null;
       }
+    } on DioException catch (e) {
+      // Handle specific error cases for better UX
+      if (e.response?.statusCode == 503) {
+        debugPrint('🚨 Service unavailable (circuit breaker): ${e.message}');
+        throw ServiceUnavailableException(
+          '服务繁忙，请稍后重试',
+          originalError: e,
+        );
+      } else if (e.response?.statusCode == 429) {
+        debugPrint('⚠️ Rate limited: ${e.message}');
+        throw RateLimitException(
+          '请求过于频繁，请稍后再试',
+          retryAfter: _parseRetryAfter(e.response?.headers),
+        );
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        debugPrint('⏱️ Timeout: ${e.message}');
+        throw NetworkException(
+          '网络连接超时，请检查网络',
+          originalError: e,
+        );
+      } else {
+        debugPrint('❌ Failed to create vocabulary node: $e');
+        throw NetworkException(
+          '保存失败，请重试',
+          originalError: e,
+        );
+      }
     } catch (e) {
-      debugPrint('❌ Failed to create vocabulary node: $e');
-      return null;
+      debugPrint('❌ Unexpected error: $e');
+      throw NetworkException(
+        '未知错误，请重试',
+        originalError: e,
+      );
     }
   }
 
-  /// Publish a draft node to main knowledge graph
-  Future<bool> publishNode(String nodeId) async {
+  int? _parseRetryAfter(Headers? headers) {
     try {
-      debugPrint('📤 Publishing node: $nodeId');
-
-      final response = await _dio.post('/galaxy/node/$nodeId/publish');
-
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        debugPrint('✅ Node published: $nodeId');
-        return true;
-      } else {
-        debugPrint('⚠️ Failed to publish node: ${response.data}');
-        return false;
+      final retryAfter = headers?.value('retry-after');
+      if (retryAfter != null) {
+        return int.tryParse(retryAfter);
       }
-    } catch (e) {
-      debugPrint('❌ Failed to publish node: $e');
-      return false;
-    }
+    } catch (_) {}
+    return null;
   }
 
   /// Delete a draft node
@@ -142,4 +176,39 @@ class VocabularyNodeResult {
       message: json['message'] as String,
     );
   }
+}
+
+/// Exception thrown when service is unavailable (503)
+/// Usually indicates circuit breaker is open
+class ServiceUnavailableException implements Exception {
+  const ServiceUnavailableException(this.message, {this.originalError});
+
+  final String message;
+  final Object? originalError;
+
+  @override
+  String toString() => message;
+}
+
+/// Exception thrown when rate limit is exceeded (429)
+class RateLimitException implements Exception {
+  const RateLimitException(this.message, {this.retryAfter});
+
+  final String message;
+  final int? retryAfter; // Seconds to wait
+
+  @override
+  String toString() =>
+      retryAfter != null ? '$message (重试间隔: ${retryAfter}秒)' : message;
+}
+
+/// Generic network exception
+class NetworkException implements Exception {
+  const NetworkException(this.message, {this.originalError});
+
+  final String message;
+  final Object? originalError;
+
+  @override
+  String toString() => message;
 }
