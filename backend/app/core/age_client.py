@@ -6,6 +6,7 @@ Apache AGE 客户端封装
 
 import asyncio
 from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse
 from dataclasses import dataclass
 from loguru import logger
 import asyncpg
@@ -233,12 +234,15 @@ def get_age_client() -> AgeClient:
     global _age_client
 
     if _age_client is None:
+        # Parse connection details from DATABASE_URL
+        # Format: postgresql://user:password@host:port/dbname
+        parsed = urlparse(settings.DATABASE_URL)
         config = AgeConfig(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-            database=settings.DB_NAME,
+            host=parsed.hostname or "localhost",
+            port=parsed.port or 5432,
+            user=parsed.username or "postgres",
+            password=parsed.password or "",
+            database=parsed.path.lstrip("/") or "sparkle",
             graph_name="sparkle_galaxy"
         )
         _age_client = AgeClient(config)

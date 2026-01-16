@@ -52,7 +52,7 @@ class GraphSyncWorker:
         self.running = True
 
         # 开始消费
-        await self._consume()
+        asyncio.create_task(self._consume())
 
     async def stop(self):
         """停止 Worker"""

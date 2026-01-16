@@ -8,6 +8,7 @@ Create Date: 2026-01-02 16:00:00
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import inspect  # <--- 1. 引入 inspect
 
 # revision identifiers, used by Alembic.
 revision = 'p1_2_error_book'
@@ -19,6 +20,15 @@ def upgrade():
     # ============================================
     # 表1: error_records (错题主表)
     # ============================================
+    # <--- 2. 获取数据库连接和检查器
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    # <--- 3. 如果表已存在，强制删除 (CASCADE) 以确保 Schema 正确
+    if 'error_records' in inspector.get_table_names():
+        op.execute("DROP TABLE error_records CASCADE")
+        print("Dropped existing 'error_records' table to ensure schema consistency.")
+
     op.create_table(
         'error_records',
         sa.Column('id', UUID(as_uuid=True), primary_key=True),

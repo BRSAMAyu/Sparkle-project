@@ -8,6 +8,7 @@ Create Date: 2026-01-15 14:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 from app.models.base import GUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB  # <--- 确保这里有 JSONB
 
 
 revision = "p13_add_event_stream_state"
@@ -27,7 +28,7 @@ def upgrade():
         sa.Column("schema_version", sa.String(length=50), nullable=False),
         sa.Column("source", sa.String(length=50), nullable=False),
         sa.Column("ts_ms", sa.BigInteger(), nullable=False),
-        sa.Column("entities", sa.JSON(), nullable=True),
+        sa.Column("entities", JSONB(), nullable=True),
         sa.Column("payload", sa.JSON(), nullable=True),
         sa.Column("received_at", sa.DateTime(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),

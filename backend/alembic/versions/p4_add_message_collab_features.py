@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from app.models.base import GUID
 
 revision = 'p4_add_message_collab_features'
-down_revision = 'p3_add_shared_resource_capsule_prism'
+down_revision = 'p3_shared_rsrc_prism'
 branch_labels = None
 depends_on = None
 
