@@ -85,6 +85,7 @@ alembic/versions/*.pyc
 # OS
 .DS_Store
 Thumbs.db
+*.meta
 
 # ========================================
 # Flutter Mobile
