@@ -75,6 +75,7 @@ services:
         condition: service_started
       tempo:
         condition: service_started
+    user: root  # 暂时改回 root 运行，避开所有权限坑，等以后部署再调优
 
   sparkle_agent:
     build:
