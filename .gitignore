@@ -206,3 +206,4 @@ yarn-error.log*
 gha-creds-*.json
 .gocache/
 \n# macOS metadata\n._*\n**/.DS_Store\n\n# Python\n**/__pycache__/\n\n# Data\npostgres_data/\nredis_data/\n.gocache/
+minio_data/
