@@ -73,7 +73,7 @@ dependencies:
 
   # Protobuf
   protobuf: ^3.1.0
-  fixnum: ^1.1.0
+  fixnum: ^1.1.1
 
   # Performance Monitoring
   sentry_flutter: ^8.0.0
@@ -81,6 +81,8 @@ dependencies:
   opentelemetry: ^0.18.10
 
   http_parser: any
+  grpc: ^4.0.1
+  google_fonts: ^7.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
