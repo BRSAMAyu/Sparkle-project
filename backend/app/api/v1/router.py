@@ -27,8 +27,8 @@ from app.api.v1 import (
     audit,
     dlq_admin,
     health_production,
-    graph_monitor,
-    graphrag_trace,
+   # graph_monitor,
+   # graphrag_trace,
     decay_timemachine,
     multi_agent,
     learning_paths,
@@ -74,8 +74,8 @@ api_router.include_router(translation.router, prefix="/translation", tags=["tran
 api_router.include_router(assets.router)  # Prefix "/assets" defined in router
 api_router.include_router(signals.router)  # Prefix "/signals" defined in router
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
-api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
-api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+# api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
+# api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 

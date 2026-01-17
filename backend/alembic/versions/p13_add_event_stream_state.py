@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from app.models.base import GUID
-from app.utils.migration_helpers import get_inspector, index_exists, table_exists
+from sqlalchemy.dialects.postgresql import UUID, JSONB  # <--- 确保这里有 JSONB
 
 
 revision = "p13_add_event_stream_state"
@@ -20,37 +20,30 @@ depends_on = None
 
 def upgrade():
     bind = op.get_bind()
-    inspector = get_inspector()
-    if not table_exists(inspector, "tracking_events"):
-        op.create_table(
-            "tracking_events",
-            sa.Column("id", GUID(), nullable=False),
-            sa.Column("event_id", sa.String(length=64), nullable=False),
-            sa.Column("user_id", GUID(), nullable=False),
-            sa.Column("event_type", sa.String(length=120), nullable=False),
-            sa.Column("schema_version", sa.String(length=50), nullable=False),
-            sa.Column("source", sa.String(length=50), nullable=False),
-            sa.Column("ts_ms", sa.BigInteger(), nullable=False),
-            sa.Column("entities", postgresql.JSONB(), nullable=True),
-            sa.Column("payload", sa.JSON(), nullable=True),
-            sa.Column("received_at", sa.DateTime(), nullable=False),
-            sa.Column("created_at", sa.DateTime(), nullable=False),
-            sa.Column("updated_at", sa.DateTime(), nullable=False),
-            sa.Column("deleted_at", sa.DateTime(), nullable=True),
-            sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
-            sa.PrimaryKeyConstraint("id"),
-            sa.UniqueConstraint("event_id")
-        )
-    if not index_exists(inspector, "tracking_events", "idx_tracking_events_event_id"):
-        op.create_index("idx_tracking_events_event_id", "tracking_events", ["event_id"], unique=True)
-    if not index_exists(inspector, "tracking_events", "idx_tracking_events_user"):
-        op.create_index("idx_tracking_events_user", "tracking_events", ["user_id"], unique=False)
-    if not index_exists(inspector, "tracking_events", "idx_tracking_events_type"):
-        op.create_index("idx_tracking_events_type", "tracking_events", ["event_type"], unique=False)
-    if not index_exists(inspector, "tracking_events", "idx_tracking_events_ts"):
-        op.create_index("idx_tracking_events_ts", "tracking_events", ["ts_ms"], unique=False)
-    if not index_exists(inspector, "tracking_events", "idx_tracking_events_user_ts"):
-        op.create_index("idx_tracking_events_user_ts", "tracking_events", ["user_id", "ts_ms"], unique=False)
+    op.create_table(
+        "tracking_events",
+        sa.Column("id", GUID(), nullable=False),
+        sa.Column("event_id", sa.String(length=64), nullable=False),
+        sa.Column("user_id", GUID(), nullable=False),
+        sa.Column("event_type", sa.String(length=120), nullable=False),
+        sa.Column("schema_version", sa.String(length=50), nullable=False),
+        sa.Column("source", sa.String(length=50), nullable=False),
+        sa.Column("ts_ms", sa.BigInteger(), nullable=False),
+        sa.Column("entities", JSONB(), nullable=True),
+        sa.Column("payload", sa.JSON(), nullable=True),
+        sa.Column("received_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("deleted_at", sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("event_id")
+    )
+    op.create_index("idx_tracking_events_event_id", "tracking_events", ["event_id"], unique=True)
+    op.create_index("idx_tracking_events_user", "tracking_events", ["user_id"], unique=False)
+    op.create_index("idx_tracking_events_type", "tracking_events", ["event_type"], unique=False)
+    op.create_index("idx_tracking_events_ts", "tracking_events", ["ts_ms"], unique=False)
+    op.create_index("idx_tracking_events_user_ts", "tracking_events", ["user_id", "ts_ms"], unique=False)
     if bind.dialect.name == "postgresql":
         if not index_exists(inspector, "tracking_events", "idx_tracking_events_entities_gin"):
             op.create_index(

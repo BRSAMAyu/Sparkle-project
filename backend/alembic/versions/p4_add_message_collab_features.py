@@ -10,7 +10,7 @@ from app.models.base import GUID
 from app.utils.migration_helpers import column_exists, foreign_key_exists, get_inspector, index_exists, table_exists
 
 revision = 'p4_add_message_collab_features'
-down_revision = 'p3_add_shared_resource_capsule_prism'
+down_revision = 'p3_shared_rsrc_prism'
 branch_labels = None
 depends_on = None
 

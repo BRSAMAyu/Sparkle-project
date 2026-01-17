@@ -152,7 +152,7 @@ func Load() *Config {
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
-	viper.SetDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)
 	viper.SetDefault("INTERNAL_API_KEY", "")
 	viper.SetDefault("CHAOS_ENABLED", false)
 	viper.SetDefault("CHAOS_ALLOW_PROD", false)

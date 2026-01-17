@@ -30,6 +30,15 @@ RUN if [ -f uv.lock ]; then \
       pip install --no-cache-dir -r requirements.txt; \
     fi
 
+# 一次性补齐所有大概率缺失的 AI 核心包
+# 补齐所有 AI 和文档处理包
+RUN uv pip install --system --no-cache \
+    pdfplumber pypdf python-docx python-pptx \
+    langgraph langchain-openai langchain-anthropic \
+    langchain-community langchain-core langchain-text-splitters \
+    langchain-huggingface sentence-transformers \
+    cryptography pydantic-settings tiktoken \
+    openpyxl python-multipart
 # Final stage
 FROM python:3.11-slim
 
@@ -44,7 +53,18 @@ RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
 # Install runtime dependencies (libpq5 for PostgreSQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libglib2.0-0 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libharfbuzz0b \
+    libfontconfig1 \
+    libfreetype6 \
+    shared-mime-info \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Copy installed python packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

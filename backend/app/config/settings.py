@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     # Embedding Service
     EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
     EMBEDDING_DIM: int = 1536  # 向量维度
+    RERANK_MODEL: str = "BAAI/bge-reranker-base"  # 重排序模型
 
     # Semantic Cache
     SEMANTIC_CACHE_ENABLED: bool = True

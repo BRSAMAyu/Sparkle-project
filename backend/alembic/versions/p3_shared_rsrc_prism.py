@@ -15,7 +15,7 @@ from app.utils.migration_helpers import (
     table_exists,
 )
 
-revision = 'p3_add_shared_resource_capsule_prism'
+revision = 'p3_shared_rsrc_prism'
 down_revision = 'p2_add_user_tool_history'
 branch_labels = None
 depends_on = None
