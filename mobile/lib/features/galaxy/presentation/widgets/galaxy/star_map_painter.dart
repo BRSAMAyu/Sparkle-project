@@ -101,6 +101,8 @@ class StarMapPainter extends CustomPainter {
     this.viewport,
     this.center = Offset.zero,
     this.selectedNodeIdHash,
+    this.highlightedNodeIdHashes = const {},
+    this.highlightRevision = 0,
     this.expandedEdgeNodeIdHashes = const {},
     this.nodeAnimationProgress = const {},
     this.selectionPulse = 0.0,
@@ -118,6 +120,8 @@ class StarMapPainter extends CustomPainter {
   final Rect? viewport;
   final Offset center;
   final int? selectedNodeIdHash;
+  final Set<int> highlightedNodeIdHashes;
+  final int highlightRevision;
   final Set<int> expandedEdgeNodeIdHashes;
   final Map<int, double> nodeAnimationProgress;
   final double selectionPulse;
@@ -185,7 +189,7 @@ class StarMapPainter extends CustomPainter {
 
     _processedNodes = [];
     for (final node in nodes) {
-      final pos = _positionCache[node.idHash]!;
+      final pos = _positionCache[node.idHash];
       final color = _colorCache[node.idHash] ?? DS.brandPrimary;
       final radius = 3.0 + node.importance * 2.0;
 
@@ -296,7 +300,11 @@ class StarMapPainter extends CustomPainter {
     // Selection Highlight (Always visible if selected and node is visible)
     if (selectedNodeIdHash != null &&
         _positionCache.containsKey(selectedNodeIdHash)) {
-      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]!);
+      _drawSelectionHighlight(canvas, _positionCache[selectedNodeIdHash!]);
+    }
+
+    if (highlightedNodeIdHashes.isNotEmpty) {
+      _drawEvidenceHighlights(canvas);
     }
   }
 
@@ -317,6 +325,26 @@ class StarMapPainter extends CustomPainter {
             DS.brandPrimary.withValues(alpha: 0.1 + (selectionPulse * 0.05));
         paint.style = PaintingStyle.fill;
         canvas.drawCircle(pos, 40, paint);
+    }
+  }
+
+  void _drawEvidenceHighlights(Canvas canvas) {
+    const baseRadius = 24.0;
+    final pulseRadius = baseRadius + (selectionPulse * 4.0);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = DS.info.withValues(alpha: 0.55);
+
+    for (final nodeHash in highlightedNodeIdHashes) {
+      if (nodeHash == selectedNodeIdHash) {
+        continue;
+      }
+      final pos = _positionCache[nodeHash];
+      if (pos == null) {
+        continue;
+      }
+      canvas.drawCircle(pos, pulseRadius, paint);
     }
   }
 
@@ -566,5 +594,7 @@ class StarMapPainter extends CustomPainter {
       old.currentDpr != currentDpr ||
       old.viewport != viewport ||
       !identical(old.nodes, nodes) ||
-      old.selectionPulse != selectionPulse;
+      old.selectionPulse != selectionPulse ||
+      old.selectedNodeIdHash != selectedNodeIdHash ||
+      old.highlightRevision != highlightRevision;
 }

@@ -9,8 +9,10 @@ from typing import Dict, Any, List
 from pydantic import BaseModel
 from datetime import datetime
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.db.session import get_db
 from app.models.user import User
 from orchestration.graph_rag import GraphRAGRetriever, RetrievalTrace
 from app.services.knowledge_service import KnowledgeService
@@ -46,6 +48,10 @@ class GraphRAGTraceResponse(BaseModel):
 
 # 内存缓存（生产环境应使用 Redis）
 _trace_cache: Dict[str, RetrievalTrace] = {}
+
+
+async def get_knowledge_service(db: AsyncSession = Depends(get_db)) -> KnowledgeService:
+    return KnowledgeService(db)
 
 
 @router.get("/trace/latest", response_model=GraphRAGTraceResponse)
@@ -118,11 +124,11 @@ def cache_trace(trace: RetrievalTrace):
     logger.debug(f"缓存追踪信息: {trace.trace_id}, 当前缓存大小: {len(_trace_cache)}")
 
 
-@router.post("/test-retrieval")
+@router.post("/test-retrieval", response_model=None)
 async def test_graphrag_retrieval(
     query: str,
     current_user: User = Depends(get_current_user),
-    knowledge_service: KnowledgeService = Depends()
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
     """
     测试端点：执行 GraphRAG 检索并返回追踪信息

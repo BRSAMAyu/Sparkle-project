@@ -42,7 +42,7 @@ class PlanRoutes {
         path: '/plans/:id',
         name: 'planDetail',
         pageBuilder: (context, state) {
-          final planId = state.pathParameters['id']!;
+          final planId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: PlanDetailScreen(planId: planId),
@@ -53,7 +53,7 @@ class PlanRoutes {
         path: '/plans/:id/edit',
         name: 'editPlan',
         pageBuilder: (context, state) {
-          final planId = state.pathParameters['id']!;
+          final planId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: PlanEditScreen(planId: planId),

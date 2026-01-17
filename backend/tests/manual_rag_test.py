@@ -15,6 +15,7 @@ from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
 from redis.asyncio import Redis
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 # Mock LLM Service stream
 async def mock_chat_stream(*args, **kwargs):
@@ -26,7 +27,8 @@ async def mock_get_embedding(text: str) -> List[float]:
 
 async def test_rag_flow():
     # Setup
-    redis = Redis.from_url(settings.REDIS_URL, password=settings.REDIS_PASSWORD, decode_responses=True)
+    resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    redis = Redis.from_url(settings.REDIS_URL, password=resolved_password, decode_responses=True)
     
     # Apply Mocks
     llm_service.chat_stream_with_tools = mock_chat_stream

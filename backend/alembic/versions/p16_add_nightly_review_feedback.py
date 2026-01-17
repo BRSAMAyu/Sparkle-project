@@ -7,6 +7,7 @@ Create Date: 2026-01-16 10:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from app.utils.migration_helpers import column_exists, get_inspector, table_exists
 
 
 revision = "p16_add_nightly_review_feedback"
@@ -16,8 +17,12 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("nightly_reviews", sa.Column("reviewed_at", sa.DateTime(), nullable=True))
+    inspector = get_inspector()
+    if table_exists(inspector, "nightly_reviews") and not column_exists(inspector, "nightly_reviews", "reviewed_at"):
+        op.add_column("nightly_reviews", sa.Column("reviewed_at", sa.DateTime(), nullable=True))
 
 
 def downgrade():
-    op.drop_column("nightly_reviews", "reviewed_at")
+    inspector = get_inspector()
+    if table_exists(inspector, "nightly_reviews") and column_exists(inspector, "nightly_reviews", "reviewed_at"):
+        op.drop_column("nightly_reviews", "reviewed_at")

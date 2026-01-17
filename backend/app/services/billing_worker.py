@@ -7,7 +7,7 @@ BillingWorker - 异步计费任务处理器
 import json
 import asyncio
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from loguru import logger
 import redis.asyncio as redis
@@ -17,6 +17,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.chat import TokenUsage
 from app.config import settings
+from app.db.url import to_async_database_url
+from app.core.redis_utils import resolve_redis_password
 
 class BillingWorker:
     """
@@ -28,7 +30,7 @@ class BillingWorker:
     def __init__(
         self, 
         redis_url: str = settings.REDIS_URL,
-        redis_password: str = settings.REDIS_PASSWORD,
+        redis_password: Optional[str] = settings.REDIS_PASSWORD,
         db_url: str = settings.DATABASE_URL,
         batch_size: int = 10,
         flush_interval: int = 5
@@ -38,10 +40,11 @@ class BillingWorker:
         self.flush_interval = flush_interval
         
         # 初始化 Redis
-        self.redis = redis.from_url(redis_url, password=redis_password)
+        resolved_password, _ = resolve_redis_password(redis_url, redis_password)
+        self.redis = redis.from_url(redis_url, password=resolved_password)
         
         # 初始化数据库引擎和会话工厂
-        self.engine = create_async_engine(db_url)
+        self.engine = create_async_engine(to_async_database_url(db_url))
         self.async_session_factory = sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )

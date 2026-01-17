@@ -3,22 +3,21 @@ Alembic Environment Configuration
 数据库迁移环境配置
 """
 from logging.config import fileConfig
-import asyncio
+import os
+import sys
 
 from sqlalchemy import pool, create_engine
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import settings and Base
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Ensure backend/ is on sys.path for CLI usage
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from app.config import settings
 from app.db.session import Base
+from app.db.url import to_sync_database_url
 
 # Import all models to ensure they are registered with Base.metadata
 from app.models import (
@@ -53,8 +52,9 @@ from app.models import (
 config = context.config
 
 # Override sqlalchemy.url from settings
-# Convert asyncpg URL to psycopg2 for Alembic migrations
-database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+# Convert asyncpg URL to sync driver for Alembic migrations
+database_url = to_sync_database_url(settings.DATABASE_URL)
+database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.

@@ -13,6 +13,7 @@ from loguru import logger
 
 from app.config import settings
 from app.orchestration.summarization_worker import SummarizationWorker
+from app.core.redis_utils import resolve_redis_password
 import redis.asyncio as redis
 
 
@@ -49,7 +50,8 @@ async def main():
     logger.info(f"Max retries: {args.max_retries}")
 
     # 创建 Redis 客户端
-    redis_client = redis.from_url(args.redis_url, decode_responses=False)
+    resolved_password, _ = resolve_redis_password(args.redis_url, settings.REDIS_PASSWORD)
+    redis_client = redis.from_url(args.redis_url, decode_responses=False, password=resolved_password)
 
     # 验证连接
     try:

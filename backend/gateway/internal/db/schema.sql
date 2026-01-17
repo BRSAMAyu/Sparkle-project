@@ -305,6 +305,30 @@ CREATE TABLE public.alembic_version (
 ALTER TABLE public.alembic_version OWNER TO postgres;
 
 --
+-- Name: asset_suggestion_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.asset_suggestion_logs (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    user_id uuid NOT NULL,
+    session_id character varying(64),
+    policy_id character varying(50) NOT NULL,
+    trigger_event character varying(100) NOT NULL,
+    evidence_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    decision character varying(20) NOT NULL,
+    decision_reason character varying(255),
+    user_response character varying(20) DEFAULT 'PENDING'::character varying,
+    response_at timestamp without time zone,
+    cooldown_until timestamp without time zone,
+    asset_id uuid
+);
+
+
+ALTER TABLE public.asset_suggestion_logs OWNER TO postgres;
+
+--
 -- Name: behavior_patterns; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -886,6 +910,19 @@ CREATE TABLE public.event_outbox (
 ALTER TABLE public.event_outbox OWNER TO postgres;
 
 --
+-- Name: event_sequence_counters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.event_sequence_counters (
+    aggregate_type character varying(100) NOT NULL,
+    aggregate_id uuid NOT NULL,
+    next_sequence bigint DEFAULT 1 NOT NULL
+);
+
+
+ALTER TABLE public.event_sequence_counters OWNER TO postgres;
+
+--
 -- Name: event_store; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1147,6 +1184,46 @@ CREATE TABLE public.knowledge_nodes (
 
 
 ALTER TABLE public.knowledge_nodes OWNER TO postgres;
+
+--
+-- Name: learning_assets; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.learning_assets (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    source_file_id uuid,
+    status character varying(20) DEFAULT 'INBOX'::character varying NOT NULL,
+    asset_kind character varying(20) DEFAULT 'WORD'::character varying NOT NULL,
+    headword character varying(255) NOT NULL,
+    definition text,
+    translation text,
+    example text,
+    language_code character varying(10) DEFAULT 'en'::character varying NOT NULL,
+    inbox_expires_at timestamp without time zone,
+    snapshot_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    snapshot_schema_version integer DEFAULT 1 NOT NULL,
+    provenance_json jsonb DEFAULT '{}'::jsonb,
+    provenance_updated_at timestamp without time zone,
+    selection_fp character varying(64),
+    anchor_fp character varying(64),
+    doc_fp character varying(64),
+    norm_version character varying(20) DEFAULT 'v1'::character varying NOT NULL,
+    match_profile character varying(50),
+    review_due_at timestamp without time zone,
+    review_count integer DEFAULT 0 NOT NULL,
+    review_success_rate double precision DEFAULT 0.0 NOT NULL,
+    last_seen_at timestamp without time zone,
+    lookup_count integer DEFAULT 1 NOT NULL,
+    star_count integer DEFAULT 0 NOT NULL,
+    ignored_count integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE public.learning_assets OWNER TO postgres;
 
 --
 -- Name: mastery_audit_log; Type: TABLE; Schema: public; Owner: postgres
@@ -1971,6 +2048,14 @@ ALTER TABLE ONLY public.alembic_version
 
 
 --
+-- Name: asset_suggestion_logs asset_suggestion_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: behavior_patterns behavior_patterns_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2147,6 +2232,14 @@ ALTER TABLE ONLY public.event_outbox
 
 
 --
+-- Name: event_sequence_counters event_sequence_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_sequence_counters
+    ADD CONSTRAINT event_sequence_counters_pkey PRIMARY KEY (aggregate_type, aggregate_id);
+
+
+--
 -- Name: event_store event_store_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2232,6 +2325,14 @@ ALTER TABLE ONLY public.jobs
 
 ALTER TABLE ONLY public.knowledge_nodes
     ADD CONSTRAINT knowledge_nodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: learning_assets learning_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.learning_assets
+    ADD CONSTRAINT learning_assets_pkey PRIMARY KEY (id);
 
 
 --
@@ -3244,6 +3345,20 @@ CREATE INDEX ix_agent_stats_user_id ON public.agent_execution_stats USING btree 
 
 
 --
+-- Name: idx_suggestion_log_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_suggestion_log_user_created ON public.asset_suggestion_logs USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_suggestion_log_policy; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_suggestion_log_policy ON public.asset_suggestion_logs USING btree (policy_id);
+
+
+--
 -- Name: ix_behavior_patterns_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -3493,6 +3608,48 @@ CREATE INDEX ix_knowledge_nodes_parent_id ON public.knowledge_nodes USING btree 
 --
 
 CREATE INDEX ix_knowledge_nodes_subject_id ON public.knowledge_nodes USING btree (subject_id);
+
+
+--
+-- Name: idx_learning_assets_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_user_status ON public.learning_assets USING btree (user_id, status);
+
+
+--
+-- Name: idx_learning_assets_headword; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_headword ON public.learning_assets USING btree (headword);
+
+
+--
+-- Name: idx_learning_assets_selection_fp; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_selection_fp ON public.learning_assets USING btree (user_id, selection_fp);
+
+
+--
+-- Name: idx_learning_assets_inbox_expires; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_inbox_expires ON public.learning_assets USING btree (inbox_expires_at) WHERE (status = 'INBOX'::text);
+
+
+--
+-- Name: idx_learning_assets_review_due; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_review_due ON public.learning_assets USING btree (user_id, review_due_at) WHERE ((status = 'ACTIVE'::text) AND (review_due_at IS NOT NULL));
+
+
+--
+-- Name: idx_learning_assets_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_learning_assets_deleted_at ON public.learning_assets USING btree (deleted_at);
 
 
 --
@@ -3965,6 +4122,22 @@ ALTER INDEX public.chat_messages_partitioned_pkey ATTACH PARTITION public.chat_m
 
 
 --
+-- Name: asset_suggestion_logs asset_suggestion_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: asset_suggestion_logs asset_suggestion_logs_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.asset_suggestion_logs
+    ADD CONSTRAINT asset_suggestion_logs_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES public.learning_assets(id) ON DELETE SET NULL;
+
+
+--
 -- Name: behavior_patterns behavior_patterns_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4218,6 +4391,22 @@ ALTER TABLE ONLY public.knowledge_nodes
 
 ALTER TABLE ONLY public.knowledge_nodes
     ADD CONSTRAINT knowledge_nodes_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id);
+
+
+--
+-- Name: learning_assets learning_assets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.learning_assets
+    ADD CONSTRAINT learning_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: learning_assets learning_assets_source_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.learning_assets
+    ADD CONSTRAINT learning_assets_source_file_id_fkey FOREIGN KEY (source_file_id) REFERENCES public.stored_files(id) ON DELETE SET NULL;
 
 
 --

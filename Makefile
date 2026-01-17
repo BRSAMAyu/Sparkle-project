@@ -1,8 +1,12 @@
-.PHONY: dev-up sync-db proto-gen db-migrate db-dump db-sqlc db-validate
+.PHONY: dev-up dev-up-all dev-preflight dev-reset db-reset sync-db proto-gen db-migrate db-dump db-sqlc db-validate
 
 DB_CONTAINER=sparkle_db
 DB_USER=postgres
 DB_NAME=sparkle
+DB_PASSWORD ?= change-me
+REDIS_PASSWORD ?= change-me
+FLOWER_IMAGE ?= mher/flower:1.2.0
+FLOWER_ENABLE ?= 0
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -14,7 +18,23 @@ _check_macos_env:
 # 启动基础设施
 dev-up:
 	@make _check_macos_env
+	@make dev-preflight
+	docker compose up -d sparkle_db redis minio
+
+# 启动完整容器栈（包含后端/网关/可观测性）
+dev-up-all:
+	@make _check_macos_env
+	@make dev-preflight
 	docker compose up -d
+
+dev-preflight:
+	@if [ ! -f .env ]; then \
+		echo "⚠️  Missing .env in repo root. Copy .env.example to .env for compose defaults."; \
+	fi
+	@if [ -d postgres_data ]; then \
+		echo "ℹ️  Detected existing postgres_data. If auth fails, run 'make db-reset'."; \
+	fi
+	@python backend/scripts/check_shadowing.py
 
 # 核心同步流：Python 迁移 -> 导出结构 -> 生成 Go 代码
 sync-db: db-migrate db-dump db-sqlc
@@ -143,20 +163,24 @@ celery-up:
 	fi
 	@echo "   Starting services..."
 	@docker run -d --name sparkle_celery_worker --network sparkle-flutter_default \
-		-e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
-		-e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
-		-e CELERY_BROKER_URL=redis://:change-me@sparkle_redis:6379/1 \
-		-e CELERY_RESULT_BACKEND=redis://:change-me@sparkle_redis:6379/2 \
+		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e CELERY_RESULT_BACKEND=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/2 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2 2>/dev/null || echo "Worker may already be running"
 	@docker run -d --name sparkle_celery_beat --network sparkle-flutter_default \
-		-e DATABASE_URL=postgresql://postgres:change-me@sparkle_db:5432/sparkle \
-		-e REDIS_URL=redis://:change-me@sparkle_redis:6379/1 \
-		-e CELERY_BROKER_URL=redis://:change-me@sparkle_redis:6379/1 \
+		-e DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@sparkle_db:5432/$(DB_NAME) \
+		-e REDIS_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
+		-e CELERY_BROKER_URL=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 \
 		-v $$(pwd)/backend:/app \
 		sparkle_backend celery -A app.core.celery_app beat -l info 2>/dev/null || echo "Beat may already be running"
-	@docker run -d --name sparkle_flower --network sparkle-flutter_default -p 5555:5555 \
-		mher/flower:1.2.0 celery --broker=redis://:change-me@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"
+	@if [ "$(FLOWER_ENABLE)" = "1" ]; then \
+		docker run -d --name sparkle_flower --network sparkle-flutter_default -p 5555:5555 \
+			$(FLOWER_IMAGE) celery --broker=redis://:$(REDIS_PASSWORD)@sparkle_redis:6379/1 flower --port=5555 2>/dev/null || echo "Flower may already be running"; \
+	else \
+		echo "ℹ️  Flower disabled. Set FLOWER_ENABLE=1 to start it."; \
+	fi
 	@echo "✅ Celery services started!"
 	@echo "   Worker: docker logs -f sparkle_celery_worker"
 	@echo "   Beat: docker logs -f sparkle_celery_beat"
@@ -215,3 +239,15 @@ dev-all:
 	@echo "🔧 Quick Commands:"
 	@echo "   make celery-status     # Check Celery services"
 	@echo "   make celery-logs-worker # View worker logs"
+
+db-reset:
+	@echo "🧹 Resetting local Postgres data (destructive)..."
+	@docker compose stop sparkle_db >/dev/null 2>&1 || true
+	@rm -rf postgres_data
+	@echo "✅ Postgres data cleared. Run 'make dev-up' to recreate."
+
+dev-reset:
+	@echo "🧹 Resetting local dev data (destructive)..."
+	@docker compose down >/dev/null 2>&1 || true
+	@rm -rf postgres_data redis_data minio_data flower_data
+	@echo "✅ Local dev data cleared. Run 'make dev-up' to recreate."

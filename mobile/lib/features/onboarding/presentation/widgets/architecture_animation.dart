@@ -414,7 +414,7 @@ class _ArchitecturePainter extends CustomPainter {
   }
 
   void _drawDataFlow(Canvas canvas, Offset start, Offset end, double progress) {
-    final position = Offset.lerp(start, end, progress)!;
+    final position = Offset.lerp(start, end, progress);
 
     final paint = Paint()
       ..color = Colors.cyan.withValues(alpha: 0.8)

@@ -1,11 +1,6 @@
 # buf.gen.yaml - Buf Code Generation Configuration
 # P1: Unified code generation for Go and Python from Protobuf definitions
 version: v2
-managed:
-  enabled: true
-  override:
-    - file_option: go_package_prefix
-      value: github.com/sparkle/gateway/gen
 plugins:
   # Go code generation
   - remote: buf.build/protocolbuffers/go
@@ -17,11 +12,14 @@ plugins:
     opt:
       - paths=source_relative
 
-  # Python code generation (using local plugins)
-  - local: protoc-gen-python
+  # Python code generation (remote plugins)
+  - remote: buf.build/protocolbuffers/python
     out: backend/app/gen
-  - local: protoc-gen-grpc_python
-    protoc_path: grpc_python_plugin
+  - remote: buf.build/grpc/python
     out: backend/app/gen
-  - local: protoc-gen-pyi
-    out: backend/app/gen
+
+  # Dart code generation (Flutter)
+  - local: protoc-gen-dart
+    out: mobile/lib/gen
+    opt:
+      - grpc

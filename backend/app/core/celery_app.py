@@ -34,6 +34,7 @@ celery_app = Celery(
     backend=CELERY_RESULT_BACKEND,
     include=[
         "app.core.celery_tasks",
+        "workers.signals_learning_worker",
     ]
 )
 
@@ -333,6 +334,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.core.celery_tasks.health_check_task",
         "schedule": 3600.0,
         "options": {"queue": "low_priority"}
+    },
+
+    # 每天凌晨3点运行信号学习分析
+    "signals-learning-daily": {
+        "task": "signals_learning_daily",
+        "schedule": 86400.0,  # 24小时
+        "args": (),
+        "options": {"queue": "default"}
     },
 }
 

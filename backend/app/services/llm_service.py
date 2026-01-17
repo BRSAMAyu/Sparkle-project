@@ -4,10 +4,12 @@ import asyncio
 from loguru import logger
 from dataclasses import dataclass
 from opentelemetry import trace
+from fastapi import HTTPException
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
+from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -146,10 +148,16 @@ class LLMService:
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
             
-        self.provider: LLMProvider = OpenAICompatibleProvider(
-            api_key=api_key,
-            base_url=base_url
-        )
+        self._provider_error: Optional[str] = None
+        try:
+            self.provider = OpenAICompatibleProvider(
+                api_key=api_key,
+                base_url=base_url
+            )
+        except Exception as e:
+            self.provider = None
+            self._provider_error = str(e)
+            logger.warning(f"LLM provider unavailable; LLM features disabled: {e}")
         self.default_model = self.chat_model
         self.demo_mode = getattr(settings, 'DEMO_MODE', False)
 
@@ -196,6 +204,11 @@ class LLMService:
         """
         Send a chat request to the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
@@ -210,8 +223,25 @@ class LLMService:
                 return mock_response
 
             logger.debug(f"Sending chat request to model: {model}")
-            response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
-            return response
+            
+            try:
+                # Circuit Breaker Check
+                await circuit_breaker_service.check("primary_llm")
+                
+                response = await self.provider.chat(messages, model=model, temperature=temperature, **kwargs)
+                
+                # Record Success
+                await circuit_breaker_service.record_success("primary_llm")
+                return response
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                # Optional: Return a degraded response if possible, or re-raise
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                # Record Failure
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Chat Error (Circuit Breaker recording): {e}")
+                raise e
 
     async def reason(
         self,
@@ -223,6 +253,11 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", model)
@@ -296,6 +331,11 @@ class LLMService:
         """
         Stream chat response from the LLM.
         """
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_stream_chat") as span:
             span.set_attribute("llm.model", model)
@@ -314,8 +354,24 @@ class LLMService:
                 return
 
             logger.debug(f"Starting stream chat with model: {model}")
-            async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
-                yield chunk
+            
+            try:
+                await circuit_breaker_service.check("primary_llm")
+                
+                async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                    yield chunk
+                    
+                # We only record success if the stream completes without error? 
+                # Streaming is tricky. Let's record success at the end.
+                await circuit_breaker_service.record_success("primary_llm")
+                
+            except CircuitBreakerOpenException:
+                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
+                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
+            except Exception as e:
+                await circuit_breaker_service.record_failure("primary_llm")
+                logger.error(f"LLM Stream Chat Error: {e}")
+                raise e
 
     async def chat_with_tools(
         self,
@@ -333,6 +389,12 @@ class LLMService:
             messages.extend(conversation_history)
         
         messages.append({"role": "user", "content": user_message})
+
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_with_tools") as span:
@@ -388,6 +450,12 @@ class LLMService:
                 "content": json.dumps(result, ensure_ascii=False)
             })
         
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
+
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_continue_after_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
@@ -426,6 +494,12 @@ class LLMService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
+
+        if not self.provider:
+            raise HTTPException(
+                status_code=501,
+                detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
+            )
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:

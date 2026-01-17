@@ -1,15 +1,30 @@
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 import json
+import os
+
 try:
     from jinja2 import Environment, FileSystemLoader
+    HAS_JINJA2 = True
+except ImportError:
+    Environment = None
+    FileSystemLoader = None
+    HAS_JINJA2 = False
+
+try:
     import weasyprint
+    HAS_WEASYPRINT = True
+except (ImportError, OSError):
+    weasyprint = None
+    HAS_WEASYPRINT = False
+
+try:
     import matplotlib
     matplotlib.use('Agg')
 except ImportError:
-    pass # Dependencies might not be installed in the environment yet
-import os
+    pass
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.analytics.weekly_stats_service import WeeklyStatsService
 from app.services.analytics.blindspot_analyzer import BlindspotAnalyzer
@@ -27,9 +42,12 @@ class WeeklySynthesisService:
         self.stats_service = WeeklyStatsService(db)
         self.blindspot_analyzer = BlindspotAnalyzer(db)
         
-        # Setup Jinja2 for PDF generation
-        template_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
-        self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
+        # Setup Jinja2 for PDF generation (optional)
+        if HAS_JINJA2:
+            template_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'templates')
+            self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
+        else:
+            self.jinja_env = None
 
     async def generate_report(self, user_id: str, end_date: Optional[datetime] = None) -> Dict[str, Any]:
         """
@@ -68,6 +86,16 @@ class WeeklySynthesisService:
         """
         Render report data to PDF.
         """
+        if not HAS_JINJA2 or not HAS_WEASYPRINT:
+            raise HTTPException(
+                status_code=501,
+                detail="PDF generation requires jinja2 and weasyprint to be installed."
+            )
+        if not self.jinja_env:
+            raise HTTPException(
+                status_code=501,
+                detail="PDF generation is not available (jinja2 not initialized)."
+            )
         template = self.jinja_env.get_template('weekly_report.html')
         html_content = template.render(data=report_data)
         

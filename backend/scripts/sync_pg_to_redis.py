@@ -16,6 +16,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.galaxy import KnowledgeNode
 from app.services.embedding_service import embedding_service
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password
 
 # Configure logging
 logger.remove()
@@ -26,7 +27,8 @@ async def sync_data():
     logger.info("🚀 Starting PG -> Redis Sync...")
 
     # 1. Connect to Redis
-    redis = Redis.from_url(settings.REDIS_URL, password=settings.REDIS_PASSWORD, decode_responses=True)
+    resolved_password, _ = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+    redis = Redis.from_url(settings.REDIS_URL, password=resolved_password, decode_responses=True)
     try:
         await redis.ping()
         logger.info("✅ Redis connected.")

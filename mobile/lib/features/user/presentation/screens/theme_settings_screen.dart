@@ -39,27 +39,21 @@ class ThemeSettingsScreen extends ConsumerWidget {
               // Theme Mode Section
               _ThemeModeSection(
                 currentMode: currentMode,
-                onModeChanged: (mode) {
-                  themeManager.setAppThemeMode(mode);
-                },
+                onModeChanged: themeManager.setAppThemeMode,
               ),
               const SizedBox(height: DS.xl),
 
               // Brand Preset Section
               _BrandPresetSection(
                 currentPreset: currentPreset,
-                onPresetChanged: (preset) {
-                  themeManager.setBrandPreset(preset);
-                },
+                onPresetChanged: themeManager.setBrandPreset,
               ),
               const SizedBox(height: DS.xl),
 
               // High Contrast Section
               _HighContrastSection(
                 highContrast: highContrast,
-                onToggled: (enabled) {
-                  themeManager.toggleHighContrast(enabled);
-                },
+                onToggled: themeManager.toggleHighContrast,
               ),
               const SizedBox(height: DS.xl),
 

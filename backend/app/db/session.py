@@ -6,16 +6,31 @@ Database Session Management
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
+import ssl
+from sqlalchemy.engine import make_url
 
 from app.config import settings
+from app.db.url import to_async_database_url
 
 
-def _get_engine_kwargs():
+def _sanitize_asyncpg_url(url: str) -> tuple[str, str | None, str | None]:
+    parsed = make_url(url)
+    if not parsed.drivername.startswith("postgresql+asyncpg"):
+        return url, None, None
+    query = dict(parsed.query)
+    sslmode = query.pop("sslmode", None)
+    sslrootcert = query.pop("sslrootcert", None)
+    if sslmode is None and sslrootcert is None:
+        return url, None, None
+    return str(parsed.set(query=query)), sslmode, sslrootcert
+
+
+def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None):
     """
     根据数据库类型返回适当的引擎配置
     PostgreSQL 使用连接池，SQLite 使用 NullPool
     """
-    is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+    is_sqlite = db_url.startswith("sqlite")
 
     if is_sqlite:
         # SQLite 不支持连接池，使用 NullPool
@@ -27,9 +42,15 @@ def _get_engine_kwargs():
     else:
         # PostgreSQL 使用连接池配置
         connect_args = {}
-        # 🆕 如果是非 SQLite 数据库，通常建议在生产环境中强制使用 SSL
-        if not settings.DEBUG:
-            connect_args["ssl"] = "require"
+        if sslrootcert:
+            connect_args["ssl"] = ssl.create_default_context(cafile=sslrootcert)
+        elif sslmode:
+            if sslmode == "disable":
+                connect_args["ssl"] = False
+            elif sslmode in ("require", "verify-ca", "verify-full"):
+                connect_args["ssl"] = True
+        elif not settings.DEBUG:
+            connect_args["ssl"] = True
 
         return {
             "pool_size": settings.DB_POOL_SIZE,
@@ -43,10 +64,11 @@ def _get_engine_kwargs():
         }
 
 
-# Create async engine with appropriate configuration
+_async_db_url = to_async_database_url(settings.DATABASE_URL)
+_async_db_url, _sslmode, _sslrootcert = _sanitize_asyncpg_url(_async_db_url)
 engine = create_async_engine(
-    settings.DATABASE_URL,
-    **_get_engine_kwargs(),
+    _async_db_url,
+    **_get_engine_kwargs(_async_db_url, _sslmode, _sslrootcert),
 )
 
 # Create async session factory

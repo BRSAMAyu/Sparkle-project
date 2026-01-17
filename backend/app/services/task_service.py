@@ -5,13 +5,24 @@ Handle task business logic
 from typing import Optional, List, Tuple
 from uuid import UUID
 from datetime import datetime
+import asyncio
+import json
+import time
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
+from loguru import logger
+from google.protobuf import json_format
 
 from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.schemas.task import TaskListQuery
+from app.core.cache import cache_service
+from app.services.llm_dispatcher import LLMDispatcher
+from app.services.gateway_client import GatewayClient
+from app.gen.sparkle.inference.v1 import inference_pb2
+from app.gen.sparkle.signals.v1 import signals_pb2
 
 
 class TaskService:
@@ -98,6 +109,8 @@ class TaskService:
             from app.services.plan_service import PlanService
             await PlanService.update_progress(db, db_obj.plan_id, db_obj.user_id)
 
+        asyncio.create_task(TaskService._trigger_next_actions(db_obj))
+
         return db_obj
 
     @staticmethod
@@ -181,3 +194,85 @@ class TaskService:
         tasks = result.scalars().all()
         
         return tasks, len(tasks) # This count is wrong for total pages, but for now simple return
+
+    @staticmethod
+    async def _trigger_next_actions(db_obj: Task) -> None:
+        idempotency_key = f"{db_obj.user_id}:{db_obj.id}:{int(time.time() // 120)}"
+        cache_key = f"signals:idempotency:{idempotency_key}"
+
+        if not cache_service.redis:
+            await cache_service.init_redis()
+        if cache_service.redis:
+            cached = await cache_service.get(cache_key)
+            if cached is not None:
+                logger.info("Signals push skipped due to idempotency")
+                return
+            await cache_service.set(cache_key, {"ts": time.time()}, ttl=120)
+
+        request = inference_pb2.InferenceRequest(
+            request_id=str(uuid.uuid4()),
+            trace_id=str(uuid.uuid4()),
+            user_id=str(db_obj.user_id),
+            task_type=inference_pb2.PREDICT_NEXT_ACTIONS,
+            priority=inference_pb2.P0,
+            schema_version="signals_p0_v1",
+            output_schema="NextActionsCandidateSet@v1",
+            prompt_version="signals_p0_v1",
+            idempotency_key=idempotency_key,
+            budgets=inference_pb2.Budgets(
+                max_output_tokens=256,
+                max_cost_level="free_only",
+            ),
+            messages=[
+                inference_pb2.Message(
+                    role="user",
+                    content=json.dumps(
+                        {
+                            "task_id": str(db_obj.id),
+                            "title": db_obj.title,
+                            "type": db_obj.type,
+                            "actual_minutes": db_obj.actual_minutes,
+                            "completed_at": db_obj.completed_at.isoformat()
+                            if db_obj.completed_at
+                            else None,
+                        },
+                        ensure_ascii=True,
+                    ),
+                )
+            ],
+        )
+
+        dispatcher = LLMDispatcher()
+        response = await dispatcher.run(request)
+        if not response.ok or not response.content:
+            return
+
+        try:
+            content_dict = json.loads(response.content)
+        except json.JSONDecodeError:
+            logger.warning("Signals response is not valid JSON")
+            return
+
+        candidate_set = signals_pb2.NextActionsCandidateSet()
+        try:
+            json_format.ParseDict(content_dict, candidate_set, ignore_unknown_fields=True)
+        except Exception as exc:
+            logger.warning(f"Failed to parse NextActionsCandidateSet: {exc}")
+            return
+
+        if not candidate_set.request_id:
+            candidate_set.request_id = request.request_id
+        if not candidate_set.trace_id:
+            candidate_set.trace_id = request.trace_id
+        if not candidate_set.user_id:
+            candidate_set.user_id = request.user_id
+        if not candidate_set.schema_version:
+            candidate_set.schema_version = request.schema_version
+        if not candidate_set.idempotency_key:
+            candidate_set.idempotency_key = request.idempotency_key
+
+        if not candidate_set.candidates:
+            return
+
+        gateway = GatewayClient()
+        await gateway.push_next_actions(candidate_set)

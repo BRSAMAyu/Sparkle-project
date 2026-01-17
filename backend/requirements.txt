@@ -38,12 +38,6 @@ black>=24.1.1
 flake8>=7.0.0
 mypy>=1.8.0
 
-# LLM & AI
-openai>=1.10.0
-sentence-transformers>=2.2.2
-langchain-text-splitters>=0.0.1
-tiktoken>=0.5.2
-
 # Discovered Dependencies
 sse-starlette
 loguru
@@ -71,9 +65,7 @@ grpcio-tools>=1.60.0
 grpcio-reflection>=1.60.0
 protobuf>=4.25.0
 
+# PDF Parsing
 # PDF Generation & Reporting
-weasyprint>=60.0
-jinja2>=3.1.2
-matplotlib>=3.8.0
 celery>=5.3.6
 y-py>=0.6.0

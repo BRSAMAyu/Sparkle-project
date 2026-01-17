@@ -282,9 +282,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: summary.strategies.map((strategy) {
-                        return _buildTagChip(context, strategy.title);
-                      }).toList(),
+                      children: summary.strategies.map((strategy) => _buildTagChip(context, strategy.title)).toList(),
                     ),
                     const SizedBox(height: 12),
                   ],

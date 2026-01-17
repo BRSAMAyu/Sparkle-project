@@ -69,7 +69,7 @@ class CommunityRoutes {
         path: '/community/groups/:id',
         name: 'groupDetail',
         pageBuilder: (context, state) {
-          final groupId = state.pathParameters['id']!;
+          final groupId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: GroupDetailScreen(groupId: groupId),
@@ -80,7 +80,7 @@ class CommunityRoutes {
         path: '/community/groups/:id/tasks',
         name: 'groupTasks',
         pageBuilder: (context, state) {
-          final groupId = state.pathParameters['id']!;
+          final groupId = state.pathParameters['id'];
           return _buildTransitionPage(
             state: state,
             child: GroupTasksScreen(groupId: groupId),

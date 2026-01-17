@@ -6,13 +6,14 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user_id, get_db
 from app.services.galaxy_service import GalaxyService
 from app.services.decay_service import DecayService
+from app.services.knowledge_integration_service import KnowledgeIntegrationService
 from app.schemas.galaxy import (
     GalaxyGraphResponse,
     SparkRequest,
@@ -45,6 +46,11 @@ async def get_galaxy_service(db: AsyncSession = Depends(get_db)) -> GalaxyServic
 async def get_decay_service(db: AsyncSession = Depends(get_db)) -> DecayService:
     """获取 DecayService 实例"""
     return DecayService(db)
+
+
+async def get_knowledge_integration_service(db: AsyncSession = Depends(get_db)) -> KnowledgeIntegrationService:
+    """获取 KnowledgeIntegrationService 实例"""
+    return KnowledgeIntegrationService(db)
 
 
 class MasterySyncRequest(BaseModel):
@@ -344,6 +350,7 @@ async def get_galaxy_stats(
 
 @router.get("/events")
 async def galaxy_events_stream(
+    request: Request,
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -353,12 +360,16 @@ async def galaxy_events_stream(
     - nodes_expanded: 新节点涌现
     - node_sparked: 节点被点亮
     - decay_warning: 衰减警告
+    - evidence_pack: RAG 证据
     """
     from fastapi.responses import StreamingResponse
     from app.core.sse import sse_manager, event_generator
 
-    # 创建连接
-    queue = await sse_manager.connect(user_id)
+    # 支持断点续传
+    last_event_id = request.headers.get("Last-Event-ID")
+
+    # 创建连接 (带 Replay 支持)
+    queue = await sse_manager.connect(user_id, last_event_id=last_event_id)
 
     async def cleanup():
         """清理连接"""
@@ -378,6 +389,148 @@ async def galaxy_events_stream(
     response.background = cleanup
 
     return response
+
+# ==========================================
+# PR-16: Knowledge Integration Endpoints
+# ==========================================
+
+class CreateVocabularyNodeRequest(BaseModel):
+    """Request model for creating vocabulary node from translation"""
+    source_text: str = Field(..., description="原始文本 (e.g., 'polymorphism')")
+    translation: str = Field(..., description="译文 (e.g., '多态性')")
+    context: str = Field(..., description="上下文场景")
+    source_url: Optional[str] = Field(default=None, description="来源URL")
+    source_document_id: Optional[str] = Field(default=None, description="来源文档ID")
+    language: str = Field(default="en", description="源语言 (en, zh)")
+    domain: Optional[str] = Field(default=None, description="领域 (cs, math, business)")
+    subject_id: Optional[int] = Field(default=None, description="关联科目ID")
+
+
+class VocabularyNodeResponse(BaseModel):
+    """Response model for vocabulary node creation"""
+    success: bool
+    node_id: UUID
+    status: str
+    message: str
+
+
+@router.post("/vocabulary", response_model=VocabularyNodeResponse)
+async def create_vocabulary_node(
+    request: CreateVocabularyNodeRequest,
+    user_id: str = Depends(get_current_user_id),
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+):
+    """
+    创建词汇知识节点（从翻译生成）
+
+    节点以 'draft' 状态创建，用户可以：
+    - 审阅和编辑内容
+    - 发布到主知识图谱
+    - 删除不需要的节点
+
+    自动安排间隔重复复习（首次复习：24小时后）
+    """
+    try:
+        node = await knowledge_service.create_vocabulary_node(
+            user_id=UUID(user_id),
+            source_text=request.source_text,
+            translation=request.translation,
+            context=request.context,
+            source_url=request.source_url,
+            source_document_id=UUID(request.source_document_id) if request.source_document_id else None,
+            language=request.language,
+            domain=request.domain,
+            subject_id=request.subject_id
+        )
+
+        return VocabularyNodeResponse(
+            success=True,
+            node_id=node.id,
+            status=node.status,
+            message=f"Vocabulary node created: {node.name} → {request.translation}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create vocabulary node: {str(e)}"
+        )
+
+
+@router.delete("/node/{node_id}/draft")
+async def delete_draft_node(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+):
+    """
+    删除草稿节点
+
+    只能删除状态为 'draft' 的节点
+    """
+    try:
+        await knowledge_service.delete_draft_node(node_id, UUID(user_id))
+        return {
+            "success": True,
+            "node_id": str(node_id),
+            "message": "Draft node deleted"
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete draft node: {str(e)}"
+        )
+
+
+class UpdateNodeContentRequest(BaseModel):
+    """Request model for updating node content"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    keywords: Optional[List[str]] = None
+
+
+@router.patch("/node/{node_id}/content")
+async def update_node_content(
+    node_id: UUID,
+    request: UpdateNodeContentRequest,
+    user_id: str = Depends(get_current_user_id),
+    knowledge_service: KnowledgeIntegrationService = Depends(get_knowledge_integration_service)
+):
+    """
+    更新节点内容（发布前编辑）
+
+    可以修改名称、描述和关键词
+    """
+    try:
+        node = await knowledge_service.update_node_content(
+            node_id=node_id,
+            user_id=UUID(user_id),
+            name=request.name,
+            description=request.description,
+            keywords=request.keywords
+        )
+
+        return {
+            "success": True,
+            "node_id": str(node.id),
+            "name": node.name,
+            "message": "Node content updated"
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update node content: {str(e)}"
+        )
+
 
 # ==========================================
 # Phase 3 & 4 Endpoints
@@ -424,7 +577,7 @@ async def get_nodes_in_viewport(
     # Reusing GalaxyGraphResponse for consistency.
     
     # Construct minimal response
-    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo
+    from app.schemas.galaxy import NodeBase, NodeStatus, UserStatusInfo, NodeWithStatus
     
     mapped_nodes = []
     for node in nodes:

@@ -21,6 +21,9 @@ class GalaxyLayoutEngine {
   static const double innerRadius = 150.0; // 核心区域半径扩大
   static const double outerRadius = 2500.0; // 宇宙边界扩大
   static const double sectorPadding = 5.0;
+  static const double canvasPadding = 400.0;
+  static const double canvasSize = outerRadius * 2 + canvasPadding * 2;
+  static const double canvasCenter = canvasSize / 2;
 
   /// 计算初始布局（快速，在主线程）
   static Map<String, Offset> calculateInitialLayout({
@@ -68,10 +71,10 @@ class GalaxyLayoutEngine {
         // 优先复用现有位置
         if (existingPositions != null &&
             existingPositions.containsKey(node.id)) {
-          positions[node.id] = existingPositions[node.id]!;
+          positions[node.id] = existingPositions[node.id];
           _layoutChildrenRecursive(
             node.id,
-            positions[node.id]!,
+            positions[node.id],
             childrenMap,
             positions,
             nodes,
@@ -160,8 +163,8 @@ class GalaxyLayoutEngine {
 
       if (existingPositions != null &&
           existingPositions.containsKey(child.id)) {
-        positions[child.id] = existingPositions[child.id]!;
-        _layoutChildrenRecursive(child.id, positions[child.id]!, childrenMap,
+        positions[child.id] = existingPositions[child.id];
+        _layoutChildrenRecursive(child.id, positions[child.id], childrenMap,
             positions, allNodes, style, random, existingPositions,);
         continue;
       }
@@ -245,10 +248,10 @@ class GalaxyLayoutEngine {
       // 构建四叉树
       final tree = QuadTree<_LayoutNode>(
         bounds: const Rect.fromLTWH(
-          -outerRadius * 1.5,
-          -outerRadius * 1.5,
-          outerRadius * 3,
-          outerRadius * 3,
+          -canvasCenter,
+          -canvasCenter,
+          canvasSize,
+          canvasSize,
         ),
         capacity: 8,
       );
@@ -455,12 +458,12 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
   for (var iter = 0; iter < iterations; iter++) {
     for (final nodeA in nodes) {
       var force = Offset.zero;
-      final posA = positions[nodeA.id]!;
+      final posA = positions[nodeA.id];
 
       // 1. 斥力：节点之间互斥
       for (final nodeB in nodes) {
         if (nodeA.id == nodeB.id) continue;
-        final posB = positions[nodeB.id]!;
+        final posB = positions[nodeB.id];
         final delta = posA - posB;
         var distance = delta.distance;
         if (distance < 1) distance = 1;
@@ -541,7 +544,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
       velocity[nodeA.id] = (velocity[nodeA.id]! + force) * damping;
 
       // 限制最大位移
-      var displacement = velocity[nodeA.id]!;
+      var displacement = velocity[nodeA.id];
       if (displacement.distance > maxDisplacement * temperature) {
         displacement = displacement /
             displacement.distance *

@@ -15,6 +15,7 @@ import time
 
 from app.core.task_manager import BackgroundTaskManager, TaskStats
 from app.core.celery_app import celery_app, get_celery_status
+from app.core.redis_utils import resolve_redis_password
 
 
 class TestTaskManagerIntegration:
@@ -395,7 +396,9 @@ class TestCeleryTaskExecution:
         """如果没有 Redis 则跳过测试"""
         try:
             import redis
-            r = redis.from_url("redis://localhost:6379/1")
+            redis_url = "redis://localhost:6379/1"
+            resolved_password, _ = resolve_redis_password(redis_url, None)
+            r = redis.from_url(redis_url, password=resolved_password)
             r.ping()
         except:
             pytest.skip("Redis not available")

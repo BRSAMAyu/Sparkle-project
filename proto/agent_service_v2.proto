@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package sparkle.agent.v2;
 
+option go_package = "github.com/sparkle/gateway/gen/agent/v2;agentv2";
+
 message ChatRequestV2 {
   string user_id = 1;
   string message = 2;

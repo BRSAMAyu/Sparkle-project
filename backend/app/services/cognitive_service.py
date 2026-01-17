@@ -1,6 +1,7 @@
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 import json
@@ -11,6 +12,7 @@ from app.models.user import User
 from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
 from app.services.analytics_service import AnalyticsService
+from app.config.phase5_config import phase5_config
 
 class CognitiveService:
     def __init__(self, db: AsyncSession):
@@ -74,11 +76,29 @@ class CognitiveService:
         
         return fragment
 
+    async def _generate_hyde_document(self, content: str) -> Optional[str]:
+        """Generate a hypothetical document for HyDE strategy."""
+        prompt = f"""
+        Given the user thought: "{content}"
+        Write a short hypothetical psychological analysis or behavior pattern description that might explain this thought.
+        Keep it under {phase5_config.HYDE_PROMPT_MAX_WORDS} words.
+        """
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+        try:
+            return await llm_service.chat(messages, temperature=0.7)
+        except Exception as e:
+            logger.warning(f"HyDE generation failed: {e}")
+            return None
+
     async def analyze_behavior(self, user_id: UUID, fragment_id: UUID) -> Dict:
         """
         Analyze a specific fragment using RAG + LLM to identify behavioral patterns.
         Returns the analysis result and potentially created/updated pattern.
         """
+        start_time = datetime.utcnow()
         # 1. Fetch Target Fragment
         stmt = select(CognitiveFragment).where(CognitiveFragment.id == fragment_id)
         result = await self.db.execute(stmt)
@@ -95,22 +115,88 @@ class CognitiveService:
 
             logger.info(f"Analyzing fragment {fragment_id}: {self._sanitize_content(fragment.content)}")
 
-            # 2. RAG: Retrieve Similar Fragments
-            similar_fragments = []
-            if fragment.embedding is not None:
-                # Use pgvector cosine distance
+            # 2. RAG Strategy Selection (HyDE Gate)
+            # 仅在查询内容较短时使用 HyDE
+            use_hyde = (
+                phase5_config.HYDE_ENABLED and
+                len(fragment.content) < phase5_config.HYDE_QUERY_LENGTH_THRESHOLD
+            )
+            hyde_cancelled = False
+            hyde_doc = None
+
+            # Define Raw Search Task
+            async def _raw_search():
+                if fragment.embedding is None:
+                    return []
                 from pgvector.sqlalchemy import Vector
-                
-                rag_query = (
+                query = (
                     select(CognitiveFragment)
                     .where(CognitiveFragment.user_id == user_id)
-                    .where(CognitiveFragment.id != fragment_id) 
+                    .where(CognitiveFragment.id != fragment_id)
                     .where(CognitiveFragment.embedding.isnot(None))
                     .order_by(CognitiveFragment.embedding.cosine_distance(fragment.embedding))
-                    .limit(3)
+                    .limit(phase5_config.RAG_RAW_RETRIEVAL_LIMIT)
                 )
-                rag_result = await self.db.execute(rag_query)
-                similar_fragments = rag_result.scalars().all()
+                res = await self.db.execute(query)
+                return res.scalars().all()
+
+            # Define HyDE Search Task
+            async def _hyde_search():
+                nonlocal hyde_doc, hyde_cancelled
+                try:
+                    # 使用配置的延迟预算
+                    hyde_doc = await asyncio.wait_for(
+                        self._generate_hyde_document(fragment.content),
+                        timeout=phase5_config.HYDE_LATENCY_BUDGET_SEC
+                    )
+                    if not hyde_doc:
+                        return []
+                        
+                    # Generate Embedding for HyDE Doc
+                    hyde_emb = await embedding_service.get_embedding(hyde_doc)
+                    
+                    # Search
+                    from pgvector.sqlalchemy import Vector
+                    query = (
+                        select(CognitiveFragment)
+                        .where(CognitiveFragment.user_id == user_id)
+                        .where(CognitiveFragment.id != fragment_id)
+                        .where(CognitiveFragment.embedding.isnot(None))
+                        .order_by(CognitiveFragment.embedding.cosine_distance(hyde_emb))
+                        .limit(phase5_config.RAG_HYDE_RETRIEVAL_LIMIT)
+                    )
+                    res = await self.db.execute(query)
+                    return res.scalars().all()
+                except asyncio.TimeoutError:
+                    hyde_cancelled = True
+                    logger.info(
+                        f"HyDE generation timed out (Budget {phase5_config.HYDE_LATENCY_BUDGET_SEC}s)"
+                    )
+                    return []
+                except Exception as e:
+                    logger.warning(f"HyDE search error: {e}")
+                    return []
+
+            # Execute RAG Tasks
+            tasks = [_raw_search()]
+            if use_hyde:
+                tasks.append(_hyde_search())
+            
+            results = await asyncio.gather(*tasks)
+            
+            raw_fragments = results[0]
+            hyde_fragments = results[1] if use_hyde else []
+            
+            # Dedup and Combine (Prioritize Raw for now, or mix? Let's mix)
+            seen_ids = set()
+            similar_fragments = []
+            for f in raw_fragments + hyde_fragments:
+                if f.id not in seen_ids:
+                    similar_fragments.append(f)
+                    seen_ids.add(f.id)
+
+            # 使用配置的合并结果上限
+            similar_fragments = similar_fragments[:phase5_config.RAG_MERGE_RESULT_LIMIT]
                 
             similar_text = "\n".join([f"- {f.content} (Tags: {f.error_tags})" for f in similar_fragments])
             
@@ -173,6 +259,14 @@ class CognitiveService:
             # Update Status to COMPLETED
             fragment.analysis_status = AnalysisStatus.COMPLETED
             await self.db.commit()
+            
+            # Add metadata to response
+            analysis["_meta"] = {
+                "strategy_used": "raw+hyde" if use_hyde else "raw",
+                "hyde_cancelled": hyde_cancelled,
+                "latency_ms": (datetime.utcnow() - start_time).total_seconds() * 1000
+            }
+            
             logger.info(f"Successfully analyzed fragment {fragment_id}")
             return analysis
 

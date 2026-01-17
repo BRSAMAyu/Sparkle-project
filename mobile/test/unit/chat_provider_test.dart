@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
 
 // 生成 Mock 类
 // 实际开发中需要运行 flutter pub run build_runner build

@@ -12,8 +12,10 @@ from typing import Any, Optional, Callable, Union
 from uuid import UUID
 
 import redis.asyncio as redis
+from loguru import logger
 from pydantic import BaseModel
 from app.config import settings
+from app.core.redis_utils import resolve_redis_password, format_redis_url_for_log
 
 from contextlib import asynccontextmanager
 
@@ -24,20 +26,35 @@ class CacheService:
 
     async def init_redis(self):
         """Initialize Redis connection pool"""
-        # If password is provided in settings but not in URL, pass it explicitly
-        # Note: If URL has password, redis-py uses it. If kwargs has password, it might override or be used.
-        # We pass it as kwarg if available.
+        password, password_source = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
         kwargs = {
             "encoding": "utf-8",
             "decode_responses": True,
         }
-        if settings.REDIS_PASSWORD:
-            kwargs["password"] = settings.REDIS_PASSWORD
+        if password:
+            kwargs["password"] = password
+
+        # Log connection attempt (masked)
+        safe_url = format_redis_url_for_log(settings.REDIS_URL)
+        logger.info(
+            "Connecting to Redis Cache: {}, Password={}, PasswordSource={}".format(
+                safe_url,
+                "Yes" if password else "No",
+                password_source,
+            )
+        )
 
         self.redis = redis.from_url(
             settings.REDIS_URL, 
             **kwargs
         )
+        try:
+            await self.redis.ping()
+            logger.info("Redis Cache initialized successfully")
+        except Exception as e:
+            self.redis = None
+            logger.warning(f"Redis Cache connection failed: {e}")
+            logger.warning("To start Redis: `docker compose up -d redis` or `systemctl start redis`")
 
     @asynccontextmanager
     async def distributed_lock(self, lock_key: str, expire: int = 10):

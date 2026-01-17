@@ -30,13 +30,13 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     // 1. Create Temporary Post Object
     final tempPost = Post(
       id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
-      userId: _currentUserId!,
+      userId: _currentUserId,
       content: content,
       imageUrls: imageUrls,
       topic: topic,
       createdAt: DateTime.now(),
       user: PostUser(
-        id: _currentUserId!,
+        id: _currentUserId,
         username: 'You', // In a real app, grab from currentUserProvider
       ),
       isOptimistic: true,
@@ -50,7 +50,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       // 3. Perform Actual API Call
       await _repository.createPost(
         CreatePostRequest(
-          userId: _currentUserId!,
+          userId: _currentUserId,
           content: content,
           imageUrls: imageUrls,
           topic: topic,

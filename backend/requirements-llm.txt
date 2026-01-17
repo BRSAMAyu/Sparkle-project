@@ -1,0 +1,7 @@
+# LLM & AI optional dependencies
+openai>=1.10.0
+langchain-openai>=0.1.8
+langchain-core>=0.2.0
+langchain-text-splitters>=0.0.1
+tiktoken>=0.5.2
+sentence-transformers>=2.2.2

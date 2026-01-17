@@ -55,7 +55,7 @@ class ChatRoutes {
           path: groupChat,
           name: 'groupChat',
           pageBuilder: (context, state) {
-            final groupId = state.pathParameters['id']!;
+            final groupId = state.pathParameters['id'];
             return _buildTransitionPage(
               state: state,
               child: GroupChatScreen(groupId: groupId),
@@ -66,7 +66,7 @@ class ChatRoutes {
           path: privateChat,
           name: 'privateChat',
           pageBuilder: (context, state) {
-            final friendId = state.pathParameters['id']!;
+            final friendId = state.pathParameters['id'];
             final friendName = state.uri.queryParameters['name'] ?? 'Chat';
             return _buildTransitionPage(
               state: state,

@@ -39,9 +39,16 @@ class GalaxyState {
     this.lastError,
     this.isUsingCache = false,
     this.selectedNodeId,
+    this.focusNodeId,
+    this.focusBounds,
+    this.highlightedNodeIds = const {},
+    this.highlightedNodeIdHashes = const {},
+    this.highlightRevision = 0,
     this.expandedEdgeNodeIds = const {},
     this.nodeAnimationProgress = const {},
     this.optimizationConfig = GalaxyOptimizationConfig.standard,
+    this.canvasSize = GalaxyLayoutEngine.canvasSize,
+    this.canvasCenter = GalaxyLayoutEngine.canvasCenter,
   });
 
   static const Object _noChange = Object();
@@ -67,6 +74,11 @@ class GalaxyState {
 
   // Interaction state
   final String? selectedNodeId;
+  final String? focusNodeId;
+  final Rect? focusBounds;
+  final Set<String> highlightedNodeIds;
+  final Set<int> highlightedNodeIdHashes;
+  final int highlightRevision;
   final Set<String>
       expandedEdgeNodeIds; // Nodes whose connections should be fully visible
   final Map<String, double>
@@ -74,6 +86,8 @@ class GalaxyState {
   
   // Performance Config
   final GalaxyOptimizationConfig optimizationConfig;
+  final double canvasSize;
+  final double canvasCenter;
 
   GalaxyState copyWith({
     List<GalaxyNodeModel>? nodes,
@@ -92,9 +106,16 @@ class GalaxyState {
     Object? lastError = _noChange,
     bool? isUsingCache,
     String? selectedNodeId,
+    Object? focusNodeId = _noChange,
+    Object? focusBounds = _noChange,
+    Set<String>? highlightedNodeIds,
+    Set<int>? highlightedNodeIdHashes,
+    int? highlightRevision,
     Set<String>? expandedEdgeNodeIds,
     Map<String, double>? nodeAnimationProgress,
     GalaxyOptimizationConfig? optimizationConfig,
+    double? canvasSize,
+    double? canvasCenter,
   }) =>
       GalaxyState(
         nodes: nodes ?? this.nodes,
@@ -115,10 +136,22 @@ class GalaxyState {
             : lastError as GalaxyError?,
         isUsingCache: isUsingCache ?? this.isUsingCache,
         selectedNodeId: selectedNodeId ?? this.selectedNodeId,
+        focusNodeId: identical(focusNodeId, _noChange)
+            ? this.focusNodeId
+            : focusNodeId as String?,
+        focusBounds: identical(focusBounds, _noChange)
+            ? this.focusBounds
+            : focusBounds as Rect?,
+        highlightedNodeIds: highlightedNodeIds ?? this.highlightedNodeIds,
+        highlightedNodeIdHashes:
+            highlightedNodeIdHashes ?? this.highlightedNodeIdHashes,
+        highlightRevision: highlightRevision ?? this.highlightRevision,
         expandedEdgeNodeIds: expandedEdgeNodeIds ?? this.expandedEdgeNodeIds,
         nodeAnimationProgress:
             nodeAnimationProgress ?? this.nodeAnimationProgress,
         optimizationConfig: optimizationConfig ?? this.optimizationConfig,
+        canvasSize: canvasSize ?? this.canvasSize,
+        canvasCenter: canvasCenter ?? this.canvasCenter,
       );
 }
 
@@ -211,18 +244,24 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     super.dispose();
   }
 
-  PerformanceTier _mapPerformanceTier(PerformanceTier tier) {
-    return tier;
-  }
+  PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
+
+  String? _lastEventId;
 
   void _initEventsListener() {
     _eventsSubscription?.cancel();
-    _eventsSubscription = _repository.getGalaxyEventsStream().listen(
+    _eventsSubscription = _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(
       (event) {
+        if (event.id != null && event.id!.isNotEmpty) {
+          _lastEventId = event.id;
+        }
+        
         if (event.event == 'nodes_expanded') {
           _handleNodesExpanded(event.jsonData);
         } else if (event.event == 'galaxy.node.updated') {
           _handleNodeUpdated(event.jsonData);
+        } else if (event.event == 'evidence_pack') {
+          _handleEvidencePack(event.jsonData);
         }
       },
       onError: (error, stack) {
@@ -279,6 +318,70 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _recalculateVisibility();
   }
 
+  void _handleEvidencePack(Map<String, dynamic>? data) {
+    if (data == null) return;
+    final nodes = data['nodes'] as List<dynamic>?;
+    if (nodes == null || nodes.isEmpty) return;
+
+    final first = nodes.first as Map<String, dynamic>?;
+    if (first == null) return;
+    final nodeId = first['node_id'] as String?;
+    if (nodeId == null || nodeId.isEmpty) return;
+    final ids = nodes
+        .map((item) => (item as Map<String, dynamic>?)?['node_id'] as String?)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    setEvidenceHighlight(ids, focusId: nodeId);
+  }
+
+  void setFocusNode(String nodeId) {
+    final expanded = _collectExpandedEdges(nodeId, state.edges);
+    state = state.copyWith(
+      selectedNodeId: nodeId,
+      focusNodeId: nodeId,
+      expandedEdgeNodeIds: expanded,
+    );
+    _recalculateVisibility();
+  }
+
+  void setEvidenceHighlight(Set<String> nodeIds, {String? focusId}) {
+    final focus = focusId ?? (nodeIds.isNotEmpty ? nodeIds.first : null);
+    final expanded =
+        focus != null ? _collectExpandedEdges(focus, state.edges) : null;
+    final hashes = nodeIds.map((id) => id.hashCode).toSet();
+    final bounds = _computeHighlightBounds(nodeIds);
+    state = state.copyWith(
+      highlightedNodeIds: nodeIds,
+      highlightedNodeIdHashes: hashes,
+      highlightRevision: state.highlightRevision + 1,
+      selectedNodeId: focus ?? state.selectedNodeId,
+      focusNodeId: focus,
+      focusBounds: bounds,
+      expandedEdgeNodeIds: expanded ?? state.expandedEdgeNodeIds,
+    );
+    _recalculateVisibility();
+  }
+
+  void clearFocusNode() {
+    if (state.focusNodeId == null) return;
+    state = state.copyWith(focusNodeId: null);
+  }
+
+  void clearFocusBounds() {
+    if (state.focusBounds == null) return;
+    state = state.copyWith(focusBounds: null);
+  }
+
+  void clearEvidenceHighlight() {
+    if (state.highlightedNodeIds.isEmpty) return;
+    state = state.copyWith(
+      highlightedNodeIds: const {},
+      highlightedNodeIdHashes: const {},
+      highlightRevision: state.highlightRevision + 1,
+    );
+  }
+
   Future<void> loadGalaxy({bool forceRefresh = false}) async {
     state = state.copyWith(isLoading: true, lastError: null);
     final requestId = ++_layoutRequestId;
@@ -300,7 +403,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         return;
       }
 
-      final response = result.data!;
+      final response = result.data;
       final aggregationLevel = _levelForScale(state.currentScale);
       final selectedNodeId = state.selectedNodeId;
       final predictedNodeId = state.predictedNodeId;
@@ -410,12 +513,12 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _viewportThrottleTimer = Timer(const Duration(milliseconds: 100), () {
       if (_pendingViewport == null) return;
 
-      final viewport = _pendingViewport!;
+      final viewport = _pendingViewport;
       _pendingViewport = null;
 
       // Only update if viewport changed significantly
       if (state.viewport != null) {
-        final old = state.viewport!;
+        final old = state.viewport;
         final dx = (old.center.dx - viewport.center.dx).abs();
         final dy = (old.center.dy - viewport.center.dy).abs();
         final dw = (old.width - viewport.width).abs();
@@ -468,8 +571,10 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       predictedNodeId: state.predictedNodeId,
       lastError: state.lastError,
       isUsingCache: state.isUsingCache,
+      highlightRevision: state.highlightRevision + 1,
       expandedEdgeNodeIds: {}, // CLEAR
       nodeAnimationProgress: state.nodeAnimationProgress,
+      optimizationConfig: state.optimizationConfig,
     );
     _recalculateVisibility();
   }
@@ -477,7 +582,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   Future<GalaxyError?> sparkNode(String id) async {
     final result = await _repository.sparkNode(id);
     if (result.error != null) {
-      final error = result.error!;
+      final error = result.error;
       final galaxyError =
           error is GalaxyError ? error : GalaxyError.unknown(error.toString());
       state = state.copyWith(lastError: galaxyError);
@@ -635,6 +740,26 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     return expanded;
   }
 
+  Rect? _computeHighlightBounds(Set<String> nodeIds) {
+    if (nodeIds.isEmpty) return null;
+    double? minX;
+    double? minY;
+    double? maxX;
+    double? maxY;
+    for (final nodeId in nodeIds) {
+      final pos = state.nodePositions[nodeId];
+      if (pos == null) continue;
+      minX = minX == null ? pos.dx : minX < pos.dx ? minX : pos.dx;
+      minY = minY == null ? pos.dy : minY < pos.dy ? minY : pos.dy;
+      maxX = maxX == null ? pos.dx : maxX > pos.dx ? maxX : pos.dx;
+      maxY = maxY == null ? pos.dy : maxY > pos.dy ? maxY : pos.dy;
+    }
+    if (minX == null || minY == null || maxX == null || maxY == null) {
+      return null;
+    }
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
   /// Calculate visible nodes based on LOD and Viewport
   List<GalaxyNodeModel> _computeVisibleNodes() {
     if (state.nodes.isEmpty) return [];
@@ -673,7 +798,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     // Always include selected node and its neighbors if any
     if (state.selectedNodeId != null) {
-      final selectedId = state.selectedNodeId!;
+      final selectedId = state.selectedNodeId;
       final extras = nodes.where((n) =>
           n.id == selectedId || state.expandedEdgeNodeIds.contains(n.id),);
       // Merge effectively

@@ -47,10 +47,21 @@ class FileProcessingOrchestrator:
             if not chunks:
                 raise ValueError("No extractable content for vectorization")
 
+            # 1. Quality Check
+            quality = document_service.check_quality(chunks)
+            if not quality.passed:
+                error_msg = f"Quality Gate Failed: {'; '.join(quality.issues)}"
+                await self._update_status(file_record, "failed", error_message=error_msg)
+                await self._publish_status(file_id, user_id, "failed", 100, error=error_msg)
+                return {"status": "failed", "error": error_msg}
+
             await self._replace_chunks(file_id)
-            await self._store_chunks(file_id, user_id, chunks)
+            await self._store_chunks(file_id, user_id, chunks, quality.score)
 
             await self._publish_status(file_id, user_id, "processing", 80)
+
+            # 2. Drafting
+            await document_service.draft_knowledge_nodes(self.db, file_id, user_id, chunks)
 
             await thumbnail_service.generate_and_upload(temp_path, file_id, thumbnail_upload_url)
 
@@ -84,7 +95,7 @@ class FileProcessingOrchestrator:
         await self.db.execute(delete(DocumentChunk).where(DocumentChunk.file_id == file_id))
         await self.db.commit()
 
-    async def _store_chunks(self, file_id: UUID, user_id: UUID, chunks) -> None:
+    async def _store_chunks(self, file_id: UUID, user_id: UUID, chunks, quality_score: float = 1.0) -> None:
         texts = [chunk.content for chunk in chunks]
         batch_size = 16
         index = 0
@@ -98,10 +109,12 @@ class FileProcessingOrchestrator:
                     file_id=file_id,
                     user_id=user_id,
                     chunk_index=index + offset,
-                    page_number=chunk.page_number,
+                    page_numbers=chunk.page_numbers, # JSON list
                     section_title=chunk.section_title,
                     content=chunk.content,
                     embedding=embedding,
+                    quality_score=quality_score,
+                    pipeline_version="v1"
                 ))
             self.db.add_all(items)
             await self.db.commit()

@@ -38,7 +38,7 @@ class AgentMessageRenderer extends StatelessWidget {
           // 4. 确认操作（如果需要）
           if ((message.requiresConfirmation ?? false) &&
               message.confirmationData != null)
-            _buildConfirmationCard(context, message.confirmationData!),
+            _buildConfirmationCard(context, message.confirmationData),
         ],
       );
 

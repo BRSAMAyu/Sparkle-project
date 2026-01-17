@@ -96,10 +96,8 @@ class SyncEngine {
       switch (item.type) {
         case 'mastery_update':
           await _sendMasteryUpdate(payload, item);
-          break;
         case 'crdt_update':
           await _sendCrdtUpdate(payload);
-          break;
         case 'chat_message':
            // TODO: Implement chat message sync
            break;

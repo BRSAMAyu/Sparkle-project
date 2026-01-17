@@ -115,9 +115,10 @@ type ChatOrchestrator struct {
 	taskCommand  *service.TaskCommandService
 	backendURL   string
 	httpClient   *http.Client
+	signalHub    *service.SignalHub
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
@@ -133,6 +134,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		signalHub: signalHub,
 	}
 }
 
@@ -165,6 +167,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	authToken := c.GetString("auth_token")
 
 	log.Printf("WebSocket connected for user: %s", userID)
+	if h.signalHub != nil {
+		h.signalHub.Register(userID, conn)
+		defer h.signalHub.Unregister(userID, conn)
+	}
 
 	tracer := otel.Tracer("chat-orchestrator")
 

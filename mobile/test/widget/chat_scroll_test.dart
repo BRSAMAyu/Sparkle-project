@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
 
 // Mock needed dependencies
 class MockChatNotifier extends ChatNotifier {

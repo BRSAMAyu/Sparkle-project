@@ -90,10 +90,10 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     }
     return AppThemeExtension(
       primaryGradient:
-          LinearGradient.lerp(primaryGradient, other.primaryGradient, t)!,
+          LinearGradient.lerp(primaryGradient, other.primaryGradient, t),
       secondaryGradient:
-          LinearGradient.lerp(secondaryGradient, other.secondaryGradient, t)!,
-      cardGradient: LinearGradient.lerp(cardGradient, other.cardGradient, t)!,
+          LinearGradient.lerp(secondaryGradient, other.secondaryGradient, t),
+      cardGradient: LinearGradient.lerp(cardGradient, other.cardGradient, t),
       cardShadow: t < 0.5 ? cardShadow : other.cardShadow,
       elevatedShadow: t < 0.5 ? elevatedShadow : other.elevatedShadow,
     );
@@ -704,23 +704,23 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   SparkleColors lerp(ThemeExtension<SparkleColors>? other, double t) {
     if (other is! SparkleColors) return this;
     return SparkleColors(
-      taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
-      taskTraining: Color.lerp(taskTraining, other.taskTraining, t)!,
-      taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t)!,
-      taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
-      taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
-      taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
-      planSprint: Color.lerp(planSprint, other.planSprint, t)!,
-      planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
-      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
-      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
-      surfaceGlass: Color.lerp(surfaceGlass, other.surfaceGlass, t)!,
-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
-      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
-      textOnPrimary: Color.lerp(textOnPrimary, other.textOnPrimary, t)!,
-      border: Color.lerp(border, other.border, t)!,
-      divider: Color.lerp(divider, other.divider, t)!,
+      taskLearning: Color.lerp(taskLearning, other.taskLearning, t),
+      taskTraining: Color.lerp(taskTraining, other.taskTraining, t),
+      taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t),
+      taskReflection: Color.lerp(taskReflection, other.taskReflection, t),
+      taskSocial: Color.lerp(taskSocial, other.taskSocial, t),
+      taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t),
+      planSprint: Color.lerp(planSprint, other.planSprint, t),
+      planGrowth: Color.lerp(planGrowth, other.planGrowth, t),
+      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t),
+      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t),
+      surfaceGlass: Color.lerp(surfaceGlass, other.surfaceGlass, t),
+      textPrimary: Color.lerp(textPrimary, other.textPrimary, t),
+      textSecondary: Color.lerp(textSecondary, other.textSecondary, t),
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t),
+      textOnPrimary: Color.lerp(textOnPrimary, other.textOnPrimary, t),
+      border: Color.lerp(border, other.border, t),
+      divider: Color.lerp(divider, other.divider, t),
     );
   }
 
