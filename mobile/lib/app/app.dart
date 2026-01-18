@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/intervention_handler_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Sparkle Application Root Widget
@@ -19,6 +20,8 @@ class SparkleApp extends ConsumerWidget {
     ref.watch(themeManagerProvider);
     // Initialize sync engine early.
     ref.watch(syncEngineProvider);
+    // Start passive intervention pipeline.
+    ref.watch(interventionHandlerServiceProvider);
     // Watch the mode specifically for MaterialApp.themeMode
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
