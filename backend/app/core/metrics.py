@@ -87,42 +87,32 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     'Number of pending events in the outbox table'
 )
 
-# 6. 文档质量门禁指标
-DOC_QUALITY_CHECK_COUNT = get_or_create_metric(
+# 6. Response Feedback & Bandit
+RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
     Counter,
-    'sparkle_doc_quality_checks_total',
-    'Total number of document quality checks',
-    ['doc_type', 'result']  # result: passed, failed
+    'sparkle_response_feedback_ingested_total',
+    'Total response feedback ingested',
+    ['type']  # type: up, down
 )
 
-DOC_QUALITY_SCORE = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_quality_score',
-    'Distribution of document quality scores',
-    ['doc_type'],
-    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-)
-
-DOC_GARBLED_RATIO = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_garbled_ratio',
-    'Distribution of garbled character ratios',
-    ['doc_type'],
-    buckets=[0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5]
-)
-
-DOC_OCR_CONFIDENCE = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_ocr_confidence',
-    'Distribution of OCR confidence scores',
-    buckets=[0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0]
-)
-
-DOC_QUALITY_ISSUES = get_or_create_metric(
+RESPONSE_FEEDBACK_DEDUPE_TOTAL = get_or_create_metric(
     Counter,
-    'sparkle_doc_quality_issues_total',
-    'Count of specific quality issues detected',
-    ['issue_type']  # garbled, too_short, low_chinese_ratio, repeated_headers, etc.
+    'sparkle_response_feedback_dedup_total',
+    'Total response feedback deduplicated'
+)
+
+PROMPT_BANDIT_UPDATES_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_updates_total',
+    'Total prompt bandit updates',
+    ['workflow_id']
+)
+
+PROMPT_BANDIT_STATE_MISSING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_state_missing_total',
+    'Total prompt bandit state misses',
+    ['workflow_id']
 )
 
 # 装饰器：用于测量函数执行时间并记录指标
