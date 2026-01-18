@@ -6,6 +6,7 @@ from app.models.base import Base
 from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.response_feedback import ResponseFeedback  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

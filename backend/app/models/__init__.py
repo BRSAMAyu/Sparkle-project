@@ -48,6 +48,7 @@ from app.models.intervention import (
     InterventionFeedback,
     UserInterventionSettings,
 )
+from app.models.response_feedback import ResponseFeedback
 
 __all__ = [
     "BaseModel",
@@ -122,4 +123,5 @@ __all__ = [
     "InterventionAuditLog",
     "InterventionFeedback",
     "UserInterventionSettings",
+    "ResponseFeedback",
 ]

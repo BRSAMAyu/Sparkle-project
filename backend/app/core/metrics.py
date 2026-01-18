@@ -87,6 +87,34 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     'Number of pending events in the outbox table'
 )
 
+# 6. Response Feedback & Bandit
+RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
+    Counter,
+    'sparkle_response_feedback_ingested_total',
+    'Total response feedback ingested',
+    ['type']  # type: up, down
+)
+
+RESPONSE_FEEDBACK_DEDUPE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_response_feedback_dedup_total',
+    'Total response feedback deduplicated'
+)
+
+PROMPT_BANDIT_UPDATES_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_updates_total',
+    'Total prompt bandit updates',
+    ['workflow_id']
+)
+
+PROMPT_BANDIT_STATE_MISSING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_state_missing_total',
+    'Total prompt bandit state misses',
+    ['workflow_id']
+)
+
 # 装饰器：用于测量函数执行时间并记录指标
 def track_latency(module, method):
     def decorator(func):
