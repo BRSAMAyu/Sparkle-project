@@ -12,7 +12,9 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
+from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.services.response_feedback_service import ResponseFeedbackService
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -50,18 +52,37 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             
             trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
-            logger.info(f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}")
+            workflow_id = "standard_chat"
+            prompt_versions = ["v1", "v2"]
+            prompt_version = "v1"
+            try:
+                bandit = PromptBandit(redis_client=self.orchestrator.redis)
+                prompt_version = await bandit.select(workflow_id, prompt_versions)
+            except Exception as e:
+                logger.warning(f"Prompt bandit selection failed: {e}")
+
+            logger.info(
+                f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}, "
+                f"workflow={workflow_id}, prompt_version={prompt_version}"
+            )
 
             # Create a dedicated DB session for this stream
             async with self.db_session_factory() as db_session:
                 try:
                     # Delegate to Orchestrator
-                    async for response in self.orchestrator.process_stream(request, db_session=db_session):
+                    async for response in self.orchestrator.process_stream(
+                        request,
+                        db_session=db_session,
+                        context_data={
+                            "workflow_id": workflow_id,
+                            "prompt_version": prompt_version,
+                        },
+                    ):
                         response.trace_id = trace_id
                         if not response.workflow_id:
-                            response.workflow_id = "standard_chat"
+                            response.workflow_id = workflow_id
                         if not response.prompt_version:
-                            response.prompt_version = "v1"
+                            response.prompt_version = prompt_version
                         yield response
                     await db_session.commit()
                 except Exception:
@@ -77,8 +98,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 created_at=int(datetime.now().timestamp()),
                 request_id=request.request_id,
                 trace_id=trace_id,
-                workflow_id="standard_chat",
-                prompt_version="v1",
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
                 error=agent_service_pb2.Error(
                     code="INTERNAL_ERROR",
                     message=str(e),
@@ -96,7 +117,18 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         Submit user feedback for an AI response.
         """
         try:
-            if not request.user_id or not request.response_id:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            meta_user_id = metadata.get("user-id")
+            user_id = meta_user_id or request.user_id
+            if request.user_id and meta_user_id and request.user_id != meta_user_id:
+                logger.warning(
+                    "Response feedback user_id mismatch metadata=%s request=%s",
+                    meta_user_id,
+                    request.user_id,
+                )
+
+            if not user_id or not request.response_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("user_id and response_id are required")
                 return agent_service_pb2.ResponseFeedbackResponse(
@@ -105,18 +137,50 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     response_id=request.response_id,
                 )
 
-            logger.info(
-                "Response feedback received - user_id=%s response_id=%s trace_id=%s feedback_type=%s reasons=%s",
-                request.user_id,
-                request.response_id,
-                request.trace_id,
-                request.feedback_type,
-                list(request.reasons),
-            )
+            trace_id = request.trace_id or metadata.get("x-trace-id") or str(uuid.uuid4())
+            if request.feedback_type not in (
+                agent_service_pb2.FEEDBACK_TYPE_UP,
+                agent_service_pb2.FEEDBACK_TYPE_DOWN,
+            ):
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("invalid feedback_type")
+                return agent_service_pb2.ResponseFeedbackResponse(
+                    success=False,
+                    message="invalid feedback_type",
+                    response_id=request.response_id,
+                )
+
+            feedback_type = 1 if request.feedback_type == agent_service_pb2.FEEDBACK_TYPE_UP else 2
+            reasons = ResponseFeedbackService.normalize_reasons(list(request.reasons))
+
+            async with self.db_session_factory() as db_session:
+                service = ResponseFeedbackService(db_session, redis_client=self.orchestrator.redis)
+                try:
+                    result = await service.submit_feedback(
+                        user_id=user_id,
+                        response_id=request.response_id,
+                        trace_id=trace_id,
+                        feedback_type=feedback_type,
+                        reasons=reasons,
+                        free_text=request.free_text or None,
+                        workflow_id=request.workflow_id or None,
+                        prompt_version=request.prompt_version or None,
+                        meta=dict(request.meta) if request.meta else None,
+                    )
+                except ValueError as exc:
+                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                    context.set_details(str(exc))
+                    return agent_service_pb2.ResponseFeedbackResponse(
+                        success=False,
+                        message=str(exc),
+                        response_id=request.response_id,
+                    )
+
+            message = "already_recorded" if result.already_recorded else "ok"
             return agent_service_pb2.ResponseFeedbackResponse(
-                success=True,
-                message="ok",
-                response_id=request.response_id,
+                success=result.success,
+                message=message,
+                response_id=result.response_id,
             )
         except Exception as e:
             logger.error(f"SubmitResponseFeedback error: {e}", exc_info=True)

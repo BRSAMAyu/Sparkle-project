@@ -35,7 +35,11 @@ AGENT_SYSTEM_PROMPT = """你是一个 Sparkle 星火的 AI 学习导师，一个
 {conversation_history_section}"""
 
 
-def build_system_prompt(user_context: dict, conversation_history: dict = None) -> str:
+def build_system_prompt(
+    user_context: dict,
+    conversation_history: dict = None,
+    prompt_version: str = "v1",
+) -> str:
     """
     构建完整的 System Prompt
 
@@ -61,12 +65,17 @@ def build_system_prompt(user_context: dict, conversation_history: dict = None) -
     # 构建对话历史部分
     conversation_history_section = _format_conversation_history(conversation_history)
 
-    return AGENT_SYSTEM_PROMPT.format(
+    prompt = AGENT_SYSTEM_PROMPT.format(
         user_context=formatted_user_context,
         conversation_history_section=conversation_history_section,
         depth_preference_text=depth_text,
         curiosity_preference_text=curiosity_text
     )
+
+    if prompt_version == "v2":
+        prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n- 列表优先"
+
+    return prompt
 
 
 def _format_conversation_history(conversation_history: dict = None) -> str:

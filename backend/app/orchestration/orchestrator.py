@@ -504,6 +504,8 @@ class ChatOrchestrator:
             session_id = request.session_id
             user_id = request.user_id
             response_id = str(uuid.uuid4())
+            workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
+            prompt_version = (context_data or {}).get("prompt_version", "v1")
             
             # Use provided session or instance session
             active_db = db_session or self.db_session
@@ -641,6 +643,8 @@ class ChatOrchestrator:
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
+                    resp.workflow_id = resp.workflow_id or workflow_id
+                    resp.prompt_version = resp.prompt_version or prompt_version
                     await queue.put(resp)
 
                 # Emit initial thinking status
@@ -664,6 +668,8 @@ class ChatOrchestrator:
                     "conversation_context": conversation_context,
                     "file_ids": list(request.file_ids),
                     "include_references": bool(request.include_references),
+                    "workflow_id": workflow_id,
+                    "prompt_version": prompt_version,
                 })
 
                 # Launch Graph Execution in Background (Managed)

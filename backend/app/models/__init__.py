@@ -48,15 +48,7 @@ from app.models.intervention import (
     InterventionFeedback,
     UserInterventionSettings,
 )
-from app.models.learning_assets import (
-    LearningAsset,
-    AssetSuggestionLog,
-    AssetStatus,
-    AssetKind,
-    MatchStrength,
-    SuggestionDecision,
-    UserSuggestionResponse,
-)
+from app.models.response_feedback import ResponseFeedback
 
 __all__ = [
     "BaseModel",
@@ -131,12 +123,5 @@ __all__ = [
     "InterventionAuditLog",
     "InterventionFeedback",
     "UserInterventionSettings",
-    # Learning Assets
-    "LearningAsset",
-    "AssetSuggestionLog",
-    "AssetStatus",
-    "AssetKind",
-    "MatchStrength",
-    "SuggestionDecision",
-    "UserSuggestionResponse",
+    "ResponseFeedback",
 ]
