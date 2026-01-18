@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/edge_ai/models/user_edge_state.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
@@ -68,11 +69,17 @@ class InterventionGateService {
   DateTime? _lastShownAt;
   DateTime _dailyCountDate = DateTime.now();
   int _dailyCount = 0;
+  bool _loaded = false;
 
-  GateDecision evaluate({
+  static const _prefsLastShownKey = 'intervention_last_shown_at';
+  static const _prefsDailyCountKey = 'intervention_daily_count';
+  static const _prefsDailyDateKey = 'intervention_daily_date';
+
+  Future<GateDecision> evaluate({
     required UserEdgeState state,
     required SceneContext sceneContext,
-  }) {
+  }) async {
+    await _ensureLoaded();
     _resetDailyCountIfNeeded();
 
     if (!sceneContext.isWhitelisted) {
@@ -95,10 +102,12 @@ class InterventionGateService {
     return GateDecision(allow: true, reason: 'allow');
   }
 
-  void markInterventionShown() {
+  Future<void> markInterventionShown() async {
+    await _ensureLoaded();
     _resetDailyCountIfNeeded();
     _dailyCount += 1;
     _lastShownAt = DateTime.now();
+    await _persist();
   }
 
   void _resetDailyCountIfNeeded() {
@@ -109,6 +118,37 @@ class InterventionGateService {
       _dailyCountDate = now;
       _dailyCount = 0;
     }
+  }
+
+  Future<void> _ensureLoaded() async {
+    if (_loaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    final lastShownMillis = prefs.getInt(_prefsLastShownKey);
+    final storedDate = prefs.getString(_prefsDailyDateKey);
+    _lastShownAt = lastShownMillis == null || lastShownMillis == 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(lastShownMillis);
+    _dailyCount = prefs.getInt(_prefsDailyCountKey) ?? 0;
+    _dailyCountDate = storedDate == null
+        ? DateTime.now()
+        : DateTime.tryParse(storedDate) ?? DateTime.now();
+    _loaded = true;
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _prefsLastShownKey,
+      _lastShownAt?.millisecondsSinceEpoch ?? 0,
+    );
+    await prefs.setInt(_prefsDailyCountKey, _dailyCount);
+    await prefs.setString(_prefsDailyDateKey, _formatDate(_dailyCountDate));
+  }
+
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 }
 

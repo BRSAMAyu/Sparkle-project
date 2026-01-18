@@ -46,7 +46,7 @@ class InterventionHandlerService {
   }
 
   void debugTrigger() {
-    _attemptIntervention('debug_trigger');
+    unawaited(_attemptIntervention('debug_trigger'));
   }
 
   void _handleSignal(PassiveSignal signal) {
@@ -60,11 +60,11 @@ class InterventionHandlerService {
             : signal.timestamp.difference(_backgroundAt!);
         _backgroundAt = null;
         if (backgroundDuration >= _backgroundTriggerThreshold) {
-          _attemptIntervention('resume_after_background');
+          unawaited(_attemptIntervention('resume_after_background'));
         }
         break;
       case PassiveSignalType.idle:
-        _attemptIntervention('idle_trigger');
+        unawaited(_attemptIntervention('idle_trigger'));
         break;
       case PassiveSignalType.userInteraction:
       case PassiveSignalType.sessionStart:
@@ -73,14 +73,23 @@ class InterventionHandlerService {
     }
   }
 
-  void _attemptIntervention(String trigger) {
+  Future<void> _attemptIntervention(String trigger) async {
     if (_overlayManager.isShowing) {
+      _events.record(
+        InterventionEvent(
+          type: InterventionEventType.gateDenied,
+          data: {
+            'reason': 'already_showing',
+            'trigger': trigger,
+          },
+        ),
+      );
       return;
     }
     final state = _monitor.latestState;
     if (state == null) return;
     final scene = SceneContext.fromNavigator();
-    final decision = _gate.evaluate(state: state, sceneContext: scene);
+    final decision = await _gate.evaluate(state: state, sceneContext: scene);
 
     if (!decision.allow) {
       _events.record(
@@ -89,6 +98,8 @@ class InterventionHandlerService {
           data: {
             'reason': decision.reason,
             'trigger': trigger,
+            'route': scene.routeName,
+            'edge_state': _edgeSnapshot(state),
           },
         ),
       );
@@ -97,7 +108,7 @@ class InterventionHandlerService {
 
     final payload = _buildPayload(state, trigger);
     _overlayManager.show(payload);
-    _gate.markInterventionShown();
+    await _gate.markInterventionShown();
 
     debugPrint(
       '[InterventionHandler] allow trigger=$trigger focus=${state.focusScore.toStringAsFixed(2)}',
@@ -121,6 +132,16 @@ class InterventionHandlerService {
       primaryActionText: 'Start',
       secondaryActionText: 'Later',
     );
+  }
+
+  Map<String, dynamic> _edgeSnapshot(UserEdgeState state) {
+    return {
+      'focus_score': state.focusScore,
+      'switching_rate': state.switchingRate,
+      'is_foreground': state.isForeground,
+      'session_seconds': state.sessionDuration.inSeconds,
+      'last_interaction_s': state.debug['last_interaction_s'],
+    };
   }
 
   void dispose() {
