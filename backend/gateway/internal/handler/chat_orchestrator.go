@@ -221,6 +221,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				case "intervention_feedback":
 					h.handleInterventionFeedback(conn, msgMap, userID, authToken)
 					return false
+				case "response_feedback":
+					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
+					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID)
 					return false
@@ -243,6 +246,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					chatInputPool.Put(input)
 				}()
 
+				traceIDFromClient, _ := msgMap["trace_id"].(string)
+
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
@@ -255,11 +260,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 
-				ctx, span := tracer.Start(c.Request.Context(), "HandleMessage")
+				msgCtx := c.Request.Context()
+				if traceIDFromClient != "" {
+					msgCtx = agent.WithTraceID(msgCtx, traceIDFromClient)
+				}
+				ctx, span := tracer.Start(msgCtx, "HandleMessage")
 				span.SetAttributes(
 					attribute.String("user_id", userID),
 					attribute.String("session_id", input.SessionID),
 				)
+				if traceIDFromClient != "" {
+					span.SetAttributes(attribute.String("trace_id", traceIDFromClient))
+				}
 				defer span.End()
 
 				return h.handleChatMessage(ctx, conn, userID, input, "")
@@ -329,6 +341,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 				h.handleInterventionFeedbackWithResponder(responder, msgMap, userID, authToken)
+				return false
+			case "response_feedback":
+				msgMap, err := decodePayloadMap(envelope.Payload["response_feedback"])
+				if err != nil {
+					responder.SendError("invalid_argument", "Invalid response_feedback payload", false)
+					return false
+				}
+				h.handleResponseFeedbackWithResponder(msgCtx, responder, msgMap, userID)
 				return false
 			default:
 				responder.SendError("invalid_argument", "Unknown payload type", false)
@@ -433,9 +453,12 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	result := map[string]interface{}{
-		"response_id": resp.ResponseId,
-		"created_at":  resp.CreatedAt,
-		"request_id":  resp.RequestId,
+		"response_id":    resp.ResponseId,
+		"created_at":     resp.CreatedAt,
+		"request_id":     resp.RequestId,
+		"trace_id":       resp.TraceId,
+		"workflow_id":    resp.WorkflowId,
+		"prompt_version": resp.PromptVersion,
 	}
 
 	// Handle oneof content field
@@ -668,6 +691,27 @@ func (r *envelopeResponder) SendInterventionAck(requestID, status, message strin
 	}
 }
 
+func (r *envelopeResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	payload := map[string]json.RawMessage{}
+	ack := map[string]interface{}{
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		ack["message"] = message
+	}
+	raw, err := json.Marshal(ack)
+	if err != nil {
+		log.Printf("Failed to encode response feedback ack: %v", err)
+		return
+	}
+	payload["response_feedback_ack"] = raw
+	if err := r.writeEnvelope(payload, traceparentFromContext(r.ctx)); err != nil {
+		log.Printf("Failed to send response feedback ack: %v", err)
+	}
+}
+
 func (r *envelopeResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
 	payload := map[string]json.RawMessage{}
 	body := map[string]interface{}{
@@ -801,6 +845,19 @@ func (r *protobufResponder) SendInterventionAck(requestID, status, message strin
 	r.sendProto("intervention_feedback_ack", raw)
 }
 
+func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	ack := map[string]interface{}{
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		ack["message"] = message
+	}
+	raw, _ := json.Marshal(ack)
+	r.sendProto("response_feedback_ack", raw)
+}
+
 func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
 	body := map[string]interface{}{
 		"node_id":   nodeID,
@@ -892,6 +949,8 @@ func envelopePayloadType(payload map[string]json.RawMessage) string {
 		return "update_node_mastery"
 	case payload["intervention_feedback"] != nil:
 		return "intervention_feedback"
+	case payload["response_feedback"] != nil:
+		return "response_feedback"
 	default:
 		return ""
 	}
@@ -980,6 +1039,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	startTime := time.Now()
 	isCacheHit := false
+	traceID := ""
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		traceID = span.SpanContext().TraceID().String()
+	}
 
 	// P0: Semantic Cache Check
 	if h.semantic != nil {
@@ -993,11 +1056,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 			// Construct cached response
 			resp := &agentv1.ChatResponse{
-				ResponseId:   fmt.Sprintf("resp_cache_%d", time.Now().UnixNano()),
-				CreatedAt:    int64(time.Now().Unix()),
-				RequestId:    requestID,
-				Content:      &agentv1.ChatResponse_FullText{FullText: cachedResp},
-				FinishReason: agentv1.FinishReason_STOP,
+				ResponseId:    uuid.New().String(),
+				CreatedAt:     int64(time.Now().Unix()),
+				RequestId:     requestID,
+				TraceId:       traceID,
+				WorkflowId:    "standard_chat",
+				PromptVersion: "v1",
+				Content:       &agentv1.ChatResponse_FullText{FullText: cachedResp},
+				FinishReason:  agentv1.FinishReason_STOP,
 			}
 
 			// Send response
@@ -1076,6 +1142,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	reqID := requestID
 	if reqID == "" {
 		reqID = fmt.Sprintf("req_%s", uuid.New().String())
+	}
+	if traceID != "" {
+		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, userID, input.SessionID, reqID)
 	}
 
 	var dailyLimit int64
@@ -1375,6 +1444,10 @@ type interventionResponder interface {
 	SendInterventionAck(requestID, status, message string)
 }
 
+type responseFeedbackResponder interface {
+	SendResponseFeedbackAck(responseID, status, message string)
+}
+
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
 	tracer := otel.Tracer("chat-orchestrator")
@@ -1460,6 +1533,25 @@ func (s legacyInterventionResponder) SendInterventionAck(requestID, status, mess
 	}
 	if err := s.conn.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send intervention feedback ack: %v", err)
+	}
+}
+
+type legacyResponseFeedbackResponder struct {
+	conn *websocket.Conn
+}
+
+func (s legacyResponseFeedbackResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	payload := map[string]interface{}{
+		"type":        "response_feedback_ack",
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		payload["message"] = message
+	}
+	if err := s.conn.WriteJSON(payload); err != nil {
+		log.Printf("Failed to send response feedback ack: %v", err)
 	}
 }
 
@@ -1706,6 +1798,113 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 	responder.SendInterventionAck(requestID, "ok", "")
 }
 
+func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Context, responder responseFeedbackResponder, msgMap map[string]interface{}, userID string) {
+	responseID, ok := msgMap["response_id"].(string)
+	if !ok || responseID == "" {
+		log.Printf("Invalid response_feedback: missing response_id")
+		responder.SendResponseFeedbackAck("", "failed", "missing response_id")
+		return
+	}
+
+	feedbackTypeRaw, ok := msgMap["feedback_type"].(string)
+	if !ok || feedbackTypeRaw == "" {
+		log.Printf("Invalid response_feedback: missing feedback_type")
+		responder.SendResponseFeedbackAck(responseID, "failed", "missing feedback_type")
+		return
+	}
+
+	feedbackType := agentv1.FeedbackType_FEEDBACK_TYPE_UP
+	switch strings.ToLower(feedbackTypeRaw) {
+	case "up", "thumbs_up", "like":
+		feedbackType = agentv1.FeedbackType_FEEDBACK_TYPE_UP
+	case "down", "thumbs_down", "dislike":
+		feedbackType = agentv1.FeedbackType_FEEDBACK_TYPE_DOWN
+	default:
+		log.Printf("Invalid response_feedback: unknown feedback_type=%s", feedbackTypeRaw)
+		responder.SendResponseFeedbackAck(responseID, "failed", "invalid feedback_type")
+		return
+	}
+
+	traceID, _ := msgMap["trace_id"].(string)
+	if traceID == "" {
+		if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+			traceID = span.SpanContext().TraceID().String()
+		}
+	}
+
+	reasonMap := map[string]agentv1.FeedbackReason{
+		"inaccurate":    agentv1.FeedbackReason_FEEDBACK_REASON_INACCURATE,
+		"incomplete":    agentv1.FeedbackReason_FEEDBACK_REASON_INCOMPLETE,
+		"verbose":       agentv1.FeedbackReason_FEEDBACK_REASON_VERBOSE,
+		"formatting":    agentv1.FeedbackReason_FEEDBACK_REASON_FORMATTING,
+		"misaligned":    agentv1.FeedbackReason_FEEDBACK_REASON_MISALIGNED,
+		"too_hard":      agentv1.FeedbackReason_FEEDBACK_REASON_TOO_HARD,
+		"too_simple":    agentv1.FeedbackReason_FEEDBACK_REASON_TOO_SIMPLE,
+		"unspecified":   agentv1.FeedbackReason_FEEDBACK_REASON_UNSPECIFIED,
+		"format":        agentv1.FeedbackReason_FEEDBACK_REASON_FORMATTING,
+		"not_aligned":   agentv1.FeedbackReason_FEEDBACK_REASON_MISALIGNED,
+		"not_accurate":  agentv1.FeedbackReason_FEEDBACK_REASON_INACCURATE,
+		"not_complete":  agentv1.FeedbackReason_FEEDBACK_REASON_INCOMPLETE,
+		"too_verbose":   agentv1.FeedbackReason_FEEDBACK_REASON_VERBOSE,
+		"too_difficult": agentv1.FeedbackReason_FEEDBACK_REASON_TOO_HARD,
+		"too_easy":      agentv1.FeedbackReason_FEEDBACK_REASON_TOO_SIMPLE,
+	}
+
+	reasons := []agentv1.FeedbackReason{}
+	if raw, ok := msgMap["reasons"].([]interface{}); ok {
+		for _, item := range raw {
+			if text, ok := item.(string); ok {
+				if reason, ok := reasonMap[strings.ToLower(text)]; ok {
+					reasons = append(reasons, reason)
+				}
+			}
+		}
+	}
+
+	freeText, _ := msgMap["free_text"].(string)
+	workflowID, _ := msgMap["workflow_id"].(string)
+	promptVersion, _ := msgMap["prompt_version"].(string)
+
+	meta := map[string]string{}
+	if raw, ok := msgMap["meta"].(map[string]interface{}); ok {
+		for key, val := range raw {
+			meta[key] = fmt.Sprint(val)
+		}
+	}
+
+	if h.agentClient == nil {
+		log.Printf("Agent client not initialized for response feedback")
+		responder.SendResponseFeedbackAck(responseID, "failed", "service unavailable")
+		return
+	}
+
+	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", userID, responseID, traceID)
+
+	req := &agentv1.ResponseFeedbackRequest{
+		UserId:        userID,
+		ResponseId:    responseID,
+		TraceId:       traceID,
+		FeedbackType:  feedbackType,
+		Reasons:       reasons,
+		FreeText:      freeText,
+		WorkflowId:    workflowID,
+		PromptVersion: promptVersion,
+		Meta:          meta,
+	}
+
+	feedbackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	resp, err := h.agentClient.SubmitResponseFeedback(feedbackCtx, req)
+	if err != nil || resp == nil || !resp.Success {
+		log.Printf("Failed to submit response feedback: %v", err)
+		responder.SendResponseFeedbackAck(responseID, "failed", "submit failed")
+		return
+	}
+
+	responder.SendResponseFeedbackAck(responseID, "ok", "")
+}
+
 // handleActionFeedback processes action confirmation/dismissal feedback from user
 func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
 	h.handleActionFeedbackWithResponder(legacyActionStatusSender{conn: conn}, msgMap, userID)
@@ -1751,6 +1950,10 @@ func (h *ChatOrchestrator) sendInterventionAck(conn *websocket.Conn, requestID, 
 	if err := conn.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send intervention feedback ack: %v", err)
 	}
+}
+
+func (h *ChatOrchestrator) handleResponseFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{conn: conn}, msgMap, userID)
 }
 
 // handleFocusCompleted processes focus session completion events

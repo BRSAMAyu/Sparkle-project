@@ -9,6 +9,7 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,6 +20,24 @@ type Client struct {
 	conn   *grpc.ClientConn
 	api    agentv1.AgentServiceClient
 	config *config.Config
+}
+
+type traceIDKey struct{}
+
+func WithTraceID(ctx context.Context, traceID string) context.Context {
+	if traceID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, traceIDKey{}, traceID)
+}
+
+func traceIDFromContext(ctx context.Context) string {
+	if value := ctx.Value(traceIDKey{}); value != nil {
+		if traceID, ok := value.(string); ok {
+			return traceID
+		}
+	}
+	return ""
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
@@ -89,10 +108,29 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 		"user-id":            req.UserId,
 		"x-internal-api-key": c.config.InternalAPIKey,
 	})
+	if traceID := traceIDFromContext(ctx); traceID != "" {
+		md.Set("x-trace-id", traceID)
+	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		md.Set("x-trace-id", span.SpanContext().TraceID().String())
+	}
 
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 
 	// StreamChat is server-side streaming: single request, stream of responses
 	// otelgrpc interceptor will handle the TraceContext propagation automatically
 	return c.api.StreamChat(outCtx, req)
+}
+
+func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {
+	md := metadata.New(map[string]string{
+		"user-id":            req.UserId,
+		"x-internal-api-key": c.config.InternalAPIKey,
+	})
+	if traceID := traceIDFromContext(ctx); traceID != "" {
+		md.Set("x-trace-id", traceID)
+	} else if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		md.Set("x-trace-id", span.SpanContext().TraceID().String())
+	}
+	outCtx := metadata.NewOutgoingContext(ctx, md)
+	return c.api.SubmitResponseFeedback(outCtx, req)
 }

@@ -1,9 +1,15 @@
 import os
 import re
-from typing import List, Dict, Optional
-from fastapi import HTTPException
+import io
+import base64
+from typing import List, Dict, Optional, Any
+import pdfplumber
+from docx import Document
+from pptx import Presentation
 from loguru import logger
 from pydantic import BaseModel
+import httpx
+from app.config import settings
 
 try:
     import pdfplumber
@@ -45,11 +51,14 @@ class IngestionService:
     Handles PDF, DOCX, PPTX with advanced cleaning and metadata extraction.
     """
 
-    def process_file(self, file_path: str) -> List[ExtractedChunk]:
+    def process_file(self, file_path: str, options: Dict[str, Any] = None) -> List[ExtractedChunk]:
         """
         Main entry point. Dispatches to specific handlers based on extension.
         Includes Magic Byte validation.
         """
+        if options is None:
+            options = {}
+
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -60,7 +69,7 @@ class IngestionService:
 
         try:
             if ext == ".pdf":
-                return self._process_pdf(file_path)
+                return self._process_pdf(file_path, options)
             elif ext == ".docx":
                 return self._process_docx(file_path)
             elif ext == ".pptx":
@@ -89,12 +98,7 @@ class IngestionService:
             if header != b"PK\x03\x04":
                 raise ValueError(f"Invalid ZIP/Office header: {header}")
 
-    def _process_pdf(self, path: str) -> List[ExtractedChunk]:
-        if not HAS_PDFPLUMBER:
-            raise HTTPException(
-                status_code=501,
-                detail="PDF processing requires pdfplumber, which is not installed."
-            )
+    def _process_pdf(self, path: str, options: Dict[str, Any]) -> List[ExtractedChunk]:
         chunks = []
         # Use pdfplumber for better layout analysis
         with pdfplumber.open(path) as pdf:
@@ -106,7 +110,7 @@ class IngestionService:
                 # If text is empty or suspiciously short (scanned page), try OCR
                 if len(text.strip()) < 50:
                     logger.info(f"Page {i+1} has low text content ({len(text.strip())} chars). Attempting OCR...")
-                    ocr_text, ocr_confidence = self._attempt_ocr(page)
+                    ocr_text = self._attempt_ocr(page, options)
                     if ocr_text:
                         text = ocr_text
                         logger.info(
@@ -135,22 +139,34 @@ class IngestionService:
                 ))
         return chunks
 
-    def _attempt_ocr(self, page) -> tuple[str, Optional[float]]:
+    def _attempt_ocr(self, page, options: Dict[str, Any]) -> str:
         """
-        Helper to run Tesseract on a pdfplumber page object with image preprocessing.
-
-        Returns:
-            tuple: (extracted_text, confidence_score)
-                - confidence_score is 0.0-1.0, None if OCR failed
+        Helper to run OCR on a pdfplumber page object.
+        Dispatches to local Tesseract or Remote API based on options.
         """
         if not HAS_OCR:
             logger.warning("OCR requested but pytesseract/Pillow not installed.")
             return "", None
 
         try:
-            # Convert page to image (Resolution 300 DPI for better OCR)
+            # pdfplumber to_image returns a PageImage, .original gives PIL Image
+            # Use 300 DPI for better OCR
             im = page.to_image(resolution=300).original
+            
+            ocr_engine = options.get("ocr_engine", "local") # 'local' or 'deepseek'
+            
+            if ocr_engine == "deepseek":
+                return self._ocr_via_api(im, options)
+            else:
+                return self._ocr_via_local(im)
 
+        except Exception as e:
+            logger.warning(f"OCR Error: {e}")
+            return ""
+
+    def _ocr_via_local(self, im) -> str:
+        """Run local Tesseract OCR with preprocessing"""
+        try:
             # --- Image Preprocessing for Accuracy ---
             # 1. Convert to grayscale
             im = im.convert('L')
@@ -161,8 +177,8 @@ class IngestionService:
             # 3. Simple Binarization (Thresholding)
             threshold = 200
             im = im.point(lambda p: 255 if p > threshold else 0)
-
-            # Run OCR with confidence data
+            
+            # 4. Run OCR
             try:
                 config = r'--oem 3 --psm 6'
                 # Get detailed data including confidence
@@ -171,34 +187,79 @@ class IngestionService:
                 )
             except pytesseract.TesseractError:
                 config = r'--oem 3 --psm 6'
-                ocr_data = pytesseract.image_to_data(
-                    im, lang='eng', config=config, output_type=pytesseract.Output.DICT
-                )
-
-            # Extract text and calculate average confidence
-            texts = []
-            confidences = []
-
-            for i, text in enumerate(ocr_data.get('text', [])):
-                text = text.strip()
-                conf = ocr_data.get('conf', [])[i]
-
-                if text and conf != -1:  # -1 means no confidence available
-                    texts.append(text)
-                    confidences.append(conf)
-
-            full_text = ' '.join(texts)
-
-            # Calculate average confidence (0-100 scale -> 0-1 scale)
-            avg_confidence = None
-            if confidences:
-                avg_confidence = sum(confidences) / len(confidences) / 100.0
-
-            return full_text, avg_confidence
-
+                return pytesseract.image_to_string(im, lang='eng', config=config)
         except Exception as e:
-            logger.warning(f"OCR Error: {e}")
-            return "", None
+            logger.warning(f"Local OCR Failed: {e}")
+            return ""
+
+    def _ocr_via_api(self, image, options: Dict[str, Any]) -> str:
+        """
+        Run Remote DeepSeek OCR via SiliconFlow API with specialized prompts.
+        Modes: 'markdown' (default), 'ocr', 'figure', 'describe'
+        """
+        if not settings.SILICONFLOW_API_KEY:
+            logger.warning("DeepSeek OCR requested but SILICONFLOW_API_KEY not set.")
+            return ""
+        
+        prompt_mode = options.get("ocr_prompt_mode", "markdown")
+        
+        # Official Prompts mapping
+        prompts = {
+            "markdown": "<|grounding|>Convert the document to markdown.",
+            "ocr": "<|grounding|>OCR this image.",
+            "free_ocr": "Free OCR.",
+            "figure": "Parse the figure.",
+            "describe": "Describe this image in detail.",
+        }
+        
+        # Fallback to markdown if mode not found
+        text_prompt = prompts.get(prompt_mode, prompts["markdown"])
+        
+        try:
+            # Convert to base64
+            buffered = io.BytesIO()
+            # Convert to RGB to ensure compatibility
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+                
+            image.save(buffered, format="JPEG", quality=95)
+            img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            
+            headers = {
+                "Authorization": f"Bearer {settings.SILICONFLOW_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "model": settings.SILICONFLOW_OCR_MODEL,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": text_prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
+                        ]
+                    }
+                ],
+                "max_tokens": 4096,
+                "temperature": 0.0 # Low temperature for deterministic transcription
+            }
+            
+            # Use synchronous calls since we are likely in a thread worker
+            with httpx.Client(base_url=settings.SILICONFLOW_BASE_URL, timeout=60.0) as client:
+                response = client.post("/chat/completions", json=data, headers=headers)
+                
+                if response.status_code != 200:
+                    logger.error(f"DeepSeek OCR API Error: {response.status_code} - {response.text}")
+                    return ""
+                    
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                return content
+                
+        except Exception as e:
+            logger.error(f"DeepSeek OCR API Exception: {e}")
+            return ""
 
     def _process_docx(self, path: str) -> List[ExtractedChunk]:
         if not HAS_DOCX:

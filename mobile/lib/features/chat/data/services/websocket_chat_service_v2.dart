@@ -26,10 +26,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     }
 
     final type = data['type'] as String?;
+    final responseId = data['response_id'] as String?;
+    final traceId = data['trace_id'] as String?;
+    final workflowId = data['workflow_id'] as String?;
+    final promptVersion = data['prompt_version'] as String?;
 
     switch (type) {
       case 'delta':
-        return TextEvent(content: data['delta'] as String? ?? '');
+        return TextEvent(
+          content: data['delta'] as String? ?? '',
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'status_update':
         final status = data['status'] as Map<String, dynamic>?;
@@ -37,32 +47,68 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           return StatusUpdateEvent(
             state: status['state'] as String? ?? 'UNKNOWN',
             details: status['details'] as String? ?? '',
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'tool_call':
         final toolCall = data['tool_call'] as Map<String, dynamic>?;
         if (toolCall != null) {
           return ToolStartEvent(
             toolName: toolCall['name'] as String? ?? 'unknown',
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'tool_result':
         final toolResult = data['tool_result'] as Map<String, dynamic>?;
         if (toolResult != null) {
           return ToolResultEvent(
             result: ToolResultModel.fromJson(toolResult),
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'intervention':
         final intervention = data['intervention'] as Map<String, dynamic>?;
         if (intervention == null) {
-          return UnknownEvent(data: data);
+          return UnknownEvent(
+            data: data,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
         }
         final content = intervention['content'] as Map<String, dynamic>? ?? {};
         final widgetType =
@@ -75,18 +121,44 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         widgetData['intervention_topic'] ??= intervention['topic'];
         widgetData['intervention_level'] ??= intervention['level'];
 
-        return WidgetEvent(widgetType: widgetType, widgetData: widgetData);
+        return WidgetEvent(
+          widgetType: widgetType,
+          widgetData: widgetData,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'widget':
         final widgetType = data['widget_type'] as String?;
         final widgetData = data['widget_data'] as Map<String, dynamic>?;
         if (widgetType != null && widgetData != null) {
-          return WidgetEvent(widgetType: widgetType, widgetData: widgetData);
+          return WidgetEvent(
+            widgetType: widgetType,
+            widgetData: widgetData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'full_text':
-        return FullTextEvent(content: data['full_text'] as String? ?? '');
+        return FullTextEvent(
+          content: data['full_text'] as String? ?? '',
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'error':
         final error = data['error'] as Map<String, dynamic>?;
@@ -95,12 +167,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             code: error['code'] as String? ?? 'UNKNOWN',
             message: error['message'] as String? ?? 'Unknown error',
             retryable: error['retryable'] as bool? ?? false,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
         return ErrorEvent(
           code: 'UNKNOWN',
           message: 'Unknown error',
           retryable: false,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
         );
 
       case 'usage':
@@ -110,31 +190,67 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             promptTokens: usage['prompt_tokens'] as int? ?? 0,
             completionTokens: usage['completion_tokens'] as int? ?? 0,
             totalTokens: usage['total_tokens'] as int? ?? 0,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'citations':
         final list = data['citations'] as List<dynamic>?;
         if (list != null) {
           return CitationEvent(
             citations: list.map((e) => e as Map<String, dynamic>).toList(),
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'pong':
         // 心跳响应，静默处理
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'reasoning_step':
         final step = data['step'] as Map<String, dynamic>?;
         if (step != null) {
           return ReasoningStepEvent(
             step: ReasoningStep.fromJson(step),
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'action_status':
         final actionId = data['action_id'] as String?;
@@ -146,9 +262,19 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             message: data['message'] as String?,
             widgetType: data['widget_type'] as String?,
             timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       case 'intervention_feedback_ack':
         final requestId = data['request_id'] as String?;
@@ -160,16 +286,38 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             message: data['message'] as String?,
             widgetType: 'intervention',
             timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
           );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
 
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {
-          return DoneEvent(finishReason: finishReason);
+          return DoneEvent(
+            finishReason: finishReason,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
         }
-        return UnknownEvent(data: data);
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
     }
   } catch (e) {
     return ErrorEvent(

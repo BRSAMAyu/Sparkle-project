@@ -36,10 +36,20 @@ class CRDTSyncManager {
 
     // 3. If local change, queue for sync
     if (origin == 'local') {
-      await _syncEngine.enqueue('crdt_update', {
-        'data': base64Encode(update),
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
+      await _syncEngine.enqueue(
+        topic: 'crdt',
+        opType: 'update',
+        payload: {
+          'data': base64Encode(update),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+        entityType: 'crdt_snapshot',
+        entityId: null,
+        dedupeKey: null,
+        priority: 0,
+        requiresAuth: true,
+        traceId: null,
+      );
     }
   }
 

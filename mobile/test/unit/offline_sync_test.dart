@@ -7,7 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/offline/sync_queue.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 
@@ -16,16 +18,20 @@ import 'offline_sync_test.mocks.dart';
 @GenerateMocks([
   LocalDatabase,
   WebSocketService,
+  ApiClient,
   Connectivity,
   Isar,
   IsarCollection,
   Query,
   QueryBuilder,
+  SyncEngine,
 ])
 void main() {
   late OfflineSyncQueue syncQueue;
   late MockLocalDatabase mockLocalDb;
   late MockWebSocketService mockWsService;
+  late MockApiClient mockApiClient;
+  late MockSyncEngine mockSyncEngine;
   late MockConnectivity mockConnectivity;
   late MockIsar mockIsar;
   late StreamController<dynamic> wsStreamController;
@@ -34,6 +40,8 @@ void main() {
   setUp(() {
     mockLocalDb = MockLocalDatabase();
     mockWsService = MockWebSocketService();
+    mockApiClient = MockApiClient();
+    mockSyncEngine = MockSyncEngine();
     mockConnectivity = MockConnectivity();
     mockIsar = MockIsar();
 
@@ -49,7 +57,11 @@ void main() {
     when(mockConnectivity.onConnectivityChanged)
         .thenAnswer((_) => connectivityStreamController.stream);
 
-    syncQueue = OfflineSyncQueue(mockLocalDb, mockWsService, mockConnectivity);
+    syncQueue = OfflineSyncQueue(
+      mockLocalDb,
+      mockConnectivity,
+      syncEngine: mockSyncEngine,
+    );
   });
 
   tearDown(() {

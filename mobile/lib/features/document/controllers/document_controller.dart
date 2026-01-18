@@ -17,11 +17,21 @@ class DocumentController extends _$DocumentController {
     return const AsyncValue.data(null);
   }
 
-  Future<void> startCleaning(File file, {bool enableOcr = true}) async {
+  Future<void> startCleaning(
+    File file, {
+    bool enableOcr = true,
+    String ocrEngine = 'local',
+    String ocrPromptMode = 'markdown',
+  }) async {
     state = const AsyncValue.loading();
     try {
       final repo = ref.read(documentRepositoryProvider);
-      final taskId = await repo.uploadAndClean(file, enableOcr: enableOcr);
+      final taskId = await repo.uploadAndClean(
+        file,
+        enableOcr: enableOcr,
+        ocrEngine: ocrEngine,
+        ocrPromptMode: ocrPromptMode,
+      );
 
       // Start polling immediately with a dummy initial status
       state = const AsyncValue.data(

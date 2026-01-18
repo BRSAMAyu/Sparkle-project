@@ -36,6 +36,11 @@ class AgentServiceStub(object):
                 request_serializer=agent__service__pb2.WeeklyReportRequest.SerializeToString,
                 response_deserializer=agent__service__pb2.WeeklyReport.FromString,
                 _registered_method=True)
+        self.SubmitResponseFeedback = channel.unary_unary(
+                '/agent.v1.AgentService/SubmitResponseFeedback',
+                request_serializer=agent__service__pb2.ResponseFeedbackRequest.SerializeToString,
+                response_deserializer=agent__service__pb2.ResponseFeedbackResponse.FromString,
+                _registered_method=True)
 
 
 class AgentServiceServicer(object):
@@ -73,6 +78,13 @@ class AgentServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SubmitResponseFeedback(self, request, context):
+        """SubmitResponseFeedback records user feedback for an AI response.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -95,6 +107,11 @@ def add_AgentServiceServicer_to_server(servicer, server):
                     servicer.GetWeeklyReport,
                     request_deserializer=agent__service__pb2.WeeklyReportRequest.FromString,
                     response_serializer=agent__service__pb2.WeeklyReport.SerializeToString,
+            ),
+            'SubmitResponseFeedback': grpc.unary_unary_rpc_method_handler(
+                    servicer.SubmitResponseFeedback,
+                    request_deserializer=agent__service__pb2.ResponseFeedbackRequest.FromString,
+                    response_serializer=agent__service__pb2.ResponseFeedbackResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -207,6 +224,33 @@ class AgentService(object):
             '/agent.v1.AgentService/GetWeeklyReport',
             agent__service__pb2.WeeklyReportRequest.SerializeToString,
             agent__service__pb2.WeeklyReport.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SubmitResponseFeedback(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent.v1.AgentService/SubmitResponseFeedback',
+            agent__service__pb2.ResponseFeedbackRequest.SerializeToString,
+            agent__service__pb2.ResponseFeedbackResponse.FromString,
             options,
             channel_credentials,
             insecure,
