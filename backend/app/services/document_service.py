@@ -51,7 +51,7 @@ class DocumentService:
 
             # 1. Physical Ingestion (OCR, Parsing)
             # This is a synchronous CPU-bound operation, might block event loop if not careful.
-            chunks = await asyncio.to_thread(ingestion_service.process_file, file_path)
+            chunks = await asyncio.to_thread(ingestion_service.process_file, file_path, options)
             
             if not chunks:
                 await self.update_progress(task_id, "Failed: No text found", 100, {"error": "No extractable text found."})

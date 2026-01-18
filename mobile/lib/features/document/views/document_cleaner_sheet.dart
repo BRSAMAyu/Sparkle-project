@@ -19,6 +19,7 @@ class DocumentCleanerSheet extends ConsumerStatefulWidget {
 class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
   File? _selectedFile;
   bool _enableOcr = true;
+  String _ocrEngine = 'local';
 
   @override
   void dispose() {
@@ -46,6 +47,8 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
     await ref.read(documentControllerProvider.notifier).startCleaning(
           _selectedFile!,
           enableOcr: _enableOcr,
+          ocrEngine: _ocrEngine,
+          ocrPromptMode: 'markdown',
         );
     // Cleanup temporary files from file_picker cache
     try {
@@ -184,6 +187,22 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
               ),
             ],
           ),
+          if (_enableOcr) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text(
+                  'OCR 引擎',
+                  style:
+                      TextStyle(color: isDark ? DS.neutral300 : DS.neutral700),
+                ),
+                const Spacer(),
+                _buildEngineChip('本地快速', 'local', isDark),
+                const SizedBox(width: 12),
+                _buildEngineChip('DeepSeek 高精', 'deepseek', isDark),
+              ],
+            ),
+          ],
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _selectedFile == null ? null : _startCleaning,
@@ -200,6 +219,35 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
           ),
         ],
       );
+
+  Widget _buildEngineChip(String label, String value, bool isDark) {
+    final isSelected = _ocrEngine == value;
+    final color =
+        isSelected ? DS.primaryBase : (isDark ? DS.neutral700 : DS.neutral200);
+    final textColor = isSelected
+        ? DS.brandPrimaryConst
+        : (isDark ? DS.neutral300 : DS.neutral700);
+
+    return GestureDetector(
+      onTap: () => setState(() => _ocrEngine = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildProgress(CleaningTaskStatus status, bool isDark) => Column(
         children: [

@@ -514,6 +514,7 @@ class ProductionChatOrchestrator:
         """
         start_time = time.time()
         request_id = request.request_id
+        response_id = str(uuid.uuid4())
         session_id = request.session_id
         user_id = request.user_id
 
@@ -521,7 +522,7 @@ class ProductionChatOrchestrator:
         if await self.message_tracker.is_processed(request_id):
             logger.warning(f"Duplicate request detected: {request_id}")
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -538,7 +539,7 @@ class ProductionChatOrchestrator:
             state = self.circuit_breaker.get_state()
             logger.error(f"Circuit breaker is {state}, rejecting request")
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -554,7 +555,7 @@ class ProductionChatOrchestrator:
         session_tracked = await self._track_session(session_id, add=True)
         if not session_tracked:
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -582,7 +583,7 @@ class ProductionChatOrchestrator:
             if cached_response:
                 logger.info(f"Cache hit for {session_id}/{request_id}")
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     full_text=cached_response.get("full_text", ""),
@@ -716,7 +717,7 @@ class ProductionChatOrchestrator:
                 
                 # Yield initial status
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     status_update=agent_service_pb2.AgentStatus(
@@ -741,7 +742,7 @@ class ProductionChatOrchestrator:
                 
                 # Send "Done" status
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     status_update=agent_service_pb2.AgentStatus(
@@ -758,7 +759,7 @@ class ProductionChatOrchestrator:
                          content = msg["content"]
                          prefix = f"**[{msg.get('name', 'Agent')}]**: "
                          yield agent_service_pb2.ChatResponse(
-                            response_id=f"resp_{uuid.uuid4()}",
+                            response_id=response_id,
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             full_text=prefix + content
@@ -777,7 +778,7 @@ class ProductionChatOrchestrator:
 
             # 发送思考状态
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 status_update=agent_service_pb2.AgentStatus(
@@ -810,7 +811,7 @@ class ProductionChatOrchestrator:
                         if chunk.type == "text":
                             full_response += chunk.content
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 delta=chunk.content
@@ -819,7 +820,7 @@ class ProductionChatOrchestrator:
                         elif chunk.type == "tool_call_end":
                             await self._update_state(session_id, STATE_TOOL_CALLING, f"Calling {chunk.tool_name}...")
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 status_update=agent_service_pb2.AgentStatus(
@@ -837,7 +838,7 @@ class ProductionChatOrchestrator:
                             total_prompt_tokens = chunk.prompt_tokens or 0
                             total_completion_tokens = chunk.completion_tokens or 0
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 usage=agent_service_pb2.Usage(
@@ -875,7 +876,7 @@ class ProductionChatOrchestrator:
 
             # 发送最终响应
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 full_text=final_response_data.get("message", full_response),
@@ -905,7 +906,7 @@ class ProductionChatOrchestrator:
 
             # 发送错误响应
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(

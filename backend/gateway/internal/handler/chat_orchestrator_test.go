@@ -79,7 +79,7 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 					SchemaVersion: "intervention.v1",
 					Level:         agentv1.InterventionLevel_CARD,
 					Reason: &agentv1.InterventionReason{
-						TriggerEventId: "evt-1",
+						TriggerEventId:  "evt-1",
 						ExplanationText: "Based on recent errors.",
 						Confidence:      0.8,
 						EvidenceRefs: []*agentv1.EvidenceRef{
@@ -108,4 +108,22 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 	assert.Equal(t, "Based on recent errors.", reason["explanation_text"])
 	contentMap := intervention["content"].(map[string]interface{})
 	assert.Equal(t, "Morning Review", contentMap["title"])
+}
+
+func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId:    "resp-3",
+		RequestId:     "req-3",
+		TraceId:       "trace-123",
+		WorkflowId:    "standard_chat",
+		PromptVersion: "v1",
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "hello",
+		},
+	}
+
+	result := convertResponseToJSON(resp)
+	assert.Equal(t, "trace-123", result["trace_id"])
+	assert.Equal(t, "standard_chat", result["workflow_id"])
+	assert.Equal(t, "v1", result["prompt_version"])
 }

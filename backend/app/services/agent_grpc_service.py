@@ -48,7 +48,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             elif metadata.get("authorization"):
                 logger.debug(f"Auth metadata found for user_id={user_id}")
             
-            trace_id = metadata.get("x-trace-id", request.request_id)
+            trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
 
             logger.info(f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}")
 
@@ -57,6 +57,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 try:
                     # Delegate to Orchestrator
                     async for response in self.orchestrator.process_stream(request, db_session=db_session):
+                        response.trace_id = trace_id
+                        if not response.workflow_id:
+                            response.workflow_id = "standard_chat"
+                        if not response.prompt_version:
+                            response.prompt_version = "v1"
                         yield response
                     await db_session.commit()
                 except Exception:
@@ -68,15 +73,59 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_error_{datetime.now().timestamp()}",
+                response_id=str(uuid.uuid4()),
                 created_at=int(datetime.now().timestamp()),
                 request_id=request.request_id,
+                trace_id=trace_id,
+                workflow_id="standard_chat",
+                prompt_version="v1",
                 error=agent_service_pb2.Error(
                     code="INTERNAL_ERROR",
                     message=str(e),
                     retryable=True
                 ),
                 finish_reason=agent_service_pb2.STOP # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
+            )
+
+    async def SubmitResponseFeedback(
+        self,
+        request: agent_service_pb2.ResponseFeedbackRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.ResponseFeedbackResponse:
+        """
+        Submit user feedback for an AI response.
+        """
+        try:
+            if not request.user_id or not request.response_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("user_id and response_id are required")
+                return agent_service_pb2.ResponseFeedbackResponse(
+                    success=False,
+                    message="Missing required fields",
+                    response_id=request.response_id,
+                )
+
+            logger.info(
+                "Response feedback received - user_id=%s response_id=%s trace_id=%s feedback_type=%s reasons=%s",
+                request.user_id,
+                request.response_id,
+                request.trace_id,
+                request.feedback_type,
+                list(request.reasons),
+            )
+            return agent_service_pb2.ResponseFeedbackResponse(
+                success=True,
+                message="ok",
+                response_id=request.response_id,
+            )
+        except Exception as e:
+            logger.error(f"SubmitResponseFeedback error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.ResponseFeedbackResponse(
+                success=False,
+                message="Internal error",
+                response_id=request.response_id,
             )
 
     async def RetrieveMemory(

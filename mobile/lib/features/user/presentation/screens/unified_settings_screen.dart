@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
+import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
@@ -130,6 +131,23 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               value: _smartReminders,
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: DS.primaryBase,
+            ),
+            const SizedBox(height: DS.spacing32),
+            _buildSectionHeader(Icons.sync, '同步'),
+            const SizedBox(height: DS.spacing16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.sync),
+              title: const Text('同步中心'),
+              subtitle: const Text('查看离线队列状态与重试'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SyncCenterScreen(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: DS.spacing64),
             Center(

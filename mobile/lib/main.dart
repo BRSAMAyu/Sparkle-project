@@ -8,6 +8,7 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
 
 void main() async {
@@ -25,6 +26,10 @@ void main() async {
 
     // Initialize Local Database (Isar)
     await LocalDatabase().init();
+
+    // Migrate legacy Hive cognitive queue into Outbox
+    await LocalCognitiveRepository(localDb: LocalDatabase())
+        .migrateToOutboxIfNeeded();
 
     // Initialize SharedPrefs
     await SharedPreferences.getInstance();
