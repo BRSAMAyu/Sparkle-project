@@ -128,19 +128,19 @@ class SyncEngine {
       await _requeueStuckWaitingAck();
       while (true) {
         final now = DateTime.now();
-        var baseQuery = _localDb.isar.outboxItems.filter();
-        if (force) {
-          baseQuery = baseQuery.group(
-            (q) => q
-                .statusEqualTo(SyncStatus.pending)
-                .or()
-                .statusEqualTo(SyncStatus.failed),
-          );
-        } else {
-          baseQuery = baseQuery.statusEqualTo(SyncStatus.pending);
-        }
+        final QueryBuilder<OutboxItem, OutboxItem, QAfterFilterCondition>
+            baseQuery = force
+                ? _localDb.isar.outboxItems.filter().group(
+                      (q) => q
+                          .statusEqualTo(SyncStatus.pending)
+                          .or()
+                          .statusEqualTo(SyncStatus.failed),
+                    )
+                : _localDb.isar.outboxItems
+                    .filter()
+                    .statusEqualTo(SyncStatus.pending);
 
-        var itemsQuery = baseQuery.limit(_batchSize);
+        var itemsQuery = baseQuery;
         if (!force) {
           itemsQuery = itemsQuery
               .and()
@@ -152,8 +152,11 @@ class SyncEngine {
               );
         }
 
-        final items = await itemsQuery.findAll()
+        var items = await itemsQuery.findAll()
           ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        if (items.length > _batchSize) {
+          items = items.sublist(0, _batchSize);
+        }
 
         if (items.isEmpty) break;
 

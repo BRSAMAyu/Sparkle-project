@@ -78,6 +78,8 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeEnhancedGalaxyRepository mockRepository;
   late ProviderContainer container;
 
