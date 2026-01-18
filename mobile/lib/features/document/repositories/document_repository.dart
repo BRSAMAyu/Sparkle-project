@@ -18,10 +18,19 @@ class DocumentRepository {
 
   /// Uploads a document and starts the cleaning task.
   /// Returns the task_id.
-  Future<String> uploadAndClean(File file, {bool enableOcr = true}) async {
+  Future<String> uploadAndClean(
+    File file, {
+    bool enableOcr = true,
+    String ocrEngine = 'local',
+    String ocrPromptMode = 'markdown',
+  }) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(file.path),
-      'options': jsonEncode({'enable_ocr': enableOcr}),
+      'options': jsonEncode({
+        'enable_ocr': enableOcr,
+        'ocr_engine': ocrEngine,
+        'ocr_prompt_mode': ocrPromptMode,
+      }),
     });
 
     final response = await _dio.post<Map<String, dynamic>>(

@@ -23,6 +23,9 @@ service AgentService {
 
   // GetWeeklyReport generates or retrieves a weekly summary for the user.
   rpc GetWeeklyReport(WeeklyReportRequest) returns (WeeklyReport);
+
+  // SubmitResponseFeedback records user feedback for an AI response.
+  rpc SubmitResponseFeedback(ResponseFeedbackRequest) returns (ResponseFeedbackResponse);
 }
 
 // ============================================================================
@@ -147,6 +150,12 @@ message ChatResponse {
 
   // The ID of the request that triggered this response (for tracing).
   string request_id = 10;
+  // Trace ID for end-to-end logging correlation.
+  string trace_id = 15;
+  // Workflow identifier for this response.
+  string workflow_id = 16;
+  // Prompt version used to generate this response.
+  string prompt_version = 17;
 
   // The main payload of the response.
   oneof content {
@@ -184,6 +193,41 @@ message ChatResponse {
 
   // Timestamp of response generation
   int64 timestamp = 13;
+}
+
+// Feedback enums for response quality.
+enum FeedbackType {
+  FEEDBACK_TYPE_UP = 0;
+  FEEDBACK_TYPE_DOWN = 1;
+}
+
+enum FeedbackReason {
+  FEEDBACK_REASON_UNSPECIFIED = 0;
+  FEEDBACK_REASON_INACCURATE = 1;
+  FEEDBACK_REASON_INCOMPLETE = 2;
+  FEEDBACK_REASON_VERBOSE = 3;
+  FEEDBACK_REASON_FORMATTING = 4;
+  FEEDBACK_REASON_MISALIGNED = 5;
+  FEEDBACK_REASON_TOO_HARD = 6;
+  FEEDBACK_REASON_TOO_SIMPLE = 7;
+}
+
+message ResponseFeedbackRequest {
+  string user_id = 1;
+  string response_id = 2;
+  string trace_id = 3;
+  FeedbackType feedback_type = 4;
+  repeated FeedbackReason reasons = 5;
+  string free_text = 6;
+  string workflow_id = 7;
+  string prompt_version = 8;
+  map<string, string> meta = 9;
+}
+
+message ResponseFeedbackResponse {
+  bool success = 1;
+  string message = 2;
+  string response_id = 3;
 }
 
 message CitationBlock {

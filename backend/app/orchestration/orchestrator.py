@@ -503,6 +503,7 @@ class ChatOrchestrator:
             request_id = request.request_id
             session_id = request.session_id
             user_id = request.user_id
+            response_id = str(uuid.uuid4())
             
             # Use provided session or instance session
             active_db = db_session or self.db_session
@@ -513,7 +514,7 @@ class ChatOrchestrator:
                 if not validation_result.is_valid:
                     logger.error(f"Validation failed: {validation_result.error_message}")
                     yield agent_service_pb2.ChatResponse(
-                        response_id=f"resp_{uuid.uuid4()}",
+                        response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         error=agent_service_pb2.Error(
@@ -531,7 +532,7 @@ class ChatOrchestrator:
                 logger.info(f"Cache hit for session {session_id}, request {request_id}")
                 # Return cached response
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     full_text=cached_response.get("full_text", ""),
@@ -545,7 +546,7 @@ class ChatOrchestrator:
             
             if not lock_acquired:
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(
@@ -637,8 +638,7 @@ class ChatOrchestrator:
                 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     # Augment response with IDs
-                    if not resp.response_id:
-                        resp.response_id = f"resp_{uuid.uuid4()}"
+                    resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
                     await queue.put(resp)
@@ -727,7 +727,7 @@ class ChatOrchestrator:
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.
                     yield agent_service_pb2.ChatResponse(
-                        response_id=f"resp_{uuid.uuid4()}",
+                        response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
                         full_text=full_response,
@@ -753,7 +753,7 @@ class ChatOrchestrator:
                 logger.error(f"Orchestration Error: {e}", exc_info=True)
                 await self._update_state(session_id, STATE_FAILED, str(e))
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     error=agent_service_pb2.Error(

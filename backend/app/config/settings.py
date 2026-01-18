@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
     DEEPSEEK_REASON_MODEL: str = "deepseek-reasoner"
 
+    # SiliconFlow (for DeepSeek OCR)
+    SILICONFLOW_API_KEY: str = ""
+    SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
+    SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
+
     # Embedding Service
     EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
     EMBEDDING_DIM: int = 1536  # 向量维度

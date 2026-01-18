@@ -77,14 +77,37 @@ class OutboxItem {
   Id id = Isar.autoIncrement;
 
   @Index()
-  late String type; // e.g. 'mastery_update', 'spark_creation'
+  String? type; // Legacy: e.g. 'mastery_update', 'spark_creation'
 
-  late String payloadJson; // Serialized JSON payload
+  @Index()
+  String? uuid;
+
+  @Index()
+  String? topic; // e.g. 'cognitive', 'knowledge', 'analytics'
+
+  String? opType; // create/update/delete/patch
+
+  String? entityType;
+  String? entityId;
+
+  String? payloadJson; // Serialized JSON payload
+  List<int>? payloadBytes; // Optional protobuf payload
+
+  @Index()
+  String? dedupeKey;
 
   @Index()
   late DateTime createdAt;
 
-  int retryCount = 0;
+  int attemptCount = 0;
+  DateTime? lastSentAt;
+  DateTime? nextAttemptAt;
+  String? lastErrorCode;
+  int priority = 0;
+  bool requiresAuth = true;
+  String? traceId;
+
+  int retryCount = 0; // Legacy field; keep for compatibility
 
   @enumerated
   SyncStatus status = SyncStatus.pending;

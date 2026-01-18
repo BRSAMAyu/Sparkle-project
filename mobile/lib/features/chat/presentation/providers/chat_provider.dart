@@ -302,7 +302,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       clearError: true,
     );
 
-    var accumulatedContent = '';
+      var accumulatedContent = '';
+      String? responseId;
+      String? traceId;
+      String? workflowId;
+      String? promptVersion;
     String? lastAiStatus;
     final accumulatedWidgets = <WidgetPayload>[];
     final accumulatedReasoningSteps = <ReasoningStep>[];
@@ -361,6 +365,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         fileIds: fileIds,
         includeReferences: fileIds.isNotEmpty,
       )) {
+        if (event.responseId != null && event.responseId!.isNotEmpty) {
+          responseId = event.responseId;
+        }
+        if (event.traceId != null && event.traceId!.isNotEmpty) {
+          traceId = event.traceId;
+        }
+        if (event.workflowId != null && event.workflowId!.isNotEmpty) {
+          workflowId = event.workflowId;
+        }
+        if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
+          promptVersion = event.promptVersion;
+        }
+
         if (event is TextEvent) {
           // 流式文本片段（delta）
           accumulatedContent += event.content;
@@ -476,6 +493,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
               : null,
           reasoningSummary: reasoningSummary,
           isReasoningComplete: accumulatedReasoningSteps.isNotEmpty,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
         );
 
         state = state.copyWith(
