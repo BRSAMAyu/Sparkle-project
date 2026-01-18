@@ -10,6 +10,7 @@ import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:opentelemetry/api.dart' show Attribute;
 import 'package:sparkle/core/tracing/tracing_service.dart';
 
 class WebSocketService {
@@ -136,7 +137,7 @@ class WebSocketService {
     if (_channel != null && _isConnected) {
       final span = TracingService.instance.startSpan('ws.send');
       if (data is WebSocketMessage) {
-        span.setAttribute('ws.type', data.type);
+        span.setAttribute(Attribute.fromString('ws.type', data.type));
         _channel!.sink.add(data.writeToBuffer());
       } else if (data is List<int>) {
         _channel!.sink.add(data);
@@ -145,7 +146,7 @@ class WebSocketService {
           data['trace_id'] = TracingService.instance.createTraceId();
         }
         if (data is Map && data['type'] is String) {
-          span.setAttribute('ws.type', data['type'] as String);
+          span.setAttribute(Attribute.fromString('ws.type', data['type'] as String));
         }
         _channel!.sink.add(jsonEncode(data));
       } else {

@@ -1,0 +1,21 @@
+import 'package:opentelemetry/api.dart' show Span, globalTracerProvider;
+import 'package:uuid/uuid.dart';
+
+import 'tracing_service.dart';
+
+class NoopTracingService implements TracingServiceBase {
+  final Uuid _uuid = const Uuid();
+
+  @override
+  Future<void> initialize({Uri? collectorUri}) async {}
+
+  @override
+  Span startSpan(String name) =>
+      globalTracerProvider.getTracer('sparkle-mobile').startSpan(name);
+
+  @override
+  String createTraceId({String spanName = 'trace.generate'}) => _uuid.v4();
+
+  @override
+  void recordException(Span span, Object error, StackTrace stackTrace) {}
+}

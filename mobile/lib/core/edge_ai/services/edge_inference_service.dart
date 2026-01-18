@@ -127,9 +127,8 @@ class EdgeInferenceService {
     workerReceivePort.listen((message) {
       if (message is _WorkerInitMessage) {
         try {
-          final params = ContextParams();
-          params.context = 2048; 
-          llama = Llama(message.modelPath, params);
+          final params = ContextParams()..nCtx = 2048;
+          llama = Llama(message.modelPath, contextParams: params);
           logger.i('Llama context initialized with Qwen3-0.6B');
         } catch (e) {
           logger.e('Failed to load Llama in worker isolate', error: e);
@@ -140,19 +139,20 @@ class EdgeInferenceService {
           return;
         }
 
-        try {
-          final featuresJson = jsonEncode(message.features);
-          
-          // Qwen3 Chat Format
-          final prompt = '<|im_start|>system\nYou are a user state estimator. Given the JSON behavior data, predict the state vector.\n<|im_end|>\n'
-              '<|im_start|>user\n$featuresJson\n<|im_end|>\n'
-              '<|im_start|>assistant\n';
+        () async {
+          try {
+            final featuresJson = jsonEncode(message.features);
+            final prompt = '<|im_start|>system\nYou are a user state estimator. Given the JSON behavior data, predict the state vector.\n<|im_end|>\n'
+                '<|im_start|>user\n$featuresJson\n<|im_end|>\n'
+                '<|im_start|>assistant\n';
 
-          final result = llama!.prompt(prompt, grammar: stateVectorGrammar);
-          message.replyPort.send(result);
-        } catch (e) {
-          message.replyPort.send('ERROR: ${e.toString()}');
-        }
+            llama!.setPrompt(prompt);
+            final result = await llama!.generateCompleteText();
+            message.replyPort.send(result);
+          } catch (e) {
+            message.replyPort.send('ERROR: ${e.toString()}');
+          }
+        }();
       }
     });
   }
