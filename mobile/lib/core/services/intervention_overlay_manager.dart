@@ -19,28 +19,32 @@ class InterventionOverlayManager {
       return;
     }
 
-    hide();
+    if (_entry != null) {
+      return;
+    }
     _payload = payload;
 
-    _entry = OverlayEntry(
-      builder: (context) => Material(
-        type: MaterialType.transparency,
-        child: InterventionOverlay(
-          payload: payload,
-          onPrimary: () => _handleAction('primary'),
-          onSecondary: () => _handleAction('secondary'),
-          onDismiss: () => _handleAction('dismissed'),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_entry != null) return;
+      _entry = OverlayEntry(
+        builder: (context) => Material(
+          type: MaterialType.transparency,
+          child: InterventionOverlay(
+            payload: payload,
+            onPrimary: () => _handleAction('primary'),
+            onSecondary: () => _handleAction('secondary'),
+            onDismiss: () => _handleAction('dismissed'),
+          ),
         ),
-      ),
-    );
-
-    overlayState.insert(_entry!);
-    _events.record(
-      InterventionEvent(
-        type: InterventionEventType.overlayShown,
-        data: {'title': payload.title},
-      ),
-    );
+      );
+      overlayState.insert(_entry!);
+      _events.record(
+        InterventionEvent(
+          type: InterventionEventType.overlayShown,
+          data: {'title': payload.title},
+        ),
+      );
+    });
   }
 
   void _handleAction(String action) {
