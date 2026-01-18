@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:opentelemetry/api.dart' show Attribute;
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -781,7 +782,7 @@ class WebSocketChatServiceV2 {
       final span = TracingService.instance.startSpan('ws.chat_send');
       payload.putIfAbsent('trace_id', TracingService.instance.createTraceId);
       if (payload['type'] is String) {
-        span.setAttribute('ws.type', payload['type'] as String);
+        span.setAttribute(Attribute.fromString('ws.type', payload['type'] as String));
       }
       _channel?.sink.add(json.encode(payload));
       _log('📤 Sent: ${payload['message']}');
