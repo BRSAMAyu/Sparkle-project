@@ -103,9 +103,6 @@ class SyncEngine {
       topic: 'legacy',
       opType: type,
       payload: payload,
-      entityType: null,
-      entityId: null,
-      dedupeKey: null,
     );
   }
 
@@ -128,8 +125,7 @@ class SyncEngine {
       await _requeueStuckWaitingAck();
       while (true) {
         final now = DateTime.now();
-        final QueryBuilder<OutboxItem, OutboxItem, QAfterFilterCondition>
-            baseQuery = force
+        final baseQuery = force
                 ? _localDb.isar.outboxItems.filter().group(
                       (q) => q
                           .statusEqualTo(SyncStatus.pending)
@@ -190,25 +186,18 @@ class SyncEngine {
       switch (descriptor.topic) {
         case 'knowledge':
           await _sendMasteryUpdate(payload, item);
-          break;
         case 'crdt':
           await _sendCrdtUpdate(payload);
-          break;
         case 'cognitive':
           await _sendCognitiveFragmentCreate(payload, item);
-          break;
         case 'intervention_requests':
           await _sendInterventionRequest(payload);
-          break;
         case 'intervention_feedback':
           await _sendInterventionFeedback(payload);
-          break;
         case 'intervention_passive_signals':
           await _sendInterventionPassiveSignal(payload);
-          break;
         case 'intervention_outcomes':
           await _sendInterventionOutcome(payload);
-          break;
         default:
           _logger.w(
             'Unknown outbox item: ${descriptor.topic}/${descriptor.opType}',
@@ -305,7 +294,7 @@ class SyncEngine {
         ApiEndpoints.cognitiveFragments,
         data: payload,
       );
-    } on DioException catch (e) {
+    } on DioException {
       rethrow;
     }
   }

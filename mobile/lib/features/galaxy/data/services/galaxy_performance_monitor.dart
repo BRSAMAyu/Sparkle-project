@@ -66,6 +66,7 @@ class GalaxyPerformanceMonitor extends ChangeNotifier {
   }
 
   PerformanceReport getPerformanceReport() => PerformanceReport(
+      averageFps: 60.0, // Placeholder
       frameCount: 100,
     );
 

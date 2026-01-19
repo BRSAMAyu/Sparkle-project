@@ -44,11 +44,6 @@ class CRDTSyncManager {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
         entityType: 'crdt_snapshot',
-        entityId: null,
-        dedupeKey: null,
-        priority: 0,
-        requiresAuth: true,
-        traceId: null,
       );
     }
   }

@@ -10,9 +10,6 @@ enum InterventionEventType {
 }
 
 class InterventionEvent {
-  final InterventionEventType type;
-  final DateTime timestamp;
-  final Map<String, dynamic> data;
 
   InterventionEvent({
     required this.type,
@@ -20,6 +17,9 @@ class InterventionEvent {
     Map<String, dynamic>? data,
   })  : timestamp = timestamp ?? DateTime.now(),
         data = data ?? {};
+  final InterventionEventType type;
+  final DateTime timestamp;
+  final Map<String, dynamic> data;
 }
 
 class InterventionEventService {

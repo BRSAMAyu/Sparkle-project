@@ -86,7 +86,6 @@ class InterventionHandlerService {
     switch (signal.type) {
       case PassiveSignalType.appBackground:
         _backgroundAt = signal.timestamp;
-        break;
       case PassiveSignalType.appForeground:
         final backgroundDuration = _backgroundAt == null
             ? Duration.zero
@@ -95,10 +94,8 @@ class InterventionHandlerService {
         if (backgroundDuration >= _backgroundTriggerThreshold) {
           unawaited(_attemptIntervention('resume_after_background'));
         }
-        break;
       case PassiveSignalType.idle:
         unawaited(_attemptIntervention('idle_trigger'));
-        break;
       case PassiveSignalType.userInteraction:
       case PassiveSignalType.sessionStart:
       case PassiveSignalType.sessionEnd:
@@ -201,15 +198,13 @@ class InterventionHandlerService {
     }
   }
 
-  Map<String, dynamic> _edgeSnapshot(UserEdgeState state) {
-    return {
+  Map<String, dynamic> _edgeSnapshot(UserEdgeState state) => {
       'focus_score': state.focusScore,
       'switching_rate': state.switchingRate,
       'is_foreground': state.isForeground,
       'session_seconds': state.sessionDuration.inSeconds,
       'last_interaction_s': state.debug['last_interaction_s'],
     };
-  }
 
   double _mapUrgency(UserEdgeState state) {
     final score = 1 - state.focusScore;

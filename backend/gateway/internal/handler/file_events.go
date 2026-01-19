@@ -2,6 +2,7 @@ package handler
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -25,6 +26,11 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 	if h.wsFactory != nil {
 		upgrader = h.wsFactory.CreateUpgrader()
 	} else {
+		if !isDevelopmentEnv() {
+			log.Printf("[ERROR] WebSocketFactory missing in non-development environment")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "WebSocket configuration error"})
+			return
+		}
 		upgrader = DefaultUpgrader()
 	}
 

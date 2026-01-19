@@ -48,7 +48,6 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
           _selectedFile!,
           enableOcr: _enableOcr,
           ocrEngine: _ocrEngine,
-          ocrPromptMode: 'markdown',
         );
     // Cleanup temporary files from file_picker cache
     try {

@@ -16,7 +16,7 @@ class EvidenceDrawer {
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.deepSpaceStart,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(DS.lg)),
       ),
       builder: (_) => ProviderScope(

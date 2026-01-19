@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import '../analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 
 // Use different implementations for web and other platforms
 import 'local_database_web.dart' if (dart.library.io) 'local_database_native.dart';

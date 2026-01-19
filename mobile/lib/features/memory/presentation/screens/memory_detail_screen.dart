@@ -11,17 +11,6 @@ import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_bad
 enum MemoryDetailType { preference, goal, episodic }
 
 class MemoryDetailArgs {
-  MemoryDetailArgs._(this.type, this.title, this.evidenceMissing, this.refs,
-      {this.prefKey, this.preference, this.goal, this.episodic});
-
-  final MemoryDetailType type;
-  final String title;
-  final bool evidenceMissing;
-  final List<EvidenceRefModel> refs;
-  final String? prefKey;
-  final MemoryPreferenceItem? preference;
-  final MemoryGoalItem? goal;
-  final EpisodicMemoryItem? episodic;
 
   factory MemoryDetailArgs.preference(MemoryPreferenceItem item) =>
       MemoryDetailArgs._(
@@ -49,10 +38,21 @@ class MemoryDetailArgs {
         item.evidenceRefs,
         episodic: item,
       );
+  MemoryDetailArgs._(this.type, this.title, this.evidenceMissing, this.refs,
+      {this.prefKey, this.preference, this.goal, this.episodic,});
+
+  final MemoryDetailType type;
+  final String title;
+  final bool evidenceMissing;
+  final List<EvidenceRefModel> refs;
+  final String? prefKey;
+  final MemoryPreferenceItem? preference;
+  final MemoryGoalItem? goal;
+  final EpisodicMemoryItem? episodic;
 }
 
 class MemoryDetailScreen extends ConsumerStatefulWidget {
-  const MemoryDetailScreen({super.key, required this.args});
+  const MemoryDetailScreen({required this.args, super.key});
 
   final MemoryDetailArgs args;
 
@@ -252,8 +252,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             Expanded(
               child: ListView.builder(
                 itemCount: _history.length,
-                itemBuilder: (context, index) =>
-                    _buildTimelineCard(context, index),
+                itemBuilder: _buildTimelineCard,
               ),
             )
           else
@@ -398,7 +397,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             Row(
               children: [
                 Text('v${item.version}',
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: Theme.of(context).textTheme.titleMedium,),
                 const Spacer(),
                 MemoryEvidenceBadge(
                   status: _statusFor(item.evidenceMissing, item.evidenceRefs),
@@ -500,7 +499,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Why this memory?',
-                style: Theme.of(context).textTheme.titleMedium),
+                style: Theme.of(context).textTheme.titleMedium,),
             const SizedBox(height: DS.sm),
             Text(_explanationText()),
             if (settingsSummary != null) ...[

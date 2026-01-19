@@ -125,7 +125,5 @@ class _TestSyncEngine extends SyncEngine {
   _TestSyncEngine(super.localDb, super.wsService, super.apiClient);
 
   @override
-  Future<void> processNow({bool force = false, bool skipConnectivity = false}) {
-    return super.processNow(force: force, skipConnectivity: true);
-  }
+  Future<void> processNow({bool force = false, bool skipConnectivity = false}) => super.processNow(force: force, skipConnectivity: true);
 }

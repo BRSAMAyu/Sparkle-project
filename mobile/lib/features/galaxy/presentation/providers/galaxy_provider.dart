@@ -246,8 +246,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
-  String? _lastEventId;
-
   void _initEventsListener() {
     _eventsSubscription?.cancel();
     _eventsSubscription = _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(

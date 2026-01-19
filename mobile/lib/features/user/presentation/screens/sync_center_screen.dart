@@ -222,8 +222,7 @@ class _TopicFilter extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         const Text('Topic:'),
         const SizedBox(width: DS.spacing8),
@@ -245,7 +244,6 @@ class _TopicFilter extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ItemsList extends ConsumerWidget {
@@ -328,7 +326,7 @@ class _OutboxItemCard extends StatelessWidget {
     final statusLabel = item.status.name;
     final errorLabel = _errorLabel(item.lastErrorCode);
     final nextAttemptAt =
-        item.nextAttemptAt != null ? item.nextAttemptAt!.toLocal() : null;
+        item.nextAttemptAt?.toLocal();
 
     return Card(
       child: Padding(

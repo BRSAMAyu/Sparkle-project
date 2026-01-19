@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/intervention_handler_service.dart';
 
 class DebugInterventionTrigger extends ConsumerStatefulWidget {
-  final Widget child;
 
   const DebugInterventionTrigger({
     super.key,
     required this.child,
   });
+  final Widget child;
 
   @override
   ConsumerState<DebugInterventionTrigger> createState() =>

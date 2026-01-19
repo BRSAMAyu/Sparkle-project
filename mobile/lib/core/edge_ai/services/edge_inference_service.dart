@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
-import '../../analytics/services/local_feature_service.dart';
-import '../models/edge_state_schema.dart';
-import '../grammar/state_vector_grammar.dart';
-import 'model_manager.dart';
+import 'package:sparkle/core/analytics/services/local_feature_service.dart';
+import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
+import 'package:sparkle/core/edge_ai/grammar/state_vector_grammar.dart';
+import 'package:sparkle/core/edge_ai/services/model_manager.dart';
 
 // Placeholder for feature input
 typedef FeatureVector = Map<String, dynamic>;
@@ -20,30 +20,30 @@ final edgeInferenceServiceProvider = Provider<EdgeInferenceService>((ref) {
 });
 
 class _WorkerInitMessage {
-  final String modelPath;
   _WorkerInitMessage(this.modelPath);
+  final String modelPath;
 }
 
 class _InferenceRequest {
+  _InferenceRequest(this.features, this.replyPort);
   final FeatureVector features;
   final SendPort replyPort;
-  _InferenceRequest(this.features, this.replyPort);
 }
 
 /// Manages the Edge AI lifecycle and communicates with the background worker.
 class EdgeInferenceService {
-  final Logger _logger = Logger();
-  final ModelManager _modelManager;
-  final LocalFeatureService _featureService;
-  
-  SendPort? _workerSendPort;
-  bool _isReady = false;
 
   EdgeInferenceService({
     required ModelManager modelManager,
     required LocalFeatureService featureService,
   })  : _modelManager = modelManager,
         _featureService = featureService;
+  final Logger _logger = Logger();
+  final ModelManager _modelManager;
+  final LocalFeatureService _featureService;
+  
+  SendPort? _workerSendPort;
+  bool _isReady = false;
 
   /// Initializes the background isolate and loads the model.
   Future<void> initialize() async {
@@ -150,7 +150,7 @@ class EdgeInferenceService {
             final result = await llama!.generateCompleteText();
             message.replyPort.send(result);
           } catch (e) {
-            message.replyPort.send('ERROR: ${e.toString()}');
+            message.replyPort.send('ERROR: ${e}');
           }
         }();
       }

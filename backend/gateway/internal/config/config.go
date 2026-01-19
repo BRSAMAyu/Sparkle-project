@@ -18,6 +18,9 @@ type Config struct {
 	AgentTLSInsecure   bool   `mapstructure:"AGENT_TLS_INSECURE"`
 	GRPCTimeoutSeconds int    `mapstructure:"GRPC_TIMEOUT_SECONDS"`
 	JWTSecret          string `mapstructure:"JWT_SECRET"`
+	JWTIssuer          string `mapstructure:"JWT_ISSUER"`
+	JWTAudience        string `mapstructure:"JWT_AUDIENCE"`
+	AllowWsQueryToken  bool   `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
 	RedisURL           string `mapstructure:"REDIS_URL"`
 	RedisPassword      string `mapstructure:"REDIS_PASSWORD"`
 	BackendURL         string `mapstructure:"BACKEND_URL"`
@@ -149,6 +152,9 @@ func Load() *Config {
 		"AGENT_TLS_INSECURE",
 		"GRPC_TIMEOUT_SECONDS",
 		"JWT_SECRET",
+		"JWT_ISSUER",
+		"JWT_AUDIENCE",
+		"ALLOW_WS_QUERY_TOKEN",
 		"REDIS_URL",
 		"REDIS_PASSWORD",
 		"BACKEND_URL",
@@ -191,6 +197,9 @@ func Load() *Config {
 	viper.SetDefault("AGENT_TLS_INSECURE", false)
 	viper.SetDefault("GRPC_TIMEOUT_SECONDS", 5)
 	// JWT_SECRET has no default - must be set via environment variable or .env file
+	viper.SetDefault("JWT_ISSUER", "")
+	viper.SetDefault("JWT_AUDIENCE", "")
+	viper.SetDefault("ALLOW_WS_QUERY_TOKEN", true)
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
@@ -254,6 +263,10 @@ func Load() *Config {
 		for i := range cfg.AllowedOrigins {
 			cfg.AllowedOrigins[i] = strings.TrimSpace(cfg.AllowedOrigins[i])
 		}
+	}
+
+	if !viper.IsSet("ALLOW_WS_QUERY_TOKEN") {
+		cfg.AllowWsQueryToken = cfg.IsDevelopment()
 	}
 
 	return &cfg
