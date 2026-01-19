@@ -8,6 +8,12 @@ from app.models.task import Task  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.response_feedback import ResponseFeedback  # noqa: F401
 from app.models.intervention import InterventionRequest  # noqa: F401
+from app.models.nightly_review import NightlyReview  # noqa: F401
+from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory  # noqa: F401
+from app.models.context_pack import ContextPackRun, ContextBudgetProfile, ContextPackFeedback  # noqa: F401
+from app.models.memory_rank_policy import MemoryRankPolicy  # noqa: F401
+from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
+from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401
     ScaffoldingState,
     PassiveSignal,

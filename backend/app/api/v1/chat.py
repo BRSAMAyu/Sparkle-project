@@ -13,6 +13,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.llm_service import llm_service, LLMResponse, StreamChunk
 from app.services.analytics_service import AnalyticsService
+from app.config import settings
 from app.tools.registry import tool_registry
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.composer import ResponseComposer
@@ -61,7 +62,7 @@ async def chat_with_task_context(
     error_handler = AgentErrorHandler()
     
     # 2. Build Context
-    user_context = await get_user_context(db, current_user.id)
+    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
     
     # Inject Task Context specifically
     task_context = {
@@ -186,7 +187,7 @@ async def chat(
     error_handler = AgentErrorHandler()
     
     # 1. 构建上下文和对话历史
-    user_context = await get_user_context(db, current_user.id)
+    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
@@ -330,7 +331,7 @@ async def chat_stream(
         user_id_uuid = current_user.id
         
         # Build context
-        user_context = await get_user_context(db, user_id_uuid)
+        user_context = await get_user_context(db, user_id_uuid, payload={"context": request.context})
         conversation_history_raw = await get_conversation_history(
             db, user_id_uuid, request.conversation_id
         )
@@ -528,7 +529,7 @@ async def confirm_action(
 
 # ============辅助函数 ============ 
 
-async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
+async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Dict[str, Any]] = None) -> dict:
     """
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
@@ -548,6 +549,24 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
     }
 
     try:
+        if settings.USE_CONTEXT_PACK:
+            from app.core.context_pack import ContextPackBuilder
+            from app.core.intent_router import IntentRouter
+
+            intent = "chat"
+            if settings.USE_CONTEXT_INTENT_ROUTER and payload is not None:
+                intent = IntentRouter().get_intent(payload)
+            pack_builder = ContextPackBuilder(db)
+            request_id = payload.get("request_id") if payload else None
+            trace_id = payload.get("trace_id") if payload else None
+            pack = await pack_builder.build(
+                user_id,
+                intent=intent,
+                request_id=request_id,
+                trace_id=trace_id,
+            )
+            return pack.to_prompt_context()
+
         # 0. 获取 Analytics Summary
         analytics_service = AnalyticsService(db)
         # Ensure today's stats are up to date (optional, might be slow for every chat, maybe skip calculation here and just read?)

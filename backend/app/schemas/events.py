@@ -79,6 +79,8 @@ class EvidenceResolveItem(BaseModel):
     error: Optional[Dict[str, Any]] = None
     concept: Optional[Dict[str, Any]] = None
     strategy: Optional[Dict[str, Any]] = None
+    task: Optional[Dict[str, Any]] = None
+    summary: Optional[Dict[str, Any]] = None
     redaction_reason: Optional[str] = None
 
 

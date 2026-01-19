@@ -1,0 +1,17 @@
+PREFERENCE_KEYS = {
+    "depth_preference",
+    "curiosity_preference",
+    "learning_style",
+    "study_time_preference",
+    "schedule_preferences",
+    "weather_preferences",
+    "language",
+    "timezone",
+    "notification_frequency",
+    "response_style",
+    "feedback_tone",
+    "task_priority_bias",
+    "coaching_style",
+    "focus_mode",
+    "sprint_mode",
+}
