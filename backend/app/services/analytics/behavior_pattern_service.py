@@ -170,6 +170,7 @@ class BehaviorPatternService:
 
     async def _create_or_update_pattern(self, user_id: UUID, pattern_name: str, pattern_type: str, 
                                       description: str, solution_text: str, evidence_id: str, confidence: float) -> BehaviorPattern:
+        now = datetime.datetime.utcnow()
         # Check if pattern exists (active)
         query = select(BehaviorPattern).where(
             BehaviorPattern.user_id == user_id,
@@ -186,6 +187,7 @@ class BehaviorPatternService:
             pattern.confidence_score = confidence
             current_freq = getattr(pattern, 'frequency', 0) or 0
             pattern.frequency = current_freq + 1
+            pattern.last_observed_at = now
             
             # Add evidence if not present
             current_evidence = getattr(pattern, 'evidence_ids', []) or []
@@ -203,7 +205,8 @@ class BehaviorPatternService:
                 solution_text=solution_text,
                 evidence_ids=[evidence_id],
                 confidence_score=confidence,
-                frequency=1
+                frequency=1,
+                last_observed_at=now,
             )
             self.db.add(pattern)
         

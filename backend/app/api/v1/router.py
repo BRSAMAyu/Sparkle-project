@@ -39,6 +39,9 @@ from app.api.v1 import (
     events,
     nightly_reviews,
     feedback_admin,
+    memory,
+    memory_settings,
+    memory_admin,
 )
 
 api_router = APIRouter()
@@ -74,6 +77,9 @@ api_router.include_router(translation.router, prefix="/translation", tags=["tran
 api_router.include_router(assets.router)  # Prefix "/assets" defined in router
 api_router.include_router(signals.router)  # Prefix "/signals" defined in router
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
+api_router.include_router(memory.router, tags=["memory"])
+api_router.include_router(memory_settings.router, tags=["memory"])
+api_router.include_router(memory_admin.router)
 # api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
 # api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
