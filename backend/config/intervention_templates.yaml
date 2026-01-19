@@ -1,0 +1,75 @@
+templates:
+  - template_id: recover_to_task_l4
+    intent_type: recover_to_task
+    support_level: 4
+    variants:
+      - id: recover_to_task_l4_v1
+        content: "似乎还没进入\"{task_name}\"的状态。要不要从这一步开始:{suggested_step}?"
+      - id: recover_to_task_l4_v2
+        content: "现在看起来在寻找入口。我把第一步准备好了:{suggested_step}"
+      - id: recover_to_task_l4_v3
+        content: "这段时间像是在寻找{task_name}的开始点。试试这个:{suggested_step}"
+      - id: recover_to_task_l4_v4
+        content: "{task_name}好像还没开始?我准备了一个小入口:{suggested_step}"
+      - id: recover_to_task_l4_v5
+        content: "{task_name}准备好了。从这里开始:{suggested_step}"
+
+  - template_id: suggest_break_l3
+    intent_type: suggest_break
+    support_level: 3
+    variants:
+      - id: suggest_break_l3_v1
+        content: "感觉有点累了。休息{break_duration}分钟,还是继续?"
+      - id: suggest_break_l3_v2
+        content: "已经专注了{focus_duration}分钟。要不要暂停一下?"
+      - id: suggest_break_l3_v3
+        content: "现在可以休息{break_duration}分钟,或者再坚持一小会儿。你决定。"
+      - id: suggest_break_l3_v4
+        content: "能量可能需要补充了。休息一下,还是继续冲刺?"
+      - id: suggest_break_l3_v5
+        content: "要不要休息{break_duration}分钟?"
+
+  - template_id: encourage_start_l2
+    intent_type: encourage_start
+    support_level: 2
+    variants:
+      - id: encourage_start_l2_v1
+        content: "{task_name}可以开始了。计划用{estimated_time}分钟。"
+      - id: encourage_start_l2_v2
+        content: "开始{task_name}?完成后会解锁下一步。"
+      - id: encourage_start_l2_v3
+        content: "{task_name}还是{alternative_task}?"
+      - id: encourage_start_l2_v4
+        content: "准备好开始{task_name}了。"
+      - id: encourage_start_l2_v5
+        content: "现在开始{task_name}怎么样?"
+
+  - template_id: reduce_stress_l4
+    intent_type: reduce_stress
+    support_level: 4
+    variants:
+      - id: reduce_stress_l4_v1
+        content: "感觉压力有点大。要不要做个{relaxation_activity}?"
+      - id: reduce_stress_l4_v2
+        content: "现在状态有点紧张。可以试试{relaxation_activity},或者休息一下。"
+      - id: reduce_stress_l4_v3
+        content: "压力信号出现了。我准备了一个放松方式:{relaxation_activity}"
+      - id: reduce_stress_l4_v4
+        content: "这段时间能量消耗挺大的。{relaxation_activity}可能有帮助。"
+      - id: reduce_stress_l4_v5
+        content: "要不要{relaxation_activity}?"
+
+  - template_id: distraction_recovery_l3
+    intent_type: distraction_recovery
+    support_level: 3
+    variants:
+      - id: distraction_recovery_l3_v1
+        content: "注意力好像飘走了几次。要回到{task_name}吗?"
+      - id: distraction_recovery_l3_v2
+        content: "刚才切换了{switch_count}次应用。准备回到{task_name}?"
+      - id: distraction_recovery_l3_v3
+        content: "现在回到{task_name},还是继续休息{break_duration}分钟?"
+      - id: distraction_recovery_l3_v4
+        content: "注意力在游走。{task_name}还在等着,要回去吗?"
+      - id: distraction_recovery_l3_v5
+        content: "回到{task_name}?"

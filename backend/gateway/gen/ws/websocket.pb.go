@@ -252,6 +252,219 @@ func (x *UpdateNodeMasteryRequest) GetRevision() int32 {
 	return 0
 }
 
+// Intervention push messages for real-time adaptive interventions
+type InterventionPushMessage struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	InterventionId string                 `protobuf:"bytes,1,opt,name=intervention_id,json=interventionId,proto3" json:"intervention_id,omitempty"`
+	Level          string                 `protobuf:"bytes,2,opt,name=level,proto3" json:"level,omitempty"` // "toast", "card", "modal", "silent"
+	Content        *InterventionContent   `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Actions        []*InterventionAction  `protobuf:"bytes,4,rep,name=actions,proto3" json:"actions,omitempty"`
+	ExpiresAt      int64                  `protobuf:"varint,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InterventionPushMessage) Reset() {
+	*x = InterventionPushMessage{}
+	mi := &file_websocket_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionPushMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionPushMessage) ProtoMessage() {}
+
+func (x *InterventionPushMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionPushMessage.ProtoReflect.Descriptor instead.
+func (*InterventionPushMessage) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InterventionPushMessage) GetInterventionId() string {
+	if x != nil {
+		return x.InterventionId
+	}
+	return ""
+}
+
+func (x *InterventionPushMessage) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
+func (x *InterventionPushMessage) GetContent() *InterventionContent {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *InterventionPushMessage) GetActions() []*InterventionAction {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
+func (x *InterventionPushMessage) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+type InterventionContent struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RenderedMessage  string                 `protobuf:"bytes,1,opt,name=rendered_message,json=renderedMessage,proto3" json:"rendered_message,omitempty"`
+	IntentType       string                 `protobuf:"bytes,2,opt,name=intent_type,json=intentType,proto3" json:"intent_type,omitempty"`
+	TemplateId       string                 `protobuf:"bytes,3,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	ScaffoldingLevel int32                  `protobuf:"varint,4,opt,name=scaffolding_level,json=scaffoldingLevel,proto3" json:"scaffolding_level,omitempty"`
+	ContextVariables map[string]string      `protobuf:"bytes,5,rep,name=context_variables,json=contextVariables,proto3" json:"context_variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *InterventionContent) Reset() {
+	*x = InterventionContent{}
+	mi := &file_websocket_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionContent) ProtoMessage() {}
+
+func (x *InterventionContent) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionContent.ProtoReflect.Descriptor instead.
+func (*InterventionContent) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InterventionContent) GetRenderedMessage() string {
+	if x != nil {
+		return x.RenderedMessage
+	}
+	return ""
+}
+
+func (x *InterventionContent) GetIntentType() string {
+	if x != nil {
+		return x.IntentType
+	}
+	return ""
+}
+
+func (x *InterventionContent) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *InterventionContent) GetScaffoldingLevel() int32 {
+	if x != nil {
+		return x.ScaffoldingLevel
+	}
+	return 0
+}
+
+func (x *InterventionContent) GetContextVariables() map[string]string {
+	if x != nil {
+		return x.ContextVariables
+	}
+	return nil
+}
+
+type InterventionAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Label         string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InterventionAction) Reset() {
+	*x = InterventionAction{}
+	mi := &file_websocket_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterventionAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterventionAction) ProtoMessage() {}
+
+func (x *InterventionAction) ProtoReflect() protoreflect.Message {
+	mi := &file_websocket_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterventionAction.ProtoReflect.Descriptor instead.
+func (*InterventionAction) Descriptor() ([]byte, []int) {
+	return file_websocket_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InterventionAction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *InterventionAction) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *InterventionAction) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
 var File_websocket_proto protoreflect.FileDescriptor
 
 const file_websocket_proto_rawDesc = "" +
@@ -279,7 +492,29 @@ const file_websocket_proto_rawDesc = "" +
 	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x04 \x01(\tR\trequestId\x12\x1a\n" +
-	"\brevision\x18\x05 \x01(\x05R\brevisionB&Z$github.com/sparkle/gateway/gen/ws;wsb\x06proto3"
+	"\brevision\x18\x05 \x01(\x05R\brevision\"\xec\x01\n" +
+	"\x17InterventionPushMessage\x12'\n" +
+	"\x0fintervention_id\x18\x01 \x01(\tR\x0einterventionId\x12\x14\n" +
+	"\x05level\x18\x02 \x01(\tR\x05level\x129\n" +
+	"\acontent\x18\x03 \x01(\v2\x1f.sparkle.ws.InterventionContentR\acontent\x128\n" +
+	"\aactions\x18\x04 \x03(\v2\x1e.sparkle.ws.InterventionActionR\aactions\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\x03R\texpiresAt\"\xd8\x02\n" +
+	"\x13InterventionContent\x12)\n" +
+	"\x10rendered_message\x18\x01 \x01(\tR\x0frenderedMessage\x12\x1f\n" +
+	"\vintent_type\x18\x02 \x01(\tR\n" +
+	"intentType\x12\x1f\n" +
+	"\vtemplate_id\x18\x03 \x01(\tR\n" +
+	"templateId\x12+\n" +
+	"\x11scaffolding_level\x18\x04 \x01(\x05R\x10scaffoldingLevel\x12b\n" +
+	"\x11context_variables\x18\x05 \x03(\v25.sparkle.ws.InterventionContent.ContextVariablesEntryR\x10contextVariables\x1aC\n" +
+	"\x15ContextVariablesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"N\n" +
+	"\x12InterventionAction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04typeB&Z$github.com/sparkle/gateway/gen/ws;wsb\x06proto3"
 
 var (
 	file_websocket_proto_rawDescOnce sync.Once
@@ -293,20 +528,27 @@ func file_websocket_proto_rawDescGZIP() []byte {
 	return file_websocket_proto_rawDescData
 }
 
-var file_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_websocket_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_websocket_proto_goTypes = []any{
 	(*WebSocketMessage)(nil),         // 0: sparkle.ws.WebSocketMessage
 	(*ChatMessage)(nil),              // 1: sparkle.ws.ChatMessage
 	(*UpdateNodeMasteryRequest)(nil), // 2: sparkle.ws.UpdateNodeMasteryRequest
-	(*v1.ToolCall)(nil),              // 3: agent.v1.ToolCall
+	(*InterventionPushMessage)(nil),  // 3: sparkle.ws.InterventionPushMessage
+	(*InterventionContent)(nil),      // 4: sparkle.ws.InterventionContent
+	(*InterventionAction)(nil),       // 5: sparkle.ws.InterventionAction
+	nil,                              // 6: sparkle.ws.InterventionContent.ContextVariablesEntry
+	(*v1.ToolCall)(nil),              // 7: agent.v1.ToolCall
 }
 var file_websocket_proto_depIdxs = []int32{
-	3, // 0: sparkle.ws.ChatMessage.tool_calls:type_name -> agent.v1.ToolCall
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	7, // 0: sparkle.ws.ChatMessage.tool_calls:type_name -> agent.v1.ToolCall
+	4, // 1: sparkle.ws.InterventionPushMessage.content:type_name -> sparkle.ws.InterventionContent
+	5, // 2: sparkle.ws.InterventionPushMessage.actions:type_name -> sparkle.ws.InterventionAction
+	6, // 3: sparkle.ws.InterventionContent.context_variables:type_name -> sparkle.ws.InterventionContent.ContextVariablesEntry
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_websocket_proto_init() }
@@ -320,7 +562,7 @@ func file_websocket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_websocket_proto_rawDesc), len(file_websocket_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
