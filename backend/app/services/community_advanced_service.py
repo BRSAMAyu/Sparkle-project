@@ -15,10 +15,14 @@ from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timedelta
 from uuid import UUID
 import re
+import base64
+import binascii
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, text
 from sqlalchemy.orm import selectinload
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from app.models.community import (
     Group, GroupRole, GroupMember, GroupMessage, PrivateMessage,
@@ -115,12 +119,24 @@ class EncryptionService:
         注意: 这是一个占位实现，实际使用时需要集成真正的加密库
         如 cryptography 或 nacl
         """
-        # TODO: 实现真正的签名验证
-        # 示例使用 Ed25519:
-        # from nacl.signing import VerifyKey
-        # verify_key = VerifyKey(base64.b64decode(public_key))
-        # verify_key.verify(content.encode(), base64.b64decode(signature))
-        return True  # 占位返回
+        if not content or not signature or not public_key:
+            return False
+
+        def _b64decode(value: str) -> bytes:
+            try:
+                return base64.b64decode(value, validate=True)
+            except (binascii.Error, ValueError):
+                padded = value + ("=" * (-len(value) % 4))
+                return base64.urlsafe_b64decode(padded)
+
+        try:
+            public_key_bytes = _b64decode(public_key)
+            signature_bytes = _b64decode(signature)
+            verify_key = Ed25519PublicKey.from_public_bytes(public_key_bytes)
+            verify_key.verify(signature_bytes, content.encode("utf-8"))
+            return True
+        except (ValueError, InvalidSignature, binascii.Error):
+            return False
 
 
 class ModerationService:

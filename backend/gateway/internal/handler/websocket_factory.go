@@ -3,6 +3,8 @@ package handler
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
@@ -56,4 +58,9 @@ func DefaultUpgrader() websocket.Upgrader {
 			return true // DEV ONLY: Allow all origins
 		},
 	}
+}
+
+func isDevelopmentEnv() bool {
+	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
+	return env == "" || env == "dev" || env == "development"
 }

@@ -10,7 +10,7 @@ import 'package:opentelemetry/sdk.dart'
 import 'package:opentelemetry/web_sdk.dart' as web_sdk;
 import 'package:uuid/uuid.dart';
 
-import 'tracing_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 
 class TracingServiceImpl implements TracingServiceBase {
   final Uuid _uuid = const Uuid();

@@ -37,7 +37,6 @@ class MemoryRoutes {
           pageBuilder: (context, state) => _buildTransitionPage(
             state: state,
             child: const MemorySettingsScreen(),
-            type: SharedAxisTransitionType.horizontal,
           ),
         ),
       ];

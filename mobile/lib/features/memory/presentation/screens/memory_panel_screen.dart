@@ -73,8 +73,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       final service = ref.read(memoryApiServiceProvider);
       final results = await Future.wait([
         service.getPreferences(),
-        service.getGoals(limit: 20),
-        service.getEpisodic(limit: 20),
+        service.getGoals(),
+        service.getEpisodic(),
       ]);
       if (!mounted) {
         return;
@@ -147,15 +147,15 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           children: [
-            _SectionHeader(title: '偏好'),
+            const _SectionHeader(title: '偏好'),
             const SizedBox(height: DS.sm),
             ..._preferences.map(_buildPreferenceCard),
             const SizedBox(height: DS.xl),
-            _SectionHeader(title: '目标'),
+            const _SectionHeader(title: '目标'),
             const SizedBox(height: DS.sm),
             ..._goals.map(_buildGoalCard),
             const SizedBox(height: DS.xl),
-            _SectionHeader(title: '经历'),
+            const _SectionHeader(title: '经历'),
             const SizedBox(height: DS.sm),
             ..._episodic.map(_buildEpisodicCard),
           ],
@@ -175,7 +175,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           if (entries.isEmpty)
             _buildEmptyState()
           else
-            ...entries.map((entry) => _buildEntryCard(entry)),
+            ...entries.map(_buildEntryCard),
         ],
       ),
     );
@@ -491,8 +491,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     return entries;
   }
 
-  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) {
-    return entries.where((entry) {
+  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) => entries.where((entry) {
       if (_filterType != null && entry.type != _filterType) {
         return false;
       }
@@ -507,7 +506,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       }
       return true;
     }).toList();
-  }
 
   List<MemoryEntry> _applySort(List<MemoryEntry> entries) {
     entries.sort((a, b) {

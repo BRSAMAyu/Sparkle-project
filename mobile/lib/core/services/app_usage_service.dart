@@ -14,10 +14,6 @@ enum AppCategory {
 
 /// App usage event
 class AppUsageEvent {
-  final String packageName;
-  final AppCategory category;
-  final DateTime timestamp;
-  final bool isForeground;
 
   AppUsageEvent({
     required this.packageName,
@@ -25,6 +21,10 @@ class AppUsageEvent {
     required this.timestamp,
     required this.isForeground,
   });
+  final String packageName;
+  final AppCategory category;
+  final DateTime timestamp;
+  final bool isForeground;
 }
 
 /// Service for tracking app usage and detecting user activity patterns
@@ -88,10 +88,8 @@ class AppUsageService {
   }
 
   /// Check if current activity is whitelisted (should not interrupt)
-  bool isActivityWhitelisted(AppCategory category) {
-    return category == AppCategory.productivity ||
+  bool isActivityWhitelisted(AppCategory category) => category == AppCategory.productivity ||
            category == AppCategory.study;
-  }
 
   /// Detect continuous read pattern (no touch for >30s)
   bool detectsContinuousRead() {
@@ -118,7 +116,7 @@ class AppUsageService {
           category: category,
           timestamp: DateTime.now(),
           isForeground: true,
-        ));
+        ),);
       }
     });
   }
@@ -137,6 +135,6 @@ class AppUsageService {
 /// Provider for AppUsageService
 final appUsageServiceProvider = Provider<AppUsageService>((ref) {
   final service = AppUsageService();
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
   return service;
 });

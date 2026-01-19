@@ -3,7 +3,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 
 class EvidenceCard extends StatelessWidget {
-  const EvidenceCard({super.key, required this.item});
+  const EvidenceCard({required this.item, super.key});
 
   final EvidenceResolveItem item;
 
@@ -20,7 +20,7 @@ class EvidenceCard extends StatelessWidget {
             Row(
               children: [
                 Text('${item.type} · ${item.id}',
-                    style: Theme.of(context).textTheme.bodyMedium),
+                    style: Theme.of(context).textTheme.bodyMedium,),
                 const Spacer(),
                 _StatusBadge(status: item.status),
               ],
@@ -43,7 +43,7 @@ class EvidenceCard extends StatelessWidget {
       return _KeyValueList(items: {
         'Type': event['event_type']?.toString() ?? '-',
         'Timestamp': event['ts_ms']?.toString() ?? '-',
-      });
+      },);
     }
     if (payload['error'] != null) {
       final error = payload['error'] as Map<String, dynamic>;
@@ -51,14 +51,14 @@ class EvidenceCard extends StatelessWidget {
         'Subject': error['subject_code']?.toString() ?? '-',
         'Root Cause': error['root_cause']?.toString() ?? '-',
         'Suggestion': error['study_suggestion']?.toString() ?? '-',
-      });
+      },);
     }
     if (payload['concept'] != null) {
       final concept = payload['concept'] as Map<String, dynamic>;
       return _KeyValueList(items: {
         'Name': concept['name']?.toString() ?? '-',
         'Description': concept['description']?.toString() ?? '-',
-      });
+      },);
     }
     if (payload['task'] != null) {
       final task = payload['task'] as Map<String, dynamic>;
@@ -66,14 +66,14 @@ class EvidenceCard extends StatelessWidget {
         'Title': task['title']?.toString() ?? '-',
         'Status': task['status']?.toString() ?? '-',
         'Due': task['due_date']?.toString() ?? '-',
-      });
+      },);
     }
     if (payload['summary'] != null) {
       final summary = payload['summary'] as Map<String, dynamic>;
       return _KeyValueList(items: {
         'Date': summary['review_date']?.toString() ?? '-',
         'Summary': summary['summary_text']?.toString() ?? '-',
-      });
+      },);
     }
     if (payload['state'] != null) {
       final state = payload['state'] as Map<String, dynamic>;
@@ -81,7 +81,7 @@ class EvidenceCard extends StatelessWidget {
         'Focus': state['focus_mode']?.toString() ?? '-',
         'Load': state['cognitive_load']?.toString() ?? '-',
         'Sprint': state['sprint_mode']?.toString() ?? '-',
-      });
+      },);
     }
     return const Text('证据记录');
   }

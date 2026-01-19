@@ -5,13 +5,12 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:opentelemetry/api.dart' show Attribute;
 import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:opentelemetry/api.dart' show Attribute;
-import 'package:sparkle/core/tracing/tracing_service.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
