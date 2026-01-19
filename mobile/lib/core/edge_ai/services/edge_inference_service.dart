@@ -103,7 +103,7 @@ class EdgeInferenceService {
 
       if (response is String && !response.startsWith('ERROR')) {
         // 3. Parse and Map
-        final jsonMap = jsonDecode(response);
+        final jsonMap = jsonDecode(response) as Map<String, dynamic>;
         final rawVector = RawStateVector.fromJson(jsonMap);
         return rawVector.toEdgeState();
       }

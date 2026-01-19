@@ -189,4 +189,11 @@ class ApiEndpoints {
   static const String focusStats = '/focus/stats';
   static const String focusLlmGuide = '/focus/llm/guide';
   static const String focusLlmBreakdown = '/focus/llm/breakdown';
+
+  // Interventions
+  static const String interventionsRequest = '/interventions/request';
+  static const String interventionsPassiveSignals = '/interventions/passive-signals';
+  static const String interventionsOutcomes = '/interventions/outcomes';
+  static String interventionFeedback(String id) =>
+      '/interventions/requests/$id/feedback';
 }

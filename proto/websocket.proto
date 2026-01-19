@@ -31,3 +31,26 @@ message UpdateNodeMasteryRequest {
   string request_id = 4;
   int32 revision = 5;
 }
+
+// Intervention push messages for real-time adaptive interventions
+message InterventionPushMessage {
+  string intervention_id = 1;
+  string level = 2; // "toast", "card", "modal", "silent"
+  InterventionContent content = 3;
+  repeated InterventionAction actions = 4;
+  int64 expires_at = 5;
+}
+
+message InterventionContent {
+  string rendered_message = 1;
+  string intent_type = 2;
+  string template_id = 3;
+  int32 scaffolding_level = 4;
+  map<string, string> context_variables = 5;
+}
+
+message InterventionAction {
+  string id = 1;
+  string label = 2;
+  string type = 3;
+}
