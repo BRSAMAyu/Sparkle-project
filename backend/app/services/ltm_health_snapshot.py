@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import CONTEXT_PACK_BUILD, CONTEXT_PACK_OVER_BUDGET
 from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
-from app.services.memory_jobs import MemoryJobsService
 
 
 class LtmHealthSnapshotService:
@@ -111,6 +110,8 @@ class LtmHealthSnapshotService:
         return items
 
     def _job_runs_summary(self) -> Dict[str, int]:
+        from app.services.memory_jobs import MemoryJobsService
+
         history = MemoryJobsService.get_history()
         cutoff = datetime.utcnow() - timedelta(hours=24)
         summary = {"ok": 0, "error": 0, "disabled": 0}
