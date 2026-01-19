@@ -16,6 +16,7 @@ from app.services.cognitive_service import CognitiveService
 from app.services.event_retention_service import EventRetentionService
 from app.config import settings
 from app.services.nightly_review_service import NightlyReviewService
+from app.services.memory_jobs import MemoryJobsService
 
 class SchedulerService:
     def __init__(self):
@@ -36,6 +37,14 @@ class SchedulerService:
 
         # 夜间复盘 (每天凌晨1点执行)
         self.scheduler.add_job(self.run_nightly_review, 'cron', hour=1, minute=0)
+
+        if settings.ENABLE_MEMORY_JOBS:
+            # Memory evidence health + decay + repair (daily, off by default)
+            self.scheduler.add_job(self.run_memory_evidence_health_job, 'cron', hour=2, minute=10)
+            self.scheduler.add_job(self.run_memory_decay_job, 'cron', hour=2, minute=40)
+            self.scheduler.add_job(self.run_memory_repair_job, 'cron', hour=3, minute=10)
+        if settings.ENABLE_MEMORY_DAILY_SUMMARY:
+            self.scheduler.add_job(self.run_memory_daily_summary_job, 'cron', hour=3, minute=30)
 
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle and daily decay jobs")
@@ -141,6 +150,50 @@ class SchedulerService:
                     await service.generate_for_user(user.id, user.timezone)
         except Exception as e:
             logger.error(f"Error in nightly review job: {e}", exc_info=True)
+
+    async def run_memory_evidence_health_job(self):
+        if not settings.ENABLE_MEMORY_JOBS:
+            return
+        logger.info("Starting memory evidence health job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = MemoryJobsService(db)
+                await service.run_evidence_health_job(limit_per_type=200)
+        except Exception as e:
+            logger.error(f"Error in memory evidence health job: {e}", exc_info=True)
+
+    async def run_memory_decay_job(self):
+        if not settings.ENABLE_MEMORY_JOBS:
+            return
+        logger.info("Starting memory decay job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = MemoryJobsService(db)
+                await service.run_decay_job(window_days=30)
+        except Exception as e:
+            logger.error(f"Error in memory decay job: {e}", exc_info=True)
+
+    async def run_memory_repair_job(self):
+        if not settings.ENABLE_MEMORY_JOBS:
+            return
+        logger.info("Starting memory repair job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = MemoryJobsService(db)
+                await service.run_repair_job(limit=200)
+        except Exception as e:
+            logger.error(f"Error in memory repair job: {e}", exc_info=True)
+
+    async def run_memory_daily_summary_job(self):
+        if not settings.ENABLE_MEMORY_DAILY_SUMMARY:
+            return
+        logger.info("Starting memory daily summary job...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = MemoryJobsService(db)
+                await service.run_daily_summary_job()
+        except Exception as e:
+            logger.error(f"Error in memory daily summary job: {e}", exc_info=True)
 
     async def _send_review_reminders(self, db):
         """

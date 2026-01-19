@@ -12,7 +12,8 @@ from app.models.user import User
 from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
 from app.services.analytics_service import AnalyticsService
-from app.config.phase5_config import phase5_config
+from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
+from app.config import settings
 
 class CognitiveService:
     def __init__(self, db: AsyncSession):
@@ -115,142 +116,87 @@ class CognitiveService:
 
             logger.info(f"Analyzing fragment {fragment_id}: {self._sanitize_content(fragment.content)}")
 
-            # 2. RAG Strategy Selection (HyDE Gate)
-            # 仅在查询内容较短时使用 HyDE
-            use_hyde = (
-                phase5_config.HYDE_ENABLED and
-                len(fragment.content) < phase5_config.HYDE_QUERY_LENGTH_THRESHOLD
-            )
-            hyde_cancelled = False
-            hyde_doc = None
-
-            # Define Raw Search Task
-            async def _raw_search():
-                if fragment.embedding is None:
-                    return []
-                from pgvector.sqlalchemy import Vector
-                query = (
-                    select(CognitiveFragment)
-                    .where(CognitiveFragment.user_id == user_id)
-                    .where(CognitiveFragment.id != fragment_id)
-                    .where(CognitiveFragment.embedding.isnot(None))
-                    .order_by(CognitiveFragment.embedding.cosine_distance(fragment.embedding))
-                    .limit(phase5_config.RAG_RAW_RETRIEVAL_LIMIT)
-                )
-                res = await self.db.execute(query)
-                return res.scalars().all()
-
-            # Define HyDE Search Task
-            async def _hyde_search():
-                nonlocal hyde_doc, hyde_cancelled
-                try:
-                    # 使用配置的延迟预算
-                    hyde_doc = await asyncio.wait_for(
-                        self._generate_hyde_document(fragment.content),
-                        timeout=phase5_config.HYDE_LATENCY_BUDGET_SEC
-                    )
-                    if not hyde_doc:
-                        return []
-                        
-                    # Generate Embedding for HyDE Doc
-                    hyde_emb = await embedding_service.get_embedding(hyde_doc)
-                    
-                    # Search
+            if settings.ANALYSIS_SYNC_ON_EVENT:
+                unified_service = UnifiedAnalysisService(self.db)
+                result = await unified_service.analyze_fragment(fragment)
+                if result.status != "ok" or not result.primary_output:
+                    fragment.analysis_status = AnalysisStatus.FAILED
+                    fragment.error_message = "Unified analysis failed"
+                    await self.db.commit()
+                    return {"error": "Unified analysis failed"}
+                analysis = result.primary_output
+                await unified_service.write_memory_from_result(result)
+            else:
+                # 2. RAG: Retrieve Similar Fragments
+                similar_fragments = []
+                if fragment.embedding is not None:
+                    # Use pgvector cosine distance
                     from pgvector.sqlalchemy import Vector
-                    query = (
+
+                    rag_query = (
                         select(CognitiveFragment)
                         .where(CognitiveFragment.user_id == user_id)
                         .where(CognitiveFragment.id != fragment_id)
                         .where(CognitiveFragment.embedding.isnot(None))
-                        .order_by(CognitiveFragment.embedding.cosine_distance(hyde_emb))
-                        .limit(phase5_config.RAG_HYDE_RETRIEVAL_LIMIT)
+                        .order_by(CognitiveFragment.embedding.cosine_distance(fragment.embedding))
+                        .limit(3)
                     )
-                    res = await self.db.execute(query)
-                    return res.scalars().all()
-                except asyncio.TimeoutError:
-                    hyde_cancelled = True
-                    logger.info(
-                        f"HyDE generation timed out (Budget {phase5_config.HYDE_LATENCY_BUDGET_SEC}s)"
-                    )
-                    return []
-                except Exception as e:
-                    logger.warning(f"HyDE search error: {e}")
-                    return []
+                    rag_result = await self.db.execute(rag_query)
+                    similar_fragments = rag_result.scalars().all()
 
-            # Execute RAG Tasks
-            tasks = [_raw_search()]
-            if use_hyde:
-                tasks.append(_hyde_search())
-            
-            results = await asyncio.gather(*tasks)
-            
-            raw_fragments = results[0]
-            hyde_fragments = results[1] if use_hyde else []
-            
-            # Dedup and Combine (Prioritize Raw for now, or mix? Let's mix)
-            seen_ids = set()
-            similar_fragments = []
-            for f in raw_fragments + hyde_fragments:
-                if f.id not in seen_ids:
-                    similar_fragments.append(f)
-                    seen_ids.add(f.id)
+                similar_text = "\n".join([f"- {f.content} (Tags: {f.error_tags})" for f in similar_fragments])
 
-            # 使用配置的合并结果上限
-            similar_fragments = similar_fragments[:phase5_config.RAG_MERGE_RESULT_LIMIT]
+                # 3. Get User Context
+                user_summary = await self.analytics_service.get_user_profile_summary(user_id)
+
+                # 4. Construct Prompt
+                prompt = f"""
+                Analyze this behavioral error/thought:
+                User Input: "{fragment.content}"
+                Context: {fragment.context_tags}
+                Error Tags: {fragment.error_tags}
+                Severity: {fragment.severity}/5
                 
-            similar_text = "\n".join([f"- {f.content} (Tags: {f.error_tags})" for f in similar_fragments])
-            
-            # 3. Get User Context
-            user_summary = await self.analytics_service.get_user_profile_summary(user_id)
-            
-            # 4. Construct Prompt
-            prompt = f"""
-            Analyze this behavioral error/thought:
-            User Input: "{fragment.content}"
-            Context: {fragment.context_tags}
-            Error Tags: {fragment.error_tags}
-            Severity: {fragment.severity}/5
-            
-            Similar Past Events (RAG Context):
-            {similar_text}
-            
-            User Profile:
-            {user_summary}
-            
-            Task:
-            1. Identify the Root Cause.
-            2. Identify Pattern.
-            3. Suggest SMART Intervention.
-            4. Provide Confidence Score (0.0 - 1.0).
-            
-            Output JSON Format:
-            {{
-                "root_cause": "...",
-                "pattern_name": "...",
-                "pattern_type": "cognitive/emotional/execution",
-                "description": "...",
-                "solution_text": "...",
-                "confidence_score": 0.85
-            }}
-            """
-            
-            messages = [
-                {"role": "system", "content": "You are an expert Cognitive Behavioral Therapist and Learning Coach. Output valid JSON only."},
-                {"role": "user", "content": prompt}
-            ]
-            
-            # 5. Call LLM
-            response_text = await llm_service.chat(messages, temperature=0.5)
-            
-            try:
-                cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
-                analysis = json.loads(cleaned_text)
-            except json.JSONDecodeError:
-                logger.error(f"Failed to parse LLM analysis for {fragment_id}")
-                fragment.analysis_status = AnalysisStatus.FAILED
-                fragment.error_message = "Invalid JSON from LLM"
-                await self.db.commit()
-                return {"error": "Analysis failed parsing"}
+                Similar Past Events (RAG Context):
+                {similar_text}
+                
+                User Profile:
+                {user_summary}
+                
+                Task:
+                1. Identify the Root Cause.
+                2. Identify Pattern.
+                3. Suggest SMART Intervention.
+                4. Provide Confidence Score (0.0 - 1.0).
+                
+                Output JSON Format:
+                {{
+                    "root_cause": "...",
+                    "pattern_name": "...",
+                    "pattern_type": "cognitive/emotional/execution",
+                    "description": "...",
+                    "solution_text": "...",
+                    "confidence_score": 0.85
+                }}
+                """
+
+                messages = [
+                    {"role": "system", "content": "You are an expert Cognitive Behavioral Therapist and Learning Coach. Output valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ]
+
+                # 5. Call LLM
+                response_text = await llm_service.chat(messages, temperature=0.5)
+
+                try:
+                    cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+                    analysis = json.loads(cleaned_text)
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse LLM analysis for {fragment_id}")
+                    fragment.analysis_status = AnalysisStatus.FAILED
+                    fragment.error_message = "Invalid JSON from LLM"
+                    await self.db.commit()
+                    return {"error": "Analysis failed parsing"}
                 
             # 6. Save/Update Pattern
             if analysis.get("confidence_score", 0) > 0.6:

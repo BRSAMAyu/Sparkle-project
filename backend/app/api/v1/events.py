@@ -19,6 +19,8 @@ from app.services.state_estimator_service import StateEstimatorService
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.models.semantic_memory import StrategyNode
+from app.models.task import Task
+from app.models.nightly_review import NightlyReview
 from sqlalchemy import select
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -217,6 +219,61 @@ async def resolve_evidence(
                             "title": strategy.title,
                             "description": strategy.description,
                             "subject_code": strategy.subject_code,
+                        },
+                    )
+                )
+                continue
+
+            if item.type == "task":
+                result = await db.execute(
+                    select(Task).where(
+                        Task.id == item.id,
+                        Task.user_id == current_user.id,
+                    )
+                )
+                task = result.scalar_one_or_none()
+                if not task:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        task={
+                            "id": str(task.id),
+                            "title": task.title,
+                            "status": task.status.value if task.status else None,
+                            "due_date": task.due_date,
+                        },
+                    )
+                )
+                continue
+
+            if item.type == "summary":
+                result = await db.execute(
+                    select(NightlyReview).where(
+                        NightlyReview.id == item.id,
+                        NightlyReview.user_id == current_user.id,
+                    )
+                )
+                review = result.scalar_one_or_none()
+                if not review:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        summary={
+                            "id": str(review.id),
+                            "review_date": review.review_date,
+                            "summary_text": review.summary_text,
                         },
                     )
                 )
