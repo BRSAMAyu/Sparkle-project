@@ -9,7 +9,7 @@ User Service - 生产级实现
 - 容错降级: 缓存/DB 故障时优雅降级
 """
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from sqlalchemy import select
 from app.models.user import User, PushPreference
 from app.schemas.user import UserContext, UserPreferences
 from app.core.metrics import CACHE_HIT_COUNT
+from app.services.personalization.preference_service import PreferenceService
 
 
 class UserService:
@@ -96,31 +97,37 @@ class UserService:
                 return None
 
             push_pref = await self._get_push_preference(user_id)
+            pref_service = PreferenceService(self.db, self.redis)
+            prefs_center = await pref_service.get_preferences(user_id)
+            explicit = prefs_center.explicit if prefs_center else {}
 
-            # 处理 active_slots: 数据库是列表，需要转换为字典格式
-            active_slots = None
-            if push_pref and push_pref.active_slots:
-                if isinstance(push_pref.active_slots, list):
-                    # 转换为字典格式
-                    active_slots = {"slots": push_pref.active_slots}
-                else:
-                    active_slots = push_pref.active_slots
+            if explicit:
+                timezone = explicit.get("timezone", "Asia/Shanghai")
+                slot_source = explicit.get("active_slots")
+            else:
+                timezone = push_pref.timezone if push_pref else "Asia/Shanghai"
+                slot_source = push_pref.active_slots if push_pref else None
+
+            active_slots = self._normalize_active_slots(
+                slot_source,
+                timezone,
+            )
 
             context = UserContext(
                 user_id=str(user_id),
                 nickname=user.nickname or user.username,
-                timezone=push_pref.timezone if push_pref else "Asia/Shanghai",
+                timezone=timezone,
                 language="zh-CN",
                 is_pro=user.flame_level >= 3,
                 preferences={
-                    "depth_preference": user.depth_preference,
-                    "curiosity_preference": user.curiosity_preference,
+                    "depth_preference": explicit.get("depth_preference", user.depth_preference),
+                    "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
                     "flame_level": user.flame_level,
                     "flame_brightness": user.flame_brightness,
                 },
                 active_slots=active_slots,
-                daily_cap=push_pref.daily_cap if push_pref else 5,
-                persona_type=push_pref.persona_type if push_pref else "coach",
+                daily_cap=explicit.get("daily_cap", push_pref.daily_cap if push_pref else 5),
+                persona_type=explicit.get("persona_type", push_pref.persona_type if push_pref else "coach"),
             )
 
             # 3. Cache Write
@@ -178,23 +185,30 @@ class UserService:
                 return None
 
             push_pref = await self._get_push_preference(user_id)
+            pref_service = PreferenceService(self.db, self.redis)
+            prefs_center = await pref_service.get_preferences(user_id)
+            explicit = prefs_center.explicit if prefs_center else {}
 
-            # 处理 schedule_preferences: 数据库是列表，需要转换为字典格式
-            schedule_preferences = None
-            if push_pref and push_pref.active_slots:
-                if isinstance(push_pref.active_slots, list):
-                    schedule_preferences = {"slots": push_pref.active_slots}
-                else:
-                    schedule_preferences = push_pref.active_slots
+            if explicit:
+                timezone = explicit.get("timezone", "Asia/Shanghai")
+                slot_source = explicit.get("active_slots")
+            else:
+                timezone = push_pref.timezone if push_pref else "Asia/Shanghai"
+                slot_source = push_pref.active_slots if push_pref else None
+
+            schedule_preferences = self._normalize_active_slots(
+                slot_source,
+                timezone,
+            )
 
             prefs = UserPreferences(
-                learning_depth=user.depth_preference,
-                curiosity_level=user.curiosity_preference,
+                learning_depth=explicit.get("depth_preference", user.depth_preference),
+                curiosity_level=explicit.get("curiosity_preference", user.curiosity_preference),
                 schedule_preferences=schedule_preferences,
                 weather_preferences=user.weather_preferences or {},
-                notification_enabled=push_pref.enable_curiosity if push_pref else True,
-                persona_type=push_pref.persona_type if push_pref else "coach",
-                daily_cap=push_pref.daily_cap if push_pref else 5,
+                notification_enabled=explicit.get("enable_push", True),
+                persona_type=explicit.get("persona_type", push_pref.persona_type if push_pref else "coach"),
+                daily_cap=explicit.get("daily_cap", push_pref.daily_cap if push_pref else 5),
             )
 
             # 3. Cache Write
@@ -306,6 +320,59 @@ class UserService:
         except Exception as e:
             logger.error(f"Failed to get push preference for user {user_id}: {e}")
             return None
+
+    def _normalize_active_slots(
+        self,
+        slots: Optional[List[Dict[str, Any]]],
+        timezone: str,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        将字符串格式的时间段转换为分钟数格式
+
+        输入: [{"start": "08:00", "end": "09:00"}]
+        输出: {
+            "timezone": "Asia/Shanghai",
+            "slots": [{"dow": [0,1,2,3,4], "start_min": 480, "end_min": 540}]
+        }
+        """
+        if not slots:
+            return None
+
+        if isinstance(slots, dict):
+            slots = slots.get("slots", [])
+        if not isinstance(slots, list):
+            return None
+
+        normalized = []
+        for slot in slots:
+            start_min = slot.get("start_min")
+            end_min = slot.get("end_min")
+            if start_min is None:
+                start_str = slot.get("start", "08:00")
+                start_min = self._time_str_to_minutes(start_str)
+            if end_min is None:
+                end_str = slot.get("end", "09:00")
+                end_min = self._time_str_to_minutes(end_str)
+            dow = slot.get("dow", [0, 1, 2, 3, 4])
+
+            normalized.append({
+                "dow": dow,
+                "start_min": start_min,
+                "end_min": end_min,
+            })
+
+        return {
+            "timezone": timezone,
+            "slots": normalized,
+        }
+
+    def _time_str_to_minutes(self, time_str: str) -> int:
+        """将 "HH:MM" 转换为分钟数"""
+        try:
+            parts = time_str.split(":")
+            return int(parts[0]) * 60 + int(parts[1])
+        except Exception:
+            return 480
 
     async def update_last_login(self, user_id: UUID) -> bool:
         """
@@ -426,6 +493,8 @@ class UserService:
 
         keys = [
             f"user:context:{user_id}",
+            f"user:context:snapshot:{user_id}",
+            f"user:prefs:center:{user_id}",
             f"user:analytics:{user_id}",
             f"user:preferences:{user_id}",
             f"user:stats:{user_id}",
@@ -463,14 +532,21 @@ class UserService:
                 logger.warning(f"User {user_id} not found")
                 return False
 
+            pref_updates = {}
             for key, value in updates.items():
                 if hasattr(user, key):
                     setattr(user, key, value)
+                    if key in ("depth_preference", "curiosity_preference"):
+                        pref_updates[key] = value
                 else:
                     logger.warning(f"User model has no attribute {key}")
 
             await self.db.commit()
             logger.info(f"Updated user profile for {user_id}: {updates}")
+
+            if pref_updates:
+                pref_service = PreferenceService(self.db, self.redis)
+                await pref_service.update_explicit(user_id, pref_updates)
 
             # 2. 使缓存失效
             await self.invalidate_user_cache(user_id)
@@ -511,6 +587,19 @@ class UserService:
                     setattr(push_pref, key, value)
                 else:
                     logger.warning(f"PushPreference model has no attribute {key}")
+
+            pref_updates = dict(updates)
+            if "active_slots" in pref_updates:
+                normalized = self._normalize_active_slots(
+                    pref_updates.get("active_slots"),
+                    pref_updates.get("timezone", push_pref.timezone if push_pref else "Asia/Shanghai"),
+                )
+                pref_updates["active_slots"] = normalized["slots"] if normalized else []
+            if "enable_curiosity" in pref_updates:
+                pref_updates["enable_curiosity_push"] = pref_updates.pop("enable_curiosity")
+
+            pref_service = PreferenceService(self.db, self.redis)
+            await pref_service.update_explicit(user_id, pref_updates)
 
             await self.db.commit()
             logger.info(f"Updated push preferences for {user_id}: {updates}")

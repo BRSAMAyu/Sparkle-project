@@ -292,14 +292,17 @@ class LLMService:
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         temperature: float = 0.7,
+        user_context: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat response from the LLM.
         """
         model = model or self.chat_model
+        temperature = self._resolve_temperature(user_context, temperature)
         with tracer.start_as_current_span("llm_stream_chat") as span:
             span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
             
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
             mock_response = self._check_demo_match(messages)
@@ -423,7 +426,9 @@ class LLMService:
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]]
+        tools: List[Dict[str, Any]],
+        user_context: Optional[Dict[str, Any]] = None,
+        temperature: float = 0.7,
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
@@ -432,10 +437,12 @@ class LLMService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
+        temperature = self._resolve_temperature(user_context, temperature)
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
+                span.set_attribute("llm.temperature", temperature)
                 
                 stream = await self.provider.client.chat.completions.create(
                     model=self.default_model,
@@ -443,7 +450,7 @@ class LLMService:
                     tools=tools,
                     tool_choice="auto",
                     stream=True,
-                    temperature=0.7,
+                    temperature=temperature,
                     stream_options={"include_usage": True}
                 )
 
@@ -497,21 +504,50 @@ class LLMService:
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
+    @staticmethod
+    def _resolve_temperature(user_context: Optional[Dict[str, Any]], default: float) -> float:
+        if not user_context or not isinstance(user_context, dict):
+            return default
+        llm_profile = user_context.get("llm_profile", {}) or {}
+        if not isinstance(llm_profile, dict):
+            return default
+        try:
+            return float(llm_profile.get("temperature", default))
+        except (TypeError, ValueError):
+            return default
+
     async def generate_push_content(
         self,
         user_nickname: str,
         persona: str,
         trigger_type: str,
-        context_data: Dict
+        context_data: Dict,
+        depth_preference: float = 0.5,
+        curiosity_preference: float = 0.5,
     ) -> Dict[str, str]:
         """
         Generate "irresistible" push notification content based on persona.
         """
+        if depth_preference > 0.7:
+            detail_instruction = "Provide detailed context and concrete next steps."
+        elif depth_preference < 0.3:
+            detail_instruction = "Keep it extremely brief, one sentence if possible."
+        else:
+            detail_instruction = "Use moderate detail, 2-3 sentences."
+
+        exploration_instruction = ""
+        if curiosity_preference > 0.6:
+            exploration_instruction = "Add one related fun fact or curiosity hook."
+
         persona_prompts = {
-            "coach": "Role: Strict, discipline-focused Study Coach. Tone: Stern, urgent, authoritative.",
-            "anime": "Role: Gentle, cute, energetic Anime Assistant. Tone: Sweet, encouraging."
+            "coach": f"Role: Strict Study Coach. Tone: Urgent, disciplined. {detail_instruction}",
+            "anime": f"Role: Cute Anime Assistant. Tone: Sweet, encouraging, use emoticons. {detail_instruction}",
+            "mentor": f"Role: Wise Mentor. Tone: Insightful, patient. {detail_instruction}",
+            "friend": f"Role: Friendly Study Buddy. Tone: Casual, supportive. {detail_instruction}",
         }
         selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"])
+        if exploration_instruction:
+            selected_persona_prompt = f"{selected_persona_prompt} {exploration_instruction}"
         
         trigger_desc = ""
         if trigger_type == "memory":
