@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -187,6 +189,22 @@ class ProfileScreen extends ConsumerWidget {
                 );
               },
             ),
+            if (AppFeatureFlags.enableUserMemoryControls) ...[
+              const Divider(height: 1, indent: 60),
+              _buildSettingsTile(
+                context,
+                icon: Icons.memory_rounded,
+                title: '记忆控制',
+                gradient: DS.primaryGradient,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MemorySettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
             const Divider(height: 1, indent: 60),
             _buildSettingsTile(
               context,

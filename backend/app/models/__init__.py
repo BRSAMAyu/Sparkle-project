@@ -55,6 +55,13 @@ from app.models.intervention_adaptive import (
     InterventionTemplate,
 )
 from app.models.response_feedback import ResponseFeedback
+from app.models.memory import MemoryPreference, MemoryGoal, EpisodicMemory, MemoryCorrection
+from app.models.context_pack import ContextPackRun, ContextBudgetProfile, ContextPackFeedback
+from app.models.memory_rank_policy import MemoryRankPolicy
+from app.models.ltm_daily_snapshot import LtmDailySnapshot
+from app.models.user_memory_settings import UserMemorySettings
+from app.models.user_preferences import UserPreferencesCenter
+from app.models.decision_record import DecisionRecord
 
 __all__ = [
     "BaseModel",
@@ -134,4 +141,16 @@ __all__ = [
     "BehavioralOutcome",
     "InterventionTemplate",
     "ResponseFeedback",
+    "MemoryPreference",
+    "MemoryGoal",
+    "EpisodicMemory",
+    "MemoryCorrection",
+    "ContextPackRun",
+    "ContextBudgetProfile",
+    "ContextPackFeedback",
+    "LtmDailySnapshot",
+    "MemoryRankPolicy",
+    "UserMemorySettings",
+    "UserPreferencesCenter",
+    "DecisionRecord",
 ]

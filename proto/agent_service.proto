@@ -156,6 +156,8 @@ message ChatResponse {
   string workflow_id = 16;
   // Prompt version used to generate this response.
   string prompt_version = 17;
+  // Additional response metadata (e.g., preference version).
+  map<string, string> metadata = 18;
 
   // The main payload of the response.
   oneof content {
@@ -278,7 +280,7 @@ message ToolResultPayload {
 // ============================================================================
 
 message EvidenceRef {
-  string type = 1;        // "event" | "error" | "concept" | "task" | "summary"
+  string type = 1;        // "event" | "user_state" | "error" | "concept" | "strategy" | "task" | "summary"
   string id = 2;
   string schema_version = 3;
   bool user_deleted = 4;

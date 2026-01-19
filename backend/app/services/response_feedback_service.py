@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.metrics import RESPONSE_FEEDBACK_DEDUPE_TOTAL, RESPONSE_FEEDBACK_INGESTED
 from app.learning.prompt_bandit import PromptBandit
 from app.models.response_feedback import ResponseFeedback
+from app.models.context_pack import ContextPackRun, ContextPackFeedback
+from app.services.budget_tuning_service import BudgetTuningService
+from app.config import settings
 
 
 MAX_REASONS = 3
@@ -101,6 +104,12 @@ class ResponseFeedbackService:
         ).inc()
 
         await self._update_bandit(workflow_id, prompt_version, feedback_type)
+        await self._handle_context_pack_feedback(
+            user_uuid,
+            feedback_type,
+            reasons,
+            meta or {},
+        )
 
         logger.info(
             "Response feedback stored trace_id=%s response_id=%s workflow_id=%s prompt_version=%s",
@@ -114,6 +123,69 @@ class ResponseFeedbackService:
             already_recorded=False,
             response_id=response_id,
         )
+
+    async def _handle_context_pack_feedback(
+        self,
+        user_id: uuid.UUID,
+        feedback_type: int,
+        reasons: List[str],
+        meta: Dict[str, Any],
+    ) -> None:
+        if not settings.ENABLE_BUDGET_TUNING:
+            return
+
+        pack_run = await self._resolve_pack_run(user_id, meta)
+        if pack_run is None:
+            return
+
+        score = 1.0 if feedback_type == ResponseFeedback.FEEDBACK_UP else -1.0
+        feedback = ContextPackFeedback(
+            pack_run_id=pack_run.id,
+            feedback_type="up" if score > 0 else "down",
+            reasons=reasons or None,
+            score=score,
+        )
+        self.db.add(feedback)
+        await self.db.commit()
+
+        tuning = BudgetTuningService(self.db)
+        await tuning.apply_feedback(pack_run.intent, reasons, score)
+
+    async def _resolve_pack_run(
+        self,
+        user_id: uuid.UUID,
+        meta: Dict[str, Any],
+    ) -> Optional[ContextPackRun]:
+        pack_id = meta.get("pack_id") or meta.get("context_pack_id")
+        if pack_id:
+            try:
+                pack_uuid = uuid.UUID(str(pack_id))
+            except ValueError:
+                pack_uuid = None
+            if pack_uuid:
+                result = await self.db.execute(
+                    select(ContextPackRun).where(
+                        ContextPackRun.id == pack_uuid,
+                        ContextPackRun.user_id == user_id,
+                        ContextPackRun.deleted_at.is_(None),
+                    )
+                )
+                pack_run = result.scalar_one_or_none()
+                if pack_run is not None:
+                    return pack_run
+
+        cutoff = datetime.utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
+        result = await self.db.execute(
+            select(ContextPackRun)
+            .where(
+                ContextPackRun.user_id == user_id,
+                ContextPackRun.created_at >= cutoff,
+                ContextPackRun.deleted_at.is_(None),
+            )
+            .order_by(ContextPackRun.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
     async def _update_bandit(
         self,

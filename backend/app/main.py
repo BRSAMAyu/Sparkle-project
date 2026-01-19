@@ -2,7 +2,8 @@
 Sparkle Backend - FastAPI Application Entry Point
 """
 import os
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,8 @@ from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.services.scheduler_service import scheduler_service
 from app.core.cache import cache_service
+from app.services.user_service import UserService
+from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.core.access_control import verify_token
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
@@ -65,6 +68,13 @@ async def lifespan(app: FastAPI):
     # Initialize WebSocket Redis
     await manager.init_redis()
 
+    preference_consumer_task = None
+    if cache_service.redis:
+        user_service = UserService(None, cache_service.redis)
+        consumer = PreferenceEventConsumer(cache_service.redis, user_service)
+        preference_consumer_task = asyncio.create_task(consumer.start())
+        app.state.preference_consumer_task = preference_consumer_task
+
     async with AsyncSessionLocal() as db:
         try:
             # 0. 初始化数据库数据
@@ -103,6 +113,13 @@ async def lifespan(app: FastAPI):
     # 停止知识拓展后台任务
     await stop_expansion_worker()
     
+    # Stop preference event consumer
+    preference_consumer_task = getattr(app.state, "preference_consumer_task", None)
+    if preference_consumer_task:
+        preference_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await preference_consumer_task
+
     # Close Cache
     await cache_service.close()
     # Close WebSocket Redis

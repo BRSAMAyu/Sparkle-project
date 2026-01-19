@@ -38,6 +38,10 @@ from app.api.v1 import (
     events,
     nightly_reviews,
     feedback_admin,
+    memory,
+    memory_settings,
+    memory_admin,
+    preferences,
 )
 
 api_router = APIRouter()
@@ -70,6 +74,10 @@ api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
+api_router.include_router(memory.router, tags=["memory"])
+api_router.include_router(memory_settings.router, tags=["memory"])
+api_router.include_router(memory_admin.router)
+api_router.include_router(preferences.router)
 # api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
 # api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])

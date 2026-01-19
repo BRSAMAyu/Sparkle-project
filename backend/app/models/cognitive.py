@@ -4,7 +4,7 @@ Cognitive Prism Models
 """
 import uuid
 import enum
-from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float, Enum
+from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float, Enum, DateTime
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
@@ -92,6 +92,8 @@ class BehaviorPattern(BaseModel):
     frequency = Column(Integer, default=1)        # Occurrences count
     
     is_archived = Column(Boolean, default=False) # 用户是否已克服此定式
+    last_observed_at = Column(DateTime, nullable=True)
+    last_decay_at = Column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User", backref="behavior_patterns")

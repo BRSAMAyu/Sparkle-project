@@ -53,6 +53,8 @@ const (
 	EventUserUpdated      EventType = "user.updated"
 	EventUserDeleted      EventType = "user.deleted"
 	EventUserStatusChanged EventType = "user.status.changed"
+	EventPreferencesUpdated  EventType = "user.preferences.updated"
+	EventPreferencesInferred EventType = "user.preferences.inferred"
 
 	// Push notification events
 	EventPushScheduled    EventType = "push.scheduled"
@@ -212,7 +214,8 @@ func (e EventType) StreamKey() string {
 		e == EventSessionCreated || e == EventSessionEnded:
 		return "cqrs:stream:chat"
 	case e == EventUserCreated || e == EventUserUpdated ||
-		e == EventUserDeleted || e == EventUserStatusChanged:
+		e == EventUserDeleted || e == EventUserStatusChanged ||
+		e == EventPreferencesUpdated || e == EventPreferencesInferred:
 		return "cqrs:stream:user"
 	case e == EventPushScheduled || e == EventPushSent ||
 		e == EventPushDelivered || e == EventPushClicked:

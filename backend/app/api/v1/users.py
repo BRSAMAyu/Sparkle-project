@@ -10,6 +10,8 @@ from app.schemas.user import UserPreferences, UserProfile, UserUpdate, PasswordC
 from app.core.security import verify_password, get_password_hash
 from app.config import settings
 from app.utils.helpers import save_upload_file
+from app.services.personalization.preference_service import PreferenceService
+from app.core.cache import cache_service
 
 router = APIRouter()
 
@@ -43,6 +45,15 @@ async def update_me(
         current_user.depth_preference = obj_in.depth_preference
     if obj_in.curiosity_preference is not None:
         current_user.curiosity_preference = obj_in.curiosity_preference
+
+    pref_updates = {}
+    if obj_in.depth_preference is not None:
+        pref_updates["depth_preference"] = obj_in.depth_preference
+    if obj_in.curiosity_preference is not None:
+        pref_updates["curiosity_preference"] = obj_in.curiosity_preference
+    if pref_updates:
+        pref_service = PreferenceService(db, cache_service.redis)
+        await pref_service.update_explicit(current_user.id, pref_updates)
     
     db.add(current_user)
     await db.commit()
@@ -121,7 +132,16 @@ async def update_my_preferences(
     """
     current_user.depth_preference = preferences.depth_preference
     current_user.curiosity_preference = preferences.curiosity_preference
-    
+
+    pref_service = PreferenceService(db, cache_service.redis)
+    await pref_service.update_explicit(
+        current_user.id,
+        {
+            "depth_preference": preferences.depth_preference,
+            "curiosity_preference": preferences.curiosity_preference,
+        },
+    )
+
     db.add(current_user)
     await db.commit()
     await db.refresh(current_user)

@@ -21,7 +21,6 @@ plugins:
   - local: protoc-gen-python
     out: backend/app/gen
   - local: protoc-gen-grpc_python
-    protoc_path: grpc_python_plugin
     out: backend/app/gen
   - local: protoc-gen-pyi
     out: backend/app/gen
