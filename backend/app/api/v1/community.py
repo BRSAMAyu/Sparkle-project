@@ -10,6 +10,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.db.session import get_db
+from app.config import settings
 from app.core.security import decode_token
 from app.api.deps import get_current_user
 from app.core.websocket import manager
@@ -515,7 +516,7 @@ async def search_users(
 async def websocket_endpoint(
     websocket: WebSocket,
     group_id: UUID,
-    token: str = Query(...),
+    token: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -523,8 +524,13 @@ async def websocket_endpoint(
     连接地址: ws://host/api/v1/community/groups/{group_id}/ws?token={jwt_token}
     """
     try:
+        auth_token = token or _extract_ws_token(websocket)
+        if not auth_token:
+            await websocket.close(code=4003)
+            return
+
         # 验证 Token
-        payload = decode_token(token, expected_type="access")
+        payload = decode_token(auth_token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)
@@ -568,6 +574,30 @@ async def websocket_endpoint(
             await websocket.close()
         except:
             pass
+
+
+def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
+    auth_header = websocket.headers.get("authorization")
+    if auth_header:
+        parts = auth_header.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return parts[1].strip()
+
+    protocol = websocket.headers.get("sec-websocket-protocol")
+    if protocol:
+        for part in protocol.split(","):
+            candidate = part.strip()
+            lower = candidate.lower()
+            if lower.startswith("bearer "):
+                return candidate[7:].strip()
+            if lower.startswith("token="):
+                return candidate[6:].strip()
+            if lower.startswith("token:"):
+                return candidate[6:].strip()
+
+    if settings.WS_ALLOW_QUERY_TOKEN:
+        return websocket.query_params.get("token")
+    return None
 
 
 # ============ 群组管理 ============

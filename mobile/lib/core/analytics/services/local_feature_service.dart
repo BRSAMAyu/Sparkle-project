@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/services/app_usage_service.dart';
-import '../../offline/local_database.dart';
-import '../models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 
 final localFeatureServiceProvider = Provider<LocalFeatureService>((ref) {
   final db = ref.watch(localDatabaseProvider);
@@ -20,10 +20,10 @@ typedef InterventionTriggerCallback = void Function(
 );
 
 class LocalFeatureService {
-  final Isar _isar;
-  final AppUsageService _appUsageService;
 
   LocalFeatureService(this._isar, this._appUsageService);
+  final Isar _isar;
+  final AppUsageService _appUsageService;
 
   Timer? _taskStuckTimer;
   StreamSubscription<AppUsageEvent>? _usageSubscription;
@@ -80,7 +80,7 @@ class LocalFeatureService {
       },
       'device': {
         'is_low_power': false, 
-      }
+      },
     };
   }
 

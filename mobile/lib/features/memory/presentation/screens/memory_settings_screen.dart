@@ -255,7 +255,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       onSelected: _enabled && _allowPreferences
                           ? (selected) => _togglePrefKey(key, selected)
                           : null,
-                    ))
+                    ),)
                 .toList(),
           ),
           const SizedBox(height: DS.lg),
@@ -270,7 +270,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       onSelected: _enabled
                           ? (selected) => _toggleSource(source, selected)
                           : null,
-                    ))
+                    ),)
                 .toList(),
           ),
           const SizedBox(height: DS.xl),

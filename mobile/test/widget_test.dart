@@ -62,7 +62,7 @@ void main() {
 
     await isar.close(deleteFromDisk: true);
     await tempDir.delete(recursive: true);
-  }, skip: true);
+  }, skip: true,);
 }
 
 class _FakeApiClient implements ApiClient {
@@ -75,14 +75,10 @@ class _FakeApiClient implements ApiClient {
   }
 
   @override
-  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) {
-    return const Stream<SSEEvent>.empty();
-  }
+  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) => const Stream<SSEEvent>.empty();
 
   @override
-  Stream<SSEEvent> postStream(String path, {Object? data}) {
-    return const Stream<SSEEvent>.empty();
-  }
+  Stream<SSEEvent> postStream(String path, {Object? data}) => const Stream<SSEEvent>.empty();
 
   @override
   Future<Response<T>> post<T>(String path, {Object? data}) {

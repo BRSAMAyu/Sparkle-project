@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/cognitive_repository.dart'; // ApiCognitiveRepository
 import 'package:sparkle/features/cognitive/data/repositories/i_cognitive_repository.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
-import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:uuid/uuid.dart';
 
 class SyncCognitiveRepository implements ICognitiveRepository {

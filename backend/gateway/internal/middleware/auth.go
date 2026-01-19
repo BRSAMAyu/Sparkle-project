@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
 	"log"
@@ -24,11 +23,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			}
 		}
 
-		if tokenString == "" && isWebSocketRequest(c) {
-			tokenString = c.Query("token")
-		}
-
-		if tokenString == "" {
+		if tokenString == "" && isWebSocketRequest(c) && cfg.AllowWsQueryToken {
 			tokenString = c.Query("token")
 		}
 
@@ -39,11 +34,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		if cfg.IsDevelopment() {
-			if len(tokenString) >= 16 {
-				log.Printf("Auth token received: len=%d prefix=%s suffix=%s", len(tokenString), tokenString[:8], tokenString[len(tokenString)-8:])
-			} else {
-				log.Printf("Auth token received: len=%d", len(tokenString))
-			}
+			log.Printf("Auth token received: len=%d", len(tokenString))
 		}
 
 		// Parse and validate token
@@ -56,8 +47,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		if err != nil || !token.Valid {
 			if cfg.IsDevelopment() {
-				secretHash := sha256.Sum256([]byte(cfg.JWTSecret))
-				log.Printf("Auth secret debug: len=%d sha256=%x", len(cfg.JWTSecret), secretHash)
+				log.Printf("Auth secret debug: len=%d", len(cfg.JWTSecret))
 			}
 			log.Printf("Auth failed: invalid token (err=%v, valid=%v)", err, token != nil && token.Valid)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -75,6 +65,27 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 			return
+		}
+
+		tokenType, ok := claims["type"].(string)
+		if !ok || tokenType != "access" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
+			return
+		}
+
+		if cfg.JWTIssuer != "" {
+			issuer, ok := claims["iss"].(string)
+			if !ok || issuer != cfg.JWTIssuer {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token issuer"})
+				return
+			}
+		}
+
+		if cfg.JWTAudience != "" {
+			if !claimHasAudience(claims["aud"], cfg.JWTAudience) {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token audience"})
+				return
+			}
 		}
 
 		// Optional query user_id is for backward compatibility but must match token identity
@@ -101,6 +112,29 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		c.Set("auth_token", tokenString)
 		c.Next()
 	}
+}
+
+func claimHasAudience(audClaim interface{}, expected string) bool {
+	if audClaim == nil {
+		return false
+	}
+	switch aud := audClaim.(type) {
+	case string:
+		return aud == expected
+	case []interface{}:
+		for _, v := range aud {
+			if s, ok := v.(string); ok && s == expected {
+				return true
+			}
+		}
+	case []string:
+		for _, v := range aud {
+			if v == expected {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // AdminAuthMiddleware validates the X-Admin-Secret header for admin endpoints

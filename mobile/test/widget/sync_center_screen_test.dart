@@ -54,7 +54,7 @@ void main() {
     final fakeStats = SyncCenterStats(
       pendingByTopic: {'cognitive': 2, 'knowledge': 1},
       totalPending: 3,
-      lastSuccessAt: DateTime(2025, 1, 1, 12, 0, 0),
+      lastSuccessAt: DateTime(2025, 1, 1, 12, 0),
     );
 
     final streamController = StreamController<SyncCenterStats>()..add(fakeStats);
@@ -101,14 +101,10 @@ class _FakeApiClient implements ApiClient {
   }
 
   @override
-  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) {
-    return const Stream<SSEEvent>.empty();
-  }
+  Stream<SSEEvent> getStream(String path, {Map<String, dynamic>? queryParameters}) => const Stream<SSEEvent>.empty();
 
   @override
-  Stream<SSEEvent> postStream(String path, {Object? data}) {
-    return const Stream<SSEEvent>.empty();
-  }
+  Stream<SSEEvent> postStream(String path, {Object? data}) => const Stream<SSEEvent>.empty();
 
   @override
   Future<Response<T>> post<T>(String path, {Object? data}) {

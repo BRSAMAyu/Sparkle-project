@@ -211,9 +211,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     super.dispose();
   }
 
-  PerformanceTier _mapPerformanceTier(PerformanceTier tier) {
-    return tier;
-  }
+  PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
   void _initEventsListener() {
     _eventsSubscription?.cancel();

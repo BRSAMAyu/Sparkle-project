@@ -4,13 +4,6 @@ enum EdgeStateSource {
 }
 
 class UserEdgeState {
-  final bool isForeground;
-  final Duration sessionDuration;
-  final double focusScore;
-  final double switchingRate;
-  final DateTime updatedAt;
-  final EdgeStateSource source;
-  final Map<String, dynamic> debug;
 
   UserEdgeState({
     required this.isForeground,
@@ -21,6 +14,13 @@ class UserEdgeState {
     required this.source,
     Map<String, dynamic>? debug,
   }) : debug = debug ?? {};
+  final bool isForeground;
+  final Duration sessionDuration;
+  final double focusScore;
+  final double switchingRate;
+  final DateTime updatedAt;
+  final EdgeStateSource source;
+  final Map<String, dynamic> debug;
 
   UserEdgeState copyWith({
     bool? isForeground,
@@ -30,8 +30,7 @@ class UserEdgeState {
     DateTime? updatedAt,
     EdgeStateSource? source,
     Map<String, dynamic>? debug,
-  }) {
-    return UserEdgeState(
+  }) => UserEdgeState(
       isForeground: isForeground ?? this.isForeground,
       sessionDuration: sessionDuration ?? this.sessionDuration,
       focusScore: focusScore ?? this.focusScore,
@@ -40,5 +39,4 @@ class UserEdgeState {
       source: source ?? this.source,
       debug: debug ?? this.debug,
     );
-  }
 }

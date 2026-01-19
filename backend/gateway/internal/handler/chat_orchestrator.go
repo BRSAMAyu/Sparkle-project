@@ -145,6 +145,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	if h.wsFactory != nil {
 		upgrader = h.wsFactory.CreateUpgrader()
 	} else {
+		if !isDevelopmentEnv() {
+			log.Printf("[ERROR] WebSocketFactory missing in non-development environment")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "WebSocket configuration error"})
+			return
+		}
 		// Fallback to development upgrader (for backward compatibility)
 		upgrader = DefaultUpgrader()
 		log.Printf("[WARNING] Using development WebSocket upgrader - configure WebSocketFactory for production")

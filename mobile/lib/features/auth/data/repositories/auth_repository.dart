@@ -52,7 +52,6 @@ class AuthRepository {
         return TokenResponse(
           accessToken: 'demo_token',
           refreshToken: 'demo_refresh_token',
-          tokenType: 'bearer',
           expiresIn: 3600,
         );
       }
@@ -87,7 +86,6 @@ class AuthRepository {
         return TokenResponse(
           accessToken: 'demo',
           refreshToken: 'demo',
-          tokenType: 'bearer',
           expiresIn: 3600,
         );
       }
@@ -130,7 +128,6 @@ class AuthRepository {
       return TokenResponse(
         accessToken: 'demo',
         refreshToken: 'demo',
-        tokenType: 'bearer',
         expiresIn: 3600,
       );
     }

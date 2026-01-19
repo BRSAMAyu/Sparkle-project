@@ -1,7 +1,4 @@
 class InterventionAction {
-  final String id;
-  final String label;
-  final String type;
 
   const InterventionAction({
     required this.id,
@@ -16,14 +13,12 @@ class InterventionAction {
       type: json['type'] as String? ?? 'primary',
     );
   }
+  final String id;
+  final String label;
+  final String type;
 }
 
 class InterventionContent {
-  final String renderedMessage;
-  final String intentType;
-  final String templateId;
-  final int scaffoldingLevel;
-  final Map<String, String> contextVariables;
 
   const InterventionContent({
     required this.renderedMessage,
@@ -51,6 +46,11 @@ class InterventionContent {
       contextVariables: context,
     );
   }
+  final String renderedMessage;
+  final String intentType;
+  final String templateId;
+  final int scaffoldingLevel;
+  final Map<String, String> contextVariables;
 }
 
 enum InterventionLevel {
@@ -75,11 +75,6 @@ InterventionLevel parseInterventionLevel(String? raw) {
 }
 
 class InterventionPushMessage {
-  final String interventionId;
-  final InterventionLevel level;
-  final InterventionContent content;
-  final List<InterventionAction> actions;
-  final DateTime? expiresAt;
 
   const InterventionPushMessage({
     required this.interventionId,
@@ -107,6 +102,11 @@ class InterventionPushMessage {
           : DateTime.fromMillisecondsSinceEpoch(expiresAtMs),
     );
   }
+  final String interventionId;
+  final InterventionLevel level;
+  final InterventionContent content;
+  final List<InterventionAction> actions;
+  final DateTime? expiresAt;
 
   bool get isExpired {
     if (expiresAt == null) return false;
@@ -122,8 +122,7 @@ class InterventionPushMessage {
 InterventionPushMessage buildLocalFallback({
   required String title,
   required String body,
-}) {
-  return InterventionPushMessage(
+}) => InterventionPushMessage(
     interventionId: 'local-${DateTime.now().millisecondsSinceEpoch}',
     level: InterventionLevel.toast,
     content: InterventionContent(
@@ -139,4 +138,3 @@ InterventionPushMessage buildLocalFallback({
     ],
     expiresAt: DateTime.now().add(const Duration(minutes: 10)),
   );
-}

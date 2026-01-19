@@ -9,8 +9,7 @@ import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen
 
 class _FakeMemoryApiService implements MemoryApiService {
   @override
-  Future<List<MemoryPreferenceItem>> getPreferences() async {
-    return [
+  Future<List<MemoryPreferenceItem>> getPreferences() async => [
       MemoryPreferenceItem(
         id: 'pref_1',
         prefKey: 'depth_preference',
@@ -24,15 +23,13 @@ class _FakeMemoryApiService implements MemoryApiService {
         correctionCount: 1,
       ),
     ];
-  }
 
   @override
   Future<List<MemoryGoalItem>> getGoals({
     String? status,
     bool includeExpired = false,
     int limit = 20,
-  }) async {
-    return [
+  }) async => [
       MemoryGoalItem(
         id: 'goal_1',
         title: 'Goal',
@@ -43,15 +40,13 @@ class _FakeMemoryApiService implements MemoryApiService {
         correctionCount: 0,
       ),
     ];
-  }
 
   @override
   Future<List<EpisodicMemoryItem>> getEpisodic({
     DateTime? start,
     DateTime? end,
     int limit = 20,
-  }) async {
-    return [
+  }) async => [
       EpisodicMemoryItem(
         id: 'mem_1',
         summary: 'Memory',
@@ -62,14 +57,11 @@ class _FakeMemoryApiService implements MemoryApiService {
         correctionCount: 0,
       ),
     ];
-  }
 
   @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
     String prefKey,
-  ) async {
-    return [];
-  }
+  ) async => [];
 
   @override
   Future<void> retractMemory({
@@ -116,8 +108,7 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
   @override
   Future<List<EvidenceResolveItem>> resolveEvidence(
     List<EvidenceRefModel> refs,
-  ) async {
-    return [
+  ) async => [
       EvidenceResolveItem(
         type: 'event',
         id: 'evt_1',
@@ -127,7 +118,6 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
         },
       ),
     ];
-  }
 }
 
 void main() {

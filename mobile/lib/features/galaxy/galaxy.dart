@@ -8,7 +8,7 @@ export 'data/services/galaxy_gesture_recognizer.dart';
 export 'data/services/galaxy_layout_engine.dart';
 export 'data/services/galaxy_llm_service.dart';
 export 'data/services/galaxy_monitoring_integration.dart'
-    hide PerformanceThresholds, PerformanceStatus;
+    hide PerformanceStatus, PerformanceThresholds;
 export 'data/services/galaxy_performance_monitor.dart';
 export 'data/services/predictive_viewport_preloader.dart';
 export 'domain/entities/galaxy_llm_protocol.dart';

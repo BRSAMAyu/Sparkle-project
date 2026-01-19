@@ -12,6 +12,7 @@ import asyncio
 import json
 
 from app.models.job import Job, JobStatus, JobType
+from app.services.error_book_service import ErrorBookService
 from app.config import settings
 from app.db.session import AsyncSessionLocal
 
@@ -167,17 +168,36 @@ class JobService:
     
     async def _execute_job(self, db: AsyncSession, job: Job) -> None:
         """后台执行任务的实际逻辑 - 需要子类覆盖或在此扩展"""
-        # 这里是实际的业务逻辑分发
-        # 比如根据 job.type 调用不同的 service
-        
-        # 模拟耗时操作
-        if job.type == JobType.GENERATE_TASKS:
-            # TODO: Call Task Generation Service
-            pass
-        elif job.type == JobType.EXECUTE_ACTIONS:
-            # TODO: Call Action Execution Service
-            pass
-        
-        # 模拟完成
-        await asyncio.sleep(1)
+        handlers = {
+            JobType.ANALYZE_ERROR: self._handle_analyze_error,
+            JobType.GENERATE_TASKS: self._handle_generate_tasks,
+            JobType.EXECUTE_ACTIONS: self._handle_execute_actions,
+            JobType.GENERATE_PLAN: self._handle_generate_plan,
+        }
+
+        handler = handlers.get(job.type)
+        if not handler:
+            raise ValueError(f"Unsupported job type: {job.type}")
+
+        await handler(db, job)
         logger.info(f"Job {job.id} logic executed")
+
+    async def _handle_analyze_error(self, db: AsyncSession, job: Job) -> None:
+        error_id = job.params.get("error_id") if job.params else None
+        if not error_id:
+            raise ValueError("Missing required param: error_id")
+
+        service = ErrorBookService(db)
+        await service.analyze_and_link(UUID(str(error_id)), job.user_id)
+        job.result = {"error_id": str(error_id), "status": "analysis_completed"}
+        job.progress = 100
+        await db.commit()
+
+    async def _handle_generate_tasks(self, db: AsyncSession, job: Job) -> None:
+        raise NotImplementedError("Task generation is not implemented yet")
+
+    async def _handle_execute_actions(self, db: AsyncSession, job: Job) -> None:
+        raise NotImplementedError("Action execution is not implemented yet")
+
+    async def _handle_generate_plan(self, db: AsyncSession, job: Job) -> None:
+        raise NotImplementedError("Plan generation is not implemented yet")
