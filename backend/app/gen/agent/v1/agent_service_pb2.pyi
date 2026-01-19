@@ -213,13 +213,21 @@ class ChatMessage(_message.Message):
     def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., name: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ChatResponse(_message.Message):
-    __slots__ = ("response_id", "created_at", "request_id", "trace_id", "workflow_id", "prompt_version", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp")
+    __slots__ = ("response_id", "created_at", "request_id", "trace_id", "workflow_id", "prompt_version", "metadata", "delta", "tool_call", "status_update", "full_text", "error", "usage", "citations", "tool_result", "intervention", "finish_reason", "timestamp")
+    class MetadataEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     RESPONSE_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
     WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
     DELTA_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALL_FIELD_NUMBER: _ClassVar[int]
     STATUS_UPDATE_FIELD_NUMBER: _ClassVar[int]
@@ -237,6 +245,7 @@ class ChatResponse(_message.Message):
     trace_id: str
     workflow_id: str
     prompt_version: str
+    metadata: _containers.ScalarMap[str, str]
     delta: str
     tool_call: ToolCall
     status_update: AgentStatus
@@ -248,7 +257,7 @@ class ChatResponse(_message.Message):
     intervention: InterventionPayload
     finish_reason: FinishReason
     timestamp: int
-    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
+    def __init__(self, response_id: _Optional[str] = ..., created_at: _Optional[int] = ..., request_id: _Optional[str] = ..., trace_id: _Optional[str] = ..., workflow_id: _Optional[str] = ..., prompt_version: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., delta: _Optional[str] = ..., tool_call: _Optional[_Union[ToolCall, _Mapping]] = ..., status_update: _Optional[_Union[AgentStatus, _Mapping]] = ..., full_text: _Optional[str] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., usage: _Optional[_Union[Usage, _Mapping]] = ..., citations: _Optional[_Union[CitationBlock, _Mapping]] = ..., tool_result: _Optional[_Union[ToolResultPayload, _Mapping]] = ..., intervention: _Optional[_Union[InterventionPayload, _Mapping]] = ..., finish_reason: _Optional[_Union[FinishReason, str]] = ..., timestamp: _Optional[int] = ...) -> None: ...
 
 class ResponseFeedbackRequest(_message.Message):
     __slots__ = ("user_id", "response_id", "trace_id", "feedback_type", "reasons", "free_text", "workflow_id", "prompt_version", "meta")

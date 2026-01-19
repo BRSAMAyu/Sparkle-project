@@ -7,16 +7,20 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Path, Header, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc, func
+from loguru import logger
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
+from app.core.cache import cache_service
 from app.models.user import User
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.task import (
     TaskCreate, TaskUpdate, TaskDetail, TaskCompleteRequest, 
-    TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse
+    TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse,
+    TaskRecommendationResponse
 )
 from app.services.task_guide_service import task_guide_service
+from app.services.task_service import TaskService
 from app.services.feedback_service import feedback_service
 from app.services.intelligent_task_service import IntelligentTaskService
 
@@ -82,31 +86,15 @@ async def create_task(
     """
     Create a new task
     """
-    task = Task(
-        user_id=current_user.id,
-        title=task_in.title,
-        type=task_in.type,
-        plan_id=task_in.plan_id,
-        tags=task_in.tags,
-        estimated_minutes=task_in.estimated_minutes,
-        difficulty=task_in.difficulty,
-        energy_cost=task_in.energy_cost,
-        priority=task_in.priority,
-        due_date=task_in.due_date,
-        guide_content=task_in.guide_content,
-        knowledge_node_id=task_in.knowledge_node_id,
-        tool_result_id=task_in.tool_result_id,
-        status=TaskStatus.PENDING
-    )
+    task = await TaskService.create(db, task_in, current_user.id)
     
     if generate_guide and not task.guide_content:
         # Call guide generation service
         guide = await task_guide_service.generate_guide(task, current_user, db)
         task.guide_content = guide
-        
-    db.add(task)
-    await db.commit()
-    await db.refresh(task)
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
     
     return {"data": TaskDetail.model_validate(task)}
 
@@ -121,6 +109,31 @@ async def get_task_suggestions(
     """
     service = IntelligentTaskService(db)
     return await service.get_suggestions(current_user.id, request.input_text)
+
+@router.get("/recommendations/micro", response_model=List[TaskRecommendationResponse])
+async def get_micro_task_recommendations(
+    context: Optional[str] = Query(None, description="上下文: commute, lunch, evening"),
+    limit: int = Query(3, ge=1, le=10),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取碎片时间微任务推荐
+    """
+    from app.services.personalization import get_personalization_engine
+    from app.services.task_recommendation_service import TaskRecommendationService
+
+    engine = get_personalization_engine(db, cache_service.redis)
+    service = TaskRecommendationService(db, engine)
+
+    recommendations = await service.get_recommendations(
+        user_id=current_user.id,
+        limit=limit * 2,
+        context=context,
+    )
+
+    micro_tasks = [r for r in recommendations if r.estimated_minutes <= 15]
+    return [TaskRecommendationResponse(**r.__dict__) for r in micro_tasks[:limit]]
 
 @router.get("/{task_id}", response_model=Dict[str, Any])
 async def get_task(
@@ -232,15 +245,27 @@ async def complete_task(
     """
     完成任务 (v2.1 增强)
     """
-    # 查找任务
-    task = await db.get(Task, task_id)
+    result = await db.execute(
+        select(Task).where(
+            Task.id == task_id,
+            Task.user_id == current_user.id,
+        )
+    )
+    task = result.scalar_one_or_none()
+
     if not task:
         raise NotFoundError(message="Task not found")
-    
-    if task.user_id != current_user.id:
-        raise AuthorizationError(message="Not authorized to complete this task")
-    
-    # 更新状态
+
+    if task.status == TaskStatus.COMPLETED:
+        return {
+            "success": True,
+            "data": {
+                "task": TaskDetail.model_validate(task),
+            },
+            "message": "Task already completed",
+            "retry_token": x_idempotency_key or "generated-token",
+        }
+
     task.status = TaskStatus.COMPLETED
     task.completed_at = datetime.utcnow()
     task.actual_minutes = request.actual_minutes
@@ -250,13 +275,52 @@ async def complete_task(
     await db.commit()
     await db.refresh(task)
 
-    # P0.2: Auto-update plan progress when task is completed
+    plan_update_result = None
     if task.plan_id:
         from app.services.plan_service import PlanService
-        await PlanService.update_progress(db, task.plan_id, task.user_id)
-    
-    # 🆕 Generate AI Feedback
-    feedback = await feedback_service.generate_feedback(task, current_user, db)
+        plan_update_result = await PlanService.update_progress(db, task.plan_id, task.user_id)
+
+    spark_result = None
+    if task.knowledge_node_id:
+        from app.services.galaxy_service import GalaxyService
+
+        galaxy_service = GalaxyService(db)
+        study_minutes = request.actual_minutes or task.estimated_minutes or 15
+
+        try:
+            spark_result = await galaxy_service.spark_node(
+                user_id=current_user.id,
+                node_id=task.knowledge_node_id,
+                study_minutes=study_minutes,
+                task_id=task.id,
+                trigger_expansion=True,
+            )
+            logger.info(
+                "Task {} completion triggered galaxy spark: node={}, new_mastery={}",
+                task_id,
+                task.knowledge_node_id,
+                spark_result.spark_event.new_mastery if spark_result and spark_result.spark_event else "N/A",
+            )
+        except Exception as e:
+            logger.error(f"Failed to spark node after task completion: {e}")
+
+    feedback = {}
+    try:
+        feedback = await feedback_service.generate_feedback(task, current_user, db)
+    except Exception as e:
+        logger.warning(f"Failed to generate feedback: {e}")
+
+    galaxy_update = None
+    if spark_result:
+        next_review_at = None
+        updated_status = spark_result.updated_status
+        if updated_status and getattr(updated_status, "next_review_at", None):
+            next_review_at = updated_status.next_review_at.isoformat()
+        galaxy_update = {
+            "node_id": str(task.knowledge_node_id),
+            "new_mastery": spark_result.spark_event.new_mastery if spark_result.spark_event else None,
+            "next_review_at": next_review_at,
+        }
 
     # 返回数据
     return {
@@ -274,7 +338,8 @@ async def complete_task(
                 "streak_days": 7
             },
             "feedback": feedback.get("content"),
-            "galaxy_update": feedback.get("galaxy_update")
+            "plan_update": plan_update_result,
+            "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
         },
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
         "retry_token": x_idempotency_key or "generated-token"

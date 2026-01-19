@@ -156,6 +156,8 @@ message ChatResponse {
   string workflow_id = 16;
   // Prompt version used to generate this response.
   string prompt_version = 17;
+  // Additional response metadata (e.g., preference version).
+  map<string, string> metadata = 18;
 
   // The main payload of the response.
   oneof content {

@@ -353,6 +353,7 @@ async def chat_stream(
             system_prompt=system_prompt,
             user_message=request.message,
             tools=tool_registry.get_openai_tools_schema(),
+            user_context=user_context,
         ):
             if chunk.type == "text":
                 collected_text_content += chunk.content
@@ -582,9 +583,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
         if user:
             context["flame_level"] = user.flame_level or 1
             context["flame_brightness"] = user.flame_brightness or 0
+
+            try:
+                from app.services.personalization.preference_service import PreferenceService
+
+                pref_service = PreferenceService(db)
+                prefs_center = await pref_service.get_preferences(user_id)
+                explicit = prefs_center.explicit if prefs_center else {}
+            except Exception:
+                explicit = {}
+
             context["learning_preferences"] = {
-                "depth_preference": user.depth_preference,
-                "curiosity_preference": user.curiosity_preference
+                "depth_preference": explicit.get("depth_preference", user.depth_preference),
+                "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
             }
 
         # 2. 获取近期任务（最近7天）

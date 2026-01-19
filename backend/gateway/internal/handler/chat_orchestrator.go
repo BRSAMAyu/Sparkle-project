@@ -458,6 +458,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		"trace_id":       resp.TraceId,
 		"workflow_id":    resp.WorkflowId,
 		"prompt_version": resp.PromptVersion,
+		"metadata":       resp.Metadata,
 	}
 
 	// Handle oneof content field

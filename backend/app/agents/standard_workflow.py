@@ -173,7 +173,8 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     async for chunk in llm_service.chat_stream_with_tools(
         system_prompt=system_prompt,
         user_message=user_message,
-        tools=tools
+        tools=tools,
+        user_context=user_context,
     ):
         if chunk.type == "text":
             full_response += chunk.content

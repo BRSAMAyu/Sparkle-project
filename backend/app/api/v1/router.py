@@ -42,6 +42,7 @@ from app.api.v1 import (
     memory,
     memory_settings,
     memory_admin,
+    preferences,
 )
 
 api_router = APIRouter()
@@ -80,6 +81,7 @@ api_router.include_router(health_production.router, prefix="/health", tags=["Hea
 api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
+api_router.include_router(preferences.router)
 # api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
 # api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])

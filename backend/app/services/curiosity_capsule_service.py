@@ -11,6 +11,7 @@ from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.user import User
 from app.models.task import Task
 from app.core.llm_client import llm_client
+from app.services.personalization.preference_service import PreferenceService
 
 class CuriosityCapsuleService:
     async def generate_daily_capsule(self, user_id: UUID, db: AsyncSession) -> Optional[CuriosityCapsule]:
@@ -22,7 +23,11 @@ class CuriosityCapsuleService:
         if not user:
             return None
             
-        if not user.curiosity_preference or user.curiosity_preference < 0.3:
+        pref_service = PreferenceService(db)
+        prefs_center = await pref_service.get_preferences(user_id)
+        curiosity_pref = (prefs_center.explicit or {}).get("curiosity_preference", user.curiosity_preference)
+
+        if not curiosity_pref or curiosity_pref < 0.3:
             # Low curiosity preference users might receive fewer or no capsules automatically
             # For now, we generate anyway but maybe content is different.
             pass
