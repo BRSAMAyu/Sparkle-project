@@ -23,6 +23,7 @@ import (
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
+	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -154,6 +155,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		upgrader = DefaultUpgrader()
 		log.Printf("[WARNING] Using development WebSocket upgrader - configure WebSocketFactory for production")
 	}
+	if selected := selectWebSocketSubprotocol(c.Request); selected != "" {
+		upgrader.Subprotocols = []string{selected}
+	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -173,6 +177,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	authToken := c.GetString("auth_token")
 
 	log.Printf("WebSocket connected for user: %s", userID)
+	authMethod := c.GetString("ws_auth_method")
+	if authMethod == "" {
+		authMethod = "unknown"
+	}
+	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	h.registerConnection(userID, conn)
 	defer h.unregisterConnection(userID)
 
