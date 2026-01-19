@@ -64,3 +64,30 @@ func isDevelopmentEnv() bool {
 	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
 	return env == "" || env == "dev" || env == "development"
 }
+
+func selectWebSocketSubprotocol(r *http.Request) string {
+	header := r.Header.Get("Sec-WebSocket-Protocol")
+	if header == "" {
+		return ""
+	}
+
+	parts := strings.Split(header, ",")
+	for _, part := range parts {
+		candidate := strings.TrimSpace(part)
+		lower := strings.ToLower(candidate)
+		if strings.HasPrefix(lower, "ticket=") ||
+			strings.HasPrefix(lower, "ticket:") ||
+			strings.HasPrefix(lower, "ws-ticket=") ||
+			strings.HasPrefix(lower, "ws-ticket:") ||
+			strings.HasPrefix(lower, "bearer ") ||
+			strings.HasPrefix(lower, "token=") ||
+			strings.HasPrefix(lower, "token:") {
+			return candidate
+		}
+	}
+
+	if len(parts) > 0 {
+		return strings.TrimSpace(parts[0])
+	}
+	return ""
+}
