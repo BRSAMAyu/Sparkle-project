@@ -21,6 +21,9 @@ type Config struct {
 	JWTIssuer          string `mapstructure:"JWT_ISSUER"`
 	JWTAudience        string `mapstructure:"JWT_AUDIENCE"`
 	AllowWsQueryToken  bool   `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	WSTicketTTLSeconds int    `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
+	WSTicketRateBurst  int    `mapstructure:"WS_TICKET_RATE_BURST"`
 	RedisURL           string `mapstructure:"REDIS_URL"`
 	RedisPassword      string `mapstructure:"REDIS_PASSWORD"`
 	BackendURL         string `mapstructure:"BACKEND_URL"`
@@ -155,6 +158,9 @@ func Load() *Config {
 		"JWT_ISSUER",
 		"JWT_AUDIENCE",
 		"ALLOW_WS_QUERY_TOKEN",
+		"WS_TICKET_TTL_SECONDS",
+		"WS_TICKET_RATE_RPS",
+		"WS_TICKET_RATE_BURST",
 		"REDIS_URL",
 		"REDIS_PASSWORD",
 		"BACKEND_URL",
@@ -200,6 +206,9 @@ func Load() *Config {
 	viper.SetDefault("JWT_ISSUER", "")
 	viper.SetDefault("JWT_AUDIENCE", "")
 	viper.SetDefault("ALLOW_WS_QUERY_TOKEN", true)
+	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
+	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
+	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
 	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
 	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")

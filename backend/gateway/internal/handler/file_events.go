@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 )
 
@@ -33,6 +34,9 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 		}
 		upgrader = DefaultUpgrader()
 	}
+	if selected := selectWebSocketSubprotocol(c.Request); selected != "" {
+		upgrader.Subprotocols = []string{selected}
+	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -43,9 +47,15 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 
 	userID := c.GetString("user_id")
 	if userID == "" {
+		metrics.WSConnectionError.WithLabelValues("/ws/files", "unknown", "missing_user").Inc()
 		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		return
 	}
+	authMethod := c.GetString("ws_auth_method")
+	if authMethod == "" {
+		authMethod = "unknown"
+	}
+	metrics.WSConnectionSuccess.WithLabelValues("/ws/files", authMethod).Inc()
 
 	h.hub.Register(userID, conn)
 	defer h.hub.Unregister(userID, conn)

@@ -37,55 +37,14 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			log.Printf("Auth token received: len=%d", len(tokenString))
 		}
 
-		// Parse and validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(cfg.JWTSecret), nil
-		})
-
-		if err != nil || !token.Valid {
+		userID, isAdmin, err := validateJWT(cfg, tokenString)
+		if err != nil {
 			if cfg.IsDevelopment() {
 				log.Printf("Auth secret debug: len=%d", len(cfg.JWTSecret))
 			}
-			log.Printf("Auth failed: invalid token (err=%v, valid=%v)", err, token != nil && token.Valid)
+			log.Printf("Auth failed: invalid token (err=%v)", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			return
-		}
-
-		// Extract User ID
-		userID, ok := claims["sub"].(string)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
-			return
-		}
-
-		tokenType, ok := claims["type"].(string)
-		if !ok || tokenType != "access" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
-			return
-		}
-
-		if cfg.JWTIssuer != "" {
-			issuer, ok := claims["iss"].(string)
-			if !ok || issuer != cfg.JWTIssuer {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token issuer"})
-				return
-			}
-		}
-
-		if cfg.JWTAudience != "" {
-			if !claimHasAudience(claims["aud"], cfg.JWTAudience) {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token audience"})
-				return
-			}
 		}
 
 		// Optional query user_id is for backward compatibility but must match token identity
@@ -96,14 +55,6 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 				"code":  "USER_ID_MISMATCH",
 			})
 			return
-		}
-
-		// Extract role information from JWT claims
-		isAdmin := false
-		if adminClaim, exists := claims["is_admin"]; exists {
-			if adminBool, ok := adminClaim.(bool); ok {
-				isAdmin = adminBool
-			}
 		}
 
 		// Set user context
@@ -171,4 +122,53 @@ func isWebSocketRequest(c *gin.Context) bool {
 	upgrade := strings.ToLower(c.GetHeader("Upgrade"))
 	connection := strings.ToLower(c.GetHeader("Connection"))
 	return upgrade == "websocket" && strings.Contains(connection, "upgrade")
+}
+
+func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(cfg.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return "", false, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", false, fmt.Errorf("invalid token claims")
+	}
+
+	userID, ok := claims["sub"].(string)
+	if !ok || userID == "" {
+		return "", false, fmt.Errorf("invalid user ID")
+	}
+
+	tokenType, ok := claims["type"].(string)
+	if !ok || tokenType != "access" {
+		return "", false, fmt.Errorf("invalid token type")
+	}
+
+	if cfg.JWTIssuer != "" {
+		issuer, ok := claims["iss"].(string)
+		if !ok || issuer != cfg.JWTIssuer {
+			return "", false, fmt.Errorf("invalid token issuer")
+		}
+	}
+
+	if cfg.JWTAudience != "" {
+		if !claimHasAudience(claims["aud"], cfg.JWTAudience) {
+			return "", false, fmt.Errorf("invalid token audience")
+		}
+	}
+
+	isAdmin := false
+	if adminClaim, exists := claims["is_admin"]; exists {
+		if adminBool, ok := adminClaim.(bool); ok {
+			isAdmin = adminBool
+		}
+	}
+
+	return userID, isAdmin, nil
 }
