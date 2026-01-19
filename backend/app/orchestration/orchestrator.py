@@ -263,6 +263,29 @@ class ChatOrchestrator:
         try:
             # Pass redis_client to UserService for caching
             user_service = UserService(db_session, self.redis)
+            base_user_context = await user_service.get_context(uuid.UUID(user_id))
+            base_user_context_data = base_user_context.model_dump() if base_user_context else None
+
+            llm_profile_data = None
+            preference_version = 0
+            try:
+                from app.services.personalization import get_personalization_engine
+
+                engine = get_personalization_engine(db_session, self.redis)
+                llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
+                prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
+                preference_version = prefs.version
+                llm_profile_data = {
+                    "system_prompt_additions": llm_profile.system_prompt_additions,
+                    "verbosity_target": llm_profile.verbosity_target,
+                    "temperature": llm_profile.temperature,
+                    "should_ask_clarifying": llm_profile.should_ask_clarifying,
+                    "should_provide_examples": llm_profile.should_provide_examples,
+                    "exploration_level": llm_profile.exploration_level,
+                    "tone": llm_profile.tone,
+                }
+            except Exception as e:
+                logger.warning(f"Failed to build LLM profile: {e}")
 
             # --- Use ContextOrchestrator (P4) ---
             from app.core.context_manager import ContextOrchestrator, CognitiveContext
@@ -277,9 +300,9 @@ class ChatOrchestrator:
             user_context_data = None
             if cognitive_context:
                 # Use data from new orchestrator
-                user_context_data = {
-                    "preferences": cognitive_context.preferences,
-                    # Add other fields if needed by legacy prompt
+                user_context_data = base_user_context_data or {
+                    "user_id": user_id,
+                    "nickname": "同学",
                 }
                 
                 # Fetch active plans manually if not in cognitive context yet
@@ -315,6 +338,8 @@ class ChatOrchestrator:
                     "next_actions": cognitive_context.active_tasks,
                     "active_plans": active_plans,
                     "focus_stats": cognitive_context.focus_stats,
+                    "preference_version": preference_version,
+                    "llm_profile": llm_profile_data,
                     
                     # New field for full context injection
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
@@ -324,7 +349,7 @@ class ChatOrchestrator:
             logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
             
             # ... Legacy Logic ...
-            user_context = await user_service.get_context(uuid.UUID(user_id))
+            user_context = base_user_context
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
 
             if user_context:
@@ -394,6 +419,8 @@ class ChatOrchestrator:
                     "next_actions": next_actions,
                     "active_plans": active_plans,
                     "focus_stats": focus_stats,
+                    "preference_version": preference_version,
+                    "llm_profile": llm_profile_data,
                 }
             else:
                 # Fallback to basic context
@@ -405,6 +432,8 @@ class ChatOrchestrator:
                     "next_actions": next_actions,
                     "active_plans": active_plans,
                     "focus_stats": focus_stats,
+                    "preference_version": preference_version,
+                    "llm_profile": llm_profile_data,
                 }
 
         except Exception as e:
@@ -413,7 +442,9 @@ class ChatOrchestrator:
             return {
                 "user_context": None,
                 "analytics_summary": {"is_active": True, "engagement_level": "medium"},
-                "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
+                "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+                "preference_version": 0,
+                "llm_profile": None,
             }
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> Dict[str, Any]:
@@ -497,6 +528,7 @@ class ChatOrchestrator:
             span.set_attribute("session_id", request.session_id)
             span.set_attribute("user_id", request.user_id)
             span.set_attribute("request_id", request.request_id)
+            trace_id = format(span.get_span_context().trace_id, "032x")
 
             start_time = time.time()
             ACTIVE_SESSIONS.inc()
@@ -532,12 +564,17 @@ class ChatOrchestrator:
             cached_response = await self._check_idempotency(session_id, request_id)
             if cached_response:
                 logger.info(f"Cache hit for session {session_id}, request {request_id}")
+                cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
+                metadata_map = {}
+                if isinstance(cached_metadata, dict):
+                    metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
                 # Return cached response
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
-                    full_text=cached_response.get("full_text", ""),
+                    full_text=cached_response.get("full_text") or cached_response.get("message", ""),
+                    metadata=metadata_map,
                     finish_reason=agent_service_pb2.STOP
                 )
                 return
@@ -645,6 +682,7 @@ class ChatOrchestrator:
                     resp.request_id = request_id
                     resp.workflow_id = resp.workflow_id or workflow_id
                     resp.prompt_version = resp.prompt_version or prompt_version
+                    resp.trace_id = resp.trace_id or trace_id
                     await queue.put(resp)
 
                 # Emit initial thinking status
@@ -724,10 +762,40 @@ class ChatOrchestrator:
                     # Note: Tool results are already in history, but ResponseComposer might need them separate.
                     # For now, we trust full_response is sufficient or we can extract from context.
                     
+                    llm_profile_meta = {}
+                    if isinstance(user_context_payload, dict):
+                        llm_profile_meta = user_context_payload.get("llm_profile") or {}
+                        if not isinstance(llm_profile_meta, dict):
+                            llm_profile_meta = {}
+
                     final_response_data = {
                         "message": full_response,
-                        "tool_results": [] 
+                        "tool_results": [],
+                        "metadata": {
+                            "response_id": response_id,
+                            "trace_id": trace_id,
+                            "preference_version": (user_context_payload or {}).get("preference_version", 0),
+                            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+                        },
                     }
+                    try:
+                        from app.services.decision_record_service import DecisionRecordService
+
+                        decision_service = DecisionRecordService(self.db_session)
+                        await decision_service.record_decision(
+                            user_id=uuid.UUID(str(user_id)),
+                            module="ai",
+                            action="generate_response",
+                            preference_version=(user_context_payload or {}).get("preference_version", 0),
+                            preferences_snapshot={
+                                "verbosity": llm_profile_meta.get("verbosity_target"),
+                                "temperature": llm_profile_meta.get("temperature"),
+                                "tone": llm_profile_meta.get("tone"),
+                            },
+                            outcome=f"Generated response with {len(full_response)} chars",
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to record decision: {e}")
                     await self._cache_response(session_id, request_id, final_response_data)
                     
                     # Yield final full_text if not already streamed complete?
@@ -736,6 +804,10 @@ class ChatOrchestrator:
                         response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        metadata={str(k): str(v) for k, v in final_response_data.get("metadata", {}).items()},
                         full_text=full_response,
                         finish_reason=agent_service_pb2.STOP
                     )

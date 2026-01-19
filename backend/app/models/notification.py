@@ -49,6 +49,8 @@ class PushHistory(BaseModel):
     
     # 状态: sent, clicked, snoozed, dismissed
     status = Column(String(50), default="sent", nullable=False)
+    interaction_type = Column(String(50), nullable=True)
+    interacted_at = Column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User", backref="push_histories")

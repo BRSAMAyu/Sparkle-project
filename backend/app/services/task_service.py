@@ -13,16 +13,12 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
 from loguru import logger
-from google.protobuf import json_format
 
 from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.schemas.task import TaskListQuery
 from app.core.cache import cache_service
-from app.services.llm_dispatcher import LLMDispatcher
-from app.services.gateway_client import GatewayClient
-from app.gen.sparkle.inference.v1 import inference_pb2
-from app.gen.sparkle.signals.v1 import signals_pb2
+from app.services.personalization import get_personalization_engine
 
 
 class TaskService:
@@ -42,14 +38,31 @@ class TaskService:
         db: AsyncSession, obj_in: TaskCreate, user_id: UUID
     ) -> Task:
         """Create new task"""
+        estimated_minutes = obj_in.estimated_minutes
+        difficulty = obj_in.difficulty
+
+        if estimated_minutes is None or difficulty is None:
+            try:
+                engine = get_personalization_engine(db, cache_service.redis)
+                profile = await engine.get_task_plan_profile(user_id)
+                if estimated_minutes is None:
+                    estimated_minutes = profile.preferred_task_duration
+                if difficulty is None:
+                    difficulty = TaskService._difficulty_from_gradient(profile.difficulty_gradient)
+            except Exception:
+                if estimated_minutes is None:
+                    estimated_minutes = 25
+                if difficulty is None:
+                    difficulty = 1
+
         db_obj = Task(
             user_id=user_id,
             plan_id=obj_in.plan_id,
             title=obj_in.title,
             type=obj_in.type,
             tags=obj_in.tags,
-            estimated_minutes=obj_in.estimated_minutes,
-            difficulty=obj_in.difficulty,
+            estimated_minutes=estimated_minutes,
+            difficulty=difficulty,
             energy_cost=obj_in.energy_cost,
             guide_content=obj_in.guide_content,
             priority=obj_in.priority,
@@ -109,9 +122,33 @@ class TaskService:
             from app.services.plan_service import PlanService
             await PlanService.update_progress(db, db_obj.plan_id, db_obj.user_id)
 
-        asyncio.create_task(TaskService._trigger_next_actions(db_obj))
+        if db_obj.knowledge_node_id:
+            from app.services.galaxy_service import GalaxyService
+
+            study_minutes = actual_minutes or db_obj.estimated_minutes or 15
+            galaxy_service = GalaxyService(db)
+            try:
+                await galaxy_service.spark_node(
+                    user_id=db_obj.user_id,
+                    node_id=db_obj.knowledge_node_id,
+                    study_minutes=study_minutes,
+                    task_id=db_obj.id,
+                    trigger_expansion=True,
+                )
+            except Exception as exc:
+                logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
         return db_obj
+
+    @staticmethod
+    def _difficulty_from_gradient(gradient: float) -> int:
+        if gradient is None:
+            return 1
+        try:
+            mapped = round(1 + max(0.0, min(1.0, gradient)) * 4)
+        except Exception:
+            return 1
+        return max(1, min(5, int(mapped)))
 
     @staticmethod
     async def abandon(

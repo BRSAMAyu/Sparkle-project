@@ -1046,6 +1046,8 @@ type ChatResponse struct {
 	WorkflowId string `protobuf:"bytes,16,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
 	// Prompt version used to generate this response.
 	PromptVersion string `protobuf:"bytes,17,opt,name=prompt_version,json=promptVersion,proto3" json:"prompt_version,omitempty"`
+	// Additional response metadata (e.g., preference version).
+	Metadata map[string]string `protobuf:"bytes,18,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// The main payload of the response.
 	//
 	// Types that are valid to be assigned to Content:
@@ -1138,6 +1140,13 @@ func (x *ChatResponse) GetPromptVersion() string {
 		return x.PromptVersion
 	}
 	return ""
+}
+
+func (x *ChatResponse) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
 }
 
 func (x *ChatResponse) GetContent() isChatResponse_Content {
@@ -1800,7 +1809,7 @@ func (x *ToolResultPayload) GetToolCallId() string {
 
 type EvidenceRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "event" | "error" | "concept" | "task" | "summary"
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "event" | "user_state" | "error" | "concept" | "strategy" | "task" | "summary"
 	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	SchemaVersion string                 `protobuf:"bytes,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	UserDeleted   bool                   `protobuf:"varint,4,opt,name=user_deleted,json=userDeleted,proto3" json:"user_deleted,omitempty"`
@@ -2743,7 +2752,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2#.agent.v1.ChatMessage.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xee\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xed\x06\n" +
 	"\fChatResponse\x12\x1f\n" +
 	"\vresponse_id\x18\x01 \x01(\tR\n" +
 	"responseId\x12\x1d\n" +
@@ -2755,7 +2764,8 @@ const file_agent_service_proto_rawDesc = "" +
 	"\btrace_id\x18\x0f \x01(\tR\atraceId\x12\x1f\n" +
 	"\vworkflow_id\x18\x10 \x01(\tR\n" +
 	"workflowId\x12%\n" +
-	"\x0eprompt_version\x18\x11 \x01(\tR\rpromptVersion\x12\x16\n" +
+	"\x0eprompt_version\x18\x11 \x01(\tR\rpromptVersion\x12@\n" +
+	"\bmetadata\x18\x12 \x03(\v2$.agent.v1.ChatResponse.MetadataEntryR\bmetadata\x12\x16\n" +
 	"\x05delta\x18\x03 \x01(\tH\x00R\x05delta\x121\n" +
 	"\ttool_call\x18\x04 \x01(\v2\x12.agent.v1.ToolCallH\x00R\btoolCall\x12<\n" +
 	"\rstatus_update\x18\x05 \x01(\v2\x15.agent.v1.AgentStatusH\x00R\fstatusUpdate\x12\x1d\n" +
@@ -2767,7 +2777,10 @@ const file_agent_service_proto_rawDesc = "" +
 	"toolResult\x12C\n" +
 	"\fintervention\x18\x0e \x01(\v2\x1d.agent.v1.InterventionPayloadH\x00R\fintervention\x12;\n" +
 	"\rfinish_reason\x18\t \x01(\x0e2\x16.agent.v1.FinishReasonR\ffinishReason\x12\x1c\n" +
-	"\ttimestamp\x18\r \x01(\x03R\ttimestampB\t\n" +
+	"\ttimestamp\x18\r \x01(\x03R\ttimestamp\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\t\n" +
 	"\acontent\"\xbe\x03\n" +
 	"\x17ResponseFeedbackRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
@@ -2973,7 +2986,7 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_agent_service_proto_goTypes = []any{
 	(FeedbackType)(0),                // 0: agent.v1.FeedbackType
 	(FeedbackReason)(0),              // 1: agent.v1.FeedbackReason
@@ -3010,64 +3023,66 @@ var file_agent_service_proto_goTypes = []any{
 	(*MemoryItem)(nil),               // 32: agent.v1.MemoryItem
 	nil,                              // 33: agent.v1.UserProfile.PreferencesEntry
 	nil,                              // 34: agent.v1.ChatMessage.MetadataEntry
-	nil,                              // 35: agent.v1.ResponseFeedbackRequest.MetaEntry
-	nil,                              // 36: agent.v1.Error.DetailsEntry
-	nil,                              // 37: agent.v1.MemoryItem.MetadataEntry
-	(*structpb.Struct)(nil),          // 38: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),    // 39: google.protobuf.Timestamp
+	nil,                              // 35: agent.v1.ChatResponse.MetadataEntry
+	nil,                              // 36: agent.v1.ResponseFeedbackRequest.MetaEntry
+	nil,                              // 37: agent.v1.Error.DetailsEntry
+	nil,                              // 38: agent.v1.MemoryItem.MetadataEntry
+	(*structpb.Struct)(nil),          // 39: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),    // 40: google.protobuf.Timestamp
 }
 var file_agent_service_proto_depIdxs = []int32{
 	11, // 0: agent.v1.ChatRequest.tool_result:type_name -> agent.v1.ToolResult
 	7,  // 1: agent.v1.ChatRequest.user_profile:type_name -> agent.v1.UserProfile
-	38, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
+	39, // 2: agent.v1.ChatRequest.extra_context:type_name -> google.protobuf.Struct
 	13, // 3: agent.v1.ChatRequest.history:type_name -> agent.v1.ChatMessage
 	12, // 4: agent.v1.ChatRequest.config:type_name -> agent.v1.ChatConfig
 	33, // 5: agent.v1.UserProfile.preferences:type_name -> agent.v1.UserProfile.PreferencesEntry
 	34, // 6: agent.v1.ChatMessage.metadata:type_name -> agent.v1.ChatMessage.MetadataEntry
-	19, // 7: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
-	26, // 8: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
-	27, // 9: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
-	28, // 10: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
-	17, // 11: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
-	20, // 12: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
-	25, // 13: agent.v1.ChatResponse.intervention:type_name -> agent.v1.InterventionPayload
-	2,  // 14: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
-	0,  // 15: agent.v1.ResponseFeedbackRequest.feedback_type:type_name -> agent.v1.FeedbackType
-	1,  // 16: agent.v1.ResponseFeedbackRequest.reasons:type_name -> agent.v1.FeedbackReason
-	35, // 17: agent.v1.ResponseFeedbackRequest.meta:type_name -> agent.v1.ResponseFeedbackRequest.MetaEntry
-	18, // 18: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
-	38, // 19: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
-	38, // 20: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
-	21, // 21: agent.v1.InterventionReason.evidence_refs:type_name -> agent.v1.EvidenceRef
-	23, // 22: agent.v1.InterventionRequest.reason:type_name -> agent.v1.InterventionReason
-	3,  // 23: agent.v1.InterventionRequest.level:type_name -> agent.v1.InterventionLevel
-	22, // 24: agent.v1.InterventionRequest.on_reject:type_name -> agent.v1.CoolDownPolicy
-	38, // 25: agent.v1.InterventionRequest.content:type_name -> google.protobuf.Struct
-	24, // 26: agent.v1.InterventionPayload.request:type_name -> agent.v1.InterventionRequest
-	5,  // 27: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
-	4,  // 28: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
-	36, // 29: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
-	30, // 30: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
-	39, // 31: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
-	39, // 32: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
-	32, // 33: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
-	39, // 34: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
-	37, // 35: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
-	6,  // 36: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
-	29, // 37: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
-	8,  // 38: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
-	9,  // 39: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
-	15, // 40: agent.v1.AgentService.SubmitResponseFeedback:input_type -> agent.v1.ResponseFeedbackRequest
-	14, // 41: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
-	31, // 42: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
-	7,  // 43: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
-	10, // 44: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
-	16, // 45: agent.v1.AgentService.SubmitResponseFeedback:output_type -> agent.v1.ResponseFeedbackResponse
-	41, // [41:46] is the sub-list for method output_type
-	36, // [36:41] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	35, // 7: agent.v1.ChatResponse.metadata:type_name -> agent.v1.ChatResponse.MetadataEntry
+	19, // 8: agent.v1.ChatResponse.tool_call:type_name -> agent.v1.ToolCall
+	26, // 9: agent.v1.ChatResponse.status_update:type_name -> agent.v1.AgentStatus
+	27, // 10: agent.v1.ChatResponse.error:type_name -> agent.v1.Error
+	28, // 11: agent.v1.ChatResponse.usage:type_name -> agent.v1.Usage
+	17, // 12: agent.v1.ChatResponse.citations:type_name -> agent.v1.CitationBlock
+	20, // 13: agent.v1.ChatResponse.tool_result:type_name -> agent.v1.ToolResultPayload
+	25, // 14: agent.v1.ChatResponse.intervention:type_name -> agent.v1.InterventionPayload
+	2,  // 15: agent.v1.ChatResponse.finish_reason:type_name -> agent.v1.FinishReason
+	0,  // 16: agent.v1.ResponseFeedbackRequest.feedback_type:type_name -> agent.v1.FeedbackType
+	1,  // 17: agent.v1.ResponseFeedbackRequest.reasons:type_name -> agent.v1.FeedbackReason
+	36, // 18: agent.v1.ResponseFeedbackRequest.meta:type_name -> agent.v1.ResponseFeedbackRequest.MetaEntry
+	18, // 19: agent.v1.CitationBlock.citations:type_name -> agent.v1.Citation
+	39, // 20: agent.v1.ToolResultPayload.data:type_name -> google.protobuf.Struct
+	39, // 21: agent.v1.ToolResultPayload.widget_data:type_name -> google.protobuf.Struct
+	21, // 22: agent.v1.InterventionReason.evidence_refs:type_name -> agent.v1.EvidenceRef
+	23, // 23: agent.v1.InterventionRequest.reason:type_name -> agent.v1.InterventionReason
+	3,  // 24: agent.v1.InterventionRequest.level:type_name -> agent.v1.InterventionLevel
+	22, // 25: agent.v1.InterventionRequest.on_reject:type_name -> agent.v1.CoolDownPolicy
+	39, // 26: agent.v1.InterventionRequest.content:type_name -> google.protobuf.Struct
+	24, // 27: agent.v1.InterventionPayload.request:type_name -> agent.v1.InterventionRequest
+	5,  // 28: agent.v1.AgentStatus.state:type_name -> agent.v1.AgentStatus.State
+	4,  // 29: agent.v1.AgentStatus.active_agent:type_name -> agent.v1.AgentType
+	37, // 30: agent.v1.Error.details:type_name -> agent.v1.Error.DetailsEntry
+	30, // 31: agent.v1.MemoryQuery.filter:type_name -> agent.v1.MemoryFilter
+	40, // 32: agent.v1.MemoryFilter.start_time:type_name -> google.protobuf.Timestamp
+	40, // 33: agent.v1.MemoryFilter.end_time:type_name -> google.protobuf.Timestamp
+	32, // 34: agent.v1.MemoryResult.items:type_name -> agent.v1.MemoryItem
+	40, // 35: agent.v1.MemoryItem.created_at:type_name -> google.protobuf.Timestamp
+	38, // 36: agent.v1.MemoryItem.metadata:type_name -> agent.v1.MemoryItem.MetadataEntry
+	6,  // 37: agent.v1.AgentService.StreamChat:input_type -> agent.v1.ChatRequest
+	29, // 38: agent.v1.AgentService.RetrieveMemory:input_type -> agent.v1.MemoryQuery
+	8,  // 39: agent.v1.AgentService.GetUserProfile:input_type -> agent.v1.ProfileRequest
+	9,  // 40: agent.v1.AgentService.GetWeeklyReport:input_type -> agent.v1.WeeklyReportRequest
+	15, // 41: agent.v1.AgentService.SubmitResponseFeedback:input_type -> agent.v1.ResponseFeedbackRequest
+	14, // 42: agent.v1.AgentService.StreamChat:output_type -> agent.v1.ChatResponse
+	31, // 43: agent.v1.AgentService.RetrieveMemory:output_type -> agent.v1.MemoryResult
+	7,  // 44: agent.v1.AgentService.GetUserProfile:output_type -> agent.v1.UserProfile
+	10, // 45: agent.v1.AgentService.GetWeeklyReport:output_type -> agent.v1.WeeklyReport
+	16, // 46: agent.v1.AgentService.SubmitResponseFeedback:output_type -> agent.v1.ResponseFeedbackResponse
+	42, // [42:47] is the sub-list for method output_type
+	37, // [37:42] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -3096,7 +3111,7 @@ func file_agent_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   32,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

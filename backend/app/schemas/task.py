@@ -15,8 +15,8 @@ class TaskCreate(BaseModel):
     type: TaskType = Field(description="Task type")
     plan_id: Optional[UUID] = Field(default=None, description="Related plan ID")
     tags: List[str] = Field(default_factory=list, description="Tags list")
-    estimated_minutes: int = Field(ge=1, description="Estimated minutes")
-    difficulty: int = Field(default=1, ge=1, le=5, description="Difficulty level")
+    estimated_minutes: Optional[int] = Field(default=None, ge=1, description="Estimated minutes")
+    difficulty: Optional[int] = Field(default=None, ge=1, le=5, description="Difficulty level")
     energy_cost: int = Field(default=1, ge=1, le=5, description="Energy cost")
     guide_content: Optional[str] = Field(default=None, description="Guide content")
     priority: int = Field(default=0, description="Priority")
@@ -91,6 +91,16 @@ class TaskSummary(BaseModel):
     in_progress: int = Field(description="In progress tasks")
     completed: int = Field(description="Completed tasks")
     abandoned: int = Field(description="Abandoned tasks")
+
+class TaskRecommendationResponse(BaseModel):
+    """Task recommendation response"""
+    knowledge_node_id: UUID = Field(description="Knowledge node ID")
+    title: str = Field(description="Task title")
+    estimated_minutes: int = Field(description="Estimated minutes")
+    task_type: str = Field(description="Task type")
+    difficulty: int = Field(description="Difficulty level")
+    priority: float = Field(description="Priority score")
+    reason: str = Field(description="Recommendation reason")
 
 class TaskListQuery(BaseModel):
     """Task list query parameters"""
