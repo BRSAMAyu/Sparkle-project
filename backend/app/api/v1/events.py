@@ -237,6 +237,11 @@ async def resolve_evidence(
                         EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
                     )
                     continue
+                if task.deleted_at is not None:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="redacted")
+                    )
+                    continue
                 resolved.append(
                     EvidenceResolveItem(
                         type=item.type,
