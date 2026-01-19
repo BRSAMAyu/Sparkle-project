@@ -151,6 +151,8 @@ func main() {
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
+	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
+	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
 
 	// Auth Service
 	appleAuthService, err := service.NewAppleAuthService(cfg)
@@ -377,6 +379,14 @@ func main() {
 
 		// File Routes
 		fileHandler.RegisterRoutes(api, authMiddleware)
+
+		// Intervention Routes (proxy to Python backend)
+		api.Any("/interventions/*path", authMiddleware, interventionProxyHandler.Proxy)
+	}
+
+	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
+	{
+		internal.POST("/interventions/push", interventionPushHandler.HandlePush)
 	}
 
 	// Swagger UI

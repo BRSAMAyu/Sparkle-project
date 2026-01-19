@@ -124,6 +124,7 @@ class Settings(BaseSettings):
 
     # Internal API
     INTERNAL_API_KEY: str = ""
+    GATEWAY_INTERNAL_URL: str = ""
 
     # Logging
     LOG_LEVEL: str = "INFO"

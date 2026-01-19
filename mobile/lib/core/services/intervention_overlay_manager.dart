@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/core/services/intervention_event_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/intervention_overlay.dart';
@@ -9,11 +10,15 @@ class InterventionOverlayManager {
 
   final InterventionEventService _events;
   OverlayEntry? _entry;
-  InterventionOverlayPayload? _payload;
+  InterventionPushMessage? _payload;
+  ValueChanged<String>? _actionHandler;
 
   bool get isShowing => _entry != null;
 
-  void show(InterventionOverlayPayload payload) {
+  void show(InterventionPushMessage payload, {ValueChanged<String>? onAction}) {
+    if (payload.level == InterventionLevel.silent) {
+      return;
+    }
     final overlayState = navigatorKey.currentState?.overlay;
     if (overlayState == null) {
       return;
@@ -23,6 +28,7 @@ class InterventionOverlayManager {
       return;
     }
     _payload = payload;
+    _actionHandler = onAction;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_entry != null) return;
@@ -30,9 +36,8 @@ class InterventionOverlayManager {
         builder: (context) => Material(
           type: MaterialType.transparency,
           child: InterventionOverlay(
-            payload: payload,
-            onPrimary: () => _handleAction('primary'),
-            onSecondary: () => _handleAction('secondary'),
+            intervention: payload,
+            onAction: _handleAction,
             onDismiss: () => _handleAction('dismissed'),
           ),
         ),
@@ -41,7 +46,7 @@ class InterventionOverlayManager {
       _events.record(
         InterventionEvent(
           type: InterventionEventType.overlayShown,
-          data: {'title': payload.title},
+          data: {'intervention_id': payload.interventionId},
         ),
       );
     });
@@ -52,9 +57,10 @@ class InterventionOverlayManager {
     _events.record(
       InterventionEvent(
         type: InterventionEventType.overlayAction,
-        data: {'action': action, 'title': _payload!.title},
+        data: {'action': action, 'intervention_id': _payload!.interventionId},
       ),
     );
+    _actionHandler?.call(action);
     hide();
   }
 
@@ -62,6 +68,7 @@ class InterventionOverlayManager {
     _entry?.remove();
     _entry = null;
     _payload = null;
+    _actionHandler = null;
   }
 
   void dispose() {

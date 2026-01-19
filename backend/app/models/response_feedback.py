@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, SmallInteger, Index, UniqueConstraint, JSON
+from sqlalchemy import Column, String, SmallInteger, Index, UniqueConstraint, JSON, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import BaseModel, GUID
@@ -19,6 +19,11 @@ class ResponseFeedback(BaseModel):
     reasons = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     free_text = Column(String, nullable=True)
     meta = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    intervention_id = Column(GUID(), nullable=True)
+    scaffolding_level = Column(Integer, nullable=True)
+    template_variant_id = Column(String(100), nullable=True)
+    time_to_response = Column(Integer, nullable=True)
+    action_taken = Column(String(40), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("user_id", "response_id", name="uq_response_feedback_user_response"),

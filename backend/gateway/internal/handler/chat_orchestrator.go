@@ -103,18 +103,20 @@ var stringBuilderPool = sync.Pool{
 var sanitizer = bluemonday.UGCPolicy()
 
 type ChatOrchestrator struct {
-	agentClient  *agent.Client
-	galaxyClient *galaxy.Client
-	queries      *db.Queries
-	chatHistory  *service.ChatHistoryService
-	quota        *service.QuotaService
-	semantic     *service.SemanticCacheService
-	billing      *service.CostCalculator
-	wsFactory    *WebSocketFactory
-	userContext  *service.UserContextService
-	taskCommand  *service.TaskCommandService
-	backendURL   string
-	httpClient   *http.Client
+	agentClient   *agent.Client
+	galaxyClient  *galaxy.Client
+	queries       *db.Queries
+	chatHistory   *service.ChatHistoryService
+	quota         *service.QuotaService
+	semantic      *service.SemanticCacheService
+	billing       *service.CostCalculator
+	wsFactory     *WebSocketFactory
+	userContext   *service.UserContextService
+	taskCommand   *service.TaskCommandService
+	backendURL    string
+	httpClient    *http.Client
+	wsConnections map[string]*websocket.Conn
+	wsMutex       sync.RWMutex
 }
 
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
@@ -133,6 +135,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		wsConnections: make(map[string]*websocket.Conn),
 	}
 }
 
@@ -165,6 +168,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	authToken := c.GetString("auth_token")
 
 	log.Printf("WebSocket connected for user: %s", userID)
+	h.registerConnection(userID, conn)
+	defer h.unregisterConnection(userID)
 
 	tracer := otel.Tracer("chat-orchestrator")
 
@@ -1995,4 +2000,67 @@ func (h *ChatOrchestrator) sendError(conn *websocket.Conn, opType, nodeID, versi
 			"error":   message,
 		},
 	})
+}
+
+func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn) {
+	h.wsMutex.Lock()
+	defer h.wsMutex.Unlock()
+	if existing, ok := h.wsConnections[userID]; ok && existing != conn {
+		_ = existing.Close()
+	}
+	h.wsConnections[userID] = conn
+}
+
+func (h *ChatOrchestrator) unregisterConnection(userID string) {
+	h.wsMutex.Lock()
+	defer h.wsMutex.Unlock()
+	delete(h.wsConnections, userID)
+}
+
+func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) {
+	h.wsMutex.RLock()
+	defer h.wsMutex.RUnlock()
+	conn, ok := h.wsConnections[userID]
+	return conn, ok
+}
+
+// PushIntervention sends an intervention push message to a connected WebSocket client.
+func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.InterventionPushMessage) error {
+	conn, exists := h.getConnection(userID)
+	if !exists {
+		return fmt.Errorf("no active WebSocket connection for user %s", userID)
+	}
+
+	message := map[string]interface{}{
+		"type":            "intervention_push",
+		"intervention_id": intervention.InterventionId,
+		"level":           intervention.Level,
+		"content": map[string]interface{}{
+			"rendered_message":  intervention.Content.GetRenderedMessage(),
+			"intent_type":       intervention.Content.GetIntentType(),
+			"template_id":       intervention.Content.GetTemplateId(),
+			"scaffolding_level": intervention.Content.GetScaffoldingLevel(),
+			"context_variables": intervention.Content.GetContextVariables(),
+		},
+		"actions":    convertInterventionActions(intervention.Actions),
+		"expires_at": intervention.ExpiresAt,
+	}
+
+	if err := conn.WriteJSON(message); err != nil {
+		h.unregisterConnection(userID)
+		return fmt.Errorf("failed to send intervention: %w", err)
+	}
+	return nil
+}
+
+func convertInterventionActions(actions []*pbws.InterventionAction) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(actions))
+	for i, action := range actions {
+		result[i] = map[string]interface{}{
+			"id":    action.Id,
+			"label": action.Label,
+			"type":  action.Type,
+		}
+	}
+	return result
 }
