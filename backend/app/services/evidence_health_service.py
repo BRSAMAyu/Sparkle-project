@@ -184,12 +184,13 @@ class EvidenceHealthService:
             select(ErrorRecord).where(
                 ErrorRecord.id == error_uuid,
                 ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted == False,
             )
         )
         error = result.scalar_one_or_none()
         if not error:
             return {"type": "error", "id": error_id, "status": "not_found"}
+        if error.is_deleted:
+            return {"type": "error", "id": error_id, "status": "redacted"}
         return {
             "type": "error",
             "id": error_id,
@@ -206,6 +207,8 @@ class EvidenceHealthService:
         node = result.scalar_one_or_none()
         if not node:
             return {"type": "concept", "id": node_id, "status": "not_found"}
+        if node.deleted_at is not None:
+            return {"type": "concept", "id": node_id, "status": "redacted"}
         return {
             "type": "concept",
             "id": node_id,
@@ -222,12 +225,13 @@ class EvidenceHealthService:
             select(StrategyNode).where(
                 StrategyNode.id == strategy_uuid,
                 StrategyNode.user_id == user_id,
-                StrategyNode.deleted_at.is_(None),
             )
         )
         strategy = result.scalar_one_or_none()
         if not strategy:
             return {"type": "strategy", "id": strategy_id, "status": "not_found"}
+        if strategy.deleted_at is not None:
+            return {"type": "strategy", "id": strategy_id, "status": "redacted"}
         return {
             "type": "strategy",
             "id": strategy_id,
@@ -249,6 +253,8 @@ class EvidenceHealthService:
         task = result.scalar_one_or_none()
         if not task:
             return {"type": "task", "id": task_id, "status": "not_found"}
+        if task.deleted_at is not None:
+            return {"type": "task", "id": task_id, "status": "redacted"}
         return {
             "type": "task",
             "id": task_id,
@@ -270,6 +276,8 @@ class EvidenceHealthService:
         review = result.scalar_one_or_none()
         if not review:
             return {"type": "summary", "id": summary_id, "status": "not_found"}
+        if review.deleted_at is not None:
+            return {"type": "summary", "id": summary_id, "status": "redacted"}
         return {
             "type": "summary",
             "id": summary_id,

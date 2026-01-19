@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+try:
+    import tiktoken
+except ImportError:  # pragma: no cover - optional runtime dependency
+    tiktoken = None
 
 from app.config import settings
 from app.core.context_budget import ContextBudgetScheduler
@@ -23,9 +28,25 @@ from app.services.memory_rank_policy_service import MemoryRankPolicyService
 from app.services.ltm_rollout_service import LtmRolloutService
 
 
+@lru_cache(maxsize=1)
+def _get_token_encoding():
+    if tiktoken is None:
+        return None
+    try:
+        return tiktoken.get_encoding("cl100k_base")
+    except Exception:
+        return None
+
+
 def estimate_tokens(text: str) -> int:
     if not text:
         return 0
+    encoding = _get_token_encoding()
+    if encoding:
+        try:
+            return len(encoding.encode(text))
+        except Exception:
+            pass
     return max(1, len(text) // 4)
 
 

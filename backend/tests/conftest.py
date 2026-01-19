@@ -14,6 +14,7 @@ from app.models.context_pack import ContextPackRun, ContextBudgetProfile, Contex
 from app.models.memory_rank_policy import MemoryRankPolicy  # noqa: F401
 from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
 from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
+from app.models.event import TrackingEvent  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401
     ScaffoldingState,
     PassiveSignal,
