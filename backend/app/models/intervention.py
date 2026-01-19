@@ -23,6 +23,11 @@ class InterventionRequest(BaseModel):
     reason = Column(JSON, nullable=True)
     content = Column(JSON, nullable=True)
     cooldown_policy = Column(JSON, nullable=True)
+    delivery_method = Column(String(20), nullable=True)
+    template_id = Column(String(100), nullable=True)
+    template_variant_id = Column(String(100), nullable=True)
+    scaffolding_level = Column(Integer, nullable=True)
+    intent_type = Column(String(50), nullable=True)
 
     schema_version = Column(String(50), nullable=False)
     policy_version = Column(String(50), nullable=True)

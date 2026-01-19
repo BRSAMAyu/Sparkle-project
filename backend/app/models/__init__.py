@@ -48,6 +48,12 @@ from app.models.intervention import (
     InterventionFeedback,
     UserInterventionSettings,
 )
+from app.models.intervention_adaptive import (
+    ScaffoldingState,
+    PassiveSignal,
+    BehavioralOutcome,
+    InterventionTemplate,
+)
 from app.models.response_feedback import ResponseFeedback
 
 __all__ = [
@@ -123,5 +129,9 @@ __all__ = [
     "InterventionAuditLog",
     "InterventionFeedback",
     "UserInterventionSettings",
+    "ScaffoldingState",
+    "PassiveSignal",
+    "BehavioralOutcome",
+    "InterventionTemplate",
     "ResponseFeedback",
 ]

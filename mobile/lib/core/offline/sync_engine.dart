@@ -197,6 +197,18 @@ class SyncEngine {
         case 'cognitive':
           await _sendCognitiveFragmentCreate(payload, item);
           break;
+        case 'intervention_requests':
+          await _sendInterventionRequest(payload);
+          break;
+        case 'intervention_feedback':
+          await _sendInterventionFeedback(payload);
+          break;
+        case 'intervention_passive_signals':
+          await _sendInterventionPassiveSignal(payload);
+          break;
+        case 'intervention_outcomes':
+          await _sendInterventionOutcome(payload);
+          break;
         default:
           _logger.w(
             'Unknown outbox item: ${descriptor.topic}/${descriptor.opType}',
@@ -296,6 +308,41 @@ class SyncEngine {
     } on DioException catch (e) {
       rethrow;
     }
+  }
+
+  Future<void> _sendInterventionRequest(Map<String, dynamic> payload) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.interventionsRequest,
+      data: payload,
+    );
+  }
+
+  Future<void> _sendInterventionFeedback(Map<String, dynamic> payload) async {
+    final interventionId = payload['intervention_id'] as String?;
+    if (interventionId == null || interventionId.isEmpty) {
+      throw SyncFailure('MISSING_INTERVENTION_ID', 'Missing intervention_id');
+    }
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.interventionFeedback(interventionId),
+      data: {
+        'feedback_type': payload['feedback_type'] ?? 'ignore',
+        'extra_data': payload,
+      },
+    );
+  }
+
+  Future<void> _sendInterventionPassiveSignal(Map<String, dynamic> payload) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.interventionsPassiveSignals,
+      data: payload,
+    );
+  }
+
+  Future<void> _sendInterventionOutcome(Map<String, dynamic> payload) async {
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.interventionsOutcomes,
+      data: payload,
+    );
   }
 
   _OutboxDescriptor _describeItem(OutboxItem item) {

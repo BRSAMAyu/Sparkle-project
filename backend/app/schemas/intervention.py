@@ -73,6 +73,11 @@ class InterventionRequestCreate(BaseModel):
     cooldown_policy: Optional[CoolDownPolicy] = None
     content: Optional[Dict[str, Any]] = None
     context: Optional[InterventionDecisionContext] = None
+    delivery_method: Optional[str] = None
+    template_id: Optional[str] = None
+    template_variant_id: Optional[str] = None
+    scaffolding_level: Optional[int] = None
+    intent_type: Optional[str] = None
 
 
 class InterventionRequestResponse(BaseModel):
@@ -86,6 +91,11 @@ class InterventionRequestResponse(BaseModel):
     reason: Optional[Dict[str, Any]] = None
     content: Optional[Dict[str, Any]] = None
     cooldown_policy: Optional[Dict[str, Any]] = None
+    delivery_method: Optional[str] = None
+    template_id: Optional[str] = None
+    template_variant_id: Optional[str] = None
+    scaffolding_level: Optional[int] = None
+    intent_type: Optional[str] = None
     schema_version: str
     policy_version: Optional[str] = None
     model_version: Optional[str] = None
@@ -153,3 +163,38 @@ class InterventionAuditResponse(BaseModel):
     occurred_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EdgeStatePayload(BaseModel):
+    focus_score: Optional[float] = None
+    switching_rate: Optional[float] = None
+    is_foreground: Optional[bool] = None
+    session_seconds: Optional[int] = None
+    stress_score: Optional[float] = None
+    fatigue_score: Optional[float] = None
+    interrupt_score: Optional[float] = None
+    attention_score: Optional[float] = None
+    debug: Optional[Dict[str, Any]] = None
+
+
+class InterventionTriggerRequest(BaseModel):
+    type: str
+    urgency: float = Field(..., ge=0.0, le=1.0)
+    context: Dict[str, Any] = Field(default_factory=dict)
+    edge_state: Optional[EdgeStatePayload] = None
+    gate_decision: Optional[Dict[str, Any]] = None
+
+
+class PassiveSignalRequest(BaseModel):
+    signal_type: str
+    intervention_id: Optional[UUID] = None
+    context: Optional[Dict[str, Any]] = None
+    timestamp: Optional[datetime] = None
+
+
+class BehavioralOutcomeRequest(BaseModel):
+    intervention_id: UUID
+    outcome_type: str
+    time_to_outcome: int = Field(..., ge=0)
+    success: bool
+    context: Optional[Dict[str, Any]] = None

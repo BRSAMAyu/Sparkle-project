@@ -1,110 +1,71 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-
-class InterventionOverlayPayload {
-  final String title;
-  final String body;
-  final String primaryActionText;
-  final String? secondaryActionText;
-
-  InterventionOverlayPayload({
-    required this.title,
-    required this.body,
-    required this.primaryActionText,
-    this.secondaryActionText,
-  });
-}
+import 'package:sparkle/core/models/intervention.dart';
+import 'package:sparkle/core/widgets/card_intervention.dart';
+import 'package:sparkle/core/widgets/modal_intervention.dart';
+import 'package:sparkle/core/widgets/toast_intervention.dart';
 
 class InterventionOverlay extends StatelessWidget {
-  final InterventionOverlayPayload payload;
-  final VoidCallback onPrimary;
-  final VoidCallback onSecondary;
+  final InterventionPushMessage intervention;
+  final ValueChanged<String> onAction;
   final VoidCallback onDismiss;
 
   const InterventionOverlay({
     super.key,
-    required this.payload,
-    required this.onPrimary,
-    required this.onSecondary,
+    required this.intervention,
+    required this.onAction,
     required this.onDismiss,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (intervention.level == InterventionLevel.silent) {
+      return const SizedBox.shrink();
+    }
+
+    Widget content;
+    switch (intervention.level) {
+      case InterventionLevel.toast:
+        content = ToastIntervention(
+          intervention: intervention,
+          onAction: onAction,
+          onDismiss: onDismiss,
+        );
+        break;
+      case InterventionLevel.card:
+        content = CardIntervention(
+          intervention: intervention,
+          onAction: onAction,
+          onDismiss: onDismiss,
+        );
+        break;
+      case InterventionLevel.modal:
+        content = ModalIntervention(
+          intervention: intervention,
+          onAction: onAction,
+          onDismiss: onDismiss,
+        );
+        break;
+      case InterventionLevel.silent:
+        content = const SizedBox.shrink();
+        break;
+    }
+
     return GestureDetector(
       onTap: onDismiss,
       child: Container(
         color: Colors.black.withOpacity(0.35),
-        child: Center(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 28),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.15),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: GestureDetector(
-                onTap: () {},
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      payload.title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      payload.body,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            height: 1.4,
-                          ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: onPrimary,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(payload.primaryActionText),
-                    ),
-                    if (payload.secondaryActionText != null) ...[
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: onSecondary,
-                        child: Text(payload.secondaryActionText!),
-                      ),
-                    ],
-                  ],
-                ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: const SizedBox.expand(),
               ),
             ),
-          ),
+            content,
+          ],
         ),
       ),
     );

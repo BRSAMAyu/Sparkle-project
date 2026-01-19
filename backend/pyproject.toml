@@ -35,6 +35,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "python-dotenv>=1.0.0",
+    "PyYAML>=6.0.1",
 
     # Task Scheduling
     "apscheduler>=3.10.4",
