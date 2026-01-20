@@ -80,7 +80,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
   }
 
   void _showCitationDetails(BuildContext context, Map<String, dynamic> cite) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text((cite['title'] as String?) ?? '详情'),

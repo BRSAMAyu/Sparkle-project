@@ -480,8 +480,6 @@ void main() {
         final eventsController = StreamController<SSEEvent>();
         mockRepository.eventsStream = eventsController.stream;
 
-        final notifier = container.read(galaxyProvider.notifier);
-
         // Simulate expansion event
         eventsController.add(SSEEvent(
           event: 'nodes_expanded',

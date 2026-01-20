@@ -14,7 +14,7 @@ Future<void> showShareResourceSheet(
   required String title,
   String? subtitle,
 }) async {
-  await showModalBottomSheet(
+  await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

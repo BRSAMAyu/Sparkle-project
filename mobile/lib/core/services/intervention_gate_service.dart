@@ -38,8 +38,11 @@ class SceneContext {
     String? routeName;
     if (context != null) {
       try {
-        routeName =
-            GoRouter.of(context).routeInformationProvider.value.location;
+        routeName = GoRouter.of(context)
+            .routeInformationProvider
+            .value
+            .uri
+            .toString();
       } catch (_) {
         routeName = ModalRoute.of(context)?.settings.name;
       }

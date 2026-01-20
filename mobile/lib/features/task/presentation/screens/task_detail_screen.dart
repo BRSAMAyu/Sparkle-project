@@ -457,7 +457,7 @@ class _BottomActionBar extends ConsumerWidget {
                   icon: Icon(Icons.delete_outline, color: DS.error),
                   onPressed: () {
                     HapticFeedback.mediumImpact();
-                    showDialog(
+                    showDialog<void>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         shape: const RoundedRectangleBorder(

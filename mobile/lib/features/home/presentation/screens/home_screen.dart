@@ -154,7 +154,9 @@ class _DashboardScreen extends ConsumerWidget {
                 label: '查看',
                 textColor: Colors.white,
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const EdgeAIStatusScreen()),
+                  MaterialPageRoute<void>(
+                    builder: (_) => const EdgeAIStatusScreen(),
+                  ),
                 ),
               ),
             ),
@@ -292,7 +294,9 @@ class _DashboardScreen extends ConsumerWidget {
               tooltip: 'Qwen3 认知状态',
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const EdgeAIStatusScreen()),
+                  MaterialPageRoute<void>(
+                    builder: (_) => const EdgeAIStatusScreen(),
+                  ),
                 );
               },
             ),

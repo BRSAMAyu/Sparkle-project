@@ -16,7 +16,7 @@ class QuickToolsPanel extends StatelessWidget {
   final String? taskId;
 
   void _showTool(BuildContext context, Widget tool) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

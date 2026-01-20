@@ -5,7 +5,6 @@ import 'package:logger/logger.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:sparkle/core/analytics/services/local_feature_service.dart';
 import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
-import 'package:sparkle/core/edge_ai/grammar/state_vector_grammar.dart';
 import 'package:sparkle/core/edge_ai/services/model_manager.dart';
 
 // Placeholder for feature input
