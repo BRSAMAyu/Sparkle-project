@@ -270,11 +270,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       .read(chatProvider.notifier)
                                       .dismissAction(action);
                                 },
-                                onResponseFeedback: (msg, feedbackType) {
-                                  ref
-                                      .read(chatProvider.notifier)
-                                      .sendResponseFeedback(msg, feedbackType);
-                                },
                               );
                             },
                           ),
@@ -368,7 +363,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             initialChildSize: initialChildSize,
             minChildSize: 0.4,
             maxChildSize: maxChildSize,
-            builder: (context, scrollController) => Container(
+            builder: (context, scrollController) => DecoratedBox(
               decoration: BoxDecoration(
                 color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
                 borderRadius:
@@ -650,7 +645,6 @@ class _QuickActionChipState extends State<_QuickActionChip> {
     final backgroundColor = isDark ? DS.neutral800 : DS.brandPrimary;
     final labelColor = ThemeUtils.getContrastSafeText(
       backgroundColor,
-      lightText: Colors.white,
       darkText: DS.neutral900,
     );
     final horizontalPadding = widget.isNarrow ? 12.0 : DS.spacing16;
@@ -730,7 +724,6 @@ class _StreamingBubble extends StatelessWidget {
     final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
     final textColor = ThemeUtils.getContrastSafeText(
       bubbleColor,
-      lightText: Colors.white,
       darkText: DS.neutral900,
     );
     return Align(
@@ -841,7 +834,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     final bubbleColor = isDark ? DS.neutral800 : DS.brandPrimary;
     final dotColor = ThemeUtils.getContrastSafeText(
       bubbleColor,
-      lightText: Colors.white,
       darkText: DS.neutral900,
     ).withValues(alpha: 0.7);
     return Container(
