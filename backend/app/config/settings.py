@@ -3,23 +3,95 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 import os
-from typing import List, Optional
+from typing import List
+from urllib.parse import urlparse, urlunparse, quote
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator, Field, AliasChoices
-from dotenv import load_dotenv
 
 # 获取当前文件的绝对路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# 假设 .env 在 backend 目录下，即 app 的父目录
-env_path = os.path.join(os.path.dirname(current_dir), ".env")
+backend_dir = os.path.dirname(current_dir)
+project_root = os.path.dirname(backend_dir)
+root_env_path = os.path.join(project_root, ".env")
+backend_env_path = os.path.join(backend_dir, ".env")
 
-# 不再显式加载 .env，交给 pydantic-settings 处理，以支持环境变量覆盖
-# load_dotenv(env_path, override=True)
+def _is_running_in_docker() -> bool:
+    return os.path.exists("/.dockerenv") or os.getenv("IN_DOCKER") == "true"
+
+
+def _normalize_local_docker_host(host: str) -> str:
+    if _is_running_in_docker():
+        return host
+    if host in ("sparkle_db", "sparkle_redis"):
+        return "127.0.0.1"
+    return host
+
+
+def _replace_url_host(raw_url: str, new_host: str) -> str:
+    parsed = urlparse(raw_url)
+    if not parsed.hostname:
+        return raw_url
+    username = quote(parsed.username) if parsed.username else ""
+    password = quote(parsed.password) if parsed.password else ""
+    auth = ""
+    if username:
+        auth = username
+        if password:
+            auth = f"{username}:{password}"
+        auth = f"{auth}@"
+    elif password:
+        auth = f":{password}@"
+    port = f":{parsed.port}" if parsed.port else ""
+    new_netloc = f"{auth}{new_host}{port}"
+    return urlunparse(parsed._replace(netloc=new_netloc))
+
+
+def normalize_database_url(raw_url: str, *, prefer_async: bool = True) -> str:
+    if not raw_url:
+        return ""
+    url = raw_url.strip()
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if prefer_async:
+        for prefix in ("postgresql+psycopg://", "postgresql+psycopg2://"):
+            if url.startswith(prefix):
+                url = "postgresql+asyncpg://" + url[len(prefix):]
+        if url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+    host = urlparse(url).hostname
+    if host:
+        url = _replace_url_host(url, _normalize_local_docker_host(host))
+    return url
+
+
+def to_sync_database_url(raw_url: str) -> str:
+    if not raw_url:
+        return ""
+    url = raw_url.strip()
+    if url.startswith("postgresql+asyncpg://"):
+        url = "postgresql://" + url[len("postgresql+asyncpg://"):]
+    if url.startswith("postgresql+psycopg://"):
+        url = "postgresql://" + url[len("postgresql+psycopg://"):]
+    if url.startswith("postgresql+psycopg2://"):
+        url = "postgresql://" + url[len("postgresql+psycopg2://"):]
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    return url
+
+
+def normalize_redis_url(raw_url: str) -> str:
+    if not raw_url:
+        return ""
+    url = raw_url.strip()
+    host = urlparse(url).hostname
+    if host:
+        url = _replace_url_host(url, _normalize_local_docker_host(host))
+    return url
 
 class Settings(BaseSettings):
     """Application settings"""
     model_config = SettingsConfigDict(
-        env_file=env_path,
+        env_file=[backend_env_path, root_env_path],
         env_file_encoding='utf-8',
         case_sensitive=True,
         extra="ignore"
@@ -35,17 +107,40 @@ class Settings(BaseSettings):
     # Support JWT_SECRET as alias for SECRET_KEY to align with Gateway/Go convention
     SECRET_KEY: str = Field("", validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET"))
 
-    # Database
+    # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 5432
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
-    DB_NAME: str = "sparkle"
+    POSTGRES_HOST: str = Field("sparkle_db", validation_alias=AliasChoices("POSTGRES_HOST", "DB_HOST"))
+    POSTGRES_PORT: int = Field(5432, validation_alias=AliasChoices("POSTGRES_PORT", "DB_PORT"))
+    POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
+    POSTGRES_PASSWORD: str = Field("change-me", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
+    POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
 
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_PASSWORD: Optional[str] = None
+    # Redis (canonical envs: REDIS_*)
+    REDIS_URL: str = ""
+    REDIS_HOST: str = Field("sparkle_redis", validation_alias=AliasChoices("REDIS_HOST", "REDIS_HOSTNAME"))
+    REDIS_PORT: int = Field(6379, validation_alias=AliasChoices("REDIS_PORT", "REDIS_PORT_NUMBER"))
+    REDIS_PASSWORD: str = "change-me"
+    REDIS_DB: int = 0
+
+    @property
+    def DB_HOST(self) -> str:
+        return _normalize_local_docker_host(self.POSTGRES_HOST)
+
+    @property
+    def DB_PORT(self) -> int:
+        return self.POSTGRES_PORT
+
+    @property
+    def DB_USER(self) -> str:
+        return self.POSTGRES_USER
+
+    @property
+    def DB_PASSWORD(self) -> str:
+        return self.POSTGRES_PASSWORD
+
+    @property
+    def DB_NAME(self) -> str:
+        return self.POSTGRES_DB
 
     # Database Pool Settings (for PostgreSQL)
     DB_POOL_SIZE: int = 20  # 连接池大小
@@ -94,6 +189,19 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
     EMBEDDING_DIM: int = 1536  # 向量维度
     RERANK_MODEL: str = "BAAI/bge-reranker-base"  # 重排序模型
+
+    # STT (Speech to Text) Service
+    STT_PROVIDER: str = "xunfei"  # 仅支持 'xunfei'
+    STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+
+    # XunFei (科大讯飞) STT Configuration
+    XUNFEI_API_KEY: str = ""
+    XUNFEI_API_SECRET: str = ""
+    XUNFEI_STT_DOMAIN: str = "iat"
+    XUNFEI_STT_LANGUAGE: str = "zh-CN"
+    XUNFEI_STT_SAMPLE_RATE: int = 16000
+    XUNFEI_STT_MAX_AUDIO_DURATION: int = 60
+    XUNFEI_STT_EOS_MS: int = 6000  # 静音检测阈值（毫秒）
 
     # Semantic Cache
     SEMANTIC_CACHE_ENABLED: bool = True
@@ -218,7 +326,7 @@ class Settings(BaseSettings):
     def validate_database_url(cls, v):
         if not v:
             return ""
-        return v
+        return normalize_database_url(v)
 
     @field_validator("LLM_API_BASE_URL", mode="before")
     @classmethod
@@ -226,6 +334,25 @@ class Settings(BaseSettings):
         if not v:
             return ""
         return v
+
+    @model_validator(mode="after")
+    def finalize_urls(self):
+        if not self.DATABASE_URL:
+            host = _normalize_local_docker_host(self.POSTGRES_HOST)
+            self.DATABASE_URL = normalize_database_url(
+                f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{host}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            )
+        else:
+            self.DATABASE_URL = normalize_database_url(self.DATABASE_URL)
+
+        if self.REDIS_URL:
+            self.REDIS_URL = normalize_redis_url(self.REDIS_URL)
+        else:
+            host = _normalize_local_docker_host(self.REDIS_HOST)
+            self.REDIS_URL = normalize_redis_url(
+                f"redis://:{self.REDIS_PASSWORD}@{host}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            )
+        return self
 
     @field_validator("LLM_API_KEY", mode="before")
     @classmethod
@@ -246,6 +373,20 @@ class Settings(BaseSettings):
     def validate_deepseek_base_url(cls, v):
         if not v:
             return "https://api.deepseek.com"
+        return v
+
+    @field_validator("XUNFEI_API_KEY", mode="before")
+    @classmethod
+    def validate_xunfei_api_key(cls, v):
+        if not v:
+            return ""
+        return v
+
+    @field_validator("XUNFEI_API_SECRET", mode="before")
+    @classmethod
+    def validate_xunfei_api_secret(cls, v):
+        if not v:
+            return ""
         return v
 
     @model_validator(mode="after")

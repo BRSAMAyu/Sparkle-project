@@ -6,13 +6,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: ${DB_NAME:-sparkle}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-sparkle}
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-sparkle}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sparkle}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,7 +25,7 @@ services:
       - ./redis_data:/data
       - ./redis.conf:/redis-stack.conf
     environment:
-      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-password}
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD:-change-me}
     ports:
       - "6379:6379"
     healthcheck:
@@ -60,13 +60,22 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/2
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/2
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_internal_key}
-      - JWT_SECRET=${JWT_SECRET:-password}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - STT_PROVIDER=${STT_PROVIDER:-xunfei}
+      - STT_ENHANCE_ENABLED=${STT_ENHANCE_ENABLED:-true}
+      - XUNFEI_API_KEY=${XUNFEI_API_KEY}
+      - XUNFEI_API_SECRET=${XUNFEI_API_SECRET}
+      - XUNFEI_STT_DOMAIN=${XUNFEI_STT_DOMAIN:-iat}
+      - XUNFEI_STT_LANGUAGE=${XUNFEI_STT_LANGUAGE:-zh-CN}
+      - XUNFEI_STT_SAMPLE_RATE=${XUNFEI_STT_SAMPLE_RATE:-16000}
+      - XUNFEI_STT_MAX_AUDIO_DURATION=${XUNFEI_STT_MAX_AUDIO_DURATION:-60}
+      - XUNFEI_STT_EOS_MS=${XUNFEI_STT_EOS_MS:-6000}
     volumes:
       - ./backend:/app
     deploy:
@@ -92,13 +101,22 @@ services:
     ports:
       - "50051:50051"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-dev_internal_key}
-      - JWT_SECRET=${JWT_SECRET:-password}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - GRPC_PORT=50051
       - GRPC_KEEPALIVE_TIME_MS=60000
+      - STT_PROVIDER=${STT_PROVIDER:-xunfei}
+      - STT_ENHANCE_ENABLED=${STT_ENHANCE_ENABLED:-true}
+      - XUNFEI_API_KEY=${XUNFEI_API_KEY}
+      - XUNFEI_API_SECRET=${XUNFEI_API_SECRET}
+      - XUNFEI_STT_DOMAIN=${XUNFEI_STT_DOMAIN:-iat}
+      - XUNFEI_STT_LANGUAGE=${XUNFEI_STT_LANGUAGE:-zh-CN}
+      - XUNFEI_STT_SAMPLE_RATE=${XUNFEI_STT_SAMPLE_RATE:-16000}
+      - XUNFEI_STT_MAX_AUDIO_DURATION=${XUNFEI_STT_MAX_AUDIO_DURATION:-60}
+      - XUNFEI_STT_EOS_MS=${XUNFEI_STT_EOS_MS:-6000}
     volumes:
       - ./backend:/app
     deploy:
@@ -124,10 +142,10 @@ services:
         - BUILDKIT_INLINE_CACHE=1
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=2
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/2
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/2
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       sparkle_db:
@@ -146,9 +164,9 @@ services:
     container_name: sparkle_celery_beat
     command: celery -A app.core.celery_app beat -l info
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
-      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-password}@sparkle_redis:6379/1
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/1
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     depends_on:
       sparkle_db:
@@ -181,9 +199,9 @@ services:
     environment:
       - PORT=8080
       - GRPC_TIMEOUT_SECONDS=30
-      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-password}@sparkle_db:5432/${DB_NAME:-sparkle}
-      - REDIS_URL=sparkle_redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-change-me}
       - AGENT_ADDRESS=sparkle_agent:50051
       - BACKEND_URL=http://sparkle_api:8000
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}

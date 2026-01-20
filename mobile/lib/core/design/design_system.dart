@@ -366,9 +366,9 @@ class DS {
 
   // Special surfaces and accents
   static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.12 : 0.22);
+      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
   static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.1 : 0.18);
+      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
   static Color get deepSpaceSurface =>
       _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
