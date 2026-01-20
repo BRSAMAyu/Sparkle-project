@@ -495,58 +495,58 @@ class StarMapPainter extends CustomPainter {
         }
       }
       
-      // LOD Filtering
-      // L1: Large nodes only (importance >= 3)
-      if (onlyLarge && p.node.importance < 3) {
-          continue;
-      }
+      // LOD Filtering is now handled by the provider's _computeVisibleNodes()
+      // This painter receives already-filtered nodes, so we only do minimal filtering here
+      // to handle edge cases during scale transitions
 
       final progress = nodeAnimationProgress[p.node.idHash] ?? 1.0;
       final r = p.radius * (0.3 + progress * 0.7);
 
-      if (scale < 0.3 && p.node.importance < 3) {
-         // Should not happen if L0 logic is correct, but for L1 transition:
-         canvas.drawCircle(p.position, r * 0.5,
-            Paint()..color = p.color.withValues(alpha: 0.5 * progress),);
-         continue;
-      }
+      // For very zoomed out views, render smaller/dimmer nodes
+      final isLowDetailView = scale < 0.3;
+      final effectiveRadius = isLowDetailView && p.node.importance < 3
+          ? r * 0.6
+          : r;
+      final effectiveAlpha = isLowDetailView && p.node.importance < 3
+          ? 0.6 * progress
+          : progress;
 
       if (p.node.isUnlocked) {
         // Glow: L3+ (>= 0.6) AND (Ultra or High Tier)
-        if (scale >= _lod2Limit && 
+        if (scale >= _lod2Limit &&
            (performanceTier == PerformanceTier.ultra || performanceTier == PerformanceTier.high)) {
             final m = p.node.mastery / 100.0;
             glowPaint.color =
-                p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * progress);
-            canvas.drawCircle(p.position, r * 3.0, glowPaint);
+                p.color.withValues(alpha: (0.3 + m * 0.5) * 0.4 * effectiveAlpha);
+            canvas.drawCircle(p.position, effectiveRadius * 3.0, glowPaint);
         }
 
         // Main Node
         // Disable fancy shader gradient on low tier OR low DPR
         if (performanceTier != PerformanceTier.low && currentDpr >= 1.5) {
-             nodePaint.shader = ui.Gradient.radial(p.position, r, [
-                DS.brandPrimary.withValues(alpha: 0.9 * progress),
-                p.color.withValues(alpha: progress),
+             nodePaint.shader = ui.Gradient.radial(p.position, effectiveRadius, [
+                DS.brandPrimary.withValues(alpha: 0.9 * effectiveAlpha),
+                p.color.withValues(alpha: effectiveAlpha),
             ]);
         } else {
-             nodePaint.color = p.color.withValues(alpha: progress);
+             nodePaint.color = p.color.withValues(alpha: effectiveAlpha);
              nodePaint.shader = null;
         }
-        
-        canvas.drawCircle(p.position, r, nodePaint);
+
+        canvas.drawCircle(p.position, effectiveRadius, nodePaint);
         nodePaint.shader = null;
 
-        if (p.node.studyCount >= 2 && progress > 0.7) {
+        if (p.node.studyCount >= 2 && effectiveAlpha > 0.7) {
           canvas.drawCircle(
               p.position,
-              r * 1.6,
+              effectiveRadius * 1.6,
               Paint()
                 ..color = p.color.withValues(alpha: 0.5)
                 ..style = PaintingStyle.stroke,);
         }
       } else {
-        canvas.drawCircle(p.position, r * 0.8,
-            Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * progress),);
+        canvas.drawCircle(p.position, effectiveRadius * 0.8,
+            Paint()..color = DS.brandPrimary.withValues(alpha: 0.2 * effectiveAlpha),);
       }
 
       // Labels Logic

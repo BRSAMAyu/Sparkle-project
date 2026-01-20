@@ -9,9 +9,10 @@ class StatisticsCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: DS.brandPrimaryConst,
+          color: DS.surfaceSecondary,
           borderRadius: DS.borderRadius16,
           boxShadow: DS.shadowSm,
+          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -21,12 +22,12 @@ class StatisticsCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    color: DS.brandPrimary.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.show_chart_rounded,
-                    color: DS.primaryBase,
+                    color: DS.brandPrimary,
                     size: 16,
                   ),
                 ),
@@ -36,7 +37,7 @@ class StatisticsCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightSemibold,
-                    color: DS.neutral900,
+                    color: DS.textPrimary,
                   ),
                 ),
               ],
@@ -112,24 +113,24 @@ class _WeeklyTrendChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: DS.primaryBase,
+              color: DS.brandPrimary,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
                 getDotPainter: (spot, percent, barData, index) =>
                     FlDotCirclePainter(
                   radius: 4,
-                  color: DS.brandPrimaryConst,
+                  color: DS.surfacePrimary,
                   strokeWidth: 2,
-                  strokeColor: DS.primaryBase,
+                  strokeColor: DS.brandPrimary,
                 ),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    DS.primaryBase.withValues(alpha: 0.2),
-                    DS.primaryBase.withValues(alpha: 0.0),
+                    DS.brandPrimary.withValues(alpha: 0.3),
+                    DS.brandPrimary.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
