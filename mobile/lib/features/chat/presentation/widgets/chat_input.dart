@@ -197,50 +197,62 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 const SizedBox(width: DS.spacing8),
 
                 Expanded(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: isDark ? DS.neutral800 : DS.neutral100,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isDark ? DS.neutral700 : DS.neutral300,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      maxLines: 5,
-                      minLines: 1,
-                      textInputAction: enterToSend
-                          ? TextInputAction.send
-                          : TextInputAction.newline,
-                      decoration: InputDecoration(
-                        hintText: widget.hintText ?? 'Type a message...',
-                        hintStyle: TextStyle(
-                          color: isDark ? DS.neutral400 : DS.neutral500,
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _textNotEmpty,
+                    builder: (context, hasText, child) {
+                      final canSend = widget.enabled && !_isSending && hasText;
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isDark ? DS.neutral800 : DS.neutral100,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isDark ? DS.neutral700 : DS.neutral300,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing16,
-                          vertical: DS.spacing10,
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          maxLines: 5,
+                          minLines: 1,
+                          enabled: canSend,
+                          textInputAction: enterToSend
+                              ? TextInputAction.send
+                              : TextInputAction.newline,
+                          decoration: InputDecoration(
+                            hintText: widget.hintText ?? 'Type a message...',
+                            hintStyle: TextStyle(
+                              color: isDark ? DS.neutral400 : DS.neutral500,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing16,
+                              vertical: DS.spacing10,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                          onSubmitted: canSend && enterToSend
+                              ? (_) => _handleSend()
+                              : null,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onSubmitted: enterToSend ? (_) => _handleSend() : null,
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
-                ValueListenableBuilder<bool>(
-                  valueListenable: _textNotEmpty,
-                  builder: (context, hasText, child) {
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _isButtonPressed = true),
+                  onTapUp: (_) => setState(() => _isButtonPressed = false),
+                  onTapCancel: () => setState(() => _isButtonPressed = false),
+                  onTap: () {
+                    final hasText = _controller.text.trim().isNotEmpty;
                     final canSend = widget.enabled && !_isSending && hasText;
-                    return GestureDetector(
-                      onTapDown: (_) => setState(() => _isButtonPressed = true),
-                      onTapUp: (_) => setState(() => _isButtonPressed = false),
-                      onTapCancel: () =>
-                          setState(() => _isButtonPressed = false),
-                      onTap: canSend ? _handleSend : null,
-                      child: AnimatedScale(
+                    if (canSend) _handleSend();
+                  },
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _textNotEmpty,
+                    builder: (context, hasText, child) {
+                      final canSend = widget.enabled && !_isSending && hasText;
+                      return AnimatedScale(
                         scale: _isButtonPressed ? 0.9 : 1.0,
                         duration: const Duration(milliseconds: 100),
                         curve: Curves.easeInOut,
@@ -285,9 +297,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                   ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
