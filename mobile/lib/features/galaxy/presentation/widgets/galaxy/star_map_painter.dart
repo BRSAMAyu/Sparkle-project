@@ -127,10 +127,10 @@ class StarMapPainter extends CustomPainter {
   final double selectionPulse;
 
   // LOD Thresholds
-  static const double _lod0Limit = 0.2;
-  static const double _lod1Limit = 0.4;
-  static const double _lod2Limit = 0.6;
-  static const double _lod3Limit = 0.8;
+  static const double _lod0Limit = 0.15;
+  static const double _lod1Limit = 0.3;
+  static const double _lod2Limit = 0.5;
+  static const double _lod3Limit = 0.7;
 
   static final SmartCache<int, List<ProcessedNode>> _nodeCache =
       SmartCache(maxSize: 10);
@@ -356,8 +356,8 @@ class StarMapPainter extends CustomPainter {
       // Culling
       if (viewport != null) {
         final cRect = viewport!.inflate(50);
-        if (!cRect.contains(edge.start - center) &&
-            !cRect.contains(edge.end - center)) {
+        if (!cRect.contains(edge.start) &&
+            !cRect.contains(edge.end)) {
           continue;
         }
       }
@@ -490,7 +490,7 @@ class StarMapPainter extends CustomPainter {
     for (final p in _processedNodes) {
       // Culling
       if (viewport != null) {
-        if (!viewport!.inflate(p.radius * 3).contains(p.position - center)) {
+        if (!viewport!.inflate(p.radius * 3).contains(p.position)) {
           continue;
         }
       }
