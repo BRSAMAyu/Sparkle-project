@@ -149,7 +149,7 @@ class HomeNotificationCard extends ConsumerWidget {
       case 'reminder':
         return DS.successAccent;
       default:
-        return Colors.purpleAccent;
+        return DS.capsuleAccent;
     }
   }
 
@@ -173,12 +173,12 @@ class HomeNotificationCard extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.2),
+                      color: DS.capsuleAccent.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.forum_outlined,
-                      color: Colors.purple,
+                      color: DS.capsuleAccent,
                       size: 16,
                     ),
                   ),

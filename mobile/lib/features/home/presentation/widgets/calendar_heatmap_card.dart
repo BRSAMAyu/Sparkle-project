@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -135,12 +136,39 @@ class CalendarHeatmapCard extends StatelessWidget {
       );
     }
 
-    return GridView.count(
-      crossAxisCount: 7,
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 4,
-      physics: const NeverScrollableScrollPhysics(),
-      children: gridCells,
+    const columns = 7;
+    const spacing = 4.0;
+    final rows = max(1, (gridCells.length / columns).ceil());
+    final cellSizeFromWidth =
+        (constraints.maxWidth - spacing * (columns - 1)) / columns;
+    final cellSizeFromHeight =
+        (constraints.maxHeight - spacing * (rows - 1)) / rows;
+    final cellSize = max(0.0, min(cellSizeFromWidth, cellSizeFromHeight));
+    final totalCells = rows * columns;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: cellSize * columns + spacing * (columns - 1),
+        height: cellSize * rows + spacing * (rows - 1),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: 1,
+          ),
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: totalCells,
+          itemBuilder: (context, index) {
+            if (index >= gridCells.length) {
+              return const SizedBox();
+            }
+            return gridCells[index];
+          },
+        ),
+      ),
     );
   }
 
