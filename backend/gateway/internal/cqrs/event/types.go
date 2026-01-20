@@ -114,7 +114,7 @@ type OutboxEntry struct {
 
 // EventStoreEntry represents a persisted event in the event store.
 type EventStoreEntry struct {
-	ID             int64
+	ID             uuid.UUID
 	AggregateType  AggregateType
 	AggregateID    uuid.UUID
 	EventType      EventType

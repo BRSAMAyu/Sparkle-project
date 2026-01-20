@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -13,16 +15,30 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
+var otelSchemeWarnOnce sync.Once
+var otelDisabledOnce sync.Once
+
 // InitTracer initializes the OpenTelemetry tracer provider
 func InitTracer(serviceName string) func(context.Context) error {
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	endpoint := strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 	if endpoint == "" {
-		endpoint = "sparkle_tempo:4318" // Default
+		otelDisabledOnce.Do(func() {
+			log.Printf("OTEL exporter disabled: OTEL_EXPORTER_OTLP_ENDPOINT not set")
+		})
+		return func(context.Context) error { return nil }
+	}
+
+	endpointURL := endpoint
+	if !strings.Contains(endpointURL, "://") {
+		otelSchemeWarnOnce.Do(func() {
+			log.Printf("OTEL_EXPORTER_OTLP_ENDPOINT missing scheme, assuming http://%s", endpointURL)
+		})
+		endpointURL = "http://" + endpointURL
 	}
 
 	// Create OTLP HTTP exporter
 	exporter, err := otlptracehttp.New(context.Background(),
-		otlptracehttp.WithEndpoint(endpoint),
+		otlptracehttp.WithEndpointURL(endpointURL),
 		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {

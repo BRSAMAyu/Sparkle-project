@@ -8,10 +8,10 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
-      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
     depends_on:
-      sparkle_redis:
+      redis:
         condition: service_started
 
   learning_service:
@@ -23,10 +23,10 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
-      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
     depends_on:
-      sparkle_redis:
+      redis:
         condition: service_started
 
   visualization_service:
@@ -38,8 +38,8 @@ services:
     ports:
       - "8003:8003"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@sparkle_db:5432/sparkle
-      - REDIS_URL=redis://:devpassword@sparkle_redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me}@${POSTGRES_HOST:-sparkle_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-sparkle}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-me}@${REDIS_HOST:-sparkle_redis}:${REDIS_PORT:-6379}/0
     depends_on:
-      sparkle_redis:
+      redis:
         condition: service_started

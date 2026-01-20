@@ -17,7 +17,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.config import settings
+from app.config import settings, to_sync_database_url
 from app.db.session import Base
 
 # Import all models to ensure they are registered with Base.metadata
@@ -53,8 +53,7 @@ from app.models import (
 config = context.config
 
 # Override sqlalchemy.url from settings
-# Convert asyncpg URL to psycopg2 for Alembic migrations
-database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+database_url = to_sync_database_url(settings.DATABASE_URL)
 # Fix for configparser interpolation error when using special characters like %
 database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)

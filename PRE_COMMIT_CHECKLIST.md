@@ -32,7 +32,7 @@ git status
 检查 `.gitignore` 确保包含:
 ```
 .env
-.env.local
+.env
 .env.*.local
 *.db
 *.sqlite
@@ -315,8 +315,8 @@ git clone https://github.com/BRSAMAyu/sparkle-flutter.git
 cd sparkle-flutter
 
 # 2. 创建环境文件
-cp .env.example .env.local
-# 编辑 .env.local 填入实际配置
+cp .env.example .env
+# 编辑 .env 填入实际配置
 
 # 3. 启动基础设施
 make dev-up

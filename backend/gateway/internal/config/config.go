@@ -2,7 +2,10 @@ package config
 
 import (
 	"log"
-	"net/url"
+	neturl "net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -11,6 +14,11 @@ import (
 type Config struct {
 	Port               string  `mapstructure:"PORT"`
 	DatabaseURL        string  `mapstructure:"DATABASE_URL"`
+	PostgresHost       string  `mapstructure:"POSTGRES_HOST"`
+	PostgresPort       int     `mapstructure:"POSTGRES_PORT"`
+	PostgresUser       string  `mapstructure:"POSTGRES_USER"`
+	PostgresPassword   string  `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB         string  `mapstructure:"POSTGRES_DB"`
 	AgentAddress       string  `mapstructure:"AGENT_ADDRESS"`
 	AgentTLSEnabled    bool    `mapstructure:"AGENT_TLS_ENABLED"`
 	AgentTLSCACertPath string  `mapstructure:"AGENT_TLS_CA_CERT"`
@@ -25,6 +33,8 @@ type Config struct {
 	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
 	WSTicketRateBurst  int     `mapstructure:"WS_TICKET_RATE_BURST"`
 	RedisURL           string  `mapstructure:"REDIS_URL"`
+	RedisHost          string  `mapstructure:"REDIS_HOST"`
+	RedisPort          int     `mapstructure:"REDIS_PORT"`
 	RedisPassword      string  `mapstructure:"REDIS_PASSWORD"`
 	BackendURL         string  `mapstructure:"BACKEND_URL"`
 	AppleClientID      string  `mapstructure:"APPLE_CLIENT_ID"`
@@ -73,7 +83,7 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 		return true
 	}
 
-	originURL, err := url.Parse(origin)
+	originURL, err := neturl.Parse(origin)
 	if err != nil || originURL.Scheme == "" || originURL.Host == "" {
 		return false
 	}
@@ -100,7 +110,7 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 			continue
 		}
 
-		allowedURL, err := url.Parse(allowed)
+		allowedURL, err := neturl.Parse(allowed)
 		if err != nil || allowedURL.Scheme == "" || allowedURL.Host == "" {
 			allowedHost := strings.ToLower(allowed)
 			if originHost == allowedHost {
@@ -144,10 +154,103 @@ func matchWildcardHost(host string, domain string) bool {
 	return strings.HasSuffix(host, "."+domain)
 }
 
+func isRunningInDocker() bool {
+	if os.Getenv("IN_DOCKER") == "true" {
+		return true
+	}
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	return false
+}
+
+func normalizeLocalDockerHost(host string) string {
+	if isRunningInDocker() {
+		return host
+	}
+	if host == "sparkle_db" || host == "sparkle_redis" {
+		return "127.0.0.1"
+	}
+	return host
+}
+
+func normalizeDatabaseURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	normalized := strings.TrimSpace(raw)
+	if strings.HasPrefix(normalized, "postgresql+asyncpg://") {
+		normalized = "postgresql://" + strings.TrimPrefix(normalized, "postgresql+asyncpg://")
+	}
+	if strings.HasPrefix(normalized, "postgresql+psycopg://") {
+		normalized = "postgresql://" + strings.TrimPrefix(normalized, "postgresql+psycopg://")
+	}
+	if strings.HasPrefix(normalized, "postgresql+psycopg2://") {
+		normalized = "postgresql://" + strings.TrimPrefix(normalized, "postgresql+psycopg2://")
+	}
+	if strings.HasPrefix(normalized, "postgres://") {
+		normalized = "postgresql://" + strings.TrimPrefix(normalized, "postgres://")
+	}
+	parsed, err := neturl.Parse(normalized)
+	if err != nil || parsed.Hostname() == "" {
+		return normalized
+	}
+	host := normalizeLocalDockerHost(parsed.Hostname())
+	if host == parsed.Hostname() {
+		return normalized
+	}
+	parsed.Host = host
+	if parsed.Port() != "" {
+		parsed.Host = host + ":" + parsed.Port()
+	}
+	return parsed.String()
+}
+
+func normalizeRedisAddr(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	trimmed := strings.TrimSpace(raw)
+	if !strings.Contains(trimmed, "://") {
+		return trimmed
+	}
+	parsed, err := neturl.Parse(trimmed)
+	if err != nil || parsed.Host == "" {
+		return trimmed
+	}
+	host := normalizeLocalDockerHost(parsed.Hostname())
+	port := parsed.Port()
+	if port != "" {
+		return host + ":" + port
+	}
+	return host
+}
+
+func findEnvFileUpwards(startDir string, filename string) string {
+	dir := startDir
+	for i := 0; i < 8; i++ {
+		candidate := filepath.Join(dir, filename)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
+}
+
 func Load() *Config {
 	envKeys := []string{
 		"PORT",
 		"DATABASE_URL",
+		"POSTGRES_HOST",
+		"POSTGRES_PORT",
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
 		"AGENT_ADDRESS",
 		"AGENT_TLS_ENABLED",
 		"AGENT_TLS_CA_CERT",
@@ -162,6 +265,8 @@ func Load() *Config {
 		"WS_TICKET_RATE_RPS",
 		"WS_TICKET_RATE_BURST",
 		"REDIS_URL",
+		"REDIS_HOST",
+		"REDIS_PORT",
 		"REDIS_PASSWORD",
 		"BACKEND_URL",
 		"APPLE_CLIENT_ID",
@@ -195,7 +300,12 @@ func Load() *Config {
 	}
 
 	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("DATABASE_URL", "postgres://postgres:password@localhost:5432/sparkle")
+	viper.SetDefault("DATABASE_URL", "")
+	viper.SetDefault("POSTGRES_HOST", "sparkle_db")
+	viper.SetDefault("POSTGRES_PORT", 5432)
+	viper.SetDefault("POSTGRES_USER", "postgres")
+	viper.SetDefault("POSTGRES_PASSWORD", "change-me")
+	viper.SetDefault("POSTGRES_DB", "sparkle")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("AGENT_TLS_ENABLED", false)
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
@@ -208,8 +318,10 @@ func Load() *Config {
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
-	viper.SetDefault("REDIS_URL", "127.0.0.1:6379")
-	viper.SetDefault("REDIS_PASSWORD", "")
+	viper.SetDefault("REDIS_URL", "")
+	viper.SetDefault("REDIS_HOST", "sparkle_redis")
+	viper.SetDefault("REDIS_PORT", 6379)
+	viper.SetDefault("REDIS_PASSWORD", "change-me")
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)
@@ -238,9 +350,23 @@ func Load() *Config {
 	viper.SetDefault("ALLOWED_ORIGINS", "https://sparkle.app,https://api.sparkle.app")
 	viper.SetDefault("CORS_ENABLED", true)
 
-	// Read from .env file if it exists
-	viper.SetConfigFile(".env")
-	viper.ReadInConfig() // Ignore error if file not found
+	// Read from .env files if they exist (root .env has priority)
+	cwd, err := os.Getwd()
+	if err == nil {
+		rootEnv := findEnvFileUpwards(cwd, ".env")
+		localEnv := filepath.Join(cwd, ".env")
+		if rootEnv != "" && rootEnv != localEnv {
+			if _, err := os.Stat(localEnv); err == nil {
+				viper.SetConfigFile(localEnv)
+				_ = viper.ReadInConfig()
+			}
+			viper.SetConfigFile(rootEnv)
+			_ = viper.MergeInConfig()
+		} else if _, err := os.Stat(localEnv); err == nil {
+			viper.SetConfigFile(localEnv)
+			_ = viper.ReadInConfig()
+		}
+	}
 
 	viper.AutomaticEnv()
 
@@ -259,8 +385,19 @@ func Load() *Config {
 		log.Fatal("ADMIN_SECRET must be set in non-development environments. Set via ADMIN_SECRET environment variable or .env file.")
 	}
 
+	if cfg.DatabaseURL == "" {
+		host := normalizeLocalDockerHost(cfg.PostgresHost)
+		cfg.DatabaseURL = "postgresql://" + cfg.PostgresUser + ":" + cfg.PostgresPassword + "@" + host + ":" + strconv.Itoa(cfg.PostgresPort) + "/" + cfg.PostgresDB
+	}
+	cfg.DatabaseURL = normalizeDatabaseURL(cfg.DatabaseURL)
+	if cfg.RedisURL == "" {
+		host := normalizeLocalDockerHost(cfg.RedisHost)
+		cfg.RedisURL = host + ":" + strconv.Itoa(cfg.RedisPort)
+	}
+	cfg.RedisURL = normalizeRedisAddr(cfg.RedisURL)
+
 	// Warn about default database password in non-development environments
-	if !cfg.IsDevelopment() && strings.Contains(cfg.DatabaseURL, ":password@") {
+	if !cfg.IsDevelopment() && strings.Contains(cfg.DatabaseURL, ":change-me@") {
 		log.Printf("[SECURITY WARNING] Using default database password in non-development environment. Set DATABASE_URL environment variable with secure credentials.")
 	}
 
