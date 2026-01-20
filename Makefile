@@ -242,14 +242,20 @@ dev-all:
 	@echo "   make celery-status     # Check Celery services"
 	@echo "   make celery-logs-worker # View worker logs"
 
-db-reset:
-	@echo "🧹 Resetting local Postgres data (destructive)..."
-	@docker compose stop sparkle_db >/dev/null 2>&1 || true
-	@rm -rf postgres_data
-	@echo "✅ Postgres data cleared. Run 'make dev-up' to recreate."
+# Mobile Development
+mobile-proto:
+	@echo "🚀 Generating Dart Protobufs..."
+	@mkdir -p mobile/lib/gen
+	@export PATH="$$PATH":"$$HOME/.pub-cache/bin" && buf generate --template buf.gen.dart.yaml
 
-dev-reset:
-	@echo "🧹 Resetting local dev data (destructive)..."
-	@docker compose down >/dev/null 2>&1 || true
-	@rm -rf postgres_data redis_data minio_data flower_data
-	@echo "✅ Local dev data cleared. Run 'make dev-up' to recreate."
+mobile-gen: mobile-proto
+	@echo "🏗️ Running Build Runner..."
+	cd mobile && flutter pub get && dart run build_runner build --delete-conflicting-outputs
+
+mobile-run:
+	@echo "🚀 Starting Mobile App..."
+	@if [[ "$$OSTYPE" == "darwin"* ]]; then \
+		echo "🍎 macOS detected. Unsetting CC/CXX..."; \
+		unset CC CXX; \
+	fi; \
+	cd mobile && flutter run

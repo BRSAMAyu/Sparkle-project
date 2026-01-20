@@ -373,6 +373,7 @@ class _TaskCardState extends ConsumerState<TaskCard>
                                 ),
                               ),
                             ),
+                            ),
 
                           // Syncing Indicator
                           if (widget.task.syncStatus == TaskSyncStatus.pending)

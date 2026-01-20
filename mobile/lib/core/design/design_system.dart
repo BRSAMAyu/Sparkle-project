@@ -257,6 +257,9 @@ class DS {
   static Color get success => _theme.colors.semanticSuccess;
   static Color get warning => _theme.colors.semanticWarning;
   static Color get error => _theme.colors.semanticError;
+  static Color get semanticSuccess => _theme.colors.semanticSuccess;
+  static Color get semanticWarning => _theme.colors.semanticWarning;
+  static Color get semanticError => _theme.colors.semanticError;
   static Color get info => _theme.colors.semanticInfo;
   static Color get primaryBase => brandPrimary;
   static Color get secondaryBase => brandSecondary;
