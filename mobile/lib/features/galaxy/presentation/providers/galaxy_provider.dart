@@ -648,21 +648,24 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     switch (level) {
       case AggregationLevel.universe:
-        // Universe level: No individual nodes, handled by clusters/sectors
-        return [];
+        // Universe level: Only show highest importance nodes (sector roots)
+        // Changed from empty to show important nodes for better UX
+        filteredNodes = nodes
+            .where((n) => n.importance >= 5 || n.parentId == null)
+            .toList();
 
       case AggregationLevel.galaxy:
-        // Galaxy level: Only root nodes or very important ones
+        // Galaxy level: Root nodes and important ones (importance >= 3)
         filteredNodes = nodes
-            .where((n) => n.importance >= 4 || n.parentId == null)
+            .where((n) => n.importance >= 3 || n.parentId == null)
             .toList();
 
       case AggregationLevel.cluster:
-        // Cluster level: Show most nodes
+        // Cluster level: Show most nodes (importance >= 2)
         filteredNodes = nodes.where((n) => n.importance >= 2).toList();
 
       case AggregationLevel.nebula:
-        // Nebula level: Show almost all nodes
+        // Nebula level: Show almost all nodes (importance >= 1)
         filteredNodes = nodes.where((n) => n.importance >= 1).toList();
 
       case AggregationLevel.full:

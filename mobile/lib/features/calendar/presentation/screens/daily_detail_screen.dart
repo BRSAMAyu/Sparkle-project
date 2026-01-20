@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -35,6 +36,10 @@ class DailyDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Deep dark
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(DateFormat('MM月dd日').format(date)),

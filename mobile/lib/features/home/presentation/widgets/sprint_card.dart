@@ -40,76 +40,78 @@ class SprintCard extends ConsumerWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Header
         Text(
           '冲刺',
           style: context.sparkleTypography.labelSmall.copyWith(
-            color: DS.brandPrimary70,
+            color: DS.textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),
 
-        const Spacer(),
+        const SizedBox(height: 8),
 
-        // Circular progress
-        Center(
-          child: SizedBox(
-            width: 70,
-            height: 70,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size(70, 70),
-                  painter: _CircularProgressPainter(
-                    progress: progress,
-                    isUrgent: isUrgent,
+        // Circular progress - use Expanded to take available space
+        Expanded(
+          child: Center(
+            child: SizedBox(
+              width: 60,
+              height: 60,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size(60, 60),
+                    painter: _CircularProgressPainter(
+                      progress: progress,
+                      isUrgent: isUrgent,
+                    ),
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$daysLeft',
-                      style: context.sparkleTypography.headingMedium.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isUrgent ? DS.error : DS.brandPrimary,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$daysLeft',
+                        style: context.sparkleTypography.headingMedium.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isUrgent ? DS.error : DS.brandPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '天',
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        fontSize: 10,
-                        color: DS.brandPrimary.withValues(alpha: 0.7),
+                      Text(
+                        '天',
+                        style: context.sparkleTypography.labelSmall.copyWith(
+                          fontSize: 9,
+                          color: DS.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
 
-        const Spacer(),
+        const SizedBox(height: 4),
 
         // Sprint name
         Text(
           sprint.name,
           style: context.sparkleTypography.labelSmall.copyWith(
             fontWeight: FontWeight.w600,
-            color: DS.brandPrimaryConst,
+            color: DS.textPrimary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 2),
         Text(
           '${(progress * 100).toInt()}% 完成',
           style: context.sparkleTypography.labelSmall.copyWith(
             fontSize: 10,
-            color: DS.brandPrimary.withValues(alpha: 0.6),
+            color: DS.textSecondary,
           ),
         ),
       ],
@@ -118,26 +120,27 @@ class SprintCard extends ConsumerWidget {
 
   Widget _buildEmptyState(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(DS.sm),
             decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.08),
+              color: DS.brandPrimary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.flash_on_rounded,
-              color: DS.brandPrimary54,
+              color: DS.brandPrimary,
               size: 20,
             ),
           ),
-          const Spacer(),
+          const Expanded(child: SizedBox()),
           Text(
             '无冲刺计划',
             style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: DS.brandPrimary70,
+              color: DS.textPrimary,
             ),
           ),
           const SizedBox(height: DS.xs),
@@ -145,7 +148,7 @@ class SprintCard extends ConsumerWidget {
             '点击创建',
             style: TextStyle(
               fontSize: 11,
-              color: DS.brandPrimary.withValues(alpha: 0.47),
+              color: DS.textSecondary,
             ),
           ),
         ],
