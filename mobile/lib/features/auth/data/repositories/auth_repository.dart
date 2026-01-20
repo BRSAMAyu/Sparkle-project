@@ -6,7 +6,6 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/shared/models/api_response_model.dart';
 
 // Keys for Secure Storage
 const String _accessTokenKey = 'accessToken';

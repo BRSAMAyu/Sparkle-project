@@ -51,7 +51,7 @@ class InterventionOverlay extends StatelessWidget {
     return GestureDetector(
       onTap: onDismiss,
       child: ColoredBox(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         child: Stack(
           children: [
             Positioned.fill(

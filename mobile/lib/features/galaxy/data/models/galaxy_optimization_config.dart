@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 
 enum ShaderQuality {

@@ -69,7 +69,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (source == 'preset') {
       if (!mounted) return;
-      showDialog(
+      showDialog<void>(
         context: context,
         builder: (context) => AvatarSelectionDialog(
           currentAvatarUrl: user?.avatarUrl,
@@ -340,8 +340,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const PasswordResetScreen(),),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PasswordResetScreen(),
+                    ),
                   );
                 },
               ),

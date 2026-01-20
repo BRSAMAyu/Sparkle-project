@@ -97,7 +97,7 @@ class _ThemeModeSection extends StatelessWidget {
   });
 
   final AppThemeMode currentMode;
-  final Function(AppThemeMode) onModeChanged;
+  final void Function(AppThemeMode) onModeChanged;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -124,7 +124,7 @@ class _SegmentedThemeButton extends StatelessWidget {
   });
 
   final AppThemeMode currentMode;
-  final Function(AppThemeMode) onModeChanged;
+  final void Function(AppThemeMode) onModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +195,7 @@ class _BrandPresetSection extends StatelessWidget {
   });
 
   final BrandPreset currentPreset;
-  final Function(BrandPreset) onPresetChanged;
+  final void Function(BrandPreset) onPresetChanged;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -255,7 +255,7 @@ class _HighContrastSection extends StatelessWidget {
   });
 
   final bool highContrast;
-  final Function(bool) onToggled;
+  final void Function(bool) onToggled;
 
   @override
   Widget build(BuildContext context) => Container(

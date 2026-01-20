@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -156,7 +157,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _initPerformanceMonitor();
   }
   final EnhancedGalaxyRepository _repository;
-  StreamSubscription? _eventsSubscription;
+  StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
 
@@ -223,7 +224,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           _handleNodeUpdated(event.jsonData);
         }
       },
-      onError: (error, stack) {
+      onError: (Object error, StackTrace stack) {
         debugPrint('Galaxy events stream error: $error');
         _scheduleEventsReconnect();
       },

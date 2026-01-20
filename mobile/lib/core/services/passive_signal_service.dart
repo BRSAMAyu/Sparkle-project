@@ -35,7 +35,6 @@ class PassiveSignalService with WidgetsBindingObserver {
       StreamController<PassiveSignal>.broadcast();
 
   Timer? _idleTimer;
-  DateTime? _lastInteractionAt;
   DateTime? _sessionStartAt;
   bool _isForeground = true;
 
@@ -57,7 +56,6 @@ class PassiveSignalService with WidgetsBindingObserver {
   }
 
   void recordUserInteraction() {
-    _lastInteractionAt = DateTime.now();
     _controller.add(PassiveSignal(type: PassiveSignalType.userInteraction));
   }
 

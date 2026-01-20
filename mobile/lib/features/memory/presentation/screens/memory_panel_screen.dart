@@ -523,7 +523,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         case MemorySort.confidence:
           return _compareNumber(b.confidence, a.confidence);
         case MemorySort.newest:
-        default:
           return _compareDates(b.updatedAt, a.updatedAt);
       }
     });

@@ -67,7 +67,7 @@ class _GroupFilesScreenState extends ConsumerState<GroupFilesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showModalBottomSheet(
+          showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,

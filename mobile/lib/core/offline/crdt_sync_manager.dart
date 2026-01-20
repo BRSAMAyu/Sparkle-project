@@ -13,6 +13,7 @@ enum SyncType {
 
 class CRDTSyncManager {
   CRDTSyncManager(this._localDb, this._syncEngine);
+  // ignore: unused_field
   final LocalDatabase _localDb;
   final SyncEngine _syncEngine;
   

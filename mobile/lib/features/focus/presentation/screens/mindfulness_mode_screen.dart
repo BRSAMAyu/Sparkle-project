@@ -145,7 +145,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
       if (mounted) {
         // Show Reflection Dialog
-        await showDialog(
+        await showDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (context) => const ReflectionDialog(),
