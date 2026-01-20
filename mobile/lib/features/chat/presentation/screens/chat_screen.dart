@@ -270,6 +270,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       .read(chatProvider.notifier)
                                       .dismissAction(action);
                                 },
+                                onResponseFeedback: (msg, feedbackType) {
+                                  ref
+                                      .read(chatProvider.notifier)
+                                      .sendResponseFeedback(msg, feedbackType);
+                                },
                               );
                             },
                           ),
