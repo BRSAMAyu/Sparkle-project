@@ -9,31 +9,31 @@ import (
 )
 
 type Config struct {
-	Port               string `mapstructure:"PORT"`
-	DatabaseURL        string `mapstructure:"DATABASE_URL"`
-	AgentAddress       string `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled    bool   `mapstructure:"AGENT_TLS_ENABLED"`
-	AgentTLSCACertPath string `mapstructure:"AGENT_TLS_CA_CERT"`
-	AgentTLSServerName string `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure   bool   `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds int    `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret          string `mapstructure:"JWT_SECRET"`
-	JWTIssuer          string `mapstructure:"JWT_ISSUER"`
-	JWTAudience        string `mapstructure:"JWT_AUDIENCE"`
-	AllowWsQueryToken  bool   `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
-	WSTicketTTLSeconds int    `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	Port               string  `mapstructure:"PORT"`
+	DatabaseURL        string  `mapstructure:"DATABASE_URL"`
+	AgentAddress       string  `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled    bool    `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath string  `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSServerName string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure   bool    `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret          string  `mapstructure:"JWT_SECRET"`
+	JWTIssuer          string  `mapstructure:"JWT_ISSUER"`
+	JWTAudience        string  `mapstructure:"JWT_AUDIENCE"`
+	AllowWsQueryToken  bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	WSTicketTTLSeconds int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
 	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
-	WSTicketRateBurst  int    `mapstructure:"WS_TICKET_RATE_BURST"`
-	RedisURL           string `mapstructure:"REDIS_URL"`
-	RedisPassword      string `mapstructure:"REDIS_PASSWORD"`
-	BackendURL         string `mapstructure:"BACKEND_URL"`
-	AppleClientID      string `mapstructure:"APPLE_CLIENT_ID"`
-	AdminSecret        string `mapstructure:"ADMIN_SECRET"`
-	RabbitMQURL        string `mapstructure:"RABBITMQ_URL"`
-	InternalAPIKey     string `mapstructure:"INTERNAL_API_KEY"`
-	ChaosEnabled       bool   `mapstructure:"CHAOS_ENABLED"`
-	ChaosAllowProd     bool   `mapstructure:"CHAOS_ALLOW_PROD"`
-	ToxiproxyURL       string `mapstructure:"TOXIPROXY_URL"`
+	WSTicketRateBurst  int     `mapstructure:"WS_TICKET_RATE_BURST"`
+	RedisURL           string  `mapstructure:"REDIS_URL"`
+	RedisPassword      string  `mapstructure:"REDIS_PASSWORD"`
+	BackendURL         string  `mapstructure:"BACKEND_URL"`
+	AppleClientID      string  `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret        string  `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL        string  `mapstructure:"RABBITMQ_URL"`
+	InternalAPIKey     string  `mapstructure:"INTERNAL_API_KEY"`
+	ChaosEnabled       bool    `mapstructure:"CHAOS_ENABLED"`
+	ChaosAllowProd     bool    `mapstructure:"CHAOS_ALLOW_PROD"`
+	ToxiproxyURL       string  `mapstructure:"TOXIPROXY_URL"`
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`
@@ -205,7 +205,6 @@ func Load() *Config {
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("JWT_ISSUER", "")
 	viper.SetDefault("JWT_AUDIENCE", "")
-	viper.SetDefault("ALLOW_WS_QUERY_TOKEN", true)
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)

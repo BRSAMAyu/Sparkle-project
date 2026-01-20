@@ -6,13 +6,11 @@ class InterventionAction {
     required this.type,
   });
 
-  factory InterventionAction.fromJson(Map<String, dynamic> json) {
-    return InterventionAction(
+  factory InterventionAction.fromJson(Map<String, dynamic> json) => InterventionAction(
       id: json['id'] as String? ?? '',
       label: json['label'] as String? ?? '',
       type: json['type'] as String? ?? 'primary',
     );
-  }
   final String id;
   final String label;
   final String type;

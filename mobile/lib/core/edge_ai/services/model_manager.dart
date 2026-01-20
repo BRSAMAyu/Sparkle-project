@@ -33,7 +33,7 @@ class ModelManager {
   /// In Dev: This ensures the model is ready. 
   /// If not found and no URL provided, it throws to alert manual placement is needed.
   Future<String> ensureModelDownloaded(
-      {void Function(double)? onProgress}) async {
+      {void Function(double)? onProgress,}) async {
     final savePath = await getModelPath();
     if (await isModelReady()) {
       _logger.i('Qwen3-0.6B model found at $savePath');

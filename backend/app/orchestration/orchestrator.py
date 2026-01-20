@@ -47,6 +47,10 @@ STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
 
+CONTEXT_VERSION_KEY_PREFIX = "user:context:versions:"
+CONTEXT_VERSION_TTL_SECONDS = 6 * 60 * 60
+REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
+
 
 def get_agent_type_for_tool(tool_name: str) -> int:
     """
@@ -223,6 +227,62 @@ class ChatOrchestrator:
         """Cache response for idempotency"""
         if self.state_manager:
             await self.state_manager.cache_response(session_id, request_id, response_data)
+
+    async def _load_context_versions(self, user_id: str) -> Dict[str, str]:
+        if not self.redis:
+            return {}
+        key = f"{CONTEXT_VERSION_KEY_PREFIX}{user_id}"
+        try:
+            raw = await self.redis.get(key)
+            if not raw:
+                return {}
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items()}
+        except Exception as e:
+            logger.warning(f"Failed to load context versions: {e}")
+        return {}
+
+    async def _save_context_versions(self, user_id: str, versions: Dict[str, str]) -> None:
+        if not self.redis:
+            return
+        key = f"{CONTEXT_VERSION_KEY_PREFIX}{user_id}"
+        try:
+            payload = json.dumps(versions, ensure_ascii=False)
+            await self.redis.setex(key, CONTEXT_VERSION_TTL_SECONDS, payload)
+        except Exception as e:
+            logger.warning(f"Failed to save context versions: {e}")
+
+    async def _self_heal_versions(
+        self,
+        user_id: str,
+        overlay_versions: Dict[str, str],
+        db_session: Optional[AsyncSession],
+    ) -> None:
+        if not overlay_versions or not user_id:
+            return
+
+        previous = await self._load_context_versions(user_id)
+        healed: List[str] = []
+
+        for domain in REALTIME_VERSION_DOMAINS:
+            new_v = overlay_versions.get(domain)
+            if not new_v:
+                continue
+            old_v = previous.get(domain)
+            if old_v == new_v:
+                continue
+
+            if domain == "prefs" and db_session:
+                user_service = UserService(db_session, self.redis)
+                await user_service.invalidate_user_cache(uuid.UUID(user_id))
+
+            previous[domain] = new_v
+            healed.append(f"{domain}:{old_v}->{new_v}")
+
+        if healed:
+            await self._save_context_versions(user_id, previous)
+            logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
 
     def _merge_user_contexts(self, local_context: Dict[str, Any], grpc_context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -632,6 +692,20 @@ class ChatOrchestrator:
 
                 if request_context:
                     grpc_context = {**grpc_context, **request_context}
+
+                overlay_versions = {}
+                if grpc_context:
+                    versions = grpc_context.get("realtime_versions")
+                    if isinstance(versions, dict):
+                        overlay_versions = {str(k): str(v) for k, v in versions.items()}
+                if overlay_versions:
+                    await self._self_heal_versions(user_id, overlay_versions, active_db)
+
+                if grpc_context:
+                    if "realtime_versions" in grpc_context or "overlay_generated_at" in grpc_context:
+                        grpc_context = dict(grpc_context)
+                        grpc_context.pop("realtime_versions", None)
+                        grpc_context.pop("overlay_generated_at", None)
 
                 user_context_payload = None
                 conversation_context = None

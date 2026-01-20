@@ -146,6 +146,31 @@ void main() {
       expect(sentJson['message'], 'Hello');
     });
 
+    test('Sends response feedback payload', () async {
+      service.sendMessage(message: 'init', userId: 'user1');
+      await Future<void>.delayed(Duration.zero);
+
+      mockChannel.mockSink.sentData.clear();
+
+      service.sendResponseFeedback(
+        responseId: 'resp-1',
+        feedbackType: 'up',
+        workflowId: 'standard_chat',
+        promptVersion: 'v1',
+        traceId: 'trace-1',
+      );
+
+      expect(mockChannel.mockSink.sentData.length, 1);
+      final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
+          as Map<String, dynamic>;
+      expect(sentJson['type'], 'response_feedback');
+      expect(sentJson['response_id'], 'resp-1');
+      expect(sentJson['feedback_type'], 'up');
+      expect(sentJson['workflow_id'], 'standard_chat');
+      expect(sentJson['prompt_version'], 'v1');
+      expect(sentJson['trace_id'], 'trace-1');
+    });
+
     test('Queues messages when disconnected and flushes on connect', () async {
       service.sendMessage(message: 'Queued Message', userId: 'user1');
 

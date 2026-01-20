@@ -21,6 +21,9 @@ class FakeRedis:
     async def set(self, key, value, ex=None):
         self.store[key] = value
 
+    async def setex(self, key, ttl, value):
+        self.store[key] = value
+
 
 @pytest.mark.asyncio
 async def test_feedback_insert_success(db_session):

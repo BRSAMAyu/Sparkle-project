@@ -67,15 +67,15 @@ class CalendarHeatmapCard extends StatelessWidget {
                             TextStyle(fontSize: 10, color: DS.brandPrimary500),
                       ),
                       const SizedBox(width: DS.xs),
-                      _buildLegendItem(0),
+                      _buildLegendItem(context, 0),
                       const SizedBox(width: 2),
-                      _buildLegendItem(1),
+                      _buildLegendItem(context, 1),
                       const SizedBox(width: 2),
-                      _buildLegendItem(2),
+                      _buildLegendItem(context, 2),
                       const SizedBox(width: 2),
-                      _buildLegendItem(3),
+                      _buildLegendItem(context, 3),
                       const SizedBox(width: 2),
-                      _buildLegendItem(4),
+                      _buildLegendItem(context, 4),
                       const SizedBox(width: DS.xs),
                       Text(
                         'More',
@@ -91,11 +91,11 @@ class CalendarHeatmapCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildLegendItem(int level) => Container(
+  Widget _buildLegendItem(BuildContext context, int level) => Container(
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: _getColorForLevel(level),
+          color: _getColorForLevel(context, level),
           borderRadius: BorderRadius.circular(2),
         ),
       );
@@ -124,7 +124,7 @@ class CalendarHeatmapCard extends StatelessWidget {
       gridCells.add(
         Container(
           decoration: BoxDecoration(
-            color: _getColorForLevel(intensity),
+            color: _getColorForLevel(context, intensity),
             borderRadius: BorderRadius.circular(4),
             border: i == now.day
                 ? Border.all(color: DS.brandPrimary, width: 1.5)
@@ -156,7 +156,6 @@ class CalendarHeatmapCard extends StatelessWidget {
             crossAxisCount: columns,
             mainAxisSpacing: spacing,
             crossAxisSpacing: spacing,
-            childAspectRatio: 1,
           ),
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
@@ -172,22 +171,14 @@ class CalendarHeatmapCard extends StatelessWidget {
     );
   }
 
-  Color _getColorForLevel(int level) {
+  Color _getColorForLevel(BuildContext context, int level) {
     // Theme color is orange.
     final baseColor = DS.brandPrimary;
-    switch (level) {
-      case 0:
-        return baseColor.withValues(alpha: 0.1);
-      case 1:
-        return baseColor.withValues(alpha: 0.3);
-      case 2:
-        return baseColor.withValues(alpha: 0.5);
-      case 3:
-        return baseColor.withValues(alpha: 0.7);
-      case 4:
-        return baseColor.withValues(alpha: 1.0);
-      default:
-        return baseColor.withValues(alpha: 0.1);
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final alphaValues = isDark
+        ? [0.15, 0.35, 0.55, 0.75, 1.0]
+        : [0.2, 0.4, 0.6, 0.8, 1.0];
+    final safeIndex = level.clamp(0, alphaValues.length - 1);
+    return baseColor.withValues(alpha: alphaValues[safeIndex]);
   }
 }

@@ -71,9 +71,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    (isDark ? DS.deepSpaceStart : DS.brandPrimary)
-                        .withValues(alpha: 0.8),
-                    (isDark ? DS.deepSpaceEnd : DS.brandPrimary)
+                    (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
+                        .withValues(alpha: 0.9),
+                    (isDark ? DS.deepSpaceEnd : DS.brandPrimary10)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
@@ -269,6 +269,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   ref
                                       .read(chatProvider.notifier)
                                       .dismissAction(action);
+                                },
+                                onResponseFeedback: (msg, feedbackType) {
+                                  ref
+                                      .read(chatProvider.notifier)
+                                      .sendResponseFeedback(msg, feedbackType);
                                 },
                               );
                             },

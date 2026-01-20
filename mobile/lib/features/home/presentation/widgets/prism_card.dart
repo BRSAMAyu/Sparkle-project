@@ -112,16 +112,14 @@ class _PrismCardState extends ConsumerState<PrismCard>
                 ),
                 const Spacer(),
                 if (weeklyPattern != null) ...[
-                  SizedBox(
-                    height: 24,
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        _buildTag(context, '#$weeklyPattern'),
-                        if (dashboardState.weather.type == 'rainy')
-                          _buildTag(context, '#焦虑波峰'),
-                      ],
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildTag(context, '#$weeklyPattern'),
+                      if (dashboardState.weather.type == 'rainy')
+                        _buildTag(context, '#焦虑波峰'),
+                    ],
                   ),
                   const SizedBox(height: DS.xs),
                   SizedBox(

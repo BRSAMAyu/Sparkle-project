@@ -4,10 +4,7 @@ import 'package:sparkle/core/models/intervention.dart';
 class CardIntervention extends StatelessWidget {
 
   const CardIntervention({
-    super.key,
-    required this.intervention,
-    required this.onAction,
-    required this.onDismiss,
+    required this.intervention, required this.onAction, required this.onDismiss, super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;

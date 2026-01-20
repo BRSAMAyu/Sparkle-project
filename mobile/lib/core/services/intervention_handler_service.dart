@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/analytics/services/local_feature_service.dart';
 import 'package:sparkle/core/edge_ai/models/user_edge_state.dart';
 import 'package:sparkle/core/edge_ai/services/edge_state_monitor.dart';
 import 'package:sparkle/core/models/intervention.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
-import 'package:sparkle/core/analytics/services/local_feature_service.dart';
 import 'package:sparkle/core/services/intervention_event_service.dart';
 import 'package:sparkle/core/services/intervention_gate_service.dart';
 import 'package:sparkle/core/services/intervention_overlay_manager.dart';

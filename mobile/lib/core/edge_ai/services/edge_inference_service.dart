@@ -149,7 +149,7 @@ class EdgeInferenceService {
             final result = await llama!.generateCompleteText();
             message.replyPort.send(result);
           } catch (e) {
-            message.replyPort.send('ERROR: ${e}');
+            message.replyPort.send('ERROR: $e');
           }
         }();
       }

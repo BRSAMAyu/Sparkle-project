@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -198,14 +199,41 @@ class InterventionService:
         user_id: UUID,
         feedback_type: InterventionFeedbackType,
         extra_data: Optional[Dict[str, Any]],
+        idempotency_key: Optional[str] = None,
     ) -> InterventionFeedback:
+        dedupe_key = idempotency_key or f"{request.id}:{feedback_type.value}"
+
+        existing = await self._get_feedback_by_idempotency(
+            request_id=request.id,
+            user_id=user_id,
+            feedback_type=feedback_type.value,
+            idempotency_key=dedupe_key,
+        )
+        if existing:
+            return existing
+
         feedback = InterventionFeedback(
             request_id=request.id,
             user_id=user_id,
             feedback_type=feedback_type.value,
             extra_data=self._sanitize_extra_data(extra_data),
+            idempotency_key=dedupe_key,
         )
         self.db.add(feedback)
+
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            existing = await self._get_feedback_by_idempotency(
+                request_id=request.id,
+                user_id=user_id,
+                feedback_type=feedback_type.value,
+                idempotency_key=dedupe_key,
+            )
+            if existing:
+                return existing
+            raise
 
         await self._apply_feedback_policy(request, feedback_type)
         await self._apply_scaffolding_feedback(request, user_id, feedback_type, extra_data)
@@ -214,6 +242,22 @@ class InterventionService:
         await self.db.commit()
         await self.db.refresh(feedback)
         return feedback
+
+    async def _get_feedback_by_idempotency(
+        self,
+        request_id: UUID,
+        user_id: UUID,
+        feedback_type: str,
+        idempotency_key: str,
+    ) -> Optional[InterventionFeedback]:
+        result = await self.db.execute(
+            select(InterventionFeedback)
+            .where(InterventionFeedback.request_id == request_id)
+            .where(InterventionFeedback.user_id == user_id)
+            .where(InterventionFeedback.feedback_type == feedback_type)
+            .where(InterventionFeedback.idempotency_key == idempotency_key)
+        )
+        return result.scalar_one_or_none()
 
     async def create_adaptive_intervention(
         self,

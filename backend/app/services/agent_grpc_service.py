@@ -3,6 +3,7 @@ AgentService gRPC Implementation
 实现 gRPC 服务端，对接现有的 LLM 服务和 RAG 能力
 """
 import json
+import time
 import uuid
 from datetime import datetime, timedelta
 from typing import AsyncIterator, Callable
@@ -15,6 +16,7 @@ from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.services.response_feedback_service import ResponseFeedbackService
+from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
@@ -60,6 +62,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 prompt_version = await bandit.select(workflow_id, prompt_versions)
             except Exception as e:
                 logger.warning(f"Prompt bandit selection failed: {e}")
+
+            await self._observe_feedback_effect(user_id, workflow_id, prompt_version)
 
             logger.info(
                 f"StreamChat started - user_id={user_id}, session={request.session_id}, trace={trace_id}, "
@@ -191,6 +195,34 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 message="Internal error",
                 response_id=request.response_id,
             )
+
+    async def _observe_feedback_effect(
+        self,
+        user_id: str,
+        workflow_id: str,
+        prompt_version: str,
+    ) -> None:
+        if not self.orchestrator.redis:
+            return
+        if not user_id:
+            return
+        key = f"bandit:last_feedback_ts:{user_id}:{workflow_id}:{prompt_version}"
+        try:
+            raw = await self.orchestrator.redis.get(key)
+            if not raw:
+                return
+            try:
+                last_ts = int(raw)
+            except (TypeError, ValueError):
+                return
+            delta = max(0, int(time.time()) - last_ts)
+            FEEDBACK_TO_EFFECT_SECONDS.labels(
+                workflow_id=workflow_id,
+                prompt_version=prompt_version
+            ).observe(delta)
+            await self.orchestrator.redis.delete(key)
+        except Exception:
+            return
 
     async def RetrieveMemory(
         self,

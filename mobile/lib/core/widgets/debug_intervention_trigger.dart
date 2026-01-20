@@ -6,8 +6,7 @@ import 'package:sparkle/core/services/intervention_handler_service.dart';
 class DebugInterventionTrigger extends ConsumerStatefulWidget {
 
   const DebugInterventionTrigger({
-    super.key,
-    required this.child,
+    required this.child, super.key,
   });
   final Widget child;
 
