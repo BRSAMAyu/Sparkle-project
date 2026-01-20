@@ -298,47 +298,49 @@ class _TaskCardState extends ConsumerState<TaskCard>
                           // Sync Error Overlay
                           if (widget.task.syncStatus == TaskSyncStatus.failed)
                             Positioned.fill(
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                                child: ColoredBox(
-                                  color: context.sparkleColors.semanticError
-                                      .withValues(alpha: 0.8),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.cloud_off,
-                                            color: context
-                                                .sparkleColors.brandPrimary,
-                                            size: 32,),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          widget.task.syncError ??
-                                              'Sync Failed',
-                                          style: TextStyle(
+                              child: ClipRect(
+                                child: BackdropFilter(
+                                  filter:
+                                      ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                                  child: ColoredBox(
+                                    color: context.sparkleColors.semanticError
+                                        .withValues(alpha: 0.8),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.cloud_off,
                                               color: context
                                                   .sparkleColors.brandPrimary,
-                                              fontWeight: FontWeight.bold,),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            TextButton(
-                                              onPressed: () {
-                                                ref
-                                                    .read(taskListProvider
-                                                        .notifier,)
-                                                    .discardChange(
-                                                        widget.task.id,);
-                                              },
-                                              style: TextButton.styleFrom(
-                                                  foregroundColor: context
-                                                      .sparkleColors
-                                                      .brandPrimary,),
-                                              child: const Text('Discard'),
-                                            ),
+                                              size: 32,),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            widget.task.syncError ??
+                                                'Sync Failed',
+                                            style: TextStyle(
+                                                color: context
+                                                    .sparkleColors.brandPrimary,
+                                                fontWeight: FontWeight.bold,),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  ref
+                                                      .read(taskListProvider
+                                                          .notifier,)
+                                                      .discardChange(
+                                                          widget.task.id,);
+                                                },
+                                                style: TextButton.styleFrom(
+                                                    foregroundColor: context
+                                                        .sparkleColors
+                                                        .brandPrimary,),
+                                                child: const Text('Discard'),
+                                              ),
                                             const SizedBox(width: 8),
                                             ElevatedButton(
                                               onPressed: () {

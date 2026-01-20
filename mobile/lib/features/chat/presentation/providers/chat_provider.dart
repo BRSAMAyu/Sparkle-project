@@ -67,6 +67,12 @@ class ChatState {
   final String? lastActionMessage;
   final List<StoredFile> attachedFiles;
 
+  int get listItemCount =>
+      messages.length +
+      (isSending ? 1 : 0) +
+      (aiStatus != null ? 1 : 0) +
+      (isReasoningActive ? 1 : 0);
+
   ChatState copyWith({
     bool? isLoading,
     bool? isSending,

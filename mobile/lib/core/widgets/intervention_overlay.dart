@@ -55,9 +55,11 @@ class InterventionOverlay extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: const SizedBox.expand(),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: const SizedBox.expand(),
+                ),
               ),
             ),
             content,
