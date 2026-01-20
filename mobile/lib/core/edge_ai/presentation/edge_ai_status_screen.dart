@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
+import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 
 class EdgeAIStatusScreen extends ConsumerWidget {
   const EdgeAIStatusScreen({super.key});

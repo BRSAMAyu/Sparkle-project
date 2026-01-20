@@ -130,6 +130,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
           animation: _glowAnimation,
           builder: (context, child) {
             final color = _getIntentColor();
+            final glowBlur = isNarrow ? 8.0 : 12.0;
+            final glowSpread = isNarrow ? 1.0 : 2.0;
 
             // Base neoGlass material
             final material = AppMaterials.neoGlass.copyWith(
@@ -144,8 +146,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
               shadows: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.2 * _glowAnimation.value),
-                  blurRadius: 12,
-                  spreadRadius: 2,
+                  blurRadius: glowBlur,
+                  spreadRadius: glowSpread,
                 ),
                 ...context.sparkleShadows.medium,
               ],

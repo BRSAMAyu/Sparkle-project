@@ -636,6 +636,24 @@ class ChatNotifier extends StateNotifier<ChatState> {
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
   }
 
+  void sendResponseFeedback(ChatMessageModel message, String feedbackType) {
+    final responseId = message.responseId ?? '';
+    if (responseId.isEmpty) {
+      debugPrint('⚠️ Missing response_id for feedback');
+      return;
+    }
+
+    _chatRepository.sendResponseFeedback(
+      responseId: responseId,
+      feedbackType: feedbackType,
+      workflowId: message.workflowId,
+      promptVersion: message.promptVersion,
+      traceId: message.traceId,
+      meta: {'message_id': message.id},
+    );
+    debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
+  }
+
   Future<void> _markNightlyReviewed(String reviewId) async {
     try {
       await _ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);

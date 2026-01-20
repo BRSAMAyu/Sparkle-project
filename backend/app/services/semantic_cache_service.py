@@ -16,6 +16,11 @@ from redis.asyncio import Redis
 from redis.asyncio.lock import Lock
 from app.config import settings
 from app.services.embedding_service import embedding_service
+from app.core.metrics import (
+    SEMANTIC_CACHE_HIT_TOTAL,
+    SEMANTIC_CACHE_MISS_TOTAL,
+    SEMANTIC_CACHE_BYPASS_TOTAL,
+)
 
 
 class SemanticCacheService:
@@ -78,7 +83,12 @@ class SemanticCacheService:
         normalized = " ".join(query.strip().lower().split())
         return normalized
 
-    def _generate_cache_key(self, query: str, user_id: Optional[str] = None) -> str:
+    def _generate_cache_key(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        knowledge_version: Optional[str] = None
+    ) -> str:
         """
         生成缓存键
 
@@ -88,10 +98,13 @@ class SemanticCacheService:
         normalized_query = self._normalize_query(query)
 
         # 生成哈希
+        parts = [normalized_query]
         if user_id:
-            cache_input = f"{normalized_query}:{user_id}"
-        else:
-            cache_input = normalized_query
+            parts.append(user_id)
+        if knowledge_version:
+            parts.append(f"kv={knowledge_version}")
+
+        cache_input = ":".join(parts)
 
         hash_key = hashlib.sha256(cache_input.encode()).hexdigest()
 
@@ -124,6 +137,7 @@ class SemanticCacheService:
         embedding: List[float],
         user_id: Optional[str],
         normalized_query: str,
+        knowledge_version: Optional[str],
         ttl: int
     ) -> None:
         if not self.redis:
@@ -133,6 +147,7 @@ class SemanticCacheService:
             "embedding": embedding,
             "user_id": user_id,
             "normalized_query": normalized_query,
+            "knowledge_version": knowledge_version,
             "updated_at": datetime.utcnow().isoformat()
         }
         await self.redis.setex(emb_key, ttl, json.dumps(payload))
@@ -152,7 +167,8 @@ class SemanticCacheService:
         self,
         query_embedding: List[float],
         user_id: Optional[str],
-        threshold: float
+        threshold: float,
+        knowledge_version: Optional[str]
     ) -> Optional[Tuple[str, float]]:
         if not self.redis:
             return None
@@ -178,6 +194,8 @@ class SemanticCacheService:
                 continue
             if user_id and payload.get("user_id") not in (None, user_id):
                 continue
+            if knowledge_version and payload.get("knowledge_version") != knowledge_version:
+                continue
 
             embedding = payload.get("embedding")
             if not embedding:
@@ -195,7 +213,8 @@ class SemanticCacheService:
         self,
         query: str,
         user_id: Optional[str] = None,
-        similarity_threshold: float = 0.95
+        similarity_threshold: float = 0.95,
+        knowledge_version: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         从缓存获取查询结果
@@ -214,12 +233,13 @@ class SemanticCacheService:
 
         try:
             await self._init_stats()
-            cache_key = self._generate_cache_key(query, user_id)
+            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
             cached_data = await self.redis.get(cache_key)
 
             if cached_data:
                 # 命中
                 await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
+                SEMANTIC_CACHE_HIT_TOTAL.inc()
                 result = json.loads(cached_data)
 
                 logger.debug(
@@ -232,13 +252,19 @@ class SemanticCacheService:
             if similarity_threshold < 1.0:
                 normalized_query = self._normalize_query(query)
                 query_embedding = await embedding_service.get_embedding(normalized_query)
-                similar = await self._find_similar_cache_key(query_embedding, user_id, similarity_threshold)
+                similar = await self._find_similar_cache_key(
+                    query_embedding,
+                    user_id,
+                    similarity_threshold,
+                    knowledge_version
+                )
                 if similar:
                     similar_key, score = similar
                     cached_similar = await self.redis.get(similar_key)
                     if cached_similar:
                         await self.redis.hincrby(self.STATS_KEY, "total_hits", 1)
                         await self.redis.hincrby(self.STATS_KEY, "semantic_hits", 1)
+                        SEMANTIC_CACHE_HIT_TOTAL.inc()
                         result = json.loads(cached_similar)
                         logger.debug(
                             f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}"
@@ -247,6 +273,7 @@ class SemanticCacheService:
 
             # 未命中
             await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
+            SEMANTIC_CACHE_MISS_TOTAL.inc()
             logger.debug(f"Cache MISS: query='{query[:30]}...'")
             return None
 
@@ -261,6 +288,7 @@ class SemanticCacheService:
         user_id: Optional[str] = None,
         ttl: Optional[int] = None,
         similarity_threshold: Optional[float] = None,
+        knowledge_version: Optional[str] = None,
         *args,
         **kwargs
     ) -> Optional[Dict[str, Any]]:
@@ -279,17 +307,19 @@ class SemanticCacheService:
             数据
         """
         if not self.redis:
+            SEMANTIC_CACHE_BYPASS_TOTAL.inc()
             return await factory_func(*args, **kwargs)
         if not settings.SEMANTIC_CACHE_ENABLED:
+            SEMANTIC_CACHE_BYPASS_TOTAL.inc()
             return await factory_func(*args, **kwargs)
 
         # 1. 尝试获取缓存
         effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
-        data = await self.get(query, user_id, effective_threshold)
+        data = await self.get(query, user_id, effective_threshold, knowledge_version)
         if data is not None:
             return data
 
-        cache_key = self._generate_cache_key(query, user_id)
+        cache_key = self._generate_cache_key(query, user_id, knowledge_version)
         lock_key = self._generate_lock_key(cache_key)
         
         # 2. 获取分布式锁 (Async)
@@ -305,7 +335,7 @@ class SemanticCacheService:
             # 所以会释放 event loop，不会阻塞其他协程。
             async with lock:
                 # 双重检查 (Double-Checked Locking)
-                data = await self.get(query, user_id, effective_threshold)
+                data = await self.get(query, user_id, effective_threshold, knowledge_version)
                 if data is not None:
                     return data
                 
@@ -315,7 +345,7 @@ class SemanticCacheService:
                 
                 # 4. 写入缓存
                 if result:
-                    await self.set(query, result, user_id, ttl)
+                    await self.set(query, result, user_id, ttl, knowledge_version)
                 
                 return result
 
@@ -325,7 +355,7 @@ class SemanticCacheService:
                  logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
                  # 稍微等待一下再尝试获取（降级策略）
                  await asyncio.sleep(0.1) 
-                 return await self.get(query, user_id) or await factory_func(*args, **kwargs)
+                 return await self.get(query, user_id, knowledge_version=knowledge_version) or await factory_func(*args, **kwargs)
 
             logger.error(f"Cache Mutex Error: {e}")
             # 出错时降级为直接调用
@@ -336,7 +366,8 @@ class SemanticCacheService:
         query: str,
         data: Dict[str, Any],
         user_id: Optional[str] = None,
-        ttl: Optional[int] = None
+        ttl: Optional[int] = None,
+        knowledge_version: Optional[str] = None
     ) -> bool:
         """
         设置缓存
@@ -356,7 +387,7 @@ class SemanticCacheService:
         try:
             await self._init_stats()
             normalized_query = self._normalize_query(query)
-            cache_key = self._generate_cache_key(query, user_id)
+            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
 
             # 包装数据，添加元信息
             cache_value = {
@@ -379,6 +410,7 @@ class SemanticCacheService:
                 embedding=await embedding_service.get_embedding(normalized_query),
                 user_id=user_id,
                 normalized_query=normalized_query,
+                knowledge_version=knowledge_version,
                 ttl=ttl_value
             )
 
@@ -395,7 +427,12 @@ class SemanticCacheService:
             logger.error(f"Cache SET error: {e}")
             return False
 
-    async def invalidate(self, query: str, user_id: Optional[str] = None) -> bool:
+    async def invalidate(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        knowledge_version: Optional[str] = None
+    ) -> bool:
         """
         失效特定缓存
 
@@ -410,7 +447,7 @@ class SemanticCacheService:
             return False
 
         try:
-            cache_key = self._generate_cache_key(query, user_id)
+            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
             deleted = await self.redis.delete(cache_key)
             logger.info(f"Cache INVALIDATE: query='{query[:30]}...', deleted={deleted}")
             return deleted > 0
@@ -496,10 +533,16 @@ class SemanticCacheService:
 
     # --- High-level methods for KnowledgeRetrievalService ---
 
-    async def get_cached_result(self, query: str, user_id: Optional[str] = None, threshold: float = 0.9) -> Optional[List[Any]]:
+    async def get_cached_result(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        threshold: float = 0.9,
+        knowledge_version: Optional[str] = None
+    ) -> Optional[List[Any]]:
         """获取缓存的知识节点列表"""
         # Note: Currently uses exact query match (threshold ignored for now)
-        data = await self.get(query, user_id)
+        data = await self.get(query, user_id, knowledge_version=knowledge_version)
         if not data or "nodes" not in data:
             return None
         
@@ -517,7 +560,14 @@ class SemanticCacheService:
             nodes.append(node)
         return nodes
 
-    async def cache_result(self, query: str, nodes: List[Any], user_id: Optional[str] = None, ttl: Optional[int] = None):
+    async def cache_result(
+        self,
+        query: str,
+        nodes: List[Any],
+        user_id: Optional[str] = None,
+        ttl: Optional[int] = None,
+        knowledge_version: Optional[str] = None
+    ):
         """缓存知识节点列表"""
         # Serialize nodes to dict
         node_dicts = []
@@ -538,7 +588,7 @@ class SemanticCacheService:
                 d["parent"] = {"name": node.parent.name}
             node_dicts.append(d)
             
-        await self.set(query, {"nodes": node_dicts}, user_id, ttl)
+        await self.set(query, {"nodes": node_dicts}, user_id, ttl, knowledge_version)
 
 
 # 便捷函数：创建服务实例

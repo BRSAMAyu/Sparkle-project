@@ -5,6 +5,7 @@ GraphRAG 检索器
 """
 
 import asyncio
+import hashlib
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from loguru import logger
@@ -13,8 +14,12 @@ import uuid
 from datetime import datetime
 
 from app.core.age_client import get_age_client
+from app.core.cache import cache_service
+from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
+from app.config import settings
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service
+from app.services.graphrag_trace_store import cache_trace
 
 
 @dataclass
@@ -62,6 +67,140 @@ class GraphRAGRetriever:
         self.knowledge_service = knowledge_service
         self.max_depth = 2
         self.min_strength = 0.3
+
+    def _normalize_query(self, query: str) -> str:
+        return " ".join(query.strip().lower().split())
+
+    def _build_cache_key(self, query: str, user_id: str, knowledge_version: Optional[str]) -> str:
+        normalized_query = self._normalize_query(query)
+        parts = [normalized_query, user_id, "v1"]
+        if knowledge_version:
+            parts.append(knowledge_version)
+        raw = ":".join(parts)
+        digest = hashlib.sha256(raw.encode()).hexdigest()
+        return f"graphrag:cache:{digest}"
+
+    async def _get_cached_result(
+        self,
+        cache_key: str
+    ) -> Optional[GraphRAGResult]:
+        cached = await cache_service.get(cache_key)
+        if not cached:
+            return None
+        try:
+            return GraphRAGResult(
+                query=cached["query"],
+                entities=cached.get("entities", []),
+                vector_results=cached.get("vector_results", []),
+                graph_results=cached.get("graph_results", []),
+                fused_context=cached.get("fused_context", ""),
+                metadata=cached.get("metadata", {}),
+                trace=None
+            )
+        except Exception:
+            return None
+
+    async def _store_cache(self, cache_key: str, result: GraphRAGResult) -> None:
+        payload = {
+            "query": result.query,
+            "entities": result.entities,
+            "vector_results": result.vector_results,
+            "graph_results": result.graph_results,
+            "fused_context": result.fused_context,
+            "metadata": result.metadata
+        }
+        await cache_service.set(cache_key, payload, ttl=settings.GRAPHRAG_CACHE_TTL_SECONDS)
+
+    async def _retrieve_fastpath(
+        self,
+        query: str,
+        user_id: str,
+        depth: int
+    ) -> Tuple[List[str], List[Dict[str, Any]], List[Dict[str, Any]], str, List[Dict[str, Any]], List[str], Dict[str, float], List[Dict[str, Any]]]:
+        import time
+        timing: Dict[str, float] = {}
+        start_time = time.time()
+
+        timeout = settings.GRAPHRAG_FASTPATH_TIMEOUT_SECONDS
+        try:
+            t0 = time.time()
+            entities_task = self.extract_entities(query)
+            vector_task = self.vector_search(query, top_k=5)
+            interests_task = self.get_user_interests(user_id)
+            entities, vector_results, user_interests = await asyncio.wait_for(
+                asyncio.gather(entities_task, vector_task, interests_task),
+                timeout=timeout
+            )
+            parallel_duration = time.time() - t0
+            timing["parallel_stage"] = parallel_duration
+            timing["entity_extraction"] = parallel_duration
+            timing["vector_search"] = parallel_duration
+            timing["user_interests"] = parallel_duration
+        except asyncio.TimeoutError:
+            logger.warning("GraphRAG fastpath timeout in parallel stage, falling back to sequential")
+            RETRIEVAL_TIMEOUT_TOTAL.labels(source="graphrag", stage="parallel").inc()
+            return await self._retrieve_sequential(query, user_id, depth)
+
+        t0 = time.time()
+        try:
+            graph_results, relationships = await asyncio.wait_for(
+                self.graph_search(entities, depth),
+                timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            logger.warning("GraphRAG fastpath graph search timeout")
+            RETRIEVAL_TIMEOUT_TOTAL.labels(source="graphrag", stage="graph_search").inc()
+            graph_results, relationships = [], []
+        timing["graph_search"] = time.time() - t0
+
+        t0 = time.time()
+        fused_context, unique_results = self.fuse_results(
+            vector_results, graph_results, user_interests
+        )
+        timing["fusion"] = time.time() - t0
+        timing["total"] = time.time() - start_time
+
+        return entities, vector_results, graph_results, fused_context, unique_results, user_interests, timing, relationships
+
+    async def _retrieve_sequential(
+        self,
+        query: str,
+        user_id: str,
+        depth: int
+    ) -> Tuple[List[str], List[Dict[str, Any]], List[Dict[str, Any]], str, List[Dict[str, Any]], List[str], Dict[str, float], List[Dict[str, Any]]]:
+        import time
+        timing: Dict[str, float] = {}
+        start_time = time.time()
+
+        # 1. 实体识别
+        t0 = time.time()
+        entities = await self.extract_entities(query)
+        timing["entity_extraction"] = time.time() - t0
+
+        # 2. 向量检索 (语义相似)
+        t0 = time.time()
+        vector_results = await self.vector_search(query, top_k=5)
+        timing["vector_search"] = time.time() - t0
+
+        # 3. 图检索 (结构关联)
+        t0 = time.time()
+        graph_results, relationships = await self.graph_search(entities, depth)
+        timing["graph_search"] = time.time() - t0
+
+        # 4. 用户个性化
+        t0 = time.time()
+        user_interests = await self.get_user_interests(user_id)
+        timing["user_interests"] = time.time() - t0
+
+        # 5. 融合与去重
+        t0 = time.time()
+        fused_context, unique_results = self.fuse_results(
+            vector_results, graph_results, user_interests
+        )
+        timing["fusion"] = time.time() - t0
+        timing["total"] = time.time() - start_time
+
+        return entities, vector_results, graph_results, fused_context, unique_results, user_interests, timing, relationships
 
     async def extract_entities(self, query: str) -> List[str]:
         """
@@ -316,41 +455,43 @@ class GraphRAGRetriever:
         Returns:
             GraphRAGResult
         """
-        import time
         logger.info(f"GraphRAG 检索: query='{query}', user='{user_id}'")
+        cache_key = None
+        if settings.ENABLE_GRAPHRAG_FASTPATH:
+            knowledge_version = None
+            try:
+                knowledge_version = await self.knowledge_service.get_knowledge_version()
+            except Exception as e:
+                logger.warning(f"Failed to resolve knowledge version for cache key: {e}")
+            cache_key = self._build_cache_key(query, user_id, knowledge_version=knowledge_version)
+            cached = await self._get_cached_result(cache_key)
+            if cached:
+                CACHE_HIT_COUNT.labels(cache_name="graphrag", result="hit").inc()
+                return cached
+            CACHE_HIT_COUNT.labels(cache_name="graphrag", result="miss").inc()
 
-        # 性能追踪
-        timing = {}
-        start_time = time.time()
-
-        # 1. 实体识别
-        t0 = time.time()
-        entities = await self.extract_entities(query)
-        timing["entity_extraction"] = time.time() - t0
-
-        # 2. 向量检索 (语义相似)
-        t0 = time.time()
-        vector_results = await self.vector_search(query, top_k=5)
-        timing["vector_search"] = time.time() - t0
-
-        # 3. 图检索 (结构关联)
-        t0 = time.time()
-        graph_results, relationships = await self.graph_search(entities, depth)
-        timing["graph_search"] = time.time() - t0
-
-        # 4. 用户个性化
-        t0 = time.time()
-        user_interests = await self.get_user_interests(user_id)
-        timing["user_interests"] = time.time() - t0
-
-        # 5. 融合与去重
-        t0 = time.time()
-        fused_context, unique_results = self.fuse_results(
-            vector_results, graph_results, user_interests
-        )
-        timing["fusion"] = time.time() - t0
-
-        timing["total"] = time.time() - start_time
+        if settings.ENABLE_GRAPHRAG_FASTPATH:
+            (
+                entities,
+                vector_results,
+                graph_results,
+                fused_context,
+                unique_results,
+                user_interests,
+                timing,
+                relationships
+            ) = await self._retrieve_fastpath(query, user_id, depth)
+        else:
+            (
+                entities,
+                vector_results,
+                graph_results,
+                fused_context,
+                unique_results,
+                user_interests,
+                timing,
+                relationships
+            ) = await self._retrieve_sequential(query, user_id, depth)
 
         # 6. 构建元数据
         metadata = {
@@ -386,6 +527,8 @@ class GraphRAGRetriever:
                 timing=timing
             )
 
+            await cache_trace(trace, user_id)
+
         result = GraphRAGResult(
             query=query,
             entities=entities,
@@ -395,6 +538,23 @@ class GraphRAGRetriever:
             metadata=metadata,
             trace=trace
         )
+
+        if settings.ENABLE_GRAPHRAG_FASTPATH and cache_key:
+            await self._store_cache(cache_key, result)
+
+        try:
+            if "total" in timing:
+                RAG_RETRIEVAL_LATENCY.labels(source="graphrag", stage="total").observe(timing["total"])
+            if "entity_extraction" in timing:
+                RAG_RETRIEVAL_LATENCY.labels(source="graphrag", stage="entity_extract").observe(
+                    timing["entity_extraction"]
+                )
+            if "graph_search" in timing:
+                RAG_RETRIEVAL_LATENCY.labels(source="graphrag", stage="graph_expand").observe(timing["graph_search"])
+            if "vector_search" in timing:
+                RAG_RETRIEVAL_LATENCY.labels(source="pgvector", stage="retrieve").observe(timing["vector_search"])
+        except Exception:
+            pass
 
         logger.info(
             f"GraphRAG 完成: vector={len(vector_results)}, "

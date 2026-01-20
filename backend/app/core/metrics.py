@@ -46,6 +46,24 @@ CACHE_HIT_COUNT = get_or_create_metric(
     ['cache_name', 'result']  # result: hit, miss
 )
 
+SEMANTIC_CACHE_HIT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_hit_total',
+    'Total semantic cache hits'
+)
+
+SEMANTIC_CACHE_MISS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_miss_total',
+    'Total semantic cache misses'
+)
+
+SEMANTIC_CACHE_BYPASS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_bypass_total',
+    'Total semantic cache bypasses'
+)
+
 # 4. 工具执行指标
 TOOL_EXECUTION_COUNT = get_or_create_metric(
     Counter,
@@ -72,7 +90,22 @@ RAG_RETRIEVAL_LATENCY = get_or_create_metric(
     Histogram,
     'sparkle_rag_retrieval_seconds',
     'RAG retrieval latency',
+    ['source', 'stage'],
     buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+)
+
+RETRIEVAL_TIMEOUT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_retrieval_timeout_total',
+    'Total retrieval timeouts',
+    ['source', 'stage']
+)
+
+RETRIEVAL_ERROR_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_retrieval_error_total',
+    'Total retrieval errors',
+    ['source', 'stage']
 )
 
 ACTIVE_WEBSOCKET_CONNECTIONS = get_or_create_metric(
@@ -113,6 +146,14 @@ PROMPT_BANDIT_STATE_MISSING_TOTAL = get_or_create_metric(
     'sparkle_prompt_bandit_state_missing_total',
     'Total prompt bandit state misses',
     ['workflow_id']
+)
+
+FEEDBACK_TO_EFFECT_SECONDS = get_or_create_metric(
+    Histogram,
+    'sparkle_feedback_to_effect_seconds',
+    'Time from feedback ingestion to prompt selection effect',
+    ['workflow_id', 'prompt_version'],
+    buckets=[60, 300, 900, 1800, 3600, 14400, 86400]
 )
 
 # 装饰器：用于测量函数执行时间并记录指标

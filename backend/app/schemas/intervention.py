@@ -134,6 +134,7 @@ class InterventionSettingsResponse(BaseModel):
 class InterventionFeedbackRequest(BaseModel):
     feedback_type: InterventionFeedbackType
     extra_data: Optional[Dict[str, Any]] = None
+    idempotency_key: Optional[str] = None
 
 
 class InterventionFeedbackResponse(BaseModel):
@@ -142,6 +143,7 @@ class InterventionFeedbackResponse(BaseModel):
     user_id: UUID
     feedback_type: InterventionFeedbackType
     extra_data: Optional[Dict[str, Any]] = None
+    idempotency_key: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

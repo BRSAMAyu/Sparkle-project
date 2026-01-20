@@ -495,6 +495,34 @@ class WebSocketChatServiceV2 {
     _log('📤 Intervention feedback sent: $feedbackType for $requestId');
   }
 
+  /// 发送回复反馈（Thumbs up/down）
+  void sendResponseFeedback({
+    required String responseId,
+    required String feedbackType,
+    List<String>? reasons,
+    String? freeText,
+    String? workflowId,
+    String? promptVersion,
+    String? traceId,
+    Map<String, dynamic>? meta,
+  }) {
+    final feedback = {
+      'type': 'response_feedback',
+      'response_id': responseId,
+      'feedback_type': feedbackType,
+      if (reasons != null && reasons.isNotEmpty) 'reasons': reasons,
+      if (freeText != null && freeText.isNotEmpty) 'free_text': freeText,
+      if (workflowId != null) 'workflow_id': workflowId,
+      if (promptVersion != null) 'prompt_version': promptVersion,
+      if (traceId != null) 'trace_id': traceId,
+      if (meta != null) 'meta': meta,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    _sendMessage(feedback);
+    _log('📤 Response feedback sent: $feedbackType for $responseId');
+  }
+
   /// 发送专注完成事件
   void sendFocusCompleted({
     required String sessionId,

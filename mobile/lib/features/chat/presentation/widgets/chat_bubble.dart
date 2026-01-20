@@ -21,6 +21,7 @@ class ChatBubble extends StatefulWidget {
     this.onRevoke,
     this.onActionConfirm,
     this.onActionDismiss,
+    this.onResponseFeedback,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
@@ -29,6 +30,8 @@ class ChatBubble extends StatefulWidget {
   final void Function(dynamic message)? onRevoke;
   final void Function(WidgetPayload action)? onActionConfirm;
   final void Function(WidgetPayload action)? onActionDismiss;
+  final void Function(ChatMessageModel message, String feedbackType)?
+      onResponseFeedback;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -119,6 +122,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ? (widget.message as PrivateMessageInfo).createdAt
           : (widget.message as MessageInfo).createdAt;
 
+  String? get _responseId => (widget.message is ChatMessageModel)
+      ? (widget.message as ChatMessageModel).responseId
+      : null;
+
   void _handleDoubleTap() {
     if (_isUser || _isRevoked || !mounted) return;
     setState(() => _showHeart = true);
@@ -146,6 +153,34 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (!_isUser &&
+                  _responseId != null &&
+                  _responseId!.isNotEmpty &&
+                  widget.onResponseFeedback != null &&
+                  widget.message is ChatMessageModel)
+                ListTile(
+                  leading: const Icon(Icons.thumb_up_alt_rounded),
+                  title: const Text('有帮助'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel, 'up',);
+                  },
+                ),
+              if (!_isUser &&
+                  _responseId != null &&
+                  _responseId!.isNotEmpty &&
+                  widget.onResponseFeedback != null &&
+                  widget.message is ChatMessageModel)
+                ListTile(
+                  leading: const Icon(Icons.thumb_down_alt_rounded),
+                  title: const Text('没帮助'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel, 'down',);
+                  },
+                ),
               if (widget.onQuote != null &&
                   widget.message is PrivateMessageInfo)
                 ListTile(

@@ -509,9 +509,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     showDialog<void>(
       context: context,
       builder: (context) => GalaxySearchDialog(
-        onNodeSelected: (nodeId) {
-          _animateToNode(nodeId);
-        },
+        onNodeSelected: _animateToNode,
       ),
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/edge_ai/services/edge_inference_service.dart';
 import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
+import 'package:sparkle/core/edge_ai/services/edge_inference_service.dart';
 
 /// Holds the latest inferred state from the edge model.
 final edgeAIStateProvider = StateNotifierProvider<EdgeAINotifier, AsyncValue<EdgeState?>>((ref) {

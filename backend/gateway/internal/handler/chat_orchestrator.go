@@ -1440,11 +1440,6 @@ func getEnvInt64(key string, fallback int64) int64 {
 	return val
 }
 
-func isDevelopmentEnv() bool {
-	env := strings.TrimSpace(strings.ToLower(os.Getenv("ENVIRONMENT")))
-	return env == "" || env == "dev" || env == "development"
-}
-
 type actionStatusSender interface {
 	SendActionStatus(actionID, status string, data map[string]interface{})
 }

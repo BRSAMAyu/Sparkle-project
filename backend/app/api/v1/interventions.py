@@ -110,6 +110,7 @@ async def submit_feedback(
         user_id=current_user.id,
         feedback_type=payload.feedback_type,
         extra_data=payload.extra_data,
+        idempotency_key=payload.idempotency_key,
     )
     return feedback
 

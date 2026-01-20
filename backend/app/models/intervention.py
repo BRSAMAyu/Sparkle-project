@@ -3,7 +3,7 @@ Intervention Models
 Phase 0: Contract, guardrails, audit, and feedback storage.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean, JSON, ForeignKey, Integer, Float
+from sqlalchemy import Column, String, DateTime, Boolean, JSON, ForeignKey, Integer, Float, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, GUID
@@ -75,11 +75,21 @@ class InterventionAuditLog(BaseModel):
 
 class InterventionFeedback(BaseModel):
     __tablename__ = "intervention_feedback"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "request_id",
+            "feedback_type",
+            "idempotency_key",
+            name="uq_intervention_feedback_idempotency",
+        ),
+    )
 
     request_id = Column(GUID(), ForeignKey("intervention_requests.id"), nullable=False, index=True)
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     feedback_type = Column(String(40), nullable=False, index=True)
     extra_data = Column(JSON, nullable=True)
+    idempotency_key = Column(String(200), nullable=False, index=True)
 
     request = relationship("InterventionRequest", back_populates="feedback")
     user = relationship("User", back_populates="intervention_feedback")

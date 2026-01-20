@@ -8,8 +8,8 @@ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
-import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 
 void main() async {
   try {

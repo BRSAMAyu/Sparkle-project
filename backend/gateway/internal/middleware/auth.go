@@ -126,7 +126,7 @@ func isWebSocketRequest(c *gin.Context) bool {
 
 func validateJWT(cfg *config.Config, tokenString string) (string, bool, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(cfg.JWTSecret), nil
