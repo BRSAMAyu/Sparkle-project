@@ -18,6 +18,10 @@ class FocusMainScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: DS.deepSpaceStart,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('选择专注任务'),
         backgroundColor: Colors.transparent,
         elevation: 0,

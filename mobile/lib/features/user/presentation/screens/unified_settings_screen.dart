@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
@@ -31,13 +32,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: Text(l10n
             .schedulePreferences,), // Using generic settings title from l10n or keeping consistent
         actions: [
           TextButton(
             onPressed: () {
               // TODO: Save all settings
-              Navigator.pop(context);
+              if (context.mounted) {
+                context.pop();
+              }
             },
             child: Text(l10n.confirm),
           ),
@@ -142,7 +149,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               subtitle: const Text('查看离线队列状态与重试'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                Navigator.of(context).push(
+                Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (_) => const SyncCenterScreen(),
                   ),

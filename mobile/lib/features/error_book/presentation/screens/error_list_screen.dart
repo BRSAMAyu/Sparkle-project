@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
@@ -64,6 +65,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: _showSearch ? _buildSearchField() : const Text('错题档案'),
         actions: [
           IconButton(

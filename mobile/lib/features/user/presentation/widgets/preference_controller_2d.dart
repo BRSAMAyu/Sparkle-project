@@ -83,31 +83,34 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                   height: size,
                   decoration: BoxDecoration(
                     borderRadius: DS.borderRadius16,
-                    border: Border.all(color: DS.neutral300, width: 2),
-                    // Gradient representing the axes
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(
-                            0xFFE0F2FE,), // Light Blue (High Depth/Structure?) - Top
-                        Color(
-                            0xFFFFF7ED,), // Light Orange (Low Depth/Shallow?) - Bottom
-                      ],
-                    ),
+                    border: Border.all(color: DS.neutral400, width: 2),
+                    // Use theme-aware background
+                    color: DS.surfaceSecondary,
                   ),
                   child: Stack(
                     children: [
-                      // Horizontal Gradient Overlay (Curiosity)
+                      // Vertical gradient for depth axis (top=deep, bottom=shallow)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: DS.borderRadius16,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              DS.info.withValues(alpha: 0.25), // Deep - blue tint
+                              DS.warning.withValues(alpha: 0.15), // Shallow - warm tint
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Horizontal gradient for curiosity axis (left=focus, right=curious)
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: DS.borderRadius16,
                           gradient: LinearGradient(
                             colors: [
-                              DS.brandPrimary.withValues(
-                                  alpha: 0.1,), // Low Curiosity (Focus) - Left
-                              Colors.amber.withValues(
-                                  alpha: 0.3,), // High Curiosity - Right
+                              DS.brandSecondary.withValues(alpha: 0.15), // Focus - purple tint
+                              DS.semanticSuccess.withValues(alpha: 0.2), // Curious - green tint
                             ],
                           ),
                         ),
@@ -160,7 +163,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     final textStyle = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.bold,
-      color: DS.neutral600,
+      color: DS.textSecondary,
     );
 
     return Stack(
