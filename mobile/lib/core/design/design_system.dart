@@ -37,6 +37,7 @@ import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
@@ -213,6 +214,15 @@ class SparkleColorAliases {
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
 }
 
+/// Responsive breakpoints for phone layouts.
+class Breakpoints {
+  const Breakpoints._();
+
+  static const double narrow = 360.0;
+  static const double standard = 390.0;
+  static const double wide = 428.0;
+}
+
 /// 设计令牌快捷访问
 class DS {
   DS._();
@@ -247,6 +257,9 @@ class DS {
   static Color get success => _theme.colors.semanticSuccess;
   static Color get warning => _theme.colors.semanticWarning;
   static Color get error => _theme.colors.semanticError;
+  static Color get semanticSuccess => _theme.colors.semanticSuccess;
+  static Color get semanticWarning => _theme.colors.semanticWarning;
+  static Color get semanticError => _theme.colors.semanticError;
   static Color get info => _theme.colors.semanticInfo;
   static Color get primaryBase => brandPrimary;
   static Color get secondaryBase => brandSecondary;
@@ -269,6 +282,11 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfacePrimaryElevated => _blend(
+        surfacePrimary,
+        surfaceTertiary,
+        _isDark ? 0.35 : 0.12,
+      );
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
@@ -278,6 +296,10 @@ class DS {
   static Color get textSecondary => _theme.colors.textSecondary;
   static Color get textTertiary =>
       _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+  static Color get textOnPrimary => ThemeUtils.getContrastSafeText(
+        brandPrimary,
+        darkText: neutral900,
+      );
   static Color get border => _isDark ? neutral600 : neutral300;
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
@@ -344,9 +366,9 @@ class DS {
 
   // Special surfaces and accents
   static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.12 : 0.22);
+      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
   static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.1 : 0.18);
+      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
   static Color get deepSpaceSurface =>
       _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
@@ -357,6 +379,8 @@ class DS {
   static Color get prismGreen => success;
   static Color get prismPurple => brandSecondary;
   static Color get flameCore => _blend(warning, brandPrimary, 0.4);
+  static Color get capsuleAccent =>
+      _shiftLightness(brandSecondary, _isDark ? 0.12 : -0.05);
 
   // Gradients
   static LinearGradient get primaryGradient =>
@@ -417,6 +441,9 @@ class DS {
   // Layout and sizing
   static const double breakpointTablet = 768.0;
   static const double breakpointDesktop = 1024.0;
+  static const double breakpointNarrow = Breakpoints.narrow;
+  static const double breakpointStandard = Breakpoints.standard;
+  static const double breakpointWide = Breakpoints.wide;
   static const double contentMaxWidthTablet = 720.0;
   static const double contentMaxWidthDesktop = 1200.0;
   static const double touchTargetMinSize = 48.0;

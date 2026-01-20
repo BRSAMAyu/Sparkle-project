@@ -50,7 +50,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             Text(
               '好奇心胶囊',
               style: context.sparkleTypography.labelSmall.copyWith(
-                color: DS.brandPrimary.withValues(alpha: 0.6),
+                color: DS.textSecondary,
               ),
             ),
           ],

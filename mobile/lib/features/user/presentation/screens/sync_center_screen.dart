@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -24,7 +25,11 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('同步中心'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('同步中心'),
           actions: [
             PopupMenuButton<String>(
               onSelected: (value) async {

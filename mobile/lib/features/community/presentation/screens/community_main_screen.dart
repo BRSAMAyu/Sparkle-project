@@ -90,6 +90,10 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title:
             const Text('星火社群', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,

@@ -75,7 +75,11 @@ class _LearningModeScreenState extends ConsumerState<LearningModeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('学习模式设置'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('学习模式设置'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(DS.spacing16),

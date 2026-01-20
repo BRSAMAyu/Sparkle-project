@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -7,7 +8,9 @@ import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
   const DailyDetailScreen({required this.date, super.key});
@@ -33,6 +36,10 @@ class DailyDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Deep dark
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(DateFormat('MM月dd日').format(date)),

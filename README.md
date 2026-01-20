@@ -121,6 +121,8 @@ make grpc-server
 make gateway-run
 ```
 
+本地开发以仓库根目录 `.env` 为唯一真源；云端/生产通过环境变量注入配置即可。
+
 ### 后端启动（详细步骤）
 
 ```bash
@@ -130,8 +132,10 @@ docker compose up -d
 # 2. 初始化Python环境
 cd backend
 pip install -r requirements.txt
+cd ..
 cp .env.example .env
-# 编辑 .env 配置数据库和API密钥
+# 编辑根目录 .env 配置数据库和API密钥
+cd backend
 alembic upgrade head
 
 # 3. 启动Python gRPC服务
@@ -142,6 +146,30 @@ cd backend/gateway
 go mod tidy
 go build -o bin/gateway ./cmd/server
 ./bin/gateway
+```
+
+可选自检：
+```bash
+make env-check
+```
+
+快速验收：
+```bash
+make smoke
+```
+
+迁移异常处理（安全默认）
+```bash
+# 发生 revision mismatch / 多 head 时，make sync-db 会输出诊断并失败
+# 明确确认后可用以下方式进行保守 stamp（无 --purge）：
+FORCE_STAMP=1 make sync-db
+```
+
+OpenTelemetry（可选）
+```bash
+# 本地建议关闭或指向本地 collector
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+# 如果未设置，将不会启用 exporter
 ```
 
 ### 移动端启动

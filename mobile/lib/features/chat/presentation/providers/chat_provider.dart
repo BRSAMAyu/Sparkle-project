@@ -67,6 +67,12 @@ class ChatState {
   final String? lastActionMessage;
   final List<StoredFile> attachedFiles;
 
+  int get listItemCount =>
+      messages.length +
+      (isSending ? 1 : 0) +
+      (aiStatus != null ? 1 : 0) +
+      (isReasoningActive ? 1 : 0);
+
   ChatState copyWith({
     bool? isLoading,
     bool? isSending,
@@ -628,6 +634,24 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     // TODO: 可以添加乐观更新 - 从 UI 中移除或标记为已忽略
     // state = state.copyWith(messages: _updateActionStatus(toolResultId, confirmed: false));
+  }
+
+  void sendResponseFeedback(ChatMessageModel message, String feedbackType) {
+    final responseId = message.responseId ?? '';
+    if (responseId.isEmpty) {
+      debugPrint('⚠️ Missing response_id for feedback');
+      return;
+    }
+
+    _chatRepository.sendResponseFeedback(
+      responseId: responseId,
+      feedbackType: feedbackType,
+      workflowId: message.workflowId,
+      promptVersion: message.promptVersion,
+      traceId: message.traceId,
+      meta: {'message_id': message.id},
+    );
+    debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
   }
 
   Future<void> _markNightlyReviewed(String reviewId) async {

@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -11,90 +11,74 @@ class CalendarHeatmapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: () => context.push('/calendar-stats'),
-        child: ClipRRect(
+        child: MaterialStyler(
+          material: AppMaterials.ceramic,
           borderRadius: DS.borderRadius20,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    DS.deepSpaceSurface.withValues(alpha: 0.6),
-                    DS.glassBackground,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: DS.borderRadius20,
-                border: Border.all(color: DS.glassBorder),
-              ),
-              padding: const EdgeInsets.all(DS.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(DS.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: DS.textSecondary.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      Icon(
-                        Icons.calendar_month_rounded,
-                        size: 16,
-                        color: DS.textSecondary.withValues(alpha: 0.6),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: DS.md),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: _buildMonthGrid,
+                  Text(
+                    DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: DS.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: DS.sm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Less',
-                        style:
-                            TextStyle(fontSize: 10, color: DS.brandPrimary500),
-                      ),
-                      const SizedBox(width: DS.xs),
-                      _buildLegendItem(0),
-                      const SizedBox(width: 2),
-                      _buildLegendItem(1),
-                      const SizedBox(width: 2),
-                      _buildLegendItem(2),
-                      const SizedBox(width: 2),
-                      _buildLegendItem(3),
-                      const SizedBox(width: 2),
-                      _buildLegendItem(4),
-                      const SizedBox(width: DS.xs),
-                      Text(
-                        'More',
-                        style:
-                            TextStyle(fontSize: 10, color: DS.brandPrimary500),
-                      ),
-                    ],
+                  Icon(
+                    Icons.calendar_month_rounded,
+                    size: 16,
+                    color: DS.textSecondary,
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: DS.md),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: _buildMonthGrid,
+                ),
+              ),
+              const SizedBox(height: DS.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Less',
+                    style:
+                        TextStyle(fontSize: 10, color: DS.textSecondary),
+                  ),
+                  const SizedBox(width: DS.xs),
+                  _buildLegendItem(context, 0),
+                  const SizedBox(width: 2),
+                  _buildLegendItem(context, 1),
+                  const SizedBox(width: 2),
+                  _buildLegendItem(context, 2),
+                  const SizedBox(width: 2),
+                  _buildLegendItem(context, 3),
+                  const SizedBox(width: 2),
+                  _buildLegendItem(context, 4),
+                  const SizedBox(width: DS.xs),
+                  Text(
+                    'More',
+                    style:
+                        TextStyle(fontSize: 10, color: DS.textSecondary),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       );
 
-  Widget _buildLegendItem(int level) => Container(
+  Widget _buildLegendItem(BuildContext context, int level) => Container(
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: _getColorForLevel(level),
+          color: _getColorForLevel(context, level),
           borderRadius: BorderRadius.circular(2),
         ),
       );
@@ -123,10 +107,10 @@ class CalendarHeatmapCard extends StatelessWidget {
       gridCells.add(
         Container(
           decoration: BoxDecoration(
-            color: _getColorForLevel(intensity),
+            color: _getColorForLevel(context, intensity),
             borderRadius: BorderRadius.circular(4),
             border: i == now.day
-                ? Border.all(color: DS.brandPrimary, width: 1.5)
+                ? Border.all(color: DS.brandPrimary.withValues(alpha: 0.8), width: 1.5)
                 : null,
           ),
           alignment: Alignment.center,
@@ -135,31 +119,48 @@ class CalendarHeatmapCard extends StatelessWidget {
       );
     }
 
-    return GridView.count(
-      crossAxisCount: 7,
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 4,
-      physics: const NeverScrollableScrollPhysics(),
-      children: gridCells,
+    const columns = 7;
+    const spacing = 4.0;
+    final rows = max(1, (gridCells.length / columns).ceil());
+    final cellSizeFromWidth =
+        (constraints.maxWidth - spacing * (columns - 1)) / columns;
+    final cellSizeFromHeight =
+        (constraints.maxHeight - spacing * (rows - 1)) / rows;
+    final cellSize = max(0.0, min(cellSizeFromWidth, cellSizeFromHeight));
+    final totalCells = rows * columns;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: cellSize * columns + spacing * (columns - 1),
+        height: cellSize * rows + spacing * (rows - 1),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+          ),
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: totalCells,
+          itemBuilder: (context, index) {
+            if (index >= gridCells.length) {
+              return const SizedBox();
+            }
+            return gridCells[index];
+          },
+        ),
+      ),
     );
   }
 
-  Color _getColorForLevel(int level) {
-    // Theme color is orange.
-    final baseColor = DS.brandPrimary;
-    switch (level) {
-      case 0:
-        return baseColor.withValues(alpha: 0.1);
-      case 1:
-        return baseColor.withValues(alpha: 0.3);
-      case 2:
-        return baseColor.withValues(alpha: 0.5);
-      case 3:
-        return baseColor.withValues(alpha: 0.7);
-      case 4:
-        return baseColor.withValues(alpha: 1.0);
-      default:
-        return baseColor.withValues(alpha: 0.1);
-    }
+  Color _getColorForLevel(BuildContext context, int level) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? DS.brandPrimary : DS.brandPrimary;
+    final alphaValues = isDark
+        ? [0.15, 0.35, 0.55, 0.75, 1.0]
+        : [0.2, 0.4, 0.6, 0.8, 1.0];
+    final safeIndex = level.clamp(0, alphaValues.length - 1);
+    return baseColor.withValues(alpha: alphaValues[safeIndex]);
   }
 }

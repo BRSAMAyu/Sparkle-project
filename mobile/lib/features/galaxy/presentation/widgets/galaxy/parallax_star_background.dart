@@ -128,10 +128,12 @@ class _ParallaxLayersPainter extends CustomPainter {
       // Scale star size slightly with zoom to give depth feeling (optional)
       // r = r * (0.5 + scale * 0.5);
 
-      // Use white/light color for stars that stands out from background
-      // Opacity varies by layer and randomness for twinkling effect
-      paint.color = Colors.white
-          .withValues(alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
+      // Use color that contrasts with background
+      // In dark mode: white stars, in light mode: dark stars
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final starColor = isDark ? Colors.white : Colors.black87;
+      paint.color = starColor.withValues(
+          alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
       canvas.drawCircle(Offset(x, y), r, paint);
     }
   }

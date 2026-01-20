@@ -157,7 +157,7 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 	view := service.PostView{
 		ID:        postIDStr,
 		UserID:    userID.String(),
-		Content:   post.Content.String,
+		Content:   post.Content,
 		ImageURLs: imageUrls,
 		Topic:     post.Topic.String,
 		LikeCount: 0,

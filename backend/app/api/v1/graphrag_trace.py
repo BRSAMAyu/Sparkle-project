@@ -10,10 +10,9 @@ from pydantic import BaseModel
 from datetime import datetime
 from loguru import logger
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_active_superuser
 from app.models.user import User
-from orchestration.graph_rag import GraphRAGRetriever, RetrievalTrace
-from app.services.knowledge_service import KnowledgeService
+from app.services.graphrag_trace_store import get_latest_trace, get_trace
 
 
 router = APIRouter(prefix="/graphrag", tags=["graphrag"])
@@ -44,13 +43,9 @@ class GraphRAGTraceResponse(BaseModel):
         from_attributes = True
 
 
-# 内存缓存（生产环境应使用 Redis）
-_trace_cache: Dict[str, RetrievalTrace] = {}
-
-
 @router.get("/trace/latest", response_model=GraphRAGTraceResponse)
 async def get_latest_trace(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """
     获取用户最新的检索追踪信息
@@ -65,57 +60,52 @@ async def get_latest_trace(
 
     logger.info(f"获取用户 {current_user.id} 的最新检索追踪")
 
-    # TODO: 从Redis或内存缓存中获取真实数据
-    # 这里返回示例响应
-    raise HTTPException(
-        status_code=404,
-        detail="No recent GraphRAG query found. Please send a chat message first."
+    trace = await get_latest_trace(str(current_user.id))
+    if not trace:
+        raise HTTPException(
+            status_code=404,
+            detail="No recent GraphRAG query found. Please send a chat message first."
+        )
+
+    return GraphRAGTraceResponse(
+        trace_id=trace["trace_id"],
+        query=trace["query"],
+        timestamp=datetime.fromisoformat(trace["timestamp"]),
+        nodes_retrieved=trace.get("nodes_retrieved", []),
+        node_sources=trace.get("node_sources", {}),
+        relationships=trace.get("relationships", []),
+        vector_search_count=len(trace.get("vector_search_results", [])),
+        graph_search_count=len(trace.get("graph_search_results", [])),
+        user_interest_count=len(trace.get("user_interest_nodes", [])),
+        timing=trace.get("timing", {})
     )
 
 
 @router.get("/trace/{trace_id}", response_model=GraphRAGTraceResponse)
 async def get_trace_by_id(
     trace_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """
     根据 trace_id 获取特定的检索追踪信息
     """
-    trace = _trace_cache.get(trace_id)
+    trace = await get_trace(trace_id)
 
     if not trace:
         raise HTTPException(status_code=404, detail="Trace not found")
 
     return GraphRAGTraceResponse(
-        trace_id=trace.trace_id,
-        query=trace.query,
-        timestamp=trace.timestamp,
-        nodes_retrieved=trace.nodes_retrieved,
-        node_sources=trace.node_sources,
-        relationships=trace.relationships,
-        vector_search_count=len(trace.vector_search_results),
-        graph_search_count=len(trace.graph_search_results),
-        user_interest_count=len(trace.user_interest_nodes),
-        timing=trace.timing
+        trace_id=trace["trace_id"],
+        query=trace["query"],
+        timestamp=datetime.fromisoformat(trace["timestamp"]),
+        nodes_retrieved=trace.get("nodes_retrieved", []),
+        node_sources=trace.get("node_sources", {}),
+        relationships=trace.get("relationships", []),
+        vector_search_count=len(trace.get("vector_search_results", [])),
+        graph_search_count=len(trace.get("graph_search_results", [])),
+        user_interest_count=len(trace.get("user_interest_nodes", [])),
+        timing=trace.get("timing", {})
     )
-
-
-def cache_trace(trace: RetrievalTrace):
-    """
-    缓存追踪信息（供orchestrator调用）
-
-    Args:
-        trace: 检索追踪对象
-    """
-    _trace_cache[trace.trace_id] = trace
-
-    # 限制缓存大小（保留最近100条）
-    if len(_trace_cache) > 100:
-        # 删除最旧的
-        oldest_key = min(_trace_cache.keys(), key=lambda k: _trace_cache[k].timestamp)
-        del _trace_cache[oldest_key]
-
-    logger.debug(f"缓存追踪信息: {trace.trace_id}, 当前缓存大小: {len(_trace_cache)}")
 
 
 # @router.post("/test-retrieval", response_model=None)

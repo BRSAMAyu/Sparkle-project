@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +25,8 @@ class _PrismCardState extends ConsumerState<PrismCard>
     _breathingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+    );
+    unawaited(_breathingController.repeat(reverse: true));
     _breathingAnimation = Tween<double>(begin: 0.1, end: 0.3).animate(
       CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
     );
@@ -44,16 +47,16 @@ class _PrismCardState extends ConsumerState<PrismCard>
     return GestureDetector(
       onTap: () => context.push('/cognitive/patterns'),
       child: MaterialStyler(
-        material: AppMaterials.neoGlass.copyWith(
+        material: AppMaterials.ceramic.copyWith(
           backgroundGradient: LinearGradient(
             colors: [
-              DS.prismPurple.withValues(alpha: 0.15),
-              DS.glassBackground,
+              DS.prismPurple.withValues(alpha: 0.08),
+              DS.surfaceSecondary,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderColor: DS.prismPurple.withValues(alpha: 0.2),
+          borderColor: DS.prismPurple.withValues(alpha: 0.25),
           borderWidth: 1.0,
         ),
         borderRadius: DS.borderRadius20,
@@ -89,13 +92,13 @@ class _PrismCardState extends ConsumerState<PrismCard>
                 Row(
                   children: [
                     Icon(Icons.diamond_outlined,
-                        color: DS.brandPrimaryConst, size: 18,),
+                        color: DS.prismPurple, size: 18,),
                     const SizedBox(width: DS.sm),
                     Text(
                       '认知棱镜',
                       style: context.sparkleTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: DS.brandPrimaryConst,
+                        color: DS.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -114,6 +117,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                 if (weeklyPattern != null) ...[
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildTag(context, '#$weeklyPattern'),
                       if (dashboardState.weather.type == 'rainy')
@@ -124,7 +128,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                   Text(
                     '行为定式分析已更新',
                     style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.brandPrimary.withValues(alpha: 0.6),
+                      color: DS.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -133,21 +137,21 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: DS.brandPrimary.withValues(alpha: 0.08),
+                        color: DS.prismPurple.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+                        border: Border.all(color: DS.prismPurple.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline, size: 12, color: DS.brandPrimaryConst),
+                          Icon(Icons.error_outline, size: 12, color: DS.prismPurple),
                           const SizedBox(width: 4),
                           Text(
                             '复习弱项: 分析',
                             style: context.sparkleTypography.labelSmall.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 10,
-                              color: DS.brandPrimaryConst,
+                              color: DS.textPrimary,
                             ),
                           ),
                         ],
@@ -159,7 +163,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     '点击同步闪念，发现你的行为定式',
                     style: context.sparkleTypography.bodyMedium.copyWith(
                       fontSize: 12,
-                      color: DS.brandPrimary70Const,
+                      color: DS.textSecondary,
                     ),
                   ),
                 ],
@@ -174,16 +178,16 @@ class _PrismCardState extends ConsumerState<PrismCard>
   Widget _buildTag(BuildContext context, String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.08),
+          color: DS.prismPurple.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.12)),
+          border: Border.all(color: DS.prismPurple.withValues(alpha: 0.2)),
         ),
         child: Text(
           text,
           style: context.sparkleTypography.labelSmall.copyWith(
             fontWeight: FontWeight.bold,
             fontSize: 11,
-            color: DS.brandPrimaryConst,
+            color: DS.textPrimary,
           ),
         ),
       );

@@ -94,10 +94,13 @@ class _GlassCardState extends State<GlassCard>
     }
 
     // Apply glass blur effect
-    final glassContent = BackdropFilter(
-      filter:
-          ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-      child: content,
+    final glassContent = ClipRRect(
+      borderRadius: widget.borderRadius ?? DS.borderRadius16,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+            sigmaX: widget.blurSigma, sigmaY: widget.blurSigma,),
+        child: content,
+      ),
     );
 
     // Add tap animation if enabled

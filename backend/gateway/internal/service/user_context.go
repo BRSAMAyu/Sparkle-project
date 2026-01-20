@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"log"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sparkle/gateway/internal/db"
-	"log"
 )
 
 // TaskSummary represents a summary of a pending task
@@ -54,6 +58,8 @@ type UserContextData struct {
 	ActivePlans    []PlanSummary       `json:"active_plans"`
 	FocusStats     FocusStatsSummary   `json:"focus_stats"`
 	RecentProgress []ProgressEvent     `json:"recent_progress"`
+	RealtimeVersions map[string]string `json:"realtime_versions,omitempty"`
+	OverlayGeneratedAt string           `json:"overlay_generated_at,omitempty"`
 }
 
 // UserContextService handles fetching user context data for the orchestrator
@@ -289,6 +295,17 @@ func (s *UserContextService) GetUserContextData(ctx context.Context, userID uuid
 		RecentProgress: progress,
 	}
 
+	realtimeVersions := s.buildRealtimeVersions(tasks, plans, stats, progress)
+	if prefsVersion, err := s.getPreferencesVersion(ctx, userID); err != nil {
+		log.Printf("Warning: failed to fetch preferences version: %v", err)
+	} else if prefsVersion != "" {
+		realtimeVersions["prefs"] = prefsVersion
+	}
+	if len(realtimeVersions) > 0 {
+		contextData.RealtimeVersions = realtimeVersions
+		contextData.OverlayGeneratedAt = fmt.Sprintf("tsms:%d", time.Now().UnixMilli())
+	}
+
 	// Serialize to JSON
 	jsonData, err := json.Marshal(contextData)
 	if err != nil {
@@ -297,4 +314,110 @@ func (s *UserContextService) GetUserContextData(ctx context.Context, userID uuid
 	}
 
 	return string(jsonData), nil
+}
+
+func (s *UserContextService) getPreferencesVersion(ctx context.Context, userID uuid.UUID) (string, error) {
+	var version int
+	var updatedAt time.Time
+	err := s.pool.QueryRow(ctx, `
+		SELECT version, updated_at
+		FROM user_preferences_center
+		WHERE user_id = $1
+	`, userID).Scan(&version, &updatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	if version > 0 {
+		return fmt.Sprintf("rev:%d", version), nil
+	}
+	if !updatedAt.IsZero() {
+		return fmt.Sprintf("tsms:%d", updatedAt.UnixMilli()), nil
+	}
+	return "", nil
+}
+
+func (s *UserContextService) buildRealtimeVersions(tasks []TaskSummary, plans []PlanSummary, stats FocusStatsSummary, progress []ProgressEvent) map[string]string {
+	versions := map[string]string{
+		"tasks":    fnv64Hex(buildTaskLines(tasks)),
+		"plans":    fnv64Hex(buildPlanLines(plans)),
+		"focus":    fnv64Hex(buildFocusLines(stats)),
+		"progress": fnv64Hex(buildProgressLines(progress)),
+	}
+	return versions
+}
+
+func buildTaskLines(tasks []TaskSummary) []string {
+	lines := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%d|%d",
+			t.ID.String(),
+			t.Title,
+			t.Type,
+			t.EstimatedMinutes,
+			t.Priority,
+			timeToMillis(t.DueDate),
+		))
+	}
+	return lines
+}
+
+func buildPlanLines(plans []PlanSummary) []string {
+	lines := make([]string, 0, len(plans))
+	for _, p := range plans {
+		lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%d",
+			p.ID.String(),
+			p.Title,
+			p.Type,
+			p.Progress,
+			timeToMillis(p.TargetDate),
+		))
+	}
+	return lines
+}
+
+func buildFocusLines(stats FocusStatsSummary) []string {
+	lines := []string{
+		fmt.Sprintf("%d|%d|%d|%d|%d",
+			stats.TotalSessionsToday,
+			stats.TotalMinutesToday,
+			stats.AverageFocusMinutes,
+			stats.Streak,
+			timeToMillis(stats.LastSessionTimestamp),
+		),
+	}
+	return lines
+}
+
+func buildProgressLines(progress []ProgressEvent) []string {
+	lines := make([]string, 0, len(progress))
+	for _, p := range progress {
+		lines = append(lines, fmt.Sprintf("%s|%s|%d|%d",
+			p.TaskID.String(),
+			p.TaskTitle,
+			p.CompletedAt.UnixMilli(),
+			p.TimeSpentMin,
+		))
+	}
+	return lines
+}
+
+func timeToMillis(ts *time.Time) int64 {
+	if ts == nil {
+		return 0
+	}
+	return ts.UnixMilli()
+}
+
+func fnv64Hex(lines []string) string {
+	sort.Strings(lines)
+	h := fnv.New64a()
+	for _, line := range lines {
+		_, _ = h.Write([]byte(line))
+		_, _ = h.Write([]byte{'\n'})
+	}
+	sum := h.Sum(nil)
+	return "fnv64:" + hex.EncodeToString(sum)
 }
