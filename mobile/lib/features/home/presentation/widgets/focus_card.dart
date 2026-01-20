@@ -173,27 +173,30 @@ class _FocusCardState extends ConsumerState<FocusCard>
     );
   }
 
-  Widget _buildMetric(BuildContext context, String value, String label) =>
-      Column(
-        children: [
-          Text(
-            value,
-            style: context.sparkleTypography.titleLarge.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: secondaryColor,
-            ),
+  Widget _buildMetric(BuildContext context, String value, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = isDark ? DS.textPrimary : DS.textSecondary;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: context.sparkleTypography.titleLarge.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: secondaryColor,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: context.sparkleTypography.labelSmall.copyWith(
-              fontSize: 10,
-              color: secondaryColor.withValues(alpha: 0.7),
-            ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: context.sparkleTypography.labelSmall.copyWith(
+            fontSize: 10,
+            color: secondaryColor.withValues(alpha: 0.7),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
   String _formatFocusTime(int minutes) {
     if (minutes < 60) return '${minutes}m';
