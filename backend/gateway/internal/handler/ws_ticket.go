@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -30,6 +31,7 @@ func (h *WSTicketHandler) Issue(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing user context"})
 		return
 	}
+	authToken := c.GetString("auth_token")
 
 	ticket := uuid.NewString()
 	key := fmt.Sprintf("%s%s", wsTicketKeyPrefix, ticket)
@@ -38,7 +40,17 @@ func (h *WSTicketHandler) Issue(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 500*time.Millisecond)
 	defer cancel()
 
-	if err := h.rdb.Set(ctx, key, userID, ttl).Err(); err != nil {
+	payload := map[string]string{"user_id": userID}
+	if authToken != "" {
+		payload["token"] = authToken
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		metrics.WSTicketIssueErrors.Inc()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encode ticket"})
+		return
+	}
+	if err := h.rdb.Set(ctx, key, string(encoded), ttl).Err(); err != nil {
 		metrics.WSTicketIssueErrors.Inc()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue ticket"})
 		return

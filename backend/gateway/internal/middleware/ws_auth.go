@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -22,6 +23,11 @@ return val
 `)
 
 const wsTicketKeyPrefix = "ws:ticket:"
+
+type wsTicketPayload struct {
+	UserID string `json:"user_id"`
+	Token  string `json:"token"`
+}
 
 func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -81,8 +87,25 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			return
 		}
 
-		userID, ok := val.(string)
-		if !ok || userID == "" {
+		valStr, ok := val.(string)
+		if !ok || valStr == "" {
+			metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
+			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
+			return
+		}
+		payload := wsTicketPayload{UserID: valStr}
+		trimmed := strings.TrimSpace(valStr)
+		if strings.HasPrefix(trimmed, "{") {
+			if err := json.Unmarshal([]byte(trimmed), &payload); err != nil {
+				metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
+				metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
+				return
+			}
+		}
+		userID := payload.UserID
+		if userID == "" {
 			metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
@@ -92,6 +115,9 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		metrics.WSTicketConsumeSuccess.Inc()
 		c.Set("user_id", userID)
 		c.Set("is_admin", false)
+		if payload.Token != "" {
+			c.Set("auth_token", payload.Token)
+		}
 		c.Set("ws_auth_method", "ticket")
 		c.Next()
 	}
