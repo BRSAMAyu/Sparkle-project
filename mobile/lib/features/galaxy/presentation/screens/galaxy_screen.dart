@@ -41,6 +41,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   // State
   bool _isEntering = true;
+  bool _hasCentered = false;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -76,28 +77,35 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Start Performance Monitoring
     PerformanceService.instance.startMonitoring();
 
-    // Defer initial centering until we know screen size (in build) or post frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Initial load
+    unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
+    unawaited(_renderEngine.prewarm());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasCentered) {
       final size = MediaQuery.of(context).size;
-
       // Ensure we have a valid size
-      if (size.width <= 0 || size.height <= 0) return;
+      if (size.width > 0 && size.height > 0) {
+        _performInitialCentering(size);
+        _hasCentered = true;
+      }
+    }
+  }
 
-      // Start at 0.15 scale (Universe View) centered
-      const initialScale = 0.15;
-      // To center canvas point (_canvasCenter, _canvasCenter) at screen center (w/2, h/2) with scale S:
-      // Tx = w/2 - _canvasCenter * S
-      final tx = size.width / 2 - _canvasCenter * initialScale;
-      final ty = size.height / 2 - _canvasCenter * initialScale;
+  void _performInitialCentering(Size size) {
+    // Start at 0.15 scale (Universe View) centered
+    const initialScale = 0.15;
+    // To center canvas point (_canvasCenter, _canvasCenter) at screen center (w/2, h/2) with scale S:
+    // Tx = w/2 - _canvasCenter * S
+    final tx = size.width / 2 - _canvasCenter * initialScale;
+    final ty = size.height / 2 - _canvasCenter * initialScale;
 
-      _transformationController.value = Matrix4.identity()
-        ..translate(tx, ty)
-        ..scale(initialScale);
-
-      unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
-      unawaited(_renderEngine.prewarm());
-    });
+    _transformationController.value = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(initialScale);
   }
 
   @override
