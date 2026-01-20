@@ -81,6 +81,10 @@ dependencies:
 
   http_parser: any
   llama_cpp_dart: ^0.2.2
+  record: ^6.0.0
+  permission_handler: ^12.0.1
+  crypto: ^3.0.7
+  grpc: ^4.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

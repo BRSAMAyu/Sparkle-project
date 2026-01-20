@@ -84,8 +84,12 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                   decoration: BoxDecoration(
                     borderRadius: DS.borderRadius16,
                     border: Border.all(color: DS.neutral400, width: 2),
-                    // Use theme-aware background
-                    color: DS.surfaceSecondary,
+                    // Use theme-aware background with better contrast
+                    // In dark mode: use surfaceTertiary (darker) to contrast with orange control point
+                    // In light mode: use surfaceSecondary (lighter) for better visibility
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? DS.surfaceTertiary
+                        : DS.surfaceSecondary,
                   ),
                   child: Stack(
                     children: [
@@ -143,10 +147,16 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                               ),
                             ],
                             border: Border.all(
-                                color: DS.brandPrimaryConst, width: 2,),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? DS.brandPrimary
+                                    : DS.brandPrimaryConst,
+                                width: 2,),
                           ),
                           child: Icon(Icons.local_fire_department,
-                              color: DS.brandPrimaryConst, size: 24,),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? DS.brandPrimary
+                                  : DS.brandPrimaryConst,
+                              size: 24,),
                         ),
                       ),
                     ],

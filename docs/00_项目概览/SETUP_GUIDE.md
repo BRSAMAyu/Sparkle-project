@@ -84,10 +84,13 @@ make dev-up
 ```
 
 ### 第二步：配置环境变量
-复制示例配置文件并根据需要修改。
+复制示例配置文件并根据需要修改（本地开发以根目录 `.env` 为准）。
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
+
+**配置优先级**：
+环境变量 > 根目录 `.env` > `backend/.env` / `backend/gateway/.env`（兼容用途，建议保持与根目录一致）。
 
 ### 第三步：启动所有服务 (三终端模式)
 
@@ -198,6 +201,32 @@ flutter run
     make integration-test
     ```
 
+4.  **配置自检（DB/Redis）**:
+    ```bash
+    make env-check
+    ```
+
+5.  **快速验收**:
+    ```bash
+    make smoke
+    ```
+
+### 迁移异常处理（安全默认）
+
+当出现 revision mismatch / 多 head 等问题时，`make sync-db` 会输出诊断并直接失败。
+确认目标 revision 后，可使用保守 stamp（无 `--purge`）：
+```bash
+FORCE_STAMP=1 make sync-db
+```
+
+### OpenTelemetry（可选）
+
+本地如需启用导出，建议显式设置 OTEL endpoint：
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+未设置时默认不启用 exporter。
+
 ---
 
 ## 6. 常见问题 (Troubleshooting)
@@ -214,7 +243,7 @@ flutter run
 ### 数据库连接失败
 **检查**:
 1. `docker ps` 确认 `sparkle_db` 正在运行。
-2. 检查 `.env.local` 中的密码是否与 `docker-compose.yml` 一致。
+2. 检查根目录 `.env` 中的密码是否与 `docker-compose.yml` 一致。
 
 ### gRPC 代码不一致
 **现象**: Go 或 Python 报错找不到方法。

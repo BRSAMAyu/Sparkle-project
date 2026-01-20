@@ -6,6 +6,7 @@ import 'package:sparkle/features/document/document.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({
@@ -169,6 +170,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                   ),
                 ),
+
+                // --- Voice Input Button ---
+                VoiceInputButton(
+                  onTranscription: (text) {
+                    // 将语音识别结果填入文本框
+                    _controller.text = text;
+                    _focusNode.requestFocus();
+                  },
+                  onError: (error) {
+                    // 显示错误提示
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(error)),
+                    );
+                  },
+                  onRecordingStarted: () {
+                    // 录音开始时的回调
+                    _focusNode.unfocus();
+                  },
+                  onRecordingStopped: () {
+                    // 录音停止时的回调
+                    _focusNode.requestFocus();
+                  },
+                ),
+
+                const SizedBox(width: DS.spacing8),
 
                 Expanded(
                   child: DecoratedBox(

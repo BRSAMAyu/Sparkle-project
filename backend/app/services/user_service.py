@@ -16,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.user import User, PushPreference
-from app.schemas.user import UserContext, UserPreferences
+from app.schemas.user import UserContext, UserPreferences, UserRegister
 from app.core.metrics import CACHE_HIT_COUNT
+from app.core.security import get_password_hash
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -40,22 +41,34 @@ class UserService:
 
     @staticmethod
     async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
-        try:
-            result = await db.execute(
-                select(User).where(User.email == email)
-            )
-            return result.scalar_one_or_none()
-        except Exception as e:
-            logger.error(f"Failed to get user by email {email}: {e}")
-            return None
+        """
+        根据邮箱获取用户实体
+
+        Args:
+            email: 用户邮箱
+
+        Returns:
+            Optional[User]: 用户实体，如果不存在则返回 None
+        """
+        result = await db.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
 
     @staticmethod
-    async def create(db: AsyncSession, user_in) -> User:
+    async def create(db: AsyncSession, user_in: UserRegister) -> User:
+        """
+        创建用户
+
+        Args:
+            user_in: 用户注册信息
+
+        Returns:
+            User: 创建后的用户实体
+        """
         user = User(
             username=user_in.username,
             email=user_in.email,
             hashed_password=get_password_hash(user_in.password),
-            nickname=getattr(user_in, "nickname", None) or user_in.username,
+            nickname=user_in.nickname or user_in.username,
             registration_source="email",
             is_active=True,
         )

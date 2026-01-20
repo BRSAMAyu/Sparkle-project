@@ -162,8 +162,8 @@ cd sparkle-flutter
 
 ### 3. 配置环境
 ```bash
-cp .env.example .env.local
-# 编辑 .env.local
+cp .env.example .env
+# 编辑 .env
 ```
 
 ### 4. 启动基础设施
@@ -184,6 +184,24 @@ alembic upgrade head
 cd backend/gateway
 go mod tidy
 make proto-gen
+```
+
+快速验收：
+```bash
+make smoke
+```
+
+迁移异常处理（安全默认）
+```bash
+# 发生 revision mismatch / 多 head 时，make sync-db 会输出诊断并失败
+# 明确确认后可用以下方式进行保守 stamp（无 --purge）：
+FORCE_STAMP=1 make sync-db
+```
+
+OpenTelemetry（可选）
+```bash
+# 本地建议关闭或指向本地 collector
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
 ### 6. 配置移动端
@@ -257,8 +275,8 @@ fi
 
 echo ""
 echo "=== 下一步 ==="
-echo "1. 复制 .env.example 到 .env.local"
-echo "2. 编辑 .env.local 配置你的环境"
+echo "1. 复制 .env.example 到 .env"
+echo "2. 编辑 .env 配置你的环境"
 echo "3. 运行: make dev-all"
 ```
 
