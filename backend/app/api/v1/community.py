@@ -524,7 +524,8 @@ async def websocket_endpoint(
     连接地址: ws://host/api/v1/community/groups/{group_id}/ws?token={jwt_token}
     """
     try:
-        auth_token = token or _extract_ws_token(websocket)
+        auth_token = token if settings.WS_ALLOW_QUERY_TOKEN else None
+        auth_token = auth_token or _extract_ws_token(websocket)
         if not auth_token:
             await websocket.close(code=4003)
             return
