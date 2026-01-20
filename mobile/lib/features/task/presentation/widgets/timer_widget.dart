@@ -18,9 +18,9 @@ class TimerWidget extends StatefulWidget {
   final int initialSeconds;
   final int? maxSeconds; // For progress visualization
   final TimerMode mode;
-  final Function(int seconds)? onTick;
+  final void Function(int seconds)? onTick;
   final VoidCallback? onComplete;
-  final Function(bool isRunning)? onStateChange;
+  final void Function(bool isRunning)? onStateChange;
 
   @override
   State<TimerWidget> createState() => _TimerWidgetState();

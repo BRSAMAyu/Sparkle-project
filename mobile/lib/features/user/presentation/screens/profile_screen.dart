@@ -169,7 +169,7 @@ class ProfileScreen extends ConsumerWidget {
               gradient: DS.primaryGradient,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const EditProfileScreen(),
                   ),
                 );
@@ -183,7 +183,7 @@ class ProfileScreen extends ConsumerWidget {
               gradient: DS.secondaryGradient,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const UnifiedSettingsScreen(),
                   ),
                 );
@@ -198,7 +198,7 @@ class ProfileScreen extends ConsumerWidget {
                 gradient: DS.primaryGradient,
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
+                    MaterialPageRoute<void>(
                       builder: (_) => const MemorySettingsScreen(),
                     ),
                   );
@@ -234,7 +234,7 @@ class ProfileScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentLocale = ref.read(localeProvider);
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.language),
@@ -270,7 +270,7 @@ class ProfileScreen extends ConsumerWidget {
 
   void _showLogoutDialog(
       BuildContext context, WidgetRef ref, AppLocalizations l10n,) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.logout),

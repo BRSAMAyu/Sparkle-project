@@ -45,7 +45,10 @@ void main() {
       ),
     );
     when(
-      mockStorage.write(key: anyNamed('key'), value: anyNamed('value')),
+      mockStorage.write(key: 'accessToken', value: 'access-token'),
+    ).thenAnswer((_) async {});
+    when(
+      mockStorage.write(key: 'refreshToken', value: 'refresh-token'),
     ).thenAnswer((_) async {});
 
     final response = await repository.login('user@example.com', 'password');

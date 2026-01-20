@@ -108,8 +108,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       final ty = size.height / 2 - canvasCenter * initialScale;
 
       _transformationController.value = Matrix4.identity()
-        ..translate(tx, ty)
-        ..scale(initialScale);
+        ..translateByDouble(tx, ty, 0, 1)
+        ..scaleByDouble(initialScale, initialScale, 1.0, 1);
 
       unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
       unawaited(_renderEngine.prewarm());
@@ -506,7 +506,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _showSearchDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => GalaxySearchDialog(
         onNodeSelected: (nodeId) {
@@ -733,8 +733,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 final tx = size.width / 2 - canvasCenter * targetScale;
                 final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
-                  ..translate(tx, ty)
-                  ..scale(targetScale);
+                  ..translateByDouble(tx, ty, 0, 1)
+                  ..scaleByDouble(targetScale, targetScale, 1.0, 1);
 
                 final animation = Matrix4Tween(
                   begin: startMatrix,
@@ -966,11 +966,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ),
     );
   }
-
-  // Helper to shift logical (0,0) to center of the star map canvas
-  Map<String, Offset> _centerPositions(
-          Map<String, Offset> raw, double cx, double cy,) =>
-      raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
 
   // Helper to shift cluster positions to center of the star map canvas
   Map<String, ClusterInfo> _centerClusters(

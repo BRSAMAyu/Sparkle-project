@@ -576,7 +576,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
   void _showCitationDialog(String citation) {
     if (!mounted) return;
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('知识引用: $citation'),

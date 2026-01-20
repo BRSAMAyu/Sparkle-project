@@ -25,10 +25,10 @@ class ChatBubble extends StatefulWidget {
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
   final String? currentUserId;
-  final Function(dynamic message)? onQuote;
-  final Function(dynamic message)? onRevoke;
-  final Function(WidgetPayload action)? onActionConfirm;
-  final Function(WidgetPayload action)? onActionDismiss;
+  final void Function(dynamic message)? onQuote;
+  final void Function(dynamic message)? onRevoke;
+  final void Function(WidgetPayload action)? onActionConfirm;
+  final void Function(WidgetPayload action)? onActionDismiss;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -134,7 +134,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final canRevoke =
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DecoratedBox(
@@ -669,30 +669,5 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   color: DS.brandPrimary26,
                   offset: const Offset(0, 4),),
             ],),),
-      );
-}
-
-class _MetaTag extends StatelessWidget {
-  const _MetaTag({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontFamily: 'monospace',
-          ),
-        ),
       );
 }

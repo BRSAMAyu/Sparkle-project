@@ -49,7 +49,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'learning_path_fab',
         onPressed: () {
-          showModalBottomSheet(
+          showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,

@@ -311,7 +311,7 @@ class GroupDetailScreen extends ConsumerWidget {
       );
 
   void _showGroupOptions(BuildContext context, WidgetRef ref, GroupInfo group) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DecoratedBox(

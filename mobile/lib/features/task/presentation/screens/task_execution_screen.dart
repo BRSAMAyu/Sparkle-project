@@ -111,7 +111,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     if (_completionResult != null) {
       // Show feedback dialog
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => TaskFeedbackDialog(
@@ -497,7 +497,7 @@ class _TimerControls extends StatelessWidget {
   });
   final bool isPomodoroMode;
   final VoidCallback onTogglePomodoro;
-  final Function(int minutes) onSetPreset;
+  final void Function(int minutes) onSetPreset;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -547,13 +547,13 @@ class _BottomControls extends ConsumerWidget {
   });
   final TaskModel task;
   final int elapsedSeconds;
-  final Function(int minutes, String? note) onComplete;
+  final void Function(int minutes, String? note) onComplete;
 
   void _showCompleteDialog(BuildContext context, WidgetRef ref) {
     final noteController = TextEditingController();
     final minutes = Duration(seconds: elapsedSeconds).inMinutes;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: const RoundedRectangleBorder(
@@ -650,7 +650,7 @@ class _BottomControls extends ConsumerWidget {
   }
 
   void _abandonTask(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => BlockingInterceptorDialog(
         taskId: task.id,

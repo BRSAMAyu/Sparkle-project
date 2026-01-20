@@ -212,8 +212,6 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   Widget _buildMiniMonthGrid(DateTime monthDate) {
     final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
     final firstWeekday = DateTime(monthDate.year, monthDate.month).weekday;
-    final offset = firstWeekday %
-        7; // Sunday is 7, but in mini grid let's assume standard Sun-Sat or Mon-Sun. TableCalendar defaults to Mon start usually? Let's stick to Mon=1.
     // Actually DateTime.weekday: Mon=1, Sun=7.
     // Let's assume Mon start for consistency with TableCalendar default.
     // If Mon start, offset for Mon(1) is 0. offset for Sun(7) is 6.
@@ -273,8 +271,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           } else {
             // If tapping already selected day, open detail
             Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => DailyDetailScreen(date: selectedDay),),
+              MaterialPageRoute<void>(
+                builder: (_) => DailyDetailScreen(date: selectedDay),
+              ),
             );
           }
         },
@@ -409,9 +408,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               TextButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => DailyDetailScreen(
-                            date: _selectedDay ?? _focusedDay,),),
+                    MaterialPageRoute<void>(
+                      builder: (_) => DailyDetailScreen(
+                        date: _selectedDay ?? _focusedDay,
+                      ),
+                    ),
                   );
                 },
                 icon: Icon(Icons.info_outline, size: 16, color: DS.primaryBase),
@@ -482,7 +483,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   }
 
   void _showAddEventDialog(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),

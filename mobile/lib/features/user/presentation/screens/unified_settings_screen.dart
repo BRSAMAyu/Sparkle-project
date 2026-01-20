@@ -153,7 +153,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             Center(
               child: GestureDetector(
                 onLongPress: () {
-                  showDialog(
+                  showDialog<void>(
                     context: context,
                     builder: (context) => const ChaosControlDialog(),
                   );
