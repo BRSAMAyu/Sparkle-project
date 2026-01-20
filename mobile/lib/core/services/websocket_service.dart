@@ -6,7 +6,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:opentelemetry/api.dart' show Attribute;
-import 'package:sparkle/core/network/proto/websocket.pb.dart';
+import 'package:sparkle/gen/websocket.pb.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;

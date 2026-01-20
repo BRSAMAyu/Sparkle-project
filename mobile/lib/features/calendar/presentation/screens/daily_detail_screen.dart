@@ -7,7 +7,9 @@ import 'package:sparkle/core/services/lunar_service.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class DailyDetailScreen extends ConsumerWidget {
   const DailyDetailScreen({required this.date, super.key});

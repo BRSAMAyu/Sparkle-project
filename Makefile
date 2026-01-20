@@ -217,3 +217,21 @@ dev-all:
 	@echo "🔧 Quick Commands:"
 	@echo "   make celery-status     # Check Celery services"
 	@echo "   make celery-logs-worker # View worker logs"
+
+# Mobile Development
+mobile-proto:
+	@echo "🚀 Generating Dart Protobufs..."
+	@mkdir -p mobile/lib/gen
+	@export PATH="$$PATH":"$$HOME/.pub-cache/bin" && buf generate --template buf.gen.dart.yaml
+
+mobile-gen: mobile-proto
+	@echo "🏗️ Running Build Runner..."
+	cd mobile && flutter pub get && dart run build_runner build --delete-conflicting-outputs
+
+mobile-run:
+	@echo "🚀 Starting Mobile App..."
+	@if [[ "$$OSTYPE" == "darwin"* ]]; then \
+		echo "🍎 macOS detected. Unsetting CC/CXX..."; \
+		unset CC CXX; \
+	fi; \
+	cd mobile && flutter run
