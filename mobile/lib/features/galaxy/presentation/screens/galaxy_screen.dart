@@ -78,7 +78,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     // Defer initial centering until we know screen size (in build) or post frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final size = MediaQuery.of(context).size;
+
+      // Ensure we have a valid size
+      if (size.width <= 0 || size.height <= 0) return;
 
       // Start at 0.15 scale (Universe View) centered
       const initialScale = 0.15;
@@ -88,8 +92,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       final ty = size.height / 2 - _canvasCenter * initialScale;
 
       _transformationController.value = Matrix4.identity()
-        ..translateByDouble(tx, ty, 0, 1)
-        ..scaleByDouble(initialScale, initialScale, 1.0, 1);
+        ..translate(tx, ty)
+        ..scale(initialScale);
 
       unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
       unawaited(_renderEngine.prewarm());
@@ -435,7 +439,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: DS.brandPrimary, // Deep space
+      backgroundColor: Colors.black, // Pure deep space background
       body: Stack(
         children: [
           Positioned.fill(
