@@ -295,7 +295,6 @@ class DS {
       _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
   static Color get textOnPrimary => ThemeUtils.getContrastSafeText(
         brandPrimary,
-        lightText: Colors.white,
         darkText: neutral900,
       );
   static Color get border => _isDark ? neutral600 : neutral300;

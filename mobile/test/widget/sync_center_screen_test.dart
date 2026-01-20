@@ -54,7 +54,7 @@ void main() {
     final fakeStats = SyncCenterStats(
       pendingByTopic: {'cognitive': 2, 'knowledge': 1},
       totalPending: 3,
-      lastSuccessAt: DateTime(2025, 1, 1, 12, 0),
+      lastSuccessAt: DateTime(2025, 1, 1, 12),
     );
 
     final streamController = StreamController<SyncCenterStats>()..add(fakeStats);

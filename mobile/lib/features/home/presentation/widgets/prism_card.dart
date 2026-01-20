@@ -114,6 +114,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                 if (weeklyPattern != null) ...[
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildTag(context, '#$weeklyPattern'),
                       if (dashboardState.weather.type == 'rainy')

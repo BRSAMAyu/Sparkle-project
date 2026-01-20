@@ -1,7 +1,6 @@
 import 'package:opentelemetry/api.dart' show Span, globalTracerProvider;
-import 'package:uuid/uuid.dart';
-
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:uuid/uuid.dart';
 
 class NoopTracingService implements TracingServiceBase {
   final Uuid _uuid = const Uuid();

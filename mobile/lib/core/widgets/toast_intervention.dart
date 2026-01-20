@@ -4,10 +4,7 @@ import 'package:sparkle/core/models/intervention.dart';
 class ToastIntervention extends StatelessWidget {
 
   const ToastIntervention({
-    super.key,
-    required this.intervention,
-    required this.onAction,
-    required this.onDismiss,
+    required this.intervention, required this.onAction, required this.onDismiss, super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;

@@ -1,4 +1,10 @@
 class EvidenceRefModel {
+  EvidenceRefModel({
+    required this.type,
+    required this.id,
+    this.schemaVersion,
+    this.userDeleted = false,
+  });
 
   factory EvidenceRefModel.fromJson(Map<String, dynamic> json) =>
       EvidenceRefModel(
@@ -7,12 +13,6 @@ class EvidenceRefModel {
         schemaVersion: json['schema_version'] as String?,
         userDeleted: json['user_deleted'] as bool? ?? false,
       );
-  EvidenceRefModel({
-    required this.type,
-    required this.id,
-    this.schemaVersion,
-    this.userDeleted = false,
-  });
 
   final String type;
   final String id;
@@ -28,6 +28,19 @@ class EvidenceRefModel {
 }
 
 class MemoryPreferenceItem {
+  MemoryPreferenceItem({
+    required this.id,
+    required this.prefKey,
+    required this.prefValue,
+    required this.version,
+    required this.evidenceMissing,
+    required this.evidenceRefs,
+    required this.evidenceScore,
+    required this.correctionCount,
+    this.confidence,
+    this.updatedAt,
+    this.retractedAt,
+  });
 
   factory MemoryPreferenceItem.fromJson(Map<String, dynamic> json) =>
       MemoryPreferenceItem(
@@ -43,19 +56,6 @@ class MemoryPreferenceItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-  MemoryPreferenceItem({
-    required this.id,
-    required this.prefKey,
-    required this.prefValue,
-    required this.version,
-    required this.evidenceMissing,
-    required this.evidenceRefs,
-    required this.evidenceScore,
-    required this.correctionCount,
-    this.confidence,
-    this.updatedAt,
-    this.retractedAt,
-  });
 
   final String id;
   final String prefKey;
@@ -71,6 +71,21 @@ class MemoryPreferenceItem {
 }
 
 class MemoryPreferenceHistoryItem {
+  MemoryPreferenceHistoryItem({
+    required this.id,
+    required this.prefKey,
+    required this.prefValue,
+    required this.version,
+    required this.evidenceMissing,
+    required this.evidenceRefs,
+    required this.evidenceScore,
+    required this.correctionCount,
+    this.confidence,
+    this.replacedById,
+    this.createdAt,
+    this.updatedAt,
+    this.retractedAt,
+  });
 
   factory MemoryPreferenceHistoryItem.fromJson(Map<String, dynamic> json) =>
       MemoryPreferenceHistoryItem(
@@ -88,21 +103,6 @@ class MemoryPreferenceHistoryItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-  MemoryPreferenceHistoryItem({
-    required this.id,
-    required this.prefKey,
-    required this.prefValue,
-    required this.version,
-    required this.evidenceMissing,
-    required this.evidenceRefs,
-    required this.evidenceScore,
-    required this.correctionCount,
-    this.confidence,
-    this.replacedById,
-    this.createdAt,
-    this.updatedAt,
-    this.retractedAt,
-  });
 
   final String id;
   final String prefKey;
@@ -120,6 +120,19 @@ class MemoryPreferenceHistoryItem {
 }
 
 class MemoryGoalItem {
+  MemoryGoalItem({
+    required this.id,
+    required this.title,
+    required this.status,
+    required this.evidenceMissing,
+    required this.evidenceRefs,
+    required this.evidenceScore,
+    required this.correctionCount,
+    this.targetDate,
+    this.expiresAt,
+    this.updatedAt,
+    this.retractedAt,
+  });
 
   factory MemoryGoalItem.fromJson(Map<String, dynamic> json) => MemoryGoalItem(
         id: json['id'] as String? ?? '',
@@ -134,19 +147,6 @@ class MemoryGoalItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-  MemoryGoalItem({
-    required this.id,
-    required this.title,
-    required this.status,
-    required this.evidenceMissing,
-    required this.evidenceRefs,
-    required this.evidenceScore,
-    required this.correctionCount,
-    this.targetDate,
-    this.expiresAt,
-    this.updatedAt,
-    this.retractedAt,
-  });
 
   final String id;
   final String title;
@@ -162,6 +162,20 @@ class MemoryGoalItem {
 }
 
 class EpisodicMemoryItem {
+  EpisodicMemoryItem({
+    required this.id,
+    required this.summary,
+    required this.sourceType,
+    required this.evidenceMissing,
+    required this.evidenceRefs,
+    required this.evidenceScore,
+    required this.correctionCount,
+    this.sourceId,
+    this.occurredAt,
+    this.importanceScore,
+    this.updatedAt,
+    this.retractedAt,
+  });
 
   factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) =>
       EpisodicMemoryItem(
@@ -178,20 +192,6 @@ class EpisodicMemoryItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-  EpisodicMemoryItem({
-    required this.id,
-    required this.summary,
-    required this.sourceType,
-    required this.evidenceMissing,
-    required this.evidenceRefs,
-    required this.evidenceScore,
-    required this.correctionCount,
-    this.sourceId,
-    this.occurredAt,
-    this.importanceScore,
-    this.updatedAt,
-    this.retractedAt,
-  });
 
   final String id;
   final String summary;
@@ -208,6 +208,15 @@ class EpisodicMemoryItem {
 }
 
 class MemoryCorrectionResult {
+  MemoryCorrectionResult({
+    required this.id,
+    required this.evidenceRefs,
+    required this.evidenceMissing,
+    required this.evidenceScore,
+    required this.correctionCount,
+    this.confidence,
+    this.retractedAt,
+  });
 
   factory MemoryCorrectionResult.fromJson(Map<String, dynamic> json) =>
       MemoryCorrectionResult(
@@ -219,15 +228,6 @@ class MemoryCorrectionResult {
         confidence: (json['confidence'] as num?)?.toDouble(),
         retractedAt: _parseDate(json['retracted_at']),
       );
-  MemoryCorrectionResult({
-    required this.id,
-    required this.evidenceRefs,
-    required this.evidenceMissing,
-    required this.evidenceScore,
-    required this.correctionCount,
-    this.confidence,
-    this.retractedAt,
-  });
 
   final String id;
   final List<EvidenceRefModel> evidenceRefs;
@@ -239,6 +239,15 @@ class MemoryCorrectionResult {
 }
 
 class MemorySettingsModel {
+  MemorySettingsModel({
+    required this.enabled,
+    required this.allowPreferences,
+    required this.allowGoals,
+    required this.allowEpisodic,
+    required this.captureLevel,
+    required this.blockedPrefKeys,
+    required this.blockedSources,
+  });
 
   factory MemorySettingsModel.fromJson(Map<String, dynamic> json) =>
       MemorySettingsModel(
@@ -254,15 +263,6 @@ class MemorySettingsModel {
             .whereType<String>()
             .toList(),
       );
-  MemorySettingsModel({
-    required this.enabled,
-    required this.allowPreferences,
-    required this.allowGoals,
-    required this.allowEpisodic,
-    required this.captureLevel,
-    required this.blockedPrefKeys,
-    required this.blockedSources,
-  });
 
   final bool enabled;
   final bool allowPreferences;
@@ -284,6 +284,13 @@ class MemorySettingsModel {
 }
 
 class EvidenceResolveItem {
+  EvidenceResolveItem({
+    required this.type,
+    required this.id,
+    required this.status,
+    this.redactionReason,
+    this.payload,
+  });
 
   factory EvidenceResolveItem.fromJson(Map<String, dynamic> json) {
     final payload = <String, dynamic>{};
@@ -301,13 +308,6 @@ class EvidenceResolveItem {
       payload: payload.isEmpty ? null : payload,
     );
   }
-  EvidenceResolveItem({
-    required this.type,
-    required this.id,
-    required this.status,
-    this.redactionReason,
-    this.payload,
-  });
 
   final String type;
   final String id;

@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
-import 'package:sparkle/core/services/app_usage_service.dart';
-import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/services/app_usage_service.dart';
 
 final localFeatureServiceProvider = Provider<LocalFeatureService>((ref) {
   final db = ref.watch(localDatabaseProvider);

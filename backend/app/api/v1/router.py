@@ -3,6 +3,7 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 from fastapi import APIRouter
+from app.config import settings
 
 from app.api.v1 import (
     auth,
@@ -43,6 +44,7 @@ from app.api.v1 import (
     memory_admin,
     preferences,
 )
+from app.api.v1 import graph_monitor, graphrag_trace
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -78,8 +80,9 @@ api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(preferences.router)
-# api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
-# api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+if settings.ENABLE_GRAPHRAG_MONITOR_API:
+    api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
+    api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 

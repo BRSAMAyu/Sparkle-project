@@ -9,10 +9,7 @@ import 'package:sparkle/core/widgets/toast_intervention.dart';
 class InterventionOverlay extends StatelessWidget {
 
   const InterventionOverlay({
-    super.key,
-    required this.intervention,
-    required this.onAction,
-    required this.onDismiss,
+    required this.intervention, required this.onAction, required this.onDismiss, super.key,
   });
   final InterventionPushMessage intervention;
   final ValueChanged<String> onAction;

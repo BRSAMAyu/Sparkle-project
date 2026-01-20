@@ -11,9 +11,9 @@ import json
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from orchestration.graph_rag import GraphRAGRetriever, GraphRAGResult
+from app.orchestration.graph_rag import GraphRAGRetriever, GraphRAGResult
 from app.services.graph_knowledge_service import GraphKnowledgeService
-from workers.graph_sync_worker import GraphSyncWorker
+from app.workers.graph_sync_worker import GraphSyncWorker
 
 
 class TestGraphRAGRetriever:
@@ -138,7 +138,7 @@ class TestGraphSyncWorker:
     @pytest.fixture
     def worker(self, mock_redis):
         """创建 Worker 实例"""
-        with patch('workers.graph_sync_worker.cache_service') as mock_cache:
+        with patch('app.workers.graph_sync_worker.cache_service') as mock_cache:
             mock_cache.redis = mock_redis
             return GraphSyncWorker()
 

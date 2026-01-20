@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -203,6 +204,79 @@ func TestPrepareUpload(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Contains(t, w.Body.String(), "exceeds limit")
+	})
+
+	t.Run("Infer Extension From MimeType", func(t *testing.T) {
+		r, mockStorage, mockMetadata, _ := setupTest()
+		reqBody := PrepareUploadRequest{
+			Filename: "test",
+			FileSize: 1024,
+			MimeType: "image/png",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
+		mockStorage.On("Bucket").Return("sparkle-files")
+		mockStorage.On("PresignExpirySeconds").Return(600)
+
+		fileID := mock.MatchedBy(func(id uuid.UUID) bool { return true })
+		objectKey := mock.MatchedBy(func(key string) bool {
+			return strings.HasSuffix(key, "/original.png")
+		})
+
+		mockMetadata.On("CreatePendingFile", mock.Anything, fileID, userID, "test", "image/png", int64(1024), "sparkle-files", objectKey).
+			Return(service.StoredFile{
+				ID:        uuid.New(),
+				Bucket:    "sparkle-files",
+				ObjectKey: "some-key",
+			}, nil)
+
+		mockStorage.On("PresignPost", mock.Anything, objectKey, "image/png", int64(1), int64(10*1024*1024)).
+			Return("https://s3.example.com/upload", map[string]string{"key": "val"}, nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("Invalid Mime Type", func(t *testing.T) {
+		r, mockStorage, _, _ := setupTest()
+		reqBody := PrepareUploadRequest{
+			Filename: "test.png",
+			FileSize: 1024,
+			MimeType: "not-a-mime",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "invalid mime_type")
+	})
+
+	t.Run("Mime Type Mismatch", func(t *testing.T) {
+		r, mockStorage, _, _ := setupTest()
+		reqBody := PrepareUploadRequest{
+			Filename: "test.png",
+			FileSize: 1024,
+			MimeType: "application/pdf",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		mockStorage.On("MaxUploadSize").Return(int64(10 * 1024 * 1024))
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/files/upload/prepare", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "mime_type does not match")
 	})
 }
 

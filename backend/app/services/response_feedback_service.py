@@ -2,6 +2,7 @@ import uuid
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import time
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
@@ -103,6 +104,7 @@ class ResponseFeedbackService:
             type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
         ).inc()
 
+        await self._record_feedback_ts(user_id, workflow_id, prompt_version)
         await self._update_bandit(workflow_id, prompt_version, feedback_type)
         await self._handle_context_pack_feedback(
             user_uuid,
@@ -198,6 +200,19 @@ class ResponseFeedbackService:
         reward = 1 if feedback_type == ResponseFeedback.FEEDBACK_UP else 0
         bandit = PromptBandit(redis_client=self.redis)
         await bandit.update(workflow_id, prompt_version, reward)
+
+    async def _record_feedback_ts(
+        self,
+        user_id: str,
+        workflow_id: Optional[str],
+        prompt_version: Optional[str],
+    ) -> None:
+        if not self.redis:
+            return
+        if not workflow_id or not prompt_version:
+            return
+        key = f"bandit:last_feedback_ts:{user_id}:{workflow_id}:{prompt_version}"
+        await self.redis.setex(key, settings.FEEDBACK_EFFECT_TTL_SECONDS, int(time.time()))
 
     async def get_summary(self, window: timedelta) -> Dict[str, Any]:
         since = datetime.utcnow() - window

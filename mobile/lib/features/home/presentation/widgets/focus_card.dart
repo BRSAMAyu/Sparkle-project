@@ -43,6 +43,9 @@ class _FocusCardState extends ConsumerState<FocusCard>
     final flameLevel = dashboardState.flame.level;
     final tasksCompleted = dashboardState.flame.tasksCompleted;
     final nudgeMessage = dashboardState.flame.nudgeMessage;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerColor = isDark ? DS.textPrimary : DS.textSecondary;
+    final secondaryColor = isDark ? DS.textPrimary : DS.textSecondary;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -62,7 +65,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                 Text(
                   '专注核心',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.textSecondary.withValues(alpha: 0.7),
+                    color: headerColor.withValues(alpha: 0.85),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -80,7 +83,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
-                      color: DS.textSecondary,
+                      color: secondaryColor,
                     ),
                   ),
                 ),
@@ -134,7 +137,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       style: context.sparkleTypography.bodyMedium.copyWith(
                         fontSize: 11,
                         height: 1.3,
-                        color: DS.textSecondary.withValues(alpha: 0.9),
+                        color: secondaryColor.withValues(alpha: 0.9),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 3,
@@ -174,7 +177,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
             style: context.sparkleTypography.titleLarge.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: DS.textSecondary,
+              color: secondaryColor,
             ),
           ),
           const SizedBox(height: 2),
@@ -182,7 +185,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
             label,
             style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 10,
-              color: DS.textSecondary.withValues(alpha: 0.6),
+              color: secondaryColor.withValues(alpha: 0.7),
             ),
           ),
         ],

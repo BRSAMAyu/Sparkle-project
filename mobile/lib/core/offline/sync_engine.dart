@@ -1,22 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
-import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/proto/websocket.pb.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_metadata.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class SyncEngine {
