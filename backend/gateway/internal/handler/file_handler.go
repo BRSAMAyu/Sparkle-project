@@ -477,6 +477,9 @@ func normalizeMimeType(raw string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if !strings.Contains(mediaType, "/") {
+		return "", errors.New("invalid mime type")
+	}
 	return strings.ToLower(mediaType), nil
 }
 

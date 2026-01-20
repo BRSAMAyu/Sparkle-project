@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,6 +29,10 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 
 	quotaSvc := service.NewQuotaService(rdb)
 	historySvc := service.NewChatHistoryService(rdb)
+	wsFactory := NewWebSocketFactory(&config.Config{
+		Environment:    "prod",
+		AllowedOrigins: []string{"*"},
+	})
 
 	// 2. Setup ChatOrchestrator with mostly nil dependencies
 	// We only care about the Quota check which happens EARLY in the flow.
@@ -39,7 +44,7 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		quotaSvc,
 		nil, // Semantic cache (nil to avoid panic in SearchExact)
 		nil, // cost
-		nil, // wsFactory
+		wsFactory,
 		nil, // userContext
 		nil, // taskCommand
 		"http://mock-backend",
