@@ -25,19 +25,6 @@ async def test_stt_service_init_xunfei():
             assert service.provider == mock_provider
 
 
-@pytest.mark.asyncio
-async def test_stt_service_init_whisper():
-    """测试STTService初始化（Whisper Provider）"""
-    with patch("app.services.stt_service.settings") as mock_settings:
-        mock_settings.STT_PROVIDER = "whisper"
-        mock_settings.UPLOAD_DIR = "./uploads"
-
-        with patch("app.services.stt.providers.whisper_provider.WhisperProvider") as mock_whisper:
-            mock_provider = Mock()
-            mock_whisper.return_value = mock_provider
-
-            service = STTService()
-            assert service.provider == mock_provider
 
 
 @pytest.mark.asyncio

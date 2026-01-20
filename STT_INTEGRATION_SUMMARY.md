@@ -121,7 +121,6 @@ mobile/lib/features/chat/data/services/audio_recording_service.dart
 mobile/lib/features/chat/presentation/widgets/voice_input_button.dart
 mobile/lib/features/chat/presentation/providers/voice_input_provider.dart
 backend/tests/services/stt/providers/test_base.py
-backend/tests/services/stt/providers/test_whisper_provider.py
 backend/tests/services/stt/providers/test_xunfei_provider.py
 backend/tests/services/test_stt_service.py
 ```
@@ -145,7 +144,7 @@ Go网关 (反向代理)
     ↓ WebSocket流式转发
 Python STTService
     ↓ 根据配置选择Provider
-XunFeiProvider / WhisperProvider
+XunFeiProvider
     ↓ API调用
 科大讯飞API / OpenAI API
     ↓ 实时识别结果
@@ -163,7 +162,6 @@ Flutter移动端 (VoiceInputButton)
 2. **策略模式**：通过配置切换STT Provider，支持多提供商
 3. **流式转发**：Python端的XunFeiProvider是真正的流式转发（Passthrough），避免过度缓冲
 4. **VAD实现**：科大讯飞API支持静音检测参数，避免空转计费
-5. **错误降级**：支持通过配置切换到Whisper作为备用方案
 
 ## 🎯 成功标准
 
@@ -185,12 +183,6 @@ Flutter移动端 (VoiceInputButton)
 5. **错误处理**: 网络错误、API错误、权限错误都需要优雅处理
 6. **用户体验**: 录音状态可视化、实时转写反馈、错误提示清晰
 
-## 🔄 回滚方案
-
-如果科大讯飞服务不可用：
-1. 自动降级到OpenAI Whisper（通过`STT_PROVIDER`配置切换）
-2. 或提示用户使用文字输入
-3. 配置`STT_PROVIDER`为`whisper`即可切换
 
 ## 📝 下一步验证步骤
 
