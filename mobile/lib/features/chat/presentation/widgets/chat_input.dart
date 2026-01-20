@@ -33,6 +33,7 @@ class ChatInput extends ConsumerStatefulWidget {
 class _ChatInputState extends ConsumerState<ChatInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
   bool _isButtonPressed = false;
 
@@ -74,9 +75,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() {
-      setState(() {}); // Update send button state
-    });
+    _controller.addListener(_handleTextChange);
+  }
+
+  void _handleTextChange() {
+    final hasText = _controller.text.trim().isNotEmpty;
+    if (_textNotEmpty.value != hasText) {
+      _textNotEmpty.value = hasText;
+    }
   }
 
   @override
@@ -89,8 +95,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
+    _controller.removeListener(_handleTextChange);
     _controller.dispose();
     _focusNode.dispose();
+    _textNotEmpty.dispose();
     super.dispose();
   }
 
@@ -117,11 +125,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final canSend =
-        widget.enabled && !_isSending && _controller.text.trim().isNotEmpty;
     final enterToSend = ref.watch(enterToSendProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isNarrow = MediaQuery.of(context).size.width < DS.breakpointNarrow;
+    final attachmentVisualSize = isNarrow ? 40.0 : DS.touchTargetMinSize;
+    final attachmentIconSize = isNarrow ? 20.0 : DS.iconSizeSm;
+    final attachmentPadding = isNarrow ? 4.0 : 8.0;
 
     return SafeArea(
       child: Column(
@@ -136,13 +146,28 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // --- Attachment Button ---
-                IconButton(
-                  icon: Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: isDark ? DS.neutral400 : DS.neutral600,
+                SizedBox(
+                  width: DS.touchTargetMinSize,
+                  height: DS.touchTargetMinSize,
+                  child: Center(
+                    child: SizedBox(
+                      width: attachmentVisualSize,
+                      height: attachmentVisualSize,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: isDark ? DS.neutral400 : DS.neutral600,
+                        ),
+                        iconSize: attachmentIconSize,
+                        onPressed: widget.enabled ? _showAttachmentSheet : null,
+                        padding: EdgeInsets.all(attachmentPadding),
+                        constraints: BoxConstraints.tightFor(
+                          width: attachmentVisualSize,
+                          height: attachmentVisualSize,
+                        ),
+                      ),
+                    ),
                   ),
-                  onPressed: widget.enabled ? _showAttachmentSheet : null,
-                  padding: const EdgeInsets.only(bottom: 8),
                 ),
 
                 Expanded(
@@ -174,61 +199,69 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         border: InputBorder.none,
                         isDense: true,
                       ),
-                      onSubmitted:
-                          canSend && enterToSend ? (_) => _handleSend() : null,
+                      onSubmitted: enterToSend ? (_) => _handleSend() : null,
                     ),
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
-                GestureDetector(
-                  onTapDown: (_) => setState(() => _isButtonPressed = true),
-                  onTapUp: (_) => setState(() => _isButtonPressed = false),
-                  onTapCancel: () => setState(() => _isButtonPressed = false),
-                  onTap: canSend ? _handleSend : null,
-                  child: AnimatedScale(
-                    scale: _isButtonPressed ? 0.9 : 1.0,
-                    duration: const Duration(milliseconds: 100),
-                    curve: Curves.easeInOut,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: canSend ? DS.primaryGradient : null,
-                        color: canSend
-                            ? null
-                            : (isDark ? DS.neutral800 : DS.neutral200),
-                        shape: BoxShape.circle,
-                        boxShadow: canSend
-                            ? [
-                                BoxShadow(
-                                  color: DS.brandPrimary.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
-                            : null,
+                ValueListenableBuilder<bool>(
+                  valueListenable: _textNotEmpty,
+                  builder: (context, hasText, child) {
+                    final canSend = widget.enabled && !_isSending && hasText;
+                    return GestureDetector(
+                      onTapDown: (_) => setState(() => _isButtonPressed = true),
+                      onTapUp: (_) => setState(() => _isButtonPressed = false),
+                      onTapCancel: () =>
+                          setState(() => _isButtonPressed = false),
+                      onTap: canSend ? _handleSend : null,
+                      child: AnimatedScale(
+                        scale: _isButtonPressed ? 0.9 : 1.0,
+                        duration: const Duration(milliseconds: 100),
+                        curve: Curves.easeInOut,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: canSend ? DS.primaryGradient : null,
+                            color: canSend
+                                ? null
+                                : (isDark ? DS.neutral800 : DS.neutral200),
+                            shape: BoxShape.circle,
+                            boxShadow: canSend
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          DS.brandPrimary.withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: _isSending
+                                ? SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: DS.brandPrimary,),
+                                  )
+                                : Icon(
+                                    Icons.arrow_upward_rounded,
+                                    color: canSend
+                                        ? DS.brandPrimary
+                                        : (isDark
+                                            ? DS.brandPrimary30
+                                            : DS.brandPrimary38),
+                                    size: 24,
+                                  ),
+                          ),
+                        ),
                       ),
-                      child: Center(
-                        child: _isSending
-                            ? SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: DS.brandPrimary,),
-                              )
-                            : Icon(
-                                Icons.arrow_upward_rounded,
-                                color: canSend
-                                    ? DS.brandPrimary
-                                    : (isDark
-                                        ? DS.brandPrimary30
-                                        : DS.brandPrimary38),
-                                size: 24,
-                              ),
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -266,8 +299,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   const SizedBox(height: DS.spacing4),
                   Text(
                     widget.quotedMessage!.content ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    overflow: TextOverflow.fade,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: isDark ? DS.neutral400 : DS.neutral600,
