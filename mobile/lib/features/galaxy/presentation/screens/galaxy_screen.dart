@@ -159,10 +159,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       inverseMatrix,
       Offset(size.width, size.height),
     );
-    final canvasCenter = ref.read(galaxyProvider).canvasCenter;
-    final viewport = Rect.fromPoints(topLeft, bottomRight)
-        .shift(Offset(-canvasCenter, -canvasCenter));
-    ref.read(galaxyProvider.notifier).updateViewport(viewport);
+    
+    // Absolute Viewport (Canvas Coordinates 0..5000) - For Painter
+    final absoluteViewport = Rect.fromPoints(topLeft, bottomRight);
+    
+    // Relative Viewport (Center Relative -2500..2500) - For Provider Culling
+    final relativeViewport = absoluteViewport.shift(
+        const Offset(-_canvasCenter, -_canvasCenter),
+    );
+        
+    ref.read(galaxyProvider.notifier).updateViewport(relativeViewport);
   }
 
   /// Convert a canvas position (in the star map space) to screen coordinates
@@ -597,9 +603,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       inverseMatrix,
                       Offset(screenSize.width, screenSize.height),
                     );
-                    final viewport =
-                        Rect.fromPoints(topLeft, bottomRight).shift(
-                            Offset(-canvasCenter, -canvasCenter),);
+                    
+                    // Absolute Viewport for Painter
+                    final absoluteViewport = Rect.fromPoints(topLeft, bottomRight);
 
                     // Convert to Compact models with centered positions for rendering
                     final compactNodes =
@@ -631,13 +637,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       performanceTier: PerformanceService.instance.currentTier.value,
                       currentDpr: PerformanceService.instance.currentDpr.value,
                       aggregationLevel: galaxyState.aggregationLevel,
-                      clusters: _centerClusters(
-                        galaxyState.clusters,
-                        canvasCenter,
-                        canvasCenter,
-                      ),
-                      viewport: viewport,
-                      center: Offset(canvasCenter, canvasCenter),
+                      clusters: _centerClusters(galaxyState.clusters,
+                          _canvasCenter, _canvasCenter,),
+                      viewport: absoluteViewport, // Use absolute for painter
+                      center:
+                          const Offset(_canvasCenter, _canvasCenter),
                       selectedNodeIdHash: selectedHash,
                       highlightedNodeIdHashes: highlightedHashes,
                       highlightRevision: galaxyState.highlightRevision,

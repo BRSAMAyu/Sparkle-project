@@ -714,16 +714,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   AggregationLevel _levelForScale(double scale) {
-    if (scale < 0.2) {
+    if (scale < 0.15) {
       return AggregationLevel.universe;
     }
-    if (scale < 0.4) {
+    if (scale < 0.3) {
       return AggregationLevel.galaxy;
     }
-    if (scale < 0.6) {
+    if (scale < 0.5) {
       return AggregationLevel.cluster;
     }
-    if (scale < 0.8) {
+    if (scale < 0.7) {
       return AggregationLevel.nebula;
     }
     return AggregationLevel.full;
@@ -777,18 +777,18 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         return [];
 
       case AggregationLevel.galaxy:
-        // Galaxy level: Only root nodes (importance=5 or no parent)
+        // Galaxy level: Only root nodes or very important ones
         filteredNodes = nodes
-            .where((n) => n.importance >= 5 || n.parentId == null)
+            .where((n) => n.importance >= 4 || n.parentId == null)
             .toList();
 
       case AggregationLevel.cluster:
-        // Cluster level: Importance >= 3
-        filteredNodes = nodes.where((n) => n.importance >= 3).toList();
+        // Cluster level: Show most nodes
+        filteredNodes = nodes.where((n) => n.importance >= 2).toList();
 
       case AggregationLevel.nebula:
-        // Nebula level: Importance >= 2
-        filteredNodes = nodes.where((n) => n.importance >= 2).toList();
+        // Nebula level: Show almost all nodes
+        filteredNodes = nodes.where((n) => n.importance >= 1).toList();
 
       case AggregationLevel.full:
         // Full level: All nodes
@@ -812,8 +812,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // 2. Viewport Culling
     if (viewport == null) return filteredNodes;
 
-    // Expand viewport slightly for smooth entry
-    final cullingRect = viewport.inflate(100);
+    // Expand viewport significantly for smooth panning (was 100)
+    final cullingRect = viewport.inflate(500);
 
     return filteredNodes.where((node) {
       final pos = posMap[node.id];
