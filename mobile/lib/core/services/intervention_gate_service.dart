@@ -6,27 +6,27 @@ import 'package:sparkle/core/edge_ai/models/user_edge_state.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
 class GateDecision {
-  final bool allow;
-  final String reason;
-  final DateTime decidedAt;
 
   GateDecision({
     required this.allow,
     required this.reason,
     DateTime? decidedAt,
   }) : decidedAt = decidedAt ?? DateTime.now();
+  final bool allow;
+  final String reason;
+  final DateTime decidedAt;
 }
 
 class SceneContext {
-  final String? routeName;
-  final bool isUserTyping;
-  final bool isFullScreen;
 
   SceneContext({
     required this.routeName,
     required this.isUserTyping,
     required this.isFullScreen,
   });
+  final String? routeName;
+  final bool isUserTyping;
+  final bool isFullScreen;
 
   bool get isWhitelisted {
     if (routeName == null) return true;
@@ -38,8 +38,11 @@ class SceneContext {
     String? routeName;
     if (context != null) {
       try {
-        routeName =
-            GoRouter.of(context).routeInformationProvider.value.location;
+        routeName = GoRouter.of(context)
+            .routeInformationProvider
+            .value
+            .uri
+            .toString();
       } catch (_) {
         routeName = ModalRoute.of(context)?.settings.name;
       }
@@ -153,6 +156,4 @@ class InterventionGateService {
 }
 
 final interventionGateServiceProvider =
-    Provider<InterventionGateService>((ref) {
-  return InterventionGateService();
-});
+    Provider<InterventionGateService>((ref) => InterventionGateService());

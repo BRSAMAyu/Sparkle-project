@@ -20,7 +20,7 @@ class ChatInput extends ConsumerStatefulWidget {
   });
   final bool enabled;
   final String? hintText;
-  final Function(String text, {String? replyToId})? onSend;
+  final void Function(String text, {String? replyToId})? onSend;
   final PrivateMessageInfo? quotedMessage;
   final VoidCallback? onCancelQuote;
   final void Function(StoredFile file)? onFileUploaded;
@@ -38,7 +38,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showAttachmentSheet() {
     if (widget.onFileUploaded != null) {
-      showModalBottomSheet(
+      showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -56,7 +56,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return;
     }
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

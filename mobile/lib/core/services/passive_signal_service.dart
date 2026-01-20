@@ -15,9 +15,6 @@ enum PassiveSignalType {
 }
 
 class PassiveSignal {
-  final PassiveSignalType type;
-  final DateTime timestamp;
-  final Map<String, dynamic> data;
 
   PassiveSignal({
     required this.type,
@@ -25,6 +22,9 @@ class PassiveSignal {
     Map<String, dynamic>? data,
   })  : timestamp = timestamp ?? DateTime.now(),
         data = data ?? {};
+  final PassiveSignalType type;
+  final DateTime timestamp;
+  final Map<String, dynamic> data;
 }
 
 class PassiveSignalService with WidgetsBindingObserver {
@@ -35,7 +35,6 @@ class PassiveSignalService with WidgetsBindingObserver {
       StreamController<PassiveSignal>.broadcast();
 
   Timer? _idleTimer;
-  DateTime? _lastInteractionAt;
   DateTime? _sessionStartAt;
   bool _isForeground = true;
 
@@ -57,7 +56,6 @@ class PassiveSignalService with WidgetsBindingObserver {
   }
 
   void recordUserInteraction() {
-    _lastInteractionAt = DateTime.now();
     _controller.add(PassiveSignal(type: PassiveSignalType.userInteraction));
   }
 

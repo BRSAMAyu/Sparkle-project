@@ -38,7 +38,7 @@ void main() async {
     await ThemeManager().initialize();
 
     // Initialize OpenTelemetry Tracing
-    const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT', defaultValue: '');
+    const otelEndpoint = String.fromEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT');
     final collectorUri = otelEndpoint.isNotEmpty ? Uri.parse(otelEndpoint) : null;
     await TracingService.instance.initialize(collectorUri: collectorUri);
 
@@ -47,8 +47,8 @@ void main() async {
     DemoDataService.isDemoMode = isDemoMode;
 
     // TODO: Open Hive boxes
-    await Hive.openBox('settings');
-    await Hive.openBox('user');
+    await Hive.openBox<dynamic>('settings');
+    await Hive.openBox<dynamic>('user');
 
     runApp(
       const ProviderScope(

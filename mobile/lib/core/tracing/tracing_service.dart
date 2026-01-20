@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:opentelemetry/api.dart' show Span;
 
-import 'tracing_service_impl_io.dart'
+import 'package:sparkle/core/tracing/tracing_service_impl_io.dart'
     if (dart.library.html) 'tracing_service_impl_web.dart';
-import 'noop_tracing_service.dart';
 
 abstract class TracingServiceBase {
   Future<void> initialize({Uri? collectorUri});

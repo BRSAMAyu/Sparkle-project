@@ -112,7 +112,7 @@ class ChatService:
             return
 
         # 4. 解析响应
-        logger.info(f"Full LLM response: {full_response_text}")
+        logger.debug("LLM response received (length=%d)", len(full_response_text))
         llm_response = self.parser.parse(full_response_text)
         
         # 5. 处理解析结果

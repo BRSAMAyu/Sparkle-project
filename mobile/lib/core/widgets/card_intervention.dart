@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class CardIntervention extends StatelessWidget {
-  final InterventionPushMessage intervention;
-  final ValueChanged<String> onAction;
-  final VoidCallback onDismiss;
 
   const CardIntervention({
     super.key,
@@ -12,6 +9,9 @@ class CardIntervention extends StatelessWidget {
     required this.onAction,
     required this.onDismiss,
   });
+  final InterventionPushMessage intervention;
+  final ValueChanged<String> onAction;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {

@@ -7,9 +7,6 @@ import 'package:sparkle/core/widgets/modal_intervention.dart';
 import 'package:sparkle/core/widgets/toast_intervention.dart';
 
 class InterventionOverlay extends StatelessWidget {
-  final InterventionPushMessage intervention;
-  final ValueChanged<String> onAction;
-  final VoidCallback onDismiss;
 
   const InterventionOverlay({
     super.key,
@@ -17,6 +14,9 @@ class InterventionOverlay extends StatelessWidget {
     required this.onAction,
     required this.onDismiss,
   });
+  final InterventionPushMessage intervention;
+  final ValueChanged<String> onAction;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -32,30 +32,26 @@ class InterventionOverlay extends StatelessWidget {
           onAction: onAction,
           onDismiss: onDismiss,
         );
-        break;
       case InterventionLevel.card:
         content = CardIntervention(
           intervention: intervention,
           onAction: onAction,
           onDismiss: onDismiss,
         );
-        break;
       case InterventionLevel.modal:
         content = ModalIntervention(
           intervention: intervention,
           onAction: onAction,
           onDismiss: onDismiss,
         );
-        break;
       case InterventionLevel.silent:
         content = const SizedBox.shrink();
-        break;
     }
 
     return GestureDetector(
       onTap: onDismiss,
-      child: Container(
-        color: Colors.black.withOpacity(0.35),
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: 0.35),
         child: Stack(
           children: [
             Positioned.fill(

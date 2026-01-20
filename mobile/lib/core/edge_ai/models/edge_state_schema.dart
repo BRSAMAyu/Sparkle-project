@@ -55,8 +55,7 @@ class EdgeState with _$EdgeState {
 
 /// 确定性映射逻辑：将 Raw 向量转为 Rich State
 extension StateMapper on RawStateVector {
-  EdgeState toEdgeState() {
-    return EdgeState(
+  EdgeState toEdgeState() => EdgeState(
       attentionScore: (attention / 100).clamp(0.0, 1.0),
       fatigueScore: (fatigue / 100).clamp(0.0, 1.0),
       stressScore: (stress / 100).clamp(0.0, 1.0),
@@ -65,7 +64,6 @@ extension StateMapper on RawStateVector {
       bestWindow: Duration(minutes: windowMinutes),
       timestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     );
-  }
 
   String _mapTone(int tone) {
     switch (tone) {

@@ -13,6 +13,7 @@ enum SyncType {
 
 class CRDTSyncManager {
   CRDTSyncManager(this._localDb, this._syncEngine);
+  // ignore: unused_field
   final LocalDatabase _localDb;
   final SyncEngine _syncEngine;
   
@@ -44,11 +45,6 @@ class CRDTSyncManager {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
         entityType: 'crdt_snapshot',
-        entityId: null,
-        dedupeKey: null,
-        priority: 0,
-        requiresAuth: true,
-        traceId: null,
       );
     }
   }

@@ -51,22 +51,17 @@ class EdgeStateMonitor {
         _isForeground = true;
         _sessionStartAt ??= signal.timestamp;
         _switchEvents.add(signal.timestamp);
-        break;
       case PassiveSignalType.appBackground:
         _isForeground = false;
         _switchEvents.add(signal.timestamp);
-        break;
       case PassiveSignalType.userInteraction:
         _lastInteractionAt = signal.timestamp;
-        break;
       case PassiveSignalType.idle:
         break;
       case PassiveSignalType.sessionStart:
         _sessionStartAt ??= signal.timestamp;
-        break;
       case PassiveSignalType.sessionEnd:
         _sessionStartAt = null;
-        break;
     }
 
     _emitState(signal.timestamp);
@@ -82,7 +77,7 @@ class EdgeStateMonitor {
         : now.difference(_sessionStartAt!);
 
     final lastInteractionGap = _lastInteractionAt == null
-        ? Duration(days: 1)
+        ? const Duration(days: 1)
         : now.difference(_lastInteractionAt!);
 
     final focusScore = _calculateFocusScore(lastInteractionGap);
@@ -119,8 +114,7 @@ class EdgeStateMonitor {
     } catch (_) {}
   }
 
-  Map<String, dynamic> _serializeEdge(EdgeState state) {
-    return {
+  Map<String, dynamic> _serializeEdge(EdgeState state) => {
       'attention_score': state.attentionScore,
       'fatigue_score': state.fatigueScore,
       'stress_score': state.stressScore,
@@ -129,7 +123,6 @@ class EdgeStateMonitor {
       'window_minutes': state.bestWindow.inMinutes,
       'timestamp': state.timestamp,
     };
-  }
 
   double _calculateFocusScore(Duration gap) {
     if (!_isForeground) return 0.0;

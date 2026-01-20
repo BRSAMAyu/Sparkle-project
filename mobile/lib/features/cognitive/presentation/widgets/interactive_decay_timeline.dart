@@ -21,10 +21,11 @@ class InteractiveDecayTimeline extends StatefulWidget {
   });
 
   /// 衰减预测数据更新回调
-  final Function(int daysAhead) onDaysChanged;
+  final void Function(int daysAhead) onDaysChanged;
 
   /// 干预模拟回调
-  final Function(List<String> nodeIds, int daysAhead) onSimulateIntervention;
+  final void Function(List<String> nodeIds, int daysAhead)
+      onSimulateIntervention;
 
   /// 当前选中的节点IDs（用于干预）
   final List<String> selectedNodeIds;

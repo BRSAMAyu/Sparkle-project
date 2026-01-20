@@ -126,8 +126,6 @@ void main() {
           ),
         );
 
-        final initialCount = updateCount;
-
         // Update provider (Simulate update by rebuilding or interacting if we could)
         // Since we can't easily trigger a change without interacting with ThemeManager,
         // we assume if it renders once it works.

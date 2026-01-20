@@ -139,6 +139,7 @@ class ThemeManager extends ChangeNotifier {
   }
 
   @override
+  // ignore: must_call_super
   void dispose() {
     // Prevent disposal of the singleton instance by Riverpod or other owners.
     // This instance is meant to live for the entire application lifecycle.

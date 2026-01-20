@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/edge_ai_provider.dart';
-import '../models/edge_state_schema.dart';
+import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
+import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
 
 class EdgeAIStatusScreen extends ConsumerWidget {
   const EdgeAIStatusScreen({super.key});
@@ -39,8 +39,7 @@ class EdgeAIStatusScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInitialState(WidgetRef ref) {
-    return Center(
+  Widget _buildInitialState(WidgetRef ref) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -55,10 +54,8 @@ class EdgeAIStatusScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildDashboard(BuildContext context, EdgeState state) {
-    return ListView(
+  Widget _buildDashboard(BuildContext context, EdgeState state) => ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _buildSectionHeader('用户核心状态'),
@@ -96,20 +93,16 @@ class EdgeAIStatusScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
+  Widget _buildSectionHeader(String title) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         title,
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
-  }
 
-  Widget _buildMetricTile(String label, double value, Color color) {
-    return Padding(
+  Widget _buildMetricTile(String label, double value, Color color) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,11 +118,10 @@ class EdgeAIStatusScreen extends ConsumerWidget {
           LinearProgressIndicator(
             value: value,
             color: color,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             minHeight: 8,
           ),
         ],
       ),
     );
-  }
 }

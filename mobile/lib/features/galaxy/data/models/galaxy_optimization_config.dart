@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 
 enum ShaderQuality {
@@ -10,6 +9,12 @@ enum ShaderQuality {
 }
 
 class GalaxyOptimizationConfig {
+  const GalaxyOptimizationConfig({
+    required this.shaderQuality,
+    required this.maxNodes,
+    required this.enablePhysics,
+    required this.targetFps,
+  });
 
   factory GalaxyOptimizationConfig.fromTier(PerformanceTier tier) {
     switch (tier) {
@@ -51,12 +56,6 @@ class GalaxyOptimizationConfig {
     enablePhysics: false,
     targetFps: 30,
   );
-  const GalaxyOptimizationConfig({
-    required this.shaderQuality,
-    required this.maxNodes,
-    required this.enablePhysics,
-    required this.targetFps,
-  });
 
   final ShaderQuality shaderQuality;
   final int maxNodes;

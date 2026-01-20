@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
+import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/cognitive_repository.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 import 'package:sparkle/features/cognitive/data/repositories/sync_cognitive_repository.dart';
-import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/offline/sync_engine.dart';
-import 'package:sparkle/core/offline/local_database.dart';
-import 'package:sparkle/core/services/websocket_service.dart';
 
 // Manual Mocks
 class MockApiCognitiveRepository extends Mock

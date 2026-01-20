@@ -8,8 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
-import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   FakeEnhancedGalaxyRepository({
@@ -479,8 +479,6 @@ void main() {
       test('handles nodes_expanded and triggers reload', () async {
         final eventsController = StreamController<SSEEvent>();
         mockRepository.eventsStream = eventsController.stream;
-
-        final notifier = container.read(galaxyProvider.notifier);
 
         // Simulate expansion event
         eventsController.add(SSEEvent(

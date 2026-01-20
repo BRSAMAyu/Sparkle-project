@@ -132,6 +132,7 @@ func main() {
 
 	// Initialize Handlers
 	wsFactory := handler.NewWebSocketFactory(cfg)
+	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	fileEventHub := service.NewFileEventHub()
 	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub)
 	chatOrchestrator := handler.NewChatOrchestrator(
@@ -348,10 +349,13 @@ func main() {
 
 	// Apply Security Headers
 	r.Use(middleware.SecurityHeadersMiddleware())
+	if cfg.CORSEnabled {
+		r.Use(middleware.CORSMiddleware(cfg))
+	}
 
 	// WebSocket Route (Go Native)
-	r.GET("/ws/chat", middleware.AuthMiddleware(cfg), chatOrchestrator.HandleWebSocket)
-	r.GET("/ws/files", middleware.AuthMiddleware(cfg), fileEventHandler.HandleWebSocket)
+	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), chatOrchestrator.HandleWebSocket)
+	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), fileEventHandler.HandleWebSocket)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)
@@ -367,6 +371,12 @@ func main() {
 
 		// Auth
 		api.POST("/auth/apple", authHandler.AppleLogin)
+		api.POST(
+			"/ws/ticket",
+			authMiddleware,
+			middleware.UserBasedRateLimit(cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
+			wsTicketHandler.Issue,
+		)
 
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)

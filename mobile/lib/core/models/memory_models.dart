@@ -1,4 +1,12 @@
 class EvidenceRefModel {
+
+  factory EvidenceRefModel.fromJson(Map<String, dynamic> json) =>
+      EvidenceRefModel(
+        type: json['type'] as String? ?? '',
+        id: json['id'] as String? ?? '',
+        schemaVersion: json['schema_version'] as String?,
+        userDeleted: json['user_deleted'] as bool? ?? false,
+      );
   EvidenceRefModel({
     required this.type,
     required this.id,
@@ -11,14 +19,6 @@ class EvidenceRefModel {
   final String? schemaVersion;
   final bool userDeleted;
 
-  factory EvidenceRefModel.fromJson(Map<String, dynamic> json) =>
-      EvidenceRefModel(
-        type: json['type'] as String? ?? '',
-        id: json['id'] as String? ?? '',
-        schemaVersion: json['schema_version'] as String?,
-        userDeleted: json['user_deleted'] as bool? ?? false,
-      );
-
   Map<String, dynamic> toJson() => {
         'type': type,
         'id': id,
@@ -28,6 +28,21 @@ class EvidenceRefModel {
 }
 
 class MemoryPreferenceItem {
+
+  factory MemoryPreferenceItem.fromJson(Map<String, dynamic> json) =>
+      MemoryPreferenceItem(
+        id: json['id'] as String? ?? '',
+        prefKey: json['pref_key'] as String? ?? '',
+        prefValue: json['pref_value'],
+        version: json['version'] as int? ?? 0,
+        confidence: (json['confidence'] as num?)?.toDouble(),
+        updatedAt: _parseDate(json['updated_at']),
+        evidenceMissing: json['evidence_missing'] as bool? ?? false,
+        evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
+        evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
+        correctionCount: json['correction_count'] as int? ?? 0,
+        retractedAt: _parseDate(json['retracted_at']),
+      );
   MemoryPreferenceItem({
     required this.id,
     required this.prefKey,
@@ -53,14 +68,19 @@ class MemoryPreferenceItem {
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
+}
 
-  factory MemoryPreferenceItem.fromJson(Map<String, dynamic> json) =>
-      MemoryPreferenceItem(
+class MemoryPreferenceHistoryItem {
+
+  factory MemoryPreferenceHistoryItem.fromJson(Map<String, dynamic> json) =>
+      MemoryPreferenceHistoryItem(
         id: json['id'] as String? ?? '',
         prefKey: json['pref_key'] as String? ?? '',
         prefValue: json['pref_value'],
         version: json['version'] as int? ?? 0,
         confidence: (json['confidence'] as num?)?.toDouble(),
+        replacedById: json['replaced_by_id'] as String?,
+        createdAt: _parseDate(json['created_at']),
         updatedAt: _parseDate(json['updated_at']),
         evidenceMissing: json['evidence_missing'] as bool? ?? false,
         evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
@@ -68,9 +88,6 @@ class MemoryPreferenceItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-}
-
-class MemoryPreferenceHistoryItem {
   MemoryPreferenceHistoryItem({
     required this.id,
     required this.prefKey,
@@ -100,16 +117,16 @@ class MemoryPreferenceHistoryItem {
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
+}
 
-  factory MemoryPreferenceHistoryItem.fromJson(Map<String, dynamic> json) =>
-      MemoryPreferenceHistoryItem(
+class MemoryGoalItem {
+
+  factory MemoryGoalItem.fromJson(Map<String, dynamic> json) => MemoryGoalItem(
         id: json['id'] as String? ?? '',
-        prefKey: json['pref_key'] as String? ?? '',
-        prefValue: json['pref_value'],
-        version: json['version'] as int? ?? 0,
-        confidence: (json['confidence'] as num?)?.toDouble(),
-        replacedById: json['replaced_by_id'] as String?,
-        createdAt: _parseDate(json['created_at']),
+        title: json['title'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        targetDate: _parseDate(json['target_date']),
+        expiresAt: _parseDate(json['expires_at']),
         updatedAt: _parseDate(json['updated_at']),
         evidenceMissing: json['evidence_missing'] as bool? ?? false,
         evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
@@ -117,9 +134,6 @@ class MemoryPreferenceHistoryItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-}
-
-class MemoryGoalItem {
   MemoryGoalItem({
     required this.id,
     required this.title,
@@ -145,13 +159,18 @@ class MemoryGoalItem {
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
+}
 
-  factory MemoryGoalItem.fromJson(Map<String, dynamic> json) => MemoryGoalItem(
+class EpisodicMemoryItem {
+
+  factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) =>
+      EpisodicMemoryItem(
         id: json['id'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        status: json['status'] as String? ?? '',
-        targetDate: _parseDate(json['target_date']),
-        expiresAt: _parseDate(json['expires_at']),
+        summary: json['summary'] as String? ?? '',
+        sourceType: json['source_type'] as String? ?? '',
+        sourceId: json['source_id'] as String?,
+        occurredAt: _parseDate(json['occurred_at']),
+        importanceScore: (json['importance_score'] as num?)?.toDouble(),
         updatedAt: _parseDate(json['updated_at']),
         evidenceMissing: json['evidence_missing'] as bool? ?? false,
         evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
@@ -159,9 +178,6 @@ class MemoryGoalItem {
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
       );
-}
-
-class EpisodicMemoryItem {
   EpisodicMemoryItem({
     required this.id,
     required this.summary,
@@ -189,25 +205,20 @@ class EpisodicMemoryItem {
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
-
-  factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) =>
-      EpisodicMemoryItem(
-        id: json['id'] as String? ?? '',
-        summary: json['summary'] as String? ?? '',
-        sourceType: json['source_type'] as String? ?? '',
-        sourceId: json['source_id'] as String?,
-        occurredAt: _parseDate(json['occurred_at']),
-        importanceScore: (json['importance_score'] as num?)?.toDouble(),
-        updatedAt: _parseDate(json['updated_at']),
-        evidenceMissing: json['evidence_missing'] as bool? ?? false,
-        evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
-        evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
-        correctionCount: json['correction_count'] as int? ?? 0,
-        retractedAt: _parseDate(json['retracted_at']),
-      );
 }
 
 class MemoryCorrectionResult {
+
+  factory MemoryCorrectionResult.fromJson(Map<String, dynamic> json) =>
+      MemoryCorrectionResult(
+        id: json['id'] as String? ?? '',
+        evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
+        evidenceMissing: json['evidence_missing'] as bool? ?? false,
+        evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
+        correctionCount: json['correction_count'] as int? ?? 0,
+        confidence: (json['confidence'] as num?)?.toDouble(),
+        retractedAt: _parseDate(json['retracted_at']),
+      );
   MemoryCorrectionResult({
     required this.id,
     required this.evidenceRefs,
@@ -225,20 +236,24 @@ class MemoryCorrectionResult {
   final int correctionCount;
   final double? confidence;
   final DateTime? retractedAt;
-
-  factory MemoryCorrectionResult.fromJson(Map<String, dynamic> json) =>
-      MemoryCorrectionResult(
-        id: json['id'] as String? ?? '',
-        evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
-        evidenceMissing: json['evidence_missing'] as bool? ?? false,
-        evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
-        correctionCount: json['correction_count'] as int? ?? 0,
-        confidence: (json['confidence'] as num?)?.toDouble(),
-        retractedAt: _parseDate(json['retracted_at']),
-      );
 }
 
 class MemorySettingsModel {
+
+  factory MemorySettingsModel.fromJson(Map<String, dynamic> json) =>
+      MemorySettingsModel(
+        enabled: json['enabled'] as bool? ?? true,
+        allowPreferences: json['allow_preferences'] as bool? ?? true,
+        allowGoals: json['allow_goals'] as bool? ?? true,
+        allowEpisodic: json['allow_episodic'] as bool? ?? true,
+        captureLevel: json['capture_level'] as String? ?? 'medium',
+        blockedPrefKeys: (json['blocked_pref_keys'] as List<dynamic>? ?? [])
+            .whereType<String>()
+            .toList(),
+        blockedSources: (json['blocked_sources'] as List<dynamic>? ?? [])
+            .whereType<String>()
+            .toList(),
+      );
   MemorySettingsModel({
     required this.enabled,
     required this.allowPreferences,
@@ -257,21 +272,6 @@ class MemorySettingsModel {
   final List<String> blockedPrefKeys;
   final List<String> blockedSources;
 
-  factory MemorySettingsModel.fromJson(Map<String, dynamic> json) =>
-      MemorySettingsModel(
-        enabled: json['enabled'] as bool? ?? true,
-        allowPreferences: json['allow_preferences'] as bool? ?? true,
-        allowGoals: json['allow_goals'] as bool? ?? true,
-        allowEpisodic: json['allow_episodic'] as bool? ?? true,
-        captureLevel: json['capture_level'] as String? ?? 'medium',
-        blockedPrefKeys: (json['blocked_pref_keys'] as List<dynamic>? ?? [])
-            .whereType<String>()
-            .toList(),
-        blockedSources: (json['blocked_sources'] as List<dynamic>? ?? [])
-            .whereType<String>()
-            .toList(),
-      );
-
   Map<String, dynamic> toJson() => {
         'enabled': enabled,
         'allow_preferences': allowPreferences,
@@ -284,19 +284,6 @@ class MemorySettingsModel {
 }
 
 class EvidenceResolveItem {
-  EvidenceResolveItem({
-    required this.type,
-    required this.id,
-    required this.status,
-    this.redactionReason,
-    this.payload,
-  });
-
-  final String type;
-  final String id;
-  final String status;
-  final String? redactionReason;
-  final Map<String, dynamic>? payload;
 
   factory EvidenceResolveItem.fromJson(Map<String, dynamic> json) {
     final payload = <String, dynamic>{};
@@ -314,6 +301,19 @@ class EvidenceResolveItem {
       payload: payload.isEmpty ? null : payload,
     );
   }
+  EvidenceResolveItem({
+    required this.type,
+    required this.id,
+    required this.status,
+    this.redactionReason,
+    this.payload,
+  });
+
+  final String type;
+  final String id;
+  final String status;
+  final String? redactionReason;
+  final Map<String, dynamic>? payload;
 }
 
 DateTime? _parseDate(dynamic value) {

@@ -6,8 +6,7 @@ import 'package:sparkle/core/services/intervention_gate_service.dart';
 UserEdgeState _state({
   required bool isForeground,
   required double focusScore,
-}) {
-  return UserEdgeState(
+}) => UserEdgeState(
     isForeground: isForeground,
     sessionDuration: const Duration(seconds: 30),
     focusScore: focusScore,
@@ -15,7 +14,6 @@ UserEdgeState _state({
     updatedAt: DateTime.now(),
     source: EdgeStateSource.passiveSignals,
   );
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -87,7 +85,6 @@ void main() {
   test('Gate enforces cooldown between interventions', () async {
     final gate = InterventionGateService(
       cooldown: const Duration(minutes: 5),
-      dailyCap: 3,
     );
     await gate.markInterventionShown();
 

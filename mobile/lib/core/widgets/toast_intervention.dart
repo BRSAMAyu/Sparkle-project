@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class ToastIntervention extends StatelessWidget {
-  final InterventionPushMessage intervention;
-  final ValueChanged<String> onAction;
-  final VoidCallback onDismiss;
 
   const ToastIntervention({
     super.key,
@@ -12,6 +9,9 @@ class ToastIntervention extends StatelessWidget {
     required this.onAction,
     required this.onDismiss,
   });
+  final InterventionPushMessage intervention;
+  final ValueChanged<String> onAction;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {

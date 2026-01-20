@@ -279,7 +279,7 @@ class DailyDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskList(BuildContext context, List tasks) {
+  Widget _buildTaskList(BuildContext context, List<TaskModel> tasks) {
     if (tasks.isEmpty) {
       return _buildEmptyState('暂无任务');
     }

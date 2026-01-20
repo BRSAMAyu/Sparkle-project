@@ -72,15 +72,21 @@ class _BlockingInterceptorDialogState
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-        shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing20),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+  Widget build(BuildContext context) {
+    final selectedReason = _selectedReason == null ||
+            !_reasons.contains(_selectedReason)
+        ? 'other'
+        : _selectedReason;
+
+    return Dialog(
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 Row(
                   children: [
                     Container(
@@ -111,31 +117,31 @@ class _BlockingInterceptorDialogState
                 ),
                 const SizedBox(height: DS.spacing20),
 
-                // Preset Options
-                ..._reasons.map(
-                  (reason) => RadioListTile<String>(
-                    title: Text(reason),
-                    value: reason,
-                    groupValue: _selectedReason,
-                    onChanged: (value) =>
-                        setState(() => _selectedReason = value),
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: DS.primaryBase,
-                  ),
-                ),
+                RadioGroup<String>(
+                  groupValue: selectedReason,
+                  onChanged: (value) =>
+                      setState(() => _selectedReason = value),
+                  child: Column(
+                    children: [
+                      // Preset Options
+                      ..._reasons.map(
+                        (reason) => RadioListTile<String>(
+                          title: Text(reason),
+                          value: reason,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: DS.primaryBase,
+                        ),
+                      ),
 
-                // Other/Custom Input
-                RadioListTile<String>(
-                  title: const Text('其他原因...'),
-                  value: 'other',
-                  groupValue: _selectedReason == null ||
-                          !_reasons.contains(_selectedReason)
-                      ? 'other'
-                      : null,
-                  onChanged: (value) => setState(
-                      () => _selectedReason = 'other',), // Hacky handling
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: DS.primaryBase,
+                      // Other/Custom Input
+                      RadioListTile<String>(
+                        title: const Text('其他原因...'),
+                        value: 'other',
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: DS.primaryBase,
+                      ),
+                    ],
+                  ),
                 ),
 
                 if (_selectedReason == 'other')
@@ -165,9 +171,10 @@ class _BlockingInterceptorDialogState
                     ),
                   ],
                 ),
-              ],
-            ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }

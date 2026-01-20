@@ -10,7 +10,7 @@ void main() {
       id: 'evt_1',
       status: 'ok',
       payload: const {
-        'event': {'event_type': 'question_submit', 'ts_ms': 12345}
+        'event': {'event_type': 'question_submit', 'ts_ms': 12345},
       },
     );
 

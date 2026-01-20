@@ -16,11 +16,11 @@ class EvidenceDrawer {
       context: context,
       isScrollControlled: true,
       backgroundColor: DS.deepSpaceStart,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(DS.lg)),
       ),
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(context),
+      builder: (_) => UncontrolledProviderScope(
+        container: ProviderScope.containerOf(context),
         child: _EvidenceDrawerContent(
           refs: refs,
           evidenceMissing: evidenceMissing,

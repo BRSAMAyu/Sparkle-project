@@ -62,7 +62,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       // or listen to a WebSocket event that confirms creation.
 
       // For this demo, let's trigger a refresh after 500ms
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
       await refresh();
     } catch (e) {
       // Revert if failed

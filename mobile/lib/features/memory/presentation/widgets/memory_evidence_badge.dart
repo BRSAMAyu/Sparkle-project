@@ -8,7 +8,7 @@ enum MemoryEvidenceStatus {
 }
 
 class MemoryEvidenceBadge extends StatelessWidget {
-  const MemoryEvidenceBadge({super.key, required this.status});
+  const MemoryEvidenceBadge({required this.status, super.key});
 
   final MemoryEvidenceStatus status;
 
