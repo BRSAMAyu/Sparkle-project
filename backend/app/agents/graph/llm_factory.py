@@ -1,95 +1,133 @@
-import os
-from typing import Optional, Dict, Any
+"""
+LLM Factory - LangGraph 兼容的模型工厂
+
+重构说明：
+- 现在统一使用 LLMRouter 进行模型选择
+- 与主系统 (llm_service.py) 共享同一套配置
+- 保持与 LangGraph 的兼容接口
+
+使用方式：
+    llm = LLMFactory.get_llm("galaxy_guide")  # 推荐方式
+    llm = LLMFactory.get_llm_for_task(TaskType.DEEP_REASONING)  # 按任务选择
+"""
+
+from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.language_models.chat_models import BaseChatModel
+
 from app.config import settings
+from app.core.llm_router import llm_router, LLMSelection
+from app.core.agent_profiles import AgentRole, TaskType
+
 
 class LLMFactory:
     """
-    LLM 模型工厂
-    负责根据 Agent 需求动态分发不同的模型实例
+    LLM 模型工厂 (LangGraph 兼容)
+
+    职责：
+    1. 根据Agent角色获取合适的LangChain ChatModel
+    2. 与主系统共享 LLMRouter 配置
+    3. 支持任务级动态模型选择
     """
-    
-    # 模型预设配置
-    MODEL_CONFIGS = {
-        # 1. 强推理模型 (Planner, ExamOracle)
-        "gpt-4o": {
-            "model": "gpt-4o",
-            "temperature": 0.7
-        },
-        # 2. 高性价比/通用模型 (Router, TimeTutor)
-        "gpt-4o-mini": {
-            "model": "gpt-4o-mini",
-            "temperature": 0.5
-        },
-        # 3. 中文/RAG 特化模型 (GalaxyGuide)
-        # DeepSeek V3 (假设通过 OpenAI 兼容接口调用)
-        "deepseek-chat": {
-            "model": settings.DEEPSEEK_CHAT_MODEL,
-            "base_url": settings.DEEPSEEK_BASE_URL,
-            "api_key": settings.DEEPSEEK_API_KEY,
-            "temperature": 0.3 # RAG 需要低温
-        },
-        "deepseek-reason": {
-            "model": settings.DEEPSEEK_REASON_MODEL,
-            "base_url": settings.DEEPSEEK_BASE_URL,
-            "api_key": settings.DEEPSEEK_API_KEY,
-            "temperature": 0.2
-        },
-        # 4. 兜底模型
-        "default": {
-            "model": settings.LLM_MODEL_NAME, # .env 中的默认配置
-            "base_url": settings.LLM_API_BASE_URL,
-            "api_key": settings.LLM_API_KEY,
-            "temperature": 0.7
-        }
-    }
 
     @staticmethod
     def get_llm(
-        agent_role: str, 
-        override_model: Optional[str] = None
+        agent_role: str,
+        override_model: Optional[str] = None,
+        task_type: Optional[TaskType] = None,
     ) -> BaseChatModel:
         """
-        根据 Agent 角色获取最佳 LLM 实例
-        
+        根据 Agent 角色获取 LangChain ChatModel
+
         Args:
-            agent_role: Agent 角色名称 (router, galaxy, time...)
-            override_model: 强制指定模型名称
+            agent_role: Agent 角色名称 (router, galaxy_guide, time_tutor, exam_oracle 等)
+            override_model: 强制指定模型名称（不推荐，仅用于调试）
+            task_type: 任务类型（用于更精细的模型选择）
+
+        Returns:
+            LangChain ChatOpenAI 实例
+
+        Example:
+            # 基本用法
+            llm = LLMFactory.get_llm("galaxy_guide")
+
+            # 按任务选择
+            from app.core.agent_profiles import TaskType
+            llm = LLMFactory.get_llm("orchestrator", task_type=TaskType.DEEP_REASONING)
         """
-        
-        # 1. 策略路由: 决定用哪个模型配置
-        config_key = "default"
-        
-        if override_model:
-            config_key = override_model if override_model in LLMFactory.MODEL_CONFIGS else "default"
-        else:
-            # 角色 -> 模型 映射策略
-            if agent_role in ["planner", "exam_oracle"]:
-                config_key = "deepseek-reason"
-            elif agent_role in ["galaxy_guide"]:
-                config_key = "deepseek-chat"
-            elif agent_role in ["router", "time_tutor"]:
-                config_key = "gpt-4o-mini"
-        
-        # 2. 获取配置
-        config = LLMFactory.MODEL_CONFIGS.get(config_key, LLMFactory.MODEL_CONFIGS["default"]).copy()
-        
-        # 提取特殊参数
-        base_url = config.pop("base_url", None)
-        api_key = config.pop("api_key", None)
-        
-        # 3. 实例化 LangChain ChatModel
-        # 如果是 DeepSeek 或自定义 endpoint
-        if base_url:
-            return ChatOpenAI(
-                base_url=base_url,
-                api_key=api_key or "sk-placeholder", # 有些本地模型随便填
-                **config
+        # 标准化角色名称
+        if isinstance(agent_role, str):
+            # 兼容旧的角色命名
+            role_mapping = {
+                "planner": "study_planner",
+                "oracle": "exam_oracle",
+                "time": "time_tutor",
+                "galaxy": "galaxy_guide",
+            }
+            agent_role = role_mapping.get(agent_role.lower(), agent_role.lower())
+
+        try:
+            role_enum = AgentRole(agent_role)
+        except ValueError:
+            # 如果不是预定义角色，作为字符串传递给router
+            role_enum = AgentRole.GENERATION  # 默认
+
+        # 使用 LLMRouter 选择模型
+        if task_type:
+            selection = llm_router.select_model(role_enum, task_type)
+        elif override_model:
+            # 强制指定已注册模型key（调试用）
+            selection = llm_router.select_specific_model(
+                override_model,
+                agent_role=role_enum,
+                task_type=task_type,
             )
-        
-        # 默认 OpenAI
-        return ChatOpenAI(
-            api_key=api_key or settings.OPENAI_API_KEY, 
-            **config
-        )
+        else:
+            selection = llm_router.select_model(role_enum)
+
+        # 获取 LangChain 兼容的参数
+        kwargs = llm_router.get_langchain_client_kwargs(selection)
+
+        # 创建 LangChain ChatOpenAI 实例
+        return ChatOpenAI(**kwargs)
+
+    @staticmethod
+    def get_llm_for_task(task_type: TaskType) -> BaseChatModel:
+        """
+        根据任务类型直接获取模型
+
+        Args:
+            task_type: 任务类型
+
+        Example:
+            from app.core.agent_profiles import TaskType
+            llm = LLMFactory.get_llm_for_task(TaskType.DEEP_REASONING)
+        """
+        return LLMFactory.get_llm("orchestrator", task_type=task_type)
+
+
+# ============================================
+# 向后兼容的别名（旧代码可能用到）
+# ============================================
+
+# 模型配置字典（仅用于向后兼容旧代码的读取）
+MODEL_CONFIGS = {
+    "deepseek-chat": {
+        "model": settings.DEEPSEEK_CHAT_MODEL,
+        "base_url": settings.DEEPSEEK_BASE_URL,
+        "api_key": settings.DEEPSEEK_API_KEY,
+        "temperature": 0.3
+    },
+    "deepseek-reason": {
+        "model": settings.DEEPSEEK_REASON_MODEL,
+        "base_url": settings.DEEPSEEK_BASE_URL,
+        "api_key": settings.DEEPSEEK_API_KEY,
+        "temperature": 0.2
+    },
+    "default": {
+        "model": settings.LLM_MODEL_NAME,
+        "base_url": settings.LLM_API_BASE_URL,
+        "api_key": settings.LLM_API_KEY,
+        "temperature": 0.7
+    }
+}

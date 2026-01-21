@@ -1,52 +1,32 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Any, Optional, Tuple
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from http import HTTPStatus
+
+import dashscope
+import httpx
 from loguru import logger
+
 from app.config import settings
+
 
 class RerankService:
     """
     Rerank Service for RAG v2.0
     Supports:
     - RRF (Reciprocal Rank Fusion)
-    - Cross-Encoder Reranking (Local Model)
+    - DashScope (阿里云百炼 SDK)
+    - SiliconFlow (HTTP API)
     """
 
     def __init__(self):
-        self.model = None
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self._load_model_task = None
-        # Start loading model in background if loop is running
-        try:
-            loop = asyncio.get_running_loop()
-            self._load_model_task = loop.create_task(self._load_model())
-        except RuntimeError:
-            # No running loop (e.g. during import or script start), skip auto-load.
-            # Caller must ensure _load_model is called or model is loaded lazily.
-            pass
+        self.provider = settings.RERANK_PROVIDER
+        self.dashscope_api_key = settings.DASHSCOPE_API_KEY
+        self.dashscope_base_url = settings.DASHSCOPE_BASE_HTTP_API_URL
+        self.dashscope_model = settings.DASHSCOPE_RERANK_MODEL or settings.RERANK_MODEL
 
-    async def ensure_model_loaded(self):
-        """Ensure model is loaded (call this if auto-load failed)"""
-        if not self.model and not self._load_model_task:
-             self._load_model_task = asyncio.create_task(self._load_model())
-        if self._load_model_task:
-            await self._load_model_task
-
-    async def _load_model(self):
-        """Load Cross-Encoder model in background"""
-        try:
-            logger.info(f"⏳ Loading Reranker model ({settings.RERANK_MODEL})...")
-            # Run in executor to avoid blocking loop
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(self.executor, self._init_transformer)
-            logger.success("✅ Reranker model loaded.")
-        except Exception as e:
-            logger.error(f"❌ Failed to load Reranker model: {e}")
-
-    def _init_transformer(self):
-        from sentence_transformers import CrossEncoder
-        # Use configured model (default: BAAI/bge-reranker-base)
-        self.model = CrossEncoder(settings.RERANK_MODEL, max_length=512)
+        self.siliconflow_api_key = settings.SILICONFLOW_API_KEY
+        self.siliconflow_base_url = settings.SILICONFLOW_BASE_URL
+        self.siliconflow_model = settings.SILICONFLOW_RERANK_MODEL or settings.RERANK_MODEL
 
     def reciprocal_rank_fusion(self, search_results_list: List[List[Any]], k: int = 60) -> List[tuple]:
         """
@@ -77,53 +57,132 @@ class RerankService:
         sorted_results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         return [(items[item_id], score) for item_id, score in sorted_results]
 
-    async def rerank(self, query: str, candidates: List[Any], top_k: int = 5) -> List[Any]:
+    async def rerank(
+        self,
+        query: str,
+        candidates: List[Any],
+        top_k: int = 5,
+        instruct: Optional[str] = None,
+    ) -> List[Any]:
         """
-        Rerank candidates based on query using local Cross-Encoder.
+        Rerank candidates based on query using remote API.
+
+        Args:
+            query: Search query text
+            candidates: List of candidate documents (dict or object)
+            top_k: Number of top results to return
+            instruct: Optional instruction for reranker (e.g., task-specific prompt)
+
+        Returns:
+            List[Any]: Reranked candidates (top_k items)
         """
         if not candidates:
             return []
-            
-        if not self.model:
-            # If model not ready or failed, return original top_k
-            logger.warning("Reranker model not ready, returning original order.")
+
+        documents, valid_candidates = self._extract_documents(candidates)
+        if not documents:
             return candidates[:top_k]
 
         try:
-            # Prepare pairs [query, doc_text]
-            # Handle dict or object
-            pairs = []
-            valid_candidates = []
-            
-            for c in candidates:
-                text = ""
-                if isinstance(c, dict):
-                    text = c.get('content', '') or c.get('description', '') or c.get('name', '')
-                else:
-                    text = getattr(c, 'content', '') or getattr(c, 'description', '') or getattr(c, 'name', '')
-                
-                if text:
-                    pairs.append([query, text])
-                    valid_candidates.append(c)
-            
-            if not pairs:
-                return candidates[:top_k]
+            if self.provider == "dashscope":
+                indices = await self._dashscope_rerank(query, documents, top_k, instruct=instruct)
+            elif self.provider == "siliconflow":
+                indices = await self._siliconflow_rerank(query, documents, top_k, instruct=instruct)
+            else:
+                raise ValueError(f"Unsupported rerank provider: {self.provider}")
 
-            # Run inference in executor
-            loop = asyncio.get_running_loop()
-            scores = await loop.run_in_executor(self.executor, lambda: self.model.predict(pairs))
-            
-            # Combine candidates with scores
-            scored_candidates = list(zip(valid_candidates, scores))
-            
-            # Sort by score desc
-            scored_candidates.sort(key=lambda x: x[1], reverse=True)
-            
-            # Return top_k items
-            return [item for item, score in scored_candidates[:top_k]]
-            
+            return [valid_candidates[i] for i in indices if i < len(valid_candidates)]
         except Exception as e:
             logger.error(f"Error during reranking: {e}")
             return candidates[:top_k]
+
+    def _extract_documents(self, candidates: List[Any]) -> Tuple[List[str], List[Any]]:
+        documents: List[str] = []
+        valid_candidates: List[Any] = []
+
+        for c in candidates:
+            if isinstance(c, dict):
+                text = c.get("content", "") or c.get("description", "") or c.get("name", "")
+            else:
+                text = getattr(c, "content", "") or getattr(c, "description", "") or getattr(c, "name", "")
+
+            if text:
+                documents.append(text)
+                valid_candidates.append(c)
+
+        return documents, valid_candidates
+
+    async def _dashscope_rerank(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: int,
+        instruct: Optional[str] = None,
+    ) -> List[int]:
+        def _call():
+            dashscope.api_key = self.dashscope_api_key
+            if self.dashscope_base_url:
+                dashscope.base_http_api_url = self.dashscope_base_url
+
+            payload = {
+                "model": self.dashscope_model,
+                "query": query,
+                "documents": documents,
+                "top_n": top_k,
+            }
+            if instruct:
+                payload["instruct"] = instruct
+            return dashscope.TextReRank.call(**payload)
+
+        resp = await asyncio.to_thread(_call)
+        if resp.status_code != HTTPStatus.OK:
+            raise RuntimeError(f"DashScope rerank failed: {resp.code} {resp.message}")
+
+        results = resp.output.get("results", [])
+        if not results:
+            return list(range(min(top_k, len(documents))))
+
+        return [item["index"] for item in results]
+
+    async def _siliconflow_rerank(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: int,
+        instruct: Optional[str] = None,
+    ) -> List[int]:
+        # SiliconFlow rerank endpoint: {base_url}/rerank
+        # With default base_url=https://api.siliconflow.cn/v1, this produces:
+        # https://api.siliconflow.cn/v1/rerank
+        base_url = self.siliconflow_base_url.rstrip("/")
+        url = base_url if base_url.endswith("/rerank") else f"{base_url}/rerank"
+
+        payload = {
+            "model": self.siliconflow_model,
+            "query": query,
+            "documents": documents,
+            "top_n": top_k,
+            "return_documents": False,
+        }
+        if instruct:
+            payload["instruct"] = instruct  # SiliconFlow uses "instruct", not "instruction"
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {self.siliconflow_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        results = data.get("results", [])
+        if not results:
+            return list(range(min(top_k, len(documents))))
+
+        return [item["index"] for item in results]
 
 rerank_service = RerankService()

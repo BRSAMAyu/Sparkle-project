@@ -219,7 +219,7 @@ def get_graph_sync_worker() -> GraphSyncWorker:
 async def start_sync_worker():
     """启动同步 Worker"""
     worker = get_graph_sync_worker()
-    await worker.start()
+    asyncio.create_task(worker.start())
 
 
 async def stop_sync_worker():

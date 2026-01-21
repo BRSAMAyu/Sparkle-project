@@ -73,7 +73,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   colors: [
                     (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
                         .withValues(alpha: 0.9),
-                    (isDark ? DS.deepSpaceEnd : DS.brandPrimary10)
+                    (isDark ? DS.deepSpaceEnd : DS.neutral50)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
@@ -145,7 +145,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: isDark
               ? DS.deepSpaceGradient
               : LinearGradient(
-                  colors: [DS.neutral50, DS.brandPrimary],
+                  colors: [DS.neutral50, DS.neutral100],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -647,11 +647,10 @@ class _QuickActionChipState extends State<_QuickActionChip> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? DS.neutral800 : DS.brandPrimary;
-    final labelColor = ThemeUtils.getContrastSafeText(
-      backgroundColor,
-      darkText: DS.neutral900,
-    );
+    // Fix: Use neutral background for light mode instead of brandPrimary (orange)
+    final backgroundColor = isDark ? DS.neutral800 : DS.neutral100;
+    // Use contrast-safe text color
+    final labelColor = isDark ? DS.textPrimary : DS.neutral900;
     final horizontalPadding = widget.isNarrow ? 12.0 : DS.spacing16;
 
     return GestureDetector(

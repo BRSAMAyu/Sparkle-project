@@ -17,25 +17,39 @@ class GalaxyMiniMap extends StatelessWidget {
   final double minimapSize;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: minimapSize,
-        height: minimapSize,
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DS.brandPrimary24),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: minimapSize,
+      height: minimapSize,
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.black.withValues(alpha: 0.7)
+            : Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? DS.neutral700 : DS.neutral300,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CustomPaint(
-            painter: _MiniMapPainter(
-              listenable: transformationController,
-              canvasSize: canvasSize,
-              screenSize: screenSize,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CustomPaint(
+          painter: _MiniMapPainter(
+            listenable: transformationController,
+            canvasSize: canvasSize,
+            screenSize: screenSize,
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _MiniMapPainter extends CustomPainter {

@@ -1,3 +1,30 @@
+"""
+Prompt 管理系统 - 统一的Agent Prompt管理
+
+重构说明：
+- 整合 AgentProfile 的系统 prompt
+- 支持按角色获取专用 prompt
+- 与 core/agent_profiles.py 配合使用
+
+使用方式：
+    from app.orchestration.prompts import get_system_prompt
+
+    # 获取通用 prompt（原有逻辑）
+    prompt = get_system_prompt(user_context, conversation_history)
+
+    # 获取角色专用 prompt（新增）
+    from app.core.agent_profiles import AgentRole
+    prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
+"""
+
+from typing import Dict, Optional, Any
+from app.core.agent_profiles import AgentRole, agent_profile_registry
+
+
+# ============================================
+# 通用 Agent Prompt 模板
+# ============================================
+
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
 
 ## 当前用户上下文
@@ -17,17 +44,44 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 """
 
 
+# ============================================
+# 主入口函数
+# ============================================
+
 def build_system_prompt(
     user_context: dict,
     conversation_history: dict = None,
     prompt_version: str = "v1",
+    agent_role: AgentRole = AgentRole.GENERATION,
 ) -> str:
     """
     构建完整的 System Prompt，深度集成用户偏好
+
+    Args:
+        user_context: 用户上下文（从UserService等获取）
+        conversation_history: 对话历史（从ContextPruner获取）
+        prompt_version: prompt版本（v1/v2）
+        agent_role: Agent角色（用于获取角色专用prompt）
+
+    Returns:
+        完整的系统prompt字符串
     """
+    # Ensure user_context is never None
+    if user_context is None:
+        user_context = {}
+    if conversation_history is None:
+        conversation_history = {}
+
+    # 1. 首先检查 AgentProfile 是否有专用 prompt
+    profile = agent_profile_registry.get_profile(agent_role)
+    base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
+
+    # 2. 格式化上下文
     formatted_user_context = format_user_context(user_context)
 
-    llm_profile = user_context.get("llm_profile", {})
+    llm_profile = user_context.get("llm_profile")
+    if llm_profile is None:
+        llm_profile = {}
     preference_instructions = llm_profile.get(
         "system_prompt_additions",
         _get_default_preference_instructions(user_context)
@@ -35,16 +89,98 @@ def build_system_prompt(
 
     conversation_history_section = _format_conversation_history(conversation_history)
 
-    prompt = AGENT_SYSTEM_PROMPT.format(
-        user_context=formatted_user_context,
-        conversation_history_section=conversation_history_section,
-        preference_instructions=preference_instructions,
-    )
+    # 3. 如果是通用模板，进行完整渲染
+    if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
+        prompt = base_prompt.format(
+            user_context=formatted_user_context,
+            conversation_history_section=conversation_history_section,
+            preference_instructions=preference_instructions,
+        )
+    else:
+        # 角色专用模板，简单替换
+        prompt = base_prompt.format(
+            user_context=formatted_user_context,
+            query=user_context.get("current_query", ""),
+        )
 
+    # 4. 版本特定修饰
     if prompt_version == "v2":
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n- 列表优先"
 
     return prompt
+
+
+def get_system_prompt_for_role(
+    agent_role: AgentRole,
+    user_context: dict,
+    query: str = "",
+    conversation_history: dict = None,
+) -> str:
+    """
+    获取指定角色的系统 Prompt
+
+    Args:
+        agent_role: Agent 角色（如 AgentRole.GALAXY_GUIDE）
+        user_context: 用户上下文
+        query: 当前用户查询（用于渲染模板）
+        conversation_history: 对话历史（可选）
+
+    Returns:
+        角色专用的系统 prompt
+
+    Example:
+        from app.core.agent_profiles import AgentRole
+        prompt = get_system_prompt_for_role(
+            AgentRole.GALAXY_GUIDE,
+            user_context,
+            query="什么是神经网络？"
+        )
+    """
+    profile = agent_profile_registry.get_profile(agent_role)
+    base_template = profile.system_prompt_template
+
+    if not base_template:
+        # 回退到通用prompt
+        return build_system_prompt(
+            user_context=user_context,
+            conversation_history=conversation_history,
+            agent_role=agent_role,
+        )
+
+    # 格式化上下文
+    formatted_user_context = format_user_context(user_context)
+
+    # 渲染角色专用模板
+    try:
+        prompt = base_template.format(
+            user_context=formatted_user_context,
+            query=query,
+        )
+    except KeyError as e:
+        # 模板变量不匹配，回退
+        from loguru import logger
+        logger.warning(f"Prompt template missing key {e} for {agent_role}, using fallback")
+        prompt = base_template
+
+    return prompt
+
+
+def get_system_prompt(
+    user_context: dict,
+    conversation_history: dict = None,
+    prompt_version: str = "v1",
+) -> str:
+    """
+    向后兼容的函数名
+
+    等同于 build_system_prompt，但使用默认的 GENERATION 角色
+    """
+    return build_system_prompt(
+        user_context=user_context,
+        conversation_history=conversation_history,
+        prompt_version=prompt_version,
+        agent_role=AgentRole.GENERATION,
+    )
 
 
 def _format_conversation_history(conversation_history: dict = None) -> str:
@@ -135,12 +271,18 @@ def format_user_context(context: dict) -> str:
     # 分析摘要
     if context.get("analytics_summary"):
         analytics = context["analytics_summary"]
-        lines.append("-" * 20)
-        if analytics.get("is_active"):
-            lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
-            lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
-        else:
-            lines.append("状态: 不活跃")
+        # Handle both dict and string formats for analytics_summary
+        if isinstance(analytics, dict):
+            lines.append("-" * 20)
+            if analytics.get("is_active"):
+                lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
+                lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
+            else:
+                lines.append("状态: 不活跃")
+        elif isinstance(analytics, str) and analytics:
+            # If it's a string summary, just append it
+            lines.append("-" * 20)
+            lines.append(f"分析摘要: {analytics}")
 
     # 火花等级
     if context.get("user_context") and context["user_context"].get("preferences"):

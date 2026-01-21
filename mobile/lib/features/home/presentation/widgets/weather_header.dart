@@ -10,12 +10,13 @@ class WeatherHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        gradient: _getWeatherGradient(dashboardState.weather.type),
+        gradient: _getWeatherGradient(dashboardState.weather.type, isDark),
       ),
       child: Stack(
         children: [
@@ -40,7 +41,7 @@ class WeatherHeader extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: DS.textSecondary,
+                        color: isDark ? DS.textSecondary : DS.neutral700,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -51,7 +52,9 @@ class WeatherHeader extends ConsumerWidget {
                   dashboardState.weather.condition,
                   style: TextStyle(
                     fontSize: 10,
-                    color: DS.textSecondary.withValues(alpha: 0.6),
+                    color: isDark
+                        ? DS.textSecondary.withValues(alpha: 0.6)
+                        : DS.neutral600.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -62,35 +65,45 @@ class WeatherHeader extends ConsumerWidget {
     );
   }
 
-  LinearGradient _getWeatherGradient(String type) {
+  LinearGradient _getWeatherGradient(String type, bool isDark) {
     switch (type) {
       case 'sunny':
         return LinearGradient(
-          colors: [DS.deepSpaceStart, DS.deepSpaceEnd, DS.neutral700],
+          colors: isDark
+              ? [DS.deepSpaceStart, DS.deepSpaceEnd, DS.neutral700]
+              : [DS.neutral50, DS.neutral100, DS.neutral200],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'cloudy':
         return LinearGradient(
-          colors: [DS.neutral900, DS.neutral800, DS.neutral700],
+          colors: isDark
+              ? [DS.neutral900, DS.neutral800, DS.neutral700]
+              : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'rainy':
         return LinearGradient(
-          colors: [DS.deepSpaceStart, DS.deepSpaceSurface, DS.neutral700],
+          colors: isDark
+              ? [DS.deepSpaceStart, DS.deepSpaceSurface, DS.neutral700]
+              : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       case 'meteor':
         return LinearGradient(
-          colors: [DS.neutral900, DS.neutral800, DS.secondaryBaseDark],
+          colors: isDark
+              ? [DS.neutral900, DS.neutral800, DS.secondaryBaseDark]
+              : [DS.neutral100, DS.neutral200, DS.neutral300],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );
       default:
         return LinearGradient(
-          colors: [DS.deepSpaceStart, DS.deepSpaceEnd],
+          colors: isDark
+              ? [DS.deepSpaceStart, DS.deepSpaceEnd]
+              : [DS.neutral50, DS.neutral100],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         );

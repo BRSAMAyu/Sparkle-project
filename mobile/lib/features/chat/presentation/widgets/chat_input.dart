@@ -184,14 +184,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       SnackBar(content: Text(error)),
                     );
                   },
-                  onRecordingStarted: () {
-                    // 录音开始时的回调
-                    _focusNode.unfocus();
-                  },
-                  onRecordingStopped: () {
-                    // 录音停止时的回调
-                    _focusNode.requestFocus();
-                  },
+                  onRecordingStarted: _focusNode.unfocus,
+                  onRecordingStopped: _focusNode.requestFocus,
                 ),
 
                 const SizedBox(width: DS.spacing8),
@@ -204,7 +198,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       return DecoratedBox(
                         decoration: BoxDecoration(
                           color: isDark ? DS.neutral800 : DS.neutral100,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isDark ? DS.neutral700 : DS.neutral300,
                           ),

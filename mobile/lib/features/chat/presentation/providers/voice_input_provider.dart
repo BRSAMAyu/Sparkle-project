@@ -16,17 +16,17 @@ enum VoiceInputState {
 
 /// 语音输入Provider
 class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
-  final AudioRecordingService _recordingService;
-  final Logger _logger;
-  Timer? _durationTimer;
-  int _recordingDuration = 0;
-  String _currentTranscription = "";
-  String _errorMessage = "";
 
   VoiceInputNotifier()
       : _recordingService = AudioRecordingService(),
         _logger = Logger(),
         super(VoiceInputState.idle);
+  final AudioRecordingService _recordingService;
+  final Logger _logger;
+  Timer? _durationTimer;
+  int _recordingDuration = 0;
+  String _currentTranscription = '';
+  String _errorMessage = '';
 
   /// 检查麦克风权限
   Future<bool> checkPermissions() async {
@@ -46,14 +46,14 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     Duration? maxDuration,
   }) async {
     if (state == VoiceInputState.recording) {
-      _logger.w("Already recording");
+      _logger.w('Already recording');
       return;
     }
 
     // 检查权限
     final hasPermission = await checkPermissions();
     if (!hasPermission) {
-      _errorMessage = "没有麦克风权限";
+      _errorMessage = '没有麦克风权限';
       state = VoiceInputState.error;
       onError(_errorMessage);
       return;
@@ -61,8 +61,8 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
 
     // 重置状态
     _recordingDuration = 0;
-    _currentTranscription = "";
-    _errorMessage = "";
+    _currentTranscription = '';
+    _errorMessage = '';
 
     state = VoiceInputState.recording;
 
@@ -94,7 +94,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
         maxDuration: maxDuration,
       );
     } catch (e) {
-      _errorMessage = "启动录音失败: $e";
+      _errorMessage = '启动录音失败: $e';
       state = VoiceInputState.error;
       onError(_errorMessage);
     }
@@ -122,7 +122,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     await _recordingService.cancelRecording();
     _durationTimer?.cancel();
     _durationTimer = null;
-    _currentTranscription = "";
+    _currentTranscription = '';
     state = VoiceInputState.idle;
   }
 
@@ -131,8 +131,8 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     _durationTimer?.cancel();
     _durationTimer = null;
     _recordingDuration = 0;
-    _currentTranscription = "";
-    _errorMessage = "";
+    _currentTranscription = '';
+    _errorMessage = '';
     state = VoiceInputState.idle;
   }
 
@@ -155,6 +155,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
   bool get hasError => state == VoiceInputState.error;
 
   /// 清理资源
+  @override
   Future<void> dispose() async {
     _durationTimer?.cancel();
     await _recordingService.dispose();
@@ -164,6 +165,4 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
 
 /// 语音输入Provider
 final voiceInputProvider =
-    StateNotifierProvider<VoiceInputNotifier, VoiceInputState>((ref) {
-  return VoiceInputNotifier();
-});
+    StateNotifierProvider<VoiceInputNotifier, VoiceInputState>((ref) => VoiceInputNotifier());

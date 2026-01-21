@@ -39,6 +39,20 @@ from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
 from opentelemetry import trace
 
+# Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
+from app.orchestration.request_router import RequestRouter
+from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.schemas import ExecutablePlan, FeedbackPayload, StateSnapshot
+from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.state_snapshot import StateSnapshotManager
+
+# Phase 3: Circuit Breaker, Observability, Shadow Mode
+from app.orchestration.circuit_breaker import (
+    CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
+)
+from app.orchestration.observability_logger import observability_logger
+from app.services.shadow_prediction_service import shadow_prediction_service
+
 # FSM States
 STATE_INIT = "INIT"
 STATE_THINKING = "THINKING"
@@ -149,9 +163,6 @@ class ChatOrchestrator:
         # Initialize tool registry (auto-discover tools)
         logger.info("ChatOrchestrator initialized with all components")
 
-        # Ensure tools are registered
-        self._ensure_tools_registered()
-
         # Initialize State Graph
         self.graph = create_standard_chat_graph()
         
@@ -161,13 +172,50 @@ class ChatOrchestrator:
         # Connect Visualizer and Tracer
         from app.visualization.realtime_visualizer import visualizer
         from app.visualization.execution_tracer import ExecutionTracer
-        
+
         self.tracer = ExecutionTracer(redis_client)
-        
+
         self.graph.on_event = self._chain_event_handlers(
             visualizer.on_graph_event,
             self.tracer.record_event
         )
+
+        # Phase 1: Initialize new components
+        self.request_router = RequestRouter(redis_client)
+        self.grounding_validator = GroundingValidator(redis_client)
+        logger.info("ChatOrchestrator initialized with RequestRouter and GroundingValidator")
+
+        # Phase 2: Initialize LangGraph Planner and Snapshot Manager
+        self.lang_graph_planner = LangGraphPlanner(redis_client)
+        self.snapshot_manager = StateSnapshotManager(redis_client)
+        logger.info("ChatOrchestrator initialized with LangGraphPlanner and StateSnapshotManager")
+
+        # Phase 3: Initialize Circuit Breaker
+        self.langgraph_breaker = CircuitBreaker(
+            name="langgraph_planner",
+            config=CircuitBreakerConfig(
+                failure_threshold=5,
+                success_threshold=2,
+                timeout_ms=60000,
+                failure_rate_threshold=0.5
+            ),
+            redis_client=redis_client
+        )
+        circuit_breaker_registry.register(self.langgraph_breaker)
+        asyncio.create_task(self.langgraph_breaker.initialize())
+
+        # Phase 3: Observability
+        self.observability = observability_logger
+        self.observability.redis = redis_client
+
+        # Phase 3: Shadow Mode
+        self.shadow_predictor = shadow_prediction_service
+        self.shadow_predictor.redis = redis_client
+
+        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode")
+
+        # Ensure tools are registered
+        self._ensure_tools_registered()
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -184,6 +232,11 @@ class ChatOrchestrator:
                 # Auto-discover tools from app.tools package
                 dynamic_tool_registry.register_from_package("app.tools")
                 logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
+
+            # Fix 3: 刷新 validator allowlist（与工具注册联动）
+            if self.grounding_validator:
+                self.grounding_validator.refresh_allowlist()
+                logger.info("GroundingValidator allowlist refreshed after tool registration")
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
 
@@ -603,41 +656,43 @@ class ChatOrchestrator:
             active_db = db_session or self.db_session
             
             # Step 0: Request Validation (with quota check)
-            if self.validator:
-                validation_result = await self.validator.validate_chat_request(request)
-                if not validation_result.is_valid:
-                    logger.error(f"Validation failed: {validation_result.error_message}")
+            with tracer.start_as_current_span("orchestrator.validate_request"):
+                if self.validator:
+                    validation_result = await self.validator.validate_chat_request(request)
+                    if not validation_result.is_valid:
+                        logger.error(f"Validation failed: {validation_result.error_message}")
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                code="VALIDATION_ERROR",
+                                message=validation_result.error_message,
+                                retryable=False
+                            ),
+                            finish_reason=agent_service_pb2.ERROR
+                        )
+                        return
+
+            # Step 1: Check Idempotency
+            with tracer.start_as_current_span("orchestrator.check_idempotency"):
+                cached_response = await self._check_idempotency(session_id, request_id)
+                if cached_response:
+                    logger.info(f"Cache hit for session {session_id}, request {request_id}")
+                    cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
+                    metadata_map = {}
+                    if isinstance(cached_metadata, dict):
+                        metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
+                    # Return cached response
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
-                        error=agent_service_pb2.Error(
-                            code="VALIDATION_ERROR",
-                            message=validation_result.error_message,
-                            retryable=False
-                        ),
-                        finish_reason=agent_service_pb2.ERROR
+                        full_text=cached_response.get("full_text") or cached_response.get("message", ""),
+                        metadata=metadata_map,
+                        finish_reason=agent_service_pb2.STOP
                     )
                     return
-
-            # Step 1: Check Idempotency
-            cached_response = await self._check_idempotency(session_id, request_id)
-            if cached_response:
-                logger.info(f"Cache hit for session {session_id}, request {request_id}")
-                cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
-                metadata_map = {}
-                if isinstance(cached_metadata, dict):
-                    metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
-                # Return cached response
-                yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    full_text=cached_response.get("full_text") or cached_response.get("message", ""),
-                    metadata=metadata_map,
-                    finish_reason=agent_service_pb2.STOP
-                )
-                return
 
             # Step 2: Acquire Distributed Lock
             with tracer.start_as_current_span("redis.acquire_lock"):
@@ -709,7 +764,7 @@ class ChatOrchestrator:
 
                 user_context_payload = None
                 conversation_context = None
-                
+
                 with tracer.start_as_current_span("db.build_context"):
                     if active_db and user_id:
                         local_context = await self._build_user_context(user_id, active_db)
@@ -737,15 +792,17 @@ class ChatOrchestrator:
                 self._log_context_injection(user_id, user_context_payload)
 
                 if self.context_pruner:
-                    conversation_context = await self._build_conversation_context(session_id, user_id)
+                    with tracer.start_as_current_span("db.build_conversation_context"):
+                        conversation_context = await self._build_conversation_context(session_id, user_id)
 
                 # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
                 
                 # Get tools
-                tools = await self._get_tools_schema()
-                
+                with tracer.start_as_current_span("orchestrator.get_tools"):
+                    tools = await self._get_tools_schema()
+
                 # Prepare queue for streaming
                 queue = asyncio.Queue()
                 
@@ -783,6 +840,228 @@ class ChatOrchestrator:
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                 })
+
+                # === Phase 1 & Phase 2: Routing & Validation Setup ===
+                # 路由决策
+                route_decision = await self.request_router.decide(
+                    message=user_message,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                logger.info(
+                    f"Route decision: {route_decision.execution_mode} "
+                    f"(risk: {route_decision.risk_level}, intent: {route_decision.reason})"
+                )
+
+                # 存储路由决策和 plan 元数据到 state
+                # 工具执行节点会使用这些信息进行验证
+                state.context_data["plan_metadata"] = {
+                    "context_version": route_decision.context_version,
+                    "execution_mode": route_decision.execution_mode,
+                    "risk_level": route_decision.risk_level,
+                    "route_reason": route_decision.reason
+                }
+                state.context_data["grounding_validator"] = self.grounding_validator
+
+                # === Phase 2: LangGraph Planning Mode ===
+                # === Phase 3: With Circuit Breaker, Observability, Shadow Mode ===
+                executable_plan = None
+                snapshot = None
+
+                if route_decision.execution_mode in ["langgraph", "hybrid"]:
+                    logger.info(f"Using LangGraph planner for {route_decision.execution_mode} mode")
+
+                    # === Phase 3: Circuit Breaker Check ===
+                    allow, reason = await self.langgraph_breaker.allow_request()
+                    if not allow:
+                        logger.warning(f"LangGraph blocked by circuit breaker: {reason}")
+                        await self.observability.log_circuit_state_change(
+                            circuit_name="langgraph_planner",
+                            old_state="open",
+                            new_state="open",
+                            reason=reason
+                        )
+                        # Degrade to direct mode
+                        await stream_callback(agent_service_pb2.ChatResponse(
+                            delta=f"\n\n⚠️ 智能规划暂时不可用，使用标准模式"
+                        ))
+                        route_decision.execution_mode = "direct"
+                    else:
+                        try:
+                            # 1. Create State Snapshot
+                            snapshot = await self.snapshot_manager.create_snapshot(
+                                user_id=user_id,
+                                session_id=session_id,
+                                db_session=active_db
+                            )
+
+                            # 2. Call LangGraph Planner
+                            conversation_history = []
+                            if conversation_context:
+                                conversation_history = conversation_context.get("messages", [])
+
+                            executable_plan = await self.lang_graph_planner.plan(
+                                message=user_message,
+                                snapshot=snapshot,
+                                user_id=user_id,
+                                session_id=session_id,
+                                conversation_history=conversation_history
+                            )
+
+                            # === Phase 3: Log planning observability ===
+                            await self.observability.log_langgraph_plan(
+                                user_id=user_id,
+                                session_id=session_id,
+                                plan_id=executable_plan.plan_id,
+                                plan_data={
+                                    "agents_involved": executable_plan.agents_involved,
+                                    "collaboration_mode": executable_plan.collaboration_mode,
+                                    "tool_calls_count": len(executable_plan.tool_calls),
+                                    "confidence": executable_plan.confidence,
+                                    "rationale": executable_plan.rationale
+                                }
+                            )
+
+                            logger.info(
+                                f"LangGraph plan generated: {len(executable_plan.tool_calls)} tool calls, "
+                                f"confidence={executable_plan.confidence}, "
+                                f"collaboration={executable_plan.collaboration_mode}, "
+                                f"agents={executable_plan.agents_involved}"
+                            )
+
+                            # 3. Version Conflict Check
+                            current_versions = await self._load_context_versions(user_id)
+                            version_check = await self.snapshot_manager.compare_versions(
+                                snapshot=snapshot,
+                                current_versions=current_versions
+                            )
+
+                            if version_check["has_conflict"]:
+                                logger.warning(
+                                    f"Version conflict detected: {version_check['conflicted_domains']}"
+                                )
+
+                                # Handle based on plan confidence
+                                if executable_plan.confidence < 0.7:
+                                    # Low confidence + conflict → Discard plan
+                                    await stream_callback(agent_service_pb2.ChatResponse(
+                                        delta=f"\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
+                                    ))
+                                    # === Phase 3: Log validation failure ===
+                                    await self.observability.log_validation_failed(
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        plan_id=executable_plan.plan_id,
+                                        failure_reason="Version conflict with low confidence"
+                                    )
+                                    await self.langgraph_breaker.on_failure("version_conflict_low_confidence")
+                                    return
+                                else:
+                                    # High confidence + conflict → Re-plan
+                                    logger.info("High confidence plan with version conflict, replanning...")
+                                    snapshot = await self.snapshot_manager.create_snapshot(
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        db_session=active_db
+                                    )
+                                    executable_plan = await self.lang_graph_planner.replan(
+                                        message=user_message,
+                                        snapshot=snapshot,
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        previous_plan=executable_plan,
+                                        conflict_info=version_check
+                                    )
+
+                            # 4. Grounding Validation
+                            validation_result = await self.grounding_validator.validate_plan(
+                                plan=executable_plan,
+                                snapshot=snapshot
+                            )
+
+                            if not validation_result.is_valid:
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    delta=f"\n\n⚠️ 计划验证失败: {validation_result.failure_reason}"
+                                ))
+                                # === Phase 3: Log validation failure ===
+                                await self.observability.log_validation_failed(
+                                    user_id=user_id,
+                                    session_id=session_id,
+                                    plan_id=executable_plan.plan_id,
+                                    failure_reason=validation_result.failure_reason
+                                )
+                                await self.langgraph_breaker.on_failure("validation_failed")
+                                return
+
+                            # 5. Preflight Check
+                            preflight = await self.grounding_validator.preflight_check(
+                                plan=executable_plan,
+                                user_id=user_id
+                            )
+
+                            if not preflight["is_ready"]:
+                                await stream_callback(agent_service_pb2.ChatResponse(
+                                    delta=f"\n\n⚠️ 服务暂时不可用: {', '.join(preflight['blocked_by'])}"
+                                ))
+                                await self.langgraph_breaker.on_failure("preflight_blocked")
+                                return
+
+                            # 6. Store plan in state for execution
+                            state.context_data["executable_plan"] = executable_plan
+                            state.context_data["snapshot"] = snapshot
+
+                            # === Phase 3: Record success for circuit breaker (plan accepted) ===
+                            await self.langgraph_breaker.on_success()
+
+                            # Log plan summary
+                            plan_summary = self.lang_graph_planner.get_plan_summary(executable_plan)
+                            logger.info(f"Plan ready for execution: {plan_summary}")
+
+                            # === Phase 3: Log collaboration start if multi-agent ===
+                            if executable_plan.collaboration_mode != "single":
+                                await self.observability.log_collaboration_start(
+                                    user_id=user_id,
+                                    session_id=session_id,
+                                    agents=executable_plan.agents_involved,
+                                    mode=executable_plan.collaboration_mode
+                                )
+
+                            # === Phase 3: Shadow Mode Prediction (parallel, non-blocking) ===
+                            asyncio.create_task(
+                                self.shadow_predictor.predict_and_record(
+                                    user_message=user_message,
+                                    user_id=user_id,
+                                    session_id=session_id,
+                                    actual_decision=route_decision,
+                                    actual_plan=executable_plan
+                                )
+                            )
+
+                        except Exception as e:
+                            logger.error(f"LangGraph planning error: {e}", exc_info=True)
+                            # === Phase 3: Record failure for circuit breaker ===
+                            await self.langgraph_breaker.on_failure(str(e))
+                            # Fall back to direct mode
+                            await stream_callback(agent_service_pb2.ChatResponse(
+                                delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"
+                            ))
+                            # Reset to direct mode
+                            route_decision.execution_mode = "direct"
+
+                # === Phase 3: Log route decision (after potential mode change) ===
+                await self.observability.log_route_decision(
+                    user_id=user_id,
+                    session_id=session_id,
+                    message=user_message,
+                    decision={
+                        "execution_mode": route_decision.execution_mode,
+                        "risk_level": route_decision.risk_level,
+                        "reason": route_decision.reason,
+                        "intent": route_decision.reason.split(":")[0] if ":" in route_decision.reason else "unknown"
+                    }
+                )
+
+                # ===========================================
 
                 # Launch Graph Execution in Background (Managed)
                 logger.info("🚀 Launching StateGraph Execution")
@@ -870,7 +1149,8 @@ class ChatOrchestrator:
                         )
                     except Exception as e:
                         logger.warning(f"Failed to record decision: {e}")
-                    await self._cache_response(session_id, request_id, final_response_data)
+                    with tracer.start_as_current_span("orchestrator.cache_response"):
+                        await self._cache_response(session_id, request_id, final_response_data)
                     
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.

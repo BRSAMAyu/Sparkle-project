@@ -21,7 +21,7 @@ class GroupTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Group Tasks')),
+        title: const Text('Group Tasks'),),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Feature: Show task creation dialog

@@ -59,6 +59,22 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
 
+    # 版本兼容性检查 (passlib/bcrypt)
+    try:
+        import passlib
+        import bcrypt
+        logger.info(f"Auth deps: passlib={passlib.__version__}, bcrypt={bcrypt.__version__}")
+        # 验证兼容性: passlib 1.7.4 与 bcrypt 5.0+ 不兼容
+        if passlib.__version__.startswith("1.7."):
+            try:
+                bcrypt_ver = tuple(map(int, bcrypt.__version__.split(".")[:2]))
+                if bcrypt_ver >= (5, 0):
+                    logger.warning(f"⚠️  passlib {passlib.__version__} may be incompatible with bcrypt {bcrypt.__version__}. Consider downgrading to bcrypt<5.0.0")
+            except Exception:
+                pass
+    except ImportError:
+        logger.warning("passlib or bcrypt not installed")
+
     # Ensure upload directory exists
     if not os.path.exists(settings.UPLOAD_DIR):
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

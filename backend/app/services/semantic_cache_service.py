@@ -251,7 +251,7 @@ class SemanticCacheService:
             # 语义相似检索
             if similarity_threshold < 1.0:
                 normalized_query = self._normalize_query(query)
-                query_embedding = await embedding_service.get_embedding(normalized_query)
+                query_embedding = await embedding_service.get_embedding(normalized_query, text_type="query")
                 similar = await self._find_similar_cache_key(
                     query_embedding,
                     user_id,
@@ -407,7 +407,7 @@ class SemanticCacheService:
             )
             await self._set_embedding_payload(
                 cache_key=cache_key,
-                embedding=await embedding_service.get_embedding(normalized_query),
+                embedding=await embedding_service.get_embedding(normalized_query, text_type="query"),
                 user_id=user_id,
                 normalized_query=normalized_query,
                 knowledge_version=knowledge_version,

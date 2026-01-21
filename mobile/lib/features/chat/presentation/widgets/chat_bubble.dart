@@ -626,7 +626,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isUser ? Colors.white : Colors.white,),),),
+                          color: isUser
+                              ? DS.onBrandPrimary
+                              : DS.onBrandPrimary,),),),
         ),
       ),
     );
@@ -635,28 +637,28 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
       MarkdownStyleSheet(
         p: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
             height: 1.4,),
         h1: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 24,
             fontWeight: FontWeight.bold,),
         code: TextStyle(
             backgroundColor: isUser
-                ? Colors.white.withValues(alpha: 0.2)
+                ? DS.chatBubbleUserText.withValues(alpha: 0.2)
                 : context.sparkleColors.surfaceTertiary,
             fontFamily: 'monospace',
             fontSize: 14,
             color:
-                isUser ? Colors.white : context.sparkleColors.brandSecondary,),
+                isUser ? DS.chatBubbleUserText : context.sparkleColors.brandSecondary,),
         codeblockDecoration: BoxDecoration(
             color: isUser
-                ? Colors.white.withValues(alpha: 0.1)
+                ? DS.chatBubbleUserText.withValues(alpha: 0.1)
                 : context.sparkleColors.surfaceTertiary,
             borderRadius: BorderRadius.circular(12),),
         a: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.brandPrimary,
+            color: isUser ? DS.chatBubbleUserText : context.sparkleColors.brandPrimary,
             decoration: TextDecoration.underline,),
       );
 

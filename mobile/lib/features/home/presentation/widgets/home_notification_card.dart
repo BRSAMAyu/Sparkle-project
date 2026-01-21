@@ -91,7 +91,7 @@ class HomeNotificationCard extends ConsumerWidget {
                       ),
                       child: Text(
                         '+${notifications.length - 1}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -197,7 +197,7 @@ class HomeNotificationCard extends ConsumerWidget {
                 ),
                 child: Text(
                   unreadCount > 99 ? '99+' : '$unreadCount',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

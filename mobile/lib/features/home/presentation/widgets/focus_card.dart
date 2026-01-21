@@ -57,6 +57,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
         padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Row(
@@ -90,8 +91,9 @@ class _FocusCardState extends ConsumerState<FocusCard>
               ],
             ),
 
-            Expanded(
+            Flexible(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Flame Animation
@@ -100,8 +102,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     builder: (context, child) => Transform.scale(
                       scale: _flameAnimation.value,
                       child: Container(
-                        width: 60,
-                        height: 60,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
                             colors: [
@@ -115,33 +117,35 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         child: Icon(
                           Icons.local_fire_department_rounded,
                           color: DS.warning,
-                          size: 32,
+                          size: 28,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: DS.md),
                   // Nudge Message
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      nudgeMessage,
-                      textAlign: TextAlign.center,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
-                        fontSize: 11,
-                        height: 1.3,
-                        color: secondaryColor.withValues(alpha: 0.9),
-                        fontStyle: FontStyle.italic,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        nudgeMessage,
+                        textAlign: TextAlign.center,
+                        style: context.sparkleTypography.bodyMedium.copyWith(
+                          fontSize: 10,
+                          height: 1.3,
+                          color: secondaryColor.withValues(alpha: 0.9),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],

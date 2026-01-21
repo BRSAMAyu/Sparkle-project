@@ -36,7 +36,7 @@ RUN uv pip install --system --no-cache \
     pdfplumber pypdf python-docx python-pptx \
     langgraph langchain-openai langchain-anthropic \
     langchain-community langchain-core langchain-text-splitters \
-    langchain-huggingface sentence-transformers \
+    langchain-huggingface dashscope \
     cryptography pydantic-settings tiktoken \
     openpyxl python-multipart
 # Final stage

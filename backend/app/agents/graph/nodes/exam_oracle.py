@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 
 from app.agents.graph.state import SparkleState
@@ -34,6 +34,10 @@ async def exam_oracle_node(state: SparkleState):
     负责考点预测、真题分析、模拟出题、文档清洗、任务调度
     """
     messages = state["messages"]
+    collaboration_context = state.get("collaboration_context")
+    if collaboration_context:
+        messages = list(messages)
+        messages.append(HumanMessage(content=collaboration_context))
     
     # 使用强推理模型 (GPT-4o) 处理复杂分析
     llm = LLMFactory.get_llm("exam_oracle")

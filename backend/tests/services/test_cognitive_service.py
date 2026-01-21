@@ -24,7 +24,7 @@ async def test_analyze_behavior_creates_pattern():
         context_tags={"mood": "anxious"},
         error_tags=["procrastination"],
         severity=3,
-        embedding=[0.1] * 1536
+        embedding=[0.1] * 1024
     )
     
     # Mock DB execution results
