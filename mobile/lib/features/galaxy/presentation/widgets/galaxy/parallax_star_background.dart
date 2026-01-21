@@ -28,6 +28,7 @@ class ParallaxStarBackground extends StatelessWidget {
           final tx = matrix.getTranslation().x;
           final ty = matrix.getTranslation().y;
           final scale = matrix.getMaxScaleOnAxis();
+          final isDark = Theme.of(context).brightness == Brightness.dark;
 
           return CustomPaint(
             painter: _ParallaxLayersPainter(
@@ -35,6 +36,7 @@ class ParallaxStarBackground extends StatelessWidget {
               offsetY: ty,
               scale: scale,
               drawBackground: drawBackground,
+              isDark: isDark,
             ),
             size: Size.infinite,
           );
@@ -48,26 +50,36 @@ class _ParallaxLayersPainter extends CustomPainter {
     required this.offsetY,
     required this.scale,
     required this.drawBackground,
+    required this.isDark,
   });
   final double offsetX;
   final double offsetY;
   final double scale;
   final bool drawBackground;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (drawBackground) {
-      // Fill with deep space void - use theme-aware colors
+      // Deep space night sky - always use blue-purple colors regardless of theme
       final center = Offset(size.width / 2, size.height / 2);
-      final startColor = DS.deepSpaceStart;
-      final endColor = DS.deepSpaceEnd;
+      // Light mode uses slightly brighter blue-purple, dark mode uses deeper night sky
+      final startColor = isDark
+          ? const Color(0xFF0A0E27)  // Dark mode: Deep night
+          : const Color(0xFF1A2540); // Light mode: Slightly brighter blue-purple
+      final midColor = isDark
+          ? const Color(0xFF0E1533)
+          : const Color(0xFF222A48);
+      final endColor = isDark
+          ? const Color(0xFF141838)
+          : const Color(0xFF2A3050);  // Still maintains night sky feel in light mode
 
       final gradient = ui.Gradient.radial(
         center,
         math.max(size.width, size.height) * 0.8,
         [
           startColor,
-          Color.lerp(startColor, endColor, 0.5) ?? endColor,
+          midColor,
           endColor,
         ],
         [0.0, 0.5, 1.0],
@@ -128,11 +140,8 @@ class _ParallaxLayersPainter extends CustomPainter {
       // Scale star size slightly with zoom to give depth feeling (optional)
       // r = r * (0.5 + scale * 0.5);
 
-      // Use color that contrasts with background
-      // In dark mode: white stars, in light mode: dark stars
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      final starColor = isDark ? Colors.white : Colors.black87;
-      paint.color = starColor.withValues(
+      // Always use white stars for night sky effect
+      paint.color = Colors.white.withValues(
           alpha: opacityBase * (0.5 + random.nextDouble() * 0.5),);
       canvas.drawCircle(Offset(x, y), r, paint);
     }
@@ -143,5 +152,6 @@ class _ParallaxLayersPainter extends CustomPainter {
       oldDelegate.offsetX != offsetX ||
       oldDelegate.offsetY != offsetY ||
       oldDelegate.scale != scale ||
-      oldDelegate.drawBackground != drawBackground;
+      oldDelegate.drawBackground != drawBackground ||
+      oldDelegate.isDark != isDark;
 }

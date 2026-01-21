@@ -83,9 +83,14 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                   height: size,
                   decoration: BoxDecoration(
                     borderRadius: DS.borderRadius16,
-                    border: Border.all(color: DS.neutral400, width: 2),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? DS.neutral700
+                          : DS.neutral400,
+                      width: 2,
+                    ),
                     // Use theme-aware background with better contrast
-                    // In dark mode: use surfaceTertiary (darker) to contrast with orange control point
+                    // In dark mode: use surfaceTertiary (darker) to contrast with white control point
                     // In light mode: use surfaceSecondary (lighter) for better visibility
                     color: Theme.of(context).brightness == Brightness.dark
                         ? DS.surfaceTertiary
@@ -137,24 +142,31 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
                           width: handleSize,
                           height: handleSize,
                           decoration: BoxDecoration(
-                            gradient: DS.primaryGradient,
+                            gradient: Theme.of(context).brightness == Brightness.dark
+                                ? null
+                                : DS.primaryGradient,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : null,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: DS.primaryBase.withValues(alpha: 0.5),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : DS.primaryBase.withValues(alpha: 0.5),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
                             ],
                             border: Border.all(
                                 color: Theme.of(context).brightness == Brightness.dark
-                                    ? DS.brandPrimary
+                                    ? Colors.white.withValues(alpha: 0.5)
                                     : DS.brandPrimaryConst,
                                 width: 2,),
                           ),
                           child: Icon(Icons.local_fire_department,
                               color: Theme.of(context).brightness == Brightness.dark
-                                  ? DS.brandPrimary
+                                  ? Colors.black87
                                   : DS.brandPrimaryConst,
                               size: 24,),
                         ),
