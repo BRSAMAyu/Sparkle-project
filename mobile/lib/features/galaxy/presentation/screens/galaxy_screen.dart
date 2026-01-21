@@ -42,6 +42,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   // State
   bool _isEntering = true;
   bool _hasCentered = false;
+  bool _loadingTimedOut = false;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -80,6 +81,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Initial load
     unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
     unawaited(_renderEngine.prewarm());
+
+    // Hide loading indicator after 5 seconds (timeout mechanism)
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _loadingTimedOut = true);
+    });
   }
 
   void _performInitialCentering(Size size) {
@@ -777,13 +783,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               left: 30, // Slightly indented
               child: FloatingActionButton.small(
                 heroTag: 'guide_btn',
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
                 foregroundColor: DS.brandPrimary,
-                elevation: 0,
+                elevation: 2,
                 shape: CircleBorder(
                     side: BorderSide(
-                        color: DS.brandPrimary.withValues(alpha: 0.3),),),
-                child: const Icon(Icons.explore),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? DS.neutral700
+                            : DS.neutral300,),),
+                child: Icon(Icons.explore, color: DS.brandPrimary),
                 onPressed: () async {
                   final nodeId =
                       await ref.read(galaxyProvider.notifier).predictNextNode();
@@ -816,7 +826,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               right: 20,
               child: FloatingActionButton(
                 mini: true,
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.9),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
+                foregroundColor: DS.brandPrimary,
+                elevation: 4,
+                heroTag: 'spark_bolt',
                 child: Icon(Icons.bolt, color: DS.brandPrimary),
                 onPressed: () {
                   // Pick a random node to spark for demo
@@ -831,7 +846,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
           if (galaxyState.isLoading &&
               galaxyState.nodes.isEmpty &&
-              !_isEntering)
+              !_isEntering &&
+              !_loadingTimedOut)
             const Center(child: CircularProgressIndicator()),
 
           if (!_isEntering &&

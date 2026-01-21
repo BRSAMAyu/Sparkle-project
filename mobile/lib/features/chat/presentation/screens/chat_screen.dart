@@ -73,7 +73,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   colors: [
                     (isDark ? DS.deepSpaceStart : DS.surfacePrimary)
                         .withValues(alpha: 0.9),
-                    (isDark ? DS.deepSpaceEnd : DS.brandPrimary10)
+                    (isDark ? DS.deepSpaceEnd : DS.neutral50)
                         .withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
@@ -145,7 +145,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: isDark
               ? DS.deepSpaceGradient
               : LinearGradient(
-                  colors: [DS.neutral50, DS.brandPrimary],
+                  colors: [DS.neutral50, DS.neutral100],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
