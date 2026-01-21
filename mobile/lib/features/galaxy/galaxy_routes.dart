@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/knowledge/presentation/screens/knowledge_detail_screen.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -22,22 +22,16 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class GalaxyRoutes {
-  static const String galaxy = '/galaxy';
+  // Route constants for deep linking and navigation
+  static const String home = '/galaxy';
   static const String knowledgeDetail = '/galaxy/node/:id';
 
   static List<RouteBase> get routes => [
-        GoRoute(
-          path: galaxy,
-          name: 'galaxy',
-          pageBuilder: (context, state) => _buildTransitionPage(
-            state: state,
-            child: const GalaxyScreen(),
-            type: SharedAxisTransitionType.scaled,
-          ),
-        ),
+        // Knowledge detail (full-screen, uses root navigator)
         GoRoute(
           path: knowledgeDetail,
           name: 'knowledgeDetail',
+          parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final nodeId = state.pathParameters['id']!;
             return _buildTransitionPage(

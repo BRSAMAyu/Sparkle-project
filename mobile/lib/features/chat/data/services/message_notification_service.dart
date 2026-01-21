@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
+import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 
 // Notification message model
 class NotificationMessage {

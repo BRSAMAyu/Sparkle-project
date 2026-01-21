@@ -64,7 +64,7 @@ class _MyFriendsTab extends ConsumerWidget {
               return InkWell(
                 onTap: () {
                   context.push(
-                      '/community/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',);
+                      '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',);
                 },
                 child: Padding(
                   padding:
