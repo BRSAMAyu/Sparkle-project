@@ -176,6 +176,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
           ],
         ),
       ),
+      ),
     );
   }
 

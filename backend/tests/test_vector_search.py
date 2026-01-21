@@ -37,7 +37,7 @@ async def test_semantic_search_nodes():
         assert results[0].name == "Test Node"
         
         # 验证调用
-        mock_embedding_service.get_embedding.assert_called_with("test query")
+        mock_embedding_service.get_embedding.assert_called_with("test query", text_type="query")
         mock_db.execute.assert_called_once()
         
         # 验证 SQL 构建 (简单验证)
