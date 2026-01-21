@@ -167,7 +167,7 @@ switch_to_yinli() {
     } | .alwaysThinkingEnabled = false' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 
     jq '.hasCompletedOnboarding = true' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
-    update_thinking_mode false
+    update_thinking_mode true
 
     echo "✅ 已切换到引力云 API (可使用 /model 切换模型)。"
 }
@@ -183,7 +183,7 @@ switch_to_glm() {
     } | .alwaysThinkingEnabled = false' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 
     jq '.hasCompletedOnboarding = true' "$CLAUDE_JSON" > "${CLAUDE_JSON}.tmp" && mv "${CLAUDE_JSON}.tmp" "$CLAUDE_JSON"
-    update_thinking_mode false
+    update_thinking_mode true
 
     echo "✅ 已切换到智谱清言 GLM API。"
 }

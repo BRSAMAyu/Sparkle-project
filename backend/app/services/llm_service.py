@@ -1,6 +1,6 @@
 import json
 import inspect
-from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator
+from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator, Union
 import asyncio
 from loguru import logger
 from dataclasses import dataclass
@@ -9,6 +9,8 @@ from opentelemetry import trace
 from app.config import settings
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
+from app.core.llm_router import llm_router, LLMSelection, select_model_for_agent
+from app.core.agent_profiles import AgentRole, TaskType
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -127,19 +129,79 @@ tracer = trace.get_tracer(__name__)
 
 class LLMService:
     """
-    LLM 服务
-    支持工具调用（Function Calling）
+    LLM 服务 - 支持工具调用和动态模型选择
+
+    新功能：
+    - 根据 AgentRole 和 TaskType 动态选择模型
+    - 兼容原有的 LLM_PROVIDER 环境变量配置
+    - 自动降级策略
+    - 可观测的模型选择日志
+
+    向后兼容：
+    - 保留原有的 chat/reason 模型划分
+    - 无需修改现有调用代码
     """
-    
-    def __init__(self):
-        # 根据提供商选择配置
+
+    def __init__(
+        self,
+        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
+        enable_dynamic_routing: bool = True,
+    ):
+        """
+        Args:
+            agent_role: 当前服务代表的Agent角色（用于模型选择）
+            enable_dynamic_routing: 是否启用动态路由（默认True）
+                                 设为False则使用原有LLM_PROVIDER逻辑
+        """
+        self.agent_role = self._normalize_agent_role(agent_role)
+        self.enable_dynamic_routing = enable_dynamic_routing
+        self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False))
+
+        # 当前选中的模型配置
+        self._current_selection: Optional[LLMSelection] = None
+        self._provider: Optional[LLMProvider] = None
+
+        # 向后兼容：保留原有的模型名称
+        self.chat_model: str = ""
+        self.reason_model: str = ""
+
+        if enable_dynamic_routing:
+            # 使用新的 LLMRouter
+            self._init_with_router()
+        else:
+            # 使用原有的 LLM_PROVIDER 逻辑
+            self._init_legacy()
+
+    def _init_with_router(self):
+        """使用 LLMRouter 初始化（推荐方式）"""
+        selection = llm_router.select_model(self.agent_role)
+        self._current_selection = selection
+
+        kwargs = llm_router.get_openai_client_kwargs(selection)
+        self._provider = OpenAICompatibleProvider(
+            api_key=kwargs["api_key"],
+            base_url=kwargs["base_url"]
+        )
+
+        self.chat_model = kwargs["model"]
+        self.reason_model = kwargs["model"]  # 默认用同一个，可按需切换
+        if not kwargs.get("api_key"):
+            self.demo_mode = True
+
+        logger.info(
+            f"[LLMRouter] {self.agent_role.value} → {kwargs['model']} "
+            f"({selection.reason})"
+        )
+
+    def _init_legacy(self):
+        """使用原有的 LLM_PROVIDER 环境变量初始化（向后兼容）"""
         provider_type = settings.LLM_PROVIDER.lower()
 
         if provider_type == "xiaomi":
             api_key = settings.XIAOMI_MIMO_API_KEY
             base_url = settings.XIAOMI_MIMO_BASE_URL
             self.chat_model = settings.XIAOMI_CHAT_MODEL
-            self.reason_model = settings.XIAOMI_CHAT_MODEL  # MIMO 无专门的 reason 模型
+            self.reason_model = settings.XIAOMI_CHAT_MODEL
         elif provider_type == "deepseek":
             api_key = settings.DEEPSEEK_API_KEY
             base_url = settings.DEEPSEEK_BASE_URL
@@ -150,19 +212,104 @@ class LLMService:
             base_url = settings.ZHIPU_BASE_URL
             self.chat_model = settings.ZHIPU_CHAT_MODEL
             self.reason_model = settings.ZHIPU_TOOLS_MODEL
+        elif provider_type == "hunyuan":
+            api_key = settings.HUNYUAN_API_KEY
+            base_url = settings.HUNYUAN_BASE_URL
+            self.chat_model = settings.HUNYUAN_CHAT_MODEL
+            self.reason_model = settings.HUNYUAN_REASON_MODEL
         else:
-            # 默认使用通用 LLM 配置 (OpenAI, Qwen 等)
             api_key = settings.LLM_API_KEY
             base_url = settings.LLM_API_BASE_URL
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
 
-        self.provider: LLMProvider = OpenAICompatibleProvider(
+        self._provider = OpenAICompatibleProvider(
             api_key=api_key,
             base_url=base_url
         )
-        self.default_model = self.chat_model
-        self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False) or not api_key)
+        if not api_key:
+            self.demo_mode = True
+
+        logger.info(f"[Legacy] LLMService initialized with provider={provider_type}")
+
+    @property
+    def provider(self) -> LLMProvider:
+        """获取当前provider（向后兼容）"""
+        if self._provider is None:
+            self._init_with_router()
+        return self._provider
+
+    @property
+    def default_model(self) -> str:
+        """获取默认模型（向后兼容）"""
+        return self.chat_model
+
+    def switch_model_for_task(self, task_type: TaskType):
+        """
+        根据任务类型动态切换模型
+
+        Args:
+            task_type: 任务类型（如 TaskType.DEEP_REASONING）
+        """
+        if not self.enable_dynamic_routing:
+            logger.warning("Dynamic routing is disabled, cannot switch model")
+            return
+
+        selection = llm_router.select_model(self.agent_role, task_type)
+        kwargs = llm_router.get_openai_client_kwargs(selection)
+
+        self._provider = OpenAICompatibleProvider(
+            api_key=kwargs["api_key"],
+            base_url=kwargs["base_url"]
+        )
+        self.chat_model = kwargs["model"]
+        self.reason_model = kwargs["model"]
+        self._current_selection = selection
+
+        logger.info(
+            f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
+        )
+
+    def get_current_selection(self) -> Optional[LLMSelection]:
+        """获取当前的模型选择（用于观测）"""
+        return self._current_selection
+
+    @staticmethod
+    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+        if isinstance(agent_role, AgentRole):
+            return agent_role
+        if isinstance(agent_role, str):
+            role_value = agent_role.lower()
+            role_aliases = {
+                "math": AgentRole.MATH_AGENT,
+                "code": AgentRole.CODE_AGENT,
+                "writing": AgentRole.WRITING_AGENT,
+                "science": AgentRole.SCIENCE_AGENT,
+                "search": AgentRole.SEARCH_AGENT,
+            }
+            if role_value in role_aliases:
+                return role_aliases[role_value]
+            try:
+                return AgentRole(role_value)
+            except ValueError:
+                return AgentRole.GENERATION
+        role_value = getattr(agent_role, "value", None)
+        if role_value:
+            role_value = str(role_value).lower()
+            role_aliases = {
+                "math": AgentRole.MATH_AGENT,
+                "code": AgentRole.CODE_AGENT,
+                "writing": AgentRole.WRITING_AGENT,
+                "science": AgentRole.SCIENCE_AGENT,
+                "search": AgentRole.SEARCH_AGENT,
+            }
+            if role_value in role_aliases:
+                return role_aliases[role_value]
+            try:
+                return AgentRole(role_value)
+            except ValueError:
+                return AgentRole.GENERATION
+        return AgentRole.GENERATION
 
     def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
         """
@@ -588,5 +735,41 @@ class LLMService:
             logger.error(f"Failed to generate push content: {e}")
             return {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
 
-# Singleton instance
-llm_service = LLMService()
+# ==========================================
+# 全局单例 - 向后兼容
+# ==========================================
+
+# 默认单例（使用新的动态路由）
+llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+
+# 创建专用角色的服务实例（按需使用）
+def get_llm_service(agent_role: Union[AgentRole, str]) -> LLMService:
+    """
+    获取指定角色的LLM服务实例
+
+    Args:
+        agent_role: Agent角色（如 "galaxy_guide", "exam_oracle" 等）
+
+    Example:
+        # 在 galaxy_guide 节点中使用
+        galaxy_llm = get_llm_service("galaxy_guide")
+        response = await galaxy_llm.chat(messages)
+    """
+    return LLMService(agent_role=agent_role, enable_dynamic_routing=True)
+
+
+def get_llm_service_for_task(task_type: TaskType) -> LLMService:
+    """
+    获取适合特定任务的LLM服务实例
+
+    Args:
+        task_type: 任务类型（如 TaskType.DEEP_REASONING）
+
+    Example:
+        # 深度推理任务使用更强的模型
+        reason_llm = get_llm_service_for_task(TaskType.DEEP_REASONING)
+        response = await reason_llm.chat(messages)
+    """
+    from app.core.llm_router import select_model_for_task
+    selection = select_model_for_task(task_type)
+    return LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
