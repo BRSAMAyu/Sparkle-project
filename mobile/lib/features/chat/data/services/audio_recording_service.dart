@@ -28,7 +28,7 @@ class AudioRecordingService {
     Duration? maxDuration,
   }) async {
     if (_isRecording) {
-      _logger.w("Already recording");
+      _logger.w('Already recording');
       return;
     }
 
@@ -38,7 +38,7 @@ class AudioRecordingService {
 
     try {
       // 1. 连接WebSocket
-      _logger.d("Connecting to WebSocket: $wsUrl");
+      _logger.d('Connecting to WebSocket: $wsUrl');
       _webSocket = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       // 2. 开始监听WebSocket消息
@@ -47,12 +47,12 @@ class AudioRecordingService {
           _handleWebSocketMessage(message, onTranscription, onError, onCompleted);
         },
         onError: (error) {
-          _logger.e("WebSocket error: $error");
-          onError("WebSocket连接失败: $error");
+          _logger.e('WebSocket error: $error');
+          onError('WebSocket连接失败: $error');
           stopRecording();
         },
         onDone: () {
-          _logger.d("WebSocket closed");
+          _logger.d('WebSocket closed');
           stopRecording();
         },
         cancelOnError: true,
@@ -64,7 +64,6 @@ class AudioRecordingService {
           encoder: AudioEncoder.wav,
           sampleRate: 16000,
           numChannels: 1,
-          bitRate: 128000,
         ),
         path: null, // 流式模式，不保存到文件
       );
@@ -87,16 +86,16 @@ class AudioRecordingService {
         _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
           _recordingDuration++;
           if (_recordingDuration >= maxDuration.inSeconds) {
-            _logger.d("Max duration reached: $maxDuration");
+            _logger.d('Max duration reached: $maxDuration');
             stopRecording();
           }
         });
       }
 
-      _logger.d("Recording started");
+      _logger.d('Recording started');
     } catch (e) {
-      _logger.e("Failed to start recording: $e");
-      onError("录制启动失败: $e");
+      _logger.e('Failed to start recording: $e');
+      onError('录制启动失败: $e');
       stopRecording();
     }
   }
@@ -119,33 +118,30 @@ class AudioRecordingService {
             if (text != null && text.isNotEmpty) {
               onTranscription(text);
             }
-            break;
 
           case 'status':
             final content = data['content'] as String?;
             if (content == 'completed') {
-              _logger.d("Transcription completed");
+              _logger.d('Transcription completed');
               onCompleted();
               stopRecording();
             }
-            break;
 
           case 'error':
             final error = data['content'] as String?;
             if (error != null) {
-              _logger.e("Transcription error: $error");
+              _logger.e('Transcription error: $error');
               onError(error);
               stopRecording();
             }
-            break;
 
           default:
-            _logger.d("Unknown message type: $type");
+            _logger.d('Unknown message type: $type');
         }
       }
     } catch (e) {
-      _logger.e("Failed to parse WebSocket message: $e");
-      onError("解析消息失败: $e");
+      _logger.e('Failed to parse WebSocket message: $e');
+      onError('解析消息失败: $e');
     }
   }
 
@@ -162,7 +158,7 @@ class AudioRecordingService {
         // 实际实现中，需要获取原始音频字节流
         // _webSocket!.sink.add(audioBytes);
       } catch (e) {
-        _logger.e("Failed to send audio data: $e");
+        _logger.e('Failed to send audio data: $e');
       }
     }
   }
@@ -198,9 +194,9 @@ class AudioRecordingService {
         _recordingCompleter!.complete();
       }
 
-      _logger.d("Recording stopped");
+      _logger.d('Recording stopped');
     } catch (e) {
-      _logger.e("Failed to stop recording: $e");
+      _logger.e('Failed to stop recording: $e');
       if (!_recordingCompleter!.isCompleted) {
         _recordingCompleter!.completeError(e);
       }

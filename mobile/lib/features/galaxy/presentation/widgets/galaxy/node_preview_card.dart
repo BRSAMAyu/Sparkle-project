@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -37,7 +38,7 @@ class NodePreviewCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: DS.galaxyShadow.withValues(alpha: 0.8),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -137,7 +138,7 @@ class NodePreviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: node.masteryScore / 100,
-                      backgroundColor: Colors.black.withValues(alpha: 0.3),
+                      backgroundColor: DS.surfaceTertiary.withValues(alpha: 0.5),
                       valueColor: AlwaysStoppedAnimation<Color>(
                           sectorStyle.primaryColor,),
                       minHeight: 6,
@@ -153,7 +154,9 @@ class NodePreviewCard extends StatelessWidget {
                     onPressed: onTap,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: sectorStyle.primaryColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: ThemeUtils.getContrastSafeText(
+                        sectorStyle.primaryColor,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

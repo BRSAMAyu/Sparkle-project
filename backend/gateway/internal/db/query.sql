@@ -26,10 +26,15 @@ VALUES ($1, $2, $3, $4, $5, NOW())
 RETURNING id, created_at;
 
 -- name: GetChatHistory :many
-SELECT * FROM chat_messages 
-WHERE session_id = $1 
+SELECT * FROM chat_messages
+WHERE session_id = $1
 AND created_at > $2
 ORDER BY created_at ASC;
+
+-- name: GetMessageByID :one
+SELECT * FROM chat_messages
+WHERE id = $1 AND session_id = $2
+LIMIT 1;
 
 -- name: GetGroupMessages :many
 SELECT

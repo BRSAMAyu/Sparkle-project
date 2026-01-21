@@ -64,6 +64,9 @@ type Config struct {
 	Environment    string   `mapstructure:"ENVIRONMENT"`     // dev, staging, production
 	AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"` // Comma-separated list of allowed origins
 	CORSEnabled    bool     `mapstructure:"CORS_ENABLED"`    // Enable CORS for WebSocket
+
+	// Cache Strategy Configuration
+	CacheStrategy CacheStrategy `mapstructure:"CACHE_STRATEGY"`
 }
 
 // IsDevelopment returns true if running in development mode

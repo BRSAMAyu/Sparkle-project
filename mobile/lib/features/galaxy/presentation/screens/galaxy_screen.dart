@@ -506,7 +506,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: Colors.black, // Pure deep space background
+      backgroundColor: DS.galaxyBackground, // Deep space background
       body: Stack(
         children: [
           Positioned.fill(

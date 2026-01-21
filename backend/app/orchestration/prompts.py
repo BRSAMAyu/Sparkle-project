@@ -135,12 +135,18 @@ def format_user_context(context: dict) -> str:
     # 分析摘要
     if context.get("analytics_summary"):
         analytics = context["analytics_summary"]
-        lines.append("-" * 20)
-        if analytics.get("is_active"):
-            lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
-            lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
-        else:
-            lines.append("状态: 不活跃")
+        # Handle both dict and string formats for analytics_summary
+        if isinstance(analytics, dict):
+            lines.append("-" * 20)
+            if analytics.get("is_active"):
+                lines.append(f"活跃度: {analytics.get('active_level', 'unknown')}")
+                lines.append(f"参与度: {analytics.get('engagement_level', 'unknown')}")
+            else:
+                lines.append("状态: 不活跃")
+        elif isinstance(analytics, str) and analytics:
+            # If it's a string summary, just append it
+            lines.append("-" * 20)
+            lines.append(f"分析摘要: {analytics}")
 
     # 火花等级
     if context.get("user_context") and context["user_context"].get("preferences"):

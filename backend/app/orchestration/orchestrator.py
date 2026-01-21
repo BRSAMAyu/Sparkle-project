@@ -603,41 +603,43 @@ class ChatOrchestrator:
             active_db = db_session or self.db_session
             
             # Step 0: Request Validation (with quota check)
-            if self.validator:
-                validation_result = await self.validator.validate_chat_request(request)
-                if not validation_result.is_valid:
-                    logger.error(f"Validation failed: {validation_result.error_message}")
+            with tracer.start_as_current_span("orchestrator.validate_request"):
+                if self.validator:
+                    validation_result = await self.validator.validate_chat_request(request)
+                    if not validation_result.is_valid:
+                        logger.error(f"Validation failed: {validation_result.error_message}")
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                code="VALIDATION_ERROR",
+                                message=validation_result.error_message,
+                                retryable=False
+                            ),
+                            finish_reason=agent_service_pb2.ERROR
+                        )
+                        return
+
+            # Step 1: Check Idempotency
+            with tracer.start_as_current_span("orchestrator.check_idempotency"):
+                cached_response = await self._check_idempotency(session_id, request_id)
+                if cached_response:
+                    logger.info(f"Cache hit for session {session_id}, request {request_id}")
+                    cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
+                    metadata_map = {}
+                    if isinstance(cached_metadata, dict):
+                        metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
+                    # Return cached response
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id,
                         created_at=int(datetime.now().timestamp()),
                         request_id=request_id,
-                        error=agent_service_pb2.Error(
-                            code="VALIDATION_ERROR",
-                            message=validation_result.error_message,
-                            retryable=False
-                        ),
-                        finish_reason=agent_service_pb2.ERROR
+                        full_text=cached_response.get("full_text") or cached_response.get("message", ""),
+                        metadata=metadata_map,
+                        finish_reason=agent_service_pb2.STOP
                     )
                     return
-
-            # Step 1: Check Idempotency
-            cached_response = await self._check_idempotency(session_id, request_id)
-            if cached_response:
-                logger.info(f"Cache hit for session {session_id}, request {request_id}")
-                cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
-                metadata_map = {}
-                if isinstance(cached_metadata, dict):
-                    metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
-                # Return cached response
-                yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    full_text=cached_response.get("full_text") or cached_response.get("message", ""),
-                    metadata=metadata_map,
-                    finish_reason=agent_service_pb2.STOP
-                )
-                return
 
             # Step 2: Acquire Distributed Lock
             with tracer.start_as_current_span("redis.acquire_lock"):
@@ -709,7 +711,7 @@ class ChatOrchestrator:
 
                 user_context_payload = None
                 conversation_context = None
-                
+
                 with tracer.start_as_current_span("db.build_context"):
                     if active_db and user_id:
                         local_context = await self._build_user_context(user_id, active_db)
@@ -737,15 +739,17 @@ class ChatOrchestrator:
                 self._log_context_injection(user_id, user_context_payload)
 
                 if self.context_pruner:
-                    conversation_context = await self._build_conversation_context(session_id, user_id)
+                    with tracer.start_as_current_span("db.build_conversation_context"):
+                        conversation_context = await self._build_conversation_context(session_id, user_id)
 
                 # Prepare initial state
                 state = WorkflowState()
                 state.append_message("user", user_message)
                 
                 # Get tools
-                tools = await self._get_tools_schema()
-                
+                with tracer.start_as_current_span("orchestrator.get_tools"):
+                    tools = await self._get_tools_schema()
+
                 # Prepare queue for streaming
                 queue = asyncio.Queue()
                 
@@ -870,7 +874,8 @@ class ChatOrchestrator:
                         )
                     except Exception as e:
                         logger.warning(f"Failed to record decision: {e}")
-                    await self._cache_response(session_id, request_id, final_response_data)
+                    with tracer.start_as_current_span("orchestrator.cache_response"):
+                        await self._cache_response(session_id, request_id, final_response_data)
                     
                     # Yield final full_text if not already streamed complete?
                     # Actually, standard_workflow streams delta. Client might need full_text signal.

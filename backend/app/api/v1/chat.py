@@ -538,7 +538,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
     from datetime import datetime, timedelta
     from app.models.task import Task
     from app.models.plan import Plan
-    from app.models.knowledge import UserNodeStatus
+    from app.models.galaxy import UserNodeStatus
 
     context = {
         "recent_tasks": [],

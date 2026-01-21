@@ -9,10 +9,6 @@ import 'package:sparkle/features/chat/data/services/audio_recording_service.dart
 /// 语音输入按钮组件
 /// 长按开始录音，松开停止录音
 class VoiceInputButton extends ConsumerStatefulWidget {
-  final void Function(String text) onTranscription;
-  final void Function(String error) onError;
-  final VoidCallback? onRecordingStarted;
-  final VoidCallback? onRecordingStopped;
 
   const VoiceInputButton({
     super.key,
@@ -21,6 +17,10 @@ class VoiceInputButton extends ConsumerStatefulWidget {
     this.onRecordingStarted,
     this.onRecordingStopped,
   });
+  final void Function(String text) onTranscription;
+  final void Function(String error) onError;
+  final VoidCallback? onRecordingStarted;
+  final VoidCallback? onRecordingStopped;
 
   @override
   ConsumerState<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -70,15 +70,15 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("需要麦克风权限"),
-        content: const Text("语音输入需要访问您的麦克风。请在设置中授予麦克风权限。"),
+        title: const Text('需要麦克风权限'),
+        content: const Text('语音输入需要访问您的麦克风。请在设置中授予麦克风权限。'),
         actions: [
           TextButton(
-            child: const Text("取消"),
+            child: const Text('取消'),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text("去设置"),
+            child: const Text('去设置'),
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();
@@ -96,7 +96,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     // 检查权限
     final hasPermission = await _checkPermissions();
     if (!hasPermission) {
-      widget.onError("没有麦克风权限");
+      widget.onError('没有麦克风权限');
       return;
     }
 
@@ -120,8 +120,8 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
     // 获取WebSocket URL和认证令牌
     // 这里需要从你的认证系统获取
-    final wsUrl = "ws://localhost:8080/api/v1/stt/stream";
-    final authToken = "your_auth_token_here"; // 从认证系统获取
+    const wsUrl = 'ws://localhost:8080/api/v1/stt/stream';
+    const authToken = 'your_auth_token_here'; // 从认证系统获取
 
     try {
       await _recordingService.startRecording(
@@ -168,7 +168,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
           _isProcessing = false;
         });
         _animationController?.reverse();
-        widget.onError("启动录音失败: $e");
+        widget.onError('启动录音失败: $e');
       }
     }
   }

@@ -133,7 +133,7 @@ class _ParallaxLayersPainter extends CustomPainter {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final starColor = isDark ? Colors.white : Colors.black87;
       paint.color = starColor.withValues(
-          alpha: opacityBase * (0.5 + random.nextDouble() * 0.5));
+          alpha: opacityBase * (0.5 + random.nextDouble() * 0.5),);
       canvas.drawCircle(Offset(x, y), r, paint);
     }
   }

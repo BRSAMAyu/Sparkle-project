@@ -325,8 +325,8 @@ func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMet
 }
 
 const getChatHistory = `-- name: GetChatHistory :many
-SELECT user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, id, created_at, updated_at, deleted_at FROM chat_messages 
-WHERE session_id = $1 
+SELECT user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, id, created_at, updated_at, deleted_at FROM chat_messages
+WHERE session_id = $1
 AND created_at > $2
 ORDER BY created_at ASC
 `
@@ -616,6 +616,39 @@ func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotPa
 		&i.SnapshotData,
 		&i.StreamPosition,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getMessageByID = `-- name: GetMessageByID :one
+SELECT user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, id, created_at, updated_at, deleted_at FROM chat_messages
+WHERE id = $1 AND session_id = $2
+LIMIT 1
+`
+
+type GetMessageByIDParams struct {
+	ID        pgtype.UUID `json:"id"`
+	SessionID pgtype.UUID `json:"session_id"`
+}
+
+func (q *Queries) GetMessageByID(ctx context.Context, arg GetMessageByIDParams) (ChatMessage, error) {
+	row := q.db.QueryRow(ctx, getMessageByID, arg.ID, arg.SessionID)
+	var i ChatMessage
+	err := row.Scan(
+		&i.UserID,
+		&i.TaskID,
+		&i.SessionID,
+		&i.MessageID,
+		&i.Role,
+		&i.Content,
+		&i.Actions,
+		&i.ParseDegraded,
+		&i.TokensUsed,
+		&i.ModelName,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

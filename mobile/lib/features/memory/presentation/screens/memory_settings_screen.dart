@@ -281,7 +281,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
           const SizedBox(height: DS.xl),
           SparkleButton.primary(
             label: _saving ? '保存中...' : '保存设置',
-            onPressed: _saving ? () {} : () => _saveSettings(),
+            onPressed: _saving ? () {} : _saveSettings,
           ),
         ],
       );

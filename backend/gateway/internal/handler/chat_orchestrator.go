@@ -1269,7 +1269,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var outputRuneCount int
 	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
 	for {
+		// Trace each streaming response
+		_, streamSpan := tracer.Start(ctx, "stream.receive")
 		resp, err := stream.Recv()
+		streamSpan.End()
+
 		if err == io.EOF {
 			// Stream ended normally
 			break
@@ -1324,10 +1328,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 		}
 
+		// Trace response processing and forwarding
+		_, respSpan := tracer.Start(ctx, "stream.process_response")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			if err := r.SendChatResponse(resp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				respSpan.End()
 				return true
 			}
 		default:
@@ -1337,9 +1344,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				respSpan.End()
 				return true
 			}
 		}
+		respSpan.End()
 	}
 	fullText = textBuilder.String()
 
@@ -2019,12 +2028,28 @@ func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Con
 		_ = existing.Close()
 	}
 	h.wsConnections[userID] = conn
+
+	// Publish connection event to Redis for cross-instance synchronization
+	if h.chatHistory != nil {
+		go func() {
+			ctx := context.Background()
+			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "connected")
+		}()
+	}
 }
 
 func (h *ChatOrchestrator) unregisterConnection(userID string) {
 	h.wsMutex.Lock()
 	defer h.wsMutex.Unlock()
 	delete(h.wsConnections, userID)
+
+	// Publish disconnection event to Redis for cross-instance synchronization
+	if h.chatHistory != nil {
+		go func() {
+			ctx := context.Background()
+			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "disconnected")
+		}()
+	}
 }
 
 func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) {
