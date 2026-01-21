@@ -24,20 +24,16 @@ class _SchedulePreferencesScreenState
     // Initialize controllers from current user data
     final user = ref.read(currentUserProvider);
     if (user != null && user.schedulePreferences != null) {
-      final prefs = user.schedulePreferences;
-      if (prefs['commute'] != null) {
-        final commute = prefs['commute'] as List;
-        if (commute.length == 2) {
-          _commuteStartController.text = commute[0] as String;
-          _commuteEndController.text = commute[1] as String;
-        }
+      final prefs = user.schedulePreferences!; // 使用!断言，因为已经检查过不为null
+      final commute = prefs['commute'];
+      if (commute is List && commute.length == 2) {
+        _commuteStartController.text = commute[0] as String;
+        _commuteEndController.text = commute[1] as String;
       }
-      if (prefs['lunch'] != null) {
-        final lunch = prefs['lunch'] as List;
-        if (lunch.length == 2) {
-          _lunchStartController.text = lunch[0] as String;
-          _lunchEndController.text = lunch[1] as String;
-        }
+      final lunch = prefs['lunch'];
+      if (lunch is List && lunch.length == 2) {
+        _lunchStartController.text = lunch[0] as String;
+        _lunchEndController.text = lunch[1] as String;
       }
     }
   }

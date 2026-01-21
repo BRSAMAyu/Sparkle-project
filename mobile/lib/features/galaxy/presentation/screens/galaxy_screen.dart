@@ -73,7 +73,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     PerformanceService.instance.startMonitoring();
 
     _focusSubscription =
-        ref.listen<GalaxyState>(galaxyProvider, (previous, next) {
+        ref.listenManual<GalaxyState>(galaxyProvider, (previous, next) {
       final focusBounds = next.focusBounds;
       if (focusBounds != null && focusBounds != previous?.focusBounds) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -647,7 +647,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     final content = Stack(
                       children: [
                         // 1. Background: Sector nebula and stars (Static, Cached)
-                        const Positioned.fill(
+                        Positioned.fill(
                           child: TiledSectorBackground(
                             width: canvasSize,
                             height: canvasSize,

@@ -71,10 +71,10 @@ class GalaxyLayoutEngine {
         // 优先复用现有位置
         if (existingPositions != null &&
             existingPositions.containsKey(node.id)) {
-          positions[node.id] = existingPositions[node.id];
+          positions[node.id] = existingPositions[node.id]!;
           _layoutChildrenRecursive(
             node.id,
-            positions[node.id],
+            positions[node.id]!,
             childrenMap,
             positions,
             nodes,
@@ -163,8 +163,8 @@ class GalaxyLayoutEngine {
 
       if (existingPositions != null &&
           existingPositions.containsKey(child.id)) {
-        positions[child.id] = existingPositions[child.id];
-        _layoutChildrenRecursive(child.id, positions[child.id], childrenMap,
+        positions[child.id] = existingPositions[child.id]!;
+        _layoutChildrenRecursive(child.id, positions[child.id]!, childrenMap,
             positions, allNodes, style, random, existingPositions,);
         continue;
       }
@@ -213,12 +213,12 @@ class GalaxyLayoutEngine {
         var hasOverlap = false;
         for (var i = 0; i < nodes.length; i++) {
           final nodeA = nodes[i];
-          final posA = positions[nodeA.id];
+          final posA = positions[nodeA.id]!;
           if (posA == null) continue;
 
           for (var j = i + 1; j < nodes.length; j++) {
             final nodeB = nodes[j];
-            final posB = positions[nodeB.id];
+            final posB = positions[nodeB.id]!;
             if (posB == null) continue;
 
             final minDist = minNodeSpacing + nodeA.radius + nodeB.radius;
@@ -458,12 +458,12 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
   for (var iter = 0; iter < iterations; iter++) {
     for (final nodeA in nodes) {
       var force = Offset.zero;
-      final posA = positions[nodeA.id];
+      final posA = positions[nodeA.id]!;
 
       // 1. 斥力：节点之间互斥
       for (final nodeB in nodes) {
         if (nodeA.id == nodeB.id) continue;
-        final posB = positions[nodeB.id];
+        final posB = positions[nodeB.id]!;
         final delta = posA - posB;
         var distance = delta.distance;
         if (distance < 1) distance = 1;
@@ -484,7 +484,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
         for (final edge in nodeEdgeList) {
           final otherId =
               edge.sourceId == nodeA.id ? edge.targetId : edge.sourceId;
-          final otherPos = positions[otherId];
+          final otherPos = positions[otherId]!;
           if (otherPos != null) {
             final delta = otherPos - posA;
             final distance = delta.distance;
@@ -502,7 +502,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
 
       // 3. 父节点吸引力
       if (nodeA.parentId != null) {
-        final parentPos = positions[nodeA.parentId];
+        final parentPos = positions[nodeA.parentId]!;
         if (parentPos != null) {
           final delta = parentPos - posA;
           final distance = delta.distance;
@@ -519,7 +519,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
       final nodeChildren = children[nodeA.id];
       if (nodeChildren != null) {
         for (final childId in nodeChildren) {
-          final childPos = positions[childId];
+          final childPos = positions[childId]!;
           if (childPos != null) {
             final delta = childPos - posA;
             if (delta.distance > 100) {
@@ -544,7 +544,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
       velocity[nodeA.id] = (velocity[nodeA.id]! + force) * damping;
 
       // 限制最大位移
-      var displacement = velocity[nodeA.id];
+      var displacement = velocity[nodeA.id]!;
       if (displacement.distance > maxDisplacement * temperature) {
         displacement = displacement /
             displacement.distance *
@@ -552,7 +552,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
             temperature;
       }
 
-      var newPos = posA + displacement;
+      var newPos = posA + displacement!;
 
       // 6. 约束在星域内
       final (baseAngle, sweepAngle) = sectorStyles[nodeA.id]!;

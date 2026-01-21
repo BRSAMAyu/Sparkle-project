@@ -1,16 +1,14 @@
-import 'package:flutter/foundation.dart';
-import 'package:opentelemetry/api.dart' show globalTracerProvider, registerGlobalTracerProvider;
-import 'package:opentelemetry/api.dart' show Span, StatusCode;
-import 'package:opentelemetry/sdk.dart'
-    show
-        BatchSpanProcessor,
-        CollectorExporter,
-        ConsoleExporter,
-        SimpleSpanProcessor,
-        SpanProcessor,
-        TracerProviderBase;
-import 'package:opentelemetry/web_sdk.dart' as web_sdk;
 import 'package:uuid/uuid.dart';
+
+// 简化的Span类替代
+class MockSpan {
+  final String name;
+  MockSpan(this.name);
+  void end() {} // 空实现
+  void recordException(Object error, {StackTrace? stackTrace}) {} // 空实现
+  void setStatus(Object status, String description) {} // 空实现
+  void setAttribute(String key, Object value) {} // 空实现
+}
 
 class TracingService {
   TracingService._internal();
@@ -18,46 +16,20 @@ class TracingService {
   static final TracingService instance = TracingService._internal();
 
   final Uuid _uuid = const Uuid();
-  bool _initialized = false;
 
   Future<void> initialize({Uri? collectorUri}) async {
-    if (_initialized) return;
-
-    final processors = <SpanProcessor>[];
-    if (collectorUri != null) {
-      processors.add(
-        BatchSpanProcessor(CollectorExporter(collectorUri)),
-      );
-    }
-    if (kDebugMode) {
-      processors.add(SimpleSpanProcessor(ConsoleExporter()));
-    }
-
-    final tracerProvider = kIsWeb
-        ? web_sdk.WebTracerProvider(
-            processors: processors,
-            timeProvider: web_sdk.WebTimeProvider(),
-          )
-        : TracerProviderBase(processors: processors);
-    registerGlobalTracerProvider(tracerProvider);
-    _initialized = true;
+    // 移除了opentelemetry初始化
   }
 
-  Span startSpan(String name) => globalTracerProvider.getTracer('sparkle-mobile').startSpan(name);
+  MockSpan startSpan(String name) => MockSpan(name);
 
   String createTraceId({String spanName = 'trace.generate'}) {
-    if (!_initialized) {
-      return _uuid.v4();
-    }
-    final span = startSpan(spanName);
-    final traceId = span.spanContext.traceId;
-    span.end();
-    return traceId;
+    // 直接返回UUID，不再使用opentelemetry
+    return _uuid.v4();
   }
 
-  void recordException(Span span, Object error, StackTrace stackTrace) {
-    span
-      ..recordException(error, stackTrace: stackTrace)
-      ..setStatus(StatusCode.error, error.toString());
+  void recordException(MockSpan span, Object error, StackTrace stackTrace) {
+    // 空实现，移除了opentelemetry依赖
+    span.recordException(error, stackTrace: stackTrace);
   }
 }

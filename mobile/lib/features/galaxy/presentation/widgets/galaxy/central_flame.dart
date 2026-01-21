@@ -106,7 +106,7 @@ class _SmallFlamePainter extends CustomPainter {
         DS.brandPrimary,
         DS.warningAccent,
         safeIntensity,
-      );
+      )!; // safeIntensity is clamped, so Color.lerp won't return null
 
     canvas.drawCircle(center, radius * breath * 0.6, corePaint);
 
@@ -138,7 +138,7 @@ class _SmallFlamePainter extends CustomPainter {
             DS.warningAccent,
             DS.warningAccent,
             safeIntensity,
-          ),
+          )!,
           Colors.transparent,
         ],
         stops: const [0.2, 0.6, 1.0],
@@ -153,7 +153,7 @@ class _SmallFlamePainter extends CustomPainter {
           DS.brandPrimary.withValues(alpha: 0.3),
           DS.errorAccent.withValues(alpha: 0.5),
           safeIntensity,
-        )
+        )!
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.5);
 
       canvas.drawCircle(center, radius * breath * 1.5, glowPaint);
@@ -164,7 +164,7 @@ class _SmallFlamePainter extends CustomPainter {
           DS.brandPrimary.withValues(alpha: 0.2),
           DS.errorAccent.withValues(alpha: 0.3),
           safeIntensity,
-        );
+        )!;
 
       canvas.drawCircle(center, radius * breath * 1.3, glowPaint);
     }

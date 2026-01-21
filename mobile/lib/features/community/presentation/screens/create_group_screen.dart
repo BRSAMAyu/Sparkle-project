@@ -192,9 +192,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       ),
                     ],
                     onChanged: (value) {
-                      setState(() {
-                        _type = value;
-                      });
+                      if (value != null) {
+                        setState(() {
+                          _type = value;
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: DS.spacing16),

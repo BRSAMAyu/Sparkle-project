@@ -51,7 +51,8 @@ class TaskRoutes {
           path: taskDetail,
           name: 'taskDetail',
           pageBuilder: (context, state) {
-            final taskId = state.pathParameters['id'];
+            // id is a required path parameter, so it won't be null
+            final taskId = state.pathParameters['id']!;
             return _buildTransitionPage(
               state: state,
               child: TaskDetailScreen(taskId: taskId),

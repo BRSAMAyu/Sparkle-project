@@ -30,16 +30,16 @@ class AppColors {
   // Semantic colors for both themes
   static Color surfaceBright(BuildContext context) =>
       Theme.of(context).brightness == Brightness.light
-          ? DS.brandPrimary
+          ? DS.primaryBase
           : DS.neutral800;
 
   static Color textOnBright(BuildContext context) =>
       Theme.of(context).brightness == Brightness.light
           ? DS.neutral900
-          : DS.brandPrimary;
+          : DS.neutral100;
 
   // For dark backgrounds, always use light text for maximum contrast
-  static Color textOnDark(BuildContext context) => DS.brandPrimary;
+  static Color textOnDark(BuildContext context) => DS.neutral100;
 
   static Color iconOnBright(BuildContext context) =>
       Theme.of(context).brightness == Brightness.light
@@ -47,7 +47,7 @@ class AppColors {
           : DS.neutral100;
 
   // For dark backgrounds, always use light icons for maximum contrast
-  static Color iconOnDark(BuildContext context) => DS.brandPrimary;
+  static Color iconOnDark(BuildContext context) => DS.neutral100;
 }
 
 /// Theme Extension for custom properties
@@ -115,11 +115,11 @@ class AppThemes {
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.lightCard,
-          onPrimary: DS.brandPrimary,
-          onSecondary: DS.brandPrimary,
+          onPrimary: DS.neutral100,
+          onSecondary: DS.neutral100,
           onSurface: AppColors.lightText,
           error: DS.error,
-          onError: DS.brandPrimary,
+          onError: DS.neutral100,
         ),
 
 
@@ -338,11 +338,11 @@ class AppThemes {
           primary: AppColors.primary,
           secondary: DS.secondaryBaseDark,
           surface: AppColors.darkCard,
-          onPrimary: DS.brandPrimary,
-          onSecondary: DS.brandPrimary,
+          onPrimary: DS.neutral100,
+          onSecondary: DS.neutral100,
           onSurface: AppColors.darkText,
           error: DS.error,
-          onError: DS.brandPrimary,
+          onError: DS.neutral100,
         ),
 
         // Extensions - use brighter secondary gradient for dark mode

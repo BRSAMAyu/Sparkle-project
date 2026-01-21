@@ -4,6 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/presentation/screens/community_screen.dart';
@@ -46,7 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
     final destinations = [
@@ -127,7 +128,7 @@ class _DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       extendBody: true,
@@ -181,6 +182,33 @@ class _DashboardScreen extends ConsumerWidget {
                 16, // Adjusted for ResponsiveScaffold which puts this inside body
             child: OmniBar(hintText: l10n.typeMessage),
           ),
+          // Theme Toggle Button
+        Positioned(
+          right: 20,
+          bottom: 80,
+          child: GestureDetector(
+            onTap: () {
+              ref.read(themeManagerProvider).toggleDarkMode();
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: DS.shadowLg,
+                color: DS.surfaceSecondary,
+                border: Border.all(color: DS.brandPrimary, width: 2),
+              ),
+              child: Icon(
+                Theme.of(context).brightness == Brightness.dark
+                    ? Icons.wb_sunny
+                    : Icons.nightlight_round,
+                size: 24,
+                color: DS.brandPrimary,
+              ),
+            ),
+          ),
+        ),
         ],
       ),
     );

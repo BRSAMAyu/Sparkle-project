@@ -433,7 +433,7 @@ class WebSocketChatServiceV2 {
       }
 
       if (_channelFactory != null) {
-        _channel = _channelFactory(
+        _channel = _channelFactory!(
           Uri.parse(wsUrl),
           headers: headers.isEmpty ? null : headers,
         );

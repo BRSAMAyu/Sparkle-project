@@ -259,11 +259,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     }
 
     final result = state.lookupResult;
-    final word = result['word'] as String? ?? '';
-    final phonetic = result['phonetic'] as String?;
-    final pos = result['pos'] as String?;
-    final definitions = result['definitions'];
-    final examples = result['examples'];
+    final word = result?['word'] as String? ?? '';
+    final phonetic = result?['phonetic'] as String?;
+    final pos = result?['pos'] as String?;
+    final definitions = result?['definitions'];
+    final examples = result?['examples'];
 
     return SingleChildScrollView(
       child: Container(
