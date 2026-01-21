@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/features/community/presentation/screens/community_main_screen.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/friends_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_detail_screen.dart';
@@ -27,47 +27,62 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class CommunityRoutes {
+  // Route constants for deep linking and navigation
+  static const String home = '/community';
+  static const String friends = '/community/friends';
+  static const String groups = '/community/groups';
+  static const String groupsSearch = '/community/groups/search';
+  static const String groupsCreate = '/community/groups/create';
+  static const String groupDetail = '/community/groups/:id';
+  static const String groupTasks = '/community/groups/:id/tasks';
+
   static List<RouteBase> get routes => [
+    // Friends list (detail page, full-screen)
     GoRoute(
-        path: '/community',
-        builder: (context, state) => const CommunityMainScreen(),
-      ),
-      GoRoute(
-        path: '/community/friends',
+        path: friends,
         name: 'friends',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const FriendsScreen(),
         ),
       ),
-      GoRoute(
-        path: '/community/groups',
+    // Group list (detail page, full-screen)
+    GoRoute(
+        path: groups,
         name: 'groups',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const GroupListScreen(),
         ),
       ),
-      GoRoute(
-        path: '/community/groups/search',
+    // Group search (detail page, full-screen)
+    GoRoute(
+        path: groupsSearch,
         name: 'groupSearch',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const GroupSearchScreen(),
         ),
       ),
-      GoRoute(
-        path: '/community/groups/create',
+    // Create group (modal-like, full-screen)
+    GoRoute(
+        path: groupsCreate,
         name: 'createGroup',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) => _buildTransitionPage(
           state: state,
           child: const CreateGroupScreen(),
           type: SharedAxisTransitionType.scaled,
         ),
       ),
-      GoRoute(
-        path: '/community/groups/:id',
+    // Group detail (full-screen, uses root navigator)
+    GoRoute(
+        path: groupDetail,
         name: 'groupDetail',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) {
           final groupId = state.pathParameters['id']!;
           return _buildTransitionPage(
@@ -76,9 +91,11 @@ class CommunityRoutes {
           );
         },
       ),
-      GoRoute(
-        path: '/community/groups/:id/tasks',
+    // Group tasks (full-screen, uses root navigator)
+    GoRoute(
+        path: groupTasks,
         name: 'groupTasks',
+        parentNavigatorKey: navigatorKey,
         pageBuilder: (context, state) {
           final groupId = state.pathParameters['id']!;
           return _buildTransitionPage(

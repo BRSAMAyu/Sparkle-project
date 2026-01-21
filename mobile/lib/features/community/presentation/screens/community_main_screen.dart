@@ -6,33 +6,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_widgets.dart';
 
 // Provider for last selected tab
 final communityTabIndexProvider = StateProvider<int>((ref) => 0);
-
-// Provider for focus mode
-final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>(
-    (ref) => FocusModeNotifier(),);
-
-class FocusModeNotifier extends StateNotifier<bool> {
-  FocusModeNotifier() : super(false) {
-    _loadFromPrefs();
-  }
-
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = prefs.getBool('focus_mode') ?? false;
-  }
-
-  Future<void> toggle() async {
-    state = !state;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('focus_mode', state);
-    // TODO: Update user status to backend when focus mode changes
-    // This would require accessing CommunityRepository here
-  }
-}
 
 class CommunityMainScreen extends ConsumerStatefulWidget {
   const CommunityMainScreen({super.key});
@@ -169,7 +147,7 @@ class _FriendsListTab extends ConsumerWidget {
             final f = friends[index];
             return InkWell(
               onTap: () => context.push(
-                  '/community/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',),
+                  '/chat/private/${f.friend.id}?name=${Uri.encodeComponent(f.friend.displayName)}',),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -264,7 +242,7 @@ class _GroupsListTab extends ConsumerWidget {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: InkWell(
-                onTap: () => context.push('/community/chat/group/${g.id}'),
+                onTap: () => context.push('/chat/group/${g.id}'),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
                   padding: const EdgeInsets.all(DS.lg),
