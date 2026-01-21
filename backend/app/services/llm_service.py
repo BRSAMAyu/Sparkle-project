@@ -134,19 +134,29 @@ class LLMService:
     def __init__(self):
         # 根据提供商选择配置
         provider_type = settings.LLM_PROVIDER.lower()
-        
-        if provider_type == "deepseek":
+
+        if provider_type == "xiaomi":
+            api_key = settings.XIAOMI_MIMO_API_KEY
+            base_url = settings.XIAOMI_MIMO_BASE_URL
+            self.chat_model = settings.XIAOMI_CHAT_MODEL
+            self.reason_model = settings.XIAOMI_CHAT_MODEL  # MIMO 无专门的 reason 模型
+        elif provider_type == "deepseek":
             api_key = settings.DEEPSEEK_API_KEY
             base_url = settings.DEEPSEEK_BASE_URL
-            self.chat_model = settings.DEEPSEEK_CHAT_MODEL or settings.LLM_MODEL_NAME
-            self.reason_model = settings.DEEPSEEK_REASON_MODEL or settings.LLM_REASON_MODEL_NAME
+            self.chat_model = settings.DEEPSEEK_CHAT_MODEL
+            self.reason_model = settings.DEEPSEEK_REASON_MODEL
+        elif provider_type == "zhipu":
+            api_key = settings.ZHIPU_API_KEY
+            base_url = settings.ZHIPU_BASE_URL
+            self.chat_model = settings.ZHIPU_CHAT_MODEL
+            self.reason_model = settings.ZHIPU_TOOLS_MODEL
         else:
             # 默认使用通用 LLM 配置 (OpenAI, Qwen 等)
             api_key = settings.LLM_API_KEY
             base_url = settings.LLM_API_BASE_URL
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
-            
+
         self.provider: LLMProvider = OpenAICompatibleProvider(
             api_key=api_key,
             base_url=base_url

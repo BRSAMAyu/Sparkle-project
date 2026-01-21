@@ -37,7 +37,7 @@ async def init_semantic_cache_index():
                 "HNSW",
                 {
                     "TYPE": "FLOAT32",
-                    "DIM": settings.EMBEDDING_DIM, # Ensure this matches your model (e.g. 1536 for OpenAI)
+                    "DIM": settings.EMBEDDING_DIM, # Ensure this matches your model (e.g. 1024 for Qwen3)
                     "DISTANCE_METRIC": "COSINE",
                 }
             ),

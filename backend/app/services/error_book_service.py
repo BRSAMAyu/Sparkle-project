@@ -240,7 +240,7 @@ class ErrorBookService:
 
     async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> List[KnowledgeNode]:
         # Generate embedding
-        embedding = await embedding_service.get_embedding(text)
+        embedding = await embedding_service.get_embedding(text, text_type="query")
         
         # PGVector search
         # Note: This requires the KnowledgeNode model to have the `embedding` column and pgvector extension

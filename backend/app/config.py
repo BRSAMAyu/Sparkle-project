@@ -172,13 +172,26 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "qwen-turbo"
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
-    LLM_PROVIDER: str = "qwen"  # 'qwen' | 'deepseek' | 'openai'
+    LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai'
 
-    # DeepSeek Specific
+    # XiaoMi MIMO Configuration (快速响应)
+    XIAOMI_MIMO_API_KEY: str = ""
+    XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
+    XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
+    XIAOMI_TEMPERATURE: float = 0.3
+
+    # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
     DEEPSEEK_REASON_MODEL: str = "deepseek-reasoner"
+
+    # Zhipu GLM Configuration (编程/工具调用)
+    ZHIPU_API_KEY: str = ""
+    ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+    ZHIPU_CHAT_MODEL: str = "glm-4.7"
+    ZHIPU_TOOLS_MODEL: str = "glm-4.7"
+    ZHIPU_TEMPERATURE: float = 0.3
 
     # SiliconFlow (for DeepSeek OCR)
     SILICONFLOW_API_KEY: str = ""
@@ -186,9 +199,21 @@ class Settings(BaseSettings):
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
 
     # Embedding Service
-    EMBEDDING_MODEL: str = "text-embedding-v2"  # 向量模型
-    EMBEDDING_DIM: int = 1536  # 向量维度
-    RERANK_MODEL: str = "BAAI/bge-reranker-base"  # 重排序模型
+    EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
+    EMBEDDING_MODEL: str = "Qwen/Qwen3-Embedding-4B"  # 向量模型
+    EMBEDDING_DIM: int = 1024  # 向量维度
+    RERANK_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
+    RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"  # 重排序模型
+
+    # DashScope (Aliyun)
+    DASHSCOPE_API_KEY: str = ""
+    DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
+    DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
+    DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
+
+    # SiliconFlow (Embedding/Rerank)
+    SILICONFLOW_EMBEDDING_MODEL: str = "Qwen/Qwen3-Embedding-4B"
+    SILICONFLOW_RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"
 
     # STT (Speech to Text) Service
     STT_PROVIDER: str = "xunfei"  # 仅支持 'xunfei'
