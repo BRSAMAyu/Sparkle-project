@@ -172,7 +172,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "qwen-turbo"
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
-    LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai'
+    LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
 
     # XiaoMi MIMO Configuration (快速响应)
     XIAOMI_MIMO_API_KEY: str = ""
@@ -197,6 +197,12 @@ class Settings(BaseSettings):
     SILICONFLOW_API_KEY: str = ""
     SILICONFLOW_BASE_URL: str = "https://api.siliconflow.cn/v1"
     SILICONFLOW_OCR_MODEL: str = "deepseek-ai/DeepSeek-OCR"
+
+    # Hunyuan Translation (via SiliconFlow)
+    HUNYUAN_API_KEY: str = ""
+    HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
+    HUNYUAN_CHAT_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
+    HUNYUAN_REASON_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
