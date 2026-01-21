@@ -4,6 +4,7 @@ import json
 import uuid
 import asyncio
 import re
+import time
 
 from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
 from app.services.llm_service import llm_service
@@ -212,13 +213,83 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     return state
 
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
-    """Execute Tools."""
+    """Execute Tools with Grounding Validation (Phase 1)."""
     tool_calls = state.context_data.get("tool_calls", [])
-    executor = ToolExecutor() # Should be injected or cached
+    executor = ToolExecutor()  # Should be injected or cached
 
     stream_callback = state.context_data.get("stream_callback")
     user_id = state.context_data.get("user_id", "")
+    session_id = state.context_data.get("session_id", "")
     db_session = state.context_data.get("db_session")
+    redis_client = state.context_data.get("redis_client")
+
+    # === Phase 1: Grounding Validation ===
+    validator = state.context_data.get("grounding_validator")
+    if validator:
+        from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
+
+        # 构建 ExecutablePlan (即时生成)
+        # Fix 2: 正确处理参数，确保大小校验不会被绕过
+        def _prepare_params(tc) -> dict:
+            """准备参数用于验证和执行"""
+            if isinstance(tc.full_arguments, dict):
+                return tc.full_arguments
+            elif isinstance(tc.full_arguments, str):
+                # 字符串参数也需要计算大小
+                try:
+                    import json
+                    return {"_raw_json": tc.full_arguments}
+                except:
+                    return {"_raw": tc.full_arguments}
+            return {}
+
+        plan = ExecutablePlan(
+            context_version=state.context_data.get("plan_metadata", {}).get("context_version", "v0"),
+            source="fast_path",
+            rationale=state.context_data.get("plan_metadata", {}).get("route_reason", ""),
+            tool_calls=[
+                ToolCallSpec(
+                    id=tc.tool_call_id or str(uuid.uuid4()),
+                    name=tc.tool_name,
+                    params=_prepare_params(tc),
+                    point_of_no_return=tc.tool_name in ["delete_task", "delete_plan"]
+                )
+                for tc in tool_calls
+            ]
+        )
+
+        # 验证计划
+        validation_result = await validator.validate_plan(plan)
+
+        if not validation_result.is_valid:
+            logger.error(f"Grounding validation failed: {validation_result.failure_reason}")
+
+            # 返回错误给用户
+            if stream_callback:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 执行被拒绝: {validation_result.failure_reason}"
+                ))
+
+            state.context_data["validation_failed"] = True
+            state.next_step = "__end__"
+            return state
+
+        if validation_result.requires_confirmation:
+            logger.warning(f"Plan requires confirmation: {validation_result.risk_flags}")
+
+            # Phase 1 安全优先: PONR 操作直接拒绝
+            if stream_callback:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
+                          f"请通过其他方式（如App界面）确认后重试。"
+                ))
+
+            state.context_data["validation_failed"] = True
+            state.next_step = "__end__"
+            return state
+    # =========================================
+
+    start_time = time.time()
 
     for tc in tool_calls:
         if stream_callback:
@@ -273,6 +344,57 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             "error": result.error_message
         })
         state.append_message("tool", result_json, name=tc.tool_name)
+
+    # === Phase 1: Feedback (Redis + Log) ===
+    if redis_client and start_time:
+        from app.orchestration.schemas import FeedbackPayload
+        from dataclasses import asdict
+        import json
+
+        duration_seconds = time.time() - start_time
+
+        feedback = FeedbackPayload(
+            task_id=state.context_data.get("plan_metadata", {}).get("plan_id", str(uuid.uuid4())),
+            user_id=user_id,
+            session_id=session_id,
+            context_version=state.context_data.get("plan_metadata", {}).get("context_version", "v0"),
+            completion={
+                "status": "completed",
+                "duration_seconds": round(duration_seconds, 2),
+                "attempts": 1,
+                "tool_count": len(tool_calls)
+            },
+            signals={
+                "clicked_next": False,
+                "delayed": False,
+                "abandoned": False
+            }
+        )
+
+        feedback_dict = asdict(feedback)
+
+        # 1. 写入 Redis (TTL 7天)
+        feedback_key = f"feedback:{user_id}:{session_id}:{feedback.task_id}"
+        try:
+            await redis_client.setex(
+                feedback_key,
+                7 * 24 * 3600,
+                json.dumps(feedback_dict, ensure_ascii=False)
+            )
+            logger.info(f"Feedback written to Redis: {feedback_key}")
+        except Exception as e:
+            logger.warning(f"Failed to write feedback to Redis: {e}")
+
+        # 2. 写入结构化日志（便于离线分析）
+        logger.info(
+            "FeedbackPayload: user={}, session={}, task={}, status={}, duration={}s",
+            user_id,
+            session_id,
+            feedback.task_id,
+            feedback.completion.get("status"),
+            feedback.completion.get("duration_seconds")
+        )
+    # =====================================
 
     # Clear tool calls and loop back to generation
     state.context_data["tool_calls"] = []

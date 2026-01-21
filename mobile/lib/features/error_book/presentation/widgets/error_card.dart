@@ -49,7 +49,7 @@ class ErrorCard extends StatelessWidget {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       child:
-                          const Text('删除', style: TextStyle(color: DS.semanticError)),
+                          Text('删除', style: TextStyle(color: DS.semanticError)),
                     ),
                   ],
                 ),

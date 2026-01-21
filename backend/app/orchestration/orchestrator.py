@@ -39,6 +39,11 @@ from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
 from opentelemetry import trace
 
+# Phase 1: Full-Loop Closed System
+from app.orchestration.request_router import RequestRouter
+from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.schemas import ExecutablePlan, FeedbackPayload
+
 # FSM States
 STATE_INIT = "INIT"
 STATE_THINKING = "THINKING"
@@ -149,9 +154,6 @@ class ChatOrchestrator:
         # Initialize tool registry (auto-discover tools)
         logger.info("ChatOrchestrator initialized with all components")
 
-        # Ensure tools are registered
-        self._ensure_tools_registered()
-
         # Initialize State Graph
         self.graph = create_standard_chat_graph()
         
@@ -161,13 +163,21 @@ class ChatOrchestrator:
         # Connect Visualizer and Tracer
         from app.visualization.realtime_visualizer import visualizer
         from app.visualization.execution_tracer import ExecutionTracer
-        
+
         self.tracer = ExecutionTracer(redis_client)
-        
+
         self.graph.on_event = self._chain_event_handlers(
             visualizer.on_graph_event,
             self.tracer.record_event
         )
+
+        # Phase 1: Initialize new components
+        self.request_router = RequestRouter(redis_client)
+        self.grounding_validator = GroundingValidator(redis_client)
+        logger.info("ChatOrchestrator initialized with RequestRouter and GroundingValidator")
+
+        # Ensure tools are registered
+        self._ensure_tools_registered()
 
     def _chain_event_handlers(self, *handlers):
         """Chain multiple event handlers"""
@@ -184,6 +194,11 @@ class ChatOrchestrator:
                 # Auto-discover tools from app.tools package
                 dynamic_tool_registry.register_from_package("app.tools")
                 logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
+
+            # Fix 3: 刷新 validator allowlist（与工具注册联动）
+            if self.grounding_validator:
+                self.grounding_validator.refresh_allowlist()
+                logger.info("GroundingValidator allowlist refreshed after tool registration")
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
 
@@ -787,6 +802,29 @@ class ChatOrchestrator:
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                 })
+
+                # === Phase 1: Routing & Validation Setup ===
+                # 路由决策
+                route_decision = await self.request_router.decide(
+                    message=user_message,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                logger.info(
+                    f"Route decision: {route_decision.execution_mode} "
+                    f"(risk: {route_decision.risk_level}, intent: {route_decision.reason})"
+                )
+
+                # 存储路由决策和 plan 元数据到 state
+                # 工具执行节点会使用这些信息进行验证
+                state.context_data["plan_metadata"] = {
+                    "context_version": route_decision.context_version,
+                    "execution_mode": route_decision.execution_mode,
+                    "risk_level": route_decision.risk_level,
+                    "route_reason": route_decision.reason
+                }
+                state.context_data["grounding_validator"] = self.grounding_validator
+                # ===========================================
 
                 # Launch Graph Execution in Background (Managed)
                 logger.info("🚀 Launching StateGraph Execution")

@@ -198,7 +198,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       return DecoratedBox(
                         decoration: BoxDecoration(
                           color: isDark ? DS.neutral800 : DS.neutral100,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isDark ? DS.neutral700 : DS.neutral300,
                           ),

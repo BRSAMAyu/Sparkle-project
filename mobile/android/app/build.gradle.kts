@@ -17,7 +17,7 @@ if (hasReleaseSigning) {
 }
 
 val applicationIdValue =
-    (project.findProperty("APPLICATION_ID") as String?) ?: "ai.sparkle.app"
+    (project.findProperty("APPLICATION_ID") as String?) ?: "com.example.sparkle"
 
 android {
     namespace = applicationIdValue
