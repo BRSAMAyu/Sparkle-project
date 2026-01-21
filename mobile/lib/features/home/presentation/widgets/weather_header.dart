@@ -10,12 +10,19 @@ class WeatherHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardState = ref.watch(dashboardProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        gradient: _getWeatherGradient(dashboardState.weather.type),
+        gradient: isDarkMode 
+            ? const LinearGradient(
+                colors: [Color(0xFF000000), Color(0xFF000000), Color(0xFF000000)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : _getWeatherGradient(dashboardState.weather.type),
       ),
       child: Stack(
         children: [

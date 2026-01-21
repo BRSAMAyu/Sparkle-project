@@ -25,18 +25,19 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   // Optimistic Update: Add post locally before sync
   Future<void> addPostOptimistically(
       String content, List<String> imageUrls, String topic,) async {
-    if (_currentUserId == null) return;
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return;
 
     // 1. Create Temporary Post Object
     final tempPost = Post(
       id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
-      userId: _currentUserId,
+      userId: currentUserId,
       content: content,
       imageUrls: imageUrls,
       topic: topic,
       createdAt: DateTime.now(),
       user: PostUser(
-        id: _currentUserId,
+        id: currentUserId,
         username: 'You', // In a real app, grab from currentUserProvider
       ),
       isOptimistic: true,
@@ -50,7 +51,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       // 3. Perform Actual API Call
       await _repository.createPost(
         CreatePostRequest(
-          userId: _currentUserId,
+          userId: currentUserId,
           content: content,
           imageUrls: imageUrls,
           topic: topic,

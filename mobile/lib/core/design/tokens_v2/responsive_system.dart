@@ -261,9 +261,9 @@ class AdaptiveLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ResponsiveBuilder(
         builder: (context, info) {
-          if (info.width >= 1440 && wide != null) return wide;
-          if (info.width >= 1024 && desktop != null) return desktop;
-          if (info.width >= 768 && tablet != null) return tablet;
+          if (info.width >= 1440 && wide != null) return wide!;
+          if (info.width >= 1024 && desktop != null) return desktop!;
+          if (info.width >= 768 && tablet != null) return tablet!;
           return mobile;
         },
       );

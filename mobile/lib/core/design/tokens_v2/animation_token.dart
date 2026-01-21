@@ -154,7 +154,7 @@ class AnimationConfig {
             );
           }
 
-          return result;
+          return result!;
         },
         child: child,
       );

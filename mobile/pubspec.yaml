@@ -78,7 +78,6 @@ dependencies:
   # Performance Monitoring
   sentry_flutter: ^8.0.0
   file_picker: ^8.0.7
-  opentelemetry: ^0.18.10
 
   http_parser: any
 dev_dependencies:

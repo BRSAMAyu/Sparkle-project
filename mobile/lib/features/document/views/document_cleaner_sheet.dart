@@ -100,8 +100,8 @@ class _DocumentCleanerSheetState extends ConsumerState<DocumentCleanerSheet> {
               } else if (taskStatus.status == 'queued' ||
                   taskStatus.status == 'processing') {
                 return _buildProgress(taskStatus, isDark);
-              } else if (taskStatus.status == 'completed') {
-                return _buildSuccess(taskStatus.result, isDark);
+              } else if (taskStatus.status == 'completed' && taskStatus.result != null) {
+                return _buildSuccess(taskStatus.result!, isDark);
               } else {
                 return _buildError(taskStatus.message, isDark);
               }

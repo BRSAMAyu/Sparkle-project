@@ -277,7 +277,7 @@ class MaterialStyler extends StatelessWidget {
                         radius: 1.5,
                         colors: [
                            Colors.transparent,
-                           material.glowColor,
+                           material.glowColor!,
                         ],
                         stops: const [0.6, 1.0],
                       ),
@@ -285,7 +285,7 @@ class MaterialStyler extends StatelessWidget {
                   ),
                 ),
 
-              // Layer 6: Content
+              // Layer 6: Content - Ensure no overflow
               Padding(
                 padding: padding ?? EdgeInsets.zero,
                 child: child,
@@ -327,7 +327,7 @@ class _MaterialBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var content = Container(
+    Widget content = Container(
       decoration: BoxDecoration(
         color: material.backgroundColor,
         gradient: material.backgroundGradient,
@@ -382,7 +382,7 @@ class _MaterialRimPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            rimColor,
+            rimColor!,
             rimColor!.withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.4], // Fade out quickly
@@ -440,7 +440,7 @@ class _MaterialBorderPainter extends CustomPainter {
     if (borderGradient != null) {
       borderPaint.shader = borderGradient!.createShader(rect);
     } else if (borderColor != null) {
-      borderPaint.color = borderColor;
+      borderPaint.color = borderColor!;
     }
 
     if (borderPath != null) {

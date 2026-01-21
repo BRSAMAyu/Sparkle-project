@@ -328,8 +328,8 @@ class SparkleColors {
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
         surfacePrimary: Color(0xFF000000),
-        surfaceSecondary: Color(0xFF1A1A1A),
-        surfaceTertiary: Color(0xFF333333),
+        surfaceSecondary: Color(0xFF000000),
+        surfaceTertiary: Color(0xFF000000),
         surfaceAmbient: Color(0xFF000000),
         rimLight: Color(0xFFFFFFFF),
         glowPrimary: Color(0x00000000),
@@ -349,11 +349,11 @@ class SparkleColors {
         statusOnline: Color(0xFF2ECC71),
         statusOffline: Color(0xFF95A5A6),
         statusInvisible: Color(0xFF34495E),
-        neutral200: Color(0xFF2D2D2D),
-        neutral300: Color(0xFF424242),
-        neutral400: Color(0xFF616161),
-        neutral500: Color(0xFF757575),
-        neutral600: Color(0xFF9E9E9E),
+        neutral200: Color(0xFF000000),
+        neutral300: Color(0xFF000000),
+        neutral400: Color(0xFF000000),
+        neutral500: Color(0xFF000000),
+        neutral600: Color(0xFF000000),
       );
     }
     return const SparkleColors(
@@ -363,10 +363,10 @@ class SparkleColors {
       semanticWarning: Color(0xFFFFB74D),
       semanticError: Color(0xFFEF5350),
       semanticInfo: Color(0xFF64B5F6),
-      surfacePrimary: Color(0xFF121212),
-      surfaceSecondary: Color(0xFF1E1E1E),
-      surfaceTertiary: Color(0xFF2D2D2D),
-      surfaceAmbient: Color(0xFF050510),
+      surfacePrimary: Color(0xFF000000),
+      surfaceSecondary: Color(0xFF000000),
+      surfaceTertiary: Color(0xFF000000),
+      surfaceAmbient: Color(0xFF000000),
       rimLight: Color(0x33FFFFFF), // white 0.2
       glowPrimary: Color(0x66FF8C5A), // brandPrimary 0.4
       noiseColor: Color(0x08FFFFFF), // white 0.03
@@ -385,11 +385,11 @@ class SparkleColors {
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFF2D2D2D),
-      neutral300: Color(0xFF424242),
-      neutral400: Color(0xFF616161),
-      neutral500: Color(0xFF757575),
-      neutral600: Color(0xFF9E9E9E),
+      neutral200: Color(0xFF000000),
+      neutral300: Color(0xFF000000),
+      neutral400: Color(0xFF000000),
+      neutral500: Color(0xFF000000),
+      neutral600: Color(0xFF000000),
     );
   }
   final Color brandPrimary;

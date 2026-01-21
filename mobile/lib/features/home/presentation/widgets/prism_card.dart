@@ -112,54 +112,72 @@ class _PrismCardState extends ConsumerState<PrismCard>
                 ),
                 const Spacer(),
                 if (weeklyPattern != null) ...[
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _buildTag(context, '#$weeklyPattern'),
-                      if (dashboardState.weather.type == 'rainy')
-                        _buildTag(context, '#焦虑波峰'),
-                    ],
+                  SizedBox(
+                    height: 24,
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        _buildTag(context, '#$weeklyPattern'),
+                        if (dashboardState.weather.type == 'rainy')
+                          _buildTag(context, '#焦虑波峰'),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: DS.xs),
-                  Text(
-                    '行为定式分析已更新',
-                    style: context.sparkleTypography.labelSmall.copyWith(
-                      color: DS.brandPrimary.withValues(alpha: 0.6),
+                  SizedBox(
+                    height: 16,
+                    child: Text(
+                      '行为定式分析已更新',
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: DS.brandPrimary.withValues(alpha: 0.6),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => context.push('/errors?dimension=analysis'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: DS.brandPrimary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error_outline, size: 12, color: DS.brandPrimaryConst),
-                          const SizedBox(width: 4),
-                          Text(
-                            '复习弱项: 分析',
-                            style: context.sparkleTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                              color: DS.brandPrimaryConst,
+                  SizedBox(
+                    height: 24,
+                    child: GestureDetector(
+                      onTap: () => context.push('/errors?dimension=analysis'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: DS.brandPrimary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, size: 12, color: DS.brandPrimaryConst),
+                            const SizedBox(width: 4),
+                            Text(
+                              '复习弱项: 分析',
+                              style: context.sparkleTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                color: DS.brandPrimaryConst,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ] else ...[
-                  Text(
-                    '点击同步闪念，发现你的行为定式',
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontSize: 12,
-                      color: DS.brandPrimary70Const,
+                  SizedBox(
+                    height: 32,
+                    child: Text(
+                      '点击同步闪念，发现你的行为定式',
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        fontSize: 12,
+                        color: DS.brandPrimary70Const,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

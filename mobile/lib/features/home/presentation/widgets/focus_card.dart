@@ -128,18 +128,21 @@ class _FocusCardState extends ConsumerState<FocusCard>
                       color: DS.brandPrimary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      nudgeMessage,
-                      textAlign: TextAlign.center,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
-                        fontSize: 11,
-                        height: 1.3,
-                        color: DS.textSecondary.withValues(alpha: 0.9),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                    child: SizedBox(
+                  height: 40,
+                  child: Text(
+                    nudgeMessage,
+                    textAlign: TextAlign.center,
+                    style: context.sparkleTypography.bodyMedium.copyWith(
+                      fontSize: 11,
+                      height: 1.3,
+                      color: DS.textSecondary.withValues(alpha: 0.9),
+                      fontStyle: FontStyle.italic,
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                   ),
                 ],
               ),

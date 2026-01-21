@@ -294,7 +294,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                                               context,
                                               isUser,
                                               (widget.message as PrivateMessageInfo)
-                                                  .quotedMessage,),
+                                                  .quotedMessage!,),
                                         if (widget.message is ChatMessageModel &&
                                             (widget.message as ChatMessageModel)
                                                     .aiStatus !=

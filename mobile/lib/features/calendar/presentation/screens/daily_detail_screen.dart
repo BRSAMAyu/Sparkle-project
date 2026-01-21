@@ -21,8 +21,8 @@ class DailyDetailScreen extends ConsumerWidget {
     // Filter tasks for this date locally (mock logic as we load all tasks)
     final allTasks = ref.watch(taskListProvider).tasks;
     final dayTasks = allTasks.where((task) {
-      if (task.dueDate == null) return false;
       final d = task.dueDate;
+      if (d == null) return false;
       return d.year == date.year && d.month == date.month && d.day == date.day;
     }).toList();
 

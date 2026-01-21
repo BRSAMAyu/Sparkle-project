@@ -25,7 +25,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!; // l10n should always be available in a build context
     final enterToSend = ref.watch(enterToSendProvider);
 
     return Scaffold(

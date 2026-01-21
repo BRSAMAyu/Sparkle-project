@@ -275,7 +275,7 @@ class EnhancedGalaxyRepository {
     // Based on typical Dio wrapper:
     return _apiClient.getStream(
       ApiEndpoints.galaxyEvents,
-      options: Options(headers: headers),
+      headers: headers,
     );
   }
 

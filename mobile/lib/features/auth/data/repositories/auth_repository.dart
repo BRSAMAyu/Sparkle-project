@@ -32,9 +32,9 @@ class AuthRepository {
       );
       // Assuming registration returns the user and tokens directly
       final data = response.data;
-      final tokenResponse = TokenResponse.fromJson(data['token'] as Map<String, dynamic>);
+      final tokenResponse = TokenResponse.fromJson(data!['token'] as Map<String, dynamic>);
       await saveTokens(tokenResponse);
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      return UserModel.fromJson(data!['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
