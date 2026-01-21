@@ -21,15 +21,11 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class HomeRoutes {
+  // Route constants for deep linking and navigation
+  static const String home = '/home';
+
   static List<RouteBase> get routes => [
-    GoRoute(
-        path: '/home',
-        name: 'home',
-        pageBuilder: (context, state) => _buildTransitionPage(
-          state: state,
-          child: const HomeScreen(),
-          type: SharedAxisTransitionType.scaled, // Fade/Scale in for Home
-        ),
-      ),
+    // Note: /home is now handled by StatefulShellRoute in routes.dart
+    // This routes list is kept for potential future use or reference
   ];
 }
