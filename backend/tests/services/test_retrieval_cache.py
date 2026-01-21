@@ -100,7 +100,7 @@ async def test_hybrid_search_cache_miss():
             
             # Mock embedding service
             with patch('app.services.galaxy.retrieval_service.embedding_service') as mock_embedding:
-                mock_embedding.get_embedding = AsyncMock(return_value=[0.1]*1536)
+                mock_embedding.get_embedding = AsyncMock(return_value=[0.1]*1024)
                 
                 # Mock rerank service
                 with patch('app.services.galaxy.retrieval_service.rerank_service') as mock_rerank:

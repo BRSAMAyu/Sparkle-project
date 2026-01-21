@@ -60,7 +60,7 @@ async def test_error_to_galaxy_loop_flow():
             "root_cause": "test",
             "study_suggestion": "test"
         }
-        mock_embed.get_embedding.return_value = [0.1] * 1536
+        mock_embed.get_embedding.return_value = [0.1] * 1024
         
         # Mock search_knowledge_nodes to return our node
         error_service._search_knowledge_nodes = AsyncMock(return_value=[

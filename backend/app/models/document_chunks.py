@@ -8,7 +8,7 @@ from pgvector.sqlalchemy import Vector
 
 from app.models.base import BaseModel, GUID
 
-VectorCompat = Vector(1536).with_variant(JSON(), "sqlite")
+VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 class DocumentChunk(BaseModel):
     """

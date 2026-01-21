@@ -114,7 +114,7 @@ class KnowledgeRetrievalService:
         # 2. Prepare Queries
         start_time = time.time()
         actual_vector_text = vector_query if vector_query else query_str
-        query_embedding = await embedding_service.get_embedding(actual_vector_text)
+        query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
         
         # 3. Parallel Retrieval
         vector_limit = limit * 10
@@ -325,7 +325,7 @@ class KnowledgeRetrievalService:
             return []
 
         actual_vector_text = vector_query if vector_query else query
-        query_embedding = await embedding_service.get_embedding(actual_vector_text)
+        query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
 
         stmt = (
             select(
@@ -362,7 +362,7 @@ class KnowledgeRetrievalService:
         threshold: float = 0.3
     ) -> List[KnowledgeNode]:
         """Internal semantic search that returns KnowledgeNode models"""
-        query_embedding = await embedding_service.get_embedding(query)
+        query_embedding = await embedding_service.get_embedding(query, text_type="query")
         
         search_query = (
             select(

@@ -76,6 +76,19 @@ services:
       - XUNFEI_STT_SAMPLE_RATE=${XUNFEI_STT_SAMPLE_RATE:-16000}
       - XUNFEI_STT_MAX_AUDIO_DURATION=${XUNFEI_STT_MAX_AUDIO_DURATION:-60}
       - XUNFEI_STT_EOS_MS=${XUNFEI_STT_EOS_MS:-6000}
+      # LLM Provider Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-xiaomi}
+      - XIAOMI_MIMO_API_KEY=${XIAOMI_MIMO_API_KEY}
+      - XIAOMI_MIMO_BASE_URL=${XIAOMI_MIMO_BASE_URL:-https://api.xiaomimimo.com/v1}
+      - XIAOMI_CHAT_MODEL=${XIAOMI_CHAT_MODEL:-mimo-v2-flash}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_CHAT_MODEL=${DEEPSEEK_CHAT_MODEL:-deepseek-chat}
+      - DEEPSEEK_REASON_MODEL=${DEEPSEEK_REASON_MODEL:-deepseek-reasoner}
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+      - ZHIPU_BASE_URL=${ZHIPU_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      - ZHIPU_CHAT_MODEL=${ZHIPU_CHAT_MODEL:-glm-4.7}
+      - ZHIPU_TOOLS_MODEL=${ZHIPU_TOOLS_MODEL:-glm-4.7}
     volumes:
       - ./backend:/app
     deploy:

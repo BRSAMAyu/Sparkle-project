@@ -706,7 +706,7 @@ CREATE TABLE cognitive_fragments (
     error_tags json,
     context_tags json,
     severity integer NOT NULL,
-    embedding vector(1536),
+    embedding vector(1024),
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -925,7 +925,7 @@ CREATE TABLE document_chunks (
     chunk_index integer NOT NULL,
     section_title character varying(255),
     content text NOT NULL,
-    embedding vector(1536),
+    embedding vector(1024),
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     deleted_at timestamp without time zone,
@@ -1478,7 +1478,7 @@ CREATE TABLE knowledge_nodes (
     is_seed boolean,
     source_type character varying(20),
     source_task_id uuid,
-    embedding vector(1536),
+    embedding vector(1024),
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -6646,5 +6646,4 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-
 
