@@ -151,7 +151,9 @@ class RerankService:
         top_k: int,
         instruct: Optional[str] = None,
     ) -> List[int]:
-        # SiliconFlow uses /rerank endpoint (not /v1/rerank)
+        # SiliconFlow rerank endpoint: {base_url}/rerank
+        # With default base_url=https://api.siliconflow.cn/v1, this produces:
+        # https://api.siliconflow.cn/v1/rerank
         base_url = self.siliconflow_base_url.rstrip("/")
         url = base_url if base_url.endswith("/rerank") else f"{base_url}/rerank"
 
