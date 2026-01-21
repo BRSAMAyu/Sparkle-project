@@ -15,47 +15,40 @@ import 'dart:core' as $core;
 import 'package:grpc/service_api.dart' as $grpc;
 import 'package:protobuf/protobuf.dart' as $pb;
 
-import 'agent_service_v2.pb.dart' as $1;
+import 'package:sparkle/gen/agent_service_v2.pb.dart' as $1;
 
 export 'agent_service_v2.pb.dart';
 
 @$pb.GrpcServiceName('sparkle.agent.v2.AgentServiceV2')
 class AgentServiceV2Client extends $grpc.Client {
-  static final _$streamChat = $grpc.ClientMethod<$1.ChatRequestV2, $1.ChatResponseV2>(
-      '/sparkle.agent.v2.AgentServiceV2/StreamChat',
-      ($1.ChatRequestV2 value) => value.writeToBuffer(),
-      ($core.List<$core.int> value) => $1.ChatResponseV2.fromBuffer(value));
-  static final _$getUserProfile = $grpc.ClientMethod<$1.ProfileRequestV2, $1.ProfileResponseV2>(
-      '/sparkle.agent.v2.AgentServiceV2/GetUserProfile',
-      ($1.ProfileRequestV2 value) => value.writeToBuffer(),
-      ($core.List<$core.int> value) => $1.ProfileResponseV2.fromBuffer(value));
-  static final _$getWeeklyReport = $grpc.ClientMethod<$1.WeeklyReportRequest, $1.WeeklyReport>(
-      '/sparkle.agent.v2.AgentServiceV2/GetWeeklyReport',
-      ($1.WeeklyReportRequest value) => value.writeToBuffer(),
-      ($core.List<$core.int> value) => $1.WeeklyReport.fromBuffer(value));
 
   AgentServiceV2Client($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
       $core.Iterable<$grpc.ClientInterceptor>? interceptors})
       : super(channel, options: options,
         interceptors: interceptors);
+  static final _$streamChat = $grpc.ClientMethod<$1.ChatRequestV2, $1.ChatResponseV2>(
+      '/sparkle.agent.v2.AgentServiceV2/StreamChat',
+      ($1.ChatRequestV2 value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $1.ChatResponseV2.fromBuffer(value),);
+  static final _$getUserProfile = $grpc.ClientMethod<$1.ProfileRequestV2, $1.ProfileResponseV2>(
+      '/sparkle.agent.v2.AgentServiceV2/GetUserProfile',
+      ($1.ProfileRequestV2 value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $1.ProfileResponseV2.fromBuffer(value),);
+  static final _$getWeeklyReport = $grpc.ClientMethod<$1.WeeklyReportRequest, $1.WeeklyReport>(
+      '/sparkle.agent.v2.AgentServiceV2/GetWeeklyReport',
+      ($1.WeeklyReportRequest value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $1.WeeklyReport.fromBuffer(value),);
 
-  $grpc.ResponseStream<$1.ChatResponseV2> streamChat($1.ChatRequestV2 request, {$grpc.CallOptions? options}) {
-    return $createStreamingCall(_$streamChat, $async.Stream.fromIterable([request]), options: options);
-  }
+  $grpc.ResponseStream<$1.ChatResponseV2> streamChat($1.ChatRequestV2 request, {$grpc.CallOptions? options}) => $createStreamingCall(_$streamChat, $async.Stream.fromIterable([request]), options: options);
 
-  $grpc.ResponseFuture<$1.ProfileResponseV2> getUserProfile($1.ProfileRequestV2 request, {$grpc.CallOptions? options}) {
-    return $createUnaryCall(_$getUserProfile, request, options: options);
-  }
+  $grpc.ResponseFuture<$1.ProfileResponseV2> getUserProfile($1.ProfileRequestV2 request, {$grpc.CallOptions? options}) => $createUnaryCall(_$getUserProfile, request, options: options);
 
-  $grpc.ResponseFuture<$1.WeeklyReport> getWeeklyReport($1.WeeklyReportRequest request, {$grpc.CallOptions? options}) {
-    return $createUnaryCall(_$getWeeklyReport, request, options: options);
-  }
+  $grpc.ResponseFuture<$1.WeeklyReport> getWeeklyReport($1.WeeklyReportRequest request, {$grpc.CallOptions? options}) => $createUnaryCall(_$getWeeklyReport, request, options: options);
 }
 
 @$pb.GrpcServiceName('sparkle.agent.v2.AgentServiceV2')
 abstract class AgentServiceV2ServiceBase extends $grpc.Service {
-  $core.String get $name => 'sparkle.agent.v2.AgentServiceV2';
 
   AgentServiceV2ServiceBase() {
     $addMethod($grpc.ServiceMethod<$1.ChatRequestV2, $1.ChatResponseV2>(
@@ -80,18 +73,15 @@ abstract class AgentServiceV2ServiceBase extends $grpc.Service {
         ($core.List<$core.int> value) => $1.WeeklyReportRequest.fromBuffer(value),
         ($1.WeeklyReport value) => value.writeToBuffer()));
   }
+  $core.String get $name => 'sparkle.agent.v2.AgentServiceV2';
 
   $async.Stream<$1.ChatResponseV2> streamChat_Pre($grpc.ServiceCall call, $async.Future<$1.ChatRequestV2> request) async* {
     yield* streamChat(call, await request);
   }
 
-  $async.Future<$1.ProfileResponseV2> getUserProfile_Pre($grpc.ServiceCall call, $async.Future<$1.ProfileRequestV2> request) async {
-    return getUserProfile(call, await request);
-  }
+  $async.Future<$1.ProfileResponseV2> getUserProfile_Pre($grpc.ServiceCall call, $async.Future<$1.ProfileRequestV2> request) async => getUserProfile(call, await request);
 
-  $async.Future<$1.WeeklyReport> getWeeklyReport_Pre($grpc.ServiceCall call, $async.Future<$1.WeeklyReportRequest> request) async {
-    return getWeeklyReport(call, await request);
-  }
+  $async.Future<$1.WeeklyReport> getWeeklyReport_Pre($grpc.ServiceCall call, $async.Future<$1.WeeklyReportRequest> request) async => getWeeklyReport(call, await request);
 
   $async.Stream<$1.ChatResponseV2> streamChat($grpc.ServiceCall call, $1.ChatRequestV2 request);
   $async.Future<$1.ProfileResponseV2> getUserProfile($grpc.ServiceCall call, $1.ProfileRequestV2 request);

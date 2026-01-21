@@ -156,7 +156,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Create Group')),
+        title: const Text('Create Group'),),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Form(

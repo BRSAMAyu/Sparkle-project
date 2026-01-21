@@ -435,7 +435,7 @@ class _DifficultyStars extends StatelessWidget {
           (index) => ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
-                Colors.amber,
+                DS.semanticWarning,
                 SparkleContextExtension(context).colors.brandPrimary,
               ],
             ).createShader(bounds),

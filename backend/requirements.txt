@@ -21,6 +21,7 @@ hvac>=2.0.0
 # Authentication & Security
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<5.0.0  # passlib 1.7.4 is incompatible with bcrypt 5.0+
 python-dotenv>=1.0.0
 PyYAML>=6.0.1
 

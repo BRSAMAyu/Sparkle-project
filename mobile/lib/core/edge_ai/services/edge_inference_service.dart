@@ -1,8 +1,9 @@
-import 'dart:isolate';
 import 'dart:convert';
+import 'dart:isolate';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logger/logger.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
+import 'package:logger/logger.dart';
 import 'package:sparkle/core/analytics/services/local_feature_service.dart';
 import 'package:sparkle/core/edge_ai/models/edge_state_schema.dart';
 import 'package:sparkle/core/edge_ai/services/model_manager.dart';

@@ -322,7 +322,7 @@ class DailyDetailScreen extends ConsumerWidget {
               const SizedBox(width: DS.md),
               Expanded(
                 child: Text(
-                  task.title as String,
+                  task.title,
                   style: TextStyle(
                     color: isCompleted
                         ? SparkleContextExtension(context)
@@ -334,7 +334,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if ((task.priority as int) > 2)
+              if (task.priority > 2)
                 Icon(Icons.flag,
                     color: SparkleContextExtension(context)
                         .colors

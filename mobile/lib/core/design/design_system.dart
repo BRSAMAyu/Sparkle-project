@@ -300,6 +300,7 @@ class DS {
         brandPrimary,
         darkText: neutral900,
       );
+  static Color get onBrandPrimary => textOnPrimary;
   static Color get border => _isDark ? neutral600 : neutral300;
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
@@ -570,6 +571,16 @@ class DS {
   static Color get neutral800 =>
       _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.7);
   static Color get neutral900 => _theme.colors.textPrimary;
+
+  // 聊天气泡颜色
+  static Color get chatBubbleUser => _theme.colors.chatBubbleUser;
+  static Color get chatBubbleUserText => _theme.colors.chatBubbleUserText;
+  static Color get chatBubbleOther => _theme.colors.chatBubbleOther;
+  static Color get chatBubbleOtherText => _theme.colors.chatBubbleOtherText;
+
+  // Galaxy专用颜色
+  static Color get galaxyBackground => _theme.colors.galaxyBackground;
+  static Color get galaxyShadow => _theme.colors.galaxyShadow;
 }
 
 /// Extension on Color to provide Material Design shade-like methods
