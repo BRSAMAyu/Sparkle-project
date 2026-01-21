@@ -184,14 +184,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       SnackBar(content: Text(error)),
                     );
                   },
-                  onRecordingStarted: () {
-                    // 录音开始时的回调
-                    _focusNode.unfocus();
-                  },
-                  onRecordingStopped: () {
-                    // 录音停止时的回调
-                    _focusNode.requestFocus();
-                  },
+                  onRecordingStarted: _focusNode.unfocus,
+                  onRecordingStopped: _focusNode.requestFocus,
                 ),
 
                 const SizedBox(width: DS.spacing8),

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
@@ -17,10 +18,18 @@ const (
 type ChatHistoryService struct {
 	rdb              *redis.Client
 	breakerThreshold atomic.Int64
+	chatHistoryTTL   time.Duration
 }
 
 func NewChatHistoryService(rdb *redis.Client) *ChatHistoryService {
-	s := &ChatHistoryService{rdb: rdb}
+	return NewChatHistoryServiceWithTTL(rdb, ChatHistoryTTL)
+}
+
+func NewChatHistoryServiceWithTTL(rdb *redis.Client, ttl time.Duration) *ChatHistoryService {
+	s := &ChatHistoryService{
+		rdb:            rdb,
+		chatHistoryTTL: ttl,
+	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
 	return s
 }
@@ -40,6 +49,18 @@ func (s *ChatHistoryService) GetQueueLength(ctx context.Context) (int64, error) 
 	return s.rdb.LLen(ctx, "queue:persist:history").Result()
 }
 
+// PublishConnectionEvent publishes a WebSocket connection event to Redis Pub/Sub
+func (s *ChatHistoryService) PublishConnectionEvent(ctx context.Context, userID string, event string) error {
+	if s.rdb == nil {
+		return nil
+	}
+
+	eventKey := fmt.Sprintf("ws:connection:events:%s", userID)
+	eventValue := fmt.Sprintf("%s:%d", event, time.Now().Unix())
+
+	return s.rdb.Publish(ctx, eventKey, eventValue).Err()
+}
+
 func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []byte) error {
 	pipe := s.rdb.Pipeline()
 
@@ -47,7 +68,7 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	cacheKey := "chat:history:" + sid
 	pipe.RPush(ctx, cacheKey, msg)
 	pipe.LTrim(ctx, cacheKey, -20, -1) // Keep last 20 messages
-	pipe.Expire(ctx, cacheKey, ChatHistoryTTL)
+	pipe.Expire(ctx, cacheKey, s.chatHistoryTTL)
 
 	// 2. Write to persistent queue (for DB, with Circuit Breaker)
 	queueKey := "queue:persist:history"
@@ -68,8 +89,8 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 		pipe.RPush(ctx, queueKey, msg)
 	} else {
 		// Circuit Breaker triggered
-		log.Printf("Persistence queue overloaded (%d/%d), dropping message for session %s", qLen, threshold, sid)
-		// We execute the pipeline (to save to cache) but skip the DB queue push.
+		// Return explicit error instead of silently dropping message
+		return fmt.Errorf("persistence queue overloaded (%d/%d), retry later", qLen, threshold)
 	}
 
 	_, err = pipe.Exec(ctx)

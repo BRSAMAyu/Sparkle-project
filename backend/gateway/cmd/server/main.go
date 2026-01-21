@@ -94,7 +94,12 @@ func main() {
 
 	// Initialize Services
 	quotaService := service.NewQuotaService(rdb)
-	chatHistoryService := service.NewChatHistoryService(rdb)
+	// Use cache strategy configuration for chat history TTL
+	chatHistoryTTL := cfg.CacheStrategy.GoRedisCache.ChatHistoryTTL
+	if chatHistoryTTL == 0 {
+		chatHistoryTTL = 30 * time.Minute // Default
+	}
+	chatHistoryService := service.NewChatHistoryServiceWithTTL(rdb, chatHistoryTTL)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(pool) // P0: Add user context service
@@ -154,6 +159,7 @@ func main() {
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
 	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
+	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
 	// Auth Service
 	appleAuthService, err := service.NewAppleAuthService(cfg)
@@ -389,6 +395,9 @@ func main() {
 
 		// File Routes
 		fileHandler.RegisterRoutes(api, authMiddleware)
+
+		// Data Consistency Routes
+		dataConsistencyHandler.RegisterRoutes(api)
 
 		// Intervention Routes (proxy to Python backend)
 		api.Any("/interventions/*path", authMiddleware, interventionProxyHandler.Proxy)
@@ -651,7 +660,12 @@ func main() {
 	}
 
 	// Reverse Proxy for Python Backend (REST API)
-	targetURL, err := url.Parse("http://localhost:8000")
+	// Use BACKEND_URL from config (defaults to http://localhost:8000)
+	backendURL := cfg.BackendURL
+	if backendURL == "" {
+		backendURL = "http://sparkle_api:8000" // Docker network
+	}
+	targetURL, err := url.Parse(backendURL)
 	if err != nil {
 		log.Fatalf("Failed to parse Python backend URL: %v", err)
 	}

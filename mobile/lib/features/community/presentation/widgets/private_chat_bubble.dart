@@ -105,7 +105,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
   Widget _buildTextBubble(BuildContext context, bool isMe) => Container(
         padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
-          color: isMe ? DS.primaryBase : DS.brandPrimary,
+          color: isMe ? DS.chatBubbleUser : DS.chatBubbleOther,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -117,7 +117,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
           boxShadow: isMe
               ? [
                   BoxShadow(
-                      color: DS.primaryBase.withValues(alpha: 0.3),
+                      color: DS.chatBubbleUser.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),),
                 ]
@@ -127,7 +127,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         child: Text(
           widget.message.content ?? '',
           style: TextStyle(
-            color: isMe ? DS.brandPrimary : DS.neutral900,
+            color: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
             height: 1.4,
           ),

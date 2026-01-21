@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 
@@ -48,7 +49,7 @@ class ErrorCard extends StatelessWidget {
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       child:
-                          const Text('删除', style: TextStyle(color: Colors.red)),
+                          const Text('删除', style: TextStyle(color: DS.semanticError)),
                     ),
                   ],
                 ),
@@ -58,8 +59,8 @@ class ErrorCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white),
+        color: DS.semanticError,
+        child: Icon(Icons.delete, color: DS.onBrandPrimary),
       ),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -121,7 +122,7 @@ class ErrorCard extends StatelessWidget {
                                   ? Icons.star
                                   : Icons.star_border,
                               size: 12,
-                              color: Colors.amber,
+                              color: DS.semanticWarning,
                             ),
                           ),
                         ),
@@ -227,9 +228,9 @@ class ErrorCard extends StatelessWidget {
   }
 
   Color _getMasteryColor(double mastery) {
-    if (mastery >= 0.8) return Colors.green;
-    if (mastery >= 0.5) return Colors.orange;
-    return Colors.red;
+    if (mastery >= 0.8) return DS.semanticSuccess;
+    if (mastery >= 0.5) return DS.semanticWarning;
+    return DS.semanticError;
   }
 
   String _formatTime(DateTime time) {

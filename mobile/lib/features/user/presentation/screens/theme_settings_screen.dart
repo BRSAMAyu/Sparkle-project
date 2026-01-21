@@ -170,7 +170,7 @@ class _SegmentedThemeButton extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? Colors.white
+                          ? DS.onBrandPrimary
                           : Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,

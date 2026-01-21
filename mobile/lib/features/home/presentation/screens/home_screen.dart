@@ -135,24 +135,26 @@ class _DashboardScreen extends ConsumerWidget {
     ref.listen(edgeAIStateProvider, (previous, next) {
       next.whenData((state) {
         if (state != null && state.shouldInterrupt) {
+          final theme = Theme.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.auto_awesome, color: Colors.white),
+                  Icon(Icons.auto_awesome, color: theme.colorScheme.onPrimary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Sparkle AI: ${state.nudgeTone == 'gentle' ? '休息一下吧，效率会更高哦' : '保持专注，你正在状态！'}',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: DS.brandPrimary,
+              backgroundColor: theme.colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
                 label: '查看',
-                textColor: Colors.white,
+                textColor: theme.colorScheme.onPrimary,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const EdgeAIStatusScreen(),
