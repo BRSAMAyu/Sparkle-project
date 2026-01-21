@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -12,7 +13,7 @@ class AudioRecordingService {
   final AudioRecorder _recorder = AudioRecorder();
   final Logger _logger = Logger();
   WebSocketChannel? _webSocket;
-  StreamSubscription<Uint8List>? _audioSubscription;
+  StreamSubscription<dynamic>? _audioSubscription;
   bool _isRecording = false;
   Timer? _durationTimer;
   int _recordingDuration = 0;
@@ -65,7 +66,7 @@ class AudioRecordingService {
           sampleRate: 16000,
           numChannels: 1,
         ),
-        path: null, // 流式模式，不保存到文件
+        path: '',  // 空路径表示不保存到文件
       );
 
       // 4. 监听音频流
@@ -109,7 +110,7 @@ class AudioRecordingService {
   ) {
     try {
       if (message is String) {
-        final data = Map<String, dynamic>.from(message);
+        final data = jsonDecode(message) as Map<String, dynamic>;
         final type = data['type'] as String?;
 
         switch (type) {

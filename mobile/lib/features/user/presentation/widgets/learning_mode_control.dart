@@ -67,12 +67,12 @@ class _LearningModeControlState extends State<LearningModeControl> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     color: isDark
-                        ? DS.brandPrimary.shade900
-                        : DS.brandPrimary.shade100,
+                        ? DS.surfaceTertiary
+                        : DS.neutral100,
                     border: Border.all(
                         color: isDark
-                            ? DS.brandPrimary24
-                            : DS.brandPrimary.shade300,),
+                            ? DS.neutral700
+                            : DS.neutral300,),
                     boxShadow: [
                       BoxShadow(
                         color: DS.primaryBase
@@ -96,46 +96,68 @@ class _LearningModeControlState extends State<LearningModeControl> {
                         // Grid lines
                         _buildGrid(maxSize, maxSize),
 
-                        // Labels - positioned at corners
+                        // Labels - positioned at edge centers
+                        // Depth+ at top center
                         Positioned(
-                          left: 8,
                           top: 8,
-                          child: Text('深度+',
-                              style: TextStyle(
-                                  color: isDark
-                                      ? DS.brandPrimary54
-                                      : DS.brandPrimary.shade600,
-                                  fontSize: 11,),),
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Text('深度+',
+                                style: TextStyle(
+                                    color: isDark
+                                        ? DS.neutral400
+                                        : DS.neutral600,
+                                    fontSize: 11,),),
+                          ),
                         ),
+                        // Depth- at bottom center
                         Positioned(
-                          left: 8,
                           bottom: 8,
-                          child: Text('深度-',
-                              style: TextStyle(
-                                  color: isDark
-                                      ? DS.brandPrimary54
-                                      : DS.brandPrimary.shade600,
-                                  fontSize: 11,),),
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Text('深度-',
+                                style: TextStyle(
+                                    color: isDark
+                                        ? DS.neutral400
+                                        : DS.neutral600,
+                                    fontSize: 11,),),
+                          ),
                         ),
+                        // Curiosity+ at right center
                         Positioned(
                           right: 8,
-                          bottom: 8,
-                          child: Text('好奇+',
-                              style: TextStyle(
-                                  color: isDark
-                                      ? DS.brandPrimary54
-                                      : DS.brandPrimary.shade600,
-                                  fontSize: 11,),),
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: RotatedBox(
+                              quarterTurns: 1,
+                              child: Text('好奇+',
+                                  style: TextStyle(
+                                      color: isDark
+                                          ? DS.neutral400
+                                          : DS.neutral600,
+                                      fontSize: 11,),),
+                            ),
+                          ),
                         ),
+                        // Curiosity- at left center
                         Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Text('好奇-',
-                              style: TextStyle(
-                                  color: isDark
-                                      ? DS.brandPrimary54
-                                      : DS.brandPrimary.shade600,
-                                  fontSize: 11,),),
+                          left: 8,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: RotatedBox(
+                              quarterTurns: 3,
+                              child: Text('好奇-',
+                                  style: TextStyle(
+                                      color: isDark
+                                          ? DS.neutral400
+                                          : DS.neutral600,
+                                      fontSize: 11,),),
+                            ),
+                          ),
                         ),
 
                         // The Handle
@@ -146,18 +168,20 @@ class _LearningModeControlState extends State<LearningModeControl> {
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: DS.brandPrimaryConst,
+                              color: isDark ? Colors.white : DS.brandPrimaryConst,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: DS.primaryBase.withValues(alpha: 0.6),
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.4)
+                                      : DS.primaryBase.withValues(alpha: 0.6),
                                   blurRadius: 8,
                                   spreadRadius: 1,
                                 ),
                               ],
                             ),
                             child: Icon(Icons.touch_app,
-                                size: 16, color: DS.primaryBase,),
+                                size: 16, color: isDark ? Colors.black87 : DS.primaryBase,),
                           ),
                         ),
                       ],
