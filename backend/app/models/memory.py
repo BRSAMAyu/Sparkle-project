@@ -9,7 +9,7 @@ from pgvector.sqlalchemy import Vector
 from app.models.base import BaseModel, GUID
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
-VectorCompat = Vector(1536).with_variant(JSON(), "sqlite")
+VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 
 
 class MemoryPreference(BaseModel):

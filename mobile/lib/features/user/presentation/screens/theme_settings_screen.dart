@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 
@@ -170,7 +170,7 @@ class _SegmentedThemeButton extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? DS.onBrandPrimary
+                          ? Colors.white
                           : Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,

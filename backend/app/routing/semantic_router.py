@@ -22,7 +22,7 @@ class SemanticRouter:
     async def route(self, query: str, context: Dict) -> Optional[str]:
         """Route based on semantic similarity"""
         try:
-            query_vec = await self.embedding.get_embedding(query)
+            query_vec = await self.embedding.get_embedding(query, text_type="query")
             similarities = {}
             
             for capability, keywords in self.capability_map.items():

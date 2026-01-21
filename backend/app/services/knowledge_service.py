@@ -205,7 +205,7 @@ class KnowledgeService:
 
         try:
             start_time = time.time()
-            query_embedding = await embedding_service.get_embedding(query)
+            query_embedding = await embedding_service.get_embedding(query, text_type="query")
             stmt = (
                 select(
                     KnowledgeNode,
