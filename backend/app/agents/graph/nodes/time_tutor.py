@@ -1,3 +1,4 @@
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from app.agents.graph.state import SparkleState
 from app.agents.graph.llm_factory import LLMFactory
@@ -24,6 +25,10 @@ async def time_tutor_node(state: SparkleState):
     负责任务管理、日程规划
     """
     messages = state["messages"]
+    collaboration_context = state.get("collaboration_context")
+    if collaboration_context:
+        messages = list(messages)
+        messages.append(HumanMessage(content=collaboration_context))
     
     # 使用高性价比模型 (GPT-4o-mini)
     llm = LLMFactory.get_llm("time_tutor")

@@ -1,0 +1,313 @@
+"""
+LangGraph Planner - Phase 3
+
+Responsibilities:
+1. Receive user message and state snapshot
+2. Output ExecutablePlan (does NOT execute tools)
+3. Support re-plan mechanism for version conflicts
+4. Support multi-agent collaboration output (Phase 3)
+"""
+from typing import Optional, Dict, Any, List
+from loguru import logger
+from langchain_core.messages import HumanMessage, AIMessage
+import uuid
+
+from app.orchestration.schemas import ExecutablePlan, ToolCallSpec, StateSnapshot
+from app.agents.graph.state import SparkleState
+from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+
+
+class LangGraphPlanner:
+    """LangGraph Planner (Phase 2)
+
+    Responsibilities:
+    1. Convert LangGraph output to ExecutablePlan
+    2. Does NOT execute any tools or database operations
+    3. Returns executable JSON structure
+    """
+
+    # Tools that should trigger PONR flag
+    PONR_TOOLS = {
+        "delete_task", "delete_plan", "remove_user",
+        "clear_all_tasks", "reset_progress"
+    }
+
+    def __init__(self, redis_client=None):
+        self.redis = redis_client
+        # Phase 2: Use planning-only graph (no ToolNode)
+        # This ensures planner does NOT execute tools
+        self.graph = sparkle_planning_graph
+        logger.info("LangGraphPlanner initialized with planning-only graph (no tool execution)")
+
+    async def plan(
+        self,
+        message: str,
+        snapshot: StateSnapshot,
+        user_id: str,
+        session_id: str,
+        conversation_history: Optional[List[Dict]] = None
+    ) -> ExecutablePlan:
+        """Generate execution plan from LangGraph
+
+        Args:
+            message: User message
+            snapshot: State snapshot
+            user_id: User ID
+            session_id: Session ID
+            conversation_history: Optional conversation history for context
+
+        Returns:
+            ExecutablePlan: Executable plan with tool_calls
+        """
+        # Build initial state
+        messages = [HumanMessage(content=message)]
+
+        # Add conversation history if provided
+        if conversation_history:
+            for hist in conversation_history[-5:]:  # Last 5 messages
+                if hist.get("role") == "user":
+                    messages.insert(-1, HumanMessage(content=hist.get("content", "")))
+                elif hist.get("role") == "assistant":
+                    messages.insert(-1, AIMessage(content=hist.get("content", "")))
+
+        initial_state: SparkleState = {
+            "messages": messages,
+            "user_id": user_id,
+            "session_id": session_id,
+            "user_profile": snapshot.to_dict() if snapshot else {},
+            "next_step": None,
+            "active_agent": None,
+            "require_approval": False,
+            "approval_context": None,
+            "approval_result": None,
+            "error": None,
+            # Phase 2: Inject snapshot info
+            "_snapshot": snapshot.to_dict() if snapshot else {},
+        }
+
+        # Execute planning graph (stops at tool_calls, does NOT execute tools)
+        config = {"configurable": {"thread_id": session_id}}
+        final_state = None
+
+        logger.info(f"Starting LangGraph planning for session {session_id}")
+
+        try:
+            # The planning graph will complete when agents generate tool_calls
+            # It will NOT execute them (no ToolNode in planning graph)
+            result_state = await self.graph.ainvoke(initial_state, config)
+            final_state = result_state
+
+        except Exception as e:
+            logger.error(f"LangGraph planning error: {e}")
+            # Return empty plan on error
+            return ExecutablePlan(
+                schema_version="3.0",  # Phase 3: Use v3.0
+                snapshot_id=snapshot.snapshot_id if snapshot else "",
+                context_version=snapshot.context_versions.get("tasks", "v0") if snapshot else "v0",
+                source="langgraph",
+                confidence=0.0,
+                rationale=f"Planning failed: {str(e)}",
+                tool_calls=[]
+            )
+
+        # Convert to ExecutablePlan
+        return self._convert_to_plan(final_state, snapshot, user_id, session_id)
+
+    def _convert_to_plan(
+        self,
+        langgraph_state: SparkleState,
+        snapshot: StateSnapshot,
+        user_id: str,
+        session_id: str
+    ) -> ExecutablePlan:
+        """Convert LangGraph state to ExecutablePlan (Phase 3: with collaboration support)
+
+        Args:
+            langgraph_state: State from LangGraph execution
+            snapshot: Original state snapshot
+            user_id: User ID
+            session_id: Session ID
+
+        Returns:
+            ExecutablePlan: Converted plan
+        """
+        tool_calls = []
+        active_agent = "unknown"
+        rationale = "Generated via LangGraph"
+
+        # Phase 3: Extract collaboration metadata
+        agents_involved = langgraph_state.get("collaboration_agents", [])
+        collaboration_mode = langgraph_state.get("collaboration_mode", "single")
+        collaboration_order = langgraph_state.get("collaboration_order", [])
+
+        def _normalize_tool_call(tc) -> Optional[Dict[str, Any]]:
+            if isinstance(tc, dict):
+                name = tc.get("name") or tc.get("tool") or tc.get("function", {}).get("name")
+                args = tc.get("args") or tc.get("arguments") or tc.get("function", {}).get("arguments", {})
+                call_id = tc.get("id") or tc.get("tool_call_id")
+            else:
+                name = getattr(tc, "name", None) or getattr(tc, "tool", None)
+                args = getattr(tc, "args", None) or getattr(tc, "arguments", None)
+                call_id = getattr(tc, "id", None) or getattr(tc, "tool_call_id", None)
+
+            if isinstance(args, str):
+                try:
+                    import json
+                    args = json.loads(args)
+                except Exception:
+                    args = {"_raw": args}
+
+            if not name:
+                return None
+
+            return {"id": call_id, "name": name, "args": args}
+
+        # Extract tool_calls from messages
+        messages = langgraph_state.get("messages", [])
+        for msg in messages:
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                for tc in msg.tool_calls:
+                    normalized = _normalize_tool_call(tc)
+                    if not normalized:
+                        continue
+                    tool_name = normalized["name"]
+                    tool_args = normalized["args"]
+
+                    tool_calls.append(ToolCallSpec(
+                        id=normalized.get("id") or f"call_{uuid.uuid4().hex[:8]}",
+                        name=tool_name,
+                        params=tool_args,
+                        timeout_ms=10000,
+                        priority="normal",
+                        allow_retry=True,
+                        max_retries=2,
+                        point_of_no_return=tool_name in self.PONR_TOOLS
+                    ))
+
+        # Get active_agent for rationale
+        active_agent = langgraph_state.get("active_agent")
+        if active_agent:
+            if collaboration_mode != "single" and agents_involved:
+                rationale = f"Planned via collaboration: {', '.join(agents_involved)}"
+            else:
+                rationale = f"Planned by {active_agent} via LangGraph"
+        else:
+            # Try to infer from next_step
+            next_step = langgraph_state.get("next_step")
+            if next_step:
+                rationale = f"Planned for {next_step} via LangGraph"
+
+        # Calculate confidence based on tool_calls presence and collaboration
+        confidence = 0.8 if tool_calls else 0.5
+        if collaboration_mode != "single":
+            confidence = min(confidence + 0.1, 1.0)  # Boost confidence for collaboration
+
+        # Get context version from snapshot
+        context_version = "v0"
+        if snapshot and snapshot.context_versions:
+            context_version = snapshot.context_versions.get("tasks", "v0")
+
+        return ExecutablePlan(
+            schema_version="3.0",  # Phase 3: Use v3.0
+            snapshot_id=snapshot.snapshot_id if snapshot else "",
+            context_version=context_version,
+            source="langgraph",
+            confidence=confidence,
+            rationale=rationale,
+            # Phase 3: Add collaboration metadata
+            agents_involved=agents_involved,
+            collaboration_mode=collaboration_mode,
+            collaboration_order=collaboration_order,
+            tool_calls=tool_calls,
+            fallback_strategy={
+                "on_validation_fail": "replan",
+                "on_version_conflict": "replan",
+                "on_execution_fail": "skip"
+            }
+        )
+
+    async def replan(
+        self,
+        message: str,
+        snapshot: StateSnapshot,
+        user_id: str,
+        session_id: str,
+        previous_plan: Optional[ExecutablePlan] = None,
+        conflict_info: Optional[Dict[str, Any]] = None
+    ) -> ExecutablePlan:
+        """Re-plan after version conflict or validation failure
+
+        Args:
+            message: Original user message
+            snapshot: New state snapshot
+            user_id: User ID
+            session_id: Session ID
+            previous_plan: Previous plan that failed
+            conflict_info: Optional conflict details
+
+        Returns:
+            ExecutablePlan: New execution plan
+        """
+        logger.info(
+            f"Re-planning for session {session_id}, "
+            f"previous confidence: {previous_plan.confidence if previous_plan else 0.0}"
+        )
+
+        # Include conflict info in message for context
+        enhanced_message = message
+        if conflict_info and conflict_info.get("has_conflict"):
+            conflicted_domains = conflict_info.get("conflicted_domains", [])
+            enhanced_message = (
+                f"{message}\n\n"
+                f"[Context: State changed in {conflicted_domains} since initial planning. "
+                f"Please consider current state.]"
+            )
+
+        # Generate new plan
+        new_plan = await self.plan(
+            message=enhanced_message,
+            snapshot=snapshot,
+            user_id=user_id,
+            session_id=session_id
+        )
+
+        # Mark as re-plan
+        new_plan.rationale += " (re-planned after state change)"
+
+        logger.info(
+            f"Re-planning complete: {len(new_plan.tool_calls)} tool_calls, "
+            f"confidence: {new_plan.confidence}"
+        )
+
+        return new_plan
+
+    def should_use_planner(self, route_decision) -> bool:
+        """Check if LangGraph planner should be used based on route decision
+
+        Args:
+            route_decision: RouteDecision from RequestRouter
+
+        Returns:
+            bool: True if planner should be used
+        """
+        return route_decision.execution_mode in ["langgraph", "hybrid"]
+
+    def get_plan_summary(self, plan: ExecutablePlan) -> str:
+        """Get a human-readable summary of the plan
+
+        Args:
+            plan: ExecutablePlan to summarize
+
+        Returns:
+            str: Plan summary
+        """
+        if not plan.tool_calls:
+            return "No tool calls planned"
+
+        tool_names = [tc.name for tc in plan.tool_calls]
+        summary = f"Plan ({plan.source}): {', '.join(tool_names)}"
+
+        if plan.risk_flags:
+            summary += f" [Risks: {', '.join(plan.risk_flags)}]"
+
+        return summary

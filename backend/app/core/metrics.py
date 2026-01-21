@@ -179,3 +179,50 @@ def track_latency(module, method):
             finally:
                 latency = time.time() - start_time
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
+
+
+# ============ Phase 3: Circuit Breaker & Collaboration Metrics ============
+
+LANGGRAPH_PLANNING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_langgraph_planning_total',
+    'Total number of LangGraph planning operations',
+    ['collaboration_mode', 'agents_count']
+)
+
+LANGGRAPH_PLANNING_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_langgraph_planning_latency_seconds',
+    'LangGraph planning latency in seconds',
+    ['collaboration_mode'],
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+CIRCUIT_BREAKER_TRIPS = get_or_create_metric(
+    Counter,
+    'sparkle_circuit_breaker_trips_total',
+    'Total number of circuit breaker trips',
+    ['circuit_name']
+)
+
+CIRCUIT_BREAKER_RESETS = get_or_create_metric(
+    Counter,
+    'sparkle_circuit_breaker_resets_total',
+    'Total number of circuit breaker resets',
+    ['circuit_name']
+)
+
+COLLABORATION_SUCCESS = get_or_create_metric(
+    Counter,
+    'sparkle_collaboration_total',
+    'Total number of collaboration operations',
+    ['workflow_type', 'agents_used', 'outcome']
+)
+
+COLLABORATION_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_collaboration_latency_seconds',
+    'Collaboration latency in seconds',
+    ['workflow_type'],
+    buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
+)
