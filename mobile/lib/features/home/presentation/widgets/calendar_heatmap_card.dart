@@ -17,16 +17,20 @@ class CalendarHeatmapCard extends StatelessWidget {
           padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: DS.textPrimary,
+                  Flexible(
+                    child: Text(
+                      DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: DS.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Icon(
@@ -37,14 +41,16 @@ class CalendarHeatmapCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: DS.md),
-              Expanded(
+              Flexible(
                 child: LayoutBuilder(
                   builder: _buildMonthGrid,
                 ),
               ),
               const SizedBox(height: DS.sm),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 2,
+                runSpacing: 2,
                 children: [
                   Text(
                     'Less',
@@ -53,13 +59,9 @@ class CalendarHeatmapCard extends StatelessWidget {
                   ),
                   const SizedBox(width: DS.xs),
                   _buildLegendItem(context, 0),
-                  const SizedBox(width: 2),
                   _buildLegendItem(context, 1),
-                  const SizedBox(width: 2),
                   _buildLegendItem(context, 2),
-                  const SizedBox(width: 2),
                   _buildLegendItem(context, 3),
-                  const SizedBox(width: 2),
                   _buildLegendItem(context, 4),
                   const SizedBox(width: DS.xs),
                   Text(

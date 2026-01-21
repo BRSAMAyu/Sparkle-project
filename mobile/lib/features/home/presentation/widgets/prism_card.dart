@@ -46,38 +46,41 @@ class _PrismCardState extends ConsumerState<PrismCard>
 
     return GestureDetector(
       onTap: () => context.push('/cognitive/patterns'),
-      child: MaterialStyler(
-        material: AppMaterials.ceramic.copyWith(
-          backgroundGradient: LinearGradient(
-            colors: [
-              DS.prismPurple.withValues(alpha: 0.08),
-              DS.surfaceSecondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderColor: DS.prismPurple.withValues(alpha: 0.25),
-          borderWidth: 1.0,
-        ),
+      child: ClipRRect(
         borderRadius: DS.borderRadius20,
-        padding: const EdgeInsets.all(DS.lg),
-        child: Stack(
-          children: [
+        child: MaterialStyler(
+          material: AppMaterials.ceramic.copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                DS.prismPurple.withValues(alpha: 0.08),
+                DS.surfaceSecondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderColor: DS.prismPurple.withValues(alpha: 0.25),
+            borderWidth: 1.0,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.all(DS.lg),
+          child: Stack(
+            clipBehavior: Clip.antiAlias,
+            children: [
             // Prism refraction effect (animated)
             Positioned(
-              right: -20,
-              bottom: -20,
+              right: -10,
+              bottom: -10,
               child: AnimatedBuilder(
                 animation: _breathingAnimation,
                 builder: (context, child) => Container(
-                  width: 100,
-                  height: 100,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        DS.prismPurple
-                            .withValues(alpha: _breathingAnimation.value),
+                        DS.prismPurple.withValues(
+                            alpha: _breathingAnimation.value * 0.5),
                         Colors.transparent,
                       ],
                     ),
@@ -88,6 +91,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
 
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
