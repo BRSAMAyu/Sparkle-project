@@ -285,7 +285,7 @@ class MaterialStyler extends StatelessWidget {
                   ),
                 ),
 
-              // Layer 6: Content
+              // Layer 6: Content - Ensure no overflow
               Padding(
                 padding: padding ?? EdgeInsets.zero,
                 child: child,

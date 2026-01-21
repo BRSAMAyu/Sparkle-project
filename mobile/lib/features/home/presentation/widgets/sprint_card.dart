@@ -95,21 +95,29 @@ class SprintCard extends ConsumerWidget {
         const Spacer(),
 
         // Sprint name
-        Text(
-          sprint.name,
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontWeight: FontWeight.w600,
-            color: DS.brandPrimaryConst,
+        SizedBox(
+          height: 16,
+          child: Text(
+            sprint.name,
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              color: DS.brandPrimaryConst,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
-        Text(
-          '${(progress * 100).toInt()}% 完成',
-          style: context.sparkleTypography.labelSmall.copyWith(
-            fontSize: 10,
-            color: DS.brandPrimary.withValues(alpha: 0.6),
+        SizedBox(
+          height: 12,
+          child: Text(
+            '${(progress * 100).toInt()}% 完成',
+            style: context.sparkleTypography.labelSmall.copyWith(
+              fontSize: 10,
+              color: DS.brandPrimary.withValues(alpha: 0.6),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

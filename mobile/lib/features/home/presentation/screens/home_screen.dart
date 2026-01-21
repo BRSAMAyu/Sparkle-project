@@ -259,25 +259,25 @@ class _DashboardScreen extends ConsumerWidget {
     // Wrap with ContentConstraint for responsive width on desktop
     return ContentConstraint(
       child: StaggeredGrid.count(
-        crossAxisCount: 4,
+        crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         children: [
-          // Card A: Focus Core (2x2)
+          // Card A: Focus Core (2x1.5)
           StaggeredGridTile.count(
             crossAxisCellCount: 2,
-            mainAxisCellCount: 2,
+            mainAxisCellCount: 1.5,
             child: FocusCard(onTap: () => context.push('/focus')),
           ),
-          // Card E: Calendar Heatmap (2x1)
+          // Card E: Calendar Heatmap (1x1)
           const StaggeredGridTile.count(
-            crossAxisCellCount: 2,
+            crossAxisCellCount: 1,
             mainAxisCellCount: 1,
             child: CalendarHeatmapCard(),
           ),
-          // Card B: Cognitive Prism (2x1)
+          // Card B: Cognitive Prism (1x1)
           const StaggeredGridTile.count(
-            crossAxisCellCount: 2,
+            crossAxisCellCount: 1,
             mainAxisCellCount: 1,
             child: PrismCard(),
           ),
