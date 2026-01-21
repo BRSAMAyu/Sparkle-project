@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/success_animation.dart';
+import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
@@ -118,14 +119,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           result: _completionResult!,
           onClose: () {
             Navigator.of(context).pop(); // Close dialog
-            context.go('/galaxy'); // Navigate away
+            context.go(GalaxyRoutes.home); // Navigate away
           },
         ),
       );
     } else {
       // Fallback if result isn't ready or failed (though optimistic update usually handles it)
       // For now, just go to galaxy
-      context.go('/galaxy');
+      context.go(GalaxyRoutes.home);
     }
   }
 
@@ -657,7 +658,7 @@ class _BottomControls extends ConsumerWidget {
         onAbandonConfirmed: () {
           ref.read(taskListProvider.notifier).abandonTask(task.id);
           // Navigate away completely to Galaxy to exit execution flow safely
-          context.go('/galaxy');
+          context.go(GalaxyRoutes.home);
         },
       ),
     );

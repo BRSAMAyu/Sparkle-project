@@ -213,7 +213,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     icon: Icons.chat_bubble_outline,
                     size: CustomButtonSize.large,
                     onPressed: () {
-                      context.push('/community/groups/$groupId/chat');
+                      context.push('/chat/group/$groupId');
                     },
                   ),
                   const SizedBox(height: DS.lg),
