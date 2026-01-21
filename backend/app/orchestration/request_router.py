@@ -1,9 +1,9 @@
 """
-Request Router - Phase 1
+Request Router - Phase 1 & Phase 2
 
-Simple rule-based router for deciding execution mode.
-In Phase 1, all requests go to "direct" mode.
-Phase 2 will introduce LangGraph as a planner.
+Rule-based router for deciding execution mode.
+Phase 1: All requests go to "direct" mode.
+Phase 2: Introduces "langgraph" and "hybrid" modes for complex intents.
 """
 from typing import Optional
 from loguru import logger
@@ -12,7 +12,7 @@ from app.orchestration.schemas import RouteDecision
 
 
 class RequestRouter:
-    """简单规则路由器 (Phase 1)
+    """路由器 (Phase 1 & Phase 2)
 
     职责:
     1. 分析用户消息意图
@@ -23,12 +23,34 @@ class RequestRouter:
     - 所有请求走 direct 模式
     - 基于关键词进行意图分类
     - 简单风险评估
+
+    Phase 2 规则:
+    - 简单查询 → direct
+    - 复杂规划 → langgraph
+    - 高风险 → direct (安全优先)
     """
 
-    # 工具到复杂度映射 (Phase 2 使用)
+    # 简单工具列表 (适合 direct 模式)
     SIMPLE_TOOLS = {
         "get_task", "get_plan", "get_knowledge", "query_knowledge",
-        "get_focus_stats", "get_user_context"
+        "get_focus_stats", "get_user_context", "get_progress"
+    }
+
+    # 复杂意图关键词 (需要 LangGraph 规划) - Phase 2
+    COMPLEX_INTENTS = {
+        "学习计划", "study plan", "制定计划", "make a plan",
+        "复习策略", "review strategy", "复习计划",
+        "时间安排", "schedule", "时间管理", "time management",
+        "考试预测", "exam prediction", "考试重点",
+        "知识图谱", "knowledge graph", "知识关联",
+        "多步骤", "multi-step", "一系列", "一系列任务"
+    }
+
+    # 多步骤模式关键词 - Phase 2
+    MULTI_STEP_INDICATORS = {
+        "然后", "然后", "接着", "之后",
+        "and then", "after that", "next", "followed by",
+        "第一步", "第一步", "首先", "first"
     }
 
     def __init__(self, redis_client=None):
@@ -40,12 +62,12 @@ class RequestRouter:
         user_id: str,
         session_id: str
     ) -> RouteDecision:
-        """路由决策
+        """路由决策 (Phase 2)
 
-        Phase 1 规则:
-        - 单个简单工具 → direct
-        - 多个工具或复杂工具 → direct (Phase 1 都是 direct)
-        - LangGraph 规划 → Phase 2
+        规则 (优先级顺序):
+        1. 高风险 → direct (安全优先，最高优先级)
+        2. 复杂规划 → langgraph
+        3. 其他 → direct
 
         Args:
             message: 用户消息
@@ -64,12 +86,36 @@ class RequestRouter:
         # 风险评估
         risk_level = self._assess_risk(message, intent)
 
-        # Phase 1: 所有请求走 direct
+        # Phase 2: 根据风险优先级决定执行模式
+        execution_mode = "direct"
+        confidence = 0.7
+        reason = f"Intent: {intent}, Phase 2 routing"
+
+        # === 优先级1: 高风险操作 → direct (安全优先) ===
+        if risk_level == "high":
+            execution_mode = "direct"
+            confidence = 0.9
+            reason = f"Intent: {intent}, HIGH RISK - direct mode for safety"
+            logger.info(f"High risk detected, forcing direct mode: {intent}")
+
+        # === 优先级2: 复杂意图 → langgraph (仅在非高风险时) ===
+        elif self._is_complex_intent(message):
+            execution_mode = "langgraph"
+            confidence = 0.8
+            reason = f"Intent: {intent}, complex routing via LangGraph"
+            logger.info(f"Complex intent detected, using LangGraph: {intent}")
+
+        # === 优先级3: 默认 → direct ===
+        else:
+            execution_mode = "direct"
+            confidence = 0.7
+            reason = f"Intent: {intent}, standard direct routing"
+
         return RouteDecision(
-            execution_mode="direct",
-            reason=f"Intent: {intent}, Phase 1 default routing",
+            execution_mode=execution_mode,
+            reason=reason,
             risk_level=risk_level,
-            confidence=0.7,
+            confidence=confidence,
             context_version=context_version
         )
 
@@ -137,3 +183,42 @@ class RequestRouter:
                 logger.warning(f"Failed to get context version: {e}")
 
         return "v0"
+
+    def _is_complex_intent(self, message: str) -> bool:
+        """检查是否为复杂意图 (Phase 2)
+
+        复杂意图的判断标准:
+        1. 包含复杂意图关键词
+        2. 包含多步骤指示词
+        3. 消息长度超过阈值（可能包含多个请求）
+
+        Args:
+            message: 用户消息
+
+        Returns:
+            bool: 是否为复杂意图
+        """
+        msg_lower = message.lower()
+
+        # 1. 检查是否包含复杂意图关键词
+        for keyword in self.COMPLEX_INTENTS:
+            if keyword.lower() in msg_lower:
+                logger.debug(f"Complex intent detected: {keyword}")
+                return True
+
+        # 2. 检查是否为多步骤任务
+        for indicator in self.MULTI_STEP_INDICATORS:
+            if indicator.lower() in msg_lower:
+                logger.debug(f"Multi-step intent detected: {indicator}")
+                return True
+
+        # 3. 消息长度检查（简化实现）
+        # 较长的消息可能包含多个请求或复杂描述
+        if len(message) > 100:
+            # 检查是否包含多个句子（可能表示多个任务）
+            sentence_count = message.count('。') + message.count('.') + message.count('!') + message.count('?')
+            if sentence_count >= 2:
+                logger.debug(f"Multi-sentence intent detected: {sentence_count} sentences")
+                return True
+
+        return False

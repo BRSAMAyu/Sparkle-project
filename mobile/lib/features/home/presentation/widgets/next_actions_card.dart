@@ -24,16 +24,20 @@ class NextActionsCard extends ConsumerWidget {
       padding: const EdgeInsets.all(DS.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '下一步',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: DS.textPrimary,
+              Flexible(
+                child: Text(
+                  '下一步',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: DS.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (onViewAll != null)
@@ -45,7 +49,7 @@ class NextActionsCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: DS.md),
-          Expanded(
+          Flexible(
             child: nextActions.isEmpty
                 ? _buildEmptyState(context)
                 : ListView.separated(

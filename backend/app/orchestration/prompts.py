@@ -66,6 +66,12 @@ def build_system_prompt(
     Returns:
         完整的系统prompt字符串
     """
+    # Ensure user_context is never None
+    if user_context is None:
+        user_context = {}
+    if conversation_history is None:
+        conversation_history = {}
+
     # 1. 首先检查 AgentProfile 是否有专用 prompt
     profile = agent_profile_registry.get_profile(agent_role)
     base_prompt = profile.system_prompt_template or AGENT_SYSTEM_PROMPT
@@ -73,7 +79,9 @@ def build_system_prompt(
     # 2. 格式化上下文
     formatted_user_context = format_user_context(user_context)
 
-    llm_profile = user_context.get("llm_profile", {})
+    llm_profile = user_context.get("llm_profile")
+    if llm_profile is None:
+        llm_profile = {}
     preference_instructions = llm_profile.get(
         "system_prompt_additions",
         _get_default_preference_instructions(user_context)

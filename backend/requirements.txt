@@ -36,6 +36,7 @@ aiofiles>=23.2.1
 # Development & Testing
 pytest>=7.4.4
 pytest-asyncio>=0.23.3
+psutil>=5.9.0
 black>=24.1.1
 flake8>=7.0.0
 mypy>=1.8.0
@@ -43,8 +44,13 @@ mypy>=1.8.0
 # LLM & AI
 openai>=1.10.0
 dashscope>=1.20.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
 langchain-text-splitters>=0.0.1
+langgraph>=0.2.0
 tiktoken>=0.5.2
+pypdf>=3.0.0
+pdfplumber>=0.10.0
 
 # Discovered Dependencies
 sse-starlette
