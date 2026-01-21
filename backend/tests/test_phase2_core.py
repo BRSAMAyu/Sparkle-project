@@ -140,13 +140,14 @@ async def test_request_validator():
 async def test_user_service():
     """测试用户服务"""
     from app.services.user_service import UserService
+    from app.services.personalization.preference_service import UserPreferencesCenter
     from sqlalchemy.ext.asyncio import AsyncSession
-    from unittest.mock import MagicMock
-    
+    from unittest.mock import MagicMock, patch
+
     # Mock DB session
     db_mock = MagicMock(spec=AsyncSession)
     db_mock.execute = AsyncMock()
-    
+
     # Mock user query result
     mock_user = MagicMock()
     mock_user.id = uuid4()
@@ -160,24 +161,36 @@ async def test_user_service():
     mock_user.is_active = True
     mock_user.last_login_at = None
     mock_user.registration_source = "email"
-    
+    mock_user.timezone = "Asia/Shanghai"
+    mock_user.persona_type = "explorer"
+
     # Mock the execute result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_user
     db_mock.execute.return_value = mock_result
-    
-    user_service = UserService(db_mock)
-    user_service._get_push_preference = AsyncMock(return_value=None)
-    
-    # Test get_context
-    user_id = uuid4()
-    context = await user_service.get_context(user_id)
-    
-    assert context is not None
-    assert context.user_id == str(user_id)
-    assert context.nickname == "Test User"
-    assert context.is_pro is True  # flame_level >= 3
-    
+
+    # Create empty UserPreferencesCenter to avoid MagicMock dict issues
+    prefs_center = UserPreferencesCenter()
+    prefs_center.explicit = {}
+
+    with patch("app.services.user_service.PreferenceService") as mock_pref_service_cls:
+        # Configure the mock PreferenceService
+        mock_pref_service = AsyncMock()
+        mock_pref_service.get_preferences = AsyncMock(return_value=prefs_center)
+        mock_pref_service_cls.return_value = mock_pref_service
+
+        user_service = UserService(db_mock)
+        user_service._get_push_preference = AsyncMock(return_value=None)
+
+        # Test get_context
+        user_id = uuid4()
+        context = await user_service.get_context(user_id)
+
+        assert context is not None
+        assert context.user_id == str(user_id)
+        assert context.nickname == "Test User"
+        assert context.is_pro is True  # flame_level >= 3
+
     print("✅ User Service test passed")
 
 
