@@ -151,12 +151,9 @@ class RerankService:
         top_k: int,
         instruct: Optional[str] = None,
     ) -> List[int]:
-        # SiliconFlow uses /v1/rerank endpoint
+        # SiliconFlow uses /rerank endpoint (not /v1/rerank)
         base_url = self.siliconflow_base_url.rstrip("/")
-        if "/v1/" in base_url:
-            url = base_url.replace("/v1/", "/v1/rerank")
-        else:
-            url = f"{base_url}/v1/rerank"
+        url = base_url if base_url.endswith("/rerank") else f"{base_url}/rerank"
 
         payload = {
             "model": self.siliconflow_model,
@@ -166,7 +163,7 @@ class RerankService:
             "return_documents": False,
         }
         if instruct:
-            payload["instruction"] = instruct
+            payload["instruct"] = instruct  # SiliconFlow uses "instruct", not "instruction"
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
