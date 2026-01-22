@@ -11,7 +11,7 @@ import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/network/proto/websocket.pb.dart';
+import 'package:sparkle/gen/websocket.pb.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_center_provider.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';

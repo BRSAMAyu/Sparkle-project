@@ -7,9 +7,6 @@ import 'package:sparkle/core/design/responsive_layout.dart';
 import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
 import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/community/presentation/screens/community_screen.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
@@ -23,107 +20,13 @@ import 'package:sparkle/features/home/presentation/widgets/sprint_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
-/// HomeScreen v2.0 - Project Cockpit
-class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedIndex = 0;
-
-  List<Widget> get _screens => [
-        const _DashboardScreen(),
-        const GalaxyScreen(),
-        const ChatScreen(),
-        const CommunityScreen(),
-        const ProfileScreen(),
-      ];
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final unreadCount = ref.watch(unreadMessageCountProvider);
-
-    final destinations = [
-      NavigationDestination(
-        icon: const Icon(Icons.home_outlined),
-        selectedIcon: const Icon(Icons.home),
-        label: l10n.home,
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.auto_awesome_outlined),
-        selectedIcon: const Icon(Icons.auto_awesome),
-        label: l10n.galaxy,
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.forum_outlined),
-        selectedIcon: const Icon(Icons.forum),
-        label: l10n.chat,
-      ),
-      NavigationDestination(
-        icon: _buildBadgedIcon(Icons.groups_outlined, unreadCount),
-        selectedIcon: _buildBadgedIcon(Icons.groups, unreadCount),
-        label: l10n.community,
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.person_outlined),
-        selectedIcon: const Icon(Icons.person),
-        label: l10n.profile,
-      ),
-    ];
-
-    return InAppNotificationOverlay(
-      child: ResponsiveScaffold(
-        title: 'Sparkle',
-        body: _screens[_selectedIndex],
-        destinations: destinations,
-        currentIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-      ),
-    );
-  }
-
-  Widget _buildBadgedIcon(IconData icon, int count) {
-    if (count == 0) return Icon(icon);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(icon),
-        Positioned(
-          right: -8,
-          top: -4,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: DS.error,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-            child: Text(
-              count > 99 ? '99+' : '$count',
-              style: TextStyle(
-                  color: DS.brandPrimaryConst,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DashboardScreen extends ConsumerWidget {
-  const _DashboardScreen();
+/// Dashboard screen - extracted from HomeScreen
+/// Displays the main project cockpit with bento grid layout
+class DashboardScreen extends ConsumerWidget {
+  const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
