@@ -4,6 +4,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/rpg/data/repositories/mock_rpg_repository.dart';
+import 'package:sparkle/features/rpg/presentation/screens/rpg_character_screen.dart';
+import 'package:sparkle/features/rpg/presentation/screens/task_list_screen.dart';
+import 'package:sparkle/features/rpg/presentation/widgets/pixel_character.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -35,6 +39,60 @@ class ProfileScreen extends ConsumerWidget {
                   const StatisticsCard(),
                   const SizedBox(height: DS.spacing24),
                   _buildSettingsSection(context, ref, l10n),
+                  const SizedBox(height: DS.spacing24),
+                  
+                  // RPG Character Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RpgCharacterScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.person_outline),
+                      label: const Text('我的RPG角色'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DS.brandPrimary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: DS.borderRadius12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: DS.spacing16),
+                  
+                  // Task Center Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TaskListScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.task_alt),
+                      label: const Text('任务中心'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DS.secondaryBase,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: DS.borderRadius12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
                   const SizedBox(height: 100), // Bottom padding
                 ],
               ),
@@ -46,7 +104,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context, UserModel user) => SizedBox(
-        height: 320,
+        height: 400,
         child: Stack(
           children: [
             // Wave Background
@@ -141,6 +199,17 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: DS.spacing24),
+                    
+                    // 像素风格角色形象
+                    Expanded(
+                      child: Center(
+                        child: PixelCharacter(
+                          character: mockRpgRepository.getMockCharacter(),
+                          size: 160,
+                        ),
+                      ),
                     ),
                   ],
                 ),
