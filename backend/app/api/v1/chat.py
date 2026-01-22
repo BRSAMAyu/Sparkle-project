@@ -20,6 +20,7 @@ from app.orchestration.composer import ResponseComposer
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.error_handler import AgentErrorHandler
 from app.core.pending_actions import pending_actions_store
+from app.core.business_metrics import HITL_APPROVED, HITL_REJECTED
 from app.models.chat import ChatMessage, MessageRole
 
 router = APIRouter()
@@ -486,6 +487,8 @@ async def confirm_action(
 
     # 如果用户取消操作
     if not confirmed:
+        reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+        HITL_REJECTED.labels(reason=reason).inc()
         await pending_actions_store.delete(action_id, str(current_user.id))
         return {"status": "cancelled", "message": "操作已取消"}
 
@@ -494,6 +497,52 @@ async def confirm_action(
     error_handler = AgentErrorHandler()
 
     try:
+        if pending_action["tool_name"] == "__plan__":
+            tool_calls = pending_action.get("arguments", {}).get("tool_calls", [])
+            results = []
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("name")
+                arguments = tool_call.get("params") or {}
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except Exception:
+                        arguments = {}
+
+                result = await tool_executor.execute_tool_call(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    user_id=str(current_user.id),
+                    db_session=db
+                )
+
+                # 错误处理与自我修正
+                if not result.success and error_handler.should_retry(result):
+                    original_request = {
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(arguments)
+                        }
+                    }
+                    result = await error_handler.handle_tool_error(
+                        llm_service=llm_service,
+                        tool_result=result,
+                        original_request=original_request,
+                        retry_count=0,
+                        user_id=str(current_user.id),
+                        db_session=db
+                    )
+
+                results.append(result.model_dump())
+
+                if not result.success:
+                    break
+
+            reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+            HITL_APPROVED.labels(reason=reason).inc()
+            await pending_actions_store.delete(action_id, str(current_user.id))
+            return {"status": "executed", "results": results}
+
         result = await tool_executor.execute_tool_call(
             tool_name=pending_action["tool_name"],
             arguments=pending_action["arguments"],
@@ -517,6 +566,9 @@ async def confirm_action(
                 user_id=str(current_user.id),
                 db_session=db
             )
+
+        reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+        HITL_APPROVED.labels(reason=reason).inc()
 
         # 删除已处理的待确认操作
         await pending_actions_store.delete(action_id, str(current_user.id))
