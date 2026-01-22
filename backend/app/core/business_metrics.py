@@ -82,6 +82,43 @@ COLLABORATION_LATENCY = get_or_create_metric(
     ['workflow_type']
 )
 
+# ========== HITL Metrics ==========
+HITL_REQUESTED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_requested_total',
+    'HITL approvals requested',
+    ['reason']
+)
+
+HITL_APPROVED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_approved_total',
+    'HITL approvals approved',
+    ['reason']
+)
+
+HITL_REJECTED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_rejected_total',
+    'HITL approvals rejected',
+    ['reason']
+)
+
+# ========== Task Loop Metrics ==========
+TASK_LOOP_COMPLETED = get_or_create_metric(
+    Counter,
+    'sparkle_task_loop_completed_total',
+    'Completed task execution loops',
+    ['source']
+)
+
+COMPENSATION_TRIGGERED = get_or_create_metric(
+    Counter,
+    'sparkle_compensation_triggered_total',
+    'Compensation triggers',
+    ['reason']
+)
+
 AGENT_INTERACTION_COUNT = get_or_create_metric(
     Counter,
     'sparkle_agent_interactions_total',

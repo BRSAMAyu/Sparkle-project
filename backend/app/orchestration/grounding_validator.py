@@ -129,13 +129,24 @@ class GroundingValidator:
                     requires_confirmation=False
                 )
 
-        # 5. Check if confirmation needed
+        # 5. Check if confirmation or HITL needed
         requires_confirmation = len(risk_flags) > 0
+        requires_hitl = False
+
+        for tool_call in plan.tool_calls:
+            tool = dynamic_tool_registry.get_tool(tool_call.name)
+            if tool and getattr(tool, "requires_confirmation", False):
+                requires_hitl = True
+                if f"confirm:{tool_call.name}" not in risk_flags:
+                    risk_flags.append(f"confirm:{tool_call.name}")
+            if tool_call.point_of_no_return:
+                requires_hitl = True
 
         return ValidationResult(
             is_valid=True,
             risk_flags=risk_flags,
-            requires_confirmation=requires_confirmation
+            requires_confirmation=requires_confirmation,
+            requires_hitl=requires_hitl
         )
 
     async def _get_allowlist(self) -> Set[str]:

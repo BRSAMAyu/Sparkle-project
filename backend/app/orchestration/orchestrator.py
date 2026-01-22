@@ -31,7 +31,12 @@ from app.config import settings
 from app.core.metrics import (
     REQUEST_COUNT, REQUEST_LATENCY, TOKEN_USAGE, TOOL_EXECUTION_COUNT, ACTIVE_SESSIONS
 )
-from app.core.business_metrics import COLLABORATION_SUCCESS, COLLABORATION_LATENCY
+from app.core.business_metrics import (
+    COLLABORATION_SUCCESS,
+    COLLABORATION_LATENCY,
+    HITL_REQUESTED
+)
+from app.core.pending_actions import pending_actions_store
 from app.orchestration.statechart_engine import WorkflowState, StateGraph
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
@@ -239,6 +244,28 @@ class ChatOrchestrator:
                 logger.info("GroundingValidator allowlist refreshed after tool registration")
         except Exception as e:
             logger.warning(f"Tool registration failed: {e}")
+
+    def _infer_domain_for_tool(self, tool_name: str) -> Optional[str]:
+        tool_lower = tool_name.lower()
+        if "task" in tool_lower:
+            return "tasks"
+        if "plan" in tool_lower or "sprint" in tool_lower:
+            return "plans"
+        if "focus" in tool_lower or "pomodoro" in tool_lower:
+            return "focus"
+        if "friend" in tool_lower or "group" in tool_lower or "community" in tool_lower:
+            return "community"
+        if "knowledge" in tool_lower or "graph" in tool_lower or "galaxy" in tool_lower:
+            return "knowledge"
+        return None
+
+    def _get_plan_affected_domains(self, plan: ExecutablePlan) -> set:
+        domains = set()
+        for tool_call in plan.tool_calls:
+            domain = self._infer_domain_for_tool(tool_call.name)
+            if domain:
+                domains.add(domain)
+        return domains
 
     async def _update_state(self, session_id: str, state: str, details: str = ""):
         """Update FSM State in Redis with persistence"""
@@ -941,8 +968,14 @@ class ChatOrchestrator:
                                     f"Version conflict detected: {version_check['conflicted_domains']}"
                                 )
 
-                                # Handle based on plan confidence
-                                if executable_plan.confidence < 0.7:
+                                conflict_domains = set(version_check.get("conflicted_domains", []))
+                                affected_domains = self._get_plan_affected_domains(executable_plan)
+
+                                if affected_domains and conflict_domains.isdisjoint(affected_domains):
+                                    logger.info(
+                                        "Version conflict outside affected domains, proceeding without replan"
+                                    )
+                                elif executable_plan.confidence < 0.7:
                                     # Low confidence + conflict → Discard plan
                                     await stream_callback(agent_service_pb2.ChatResponse(
                                         delta=f"\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
@@ -957,21 +990,46 @@ class ChatOrchestrator:
                                     await self.langgraph_breaker.on_failure("version_conflict_low_confidence")
                                     return
                                 else:
-                                    # High confidence + conflict → Re-plan
-                                    logger.info("High confidence plan with version conflict, replanning...")
-                                    snapshot = await self.snapshot_manager.create_snapshot(
-                                        user_id=user_id,
-                                        session_id=session_id,
-                                        db_session=active_db
+                                    # High confidence + conflict → HITL confirmation
+                                    tool_calls_payload = [
+                                        {
+                                            "id": tc.id,
+                                            "name": tc.name,
+                                            "params": tc.params
+                                        }
+                                        for tc in executable_plan.tool_calls
+                                    ]
+                                    action_id = await pending_actions_store.save(
+                                        tool_name="__plan__",
+                                        arguments={
+                                            "plan_id": executable_plan.plan_id,
+                                            "snapshot_id": snapshot.snapshot_id if snapshot else None,
+                                            "tool_calls": tool_calls_payload,
+                                            "reason": "version_conflict",
+                                            "conflicted_domains": list(conflict_domains)
+                                        },
+                                        user_id=str(user_id),
+                                        description="检测到状态变更，是否继续执行该计划？",
+                                        preview_data={
+                                            "plan_id": executable_plan.plan_id,
+                                            "conflicted_domains": list(conflict_domains),
+                                            "affected_domains": list(affected_domains),
+                                            "tool_calls": tool_calls_payload
+                                        }
                                     )
-                                    executable_plan = await self.lang_graph_planner.replan(
-                                        message=user_message,
-                                        snapshot=snapshot,
-                                        user_id=user_id,
-                                        session_id=session_id,
-                                        previous_plan=executable_plan,
-                                        conflict_info=version_check
-                                    )
+                                    HITL_REQUESTED.labels(reason="version_conflict").inc()
+                                    await stream_callback(agent_service_pb2.ChatResponse(
+                                        delta=(
+                                            "\n\n⚠️ 检测到状态变化，需要确认后继续执行。\n"
+                                            f"action_id={action_id}"
+                                        ),
+                                        metadata={
+                                            "requires_hitl": "true",
+                                            "action_id": action_id,
+                                            "reason": "version_conflict"
+                                        }
+                                    ))
+                                    return
 
                             # 4. Grounding Validation
                             validation_result = await self.grounding_validator.validate_plan(
