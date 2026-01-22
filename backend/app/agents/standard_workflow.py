@@ -20,6 +20,8 @@ from app.agents.collaboration_workflows import (
     ErrorDiagnosisWorkflow
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
+from app.core.pending_actions import pending_actions_store
+from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 
 # ==========================================
 # Nodes
@@ -254,12 +256,25 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 state.next_step = "__end__"
                 return state
 
-            if validation_result.requires_confirmation:
+            if validation_result.requires_confirmation or validation_result.requires_hitl:
                 logger.warning(f"LangGraph plan requires confirmation: {validation_result.risk_flags}")
+                action_id = await _queue_hitl_action(
+                    user_id=str(user_id),
+                    reason="risk_flags",
+                    description="高风险操作需要确认",
+                    tool_calls=executable_plan.tool_calls,
+                    plan_id=executable_plan.plan_id,
+                    snapshot_id=getattr(snapshot, "snapshot_id", None)
+                )
                 if stream_callback:
                     await stream_callback(agent_service_pb2.ChatResponse(
                         delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
-                              f"请通过其他方式（如App界面）确认后重试。"
+                              f"action_id={action_id}",
+                        metadata={
+                            "requires_hitl": "true",
+                            "action_id": action_id,
+                            "reason": "risk_flags"
+                        }
                     ))
                 state.context_data["validation_failed"] = True
                 state.next_step = "__end__"
@@ -352,12 +367,25 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             state.next_step = "__end__"
             return state
 
-        if validation_result.requires_confirmation:
+        if validation_result.requires_confirmation or validation_result.requires_hitl:
             logger.warning(f"Plan requires confirmation: {validation_result.risk_flags}")
+            action_id = await _queue_hitl_action(
+                user_id=str(user_id),
+                reason="risk_flags",
+                description="高风险操作需要确认",
+                tool_calls=plan.tool_calls,
+                plan_id=plan.plan_id,
+                snapshot_id=None
+            )
             if stream_callback:
                 await stream_callback(agent_service_pb2.ChatResponse(
                     delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
-                          f"请通过其他方式（如App界面）确认后重试。"
+                          f"action_id={action_id}",
+                    metadata={
+                        "requires_hitl": "true",
+                        "action_id": action_id,
+                        "reason": "risk_flags"
+                    }
                 ))
             state.context_data["validation_failed"] = True
             state.next_step = "__end__"
@@ -939,3 +967,46 @@ async def _write_feedback(
         feedback.completion.get("status"),
         feedback.completion.get("duration_seconds")
     )
+
+    TASK_LOOP_COMPLETED.labels(source="standard_workflow").inc()
+
+
+def _serialize_tool_calls(tool_calls: List[Any]) -> List[Dict[str, Any]]:
+    payload = []
+    for tool_call in tool_calls:
+        payload.append({
+            "id": getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None),
+            "name": getattr(tool_call, "name", None) or getattr(tool_call, "tool_name", None),
+            "params": getattr(tool_call, "params", None) or getattr(tool_call, "full_arguments", None),
+        })
+    return payload
+
+
+async def _queue_hitl_action(
+    *,
+    user_id: str,
+    reason: str,
+    description: str,
+    tool_calls: List[Any],
+    plan_id: Optional[str] = None,
+    snapshot_id: Optional[str] = None
+) -> str:
+    action_id = await pending_actions_store.save(
+        tool_name="__plan__",
+        arguments={
+            "plan_id": plan_id,
+            "snapshot_id": snapshot_id,
+            "tool_calls": _serialize_tool_calls(tool_calls),
+            "reason": reason
+        },
+        user_id=user_id,
+        description=description,
+        preview_data={
+            "plan_id": plan_id,
+            "snapshot_id": snapshot_id,
+            "reason": reason,
+            "tool_calls": _serialize_tool_calls(tool_calls)
+        }
+    )
+    HITL_REQUESTED.labels(reason=reason).inc()
+    return action_id
