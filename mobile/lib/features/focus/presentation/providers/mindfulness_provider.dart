@@ -176,71 +176,76 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
   /// 停止正念模式
   Future<void> stop() async {
-    // P0.3: Log focus session to backend before stopping
-    if (state.startTime != null && state.isActive) {
-      try {
-        final endTime = DateTime.now();
-        final durationMinutes = (state.elapsedSeconds / 60).floor();
-        final status =
-            state.interruptionCount > 3 ? 'interrupted' : 'completed';
-
-        debugPrint(
-            '📤 Logging focus session: ${durationMinutes}min, status=$status',);
-
-        final response = await _focusRepository.logFocusSession(
-          startTime: state.startTime!,
-          endTime: endTime,
-          durationMinutes: durationMinutes,
-          taskId: state.currentTask?.id,
-          status: status,
-        );
-
-        debugPrint(
-            '✅ Focus session logged: ${response.rewards.flameEarned} flames earned',);
-
-        // TODO: Show reward feedback to user
-        // Can emit an event or update state to trigger UI update
-      } catch (e) {
-        // Log error but don't block exit
-        debugPrint('❌ Failed to log focus session: $e');
-      }
-
-      // PR-14: Trigger prediction after focus session
-      try {
-        debugPrint('🔮 Generating context envelope for prediction...');
-
-        // Generate context envelope
-        final envelope = await contextService.generateContextEnvelope(
-          focusState: state,
-          translationRequests: state.translationRequestCount,
-          translationGranularity: state.lastTranslationGranularity,
-          unknownTermsSaved: 0, // TODO: Track from translation saves
-        );
-
-        debugPrint('📊 Context: interruptions=${state.interruptionCount}, '
-            'translations=${state.translationRequestCount}, '
-            'completion=${envelope['focus']['completion']}');
-
-        // PR-15: Call prediction API and store candidates in state
-        final candidates = await _predictionService.requestPredictions(
-          userId: state.currentTask?.userId ?? 'unknown', // TODO: Get actual user ID from auth
-          contextEnvelope: envelope,
-        );
-
-        if (candidates.isNotEmpty) {
-          // Store candidates in state for UI to display
-          state = state.copyWith(candidateActions: candidates);
-          debugPrint('✨ ${candidates.length} candidates stored in state');
-        }
-      } catch (e) {
-        // Log error but don't block exit
-        debugPrint('❌ Failed to generate prediction: $e');
-      }
-    }
-
+    // Save current state for background processing
+    final currentState = state;
+    final currentTask = state.currentTask;
+    final startTime = state.startTime;
+    
+    // First, immediately stop the timer and update state to give instant feedback to user
     _timer?.cancel();
     _timer = null;
     state = const MindfulnessState();
+    
+    // Then, execute time-consuming operations in background without blocking UI
+    if (startTime != null && currentState.isActive) {
+      // Run in background
+      Future.microtask(() async {
+        // P0.3: Log focus session to backend in background
+        try {
+          final endTime = DateTime.now();
+          final durationMinutes = (currentState.elapsedSeconds / 60).floor();
+          final status = 
+              currentState.interruptionCount > 3 ? 'interrupted' : 'completed';
+
+          debugPrint(
+              '📤 Logging focus session: ${durationMinutes}min, status=$status',);
+
+          final response = await _focusRepository.logFocusSession(
+            startTime: startTime,
+            endTime: endTime,
+            durationMinutes: durationMinutes,
+            taskId: currentTask?.id,
+            status: status,
+          );
+
+          debugPrint(
+              '✅ Focus session logged: ${response.rewards.flameEarned} flames earned',);
+        } catch (e) {
+          // Log error but don't affect user experience
+          debugPrint('❌ Failed to log focus session: $e');
+        }
+
+        // PR-14: Trigger prediction after focus session in background
+        try {
+          debugPrint('🔮 Generating context envelope for prediction...');
+
+          // Generate context envelope
+          final envelope = await contextService.generateContextEnvelope(
+            focusState: currentState,
+            translationRequests: currentState.translationRequestCount,
+            translationGranularity: currentState.lastTranslationGranularity,
+            unknownTermsSaved: 0, // TODO: Track from translation saves
+          );
+
+          debugPrint('📊 Context: interruptions=${currentState.interruptionCount}, '
+              'translations=${currentState.translationRequestCount}, '
+              'completion=${envelope['focus']['completion']}');
+
+          // PR-15: Call prediction API in background
+          final candidates = await _predictionService.requestPredictions(
+            userId: currentTask?.userId ?? 'unknown', // TODO: Get actual user ID from auth
+            contextEnvelope: envelope,
+          );
+
+          if (candidates.isNotEmpty) {
+            debugPrint('✨ ${candidates.length} candidates generated');
+          }
+        } catch (e) {
+          // Log error but don't affect user experience
+          debugPrint('❌ Failed to generate prediction: $e');
+        }
+      });
+    }
   }
 
   /// Record translation request (called by translation widgets)

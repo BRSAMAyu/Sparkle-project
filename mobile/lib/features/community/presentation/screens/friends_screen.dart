@@ -6,6 +6,9 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/rpg/data/models/rpg_models.dart';
+import 'package:sparkle/features/rpg/data/repositories/mock_rpg_repository.dart';
+import 'package:sparkle/features/rpg/presentation/widgets/pixel_character.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -71,27 +74,42 @@ class _MyFriendsTab extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: DS.brandPrimaryConst, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                                color: DS.brandPrimaryConst
-                                    .withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          backgroundImage: friend.avatarUrl != null
-                              ? NetworkImage(friend.avatarUrl!)
-                              : null,
-                          child: friend.avatarUrl == null
-                              ? Text(friend.displayName[0])
-                              : null,
-                        ),
+                      // Avatar and Pixel Character
+                      Column(
+                        children: [
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: DS.brandPrimaryConst, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: DS.brandPrimaryConst
+                                        .withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              backgroundImage: friend.avatarUrl != null
+                                  ? NetworkImage(friend.avatarUrl!)
+                                  : null,
+                              child: friend.avatarUrl == null
+                                  ? Text(friend.displayName[0])
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: DS.spacing4),
+                          // Pixel Character
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: PixelCharacter(
+                              character: mockRpgRepository.getMockCharacter(),
+                              size: 40,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(width: DS.md),
                       Expanded(
