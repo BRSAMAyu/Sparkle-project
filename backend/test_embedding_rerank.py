@@ -169,8 +169,11 @@ async def main():
     """主函数"""
     print("🚀 开始测试阿里云 DashScope Embedding 和 Rerank API")
 
-    # 设置环境变量（使用用户提供的 API key）
-    os.environ["DASHSCOPE_API_KEY"] = "YOUR_API_KEY_HERE"
+    # API 密钥从环境变量或 .env 文件读取
+    if not os.environ.get("DASHSCOPE_API_KEY"):
+        print("❌ 错误: DASHSCOPE_API_KEY 环境变量未设置")
+        print("   请在 .env 文件中配置 DASHSCOPE_API_KEY")
+        return False
 
     # 设置使用阿里云 provider
     from app.config import settings
