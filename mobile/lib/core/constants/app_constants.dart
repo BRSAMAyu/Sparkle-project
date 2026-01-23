@@ -29,10 +29,10 @@ class AppConstants {
 }
 
 class AppFeatureFlags {
-  static bool enableMemoryPanelV2 = false;
-  static bool enableEvidenceViewer = false;
-  static bool enableMemoryExplain = false;
-  static bool enableMemoryRetraction = false;
-  static bool enableMemoryCorrection = false;
-  static bool enableUserMemoryControls = false;
+  static bool enableMemoryPanelV2 = true;
+  static bool enableEvidenceViewer = true;
+  static bool enableMemoryExplain = true;
+  static bool enableMemoryRetraction = true;
+  static bool enableMemoryCorrection = true;
+  static bool enableUserMemoryControls = true;
 }

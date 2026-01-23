@@ -47,6 +47,7 @@ class ApiConstants {
   }
 
   static const String wsChat = '/ws/chat';
+  static const String wsStt = '/ws/stt';
 
   // Endpoints
   static const String auth = '/auth';

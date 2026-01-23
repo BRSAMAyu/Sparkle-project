@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
@@ -313,11 +315,32 @@ class TaskRepository {
               userNote: note,
             );
         DemoDataService().demoTasks[existingIndex] = updated;
+        // Demo mode: include mock next actions
         return TaskCompletionResult(
           task: updated.toJson(),
           feedback: 'Mock feedback: Great job!',
-          flameUpdate: {'level': 15, 'brightness': 85},
-          statsUpdate: {'total_minutes': 100},
+          flameUpdate: {'level': 15, 'brightness_change': 10},
+          statsUpdate: {'total_minutes': 100, 'streak_days': 7},
+          nextActions: const [
+            NextAction(
+              type: NextActionType.quickReview,
+              title: '快速回顾',
+              description: '回顾刚才的核心要点',
+              estimatedMinutes: 5,
+              energyCost: 1,
+              difficulty: 1,
+              reason: '及时回顾对抗遗忘',
+            ),
+            NextAction(
+              type: NextActionType.lightExpand,
+              title: '拓展: 相关概念',
+              description: '了解相关知识点',
+              estimatedMinutes: 10,
+              energyCost: 2,
+              difficulty: 2,
+              reason: '加深理解',
+            ),
+          ],
         );
       }
     }
@@ -412,6 +435,26 @@ class TaskRepository {
       return rawData;
     }
     return [];
+  }
+
+  Future<void> submitTaskFeedback(
+    String taskId,
+    TaskFeedbackSubmission feedback,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      // Demo mode: no-op - feedback is optional
+      return;
+    }
+    try {
+      await _apiClient.post<void>(
+        ApiEndpoints.taskFeedback(taskId),
+        data: feedback.toJson(),
+      );
+    } on DioException catch (e) {
+      // Feedback is optional - fail silently
+      // Log for debugging but don't throw
+      return;
+    }
   }
 }
 

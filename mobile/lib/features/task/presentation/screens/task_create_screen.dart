@@ -42,6 +42,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   void initState() {
     super.initState();
+    // Read pre-filled title from query parameter
+    final titleQueryParam = GoRouterState.of(context).uri.queryParameters['title'];
+    if (titleQueryParam != null && titleQueryParam.isNotEmpty) {
+      _titleController.text = titleQueryParam;
+    }
     _titleController.addListener(_onTitleChanged);
   }
 

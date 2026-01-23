@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 
 /// 语音输入按钮组件
@@ -119,9 +121,20 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     });
 
     // 获取WebSocket URL和认证令牌
-    // 这里需要从你的认证系统获取
-    const wsUrl = 'ws://localhost:8080/api/v1/stt/stream';
-    const authToken = 'your_auth_token_here'; // 从认证系统获取
+    final wsUrl = '${ApiConstants.wsBaseUrl}${ApiConstants.wsStt}';
+    final authToken = await ref.read(authRepositoryProvider).getAccessToken();
+
+    if (authToken == null) {
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+          _isProcessing = false;
+        });
+        _animationController?.reverse();
+        widget.onError('未登录，请先登录');
+      }
+      return;
+    }
 
     try {
       await _recordingService.startRecording(
