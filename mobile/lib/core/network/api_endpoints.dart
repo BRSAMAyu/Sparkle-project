@@ -33,6 +33,10 @@ class ApiEndpoints {
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static const String taskSuggestions = '/tasks/suggestions';
 
+  // Subtasks
+  static const String subtasks = '/subtasks';
+  static String subtask(String id) => '/subtasks/$id';
+
   // Plans
   static const String plans = '/plans';
   static String plan(String id) => '/plans/$id';
@@ -189,6 +193,10 @@ class ApiEndpoints {
   static const String focusStats = '/focus/stats';
   static const String focusLlmGuide = '/focus/llm/guide';
   static const String focusLlmBreakdown = '/focus/llm/breakdown';
+
+  // Translation
+  static const String translationTranslate = '/translation/translate';
+  static const String translationLanguages = '/translation/languages';
 
   // Interventions
   static const String interventionsRequest = '/interventions/request';

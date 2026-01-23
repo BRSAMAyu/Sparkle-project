@@ -115,7 +115,7 @@ class HunyuanTranslateTool(BaseTool):
                 )
 
                 response = await hunyuan_client.chat.completions.create(
-                    model="tencent/Hunyuan-A13B-Instruct",
+                    model=settings.HUNYUAN_TRANSLATE_MODEL,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3
                 )

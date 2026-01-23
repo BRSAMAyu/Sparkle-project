@@ -36,47 +36,42 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   bool _isPomodoroMode = false;
   int _pomodoroCycle = 0; // 0: work, 1: break, 2: long break
 
+  // Focus Protection State
+  DateTime? _pageEnterTime;
+
   @override
   void initState() {
     super.initState();
+    _pageEnterTime = DateTime.now(); // Record page entry time
     final task = ref.read(activeTaskProvider);
     _currentTimerDuration =
         task?.actualMinutes != null ? task!.actualMinutes! * 60 : 0;
   }
 
+  bool _shouldShowFullExitConfirmation() {
+    if (_pageEnterTime == null) return true;
+    final elapsed = DateTime.now().difference(_pageEnterTime!);
+    return elapsed.inSeconds >= 15; // Require confirmation after 15 seconds
+  }
+
   Future<bool> _onWillPop() async {
     if (_showCelebration) return false; // Don't pop during celebration
-    if (!_isTimerRunning) return true;
+
+    // Quick exit within 15 seconds (mis-click protection)
+    if (!_shouldShowFullExitConfirmation()) {
+      return true;
+    }
+
+    // Show focus protection confirmation after 15 seconds
+    final elapsedSeconds = DateTime.now().difference(_pageEnterTime!).inSeconds;
+    final elapsedMinutes = (elapsedSeconds / 60).floor();
 
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: const RoundedRectangleBorder(
-          borderRadius: DS.borderRadius20,
-        ),
-        title: const Text(
-          '离开任务？',
-          style: TextStyle(
-            fontWeight: DS.fontWeightBold,
-          ),
-        ),
-        content: const Text('计时器仍在运行，确定要离开吗？您的进度将被保存。'),
-        actions: [
-          CustomButton.text(
-            text: '继续执行',
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          CustomButton.primary(
-            text: '离开',
-            icon: Icons.exit_to_app,
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).pop(true);
-            },
-            customGradient: DS.warningGradient,
-            size: CustomButtonSize.small,
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => _TaskExitConfirmationDialog(
+        elapsedSeconds: elapsedSeconds,
+        elapsedMinutes: elapsedMinutes,
       ),
     );
     return shouldPop ?? false;
@@ -262,7 +257,32 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: DS.spacing16),
-                            // 1. Timer Area
+                            // 1. Focus Mode Entry Card (Prominent)
+                            _buildFocusEntryCard(context, activeTask),
+                            const SizedBox(height: DS.spacing24),
+
+                            // Divider
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: DS.spacing8, vertical: DS.spacing16),
+                              child: Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: DS.neutral200,
+                              ),
+                            ),
+
+                            // 2. Timer Area (Auxiliary)
+                            Text(
+                              '页面内计时器',
+                              style: TextStyle(
+                                fontSize: DS.fontSizeSm,
+                                color: DS.neutral500,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: DS.spacing12),
                             Center(
                               child: TimerWidget(
                                 key: ValueKey(
@@ -281,7 +301,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             ),
                             const SizedBox(height: DS.spacing24),
 
-                            // Timer Controls
+                            // Timer Controls (without mindfulness button)
                             _TimerControls(
                               isPomodoroMode: _isPomodoroMode,
                               onTogglePomodoro: _togglePomodoro,
@@ -488,6 +508,83 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       ),
     );
   }
+
+  Widget _buildFocusEntryCard(BuildContext context, TaskModel task) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: DS.spacing4),
+        padding: const EdgeInsets.all(DS.xl),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              DS.primaryBase.withValues(alpha: 0.08),
+              DS.secondaryBase.withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: DS.borderRadius20,
+          border: Border.all(
+            color: DS.primaryBase.withValues(alpha: 0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: DS.primaryBase.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: DS.flameGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.local_fire_department_rounded,
+                      color: DS.brandPrimaryConst, size: 28),
+                ),
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: Text(
+                    '进入沉浸专注模式',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.neutral900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.md),
+            Wrap(
+              spacing: DS.md,
+              runSpacing: DS.xs,
+              children: const [
+                _FeatureChip(icon: Icons.fullscreen, label: '全屏专注'),
+                _FeatureChip(icon: Icons.access_time_rounded, label: '翻页时钟'),
+                _FeatureChip(icon: Icons.star_rounded, label: '星空背景'),
+                _FeatureChip(icon: Icons.visibility_off_rounded, label: '分心检测'),
+                _FeatureChip(icon: Icons.psychology_rounded, label: 'AI教练'),
+                _FeatureChip(icon: Icons.emoji_events_rounded, label: '火苗奖励'),
+              ],
+            ),
+            const SizedBox(height: DS.lg),
+            CustomButton.primary(
+              text: '立即开始',
+              icon: Icons.arrow_forward_rounded,
+              customGradient: DS.primaryGradient,
+              onPressed: () {
+                context.push('/focus/mindfulness/${task.id}');
+              },
+            ),
+          ],
+        ),
+      );
 }
 
 class _TimerControls extends StatelessWidget {
@@ -523,20 +620,31 @@ class _TimerControls extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: DS.lg),
-          CustomButton.primary(
-            text: '进入正念模式',
-            icon: Icons.self_improvement,
-            onPressed: () {
-              final activeTask =
-                  ProviderScope.containerOf(context).read(activeTaskProvider);
-              if (activeTask != null) {
-                context.push('/focus/mindfulness/${activeTask.id}');
-              }
-            },
-            customGradient: DS.primaryGradient,
-          ),
         ],
+      );
+}
+
+class _FeatureChip extends StatelessWidget {
+  const _FeatureChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: DS.brandPrimaryConst.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.primaryBase),
+            const SizedBox(width: 4),
+            Text(label,
+                style: const TextStyle(fontSize: 12, color: DS.neutral700)),
+          ],
+        ),
       );
 }
 
@@ -698,4 +806,241 @@ class _BottomControls extends ConsumerWidget {
           ],
         ),
       );
+}
+
+/// Task Exit Confirmation Dialog - Triple confirmation for focus protection
+enum _TaskExitStep { first, second, third }
+
+class _TaskExitConfirmationDialog extends StatefulWidget {
+  const _TaskExitConfirmationDialog({
+    required this.elapsedSeconds,
+    required this.elapsedMinutes,
+  });
+  final int elapsedSeconds;
+  final int elapsedMinutes;
+
+  @override
+  State<_TaskExitConfirmationDialog> createState() =>
+      _TaskExitConfirmationDialogState();
+}
+
+class _TaskExitConfirmationDialogState extends State<_TaskExitConfirmationDialog>
+    with SingleTickerProviderStateMixin {
+  _TaskExitStep _currentStep = _TaskExitStep.first;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOut,
+      ),
+    );
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  void _nextStep() {
+    HapticFeedback.lightImpact();
+    if (_currentStep == _TaskExitStep.third) {
+      // Show reflection dialog after triple confirmation
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _currentStep = _TaskExitStep.values[_currentStep.index + 1];
+      });
+    }
+  }
+
+  void _cancel() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pop(false);
+  }
+
+  @override
+  Widget build(BuildContext context) => SlideTransition(
+        position: _slideAnimation,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(DS.xl),
+          child: Container(
+            padding: const EdgeInsets.all(DS.xl),
+            decoration: BoxDecoration(
+              color: DS.surfaceBase,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DS.neutral200,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: DS.neutral900.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress Indicator
+                _buildProgressIndicator(),
+                const SizedBox(height: DS.xl),
+
+                // Icon
+                _buildIcon(),
+                const SizedBox(height: DS.lg),
+
+                // Title
+                Text(
+                  _getTitle(),
+                  style: TextStyle(
+                    color: DS.neutral900,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.md),
+
+                // Message
+                Text(
+                  _getMessage(),
+                  style: TextStyle(
+                    color: DS.neutral600,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.xl),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton.secondary(
+                        text: _getCancelText(),
+                        onPressed: _cancel,
+                      ),
+                    ),
+                    const SizedBox(width: DS.lg),
+                    Expanded(
+                      child: CustomButton.primary(
+                        text: _getConfirmText(),
+                        onPressed: _nextStep,
+                        customGradient: _currentStep == _TaskExitStep.third
+                            ? DS.warningGradient
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildProgressIndicator() => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          final isActive = index <= _currentStep.index;
+          return Container(
+            width: 24,
+            height: 4,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? DS.primaryBase
+                  : DS.neutral300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      );
+
+  Widget _buildIcon() {
+    IconData icon;
+    Color color;
+
+    switch (_currentStep) {
+      case _TaskExitStep.first:
+        icon = Icons.pause_circle_outline_rounded;
+        color = DS.warning;
+      case _TaskExitStep.second:
+        icon = Icons.timer_outlined;
+        color = DS.info;
+      case _TaskExitStep.third:
+        icon = Icons.exit_to_app_rounded;
+        color = DS.error;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(DS.lg),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: 40),
+    );
+  }
+
+  String _getTitle() {
+    switch (_currentStep) {
+      case _TaskExitStep.first:
+        return '确定要离开任务吗？';
+      case _TaskExitStep.second:
+        return '专注统计';
+      case _TaskExitStep.third:
+        return '最后确认';
+    }
+  }
+
+  String _getMessage() {
+    switch (_currentStep) {
+      case _TaskExitStep.first:
+        return '你正在执行任务，离开可能会影响专注效果。';
+      case _TaskExitStep.second:
+        return '你已经专注了 ${widget.elapsedMinutes} 分钟 ${widget.elapsedSeconds % 60} 秒。';
+      case _TaskExitStep.third:
+        return '再坚持一下！现在离开会中断你的专注记录。';
+    }
+  }
+
+  String _getCancelText() {
+    switch (_currentStep) {
+      case _TaskExitStep.first:
+        return '继续执行';
+      case _TaskExitStep.second:
+        return '返回';
+      case _TaskExitStep.third:
+        return '取消';
+    }
+  }
+
+  String _getConfirmText() {
+    switch (_currentStep) {
+      case _TaskExitStep.first:
+        return '确认离开';
+      case _TaskExitStep.second:
+        return '继续';
+      case _TaskExitStep.third:
+        return '确定离开';
+    }
+  }
 }

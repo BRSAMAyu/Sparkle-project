@@ -5,10 +5,11 @@ Task Model - 学习任务卡片系统
 import enum
 from sqlalchemy import (
     Column, String, Integer, Text, Enum,
-    ForeignKey, DateTime, Date, Index, JSON, Boolean
+    ForeignKey, DateTime, Date, Index, JSON, Boolean, update
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+from sqlalchemy import event
 
 from app.models.base import BaseModel, GUID
 
@@ -28,6 +29,12 @@ class TaskStatus(str, enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"
+
+
+class SubTaskStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
 
 class Task(BaseModel):
     __tablename__ = "tasks"
@@ -72,6 +79,10 @@ class Task(BaseModel):
     knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
     auto_expand_enabled = Column(Boolean, default=True)
 
+    # Subtask counters
+    subtasks_total = Column(Integer, default=0, nullable=False)
+    subtasks_completed = Column(Integer, default=0, nullable=False)
+
     # 关系定义
     user = relationship("User", back_populates="tasks")
     plan = relationship("Plan", back_populates="tasks")
@@ -90,6 +101,15 @@ class Task(BaseModel):
         lazy="dynamic"
     )
 
+    # Subtasks relationship
+    subtasks = relationship(
+        "SubTask",
+        back_populates="parent_task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+        order_by="SubTask.order"
+    )
+
     def __repr__(self):
         return f"<Task(title={self.title}, status={self.status})>"
 
@@ -100,3 +120,79 @@ Index("idx_tasks_plan_id", Task.plan_id)
 Index("idx_tasks_status", Task.status)
 Index("idx_tasks_created_at", Task.created_at)
 Index("idx_tasks_due_date", Task.due_date)
+
+
+class SubTask(BaseModel):
+    """子任务模型 - 用于任务的细分"""
+    __tablename__ = "subtasks"
+
+    parent_task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # 基本信息
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # 排序和状态
+    order = Column(Integer, default=0, nullable=False)
+    status = Column(Enum(SubTaskStatus), default=SubTaskStatus.PENDING, nullable=False, index=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # 关系
+    parent_task = relationship("Task", back_populates="subtasks")
+
+    def __repr__(self):
+        return f"<SubTask(title={self.title}, status={self.status})>"
+
+
+# SubTask 索引
+Index("idx_subtasks_parent_task_id", SubTask.parent_task_id)
+Index("idx_subtasks_status", SubTask.status)
+Index("idx_subtasks_order", SubTask.order)
+
+
+# SQLAlchemy 事件监听器 - 自动更新父任务的子任务计数
+@event.listens_for(SubTask, 'after_insert')
+def update_total_on_subtask_insert(mapper, connection, target):
+    """创建子任务时自动增加父任务的 subtasks_total"""
+    connection.execute(
+        update(Task)
+        .where(Task.id == target.parent_task_id)
+        .values(subtasks_total=Task.subtasks_total + 1)
+    )
+
+
+@event.listens_for(SubTask, 'after_delete')
+def update_total_on_subtask_delete(mapper, connection, target):
+    """删除子任务时自动减少父任务的 subtasks_total"""
+    connection.execute(
+        update(Task)
+        .where(Task.id == target.parent_task_id)
+        .values(
+            subtasks_total=Task.subtasks_total - 1,
+            subtasks_completed=Task.subtasks_completed - (1 if target.status == SubTaskStatus.COMPLETED else 0)
+        )
+    )
+
+
+@event.listens_for(SubTask, 'after_update')
+def update_completed_on_subtask_status_change(mapper, connection, target):
+    """子任务状态变更时自动更新父任务的 subtasks_completed"""
+    # 检查 status 字段是否发生变化
+    state = target._sa_instance_state
+    if 'status' in state.committed_attributes:
+        # 获取变更前的状态
+        old_status = state.committed_attributes.get('status')
+        if old_status != target.status:
+            delta = 0
+            if target.status == SubTaskStatus.COMPLETED:
+                delta = 1
+            elif old_status == SubTaskStatus.COMPLETED:
+                delta = -1
+
+            if delta != 0:
+                connection.execute(
+                    update(Task)
+                    .where(Task.id == target.parent_task_id)
+                    .values(subtasks_completed=Task.subtasks_completed + delta)
+                )
+

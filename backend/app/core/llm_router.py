@@ -137,6 +137,18 @@ class LLMRouter:
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=600,
             ),
+            # GLM-4.7-FlashX 快速响应模型
+            "zhipu_flash": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_FLASH_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,
+                tier=ModelTier.FAST,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=150,
+            ),
 
             # ===== Aliyun DashScope (通义千问) =====
             "dashscope_chat": ModelConfig(
@@ -175,8 +187,9 @@ class LLMRouter:
 
         # 按tier分组（优先级从高到低）
         # GLM-4.7 支持默认思考模式和交错式思考，适合作为 Standard 和 Reasoning 首选
+        # GLM-4.7-FlashX 作为快速响应备用选项
         self._tier_mapping = {
-            ModelTier.FAST: ["xiaomi_chat"],
+            ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
             ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
             ModelTier.REASONING: ["zhipu_chat", "deepseek_reason", "dashscope_reason"],
         }

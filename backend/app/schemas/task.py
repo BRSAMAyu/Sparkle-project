@@ -1,11 +1,12 @@
 """Task Schemas - Task creation, update, query, etc."""
 from typing import Optional, List
+from enum import Enum
 from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime, date
 
 from app.schemas.common import BaseSchema
-from app.models.task import TaskType, TaskStatus
+from app.models.task import TaskType, TaskStatus, SubTaskStatus
 
 # ========== Request Schemas ==========
 
@@ -131,3 +132,60 @@ class TaskSuggestionResponse(BaseModel):
     suggested_tags: List[str] = Field(default_factory=list, description="Suggested tags")
     estimated_minutes: Optional[int] = Field(default=None, description="Suggested duration")
     difficulty: Optional[int] = Field(default=None, description="Suggested difficulty")
+
+# ========== Next Step Recommendation Schemas ==========
+
+class NextActionType(str, Enum):
+    """下一步行动类型"""
+    QUICK_REVIEW = "quick_review"
+    LIGHT_EXPAND = "light_expand"
+    PRACTICE_APPLY = "practice_apply"
+    REST_BREAK = "rest_break"
+    CONTINUE_PLAN = "continue_plan"
+
+
+class NextActionSuggestion(BaseModel):
+    """Next action suggestion after task completion"""
+    type: NextActionType = Field(description="Action type")
+    title: str = Field(description="Action title")
+    description: str = Field(description="Action description")
+    estimated_minutes: int = Field(le=15, description="Estimated minutes (micro-task)")
+    energy_cost: int = Field(le=2, description="Energy cost (low)")
+    difficulty: int = Field(description="Difficulty level")
+    reason: str = Field(description="Reason for recommendation")
+    quick_create_params: Optional[dict] = Field(default=None, description="Params to quick create task")
+    existing_task_id: Optional[UUID] = Field(default=None, description="ID if linking to existing task")
+    can_quick_create: bool = Field(default=True, description="Whether can be quick created")
+
+
+# ========== Subtask Schemas ==========
+
+class SubTaskCreate(BaseModel):
+    """Create subtask"""
+    title: str = Field(min_length=1, max_length=255, description="Subtask title")
+    description: Optional[str] = Field(default=None, description="Subtask description")
+    order: Optional[int] = Field(default=0, description="Display order")
+
+class SubTaskUpdate(BaseModel):
+    """Update subtask"""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=255, description="Subtask title")
+    description: Optional[str] = Field(default=None, description="Subtask description")
+    status: Optional[SubTaskStatus] = Field(default=None, description="Subtask status")
+    order: Optional[int] = Field(default=None, description="Display order")
+
+class SubTaskDetail(BaseSchema):
+    """Subtask detailed information"""
+    parent_task_id: UUID = Field(description="Parent task ID")
+    title: str = Field(description="Subtask title")
+    description: Optional[str] = Field(default=None, description="Subtask description")
+    order: int = Field(description="Display order")
+    status: SubTaskStatus = Field(description="Subtask status")
+    completed_at: Optional[datetime] = Field(default=None, description="Completion time")
+
+class SubTaskReorderRequest(BaseModel):
+    """Reorder subtasks"""
+    subtask_orders: List[dict] = Field(
+        description="List of {subtask_id, order} pairs",
+        examples=[[{"subtask_id": "uuid", "order": 0}, {"subtask_id": "uuid", "order": 1}]]
+    )
+
