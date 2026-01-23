@@ -27,6 +27,13 @@ func (h *FileEventHub) Register(userID string, conn *websocket.Conn) {
 	h.connections[userID][conn] = struct{}{}
 }
 
+func (h *FileEventHub) Count(userID string) int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	return len(h.connections[userID])
+}
+
 func (h *FileEventHub) Unregister(userID string, conn *websocket.Conn) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

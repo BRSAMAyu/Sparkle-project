@@ -32,6 +32,10 @@ type Config struct {
 	WSTicketTTLSeconds int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
 	WSTicketRateRPS    float64 `mapstructure:"WS_TICKET_RATE_RPS"`
 	WSTicketRateBurst  int     `mapstructure:"WS_TICKET_RATE_BURST"`
+	WSMaxMessageBytes  int64   `mapstructure:"WS_MAX_MESSAGE_BYTES"`
+	WSMessageRateRPS   float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
+	WSMessageRateBurst int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
+	WSMaxConnections   int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
 	RedisURL           string  `mapstructure:"REDIS_URL"`
 	RedisHost          string  `mapstructure:"REDIS_HOST"`
 	RedisPort          int     `mapstructure:"REDIS_PORT"`
@@ -267,6 +271,10 @@ func Load() *Config {
 		"WS_TICKET_TTL_SECONDS",
 		"WS_TICKET_RATE_RPS",
 		"WS_TICKET_RATE_BURST",
+		"WS_MAX_MESSAGE_BYTES",
+		"WS_MESSAGE_RATE_RPS",
+		"WS_MESSAGE_RATE_BURST",
+		"WS_MAX_CONNECTIONS_PER_USER",
 		"REDIS_URL",
 		"REDIS_HOST",
 		"REDIS_PORT",
@@ -321,6 +329,10 @@ func Load() *Config {
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
+	viper.SetDefault("WS_MAX_MESSAGE_BYTES", int64(262144))
+	viper.SetDefault("WS_MESSAGE_RATE_RPS", 10.0)
+	viper.SetDefault("WS_MESSAGE_RATE_BURST", 20)
+	viper.SetDefault("WS_MAX_CONNECTIONS_PER_USER", 2)
 	viper.SetDefault("REDIS_URL", "")
 	viper.SetDefault("REDIS_HOST", "sparkle_redis")
 	viper.SetDefault("REDIS_PORT", 6379)

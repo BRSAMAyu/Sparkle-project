@@ -962,11 +962,33 @@ class ChatOrchestrator:
                                 snapshot=snapshot,
                                 current_versions=current_versions
                             )
+                            replan_attempted = False
 
                             if version_check["has_conflict"]:
                                 logger.warning(
                                     f"Version conflict detected: {version_check['conflicted_domains']}"
                                 )
+
+                                if executable_plan.fallback_strategy.get("on_version_conflict") == "replan":
+                                    logger.info("Version conflict -> attempting replan with latest snapshot")
+                                    replan_attempted = True
+                                    snapshot = await self.snapshot_manager.create_snapshot(
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        db_session=active_db
+                                    )
+                                    executable_plan = await self.lang_graph_planner.plan(
+                                        message=user_message,
+                                        snapshot=snapshot,
+                                        user_id=user_id,
+                                        session_id=session_id,
+                                        conversation_history=conversation_history
+                                    )
+                                    current_versions = await self._load_context_versions(user_id)
+                                    version_check = await self.snapshot_manager.compare_versions(
+                                        snapshot=snapshot,
+                                        current_versions=current_versions
+                                    )
 
                                 conflict_domains = set(version_check.get("conflicted_domains", []))
                                 affected_domains = self._get_plan_affected_domains(executable_plan)
@@ -975,7 +997,7 @@ class ChatOrchestrator:
                                     logger.info(
                                         "Version conflict outside affected domains, proceeding without replan"
                                     )
-                                elif executable_plan.confidence < 0.7:
+                                elif executable_plan.confidence < 0.7 and not replan_attempted:
                                     # Low confidence + conflict → Discard plan
                                     await stream_callback(agent_service_pb2.ChatResponse(
                                         delta=f"\n\n⚠️ 检测到状态变化，计划已过期。请重试。"
@@ -989,7 +1011,7 @@ class ChatOrchestrator:
                                     )
                                     await self.langgraph_breaker.on_failure("version_conflict_low_confidence")
                                     return
-                                else:
+                                elif version_check["has_conflict"]:
                                     # High confidence + conflict → HITL confirmation
                                     tool_calls_payload = [
                                         {
