@@ -21,10 +21,17 @@ async def test_embedding_service_with_dashscope():
     print("🔍 测试 Embedding 服务 (阿里云配置)")
     print("=" * 60)
 
+    # 检查环境变量
+    dashscope_key = os.getenv("DASHSCOPE_API_KEY")
+    if not dashscope_key:
+        print("❌ 错误: DASHSCOPE_API_KEY 环境变量未设置")
+        print("   请在 .env 文件中配置 DASHSCOPE_API_KEY")
+        return False
+
     # 临时设置环境变量
     original_provider = embedding_service.provider
     embedding_service.provider = "dashscope"
-    embedding_service.dashscope_api_key = "YOUR_API_KEY_HERE"
+    embedding_service.dashscope_api_key = dashscope_key
     embedding_service.dashscope_model = "text-embedding-v4"
     embedding_service.embedding_dim = 1024
 
@@ -66,10 +73,17 @@ async def test_rerank_service_with_dashscope():
     print("🔍 测试 Rerank 服务 (阿里云配置)")
     print("=" * 60)
 
+    # 检查环境变量
+    dashscope_key = os.getenv("DASHSCOPE_API_KEY")
+    if not dashscope_key:
+        print("❌ 错误: DASHSCOPE_API_KEY 环境变量未设置")
+        print("   请在 .env 文件中配置 DASHSCOPE_API_KEY")
+        return False
+
     # 临时设置环境变量
     original_provider = rerank_service.provider
     rerank_service.provider = "dashscope"
-    rerank_service.dashscope_api_key = "YOUR_API_KEY_HERE"
+    rerank_service.dashscope_api_key = dashscope_key
     rerank_service.dashscope_model = "qwen3-rerank"
 
     try:

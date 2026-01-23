@@ -14,8 +14,11 @@ from http import HTTPStatus
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 设置 API Key
-os.environ["DASHSCOPE_API_KEY"] = "YOUR_API_KEY_HERE"
+# API 密钥从环境变量或 .env 文件读取
+if not os.environ.get("DASHSCOPE_API_KEY"):
+    print("❌ 错误: DASHSCOPE_API_KEY 环境变量未设置")
+    print("   请在 .env 文件中配置 DASHSCOPE_API_KEY")
+    sys.exit(1)
 
 
 async def test_dashscope_embedding():
