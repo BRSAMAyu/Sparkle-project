@@ -16,6 +16,7 @@ from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.services.scheduler_service import scheduler_service
 from app.core.cache import cache_service
+from app.core.pending_actions import pending_actions_store
 from app.services.user_service import UserService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.core.access_control import verify_token
@@ -81,6 +82,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize Cache (Redis)
     await cache_service.init_redis()
+    pending_actions_store.set_redis(cache_service.redis)
     # Initialize WebSocket Redis
     await manager.init_redis()
 
@@ -176,7 +178,32 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        if settings.DEBUG:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-src 'none'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self';"
+            )
+        else:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-src 'none'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self';"
+            )
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -245,12 +272,14 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
 async def generic_exception_handler(request: Request, exc: Exception):
     """全局未捕获异常处理器"""
     logger.exception(f"Unhandled exception: {exc}")
+    content = {
+        "success": False,
+        "error_code": "InternalServerError",
+        "message": "An unexpected error occurred",
+    }
+    if settings.DEBUG:
+        content["detail"] = str(exc)
     return JSONResponse(
         status_code=500,
-        content={
-            "success": False,
-            "error_code": "InternalServerError",
-            "message": "An unexpected error occurred",
-            "detail": str(exc) if settings.DEBUG else None
-        },
+        content=content,
     )

@@ -298,7 +298,8 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                 user_id=user_id,
                 db_session=db_session,
                 executor=executor,
-                state=state
+                state=state,
+                compensation_call=tool_call_spec.compensation_call
             )
 
         # Write feedback for LangGraph plan
@@ -853,7 +854,8 @@ async def _execute_single_tool(
     user_id: str,
     db_session,
     executor,
-    state: WorkflowState
+    state: WorkflowState,
+    compensation_call: Optional[Dict[str, Any]] = None
 ) -> None:
     """Execute a single tool call and stream results.
 
@@ -872,7 +874,8 @@ async def _execute_single_tool(
         tool_name=tool_name,
         arguments=tool_args,
         user_id=user_id,
-        db_session=db_session
+        db_session=db_session,
+        compensation_call=compensation_call
     )
 
     if stream_callback:
@@ -978,6 +981,7 @@ def _serialize_tool_calls(tool_calls: List[Any]) -> List[Dict[str, Any]]:
             "id": getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None),
             "name": getattr(tool_call, "name", None) or getattr(tool_call, "tool_name", None),
             "params": getattr(tool_call, "params", None) or getattr(tool_call, "full_arguments", None),
+            "compensation_call": getattr(tool_call, "compensation_call", None),
         })
     return payload
 

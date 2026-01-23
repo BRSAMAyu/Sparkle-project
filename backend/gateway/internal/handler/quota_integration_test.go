@@ -33,6 +33,10 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		Environment:    "prod",
 		AllowedOrigins: []string{"*"},
 	})
+	cfg := &config.Config{
+		Environment:    "prod",
+		AllowedOrigins: []string{"*"},
+	}
 
 	// 2. Setup ChatOrchestrator with mostly nil dependencies
 	// We only care about the Quota check which happens EARLY in the flow.
@@ -45,6 +49,7 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		nil, // Semantic cache (nil to avoid panic in SearchExact)
 		nil, // cost
 		wsFactory,
+		cfg,
 		nil, // userContext
 		nil, // taskCommand
 		"http://mock-backend",

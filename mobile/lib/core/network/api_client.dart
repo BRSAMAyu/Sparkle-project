@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/http_client_pinning.dart';
 
 import 'package:sparkle/core/network/api_interceptor.dart';
 
@@ -18,6 +20,7 @@ class ApiClient {
       contentType: 'application/json',
     );
     _dio = Dio(options);
+    configureDioForPinning(_dio, ApiConstants.apiCertSha256);
     _dio.interceptors.add(_ref.read(authInterceptorProvider));
     _dio.interceptors.add(_ref.read(retryInterceptorProvider(_dio)));
     _dio.interceptors.add(_ref.read(loggingInterceptorProvider));

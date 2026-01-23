@@ -139,7 +139,7 @@ func main() {
 	wsFactory := handler.NewWebSocketFactory(cfg)
 	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	fileEventHub := service.NewFileEventHub()
-	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub)
+	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub, cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		galaxyClient,
@@ -149,6 +149,7 @@ func main() {
 		semanticCacheService,
 		billingService,
 		wsFactory,
+		cfg,
 		userContextService, // P0: Pass user context service
 		taskCommandService, // P0: Pass task command service
 		cfg.BackendURL,
@@ -365,6 +366,7 @@ func main() {
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)
+	authRateLimit := middleware.AuthRateLimitMiddleware()
 
 	// API Routes
 	api := r.Group("/api/v1")
@@ -376,7 +378,7 @@ func main() {
 		api.GET("/health/cqrs", cqrsHealthHandler)
 
 		// Auth
-		api.POST("/auth/apple", authHandler.AppleLogin)
+		api.POST("/auth/apple", authRateLimit, authHandler.AppleLogin)
 		api.POST(
 			"/ws/ticket",
 			authMiddleware,
@@ -695,6 +697,12 @@ func main() {
 			strings.HasPrefix(path, "/docs") ||
 			strings.HasPrefix(path, "/redoc") ||
 			strings.HasPrefix(path, "/openapi.json") {
+			if strings.HasPrefix(path, "/api/v1/auth") {
+				authRateLimit(c)
+				if c.IsAborted() {
+					return
+				}
+			}
 			proxy.ServeHTTP(c.Writer, c.Request)
 			return
 		}

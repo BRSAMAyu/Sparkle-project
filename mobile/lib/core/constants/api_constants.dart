@@ -5,6 +5,8 @@ class ApiConstants {
   static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
   static const String _wsBaseUrlOverride =
       String.fromEnvironment('WS_BASE_URL');
+  static const String apiCertSha256 =
+      String.fromEnvironment('API_CERT_SHA256');
 
   // Base URL (HTTP)
   static String get baseUrl {

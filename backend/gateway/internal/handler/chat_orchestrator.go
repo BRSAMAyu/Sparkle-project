@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,6 +22,7 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/metrics"
@@ -32,6 +34,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"golang.org/x/time/rate"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
@@ -112,6 +115,7 @@ type ChatOrchestrator struct {
 	semantic      *service.SemanticCacheService
 	billing       *service.CostCalculator
 	wsFactory     *WebSocketFactory
+	cfg           *config.Config
 	userContext   *service.UserContextService
 	taskCommand   *service.TaskCommandService
 	backendURL    string
@@ -120,7 +124,7 @@ type ChatOrchestrator struct {
 	wsMutex       sync.RWMutex
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
@@ -130,6 +134,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		semantic:     sc,
 		billing:      bc,
 		wsFactory:    wsFactory,
+		cfg:          cfg,
 		userContext:  uc,
 		taskCommand:  tc,
 		backendURL:   strings.TrimRight(backendURL, "/"),
@@ -185,6 +190,25 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	h.registerConnection(userID, conn)
 	defer h.unregisterConnection(userID)
 
+	readLimit := int64(0)
+	msgRate := 0.0
+	msgBurst := 0
+	if h.cfg != nil {
+		readLimit = h.cfg.WSMaxMessageBytes
+		msgRate = h.cfg.WSMessageRateRPS
+		msgBurst = h.cfg.WSMessageRateBurst
+	}
+	if readLimit > 0 {
+		conn.SetReadLimit(readLimit)
+	}
+	if msgRate <= 0 {
+		msgRate = 1
+	}
+	if msgBurst <= 0 {
+		msgBurst = 1
+	}
+	msgLimiter := rate.NewLimiter(rate.Limit(msgRate), msgBurst)
+
 	tracer := otel.Tracer("chat-orchestrator")
 
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
@@ -192,9 +216,17 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		// Read message from WebSocket client
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
+			if errors.Is(err, websocket.ErrReadLimit) {
+				_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
+			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
 			}
+			break
+		}
+
+		if !msgLimiter.Allow() {
+			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
 			break
 		}
 
@@ -479,7 +511,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	switch content := resp.Content.(type) {
 	case *agentv1.ChatResponse_Delta:
 		result["type"] = "delta"
-		result["delta"] = content.Delta
+		result["delta"] = sanitizer.Sanitize(content.Delta)
 	case *agentv1.ChatResponse_ToolCall:
 		result["type"] = "tool_call"
 		result["tool_call"] = map[string]interface{}{
@@ -491,11 +523,11 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		result["type"] = "status_update"
 		result["status"] = map[string]interface{}{
 			"state":   content.StatusUpdate.State.String(),
-			"details": content.StatusUpdate.Details,
+			"details": sanitizer.Sanitize(content.StatusUpdate.Details),
 		}
 	case *agentv1.ChatResponse_FullText:
 		result["type"] = "full_text"
-		result["full_text"] = content.FullText
+		result["full_text"] = sanitizer.Sanitize(content.FullText)
 	case *agentv1.ChatResponse_Error:
 		result["type"] = "error"
 		result["error"] = map[string]interface{}{

@@ -165,6 +165,9 @@ class LLMService:
         self.chat_model: str = ""
         self.reason_model: str = ""
 
+        # GLM 特有参数
+        self._extra_body: Optional[Dict[str, Any]] = None
+
         if enable_dynamic_routing:
             # 使用新的 LLMRouter
             self._init_with_router()
@@ -185,6 +188,7 @@ class LLMService:
 
         self.chat_model = kwargs["model"]
         self.reason_model = kwargs["model"]  # 默认用同一个，可按需切换
+        self._extra_body = kwargs.get("extra_body")  # 保存 GLM 特有参数
         if not kwargs.get("api_key"):
             self.demo_mode = True
 
@@ -192,6 +196,8 @@ class LLMService:
             f"[LLMRouter] {self.agent_role.value} → {kwargs['model']} "
             f"({selection.reason})"
         )
+        if self._extra_body:
+            logger.info(f"[LLMRouter] GLM extra_body: {self._extra_body}")
 
     def _init_legacy(self):
         """使用原有的 LLM_PROVIDER 环境变量初始化（向后兼容）"""
@@ -494,23 +500,30 @@ class LLMService:
         带工具调用的聊天
         """
         messages = [{"role": "system", "content": system_prompt}]
-        
+
         if conversation_history:
             messages.extend(conversation_history)
-        
+
         messages.append({"role": "user", "content": user_message})
 
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
-                
-                response = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    temperature=0.7,
-                )
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "temperature": 0.7,
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                response = await self.provider.client.chat.completions.create(**request_params)
                 
                 choice = response.choices[0]
                 message = choice.message
@@ -557,12 +570,19 @@ class LLMService:
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_continue_after_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
-                
-                response = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    temperature=0.7,
-                )
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
                 
@@ -600,16 +620,23 @@ class LLMService:
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
                 span.set_attribute("llm.temperature", temperature)
-                
-                stream = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    stream=True,
-                    temperature=temperature,
-                    stream_options={"include_usage": True}
-                )
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "stream": True,
+                    "temperature": temperature,
+                    "stream_options": {"include_usage": True}
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                stream = await self.provider.client.chat.completions.create(**request_params)
 
                 collected_tool_call_chunks = {}
                 usage_data = None

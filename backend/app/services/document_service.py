@@ -1,4 +1,5 @@
 import asyncio
+import os
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any
 from app.core.ingestion.ingestion_service import ingestion_service
@@ -7,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from loguru import logger
 from app.core.cache import cache_service
+from app.config import settings
 
 
 @dataclass
@@ -47,11 +49,16 @@ class DocumentService:
         # Note: IngestionService currently auto-detects OCR need. We could pass this flag down if we refactor IngestionService further.
         
         try:
+            resolved_path = _resolve_allowed_path(file_path)
+            if not resolved_path:
+                await self.update_progress(task_id, "Failed: Invalid file path", 100, {"error": "Invalid file path."})
+                return {"status": "failed", "error": "Invalid file path."}
+
             await self.update_progress(task_id, "Reading and parsing document...", 10)
 
             # 1. Physical Ingestion (OCR, Parsing)
             # This is a synchronous CPU-bound operation, might block event loop if not careful.
-            chunks = await asyncio.to_thread(ingestion_service.process_file, file_path, options)
+            chunks = await asyncio.to_thread(ingestion_service.process_file, resolved_path, options)
             
             if not chunks:
                 await self.update_progress(task_id, "Failed: No text found", 100, {"error": "No extractable text found."})
@@ -121,6 +128,27 @@ class DocumentService:
             logger.error(f"Document cleaning failed: {e}")
             await self.update_progress(task_id, f"Error: {str(e)}", 100, {"error": str(e)})
             return {"status": "error", "error": str(e)}
+
+
+def _resolve_allowed_path(file_path: str) -> Optional[str]:
+    if not file_path:
+        return None
+
+    resolved = os.path.realpath(file_path)
+    if not os.path.isfile(resolved):
+        return None
+
+    allowed_roots = [
+        os.path.realpath(settings.UPLOAD_DIR),
+        os.path.realpath("/tmp/sparkle_uploads"),
+    ]
+
+    for root in allowed_roots:
+        if resolved == root:
+            return None
+        if resolved.startswith(root + os.sep):
+            return resolved
+    return None
 
     async def _generate_quick_summary(self, text: str) -> str:
         """Single-shot summary for small files."""
