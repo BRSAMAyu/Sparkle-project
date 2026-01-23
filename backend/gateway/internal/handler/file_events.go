@@ -6,19 +6,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
+	"golang.org/x/time/rate"
 )
 
 type FileEventHandler struct {
 	wsFactory *WebSocketFactory
 	hub       *service.FileEventHub
+	cfg       *config.Config
 }
 
-func NewFileEventHandler(wsFactory *WebSocketFactory, hub *service.FileEventHub) *FileEventHandler {
+func NewFileEventHandler(wsFactory *WebSocketFactory, hub *service.FileEventHub, cfg *config.Config) *FileEventHandler {
 	return &FileEventHandler{
 		wsFactory: wsFactory,
 		hub:       hub,
+		cfg:       cfg,
 	}
 }
 
@@ -57,11 +61,43 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/files", authMethod).Inc()
 
+	maxConns := 0
+	if h.cfg != nil {
+		maxConns = h.cfg.WSMaxConnections
+	}
+	if maxConns > 0 && h.hub.Count(userID) >= maxConns {
+		metrics.WSConnectionError.WithLabelValues("/ws/files", authMethod, "connection_limit").Inc()
+		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"))
+		return
+	}
 	h.hub.Register(userID, conn)
 	defer h.hub.Unregister(userID, conn)
 
+	readLimit := int64(0)
+	msgRate := 0.0
+	msgBurst := 0
+	if h.cfg != nil {
+		readLimit = h.cfg.WSMaxMessageBytes
+		msgRate = h.cfg.WSMessageRateRPS
+		msgBurst = h.cfg.WSMessageRateBurst
+	}
+	if readLimit > 0 {
+		conn.SetReadLimit(readLimit)
+	}
+	if msgRate <= 0 {
+		msgRate = 1
+	}
+	if msgBurst <= 0 {
+		msgBurst = 1
+	}
+	msgLimiter := rate.NewLimiter(rate.Limit(msgRate), msgBurst)
+
 	for {
 		if _, _, err := conn.ReadMessage(); err != nil {
+			break
+		}
+		if !msgLimiter.Allow() {
+			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
 			break
 		}
 	}

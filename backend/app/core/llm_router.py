@@ -30,6 +30,7 @@ class ModelProvider(str, Enum):
     XIAOMI = "xiaomi"      # XiaoMi MIMO (快速响应)
     DEEPSEEK = "deepseek"  # DeepSeek (核心模型)
     ZHIPU = "zhipu"        # Zhipu GLM (编程/工具)
+    DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
 
 
 @dataclass
@@ -41,6 +42,8 @@ class ModelConfig:
     api_key: str
     temperature: float = 0.7
     max_tokens: Optional[int] = None
+    # GLM 特有参数
+    clear_thinking: Optional[bool] = None  # False=保留式思考(适合Coding/Agent), True=None=默认
     # 成本/性能指标
     tier: ModelTier = ModelTier.STANDARD
     cost_per_1k_tokens: float = 0.001
@@ -121,16 +124,40 @@ class LLMRouter:
                 avg_latency_ms=3000,
             ),
 
-            # ===== Zhipu GLM (标准) =====
+            # ===== Zhipu GLM (标准 + 推理) =====
+            # GLM-4.7 默认开启思考模式，clear_thinking=False 开启保留式思考
             "zhipu_chat": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,  # 开启保留式思考，保持推理连续性
                 tier=ModelTier.STANDARD,
                 cost_per_1k_tokens=0.001,
                 avg_latency_ms=600,
+            ),
+
+            # ===== Aliyun DashScope (通义千问) =====
+            "dashscope_chat": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_CHAT_MODEL,
+                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=settings.DASHSCOPE_TEMPERATURE,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.0004,
+                avg_latency_ms=500,
+            ),
+            "dashscope_reason": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_REASON_MODEL,
+                base_url=settings.DASHSCOPE_BASE_URL_COMPATIBLE,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=0.2,
+                tier=ModelTier.REASONING,
+                cost_per_1k_tokens=0.001,
+                avg_latency_ms=2000,
             ),
 
             # ===== 通用备用 =====
@@ -146,11 +173,12 @@ class LLMRouter:
 
         self._available_models = configs
 
-        # 按tier分组
+        # 按tier分组（优先级从高到低）
+        # GLM-4.7 支持默认思考模式和交错式思考，适合作为 Standard 和 Reasoning 首选
         self._tier_mapping = {
             ModelTier.FAST: ["xiaomi_chat"],
-            ModelTier.STANDARD: ["deepseek_chat", "zhipu_chat"],
-            ModelTier.REASONING: ["deepseek_reason"],
+            ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
+            ModelTier.REASONING: ["zhipu_chat", "deepseek_reason", "dashscope_reason"],
         }
 
         # 注册到agent_profile_registry
@@ -373,13 +401,21 @@ class LLMRouter:
         - langchain_openai.ChatOpenAI
         """
         config = selection.config
-        return {
+        kwargs = {
             "api_key": config.api_key,
             "base_url": config.base_url,
             "model": config.model_name,
             "temperature": config.temperature,
             "max_tokens": config.max_tokens,
         }
+
+        # GLM 特有参数：通过 extra_body 传递
+        if config.provider == ModelProvider.ZHIPU and config.clear_thinking is not None:
+            kwargs["extra_body"] = {
+                "clear_thinking": config.clear_thinking
+            }
+
+        return kwargs
 
     def get_langchain_client_kwargs(self, selection: LLMSelection) -> Dict[str, Any]:
         """获取用于创建 LangChain ChatOpenAI 的参数"""

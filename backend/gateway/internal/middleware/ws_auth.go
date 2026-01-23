@@ -50,24 +50,6 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			}
 		}
 
-		if cfg.AllowWsQueryToken && isWebSocketRequest(c) {
-			tokenString := c.Query("token")
-			if tokenString != "" {
-				userID, isAdmin, err := validateJWT(cfg, tokenString)
-				if err != nil {
-					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
-					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-					return
-				}
-				c.Set("user_id", userID)
-				c.Set("is_admin", isAdmin)
-				c.Set("auth_token", tokenString)
-				c.Set("ws_auth_method", "jwt_query")
-				c.Next()
-				return
-			}
-		}
-
 		ticket := extractWSTicket(c, cfg.AllowWsQueryToken)
 		if ticket == "" {
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "unknown", "missing_credentials").Inc()

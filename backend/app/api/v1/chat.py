@@ -503,6 +503,7 @@ async def confirm_action(
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name")
                 arguments = tool_call.get("params") or {}
+                compensation_call = tool_call.get("compensation_call")
                 if isinstance(arguments, str):
                     try:
                         arguments = json.loads(arguments)
@@ -513,7 +514,8 @@ async def confirm_action(
                     tool_name=tool_name,
                     arguments=arguments,
                     user_id=str(current_user.id),
-                    db_session=db
+                    db_session=db,
+                    compensation_call=compensation_call
                 )
 
                 # 错误处理与自我修正

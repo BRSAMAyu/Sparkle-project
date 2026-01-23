@@ -1,12 +1,11 @@
 """
 待确认操作管理
 用于存储需要用户二次确认的高风险操作
-
-MVP 阶段使用内存存储，生产环境可升级为 Redis
 """
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import asyncio
+import json
 from uuid import uuid4
 
 
@@ -16,7 +15,10 @@ class PendingActionsStore:
     使用内存字典存储，支持过期清理
     """
 
-    def __init__(self, expire_minutes: int = 5):
+    ACTION_KEY_PREFIX = "pending_action:"
+    USER_INDEX_PREFIX = "pending_action_user:"
+
+    def __init__(self, expire_minutes: int = 5, redis_client=None):
         """
         初始化存储
 
@@ -26,6 +28,11 @@ class PendingActionsStore:
         self._store: Dict[str, Dict[str, Any]] = {}
         self._expire_minutes = expire_minutes
         self._cleanup_task: Optional[asyncio.Task] = None
+        self.redis = redis_client
+
+    def set_redis(self, redis_client) -> None:
+        """Configure Redis client for persistent storage."""
+        self.redis = redis_client
 
     async def save(
         self,
@@ -50,7 +57,7 @@ class PendingActionsStore:
         """
         action_id = str(uuid4())
 
-        self._store[action_id] = {
+        payload = {
             "action_id": action_id,
             "tool_name": tool_name,
             "arguments": arguments,
@@ -61,9 +68,18 @@ class PendingActionsStore:
             "expires_at": datetime.utcnow() + timedelta(minutes=self._expire_minutes),
         }
 
-        # 启动清理任务（如果尚未启动）
-        if self._cleanup_task is None or self._cleanup_task.done():
-            self._cleanup_task = asyncio.create_task(self._cleanup_expired())
+        if self.redis:
+            key = f"{self.ACTION_KEY_PREFIX}{action_id}"
+            ttl_seconds = int(self._expire_minutes * 60)
+            await self.redis.setex(key, ttl_seconds, json.dumps(_serialize_payload(payload)))
+            user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
+            await self.redis.sadd(user_index_key, action_id)
+            await self.redis.expire(user_index_key, ttl_seconds)
+        else:
+            self._store[action_id] = payload
+            # 启动清理任务（如果尚未启动）
+            if self._cleanup_task is None or self._cleanup_task.done():
+                self._cleanup_task = asyncio.create_task(self._cleanup_expired())
 
         return action_id
 
@@ -78,18 +94,28 @@ class PendingActionsStore:
         Returns:
             Optional[Dict]: 操作数据，如果不存在或已过期返回 None
         """
-        action = self._store.get(action_id)
+        if self.redis:
+            key = f"{self.ACTION_KEY_PREFIX}{action_id}"
+            raw = await self.redis.get(key)
+            if not raw:
+                await self.redis.srem(f"{self.USER_INDEX_PREFIX}{user_id}", action_id)
+                return None
+            try:
+                action = json.loads(raw)
+            except Exception:
+                return None
+        else:
+            action = self._store.get(action_id)
+            if not action:
+                return None
 
-        if not action:
-            return None
-
-        # 检查是否过期
-        if action["expires_at"] < datetime.utcnow():
-            del self._store[action_id]
-            return None
+            # 检查是否过期
+            if action["expires_at"] < datetime.utcnow():
+                del self._store[action_id]
+                return None
 
         # 检查用户权限
-        if action["user_id"] != user_id:
+        if action.get("user_id") != user_id:
             return None
 
         return action
@@ -105,15 +131,28 @@ class PendingActionsStore:
         Returns:
             bool: 是否成功删除
         """
-        action = self._store.get(action_id)
+        if self.redis:
+            key = f"{self.ACTION_KEY_PREFIX}{action_id}"
+            raw = await self.redis.get(key)
+            if not raw:
+                await self.redis.srem(f"{self.USER_INDEX_PREFIX}{user_id}", action_id)
+                return False
+            try:
+                action = json.loads(raw)
+            except Exception:
+                return False
+            if action.get("user_id") != user_id:
+                return False
+            await self.redis.delete(key)
+            await self.redis.srem(f"{self.USER_INDEX_PREFIX}{user_id}", action_id)
+            return True
 
+        action = self._store.get(action_id)
         if not action:
             return False
-
         # 检查用户权限
         if action["user_id"] != user_id:
             return False
-
         del self._store[action_id]
         return True
 
@@ -142,7 +181,7 @@ class PendingActionsStore:
                 # 记录错误但不中断清理任务
                 print(f"清理过期操作时出错: {e}")
 
-    def get_all_by_user(self, user_id: str) -> list[Dict[str, Any]]:
+    async def get_all_by_user(self, user_id: str) -> list[Dict[str, Any]]:
         """
         获取用户的所有待确认操作（用于测试和调试）
 
@@ -152,17 +191,72 @@ class PendingActionsStore:
         Returns:
             list: 操作列表
         """
+        if self.redis:
+            return await self._get_all_by_user_redis(user_id)
         return [
             action
             for action in self._store.values()
             if action["user_id"] == user_id and action["expires_at"] > datetime.utcnow()
         ]
 
-    def clear_all(self):
+    async def _get_all_by_user_redis(self, user_id: str) -> list[Dict[str, Any]]:
+        user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
+        action_ids = await self.redis.smembers(user_index_key) if self.redis else []
+        if not action_ids:
+            return []
+
+        actions = []
+        now = datetime.utcnow()
+        for action_id in action_ids:
+            key = f"{self.ACTION_KEY_PREFIX}{action_id}"
+            raw = await self.redis.get(key)
+            if not raw:
+                await self.redis.srem(user_index_key, action_id)
+                continue
+            try:
+                action = json.loads(raw)
+            except Exception:
+                await self.redis.srem(user_index_key, action_id)
+                continue
+            expires_at = action.get("expires_at")
+            if expires_at and _parse_datetime(expires_at) < now:
+                await self.redis.delete(key)
+                await self.redis.srem(user_index_key, action_id)
+                continue
+            actions.append(action)
+        return actions
+
+    async def clear_all(self):
         """
         清空所有待确认操作（用于测试）
         """
+        if self.redis:
+            await self._clear_all_redis()
+            return
         self._store.clear()
+
+    async def _clear_all_redis(self) -> None:
+        async for key in self.redis.scan_iter(match=f"{self.ACTION_KEY_PREFIX}*"):
+            await self.redis.delete(key)
+        async for key in self.redis.scan_iter(match=f"{self.USER_INDEX_PREFIX}*"):
+            await self.redis.delete(key)
+
+
+def _serialize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        **payload,
+        "created_at": payload["created_at"].isoformat(),
+        "expires_at": payload["expires_at"].isoformat()
+    }
+
+
+def _parse_datetime(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(value)
+    except Exception:
+        return datetime.utcnow()
 
 
 # 全局单例

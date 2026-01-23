@@ -43,6 +43,10 @@ class BackgroundTaskManager:
         self._total_completed = 0
         self._total_failed = 0
         self._start_time = datetime.now()
+        self._queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
+        self._queue_seq = 0
+        self._queue_worker_task: Optional[asyncio.Task] = None
+        self._shutdown = False
 
     async def spawn(
         self,
@@ -75,6 +79,72 @@ class BackgroundTaskManager:
         self._stats[task_id] = stats
         self._total_spawned += 1
 
+        result_future: asyncio.Future = asyncio.get_event_loop().create_future()
+        self._ensure_queue_worker()
+
+        # Higher priority value means earlier execution
+        self._queue_seq += 1
+        await self._queue.put(
+            (-priority, self._queue_seq, task_id, task_name, user_id, coro, stats, result_future)
+        )
+
+        async def _await_result():
+            try:
+                return await result_future
+            except asyncio.CancelledError:
+                result_future.cancel()
+                raise
+
+        queued_task = asyncio.create_task(_await_result(), name=f"queued_{task_id}")
+        self._logger.debug(
+            f"🚀 Task queued: {task_name} (ID: {task_id}, "
+            f"User: {user_id}, Priority: {priority})"
+        )
+        return queued_task
+
+    def _ensure_queue_worker(self) -> None:
+        if self._queue_worker_task and not self._queue_worker_task.done():
+            return
+        self._queue_worker_task = asyncio.create_task(self._queue_worker(), name="task_manager_queue_worker")
+
+    async def _queue_worker(self) -> None:
+        while not self._shutdown:
+            try:
+                item = await self._queue.get()
+            except asyncio.CancelledError:
+                break
+
+            priority, seq, task_id, task_name, user_id, coro, stats, result_future = item
+            try:
+                if result_future.cancelled():
+                    self._queue.task_done()
+                    continue
+
+                task = self._create_managed_task(
+                    task_id=task_id,
+                    task_name=task_name,
+                    user_id=user_id,
+                    coro=coro,
+                    stats=stats
+                )
+                result = await task
+                if not result_future.cancelled():
+                    result_future.set_result(result)
+            except Exception as e:
+                if not result_future.cancelled():
+                    result_future.set_exception(e)
+            finally:
+                self._queue.task_done()
+
+    def _create_managed_task(
+        self,
+        *,
+        task_id: str,
+        task_name: str,
+        user_id: Optional[str],
+        coro: Coroutine[Any, Any, Any],
+        stats: TaskStats
+    ) -> asyncio.Task:
         async def _wrapped():
             async with self._semaphore:
                 stats.started_at = datetime.now()
@@ -131,12 +201,6 @@ class BackgroundTaskManager:
                 del self._tasks[task_id]
 
         task.add_done_callback(cleanup_callback)
-
-        self._logger.debug(
-            f"🚀 Task spawned: {task_name} (ID: {task_id}, "
-            f"User: {user_id}, Priority: {priority})"
-        )
-
         return task
 
     async def spawn_with_retry(
@@ -216,11 +280,18 @@ class BackgroundTaskManager:
 
     def get_active_tasks(self) -> Dict[str, str]:
         """获取当前活跃的任务"""
-        return {
+        active_tasks = {
             task_id: task.get_name()
             for task_id, task in self._tasks.items()
             if not task.done() and self._stats.get(task_id, TaskStats("", "", "", datetime.now())).status == "running"
         }
+        queued_tasks = {
+            task_id: stats.task_name
+            for task_id, stats in self._stats.items()
+            if stats.status == "queued" and task_id not in active_tasks
+        }
+        active_tasks.update(queued_tasks)
+        return active_tasks
 
     async def wait_for_task(self, task_id: str, timeout: Optional[float] = None) -> bool:
         """
@@ -248,12 +319,18 @@ class BackgroundTaskManager:
         """
         if not self._tasks:
             self._logger.info("No background tasks to shutdown")
+            if self._queue_worker_task:
+                self._queue_worker_task.cancel()
             return
 
         self._logger.info(
             f"🛑 Graceful shutdown initiated - "
             f"Waiting for {len(self._tasks)} tasks to complete (timeout: {timeout}s)"
         )
+
+        self._shutdown = True
+        if self._queue_worker_task:
+            self._queue_worker_task.cancel()
 
         # 等待所有任务完成
         try:
@@ -268,6 +345,15 @@ class BackgroundTaskManager:
             for task in self._tasks.values():
                 task.cancel()
             await asyncio.sleep(0.1)  # 让取消生效
+        finally:
+            while not self._queue.empty():
+                try:
+                    _, _, _, _, _, _, _, result_future = self._queue.get_nowait()
+                except Exception:
+                    break
+                if not result_future.cancelled():
+                    result_future.cancel()
+                self._queue.task_done()
 
         # 清理统计信息(保留最近1000条)
         if len(self._stats) > 1000:

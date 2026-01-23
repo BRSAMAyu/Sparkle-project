@@ -1,7 +1,7 @@
 import json
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from pydantic import ValidationError
 from loguru import logger
 
@@ -9,6 +9,7 @@ from app.tools.registry import tool_registry
 from app.tools.base import ToolResult
 from app.services.tool_history_service import ToolHistoryService
 from app.db.session import AsyncSessionLocal
+from app.core.business_metrics import COMPENSATION_TRIGGERED
 
 
 class ToolExecutor:
@@ -24,7 +25,8 @@ class ToolExecutor:
         user_id: str,
         db_session: Optional[Any],
         progress_callback: Optional[Any] = None,
-        tool_call_id: Optional[str] = None
+        tool_call_id: Optional[str] = None,
+        compensation_call: Optional[Dict[str, Any]] = None
     ) -> ToolResult:
         """
         执行单个工具调用并记录执行历史
@@ -49,7 +51,8 @@ class ToolExecutor:
                     db_session=session,
                     progress_callback=progress_callback,
                     tool_call_id=tool_call_id,
-                    owns_session=True
+                    owns_session=True,
+                    compensation_call=compensation_call
                 )
 
         return await self._execute_tool_call_with_session(
@@ -59,7 +62,8 @@ class ToolExecutor:
             db_session=db_session,
             progress_callback=progress_callback,
             tool_call_id=tool_call_id,
-            owns_session=False
+            owns_session=False,
+            compensation_call=compensation_call
         )
 
     async def _execute_tool_call_with_session(
@@ -70,7 +74,8 @@ class ToolExecutor:
         db_session: Any,
         progress_callback: Optional[Any],
         tool_call_id: Optional[str],
-        owns_session: bool
+        owns_session: bool,
+        compensation_call: Optional[Dict[str, Any]]
     ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
 
@@ -114,9 +119,12 @@ class ToolExecutor:
 
         # 记录执行开始时间
         start_time = time.time()
+        executed_tool = False
+        compensation_spec = self._parse_compensation_call(compensation_call)
 
         try:
             # 执行工具
+            executed_tool = True
             if getattr(tool, "is_long_running", False) and progress_callback:
                 result = await tool.execute(validated_params, user_id, db_session, tool_call_id=tool_call_id, progress_callback=progress_callback)
             else:
@@ -140,6 +148,15 @@ class ToolExecutor:
             )
             await self._commit_if_owned(db_session, owns_session)
 
+            if not result.success:
+                await self._maybe_execute_compensation(
+                    compensation_spec=compensation_spec,
+                    user_id=user_id,
+                    db_session=db_session,
+                    owns_session=owns_session,
+                    reason="tool_failed"
+                )
+
             return result
 
         except Exception as e:
@@ -162,6 +179,15 @@ class ToolExecutor:
                 use_separate_session=not owns_session
             )
             await self._commit_if_owned(db_session, owns_session)
+
+            if executed_tool:
+                await self._maybe_execute_compensation(
+                    compensation_spec=compensation_spec,
+                    user_id=user_id,
+                    db_session=db_session,
+                    owns_session=owns_session,
+                    reason="tool_exception"
+                )
 
             return ToolResult(
                 success=False,
@@ -261,6 +287,61 @@ class ToolExecutor:
             await db_session.rollback()
         except Exception as e:
             logger.warning(f"Failed to rollback tool execution session: {e}")
+
+    def _parse_compensation_call(
+        self,
+        compensation_call: Optional[Dict[str, Any]]
+    ) -> Optional[Tuple[str, Dict[str, Any]]]:
+        if not compensation_call or not isinstance(compensation_call, dict):
+            return None
+        tool_name = (
+            compensation_call.get("name")
+            or compensation_call.get("tool_name")
+            or compensation_call.get("tool")
+        )
+        args = (
+            compensation_call.get("params")
+            or compensation_call.get("arguments")
+            or compensation_call.get("args")
+            or {}
+        )
+        if not tool_name:
+            return None
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except Exception:
+                args = {"_raw": args}
+        if not isinstance(args, dict):
+            args = {}
+        return tool_name, args
+
+    async def _maybe_execute_compensation(
+        self,
+        *,
+        compensation_spec: Optional[Tuple[str, Dict[str, Any]]],
+        user_id: str,
+        db_session: Any,
+        owns_session: bool,
+        reason: str
+    ) -> None:
+        if not compensation_spec:
+            return
+        tool_name, arguments = compensation_spec
+        COMPENSATION_TRIGGERED.labels(reason=reason).inc()
+        try:
+            await self._execute_tool_call_with_session(
+                tool_name=tool_name,
+                arguments=arguments,
+                user_id=user_id,
+                db_session=db_session,
+                progress_callback=None,
+                tool_call_id=None,
+                owns_session=owns_session,
+                compensation_call=None
+            )
+        except Exception as e:
+            logger.warning(f"Compensation tool failed: {tool_name} - {e}")
     
     async def execute_tool_calls(
         self,
@@ -284,7 +365,11 @@ class ToolExecutor:
                 arguments=call["function"]["arguments"] if isinstance(call["function"]["arguments"], dict) else json.loads(call["function"]["arguments"]),
                 user_id=user_id,
                 db_session=db_session,
-                tool_call_id=call.get("id")
+                tool_call_id=call.get("id"),
+                compensation_call=(
+                    call.get("compensation_call")
+                    or call.get("function", {}).get("compensation_call")
+                )
             )
             results.append(result)
         return results
