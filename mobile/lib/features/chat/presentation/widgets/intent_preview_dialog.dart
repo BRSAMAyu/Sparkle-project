@@ -112,15 +112,16 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: 16),
-            Text(_errorMessage!),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: _analyzeIntents,
-              child: const Text('重试'),
-            ),
-          ],
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(_errorMessage!),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _analyzeIntents,
+                child: const Text('重试'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -137,7 +138,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               const Text('识别到单一意图'),
               const SizedBox(height: 8),
               Text(
-                '"$message"',
+                '"${widget.message}"',
                 style: const TextStyle(
                   color: Colors.grey,
                   fontStyle: FontStyle.italic,
@@ -183,7 +184,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getIntentColor(intent.type).withOpacity(0.3),
+          color: _getIntentColor(intent.type).withValues(alpha: 0.3),
           width: 2,
         ),
       ),
@@ -409,10 +410,31 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     });
 
     try {
-      // TODO: Call actual API
-      await Future.delayed(const Duration(milliseconds: 800));
+      // TODO: Call actual API when backend is ready
+      // Expected API endpoint: POST /api/v1/intent/analyze
+      // Request body: { "message": widget.message }
+      // Response: { "intents": [...] }
+      //
+      // Example implementation:
+      // final authToken = await ref.read(authRepositoryProvider).getAccessToken();
+      // final response = await dio.post(
+      //   '/api/v1/intent/analyze',
+      //   data: {'message': widget.message},
+      //   options: Options(headers: {'Authorization': 'Bearer $authToken'}),
+      // );
+      // final data = response.data;
+      // final intents = (data['intents'] as List)
+      //     .map((e) => _IntentItem(
+      //           type: e['type'],
+      //           confidence: e['confidence'],
+      //           content: e['content'],
+      //           agentRole: e['agent_role'],
+      //         ))
+      //     .toList();
 
-      // Mock response for demo
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+
+      // Mock response for demo - remove when API is ready
       setState(() {
         _isAnalyzing = false;
         _intents = [
@@ -443,11 +465,11 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
 
     try {
       // TODO: Call actual execution API
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        onConfirm();
+        widget.onConfirm();
       }
     } catch (e) {
       setState(() => _isExecuting = false);

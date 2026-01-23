@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:record/record.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// 音频录制服务
@@ -13,7 +14,7 @@ class AudioRecordingService {
   final AudioRecorder _recorder = AudioRecorder();
   final Logger _logger = Logger();
   WebSocketChannel? _webSocket;
-  StreamSubscription<dynamic>? _audioSubscription;
+  StreamSubscription<Uint8List>? _audioStreamSubscription;
   bool _isRecording = false;
   Timer? _durationTimer;
   int _recordingDuration = 0;
@@ -40,7 +41,16 @@ class AudioRecordingService {
     try {
       // 1. 连接WebSocket
       _logger.d('Connecting to WebSocket: $wsUrl');
-      _webSocket = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      // Prepare WebSocket with token as query param
+      // Flutter's IOWebSocketChannel doesn't support custom headers,
+      // so we pass the token via query parameter
+      final uri = Uri.parse('$wsUrl?token=$authToken');
+      final channel = IOWebSocketChannel.connect(
+        uri,
+      );
+
+      _webSocket = channel;
 
       // 2. 开始监听WebSocket消息
       _webSocket!.stream.listen(
@@ -59,28 +69,36 @@ class AudioRecordingService {
         cancelOnError: true,
       );
 
-      // 3. 开始录制音频
-      await _recorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.wav,
-          sampleRate: 16000,
-          numChannels: 1,
-        ),
-        path: '',  // 空路径表示不保存到文件
+      // 3. 开始录制音频流 - 使用 startStream 获取原始 PCM 数据
+      final config = RecordConfig(
+        encoder: AudioEncoder.pcm16bits, // 获取原始 PCM 数据
+        sampleRate: 16000,               // 16kHz 采样率（科大讯飞要求）
+        numChannels: 1,                   // 单声道
       );
 
-      // 4. 监听音频流
-      _audioSubscription = _recorder.onAmplitudeChanged(
-        const Duration(milliseconds: 100),
-      ).listen((amplitude) {
-        // 发送音频数据到WebSocket
-        if (_webSocket != null && _isRecording) {
-          // 注意：record包的onAmplitudeChanged只返回振幅，不返回音频数据
-          // 实际的音频流需要通过其他方式获取
-          // 这里我们使用一个简化的实现
-          _sendAudioData(amplitude);
-        }
-      });
+      final audioStream = await _recorder.startStream(config);
+
+      // 4. 监听音频数据流并实时发送
+      _audioStreamSubscription = audioStream.listen(
+        (audioData) {
+          if (_webSocket != null && _isRecording) {
+            _sendAudioData(audioData);
+          }
+        },
+        onError: (error) {
+          _logger.e('Audio stream error: $error');
+          onError('音频录制失败: $error');
+          stopRecording();
+        },
+        onDone: () {
+          _logger.d('Audio stream ended');
+          // Send stop signal to server
+          _sendStopSignal();
+          onCompleted();
+          stopRecording();
+        },
+        cancelOnError: true,
+      );
 
       // 5. 启动时长计时器
       if (maxDuration != null) {
@@ -88,12 +106,13 @@ class AudioRecordingService {
           _recordingDuration++;
           if (_recordingDuration >= maxDuration.inSeconds) {
             _logger.d('Max duration reached: $maxDuration');
+            _sendStopSignal();
             stopRecording();
           }
         });
       }
 
-      _logger.d('Recording started');
+      _logger.d('Recording started successfully');
     } catch (e) {
       _logger.e('Failed to start recording: $e');
       onError('录制启动失败: $e');
@@ -117,6 +136,7 @@ class AudioRecordingService {
           case 'transcription':
             final text = data['text'] as String?;
             if (text != null && text.isNotEmpty) {
+              _logger.d('Received transcription: $text');
               onTranscription(text);
             }
 
@@ -147,19 +167,24 @@ class AudioRecordingService {
   }
 
   /// 发送音频数据到WebSocket
-  void _sendAudioData(dynamic amplitudeData) {
-    // 注意：record包的onAmplitudeChanged只返回振幅，不返回原始音频数据
-    // 在实际应用中，需要使用其他方式获取原始音频数据
-    // 这里我们发送一个占位符，实际实现需要根据音频格式调整
-
-    // 如果WebSocket连接正常，发送音频数据
+  void _sendAudioData(Uint8List audioData) {
     if (_webSocket != null && _isRecording) {
       try {
-        // 发送音频数据（这里需要根据实际音频格式调整）
-        // 实际实现中，需要获取原始音频字节流
-        // _webSocket!.sink.add(audioBytes);
+        // 直接发送 PCM 二进制数据
+        _webSocket!.sink.add(audioData);
       } catch (e) {
         _logger.e('Failed to send audio data: $e');
+      }
+    }
+  }
+
+  /// 发送停止信号
+  void _sendStopSignal() {
+    if (_webSocket != null) {
+      try {
+        _webSocket!.sink.add('STOP');
+      } catch (e) {
+        _logger.e('Failed to send STOP signal: $e');
       }
     }
   }
@@ -177,8 +202,8 @@ class AudioRecordingService {
       await _recorder.stop();
 
       // 取消订阅
-      await _audioSubscription?.cancel();
-      _audioSubscription = null;
+      await _audioStreamSubscription?.cancel();
+      _audioStreamSubscription = null;
 
       // 关闭WebSocket
       if (_webSocket != null) {

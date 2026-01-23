@@ -42,6 +42,7 @@ from app.agents.standard_workflow import create_standard_chat_graph
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.core.task_manager import task_manager
 from app.core.celery_app import schedule_long_task
+from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
 from opentelemetry import trace
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
@@ -217,7 +218,10 @@ class ChatOrchestrator:
         self.shadow_predictor = shadow_prediction_service
         self.shadow_predictor.redis = redis_client
 
-        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode")
+        # Plan Review Service
+        plan_review_service.set_redis(redis_client)
+
+        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview")
 
         # Ensure tools are registered
         self._ensure_tools_registered()
@@ -307,6 +311,62 @@ class ChatOrchestrator:
         """Cache response for idempotency"""
         if self.state_manager:
             await self.state_manager.cache_response(session_id, request_id, response_data)
+
+    def _format_review_message(self, review_result) -> str:
+        """Format plan review result as user-friendly message"""
+        from app.orchestration.plan_review_service import ReviewDecision
+
+        decision = review_result.decision
+        comments = review_result.comments
+
+        # Header based on decision
+        if decision == ReviewDecision.REJECTED.value:
+            header = "🚫 计划未通过审查"
+        elif decision == ReviewDecision.NEEDS_MODIFICATION.value:
+            header = "⚠️ 计划需要修改"
+        elif decision == ReviewDecision.REQUIRES_CONFIRMATION.value:
+            header = "🔍 需要确认计划"
+        else:
+            header = "✅ 计划已通过审查"
+
+        lines = [f"\n\n{header}"]
+
+        # Add comments by severity
+        critical_comments = [c for c in comments if c.severity == "critical"]
+        warning_comments = [c for c in comments if c.severity == "warning"]
+        info_comments = [c for c in comments if c.severity == "info"]
+
+        if critical_comments:
+            lines.append("\n**严重问题:**")
+            for c in critical_comments:
+                lines.append(f"- {c.message}")
+                if c.suggested_fix:
+                    lines.append(f"  建议: {c.suggested_fix}")
+
+        if warning_comments:
+            lines.append("\n**警告:**")
+            for c in warning_comments[:3]:  # Limit warnings
+                lines.append(f"- {c.message}")
+
+        if info_comments and decision != ReviewDecision.REJECTED.value:
+            lines.append("\n**建议:**")
+            for c in info_comments[:2]:  # Limit info comments
+                lines.append(f"- {c.message}")
+
+        # Add confidence indicator
+        if review_result.confidence > 0:
+            confidence_pct = int(review_result.confidence * 100)
+            lines.append(f"\n置信度: {confidence_pct}%")
+
+        # Add footer based on decision
+        if decision == ReviewDecision.REJECTED.value:
+            lines.append("\n请重新描述您的需求，我将为您重新规划。")
+        elif decision == ReviewDecision.NEEDS_MODIFICATION.value:
+            lines.append("\n请在下方补充说明修改要求，我将重新规划。")
+        elif decision == ReviewDecision.REQUIRES_CONFIRMATION.value:
+            lines.append("\n请确认是否执行此计划。")
+
+        return "\n".join(lines)
 
     async def _load_context_versions(self, user_id: str) -> Dict[str, str]:
         if not self.redis:
@@ -1086,7 +1146,60 @@ class ChatOrchestrator:
                                 await self.langgraph_breaker.on_failure("preflight_blocked")
                                 return
 
-                            # 6. Store plan in state for execution
+                            # 6. Plan Review (User Confirmation Loop)
+                            if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
+                                review_result = await plan_review_service.review_plan(
+                                    plan=executable_plan,
+                                    user_message=user_message,
+                                    user_context=user_context_payload or {}
+                                )
+
+                                # Check if plan requires user action
+                                if review_result.decision in [
+                                    ReviewDecision.REJECTED.value,
+                                    ReviewDecision.REQUIRES_CONFIRMATION.value,
+                                    ReviewDecision.NEEDS_MODIFICATION.value
+                                ]:
+                                    action_id = await plan_review_service.store_review_result(
+                                        review=review_result,
+                                        user_id=str(user_id)
+                                    )
+
+                                    # Send review result to client
+                                    review_metadata = {
+                                        "requires_review": "true",
+                                        "review_action_id": action_id,
+                                        "review_decision": review_result.decision,
+                                        "review_id": review_result.review_id,
+                                        "plan_id": review_result.plan_id,
+                                    }
+
+                                    # Format review message for display
+                                    review_delta = self._format_review_message(review_result)
+
+                                    await stream_callback(agent_service_pb2.ChatResponse(
+                                        delta=review_delta,
+                                        metadata=review_metadata
+                                    ))
+
+                                    # Store review result in state for potential re-plan
+                                    state.context_data["plan_review"] = review_result.to_dict()
+                                    state.context_data["pending_review_action_id"] = action_id
+
+                                    logger.info(
+                                        f"Plan {executable_plan.plan_id} requires user review: "
+                                        f"{review_result.decision} (action_id={action_id})"
+                                    )
+                                    return
+
+                                # Auto-approved: continue with execution
+                                state.context_data["plan_review"] = review_result.to_dict()
+                                logger.info(
+                                    f"Plan {executable_plan.plan_id} auto-approved: "
+                                    f"confidence={review_result.confidence}"
+                                )
+
+                            # 7. Store plan in state for execution
                             state.context_data["executable_plan"] = executable_plan
                             state.context_data["snapshot"] = snapshot
 

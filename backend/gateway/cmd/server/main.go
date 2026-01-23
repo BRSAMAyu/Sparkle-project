@@ -164,6 +164,12 @@ func main() {
 	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
 	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
 
+	// STT Handler for Speech-to-Text WebSocket proxy
+	sttHandler := handler.NewSTTHandler(cfg.BackendURL+"/api/v1/stt/stream", logger.Log)
+
+	// WebSocket Proxy for Python Community WebSocket
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger.Log)
+
 	// Auth Service
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {
@@ -365,6 +371,16 @@ func main() {
 	// WebSocket Route (Go Native)
 	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), chatOrchestrator.HandleWebSocket)
 	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), fileEventHandler.HandleWebSocket)
+	r.GET("/ws/stt", middleware.WsAuthMiddleware(cfg, rdb), sttHandler.HandleWebSocket)
+
+	// Community WebSocket Proxy Routes (must be before NoRoute)
+	// These routes proxy WebSocket connections to Python backend
+	r.GET("/api/v1/community/groups/:group_id/ws",
+		middleware.WsAuthMiddleware(cfg, rdb),
+		wsProxy.HandleCommunityWS)
+	r.GET("/api/v1/community/ws/connect",
+		middleware.WsAuthMiddleware(cfg, rdb),
+		wsProxy.HandlePersonalWS)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)

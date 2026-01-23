@@ -191,3 +191,35 @@ class ActionStatusEvent extends ChatStreamEvent {
   final String? widgetType;
   final int? timestamp;
 }
+
+/// Plan Review 状态事件
+class PlanReviewStatusEvent extends ChatStreamEvent {
+  PlanReviewStatusEvent({
+    required this.reviewId,
+    required this.status,
+    this.message,
+    this.userDecision,
+    this.timestamp,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+  final String reviewId;
+  final String status; // 'approved', 'rejected', 'modify_requested', 'acknowledged'
+  final String? message;
+  final String? userDecision;
+  final int? timestamp;
+}
+
+/// Plan Review Widget Event (for displaying review cards)
+class PlanReviewWidgetEvent extends ChatStreamEvent {
+  PlanReviewWidgetEvent({
+    required this.reviewData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+  final Map<String, dynamic> reviewData;
+}
