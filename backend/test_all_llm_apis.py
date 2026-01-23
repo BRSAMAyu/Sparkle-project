@@ -407,7 +407,7 @@ class APIValidator:
             prompt = "请将以下文本翻译成中文。只输出翻译结果，不要添加任何解释或额外内容。\n\nHello, how are you?"
 
             response = await client.chat.completions.create(
-                model=settings.HUNYUAN_CHAT_MODEL,
+                model=settings.HUNYUAN_TRANSLATE_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3
             )
@@ -420,7 +420,7 @@ class APIValidator:
             return {
                 "original": "Hello, how are you?",
                 "translation": translation,
-                "model": settings.HUNYUAN_CHAT_MODEL
+                "model": settings.HUNYUAN_TRANSLATE_MODEL
             }
 
         await self.test_api(

@@ -74,9 +74,8 @@ HUNYUAN_API_KEY=sk-your-api-key-here
 # 端点配置
 HUNYUAN_BASE_URL=https://api.siliconflow.cn/v1
 
-# 模型配置
-HUNYUAN_CHAT_MODEL=tencent/Hunyuan-A13B-Instruct
-HUNYUAN_REASON_MODEL=tencent/Hunyuan-A13B-Instruct
+# 模型配置（翻译专用）
+HUNYUAN_TRANSLATE_MODEL=tencent/Hunyuan-MT-7B
 ```
 
 **用途**：

@@ -204,4 +204,51 @@ class ApiEndpoints {
   static const String interventionsOutcomes = '/interventions/outcomes';
   static String interventionFeedback(String id) =>
       '/interventions/requests/$id/feedback';
+
+  // Achievements
+  static const String achievements = '/achievements';
+  static const String achievementsStats = '/achievements/stats';
+  static const String achievementsMap = '/achievements/map';
+  static const String achievementsStreak = '/achievements/streak';
+  static String achievementDetail(String id) => '/achievements/achievements/$id';
+  static String achievementShare(String id) => '/achievements/achievements/$id/share';
+  static String achievementPin(String id) => '/achievements/achievements/$id/pin';
+
+  // Contracts
+  static const String contracts = '/achievements/contracts';
+  static const String contractsStatus = '/achievements/contracts';
+
+  // Galaxy Skins
+  static const String galaxySkins = '/achievements/skins';
+  static String skinEquip(String id) => '/achievements/skins/$id/equip';
+
+  // Titles
+  static const String titles = '/achievements/titles';
+  static String titleEquip(String id) => '/achievements/titles/$id/equip';
+
+  // Achievement Events (internal)
+  static const String achievementEventsProcess = '/achievements/events/process';
+
+  // Multi-Intent
+  static const String multiIntentParse = '/multi-intent/parse';
+  static const String multiIntentPreview = '/multi-intent/preview';
+  static const String multiIntentExecute = '/multi-intent/execute';
+  static const String multiIntentAnalyzeExecute = '/multi-intent/analyze-and-execute';
+  static const String multiIntentTypes = '/multi-intent/intent-types';
+
+  // Recommendations
+  static const String recommendationsCollaborative = '/recommendations/collaborative';
+  static const String recommendationsSimilarUsers = '/recommendations/similar-users';
+  static const String recommendationsSimilarItems = '/recommendations/similar-items';
+  static const String recommendationsMyInteractions = '/recommendations/my-interactions';
+  static const String recommendationsRecord = '/recommendations/record-interaction';
+  static const String recommendationsStats = '/recommendations/stats';
+
+  // Leaderboards
+  static const String leaderboards = '/leaderboards';
+  static const String leaderboardsSummary = '/leaderboards/summary';
+  static const String leaderboardsMyRank = '/leaderboards/my-rank';
+  static const String leaderboardsTypes = '/leaderboards/types';
+  static String leaderboardsTopThree(String type) => '/leaderboards/top-three/$type';
+  static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
 }

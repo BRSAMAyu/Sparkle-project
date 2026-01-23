@@ -44,6 +44,11 @@ from app.api.v1 import (
     memory_settings,
     memory_admin,
     preferences,
+    seed_libraries,
+    achievements,
+    multi_intent,
+    recommendations,
+    leaderboards,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -82,6 +87,11 @@ api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(preferences.router)
+api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
+api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
+api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
+api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:
     api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
     api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
@@ -109,5 +119,8 @@ async def api_root():
             "/capsules",
             "/omnibar",
             "/dashboard",
+            "/multi-intent",
+            "/recommendations",
+            "/leaderboards",
         ],
     }

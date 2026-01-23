@@ -32,15 +32,23 @@ class PersonalizationEngine:
         """生成 AI 系统策略配置"""
         prefs = await self.pref_service.get_preferences(user_id)
         explicit = prefs.explicit.copy()
+        inferred = prefs.inferred or {}
 
         if override_preferences:
             explicit.update(override_preferences)
 
-        depth = explicit.get("depth_preference", 0.5)
+        # 显式未设置时，使用推断值
+        depth = explicit.get("depth_preference")
+        if depth is None:
+            depth = inferred.get("depth_preference", 0.5)
+
         verbosity = "detailed" if depth > 0.7 else ("concise" if depth < 0.3 else "balanced")
         temperature = 0.3 + (depth * 0.4)
 
-        curiosity = explicit.get("curiosity_preference", 0.5)
+        curiosity = explicit.get("curiosity_preference")
+        if curiosity is None:
+            curiosity = inferred.get("curiosity_preference", 0.5)
+
         exploration = "exploratory" if curiosity > 0.7 else ("focused" if curiosity < 0.3 else "moderate")
 
         feedback_style = explicit.get("feedback_style", "balanced")
@@ -49,10 +57,14 @@ class PersonalizationEngine:
         persona = explicit.get("persona_type", "coach")
         persona_additions = self._get_persona_prompt_additions(persona)
 
+        # 标记来源（用于调试）
+        depth_source = "explicit" if explicit.get("depth_preference") is not None else "inferred"
+        curiosity_source = "explicit" if explicit.get("curiosity_preference") is not None else "inferred"
+
         system_additions = f"""
 ## 用户偏好适配指令
-- 回答详细程度：{verbosity}（depth_preference={depth:.2f}）
-- 探索倾向：{exploration}（curiosity_preference={curiosity:.2f}）
+- 回答详细程度：{verbosity}（depth_preference={depth:.2f} [source: {depth_source}]）
+- 探索倾向：{exploration}（curiosity_preference={curiosity:.2f} [source: {curiosity_source}]）
 - 语气风格：{tone}
 {persona_additions}
 

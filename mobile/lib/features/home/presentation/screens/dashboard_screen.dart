@@ -22,6 +22,7 @@ import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_pan
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 
 /// Dashboard screen - extracted from HomeScreen
 /// Displays the main project cockpit with bento grid layout
@@ -208,11 +209,11 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisCellCount: 1,
             child: PrismCard(),
           ),
-          // Card D: Sprint Ring (1x1)
+          // Card H: Streak Indicator (1x1) - Achievement Integration
           StaggeredGridTile.count(
             crossAxisCellCount: 1,
             mainAxisCellCount: 1,
-            child: SprintCard(onTap: () => context.push('/plans')),
+            child: _StreakCard(onTap: () => context.push('/achievements')),
           ),
           // Card C: Next Actions (1x1) - Resized
           StaggeredGridTile.count(
@@ -233,6 +234,68 @@ class DashboardScreen extends ConsumerWidget {
             child: LongTermPlanCard(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 连胜指示器卡片 - 用于仪表盘
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.warning.withValues(alpha: 0.15),
+              DS.warning.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(
+            color: DS.warning.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  color: DS.warning,
+                  size: DS.iconSizeSm,
+                ),
+                SizedBox(width: DS.spacing6),
+                Text(
+                  '连胜',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textSecondary,
+                  ),
+                ),
+                Spacer(),
+                Icon(
+                  Icons.chevron_right,
+                  size: DS.iconSizeSm,
+                  color: DS.textTertiary,
+                ),
+              ],
+            ),
+            SizedBox(height: DS.spacing12),
+            DashboardStreakIndicator(),
+          ],
+        ),
       ),
     );
   }

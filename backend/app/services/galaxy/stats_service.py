@@ -101,6 +101,42 @@ class GalaxyStatsService:
         pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
         await cache_service.delete_pattern(pattern)
 
+        # ========== Achievement Integration ==========
+        try:
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            achievement_engine = AchievementEngine(self.db)
+
+            # Node unlock event
+            await achievement_engine.process_event(
+                user_id=str(user_id),
+                event_type=AchievementEvent.NODE_UNLOCKED,
+                node_id=str(node_id),
+                mastery_score=status.mastery_score,
+                study_minutes=study_minutes,
+            )
+
+            # Node mastered event (when mastery reaches 80%+)
+            if status.mastery_score >= 80:
+                await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.NODE_MASTERED,
+                    node_id=str(node_id),
+                    mastery_score=status.mastery_score,
+                )
+
+            # Perfectionist achievement (100% mastery)
+            if status.mastery_score >= 100:
+                await achievement_engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.NODE_MASTERED,
+                    node_id=str(node_id),
+                    mastery_score=status.mastery_score,
+                )
+        except Exception as e:
+            logger.warning(f"Achievement processing failed in spark_node: {e}")
+        # ============================================
+
         return SparkResult(
             spark_event=spark_event,
             expansion_queued=expansion_queued,

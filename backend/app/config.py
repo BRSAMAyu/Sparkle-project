@@ -202,8 +202,6 @@ class Settings(BaseSettings):
     # Hunyuan Translation (via SiliconFlow)
     HUNYUAN_API_KEY: str = ""
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
-    HUNYUAN_CHAT_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
-    HUNYUAN_REASON_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
     HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
 
     # Embedding Service

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 
@@ -140,6 +141,7 @@ class LocalDatabase {
         TranslationWordLinkSchema,
         VocabWordSchema,
         VocabReviewSchema,
+        FocusSessionRecordSchema, // Added for focus statistics
       ],
       directory: dir.path,
     );
@@ -155,4 +157,5 @@ class LocalDatabase {
   IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => isar.localCRDTSnapshots;
   IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
   IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
+  IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
 }

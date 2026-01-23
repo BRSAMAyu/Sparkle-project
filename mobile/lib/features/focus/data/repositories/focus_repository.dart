@@ -114,6 +114,79 @@ class FocusRepository {
       rethrow;
     }
   }
+
+  /// Get weekly focus statistics
+  Future<FocusWeeklyStatsResponse> getWeeklyStats() async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        '/focus/stats/weekly',
+      );
+
+      return FocusWeeklyStatsResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ Failed to get weekly stats: ${e.message}');
+      rethrow;
+    }
+  }
+
+  /// Get monthly focus statistics
+  Future<FocusMonthlyStatsResponse> getMonthlyStats() async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        '/focus/stats/monthly',
+      );
+
+      return FocusMonthlyStatsResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ Failed to get monthly stats: ${e.message}');
+      rethrow;
+    }
+  }
+
+  /// Get focus session history
+  Future<FocusSessionHistoryResponse> getSessionHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        '/focus/sessions/history',
+        queryParameters: {
+          'limit': limit,
+          'offset': offset,
+        },
+      );
+
+      return FocusSessionHistoryResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ Failed to get session history: ${e.message}');
+      rethrow;
+    }
+  }
+
+  /// Get focus heatmap data
+  Future<Map<String, double>> getHeatmapData({int days = 90}) async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        '/focus/stats/heatmap',
+        queryParameters: {'days': days},
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      return data.map<String, double>(
+        (key, value) => MapEntry(key, (value as num).toDouble()),
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ Failed to get heatmap data: ${e.message}');
+      rethrow;
+    }
+  }
 }
 
 /// Focus repository provider (P0.3)
