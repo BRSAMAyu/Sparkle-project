@@ -31,7 +31,10 @@ from app.models.community import (
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
 from app.models.analytics import UserDailyMetric
 from app.models.compliance import LegalHold, UserPersonaKey, CryptoShreddingCertificate, DlqReplayAuditLog, PersonaSnapshot
-from app.models.curiosity_capsule import CuriosityCapsule
+from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
+from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
+from app.models.capsule_favorite import CapsuleFavorite
+from app.models.capsule_generation_job import CapsuleGenerationJob, JobStatus, GenerationType
 from app.models.focus import FocusSession, FocusType, FocusStatus
 from app.models.vocabulary import WordBook, DictionaryEntry
 from app.models.file_storage import StoredFile
@@ -62,6 +65,29 @@ from app.models.ltm_daily_snapshot import LtmDailySnapshot
 from app.models.user_memory_settings import UserMemorySettings
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.decision_record import DecisionRecord
+from app.models.seed_content import (
+    SeedLibrary,
+    SeedItem,
+    UserLibrarySubscription,
+    LibraryCategory,
+    LibraryVisibility,
+    ItemType,
+    DifficultyLevel,
+)
+from app.models.achievement import (
+    Achievement,
+    UserAchievement,
+    AchievementRarity,
+    AchievementType,
+    VisualEffectType,
+    UserStreakStats,
+    SparkContract,
+    ContractStatus,
+    GalaxySkin,
+    UserGalaxySkin,
+    StudyBuddy,
+    UserTitle,
+)
 
 __all__ = [
     "BaseModel",
@@ -115,6 +141,13 @@ __all__ = [
     "DlqReplayAuditLog",
     "PersonaSnapshot",
     "CuriosityCapsule",
+    "DepthLevel",
+    "CapsuleFeedback",
+    "FeedbackCategory",
+    "CapsuleFavorite",
+    "CapsuleGenerationJob",
+    "JobStatus",
+    "GenerationType",
     # Focus
     "FocusSession",
     "FocusType",
@@ -153,4 +186,25 @@ __all__ = [
     "UserMemorySettings",
     "UserPreferencesCenter",
     "DecisionRecord",
+    # Seed Content Library
+    "SeedLibrary",
+    "SeedItem",
+    "UserLibrarySubscription",
+    "LibraryCategory",
+    "LibraryVisibility",
+    "ItemType",
+    "DifficultyLevel",
+    # Achievement System
+    "Achievement",
+    "UserAchievement",
+    "AchievementRarity",
+    "AchievementType",
+    "VisualEffectType",
+    "UserStreakStats",
+    "SparkContract",
+    "ContractStatus",
+    "GalaxySkin",
+    "UserGalaxySkin",
+    "StudyBuddy",
+    "UserTitle",
 ]

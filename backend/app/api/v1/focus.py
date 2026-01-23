@@ -110,3 +110,46 @@ async def get_llm_breakdown(
         data.task_description
     )
     return {"subtasks": subtasks}
+
+
+# ============ Statistics Endpoints ============
+
+@router.get("/stats/weekly", summary="获取本周专注统计")
+async def get_weekly_focus_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get focus statistics for the current week"""
+    return await focus_service.get_weekly_stats(db, current_user.id)
+
+
+@router.get("/stats/monthly", summary="获取本月专注统计")
+async def get_monthly_focus_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get focus statistics for the current month"""
+    return await focus_service.get_monthly_stats(db, current_user.id)
+
+
+@router.get("/sessions/history", summary="获取专注会话历史")
+async def get_focus_session_history(
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get paginated history of focus sessions"""
+    return await focus_service.get_session_history(
+        db, current_user.id, limit, offset
+    )
+
+
+@router.get("/stats/heatmap", summary="获取专注热力图数据")
+async def get_focus_heatmap(
+    days: int = 90,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get heatmap data for the last N days"""
+    return await focus_service.get_heatmap_data(db, current_user.id, days)

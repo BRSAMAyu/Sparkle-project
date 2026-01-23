@@ -3,11 +3,20 @@
 """
 import asyncio
 import json
+import time
 from uuid import UUID
+from typing import Dict
 
 from loguru import logger
 
 from app.services.user_service import UserService
+from app.core.metrics import (
+    PREFERENCE_EVENT_E2E_LATENCY,
+    PREFERENCE_EVENT_CONSUME_LAG,
+    PREFERENCE_EVENT_STREAM_LENGTH,
+    CACHE_INVALIDATION_LATENCY,
+    PREFERENCE_EVENT_ERRORS_TOTAL
+)
 
 
 class PreferenceEventConsumer:
@@ -37,6 +46,9 @@ class PreferenceEventConsumer:
 
         while True:
             try:
+                # 记录流长度（监控积压）
+                await self._report_stream_length()
+
                 messages = await self.redis.xreadgroup(
                     groupname=self.consumer_group,
                     consumername=self.consumer_name,
@@ -45,18 +57,37 @@ class PreferenceEventConsumer:
                     block=1000,
                 )
 
+                if not messages:
+                    continue
+
                 for _stream, entries in messages:
                     for entry_id, data in entries:
-                        await self._handle_event(data)
+                        await self._handle_event(entry_id, data)
                         await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
 
             except Exception as e:
                 logger.error(f"Error consuming events: {e}")
+                PREFERENCE_EVENT_ERRORS_TOTAL.labels(
+                    error_type=type(e).__name__,
+                    consumer_group=self.consumer_group
+                ).inc()
                 await asyncio.sleep(1)
 
-    async def _handle_event(self, data: dict):
+    async def _report_stream_length(self):
+        """报告 Redis Stream 长度"""
+        try:
+            length = await self.redis.xlen(self.stream_key)
+            PREFERENCE_EVENT_STREAM_LENGTH.labels(
+                stream_key=self.stream_key
+            ).set(length)
+        except Exception:
+            pass
+
+    async def _handle_event(self, entry_id: str, data: dict):
         """处理单个事件"""
+        consume_start = time.time()
         event_type = self._get_value(data, "type")
+
         if event_type in ("user.preferences.updated", "user.preferences.inferred"):
             try:
                 payload_str = self._get_value(data, "payload") or "{}"
@@ -65,12 +96,41 @@ class PreferenceEventConsumer:
 
                 user_id = UUID(inner_data["user_id"])
                 version = inner_data.get("preference_version")
+                published_at = inner_data.get("timestamp", time.time())
 
-                logger.info(f"Received preferences update for user {user_id}, version={version}")
+                # 计算消费延迟
+                consume_lag = consume_start - published_at
+                PREFERENCE_EVENT_CONSUME_LAG.labels(
+                    consumer_group=self.consumer_group
+                ).set(consume_lag)
+
+                logger.info(
+                    f"Received preferences update for user {user_id}, "
+                    f"version={version}, lag={consume_lag:.3f}s"
+                )
+
+                # 测量缓存失效延迟
+                invalidate_start = time.time()
                 await self.user_service.invalidate_user_cache(user_id)
+                invalidate_latency = time.time() - invalidate_start
+
+                CACHE_INVALIDATION_LATENCY.labels(
+                    cache_type="user_preferences"
+                ).observe(invalidate_latency)
+
+                # 端到端延迟
+                e2e_latency = time.time() - published_at
+                PREFERENCE_EVENT_E2E_LATENCY.labels(
+                    event_type=event_type,
+                    source="gateway"
+                ).observe(e2e_latency)
 
             except Exception as e:
                 logger.error(f"Failed to handle preferences update event: {e}")
+                PREFERENCE_EVENT_ERRORS_TOTAL.labels(
+                    error_type="handle_event",
+                    consumer_group=self.consumer_group
+                ).inc()
 
     @staticmethod
     def _get_value(data: dict, key: str):

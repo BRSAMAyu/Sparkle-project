@@ -4,22 +4,23 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:typed_data' as _i14;
+import 'dart:typed_data' as _i15;
 
-import 'package:connectivity_plus/connectivity_plus.dart' as _i11;
+import 'package:connectivity_plus/connectivity_plus.dart' as _i12;
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart'
-    as _i12;
+    as _i13;
 import 'package:dio/dio.dart' as _i3;
 import 'package:isar/isar.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i13;
+import 'package:mockito/src/dummies.dart' as _i14;
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart' as _i8;
-import 'package:sparkle/core/network/api_client.dart' as _i10;
+import 'package:sparkle/core/network/api_client.dart' as _i11;
 import 'package:sparkle/core/offline/local_database.dart' as _i5;
+import 'package:sparkle/core/offline/models/focus_session_record.dart' as _i9;
 import 'package:sparkle/core/offline/models/translation_record.dart' as _i6;
 import 'package:sparkle/core/offline/models/vocab_word.dart' as _i7;
-import 'package:sparkle/core/offline/sync_engine.dart' as _i15;
-import 'package:sparkle/core/services/websocket_service.dart' as _i9;
+import 'package:sparkle/core/offline/sync_engine.dart' as _i16;
+import 'package:sparkle/core/services/websocket_service.dart' as _i10;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -231,6 +232,16 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
       ) as _i2.IsarCollection<_i8.UserAnalyticsEvent>);
 
   @override
+  _i2.IsarCollection<_i9.FocusSessionRecord> get focusSessionRecords =>
+      (super.noSuchMethod(
+        Invocation.getter(#focusSessionRecords),
+        returnValue: _FakeIsarCollection_1<_i9.FocusSessionRecord>(
+          this,
+          Invocation.getter(#focusSessionRecords),
+        ),
+      ) as _i2.IsarCollection<_i9.FocusSessionRecord>);
+
+  @override
   _i4.Future<void> init() => (super.noSuchMethod(
         Invocation.method(
           #init,
@@ -244,7 +255,7 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
 /// A class which mocks [WebSocketService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockWebSocketService extends _i1.Mock implements _i9.WebSocketService {
+class MockWebSocketService extends _i1.Mock implements _i10.WebSocketService {
   MockWebSocketService() {
     _i1.throwOnMissingStub(this);
   }
@@ -297,7 +308,7 @@ class MockWebSocketService extends _i1.Mock implements _i9.WebSocketService {
 /// A class which mocks [ApiClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockApiClient extends _i1.Mock implements _i10.ApiClient {
+class MockApiClient extends _i1.Mock implements _i11.ApiClient {
   MockApiClient() {
     _i1.throwOnMissingStub(this);
   }
@@ -418,7 +429,7 @@ class MockApiClient extends _i1.Mock implements _i10.ApiClient {
       ) as _i4.Future<_i3.Response<T>>);
 
   @override
-  _i4.Stream<_i10.SSEEvent> getStream(
+  _i4.Stream<_i11.SSEEvent> getStream(
     String? path, {
     Map<String, dynamic>? queryParameters,
   }) =>
@@ -428,11 +439,11 @@ class MockApiClient extends _i1.Mock implements _i10.ApiClient {
           [path],
           {#queryParameters: queryParameters},
         ),
-        returnValue: _i4.Stream<_i10.SSEEvent>.empty(),
-      ) as _i4.Stream<_i10.SSEEvent>);
+        returnValue: _i4.Stream<_i11.SSEEvent>.empty(),
+      ) as _i4.Stream<_i11.SSEEvent>);
 
   @override
-  _i4.Stream<_i10.SSEEvent> postStream(
+  _i4.Stream<_i11.SSEEvent> postStream(
     String? path, {
     Object? data,
   }) =>
@@ -442,35 +453,35 @@ class MockApiClient extends _i1.Mock implements _i10.ApiClient {
           [path],
           {#data: data},
         ),
-        returnValue: _i4.Stream<_i10.SSEEvent>.empty(),
-      ) as _i4.Stream<_i10.SSEEvent>);
+        returnValue: _i4.Stream<_i11.SSEEvent>.empty(),
+      ) as _i4.Stream<_i11.SSEEvent>);
 }
 
 /// A class which mocks [Connectivity].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockConnectivity extends _i1.Mock implements _i11.Connectivity {
+class MockConnectivity extends _i1.Mock implements _i12.Connectivity {
   MockConnectivity() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Stream<List<_i12.ConnectivityResult>> get onConnectivityChanged =>
+  _i4.Stream<List<_i13.ConnectivityResult>> get onConnectivityChanged =>
       (super.noSuchMethod(
         Invocation.getter(#onConnectivityChanged),
-        returnValue: _i4.Stream<List<_i12.ConnectivityResult>>.empty(),
-      ) as _i4.Stream<List<_i12.ConnectivityResult>>);
+        returnValue: _i4.Stream<List<_i13.ConnectivityResult>>.empty(),
+      ) as _i4.Stream<List<_i13.ConnectivityResult>>);
 
   @override
-  _i4.Future<List<_i12.ConnectivityResult>> checkConnectivity() =>
+  _i4.Future<List<_i13.ConnectivityResult>> checkConnectivity() =>
       (super.noSuchMethod(
         Invocation.method(
           #checkConnectivity,
           [],
         ),
-        returnValue: _i4.Future<List<_i12.ConnectivityResult>>.value(
-            <_i12.ConnectivityResult>[]),
-      ) as _i4.Future<List<_i12.ConnectivityResult>>);
+        returnValue: _i4.Future<List<_i13.ConnectivityResult>>.value(
+            <_i13.ConnectivityResult>[]),
+      ) as _i4.Future<List<_i13.ConnectivityResult>>);
 }
 
 /// A class which mocks [Isar].
@@ -484,7 +495,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
   @override
   String get name => (super.noSuchMethod(
         Invocation.getter(#name),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#name),
         ),
@@ -512,8 +523,8 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           #txn,
           [callback],
         ),
-        returnValue: _i13.ifNotNull(
-              _i13.dummyValueOrNull<T>(
+        returnValue: _i14.ifNotNull(
+              _i14.dummyValueOrNull<T>(
                 this,
                 Invocation.method(
                   #txn,
@@ -542,8 +553,8 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           [callback],
           {#silent: silent},
         ),
-        returnValue: _i13.ifNotNull(
-              _i13.dummyValueOrNull<T>(
+        returnValue: _i14.ifNotNull(
+              _i14.dummyValueOrNull<T>(
                 this,
                 Invocation.method(
                   #writeTxn,
@@ -569,7 +580,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           #txnSync,
           [callback],
         ),
-        returnValue: _i13.dummyValue<T>(
+        returnValue: _i14.dummyValue<T>(
           this,
           Invocation.method(
             #txnSync,
@@ -589,7 +600,7 @@ class MockIsar extends _i1.Mock implements _i2.Isar {
           [callback],
           {#silent: silent},
         ),
-        returnValue: _i13.dummyValue<T>(
+        returnValue: _i14.dummyValue<T>(
           this,
           Invocation.method(
             #writeTxnSync,
@@ -745,7 +756,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
   @override
   String get name => (super.noSuchMethod(
         Invocation.getter(#name),
-        returnValue: _i13.dummyValue<String>(
+        returnValue: _i14.dummyValue<String>(
           this,
           Invocation.getter(#name),
         ),
@@ -1079,7 +1090,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
       );
 
   @override
-  _i4.Future<void> importJsonRaw(_i14.Uint8List? jsonBytes) =>
+  _i4.Future<void> importJsonRaw(_i15.Uint8List? jsonBytes) =>
       (super.noSuchMethod(
         Invocation.method(
           #importJsonRaw,
@@ -1090,7 +1101,7 @@ class MockIsarCollection<OBJ> extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  void importJsonRawSync(_i14.Uint8List? jsonBytes) => super.noSuchMethod(
+  void importJsonRawSync(_i15.Uint8List? jsonBytes) => super.noSuchMethod(
         Invocation.method(
           #importJsonRawSync,
           [jsonBytes],
@@ -1503,14 +1514,14 @@ class MockQuery<T> extends _i1.Mock implements _i2.Query<T> {
       ) as _i4.Stream<void>);
 
   @override
-  _i4.Future<R> exportJsonRaw<R>(R Function(_i14.Uint8List)? callback) =>
+  _i4.Future<R> exportJsonRaw<R>(R Function(_i15.Uint8List)? callback) =>
       (super.noSuchMethod(
         Invocation.method(
           #exportJsonRaw,
           [callback],
         ),
-        returnValue: _i13.ifNotNull(
-              _i13.dummyValueOrNull<R>(
+        returnValue: _i14.ifNotNull(
+              _i14.dummyValueOrNull<R>(
                 this,
                 Invocation.method(
                   #exportJsonRaw,
@@ -1529,13 +1540,13 @@ class MockQuery<T> extends _i1.Mock implements _i2.Query<T> {
       ) as _i4.Future<R>);
 
   @override
-  R exportJsonRawSync<R>(R Function(_i14.Uint8List)? callback) =>
+  R exportJsonRawSync<R>(R Function(_i15.Uint8List)? callback) =>
       (super.noSuchMethod(
         Invocation.method(
           #exportJsonRawSync,
           [callback],
         ),
-        returnValue: _i13.dummyValue<R>(
+        returnValue: _i14.dummyValue<R>(
           this,
           Invocation.method(
             #exportJsonRawSync,
@@ -1577,7 +1588,7 @@ class MockQueryBuilder<OBJ, R, S> extends _i1.Mock
 /// A class which mocks [SyncEngine].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSyncEngine extends _i1.Mock implements _i15.SyncEngine {
+class MockSyncEngine extends _i1.Mock implements _i16.SyncEngine {
   MockSyncEngine() {
     _i1.throwOnMissingStub(this);
   }

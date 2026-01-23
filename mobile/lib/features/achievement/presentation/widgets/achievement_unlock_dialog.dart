@@ -1,0 +1,829 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
+
+/// 成就解锁弹窗
+///
+/// 显示成就解锁动画，根据稀有度显示不同视觉效果
+class AchievementUnlockDialog extends StatefulWidget {
+  const AchievementUnlockDialog({
+    required this.event,
+    super.key,
+    this.onShare,
+    this.onClose,
+  });
+
+  final AchievementUnlockEvent event;
+  final VoidCallback? onShare;
+  final VoidCallback? onClose;
+
+  @override
+  State<AchievementUnlockDialog> createState() => _AchievementUnlockDialogState();
+
+  /// 显示成就解锁弹窗
+  static Future<void> show(
+    BuildContext context,
+    AchievementUnlockEvent event, {
+    VoidCallback? onShare,
+    bool barrierDismissible = true,
+  }) {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      barrierLabel: 'Achievement Unlock',
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      transitionDuration: const Duration(milliseconds: 600),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return AchievementUnlockDialog(
+          event: event,
+          onShare: onShare,
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return _AchievementUnlockTransition(
+          animation: animation,
+          rarity: event.rarity,
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late AnimationController _rotateController;
+  late AnimationController _particleController;
+  late AnimationController _glowController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotateAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimations();
+  }
+
+  void _initAnimations() {
+    // 缩放动画
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _scaleController,
+        curve: Curves.elasticOut,
+      ),
+    );
+    _scaleController.forward();
+
+    // 旋转动画
+    _rotateController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+    _rotateAnimation = Tween<double>(begin: 0, end: 2 * math.pi).animate(
+      _rotateController,
+    );
+
+    // 粒子动画
+    _particleController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    // 光晕动画
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _glowController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // 根据稀有度启动不同动画
+    _startRarityAnimations();
+  }
+
+  void _startRarityAnimations() {
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        // 简单淡入，无特殊效果
+        break;
+      case AchievementRarity.rare:
+        // 金色光晕 + 缓慢旋转
+        _glowController.repeat(reverse: true);
+        break;
+      case AchievementRarity.epic:
+        // 紫色脉动光圈 + 扩散波纹
+        _glowController.repeat(reverse: true);
+        _particleController.repeat();
+        break;
+      case AchievementRarity.legendary:
+        // 彩虹粒子爆炸 + 屏幕震动效果
+        _rotateController.repeat();
+        _particleController.repeat();
+        _glowController.repeat(reverse: true);
+
+        // 屏幕震动
+        if (mounted) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              _triggerScreenShake();
+            }
+          });
+        }
+        break;
+    }
+  }
+
+  void _triggerScreenShake() {
+    // 震动反馈
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        // 普通成就无需震动，或仅使用极轻微震动
+        break;
+      case AchievementRarity.rare:
+        HapticFeedback.lightImpact();
+        break;
+      case AchievementRarity.epic:
+        HapticFeedback.mediumImpact();
+        break;
+      case AchievementRarity.legendary:
+        HapticFeedback.heavyImpact();
+        // 传说级额外震动
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) HapticFeedback.heavyImpact();
+        });
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _rotateController.dispose();
+    _particleController.dispose();
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rarity = widget.event.rarity;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 背景特效
+          if (rarity != AchievementRarity.common)
+            _buildBackgroundEffects(),
+
+          // 主内容
+          _buildContent(),
+
+          // 粒子效果
+          if (rarity == AchievementRarity.rare ||
+              rarity == AchievementRarity.epic ||
+              rarity == AchievementRarity.legendary)
+            _buildParticleOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final rarity = widget.event.rarity;
+    final colors = _getRarityColors();
+
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(DS.spacing24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.primary.withValues(alpha: 0.95),
+            colors.secondary.withValues(alpha: 0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colors.border,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.glow,
+            blurRadius: 32,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 稀有度徽章
+          RarityBadge(rarity: rarity),
+          const SizedBox(height: DS.spacing16),
+
+          // 成就图标
+          _buildIconContainer(),
+          const SizedBox(height: DS.spacing16),
+
+          // 成就名称
+          Text(
+            widget.event.name,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: DS.fontSizeXl,
+              fontWeight: DS.fontWeightBold,
+              color: colors.text,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+
+          // 解锁文本
+          Text(
+            _getUnlockText(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: DS.fontSizeBase,
+              color: colors.text.withValues(alpha: 0.8),
+            ),
+          ),
+
+          // 解锁时间
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+            child: Text(
+              _formatTime(widget.event.unlockedAt),
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: colors.text.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+
+          // 首次解锁标记
+          if (widget.event.isFirst)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.3),
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: Colors.amber,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    size: DS.iconSizeSm,
+                    color: Colors.amber,
+                  ),
+                  const SizedBox(width: DS.spacing4),
+                  Text(
+                    '首位解锁者！',
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightBold,
+                      color: Colors.amber.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: DS.spacing20),
+
+          // 操作按钮
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.close,
+                  label: '关闭',
+                  isPrimary: false,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onClose?.call();
+                  },
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.share,
+                  label: '分享',
+                  isPrimary: true,
+                  onPressed: () {
+                    widget.onShare?.call();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconContainer() {
+    final rarity = widget.event.rarity;
+    final colors = _getRarityColors();
+
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: AnimatedBuilder(
+            animation: _rotateAnimation,
+            builder: (context, child) {
+              final shouldRotate = rarity == AchievementRarity.legendary;
+              return Transform.rotate(
+                angle: shouldRotate ? _rotateAnimation.value * 0.1 : 0,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        colors.primary,
+                        colors.secondary,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.glow,
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _glowAnimation,
+                    builder: (context, child) {
+                      return Container(
+                        margin: EdgeInsets.all(4 * _glowAnimation.value),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.background,
+                        ),
+                        child: Icon(
+                          _getIconForRarity(),
+                          size: 50,
+                          color: colors.icon,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBackgroundEffects() {
+    final rarity = widget.event.rarity;
+
+    switch (rarity) {
+      case AchievementRarity.rare:
+        return _buildGlowingRings();
+      case AchievementRarity.epic:
+        return _buildPulsingWaves();
+      case AchievementRarity.legendary:
+        return _buildRainbowExplosion();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildGlowingRings() {
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return Container(
+          width: 360,
+          height: 360,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.amber.withValues(alpha: 0.3 * _glowAnimation.value),
+              width: 2,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPulsingWaves() {
+    return AnimatedBuilder(
+      animation: _particleController,
+      builder: (context, child) {
+        return Container(
+          width: 400,
+          height: 400,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.purple.withValues(
+                alpha: 0.2 * (1 - _particleController.value),
+              ),
+              width: 3,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRainbowExplosion() {
+    return AnimatedBuilder(
+      animation: _particleController,
+      builder: (context, child) {
+        final progress = _particleController.value;
+        return CustomPaint(
+          size: const Size(400, 400),
+          painter: _RainbowExplosionPainter(progress),
+        );
+      },
+    );
+  }
+
+  Widget _buildParticleOverlay() {
+    return Positioned.fill(
+      child: CustomPaint(
+        painter: _ParticlePainter(
+          rarity: widget.event.rarity,
+          animation: _particleController,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required bool isPrimary,
+    required VoidCallback onPressed,
+  }) {
+    final colors = _getRarityColors();
+
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: DS.spacing12,
+        ),
+        decoration: BoxDecoration(
+          color: isPrimary ? colors.primary.withValues(alpha: 0.8) : null,
+          border: Border.all(
+            color: colors.border,
+            width: 1.5,
+          ),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: DS.iconSizeSm,
+              color: colors.text,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                fontWeight: DS.fontWeightMedium,
+                color: colors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _RarityColors _getRarityColors() {
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        return _RarityColors(
+          primary: DS.neutral200,
+          secondary: DS.neutral300,
+          border: DS.neutral400,
+          glow: DS.neutral400.withValues(alpha: 0.3),
+          text: DS.neutral800,
+          background: Colors.white,
+          icon: DS.neutral600,
+        );
+      case AchievementRarity.rare:
+        return _RarityColors(
+          primary: const Color(0xFFFFD700),
+          secondary: const Color(0xFFFFA500),
+          border: const Color(0xFFFFD700),
+          glow: const Color(0xFFFFD700).withValues(alpha: 0.5),
+          text: const Color(0xFFB8860B),
+          background: Colors.white.withValues(alpha: 0.9),
+          icon: const Color(0xFFB8860B),
+        );
+      case AchievementRarity.epic:
+        return _RarityColors(
+          primary: const Color(0xFF9B59B6),
+          secondary: const Color(0xFF8E44AD),
+          border: const Color(0xFF9B59B6),
+          glow: const Color(0xFF9B59B6).withValues(alpha: 0.6),
+          text: Colors.white,
+          background: Colors.white.withValues(alpha: 0.95),
+          icon: Colors.white,
+        );
+      case AchievementRarity.legendary:
+        return _RarityColors(
+          primary: const Color(0xFFFF6B6B),
+          secondary: const Color(0xFF4D96FF),
+          border: const Color(0xFFFFD93D),
+          glow: const Color(0xFFFFD93D).withValues(alpha: 0.7),
+          text: Colors.white,
+          background: Colors.white.withValues(alpha: 0.95),
+          icon: Colors.white,
+        );
+    }
+  }
+
+  IconData _getIconForRarity() {
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        return Icons.military_tech;
+      case AchievementRarity.rare:
+        return Icons.stars;
+      case AchievementRarity.epic:
+        return Icons.auto_awesome;
+      case AchievementRarity.legendary:
+        return Icons.diamond;
+    }
+  }
+
+  String _getUnlockText() {
+    switch (widget.event.rarity) {
+      case AchievementRarity.common:
+        return '成就解锁！';
+      case AchievementRarity.rare:
+        return '稀有成就解锁！';
+      case AchievementRarity.epic:
+        return '史诗成就解锁！';
+      case AchievementRarity.legendary:
+        return '传说成就解锁！';
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+
+    if (diff.inSeconds < 60) {
+      return '刚刚';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} 分钟前';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} 小时前';
+    } else {
+      return '${time.month}月${time.day}日 ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    }
+  }
+}
+
+/// 成就解锁转场动画
+class _AchievementUnlockTransition extends StatelessWidget {
+  const _AchievementUnlockTransition({
+    required this.animation,
+    required this.rarity,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final AchievementRarity rarity;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // 根据稀有度使用不同的动画曲线
+    final curve = _getCurveForRarity();
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: curve,
+    );
+
+    // 根据稀有度添加额外的动画效果
+    switch (rarity) {
+      case AchievementRarity.common:
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: ScaleTransition(
+            scale: curvedAnimation,
+            child: child,
+          ),
+        );
+      case AchievementRarity.rare:
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.5, end: 1.0).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: child,
+          ),
+        );
+      case AchievementRarity.epic:
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: RotationTransition(
+            turns: Tween<double>(begin: -0.05, end: 0).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.3, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.elasticOut,
+                ),
+              ),
+              child: child,
+            ),
+          ),
+        );
+      case AchievementRarity.legendary:
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.1, end: 1.0).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.elasticOut,
+              ),
+            ),
+            child: child,
+          ),
+        );
+    }
+  }
+
+  Curve _getCurveForRarity() {
+    switch (rarity) {
+      case AchievementRarity.common:
+        return Curves.easeOut;
+      case AchievementRarity.rare:
+        return Curves.easeOutBack;
+      case AchievementRarity.epic:
+        return Curves.elasticOut;
+      case AchievementRarity.legendary:
+        return Curves.elasticOut;
+    }
+  }
+}
+
+/// 稀有度颜色配置
+class _RarityColors {
+  _RarityColors({
+    required this.primary,
+    required this.secondary,
+    required this.border,
+    required this.glow,
+    required this.text,
+    required this.background,
+    required this.icon,
+  });
+
+  final Color primary;
+  final Color secondary;
+  final Color border;
+  final Color glow;
+  final Color text;
+  final Color background;
+  final Color icon;
+}
+
+/// 粒子绘制器
+class _ParticlePainter extends CustomPainter {
+  _ParticlePainter({
+    required this.rarity,
+    required this.animation,
+  });
+
+  final AchievementRarity rarity;
+    final Animation<double> animation;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (rarity == AchievementRarity.common) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final progress = animation.value;
+    final random = math.Random(42); // 固定种子保证一致性
+
+    final particleCount = rarity == AchievementRarity.legendary ? 50 : 20;
+    final baseColor = _getParticleBaseColor();
+
+    for (int i = 0; i < particleCount; i++) {
+      final angle = (i / particleCount) * 2 * math.pi + progress * 0.5;
+      final distance = 50 + progress * 150;
+      final x = center.dx + math.cos(angle) * distance;
+      final y = center.dy + math.sin(angle) * distance;
+
+      final particleSize = rarity == AchievementRarity.legendary
+          ? (4 + random.nextDouble() * 4) * (1 - progress * 0.5)
+          : 3.0;
+
+      final paint = Paint()
+        ..color = baseColor.withValues(
+          alpha: (0.6 * (1 - progress * 0.8)),
+        )
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(Offset(x, y), particleSize, paint);
+    }
+  }
+
+  Color _getParticleBaseColor() {
+    switch (rarity) {
+      case AchievementRarity.rare:
+        return const Color(0xFFFFD700);
+      case AchievementRarity.epic:
+        return const Color(0xFF9B59B6);
+      case AchievementRarity.legendary:
+        return const Color(0xFFFFD93D);
+      default:
+        return DS.neutral400;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) =>
+      oldDelegate.animation.value != animation.value;
+}
+
+/// 彩虹爆炸绘制器
+class _RainbowExplosionPainter extends CustomPainter {
+  _RainbowExplosionPainter(this.progress);
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final colors = [
+      const Color(0xFFFF6B6B),
+      const Color(0xFFFFD93D),
+      const Color(0xFF6BCB77),
+      const Color(0xFF4D96FF),
+    ];
+
+    for (int i = 0; i < colors.length; i++) {
+      final radius = 80 + progress * 120 + i * 30;
+      final paint = Paint()
+        ..color = colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+
+      canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RainbowExplosionPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}

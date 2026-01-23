@@ -153,6 +153,24 @@ class ResponseFeedbackService:
         tuning = BudgetTuningService(self.db)
         await tuning.apply_feedback(pack_run.intent, reasons, score)
 
+        # 推断用户偏好
+        try:
+            from app.services.personalization.preference_inference_service import PreferenceInferenceService
+            inference_service = PreferenceInferenceService(self.db, self.redis)
+            normalized_reasons = self.normalize_reasons([int(r) for r in reasons] if reasons else [])
+
+            result = await inference_service.process_feedback(
+                user_id=user_id,
+                feedback_type=feedback_type,
+                reasons=normalized_reasons,
+                metadata=meta
+            )
+
+            if result.get("changes"):
+                logger.info(f"Preference inference applied: {result['changes']}")
+        except Exception as e:
+            logger.warning(f"Failed to apply preference inference: {e}")
+
     async def _resolve_pack_run(
         self,
         user_id: uuid.UUID,

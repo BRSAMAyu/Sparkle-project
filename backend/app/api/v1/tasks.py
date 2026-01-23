@@ -354,6 +354,32 @@ async def complete_task(
     except Exception as e:
         logger.warning(f"Failed to generate next actions: {e}")
 
+    # ========== Achievement Integration ==========
+    unlocked_achievements = []
+    try:
+        from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+        achievement_engine = AchievementEngine(db)
+        unlocked = await achievement_engine.process_event(
+            user_id=str(current_user.id),
+            event_type=AchievementEvent.TASK_COMPLETED,
+            task_id=str(task.id),
+            actual_minutes=request.actual_minutes or task.estimated_minutes or 15,
+            estimated_minutes=task.estimated_minutes,
+            difficulty=task.difficulty if hasattr(task, 'difficulty') else None,
+        )
+
+        if unlocked:
+            unlocked_achievements = unlocked
+            next_actions.append({
+                "type": "achievement_unlocked",
+                "achievements": unlocked
+            })
+            logger.info(f"User {current_user.id} unlocked {len(unlocked)} achievements on task completion")
+    except Exception as e:
+        logger.warning(f"Achievement processing failed: {e}")
+    # ============================================
+
     # 返回数据
     return {
         "success": True,
@@ -372,6 +398,7 @@ async def complete_task(
             "feedback": feedback.get("content"),
             "plan_update": plan_update_result,
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
+            "unlocked_achievements": unlocked_achievements,
         },
         "next_actions": [action.model_dump() for action in next_actions],
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
