@@ -3,7 +3,7 @@ Tasks API Endpoints
 """
 from typing import Dict, Any, List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException, Path, Header, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc, func
@@ -34,6 +34,8 @@ async def list_tasks(
     type: Optional[TaskType] = Query(None, description="Filter by type"),
     plan_id: Optional[UUID] = Query(None, description="Filter by plan ID"),
     tags: Optional[List[str]] = Query(None, description="Filter by tags"),
+    due_date_start: Optional[date] = Query(None, description="Filter by due date start (inclusive)"),
+    due_date_end: Optional[date] = Query(None, description="Filter by due date end (inclusive)"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size"),
     current_user: User = Depends(get_current_user),
@@ -53,6 +55,10 @@ async def list_tasks(
         query = query.where(Task.plan_id == plan_id)
     if tags:
         pass # Tag filtering implementation pending DB specific JSON operators
+    if due_date_start:
+        query = query.where(Task.due_date >= due_date_start)
+    if due_date_end:
+        query = query.where(Task.due_date <= due_date_end)
 
     # Order by created_at desc
     query = query.order_by(desc(Task.created_at))
@@ -87,7 +93,7 @@ async def create_task(
     Create a new task
     """
     task = await TaskService.create(db, task_in, current_user.id)
-    
+
     if generate_guide and not task.guide_content:
         # Call guide generation service
         guide = await task_guide_service.generate_guide(task, current_user, db)
@@ -95,8 +101,22 @@ async def create_task(
         db.add(task)
         await db.commit()
         await db.refresh(task)
-    
-    return {"data": TaskDetail.model_validate(task)}
+
+    # Get Nudge suggestions based on user behavior patterns
+    nudges = []
+    try:
+        nudge_service = IntelligentTaskService(db)
+        nudges = await nudge_service.get_task_nudges(
+            db, current_user.id,
+            {"estimated_minutes": task_in.estimated_minutes, **task_in.model_dump()}
+        )
+    except Exception as e:
+        logger.warning(f"Failed to get task nudges: {e}")
+
+    return {
+        "data": TaskDetail.model_validate(task),
+        "nudges": nudges
+    }
 
 @router.post("/suggestions", response_model=TaskSuggestionResponse)
 async def get_task_suggestions(
@@ -322,6 +342,18 @@ async def complete_task(
             "next_review_at": next_review_at,
         }
 
+    # Generate Next Steps
+    next_actions = []
+    try:
+        from app.services.next_step_service import next_step_service
+        next_actions = await next_step_service.suggest_next_actions(
+            completed_task=task,
+            user=current_user,
+            db=db
+        )
+    except Exception as e:
+        logger.warning(f"Failed to generate next actions: {e}")
+
     # 返回数据
     return {
         "success": True,
@@ -341,6 +373,7 @@ async def complete_task(
             "plan_update": plan_update_result,
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
         },
+        "next_actions": [action.model_dump() for action in next_actions],
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
         "retry_token": x_idempotency_key or "generated-token"
     }

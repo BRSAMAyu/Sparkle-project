@@ -41,8 +41,26 @@ class CognitiveService:
         source_event_id: Optional[str] = None,
         persona_version: Optional[str] = None
     ) -> CognitiveFragment:
-        """Create a new cognitive fragment and generate its embedding."""
-        
+        """
+        Create a new cognitive fragment and generate its embedding.
+
+        Idempotency: If source_event_id is provided and a fragment with the same
+        source_event_id already exists, the existing fragment is returned instead
+        of creating a duplicate.
+        """
+        # Idempotency check: If source_event_id is provided, check for existing fragment
+        if source_event_id:
+            existing_stmt = select(CognitiveFragment).where(
+                CognitiveFragment.user_id == user_id,
+                CognitiveFragment.source_event_id == source_event_id
+            )
+            existing_result = await self.db.execute(existing_stmt)
+            existing_fragment = existing_result.scalar_one_or_none()
+
+            if existing_fragment:
+                logger.info(f"Fragment with source_event_id {source_event_id} already exists, returning existing fragment {existing_fragment.id}")
+                return existing_fragment
+
         # 1. Create Fragment Object
         fragment = CognitiveFragment(
             id=fragment_id or uuid4(),
@@ -60,9 +78,9 @@ class CognitiveService:
             analysis_status=AnalysisStatus.PENDING,
             created_at=datetime.utcnow()
         )
-        
+
         logger.info(f"Creating fragment {fragment.id} for user {user_id}: {self._sanitize_content(content)}")
-        
+
         # 2. Generate Embedding
         try:
             embedding = await embedding_service.get_embedding(content)
@@ -70,11 +88,11 @@ class CognitiveService:
         except Exception as e:
             logger.error(f"Failed to generate embedding for fragment: {e}")
             # We continue without embedding, but RAG won't work for this item until updated
-        
+
         self.db.add(fragment)
         await self.db.commit()
         await self.db.refresh(fragment)
-        
+
         return fragment
 
     async def _generate_hyde_document(self, content: str) -> Optional[str]:

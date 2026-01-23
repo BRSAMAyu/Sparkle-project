@@ -19,6 +19,8 @@ from app.core.cache import cache_service
 from app.core.pending_actions import pending_actions_store
 from app.services.user_service import UserService
 from app.services.preference_event_consumer import PreferenceEventConsumer
+from app.services.galaxy_event_consumer import GalaxyEventConsumer
+from app.services.task_event_consumer import TaskEventConsumer
 from app.core.access_control import verify_token
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
@@ -91,6 +93,21 @@ async def lifespan(app: FastAPI):
         preference_consumer_task = asyncio.create_task(consumer.start())
         app.state.preference_consumer_task = preference_consumer_task
 
+    # Start Galaxy event consumer
+    galaxy_consumer_task = None
+    if cache_service.redis:
+        from app.core.event_bus import event_bus
+        galaxy_consumer = GalaxyEventConsumer(event_bus=event_bus)
+        galaxy_consumer_task = asyncio.create_task(galaxy_consumer.start())
+        app.state.galaxy_consumer_task = galaxy_consumer_task
+
+    # Start Task event consumer
+    task_consumer_task = None
+    if cache_service.redis:
+        task_consumer = TaskEventConsumer(event_bus=event_bus)
+        task_consumer_task = asyncio.create_task(task_consumer.start())
+        app.state.task_consumer_task = task_consumer_task
+
     async with AsyncSessionLocal() as db:
         try:
             # 0. 初始化数据库数据
@@ -137,6 +154,20 @@ async def lifespan(app: FastAPI):
         preference_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await preference_consumer_task
+
+    # Stop galaxy event consumer
+    galaxy_consumer_task = getattr(app.state, "galaxy_consumer_task", None)
+    if galaxy_consumer_task:
+        galaxy_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await galaxy_consumer_task
+
+    # Stop task event consumer
+    task_consumer_task = getattr(app.state, "task_consumer_task", None)
+    if task_consumer_task:
+        task_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task_consumer_task
 
     # Close Cache
     await cache_service.close()
