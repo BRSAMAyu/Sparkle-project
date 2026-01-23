@@ -6,8 +6,9 @@ import json
 from uuid import UUID
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
 
-from app.core.llm_client import llm_client
+from app.config import settings
 from app.services.galaxy_service import GalaxyService
 from app.schemas.task import TaskSuggestionResponse, SuggestedNode
 
@@ -16,6 +17,53 @@ class IntelligentTaskService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.galaxy_service = GalaxyService(db)
+
+    async def get_task_nudges(self, db: AsyncSession, user_id: UUID,
+                              task_data: dict) -> List[dict]:
+        """
+        获取任务创建时的 Nudge 建议
+
+        Args:
+            db: Database session
+            user_id: User ID
+            task_data: Task data including estimated_minutes, etc.
+
+        Returns:
+            List of nudge suggestions
+        """
+        nudges = []
+
+        # 1. 检查规划乐观偏差模式
+        from app.services.cognitive_service import CognitiveService
+        cognitive_service = CognitiveService(db)
+        patterns = await cognitive_service.get_user_patterns(user_id, min_confidence=0.6)
+
+        for pattern in patterns:
+            if "optimism" in pattern.pattern_name.lower() or "planning" in pattern.pattern_name.lower():
+                estimated = task_data.get("estimated_minutes")
+                if estimated:
+                    # 建议增加时间缓冲
+                    suggested = int(estimated * 1.3)
+                    nudges.append({
+                        "type": "time_adjustment",
+                        "title": "检测到规划乐观偏差",
+                        "message": f"根据您的历史行为模式，建议将预估时间调整为 {suggested} 分钟",
+                        "suggested_value": suggested,
+                        "pattern_id": str(pattern.id),
+                        "confidence": pattern.confidence_score
+                    })
+
+            # 检查任务放弃模式
+            if "abandon" in pattern.pattern_name.lower() or "procrastination" in pattern.pattern_name.lower():
+                nudges.append({
+                    "type": "start_now",
+                    "title": "避免任务放弃",
+                    "message": "根据历史数据，建议立即开始任务以降低放弃风险",
+                    "pattern_id": str(pattern.id),
+                    "confidence": pattern.confidence_score
+                })
+
+        return nudges
 
     async def get_suggestions(
         self, 
@@ -73,6 +121,7 @@ class IntelligentTaskService:
     async def _recognize_intent(self, input_text: str) -> dict:
         """
         Internal method to call LLM for intent recognition.
+        Uses Xiaomi MIMO model for fast response.
         """
         prompt = f"""你是一个智能学习助手。请分析用户想要创建的任务意图，并提供相关的知识点和关键词建议。
 
@@ -88,17 +137,40 @@ class IntelligentTaskService:
 }}
 """
         try:
-            response = await llm_client.chat_completion(
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"}
-            )
-            return json.loads(response)
-        except Exception:
-            # Fallback
-            return {{
+            # 使用 MIMO 模型进行快速意图识别
+            headers = {
+                "Authorization": f"Bearer {settings.XIAOMI_MIMO_API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "model": settings.XIAOMI_CHAT_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": settings.XIAOMI_TEMPERATURE,
+                "response_format": {"type": "json_object"}
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{settings.XIAOMI_MIMO_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            if "choices" in data and len(data["choices"]) > 0:
+                content = data["choices"][0]["message"]["content"]
+                return json.loads(content)
+            else:
+                raise ValueError(f"Unexpected response format: {data}")
+
+        except Exception as e:
+            # Fallback to default values
+            return {
                 "intent": "日常学习",
                 "keywords": [],
                 "potential_nodes": [],
                 "estimated_minutes": 25,
                 "difficulty": 1
-            }}
+            }

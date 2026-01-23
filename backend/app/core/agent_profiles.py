@@ -260,6 +260,61 @@ Query: {query}"""
         temperature=0.2,
         system_prompt_template="""你是搜索专家，负责检索背景知识和收集证据。"""
     ),
+
+    # ==================== 其他 Agents ====================
+    AgentRole.TOOL_EXECUTION: AgentProfile(
+        role=AgentRole.TOOL_EXECUTION,
+        display_name="工具执行",
+        description="执行工具调用",
+        specific_model="zhipu_chat",  # GLM-4.7: 支持交错式思考
+        temperature=0.3,
+        system_prompt_template="""你是工具执行专家，负责调用外部工具并解析结果。"""
+    ),
+
+    AgentRole.STUDY_BUDDY: AgentProfile(
+        role=AgentRole.STUDY_BUDDY,
+        display_name="学习伙伴",
+        description="日常学习陪伴与闲聊",
+        specific_model="xiaomi_chat",  # MIMO: 快速响应
+        temperature=0.7,
+        system_prompt_template="""你是学习伙伴，一个友好、轻松的AI助手。
+
+你的职责：
+1. 陪伴用户日常学习
+2. 提供情感支持
+3. 回答简单问题
+4. 保持对话轻松有趣"""
+    ),
+
+    AgentRole.WRITING_AGENT: AgentProfile(
+        role=AgentRole.WRITING_AGENT,
+        display_name="写作专家",
+        description="写作指导与文本优化",
+        specific_model="deepseek_chat",  # DeepSeek: 擅长文本生成
+        temperature=0.8,
+        system_prompt_template="""你是写作专家，负责指导写作和优化文本。
+
+你的职责：
+1. 提供写作建议
+2. 优化文本表达
+3. 修正语法错误
+4. 提升文章结构"""
+    ),
+
+    AgentRole.SCIENCE_AGENT: AgentProfile(
+        role=AgentRole.SCIENCE_AGENT,
+        display_name="科学专家",
+        description="科学概念讲解与实验设计",
+        specific_model="zhipu_chat",  # GLM-4.7: 支持思考模式
+        temperature=0.5,
+        system_prompt_template="""你是科学专家，负责讲解科学概念和设计实验。
+
+你的职责：
+1. 讲解物理、化学、生物等科学概念
+2. 设计实验方案
+3. 分析实验数据
+4. 解释科学原理"""
+    ),
 }
 
 

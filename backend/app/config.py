@@ -191,6 +191,7 @@ class Settings(BaseSettings):
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_CHAT_MODEL: str = "glm-4.7"
     ZHIPU_TOOLS_MODEL: str = "glm-4.7"
+    ZHIPU_FLASH_MODEL: str = "glm-4.7-flashx"  # 快速响应模型
     ZHIPU_TEMPERATURE: float = 0.3
 
     # SiliconFlow (for DeepSeek OCR)
@@ -203,6 +204,7 @@ class Settings(BaseSettings):
     HUNYUAN_BASE_URL: str = "https://api.siliconflow.cn/v1"
     HUNYUAN_CHAT_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
     HUNYUAN_REASON_MODEL: str = "tencent/Hunyuan-A13B-Instruct"
+    HUNYUAN_TRANSLATE_MODEL: str = "tencent/Hunyuan-MT-7B"
 
     # Embedding Service
     EMBEDDING_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
@@ -259,6 +261,13 @@ class Settings(BaseSettings):
     INTERVENTION_QUIET_HOURS_START: str = "22:00"
     INTERVENTION_QUIET_HOURS_END: str = "07:00"
     INTERVENTION_BUDGET_TTL_SECONDS: int = 86400
+
+    # Next Step Recommendation Settings
+    NEXT_STEP_FATIGUE_HIGH_THRESHOLD: float = 1.5  # 高疲劳阈值
+    NEXT_STEP_FATIGUE_EXTREME_THRESHOLD: float = 2.0  # 极度疲劳阈值
+    NEXT_STEP_MAX_RECOMMENDATIONS: int = 3  # 最多推荐数量
+    NEXT_STEP_DEFAULT_DURATION: int = 15  # 默认推荐时长
+    NEXT_STEP_DEFAULT_ENERGY: int = 2  # 默认精力消耗
 
     # Feature Flags
     USE_CONTEXT_PACK: bool = False

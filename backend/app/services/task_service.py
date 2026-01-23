@@ -134,6 +134,23 @@ class TaskService:
             except Exception as exc:
                 logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
+        # Publish task completion event for cognitive analysis
+        from app.core.event_bus import event_bus, TaskCompleted
+
+        estimated = db_obj.estimated_minutes or 0
+        completion_rate = actual_minutes / estimated if estimated > 0 else 1.0
+
+        event = TaskCompleted(
+            user_id=str(db_obj.user_id),
+            task_id=str(db_obj.id),
+            estimated_minutes=estimated,
+            actual_minutes=actual_minutes,
+            difficulty=db_obj.difficulty or 1,
+            completion_rate=completion_rate,
+            user_note=note
+        )
+        await event_bus.publish("task.completed", event.to_dict())
+
         return db_obj
 
     @staticmethod
@@ -155,10 +172,27 @@ class TaskService:
         db_obj.completed_at = datetime.utcnow() # using completed_at for end time
         if reason:
             db_obj.user_note = f"Abandoned: {reason}"
-            
+
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Publish task abandonment event for cognitive analysis
+        from app.core.event_bus import event_bus, TaskAbandoned
+
+        time_spent = None
+        if db_obj.started_at:
+            time_spent = int((datetime.utcnow() - db_obj.started_at).total_seconds() / 60)
+
+        event = TaskAbandoned(
+            user_id=str(db_obj.user_id),
+            task_id=str(db_obj.id),
+            reason=reason,
+            estimated_minutes=db_obj.estimated_minutes,
+            time_spent=time_spent
+        )
+        await event_bus.publish("task.abandoned", event.to_dict())
+
         return db_obj
 
     @staticmethod

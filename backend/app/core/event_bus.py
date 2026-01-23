@@ -66,6 +66,53 @@ class ErrorCreated(Event):
             "timestamp": self.timestamp.isoformat()
         }
 
+class TaskCompleted(Event):
+    def __init__(self, user_id: str, task_id: str, estimated_minutes: int,
+                 actual_minutes: int, difficulty: int, completion_rate: float,
+                 user_note: Optional[str] = None):
+        self.user_id = user_id
+        self.task_id = task_id
+        self.estimated_minutes = estimated_minutes
+        self.actual_minutes = actual_minutes
+        self.difficulty = difficulty
+        self.completion_rate = completion_rate
+        self.user_note = user_note
+        self.timestamp = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            "event_type": "task.completed",
+            "user_id": self.user_id,
+            "task_id": self.task_id,
+            "estimated_minutes": self.estimated_minutes,
+            "actual_minutes": self.actual_minutes,
+            "difficulty": self.difficulty,
+            "completion_rate": self.completion_rate,
+            "user_note": self.user_note,
+            "timestamp": self.timestamp.isoformat()
+        }
+
+class TaskAbandoned(Event):
+    def __init__(self, user_id: str, task_id: str, reason: Optional[str] = None,
+                 estimated_minutes: Optional[int] = None, time_spent: Optional[int] = None):
+        self.user_id = user_id
+        self.task_id = task_id
+        self.reason = reason
+        self.estimated_minutes = estimated_minutes
+        self.time_spent = time_spent
+        self.timestamp = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            "event_type": "task.abandoned",
+            "user_id": self.user_id,
+            "task_id": self.task_id,
+            "reason": self.reason,
+            "estimated_minutes": self.estimated_minutes,
+            "time_spent": self.time_spent,
+            "timestamp": self.timestamp.isoformat()
+        }
+
 class EventBus:
     """
     Event Bus - Redis Streams Implementation

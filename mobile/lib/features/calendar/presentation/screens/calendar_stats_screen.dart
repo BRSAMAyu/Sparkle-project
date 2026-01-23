@@ -11,6 +11,23 @@ import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uuid/uuid.dart';
 
+// Import task calendar provider
+import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart'
+    show
+        TaskDaySummary,
+        taskCalendarProvider,
+        TaskCalendarNotifier;
+
+// Import drag and drop components
+import 'package:sparkle/shared/widgets/draggable_task_card.dart'
+    show CalendarDayDragTarget;
+
+// Import task provider for updating tasks
+import 'package:sparkle/features/task/data/models/task_create.dart' show TaskUpdate;
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
+    show taskListProvider;
+import 'package:sparkle/shared/entities/task_model.dart';
+
 enum CalendarViewMode { month, twoWeeks, year }
 
 class CalendarStatsScreen extends ConsumerStatefulWidget {
@@ -31,6 +48,45 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    // Load task summaries for the initial month
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(taskCalendarProvider.notifier).loadTasksForMonth(_focusedDay);
+    });
+  }
+
+  /// Handle dropping a task on a calendar date
+  Future<void> _handleTaskDropped(TaskModel task, DateTime newDueDate) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: DS.surfaceBase,
+        title: Text('设置任务截止日期', style: TextStyle(color: DS.brandPrimary)),
+        content: Text(
+          '将「${task.title}」设为${newDueDate.month}月${newDueDate.day}日到期?',
+          style: TextStyle(color: DS.brandPrimary70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('取消', style: TextStyle(color: DS.brandPrimary54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('确认', style: TextStyle(color: DS.primaryBase)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Update the task with new due date
+      final taskUpdate = TaskUpdate(dueDate: newDueDate);
+      await ref.read(taskListProvider.notifier).updateTask(task.id, taskUpdate);
+
+      // Refresh task summaries for the current month
+      ref.read(taskCalendarProvider.notifier).loadTasksForMonth(_focusedDay);
+    }
   }
 
   CalendarFormat get _tableCalendarFormat {
@@ -282,6 +338,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         },
         onPageChanged: (focusedDay) {
           _focusedDay = focusedDay;
+          // Load task summaries for the new month
+          ref.read(taskCalendarProvider.notifier).loadTasksForMonth(focusedDay);
         },
         eventLoader: (day) => notifier.getEventsForDay(day),
         calendarStyle: CalendarStyle(
@@ -306,12 +364,14 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
         calendarBuilders: CalendarBuilders(
           markerBuilder: (context, date, events) {
-            if (events.isEmpty) return null;
-            return Positioned(
-              bottom: 1,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: events
+            final taskSummaries = ref.watch(taskCalendarProvider).taskSummaries;
+            final normalizedDate = DateTime(date.year, date.month, date.day);
+            final taskSummary = taskSummaries[normalizedDate];
+
+            // Show calendar events
+            final eventMarkers = events.isEmpty
+                ? <Widget>[]
+                : events
                     .take(3)
                     .map(
                       (event) => Container(
@@ -324,16 +384,108 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         ),
                       ),
                     )
-                    .toList(),
+                    .toList();
+
+            // Show task markers
+            final List<Widget> taskMarkers = [];
+            if (taskSummary != null && taskSummary.hasTasks) {
+              final today = DateTime.now();
+              final isToday = date.year == today.year &&
+                  date.month == today.month &&
+                  date.day == today.day;
+
+              // Determine color based on task status
+              Color markerColor;
+              if (taskSummary.overdue > 0) {
+                markerColor = const Color(0xFFFF5252); // Red for overdue
+              } else if (isToday) {
+                markerColor = const Color(0xFF2196F3); // Blue for today
+              } else {
+                markerColor = const Color(0xFF757575); // Gray for future
+              }
+
+              // Add dot or number badge
+              if (taskSummary.total >= 4) {
+                // Show number badge for 4+ tasks
+                taskMarkers.add(
+                  Positioned(
+                    bottom: 1,
+                    right: 1,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: markerColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 12,
+                      ),
+                      child: Text(
+                        '${taskSummary.total}',
+                        style: TextStyle(
+                          color: DS.brandPrimary,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                );
+              } else {
+                // Show dots for 1-3 tasks
+                for (int i = 0; i < taskSummary.total && i < 3; i++) {
+                  taskMarkers.add(
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1.0),
+                      width: 5.0,
+                      height: 5.0,
+                      decoration: BoxDecoration(
+                        color: markerColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  );
+                }
+              }
+            }
+
+            // Combine events and task markers
+            final allMarkers = [...eventMarkers, ...taskMarkers];
+            if (allMarkers.isEmpty) return null;
+
+            return Positioned(
+              bottom: 1,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: allMarkers,
               ),
             );
           },
-          defaultBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, false),
-          todayBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, true),
-          selectedBuilder: (context, day, focusedDay) =>
-              _buildCalendarCell(day, false, isSelected: true),
+          defaultBuilder: (context, day, focusedDay) {
+            return CalendarDayDragTarget(
+              date: day,
+              onTaskDropped: _handleTaskDropped,
+              child: _buildCalendarCell(day, false),
+            );
+          },
+          todayBuilder: (context, day, focusedDay) {
+            return CalendarDayDragTarget(
+              date: day,
+              onTaskDropped: _handleTaskDropped,
+              child: _buildCalendarCell(day, true),
+            );
+          },
+          selectedBuilder: (context, day, focusedDay) {
+            return CalendarDayDragTarget(
+              date: day,
+              onTaskDropped: _handleTaskDropped,
+              child: _buildCalendarCell(day, false, isSelected: true),
+            );
+          },
         ),
       );
 

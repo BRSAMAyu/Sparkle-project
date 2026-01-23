@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, TaskReminderConfig, taskReminderConfigProvider;
 
 // A dummy filter class for now
 class TaskFilter {}
@@ -47,13 +48,16 @@ class TaskListState {
 
 // 2. TaskNotifier Class
 class TaskNotifier extends StateNotifier<TaskListState> {
-  TaskNotifier(this._taskRepository) : super(TaskListState()) {
+  TaskNotifier(this._taskRepository, this._notificationScheduler, this._ref)
+      : super(TaskListState()) {
     // Load initial data
     loadTodayTasks();
     loadRecommendedTasks();
     loadTasks();
   }
   final TaskRepository _taskRepository;
+  final TaskNotificationScheduler _notificationScheduler;
+  final Ref _ref;
 
   Future<void> _runWithErrorHandling(Future<void> Function() action) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -89,9 +93,27 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
-  Future<void> createTask(TaskCreate task) async {
+  Future<void> createTask(TaskCreate task, {bool generateGuide = false}) async {
     await _runWithErrorHandling(() async {
-      await _taskRepository.createTask(task);
+      final newTask = await _taskRepository.createTask(
+        task,
+        generateGuide: generateGuide,
+      );
+
+      // Schedule reminders if due date is set
+      if (newTask.dueDate != null) {
+        final config = _ref.read(taskReminderConfigProvider);
+        try {
+          await _notificationScheduler.scheduleTaskReminders(
+            newTask,
+            config: config,
+          );
+        } catch (e) {
+          // Don't fail task creation if notification scheduling fails
+          // Log but continue
+        }
+      }
+
       await refreshTasks();
     });
   }
@@ -99,13 +121,41 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<void> updateTask(String id, TaskUpdate taskUpdate,
       {bool refresh = true,}) async {
     await _runWithErrorHandling(() async {
-      await _taskRepository.updateTask(id, taskUpdate);
+      final updatedTask = await _taskRepository.updateTask(id, taskUpdate);
+
+      // Reschedule reminders if due date changed
+      if (taskUpdate.dueDate != null && updatedTask.dueDate != null) {
+        final config = _ref.read(taskReminderConfigProvider);
+        try {
+          await _notificationScheduler.rescheduleTaskReminders(
+            updatedTask,
+            config: config,
+          );
+        } catch (e) {
+          // Don't fail task update if notification scheduling fails
+        }
+      } else if (taskUpdate.dueDate == null) {
+        // Cancel reminders if due date was removed
+        try {
+          await _notificationScheduler.cancelTaskReminders(id);
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+
       if (refresh) await refreshTasks();
     });
   }
 
   Future<void> deleteTask(String id) async {
     await _runWithErrorHandling(() async {
+      // Cancel reminders before deleting
+      try {
+        await _notificationScheduler.cancelTaskReminders(id);
+      } catch (e) {
+        // Ignore errors
+      }
+
       await _taskRepository.deleteTask(id);
       await refreshTasks();
     });
@@ -123,6 +173,13 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   /// 完成任务 - 乐观更新（v2.1 增强）
   Future<TaskCompletionResult?> completeTask(
       String id, int minutes, String? note,) async {
+    // Cancel reminders when completing task
+    try {
+      await _notificationScheduler.cancelTaskReminders(id);
+    } catch (e) {
+      // Ignore errors
+    }
+
     // 1. 乐观更新 UI
     _updateTask(
       id,
@@ -248,7 +305,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 // 3. Providers
 
 final taskListProvider = StateNotifierProvider<TaskNotifier, TaskListState>(
-    (ref) => TaskNotifier(ref.watch(taskRepositoryProvider)),);
+    (ref) => TaskNotifier(
+      ref.watch(taskRepositoryProvider),
+      ref.watch(taskNotificationSchedulerProvider),
+      ref,
+    ),);
 
 final taskDetailProvider = FutureProvider.family<TaskModel, String>((ref, id) {
   final taskRepo = ref.watch(taskRepositoryProvider);

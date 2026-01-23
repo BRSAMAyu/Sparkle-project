@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/models/translation_record.dart';
+import 'package:sparkle/core/offline/models/vocab_word.dart';
 
 part 'local_database.g.dart';
 
@@ -134,8 +136,23 @@ class LocalDatabase {
         LocalCRDTSnapshotSchema,
         OutboxItemSchema,
         UserAnalyticsEventSchema, // Added for Edge AI
+        TranslationRecordSchema,
+        TranslationWordLinkSchema,
+        VocabWordSchema,
+        VocabReviewSchema,
       ],
       directory: dir.path,
     );
   }
+
+  // Convenience accessors for collections
+  IsarCollection<TranslationRecord> get translationRecords => isar.translationRecords;
+  IsarCollection<TranslationWordLink> get translationWordLinks => isar.translationWordLinks;
+  IsarCollection<VocabWord> get vocabWords => isar.vocabWords;
+  IsarCollection<VocabReview> get vocabReviews => isar.vocabReviews;
+  IsarCollection<LocalKnowledgeNode> get knowledgeNodes => isar.localKnowledgeNodes;
+  IsarCollection<PendingUpdate> get pendingUpdates => isar.pendingUpdates;
+  IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => isar.localCRDTSnapshots;
+  IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
+  IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
 }

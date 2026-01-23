@@ -91,7 +91,7 @@ class _NextActionItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => GestureDetector(
         onTap: () {
           final taskModel = _toTaskModel(task);
-          context.push('/focus/mindfulness/${taskModel.id}');
+          context.push('/tasks/${taskModel.id}/execute');
         },
         child: Container(
           padding: const EdgeInsets.all(DS.sm),
