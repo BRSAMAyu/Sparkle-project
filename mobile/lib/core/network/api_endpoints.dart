@@ -31,6 +31,7 @@ class ApiEndpoints {
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static String taskFeedback(String id) => '/tasks/$id/feedback';
   static const String taskSuggestions = '/tasks/suggestions';
 
   // Subtasks

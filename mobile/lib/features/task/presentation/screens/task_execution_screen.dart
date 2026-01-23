@@ -106,12 +106,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     if (!mounted) return;
 
     if (_completionResult != null) {
+      final task = ref.read(activeTaskProvider);
       // Show feedback dialog
       showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => TaskFeedbackDialog(
           result: _completionResult!,
+          taskId: task?.id ?? '',
           onClose: () {
             Navigator.of(context).pop(); // Close dialog
             context.go(GalaxyRoutes.home); // Navigate away

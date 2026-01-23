@@ -3,6 +3,7 @@
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
 import json
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -644,6 +645,15 @@ async def join_group(
     try:
         await GroupService.join_group(db, group_id, current_user.id)
         await db.commit()
+
+        # Broadcast member joined event
+        await manager.broadcast({
+            "type": "member_joined",
+            "group_id": str(group_id),
+            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -659,6 +669,15 @@ async def leave_group(
     try:
         await GroupService.leave_group(db, group_id, current_user.id)
         await db.commit()
+
+        # Broadcast member left event
+        await manager.broadcast({
+            "type": "member_left",
+            "group_id": str(group_id),
+            "user_id": str(current_user.id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -690,6 +709,16 @@ async def transfer_group_owner(
     try:
         await GroupService.transfer_owner(db, group_id, current_user.id, new_owner_id)
         await db.commit()
+
+        # Broadcast owner transfer event
+        await manager.broadcast({
+            "type": "owner_transferred",
+            "group_id": str(group_id),
+            "old_owner_id": str(current_user.id),
+            "new_owner_id": str(new_owner_id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1300,6 +1329,16 @@ async def checkin(
     try:
         result = await CheckinService.checkin(db, current_user.id, data)
         await db.commit()
+
+        # Broadcast member checkin event
+        await manager.broadcast({
+            "type": "member_checkin",
+            "group_id": str(data.group_id),
+            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
+            "duration": data.today_duration_minutes,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(data.group_id))
+
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1318,6 +1357,19 @@ async def create_group_task(
     try:
         task = await GroupTaskService.create_task(db, group_id, current_user.id, data)
         await db.commit()
+
+        # Broadcast task created event
+        await manager.broadcast({
+            "type": "task_created",
+            "group_id": str(group_id),
+            "task": {
+                "id": str(task.id),
+                "title": task.title,
+                "description": task.description,
+                "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
 
         return GroupTaskInfo(
             id=task.id,
@@ -1755,6 +1807,15 @@ async def update_group_moderation_settings(
     try:
         group = await ModerationService.update_moderation_settings(db, group_id, current_user.id, data)
         await db.commit()
+
+        # Broadcast settings updated event
+        await manager.broadcast({
+            "type": "group_settings_updated",
+            "group_id": str(group_id),
+            "settings": data.model_dump(mode='json'),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {
             "success": True,
             "mute_all": group.mute_all,

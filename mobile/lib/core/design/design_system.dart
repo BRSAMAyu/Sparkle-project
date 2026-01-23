@@ -48,6 +48,7 @@ export 'tokens_v2/spacing_token.dart';
 export 'tokens_v2/theme_manager.dart';
 export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
+export '../statistics/statistics.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -581,6 +582,51 @@ class DS {
   // Galaxy专用颜色
   static Color get galaxyBackground => _theme.colors.galaxyBackground;
   static Color get galaxyShadow => _theme.colors.galaxyShadow;
+
+  // ============================================
+  // 向后兼容属性（用于统计模块）
+  // ============================================
+
+  /// 文本样式快捷方式
+  static TextStyle get textStyle => TextStyle(
+    fontSize: fontSizeBase,
+    fontWeight: fontWeightRegular,
+    color: textPrimary,
+  );
+
+  static TextStyle get headlineStyle => TextStyle(
+    fontSize: fontSizeLg,
+    fontWeight: fontWeightSemibold,
+    color: textPrimary,
+  );
+
+  static TextStyle get bodyStyle => TextStyle(
+    fontSize: fontSizeBase,
+    fontWeight: fontWeightRegular,
+    color: textSecondary,
+  );
+
+  static TextStyle get captionStyle => TextStyle(
+    fontSize: fontSizeSm,
+    fontWeight: fontWeightRegular,
+    color: textTertiary,
+  );
+
+  /// 颜色快捷方式
+  static const Color white = Colors.white;
+  static const Color black = Colors.black;
+
+  /// 圆角快捷方式（用于DSC替代）
+  static const double borderRadiusSM = radius8;
+  static const double borderRadiusMD = radius12;
+  static const double borderRadiusLG = radius16;
+  static const double borderRadiusXL = radius20;
+
+  /// 字体大小快捷方式（别名）
+  static const double fontSizeSM = fontSizeSm;
+  static const double fontSizeMD = fontSizeBase;
+  static const double fontSizeLG = fontSizeLg;
+  static const double fontSizeXL = fontSizeXl;
 }
 
 /// Extension on Color to provide Material Design shade-like methods

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/home/data/repositories/omnibar_repository.dart';
 import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -22,6 +27,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final AudioRecordingService _recordingService = AudioRecordingService();
   bool _isLoading = false;
   IntentType? _intentType;
 
@@ -43,7 +49,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
   }
 
   void _onTextChanged() {
-    final newIntent = IntentClassifier.classify(_controller.text);
+    final text = _controller.text;
+    final newIntent = IntentClassifier.classify(text);
+
+    // Notify intent prediction provider
+    ref.read(intentPredictionProvider.notifier).onInputChanged(text);
 
     if (newIntent != _intentType) {
       setState(() => _intentType = newIntent);
@@ -60,6 +70,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     _controller.dispose();
     _focusNode.dispose();
     _glowController.dispose();
+    _recordingService.dispose();
     super.dispose();
   }
 
@@ -76,6 +87,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
         _controller.clear();
         _focusNode.unfocus();
         setState(() => _intentType = null);
+        // Clear intent prediction
+        ref.read(intentPredictionProvider.notifier).onInputCleared();
       }
     } catch (e) {
       if (mounted) {
@@ -243,31 +256,113 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   bool _isListening = false;
 
-  void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-    });
+  Future<bool> _checkPermissions() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('需要麦克风权限才能使用语音输入'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+      return false;
+    }
+    return true;
+  }
 
+  Future<void> _toggleListening() async {
     if (_isListening) {
-      _glowController.repeat(reverse: true);
-      // Feature: Implement WebSocket audio streaming
-      // See: lib/core/services/websocket_service.dart
-      // For UI demo, simulate text input after 2 seconds
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _isListening) {
-          setState(() {
-            _isListening = false;
-            _controller.text = '创建一个复习离散数学的计划';
-            _onTextChanged();
-            _glowController.stop();
-            _glowController.reset();
-            _glowController.forward();
-          });
-        }
+      // Stop listening
+      await _recordingService.stopRecording();
+      setState(() {
+        _isListening = false;
       });
-    } else {
       _glowController.stop();
       _glowController.reset();
+      return;
+    }
+
+    // Start listening
+    final hasPermission = await _checkPermissions();
+    if (!hasPermission) {
+      return;
+    }
+
+    // Get auth token
+    final authToken = await ref.read(authRepositoryProvider).getAccessToken();
+    if (authToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('未登录，请先登录'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+    _glowController.repeat(reverse: true);
+
+    final wsUrl = '${ApiConstants.wsBaseUrl}${ApiConstants.wsStt}';
+
+    try {
+      await _recordingService.startRecording(
+        wsUrl: wsUrl,
+        authToken: authToken,
+        onTranscription: (text) {
+          if (mounted) {
+            setState(() {
+              _controller.text = text;
+            });
+            _onTextChanged();
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+            });
+            _glowController.stop();
+            _glowController.reset();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('语音识别失败: $error'),
+                backgroundColor: DS.error,
+              ),
+            );
+          }
+        },
+        onCompleted: () {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+            });
+            _glowController.stop();
+            _glowController.reset();
+          }
+        },
+        maxDuration: const Duration(seconds: 30),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+        _glowController.stop();
+        _glowController.reset();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('启动录音失败: $e'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
     }
   }
 }

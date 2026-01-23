@@ -3,7 +3,7 @@ Models Package
 导出所有数据库模型
 """
 from app.models.base import BaseModel, GUID
-from app.models.user import User, PushPreference
+from app.models.user import User, PushPreference, UserDevice
 from app.models.task import Task, TaskType, TaskStatus
 from app.models.plan import Plan, PlanType
 from app.models.chat import ChatMessage, MessageRole
@@ -94,6 +94,7 @@ __all__ = [
     "GUID",
     "User",
     "PushPreference",
+    "UserDevice",
     "Task",
     "TaskType",
     "TaskStatus",

@@ -49,6 +49,7 @@ from app.api.v1 import (
     multi_intent,
     recommendations,
     leaderboards,
+    monitoring,
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
@@ -92,6 +93,8 @@ api_router.include_router(achievements.router, prefix="/achievements", tags=["ac
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
+# WebSocket monitoring endpoints
+api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
 if settings.ENABLE_GRAPHRAG_MONITOR_API:
     api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
     api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
@@ -122,5 +125,6 @@ async def api_root():
             "/multi-intent",
             "/recommendations",
             "/leaderboards",
+            "/ws",
         ],
     }

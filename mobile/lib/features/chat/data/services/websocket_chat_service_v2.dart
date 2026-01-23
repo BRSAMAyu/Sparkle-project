@@ -277,6 +277,49 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'plan_review_status':
+        final reviewId = data['review_id'] as String?;
+        final status = data['status'] as String?;
+        if (reviewId != null && status != null) {
+          return PlanReviewStatusEvent(
+            reviewId: reviewId,
+            status: status,
+            message: data['message'] as String?,
+            userDecision: data['user_decision'] as String?,
+            timestamp: data['timestamp'] as int?,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
+      case 'plan_review_widget':
+        final reviewData = data['review_data'] as Map<String, dynamic>?;
+        if (reviewData != null) {
+          return PlanReviewWidgetEvent(
+            reviewData: reviewData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       case 'intervention_feedback_ack':
         final requestId = data['request_id'] as String?;
         final status = data['status'] as String?;
@@ -521,6 +564,28 @@ class WebSocketChatServiceV2 {
 
     _sendMessage(feedback);
     _log('📤 Response feedback sent: $feedbackType for $responseId');
+  }
+
+  /// 发送计划审查反馈（Plan Review Feedback）
+  void sendPlanReviewFeedback({
+    required String reviewId,
+    required String userDecision,
+    String? userComment,
+    Map<String, dynamic>? modifications,
+  }) {
+    final feedback = {
+      'type': 'plan_review_feedback',
+      'review_id': reviewId,
+      'user_decision': userDecision, // 'approve', 'reject', 'modify'
+      if (userComment != null && userComment.isNotEmpty)
+        'user_comment': userComment,
+      if (modifications != null && modifications.isNotEmpty)
+        'modifications': modifications,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    _sendMessage(feedback);
+    _log('📤 Plan review feedback sent: $userDecision for $reviewId');
   }
 
   /// 发送专注完成事件

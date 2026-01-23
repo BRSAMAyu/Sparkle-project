@@ -50,6 +50,24 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			}
 		}
 
+		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
+		if cfg.AllowWsQueryToken {
+			if queryToken := c.Query("token"); queryToken != "" {
+				userID, isAdmin, err := validateJWT(cfg, queryToken)
+				if err != nil {
+					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+					return
+				}
+				c.Set("user_id", userID)
+				c.Set("is_admin", isAdmin)
+				c.Set("auth_token", queryToken)
+				c.Set("ws_auth_method", "jwt_query")
+				c.Next()
+				return
+			}
+		}
+
 		ticket := extractWSTicket(c, cfg.AllowWsQueryToken)
 		if ticket == "" {
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "unknown", "missing_credentials").Inc()

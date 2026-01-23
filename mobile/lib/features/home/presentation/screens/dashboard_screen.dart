@@ -8,15 +8,19 @@ import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
 import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/expanded_toolbar_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
 import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/sprint_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
@@ -33,7 +37,20 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
+    final predictions = ref.watch(visiblePredictionsProvider);
     final l10n = AppLocalizations.of(context)!;
+
+    // Dynamic bottom spacing based on visible predictions
+    final hasPredictions = predictions.isNotEmpty;
+    final bottomSpacing = hasPredictions ? 160.0 : 88.0;
+
+    // Max width for floating components on larger screens
+    final layoutType = getLayoutType(context);
+    final floatingMaxWidth = switch (layoutType) {
+      LayoutType.desktop => DS.contentMaxWidthDesktop,
+      LayoutType.tablet => DS.contentMaxWidthTablet,
+      LayoutType.mobile => double.infinity,
+    };
 
     // Listen for Edge AI Nudges
     ref.listen(edgeAIStateProvider, (previous, next) {
@@ -109,19 +126,55 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  // Task Board Card (Full width below grid)
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: DS.spacing16),
+                  ),
+                  const SliverToBoxAdapter(child: TaskBoardCard()),
+
+                  // Expanded Toolbar Section
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: DS.spacing16),
+                  ),
+                  const SliverToBoxAdapter(child: ExpandedToolbarSection()),
+
+                  // Dynamic bottom spacing for prediction bar and OmniBar
+                  SliverToBoxAdapter(child: SizedBox(height: bottomSpacing)),
                 ],
               ),
             ),
           ),
 
-          // Layer 3: Omni-Bar
+          // Layer 3: Intent Prediction Bar (above OmniBar)
           Positioned(
-            left: 16,
-            right: 16,
-            bottom:
-                16, // Adjusted for ResponsiveScaffold which puts this inside body
-            child: OmniBar(hintText: l10n.typeMessage),
+            left: 0,
+            right: 0,
+            bottom: 88,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: floatingMaxWidth),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                  child: const IntentPredictionBar(),
+                ),
+              ),
+            ),
+          ),
+
+          // Layer 4: Omni-Bar
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 16,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: floatingMaxWidth),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+                  child: OmniBar(hintText: l10n.typeMessage),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -266,7 +319,7 @@ class _StreakCard extends StatelessWidget {
             width: 1.5,
           ),
         ),
-        child: const Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(

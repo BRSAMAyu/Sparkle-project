@@ -28,4 +28,47 @@ var (
 		Name: "ws_connection_error_total",
 		Help: "Total number of failed WebSocket connections",
 	}, []string{"endpoint", "auth_method", "reason"})
+
+	// ========== Community WebSocket Metrics ==========
+
+	WSCommunityConnectionTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_community_connection_total",
+		Help: "Total number of community WebSocket connections (group/personal)",
+	}, []string{"type", "status"})
+
+	WSCommunityMessageSentTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_community_message_sent_total",
+		Help: "Total number of messages sent via community WebSocket",
+	}, []string{"type", "message_type"})
+
+	WSCommunityMessageReceivedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_community_message_received_total",
+		Help: "Total number of messages received via community WebSocket",
+	}, []string{"type", "message_type"})
+
+	WSCommunityConnectionDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ws_community_connection_duration_seconds",
+		Help:    "Community WebSocket connection duration",
+		Buckets: prometheus.ExponentialBuckets(1, 2, 10),
+	}, []string{"type"})
+
+	WSCommunityActiveConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ws_community_active_connections",
+		Help: "Current number of active community WebSocket connections",
+	}, []string{"type"})
+
+	WSCommunityOfflinePushQueued = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_community_offline_push_queued_total",
+		Help: "Total number of push notifications queued for offline users",
+	}, []string{"message_type"})
+
+	WSCommunityAckTimeoutTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_community_ack_timeout_total",
+		Help: "Total number of message ACK timeouts",
+	}, []string{"type"})
+
+	WSCommunityDuplicateMessagesTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "ws_community_duplicate_messages_total",
+		Help: "Total number of duplicate messages detected and dropped",
+	})
 )

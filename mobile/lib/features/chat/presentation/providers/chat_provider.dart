@@ -12,6 +12,7 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
@@ -67,6 +68,10 @@ class ChatState {
   final String? lastActionMessage;
   final List<StoredFile> attachedFiles;
 
+  // Plan Review state
+  final PlanReviewResult? pendingPlanReview;
+  final String? pendingReviewActionId;
+
   int get listItemCount =>
       messages.length +
       (isSending ? 1 : 0) +
@@ -101,6 +106,9 @@ class ChatState {
     bool clearActionFeedback = false,
     List<StoredFile>? attachedFiles,
     bool clearAttachments = false,
+    PlanReviewResult? pendingPlanReview,
+    bool clearPendingReview = false,
+    String? pendingReviewActionId,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -137,6 +145,10 @@ class ChatState {
             : lastActionMessage ?? this.lastActionMessage,
         attachedFiles:
             clearAttachments ? [] : attachedFiles ?? this.attachedFiles,
+        pendingPlanReview:
+            clearPendingReview ? null : pendingPlanReview ?? this.pendingPlanReview,
+        pendingReviewActionId:
+            clearPendingReview ? null : pendingReviewActionId ?? this.pendingReviewActionId,
       );
 }
 
@@ -465,6 +477,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
           // ActionCard 状态更新事件
           _handleActionStatus(event);
           flushPending();
+        } else if (event is PlanReviewWidgetEvent) {
+          // Plan Review Widget Event
+          _handlePlanReviewWidget(event);
+          flushPending();
+        } else if (event is PlanReviewStatusEvent) {
+          // Plan Review Status Event
+          _handlePlanReviewStatus(event);
+          flushPending();
         } else if (event is DoneEvent) {
           // 流结束
           // finishReason: event.finishReason
@@ -654,6 +674,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
   }
 
+  /// 发送计划审查反馈
+  void sendPlanReviewFeedback({
+    required String reviewId,
+    required String userDecision,
+    String? userComment,
+  }) {
+    _chatRepository.sendPlanReviewFeedback(
+      reviewId: reviewId,
+      userDecision: userDecision,
+      userComment: userComment,
+    );
+    debugPrint('📤 Plan review feedback sent: $userDecision for $reviewId');
+
+    // Clear the pending review after sending feedback
+    state = state.copyWith(clearPendingReview: true);
+  }
+
   Future<void> _markNightlyReviewed(String reviewId) async {
     try {
       await _ref.read(nightlyReviewActionsProvider).markReviewed(reviewId);
@@ -705,6 +742,67 @@ class ChatNotifier extends StateNotifier<ChatState> {
         return '❌ 操作失败';
       default:
         return '📝 状态更新: $status';
+    }
+  }
+
+  /// 处理 Plan Review Widget Event
+  void _handlePlanReviewWidget(PlanReviewWidgetEvent event) {
+    debugPrint('📥 Plan review widget received');
+
+    // Parse review data
+    final reviewData = event.reviewData;
+    final review = PlanReviewResult.fromJson(reviewData);
+
+    // Update state with pending review
+    state = state.copyWith(
+      pendingPlanReview: review,
+      pendingReviewActionId: review.actionId,
+    );
+
+    debugPrint('📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})');
+  }
+
+  /// 处理 Plan Review Status Event
+  void _handlePlanReviewStatus(PlanReviewStatusEvent event) {
+    debugPrint(
+        '📥 Plan review status received: ${event.status} for ${event.reviewId}');
+
+    // Show user-friendly message
+    final message = event.message ?? _getPlanReviewStatusMessage(event.status);
+
+    // Update state to trigger UI feedback
+    state = state.copyWith(
+      lastActionStatus: event.status,
+      lastActionMessage: message,
+    );
+
+    // Clear pending review if status indicates completion
+    if (event.status == 'approved' || event.status == 'rejected') {
+      state = state.copyWith(clearPendingReview: true);
+    }
+
+    // Delay clearing feedback state
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        state = state.copyWith(clearActionFeedback: true);
+      }
+    });
+
+    debugPrint('💬 Plan review status message: $message');
+  }
+
+  String _getPlanReviewStatusMessage(String status) {
+    switch (status) {
+      case 'approved':
+        return '✅ 计划已批准';
+      case 'rejected':
+        return '❌ 计划已取消';
+      case 'modify_requested':
+        return '📝 请提供修改要求...';
+      case 'acknowledged':
+        return '✅ 反馈已收到';
+      default:
+        return '📋 计划状态更新: $status';
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
+import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
 
 part 'local_database.g.dart';
 
@@ -142,6 +143,7 @@ class LocalDatabase {
         VocabWordSchema,
         VocabReviewSchema,
         FocusSessionRecordSchema, // Added for focus statistics
+        CachedStatisticsModelSchema, // Added for unified statistics caching
       ],
       directory: dir.path,
     );
@@ -158,4 +160,5 @@ class LocalDatabase {
   IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
   IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
   IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
+  IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
 }

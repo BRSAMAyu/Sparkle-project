@@ -269,6 +269,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				case "response_feedback":
 					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
 					return false
+				case "plan_review_feedback":
+					h.handlePlanReviewFeedback(conn, msgMap, userID)
+					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID)
 					return false
@@ -394,6 +397,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 				h.handleResponseFeedbackWithResponder(msgCtx, responder, msgMap, userID)
+				return false
+			case "plan_review_feedback":
+				msgMap, err := decodePayloadMap(envelope.Payload["plan_review_feedback"])
+				if err != nil {
+					responder.SendError("invalid_argument", "Invalid plan_review_feedback payload", false)
+					return false
+				}
+				h.handlePlanReviewFeedbackWithResponder(responder, msgMap, userID)
 				return false
 			default:
 				responder.SendError("invalid_argument", "Unknown payload type", false)
@@ -1498,6 +1509,10 @@ type responseFeedbackResponder interface {
 	SendResponseFeedbackAck(responseID, status, message string)
 }
 
+type planReviewStatusSender interface {
+	SendPlanReviewStatus(reviewID, status string, data map[string]interface{})
+}
+
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
 	tracer := otel.Tracer("chat-orchestrator")
@@ -1602,6 +1617,27 @@ func (s legacyResponseFeedbackResponder) SendResponseFeedbackAck(responseID, sta
 	}
 	if err := s.conn.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send response feedback ack: %v", err)
+	}
+}
+
+type legacyPlanReviewStatusSender struct {
+	conn *websocket.Conn
+}
+
+func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status string, data map[string]interface{}) {
+	statusMsg := map[string]interface{}{
+		"type":       "plan_review_status",
+		"review_id":  reviewID,
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+	}
+	for k, v := range data {
+		statusMsg[k] = v
+	}
+	if err := s.conn.WriteJSON(statusMsg); err != nil {
+		log.Printf("Failed to send plan review status: %v", err)
+	} else {
+		log.Printf("✅ Plan review status sent: status=%s, review_id=%s", status, reviewID)
 	}
 }
 
@@ -2004,6 +2040,58 @@ func (h *ChatOrchestrator) sendInterventionAck(conn *websocket.Conn, requestID, 
 
 func (h *ChatOrchestrator) handleResponseFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
 	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{conn: conn}, msgMap, userID)
+}
+
+// handlePlanReviewFeedback processes user feedback on plan reviews (legacy wrapper)
+func (h *ChatOrchestrator) handlePlanReviewFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
+	h.handlePlanReviewFeedbackWithResponder(legacyPlanReviewStatusSender{conn: conn}, msgMap, userID)
+}
+
+// handlePlanReviewFeedbackWithResponder processes user feedback on plan reviews
+func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(sender planReviewStatusSender, msgMap map[string]interface{}, userID string) {
+	reviewID, ok := msgMap["review_id"].(string)
+	if !ok {
+		log.Printf("Invalid plan review feedback: missing review_id field")
+		return
+	}
+
+	userDecision, ok := msgMap["user_decision"].(string)
+	if !ok {
+		log.Printf("Invalid plan review feedback: missing user_decision field")
+		return
+	}
+
+	userComment, _ := msgMap["user_comment"].(string)
+
+	log.Printf("Plan review feedback from user %s: review_id=%s, decision=%s, comment=%s",
+		userID, reviewID, userDecision, userComment)
+
+	// For now, we just acknowledge the feedback
+	// In the future, this could trigger re-planning or execution
+	status := "acknowledged"
+	message := ""
+
+	switch userDecision {
+	case "approve":
+		status = "approved"
+		message = "计划已批准，正在执行..."
+	case "reject":
+		status = "rejected"
+		message = "计划已取消"
+	case "modify":
+		status = "modify_requested"
+		message = "请提供修改要求..."
+	default:
+		log.Printf("Unknown user decision: %s", userDecision)
+		status = "unknown"
+		message = "未知操作"
+	}
+
+	sender.SendPlanReviewStatus(reviewID, status, map[string]interface{}{
+		"message":       message,
+		"user_decision": userDecision,
+		"timestamp":     time.Now().Unix(),
+	})
 }
 
 // handleFocusCompleted processes focus session completion events
