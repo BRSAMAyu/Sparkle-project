@@ -45,7 +45,9 @@ from app.models import (
     TrackingEvent, UserStateSnapshot,
     # Phase 2 models
     StrategyNode, SemanticLink,
-    NightlyReview
+    NightlyReview,
+    # Seed Content Library
+    SeedLibrary, SeedItem, UserLibrarySubscription,
 )  # noqa: F401
 
 # this is the Alembic Config object

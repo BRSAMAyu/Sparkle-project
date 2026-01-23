@@ -145,6 +145,30 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    # 胶囊反馈关系
+    capsule_feedbacks = relationship(
+        "CapsuleFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 胶囊收藏关系
+    capsule_favorites = relationship(
+        "CapsuleFavorite",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 胶囊生成任务关系
+    capsule_generation_jobs = relationship(
+        "CapsuleGenerationJob",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     # 安全审计日志关系
     security_audit_logs = relationship(
         "SecurityAuditLog",

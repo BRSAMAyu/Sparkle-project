@@ -1,11 +1,12 @@
 import json
 import inspect
+import uuid
 from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator, Union
 import asyncio
 from loguru import logger
 from dataclasses import dataclass
 from opentelemetry import trace
-from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
@@ -219,11 +220,6 @@ class LLMService:
             base_url = settings.ZHIPU_BASE_URL
             self.chat_model = settings.ZHIPU_CHAT_MODEL
             self.reason_model = settings.ZHIPU_TOOLS_MODEL
-        elif provider_type == "hunyuan":
-            api_key = settings.HUNYUAN_API_KEY
-            base_url = settings.HUNYUAN_BASE_URL
-            self.chat_model = settings.HUNYUAN_CHAT_MODEL
-            self.reason_model = settings.HUNYUAN_REASON_MODEL
         else:
             api_key = settings.LLM_API_KEY
             base_url = settings.LLM_API_BASE_URL
@@ -851,3 +847,112 @@ def get_llm_service_for_task(task_type: TaskType) -> LLMService:
     from app.core.llm_router import select_model_for_task
     selection = select_model_for_task(task_type)
     return LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+
+
+# ==========================================
+# 种子内容库集成 (Seed Content Library Integration)
+# ==========================================
+
+async def build_prompt_with_seed_examples(
+    system_prompt: str,
+    user_message: str,
+    user_id: str,
+    subject: Optional[str] = None,
+    db: Optional[AsyncSession] = None,
+    count: int = 3,
+) -> List[Dict[str, str]]:
+    """
+    使用种子库的 few-shot 示例增强 prompt
+
+    Args:
+        system_prompt: 原始系统提示
+        user_message: 用户消息
+        user_id: 用户ID
+        subject: 学科筛选
+        db: 数据库会话 (可选)
+        count: 需要的示例数量
+
+    Returns:
+        增强后的消息列表
+    """
+    from app.services.seed_library_service import SeedLibraryService
+    from app.db.session import get_db
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # 尝试获取 few-shot 示例
+    if db is None:
+        db_gen = get_db()
+        db = await db_gen.__anext__()
+
+    try:
+        seed_service = SeedLibraryService()
+        examples = await seed_service.get_few_shot_examples(
+            db=db,
+            user_id=uuid.UUID(user_id) if isinstance(user_id, str) else user_id,
+            subject=subject,
+            count=count,
+        )
+
+        if examples:
+            # 添加 few-shot 示例到消息中
+            few_shot_section = "以下是参考示例：\n\n"
+            for i, example in enumerate(examples, 1):
+                few_shot_section += f"### 示例 {i}\n"
+                few_shot_section += f"**问题：** {example.get('input', '')}\n"
+                few_shot_section += f"**解答：** {example.get('output', '')}\n"
+                if example.get('explanation'):
+                    few_shot_section += f"**说明：** {example['explanation']}\n"
+                few_shot_section += "\n"
+
+            # 将示例添加到系统提示后
+            messages[0]["content"] = f"{system_prompt}\n\n{few_shot_section}"
+            logger.debug(f"Added {len(examples)} few-shot examples to prompt")
+
+    except Exception as e:
+        logger.warning(f"Failed to fetch few-shot examples: {e}, using original prompt")
+    finally:
+        # db 是从 get_db() 获取的，不要关闭
+        pass
+
+    messages.append({"role": "user", "content": user_message})
+    return messages
+
+
+async def get_reply_template(
+    template_key: str,
+    user_id: str,
+    language: str = "zh",
+    db: Optional[AsyncSession] = None,
+) -> Optional[str]:
+    """
+    获取回复模板
+
+    Args:
+        template_key: 模板标识
+        user_id: 用户ID
+        language: 语言
+        db: 数据库会话 (可选)
+
+    Returns:
+        模板内容或 None
+    """
+    from app.services.seed_library_service import SeedLibraryService
+    from app.db.session import get_db
+
+    if db is None:
+        db_gen = get_db()
+        db = await db_gen.__anext__()
+
+    try:
+        seed_service = SeedLibraryService()
+        template = await seed_service.get_reply_template(
+            db=db,
+            template_key=template_key,
+            user_id=uuid.UUID(user_id) if isinstance(user_id, str) else user_id,
+            language=language,
+        )
+        return template
+    except Exception as e:
+        logger.warning(f"Failed to fetch reply template '{template_key}': {e}")
+        return None

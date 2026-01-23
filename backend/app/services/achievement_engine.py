@@ -1,0 +1,892 @@
+"""
+Achievement Engine Service
+成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
+"""
+from typing import Optional, List, Dict, Any
+from datetime import datetime, date, timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, update, func, or_
+from loguru import logger
+
+from app.models.achievement import (
+    Achievement, UserAchievement, UserStreakStats,
+    AchievementRarity, AchievementType, SparkContract,
+    GalaxySkin, UserGalaxySkin, UserTitle, ContractStatus, VisualEffectType
+)
+from app.models.user import User
+from app.models.galaxy import UserNodeStatus, KnowledgeNode, StudyRecord
+from app.core.cache import cache_service
+from app.config import settings
+
+
+class AchievementEvent:
+    """成就事件类型"""
+    TASK_COMPLETED = "task_completed"
+    DAILY_CHECKIN = "daily_checkin"
+    NODE_UNLOCKED = "node_unlocked"
+    NODE_MASTERED = "node_mastered"
+    STUDY_MINUTES_ACCUMULATED = "study_minutes_accumulated"
+    NIGHT_STUDY = "night_study"  # 23:00-05:00
+    EARLY_BIRD = "early_bird"    # 05:00-08:00
+    WEEKEND_WARRIOR = "weekend_warrior"
+    STREAK_MILESTONE = "streak_milestone"
+    CONTRACT_COMPLETED = "contract_completed"
+    CONTRACT_FAILED = "contract_failed"
+    MUTUAL_STUDY = "mutual_study"  # 与搭子同时学习
+    HIDDEN_TRIGGER = "hidden_trigger"  # 隐藏成就特殊触发
+
+
+class AchievementEngine:
+    """成就引擎 - 核心服务"""
+
+    # 成就定义缓存（内存缓存）
+    _achievement_cache: Dict[str, Achievement] = {}
+    _cache_last_update: datetime = None
+    _cache_ttl = timedelta(minutes=5)
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def _refresh_achievement_cache(self):
+        """刷新成就定义缓存"""
+        now = datetime.utcnow()
+        if self._cache_last_update and (now - self._cache_last_update < self._cache_ttl):
+            return
+
+        query = select(Achievement)
+        result = await self.db.execute(query)
+        achievements = result.scalars().all()
+
+        self._achievement_cache = {a.id: a for a in achievements}
+        self._cache_last_update = now
+
+    async def _get_achievement(self, achievement_id: str) -> Optional[Achievement]:
+        """获取成就定义（带缓存）"""
+        await self._refresh_achievement_cache()
+        return self._achievement_cache.get(achievement_id)
+
+    async def _get_all_achievements(self) -> List[Achievement]:
+        """获取所有成就定义（带缓存）"""
+        await self._refresh_achievement_cache()
+        return list(self._achievement_cache.values())
+
+    async def process_event(
+        self,
+        user_id: str,
+        event_type: str,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        处理用户事件，检查并解锁成就
+
+        Args:
+            user_id: 用户ID
+            event_type: 事件类型
+            **kwargs: 事件相关数据
+
+        Returns:
+            新解锁的成就列表
+        """
+        # 1. 更新连胜统计
+        await self._update_streak_stats(user_id, event_type, **kwargs)
+
+        # 2. 获取相关成就定义
+        relevant_achievements = await self._get_relevant_achievements(event_type)
+
+        # 3. 检查每个成就的条件
+        unlocked = []
+        for achievement in relevant_achievements:
+            # 检查是否已解锁
+            if await self._is_unlocked(user_id, achievement.id):
+                continue
+
+            # 检查前置条件
+            if not await self._check_prerequisites(user_id, achievement):
+                continue
+
+            # 评估进度
+            progress, current_value, target_value = await self._evaluate_progress(
+                user_id, achievement, **kwargs
+            )
+
+            # 更新或创建进度记录
+            await self._update_progress(
+                user_id, achievement.id, progress, current_value, target_value
+            )
+
+            # 检查是否解锁
+            if progress >= 1.0:
+                unlock_data = await self._unlock_achievement(user_id, achievement)
+                unlocked.append(unlock_data)
+
+        # 4. 发送通知和触发视觉效果
+        if unlocked:
+            await self._notify_unlocks(user_id, unlocked)
+
+        return unlocked
+
+    async def _get_relevant_achievements(self, event_type: str) -> List[Achievement]:
+        """获取与事件类型相关的成就"""
+        all_achievements = await self._get_all_achievements()
+
+        relevant = []
+        for achievement in all_achievements:
+            # 检查触发代码是否匹配事件
+            trigger_code = achievement.trigger_code
+
+            # 直接匹配
+            if trigger_code == event_type:
+                relevant.append(achievement)
+                continue
+
+            # 特殊匹配逻辑
+            match event_type:
+                case AchievementEvent.TASK_COMPLETED:
+                    if trigger_code in ["TASKS_TOTAL", "TASKS_COMPLETED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.DAILY_CHECKIN:
+                    if trigger_code == "STREAK_DAYS":
+                        relevant.append(achievement)
+                case AchievementEvent.NODE_UNLOCKED:
+                    if trigger_code in ["NODES_UNLOCKED", "SECTOR_MASTERY"]:
+                        relevant.append(achievement)
+                case AchievementEvent.NODE_MASTERED:
+                    if trigger_code in ["NODES_MASTERED", "PERFECTIONIST"]:
+                        relevant.append(achievement)
+                case AchievementEvent.STUDY_MINUTES_ACCUMULATED:
+                    if trigger_code in ["STUDY_MINUTES_TOTAL", "STUDY_MINUTES_SINGLE"]:
+                        relevant.append(achievement)
+
+        return relevant
+
+    async def _is_unlocked(self, user_id: str, achievement_id: str) -> bool:
+        """检查成就是否已解锁"""
+        cache_key = f"{settings.APP_NAME}:achievement:{user_id}:{achievement_id}:unlocked"
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return cached
+
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id,
+                UserAchievement.unlocked_at.isnot(None)
+            )
+        )
+        result = await self.db.execute(query)
+        unlocked = result.scalar_one_or_none() is not None
+
+        await cache_service.set(cache_key, unlocked, ttl=300)
+        return unlocked
+
+    async def _check_prerequisites(self, user_id: str, achievement: Achievement) -> bool:
+        """检查前置成就是否已解锁"""
+        if not achievement.prerequisites:
+            return True
+
+        for prereq_id in achievement.prerequisites:
+            if not await self._is_unlocked(user_id, prereq_id):
+                return False
+        return True
+
+    async def _evaluate_progress(
+        self,
+        user_id: str,
+        achievement: Achievement,
+        **kwargs
+    ) -> tuple[float, int, int]:
+        """
+        评估成就进度
+
+        Returns:
+            (progress, current_value, target_value)
+        """
+        config = achievement.trigger_config or {}
+        trigger_code = achievement.trigger_code
+
+        match trigger_code:
+            # 连续学习天数
+            case "STREAK_DAYS":
+                stats = await self._get_or_create_streak_stats(user_id)
+                target = config.get("days", 30)
+                current = stats.current_streak
+                return (min(current / target, 1.0), current, target)
+
+            # 任务完成数量
+            case "TASKS_TOTAL":
+                from app.models.task import Task, TaskStatus
+                target = config.get("count", 10)
+                query = select(func.count()).select_from(Task).where(
+                    and_(
+                        Task.user_id == user_id,
+                        Task.status == TaskStatus.COMPLETED
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 知识点数量
+            case "NODES_UNLOCKED":
+                target = config.get("count", 100)
+                query = select(func.count()).select_from(UserNodeStatus).where(
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.is_unlocked == True
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 知识点掌握数量
+            case "NODES_MASTERED":
+                target = config.get("count", 50)
+                mastery_threshold = config.get("mastery_threshold", 80)
+                query = select(func.count()).select_from(UserNodeStatus).where(
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.mastery_score >= mastery_threshold
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 领域精通
+            case "SECTOR_MASTERY":
+                sector = config.get("sector")
+                target_percent = config.get("percent", 80)
+
+                # 查询该领域所有节点
+                query = select(UserNodeStatus).join(KnowledgeNode).where(
+                    and_(
+                        UserNodeStatus.user_id == user_id,
+                        KnowledgeNode.sector_code == sector,
+                        UserNodeStatus.is_unlocked == True
+                    )
+                )
+                result = await self.db.execute(query)
+                statuses = result.scalars().all()
+
+                if not statuses:
+                    return (0.0, 0, 100)
+
+                mastered = sum(1 for s in statuses if s.mastery_score >= target_percent)
+                return (mastered / len(statuses), mastered, len(statuses))
+
+            # 学习时长累计
+            case "STUDY_MINUTES_TOTAL":
+                target = config.get("minutes", 1000)
+                query = select(func.coalesce(func.sum(UserNodeStatus.total_study_minutes), 0)).where(
+                    UserNodeStatus.user_id == user_id
+                )
+                result = await self.db.execute(query)
+                total = result.scalar_one() or 0
+                return (min(total / target, 1.0), total, target)
+
+            # 单次学习时长
+            case "STUDY_MINUTES_SINGLE":
+                target = config.get("minutes", 60)
+                current = kwargs.get("study_minutes", 0)
+                return (min(current / target, 1.0), current, target)
+
+            # 深夜学习（隐藏成就）
+            case "NIGHT_OWL_STUDY":
+                hour = datetime.utcnow().hour
+                if 23 <= hour or hour <= 5:
+                    # 检查累计次数
+                    cache_key = f"night_owl:{user_id}"
+                    count = await cache_service.get(cache_key) or 0
+                    count += 1
+                    await cache_service.set(cache_key, count, ex=86400*30)
+                    target = config.get("sessions", 10)
+                    return (min(count / target, 1.0), count, target)
+                return (0.0, 0, 10)
+
+            # 完美主义者（单节点100%掌握度）
+            case "PERFECTIONIST":
+                node_id = kwargs.get("node_id")
+                if node_id:
+                    status = await self.db.get(UserNodeStatus, {
+                        "user_id": user_id,
+                        "node_id": node_id
+                    })
+                    if status and status.mastery_score >= 100:
+                        return (1.0, 100, 100)
+                return (0.0, 0, 100)
+
+            case _:
+                logger.warning(f"Unknown trigger code: {trigger_code}")
+                return (0.0, 0, 1)
+
+    async def _update_progress(
+        self,
+        user_id: str,
+        achievement_id: str,
+        progress: float,
+        current_value: int,
+        target_value: int
+    ):
+        """更新或创建进度记录"""
+        # 检查是否已有记录
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_achievement = result.scalar_one_or_none()
+
+        if user_achievement:
+            # 更新现有记录
+            user_achievement.progress = min(progress, 1.0)
+            user_achievement.progress_value = current_value
+            user_achievement.progress_target = target_value
+            user_achievement.last_progress_update = datetime.utcnow()
+        else:
+            # 创建新记录
+            user_achievement = UserAchievement(
+                user_id=user_id,
+                achievement_id=achievement_id,
+                progress=min(progress, 1.0),
+                progress_value=current_value,
+                progress_target=target_value,
+                last_progress_update=datetime.utcnow()
+            )
+            self.db.add(user_achievement)
+
+        await self.db.flush()
+
+    async def _unlock_achievement(
+        self,
+        user_id: str,
+        achievement: Achievement
+    ) -> Dict[str, Any]:
+        """解锁成就"""
+        now = datetime.utcnow()
+
+        # 更新用户成就记录
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == achievement.id
+            )
+        )
+        result = await self.db.execute(query)
+        user_achievement = result.scalar_one_or_none()
+
+        if not user_achievement:
+            user_achievement = UserAchievement(
+                user_id=user_id,
+                achievement_id=achievement.id,
+                progress=1.0,
+                unlocked_at=now
+            )
+            self.db.add(user_achievement)
+        else:
+            user_achievement.unlocked_at = now
+            user_achievement.progress = 1.0
+
+        # 检查是否首位解锁者
+        is_first = False
+        if not achievement.first_unlocker_id:
+            achievement.first_unlocker_id = user_id
+            user_achievement.is_first_unlocker = True
+            is_first = True
+
+        # 更新全局统计
+        achievement.total_unlocked += 1
+
+        await self.db.commit()
+
+        # 清除缓存
+        cache_key = f"{settings.APP_NAME}:achievement:{user_id}:{achievement.id}:unlocked"
+        await cache_service.delete(cache_key)
+        await cache_service.delete_pattern(
+            f"{settings.APP_NAME}:achievement:{user_id}:*"
+        )
+
+        # 处理奖励
+        await self._grant_rewards(user_id, achievement)
+
+        return {
+            "achievement_id": achievement.id,
+            "name": achievement.name,
+            "rarity": achievement.rarity,
+            "visual_effect": achievement.visual_config,
+            "visual_effect_type": achievement.visual_effect_type,
+            "rewards": achievement.reward_config,
+            "is_first": is_first,
+            "unlocked_at": now
+        }
+
+    async def _grant_rewards(self, user_id: str, achievement: Achievement):
+        """发放奖励"""
+        if not achievement.reward_config:
+            return
+
+        rewards = achievement.reward_config if isinstance(achievement.reward_config, list) else achievement.reward_config.get("rewards", [])
+
+        for reward in rewards:
+            reward_type = reward.get("type")
+
+            match reward_type:
+                case "title":
+                    # 解锁称号
+                    title_id = reward.get("value") or f"title_{achievement.id}"
+                    await self._unlock_title(
+                        user_id, title_id,
+                        reward.get("display", achievement.name),
+                        achievement.id
+                    )
+
+                case "galaxy_skin":
+                    # 解锁星系皮肤
+                    skin_id = reward.get("skin_id")
+                    if skin_id:
+                        await self._unlock_galaxy_skin(user_id, skin_id)
+
+                case "freeze_charge":
+                    # 增加连胜保护卡
+                    quantity = reward.get("quantity", 1)
+                    stats = await self._get_or_create_streak_stats(user_id)
+                    stats.freeze_charges = min(
+                        stats.freeze_charges + quantity,
+                        stats.max_freeze_charges
+                    )
+                    await self.db.flush()
+
+                case "photon":
+                    # 光子积分（暂时只记录，不实际发放）
+                    logger.info(f"Grant {reward.get('quantity', 0)} photons to user {user_id}")
+
+    async def _unlock_title(self, user_id: str, title_id: str, display: str, achievement_id: str):
+        """解锁称号"""
+        query = select(UserTitle).where(
+            and_(
+                UserTitle.user_id == user_id,
+                UserTitle.title_id == title_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_title = result.scalar_one_or_none()
+
+        if not user_title:
+            user_title = UserTitle(
+                user_id=user_id,
+                title_id=title_id,
+                title_name=display,
+                title_display=display,
+                source_achievement_id=achievement_id,
+                unlocked_at=datetime.utcnow()
+            )
+            self.db.add(user_title)
+            await self.db.flush()
+
+    async def _unlock_galaxy_skin(self, user_id: str, skin_id: str):
+        """解锁星系皮肤"""
+        query = select(UserGalaxySkin).where(
+            and_(
+                UserGalaxySkin.user_id == user_id,
+                UserGalaxySkin.skin_id == skin_id
+            )
+        )
+        result = await self.db.execute(query)
+        user_skin = result.scalar_one_or_none()
+
+        if not user_skin:
+            user_skin = UserGalaxySkin(
+                user_id=user_id,
+                skin_id=skin_id,
+                unlocked_at=datetime.utcnow(),
+                unlock_source="achievement"
+            )
+            self.db.add(user_skin)
+            await self.db.flush()
+
+    async def _notify_unlocks(self, user_id: str, unlocked: List[Dict]):
+        """发送成就解锁通知"""
+        # TODO: 实现通知发送
+        for unlock in unlocked:
+            logger.info(f"Achievement unlocked for user {user_id}: {unlock['name']}")
+
+    async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
+        """更新连胜统计"""
+        stats = await self._get_or_create_streak_stats(user_id)
+        today = datetime.utcnow().date()
+
+        # 只有核心活动才更新连胜
+        if event_type not in [AchievementEvent.DAILY_CHECKIN,
+                              AchievementEvent.TASK_COMPLETED,
+                              AchievementEvent.NODE_MASTERED]:
+            return
+
+        if not stats.last_activity_date:
+            stats.current_streak = 1
+            stats.last_activity_date = today
+            stats.longest_streak_start = today
+            await self.db.flush()
+            return
+
+        delta = (today - stats.last_activity_date).days
+
+        if delta == 0:
+            # 今天已活动，无需更新
+            return
+        elif delta == 1:
+            # 连续活动
+            stats.current_streak += 1
+            stats.max_streak = max(stats.current_streak, stats.max_streak)
+            stats.total_checkin_days += 1
+
+            # 更新最长连胜记录
+            if stats.current_streak > stats.longest_streak:
+                stats.longest_streak = stats.current_streak
+                stats.longest_streak_start = stats.longest_streak_start or today
+                stats.longest_streak_end = today
+        else:
+            # 演了活动，检查保护卡
+            days_missed = delta - 1
+
+            if stats.freeze_charges >= days_missed:
+                # 使用保护卡
+                stats.freeze_charges -= days_missed
+                stats.last_freeze_used_at = datetime.utcnow()
+                stats.current_streak += 1  # 今天也算
+                logger.info(f"User {user_id} used {days_missed} freeze charges")
+            else:
+                # 保护不足，连胜断裂
+                stats.current_streak = 1
+                logger.info(f"User {user_id} streak broken at {stats.max_streak} days")
+
+        stats.last_activity_date = today
+        await self.db.flush()
+
+        # 触发连胜里程碑检查
+        if stats.current_streak in [7, 14, 30, 60, 100, 365]:
+            await self.process_event(
+                user_id,
+                AchievementEvent.STREAK_MILESTONE,
+                streak_days=stats.current_streak
+            )
+
+    async def _get_or_create_streak_stats(self, user_id: str) -> UserStreakStats:
+        """获取或创建连胜统计"""
+        query = select(UserStreakStats).where(UserStreakStats.user_id == user_id)
+        result = await self.db.execute(query)
+        stats = result.scalar_one_or_none()
+
+        if not stats:
+            stats = UserStreakStats(user_id=user_id)
+            self.db.add(stats)
+            await self.db.flush()
+
+        return stats
+
+    # ========== 公共API方法 ==========
+
+    async def get_user_achievements(
+        self,
+        user_id: str,
+        category: Optional[str] = None,
+        rarity: Optional[AchievementRarity] = None,
+        include_hidden: bool = False
+    ) -> Dict[str, Any]:
+        """获取用户成就列表"""
+        all_achievements = await self._get_all_achievements()
+
+        # 过滤
+        filtered = []
+        for achievement in all_achievements:
+            if category and achievement.category != category:
+                continue
+            if rarity and achievement.rarity != rarity:
+                continue
+            if not include_hidden and achievement.is_hidden:
+                # 对于隐藏成就，只显示已解锁的
+                if not await self._is_unlocked(user_id, achievement.id):
+                    continue
+
+            filtered.append(achievement)
+
+        # 获取用户进度
+        achievement_ids = [a.id for a in filtered]
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id.in_(achievement_ids)
+            )
+        )
+        result = await self.db.execute(query)
+        user_progress = {ua.achievement_id: ua for ua in result.scalars().all()}
+
+        # 组装结果
+        from app.schemas.achievement import AchievementDetail, UserAchievementDetail, AchievementWithProgress
+
+        result_list = []
+        for achievement in filtered:
+            user_ach = user_progress.get(achievement.id)
+            is_unlocked = user_ach and user_ach.unlocked_at is not None
+            progress_percentage = int((user_ach.progress if user_ach else 0) * 100)
+
+            # 转换为schema
+            achievement_detail = AchievementDetail.model_validate(achievement)
+            user_progress_detail = UserAchievementDetail.model_validate(user_ach) if user_ach else None
+
+            result_list.append(AchievementWithProgress(
+                achievement=achievement_detail,
+                user_progress=user_progress_detail,
+                is_unlocked=is_unlocked,
+                progress_percentage=progress_percentage
+            ))
+
+        # 统计
+        total_unlocked = sum(1 for ua in user_progress.values() if ua.unlocked_at is not None)
+
+        # 分类统计
+        categories = {}
+        for achievement in all_achievements:
+            cat = achievement.category or "other"
+            if cat not in categories:
+                categories[cat] = {"total": 0, "unlocked": 0}
+            categories[cat]["total"] += 1
+            if achievement.id in user_progress and user_progress[achievement.id].unlocked_at:
+                categories[cat]["unlocked"] += 1
+
+        return {
+            "data": [r.model_dump() for r in result_list],
+            "meta": {
+                "total_achievements": len(all_achievements),
+                "total_unlocked": total_unlocked,
+                "categories": categories
+            }
+        }
+
+    async def get_achievement_map(self, user_id: str) -> Dict[str, Any]:
+        """获取成就地图数据"""
+        all_achievements = await self._get_all_achievements()
+
+        # 按类别分组获取位置
+        categories = {}
+        positions = {}
+        x, y = 0, 0
+        row_width = 5
+
+        for achievement in all_achievements:
+            cat = achievement.category or "other"
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(achievement)
+
+        # 计算位置（简单的网格布局）
+        for cat, achievements in categories.items():
+            for i, achievement in enumerate(achievements):
+                positions[achievement.id] = {
+                    "x": (i % row_width) * 100 + (len(cat) * 50),
+                    "y": (i // row_width) * 100
+                }
+
+        # 生成节点
+        from app.schemas.achievement import AchievementMapNode
+
+        nodes = []
+        connections = []
+
+        for achievement in all_achievements:
+            is_unlocked = await self._is_unlocked(user_id, achievement.id)
+
+            nodes.append(AchievementMapNode(
+                id=achievement.id,
+                name=achievement.name,
+                rarity=achievement.rarity,
+                category=achievement.category or "other",
+                position=positions.get(achievement.id, {"x": 0, "y": 0}),
+                is_unlocked=is_unlocked,
+                is_hidden=achievement.is_hidden,
+                prerequisites=achievement.prerequisites or [],
+                parent_id=achievement.parent_id
+            ))
+
+            # 生成连接线
+            if achievement.prerequisites:
+                for prereq in achievement.prerequisites:
+                    connections.append({
+                        "from": prereq,
+                        "to": achievement.id,
+                        "type": "prerequisite"
+                    })
+
+            if achievement.parent_id:
+                connections.append({
+                    "from": achievement.parent_id,
+                    "to": achievement.id,
+                    "type": "parent"
+                })
+
+        # 分类信息
+        category_info = [
+            {"id": cat, "name": cat, "count": len(achievements)}
+            for cat, achievements in categories.items()
+        ]
+
+        return {
+            "nodes": [n.model_dump() for n in nodes],
+            "connections": connections,
+            "categories": category_info
+        }
+
+    async def get_streak_stats(self, user_id: str) -> Dict[str, Any]:
+        """获取用户连胜统计"""
+        stats = await self._get_or_create_streak_stats(user_id)
+
+        from app.schemas.achievement import StreakStatsResponse
+        return StreakStatsResponse.model_validate(stats).model_dump()
+
+    async def get_achievement_stats(self, user_id: str) -> Dict[str, Any]:
+        """获取用户成就统计"""
+        all_achievements = await self._get_all_achievements()
+
+        # 获取用户成就
+        query = select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == user_id,
+                UserAchievement.unlocked_at.isnot(None)
+            )
+        )
+        result = await self.db.execute(query)
+        unlocked = result.scalars().all()
+
+        unlocked_ids = {ua.achievement_id for ua in unlocked}
+
+        # 按稀有度统计
+        rarity_count = {r: 0 for r in AchievementRarity}
+        hidden_count = 0
+
+        for ua in unlocked:
+            achievement = await self._get_achievement(ua.achievement_id)
+            if achievement:
+                rarity_count[achievement.rarity] += 1
+                if achievement.is_hidden:
+                    hidden_count += 1
+
+        # 连胜统计
+        stats = await self._get_or_create_streak_stats(user_id)
+
+        from app.schemas.achievement import AchievementStatsResponse
+        return AchievementStatsResponse(
+            total_achievements=len(all_achievements),
+            unlocked_count=len(unlocked),
+            unlocked_percentage=round(len(unlocked) / len(all_achievements) * 100, 1) if all_achievements else 0,
+            common_count=rarity_count[AchievementRarity.COMMON],
+            rare_count=rarity_count[AchievementRarity.RARE],
+            epic_count=rarity_count[AchievementRarity.EPIC],
+            legendary_count=rarity_count[AchievementRarity.LEGENDARY],
+            hidden_found=hidden_count,
+            current_streak=stats.current_streak,
+            total_photons=0  # TODO: 计算从成就获得的光子总数
+        ).model_dump()
+
+
+class ContractService:
+    """星火契约服务"""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_contract(
+        self,
+        user_id: str,
+        study_minutes: int,
+        days: int,
+        photon_stake: int
+    ) -> SparkContract:
+        """创建学习契约"""
+        # 检查是否已有活跃契约
+        existing = await self._get_active_contract(user_id)
+        if existing:
+            raise ValueError("User already has an active contract")
+
+        contract = SparkContract(
+            user_id=user_id,
+            target_study_minutes=study_minutes,
+            target_days=days,
+            photon_stake=photon_stake,
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow() + timedelta(days=days),
+            status=ContractStatus.ACTIVE
+        )
+        self.db.add(contract)
+        await self.db.commit()
+        await self.db.refresh(contract)
+        return contract
+
+    async def _get_active_contract(self, user_id: str) -> Optional[SparkContract]:
+        """获取活跃契约"""
+        query = select(SparkContract).where(
+            and_(
+                SparkContract.user_id == user_id,
+                SparkContract.status == ContractStatus.ACTIVE
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def check_contract_status(self, user_id: str) -> Optional[Dict]:
+        """检查契约状态"""
+        contract = await self._get_active_contract(user_id)
+        if not contract:
+            return None
+
+        today = datetime.utcnow()
+
+        # 检查是否过期
+        if today > contract.end_date:
+            if contract.current_days >= contract.target_days:
+                # 完成
+                contract.status = ContractStatus.COMPLETED
+                contract.completed_at = today
+                await self._grant_rewards(contract)
+                await self.db.commit()
+                return {"status": "completed", "reward": contract.photon_stake * contract.reward_multiplier}
+            else:
+                # 失败
+                contract.status = ContractStatus.FAILED
+                contract.failed_at = today
+                contract.failure_reason = "Time expired"
+                await self._deduct_photons(contract)
+                await self.db.commit()
+                return {"status": "failed", "lost": contract.photon_stake}
+
+        return {
+            "status": "active",
+            "progress": f"{contract.current_days}/{contract.target_days}",
+            "minutes": f"{contract.current_minutes}/{contract.target_study_minutes}"
+        }
+
+    async def _grant_rewards(self, contract: SparkContract):
+        """发放契约奖励"""
+        # TODO: 实际发放光子积分
+        logger.info(f"Contract rewards granted: {contract.photon_stake * contract.reward_multiplier}")
+
+    async def _deduct_photons(self, contract: SparkContract):
+        """扣除光子积分"""
+        # TODO: 实际扣除光子积分
+        logger.info(f"Contract photons deducted: {contract.photon_stake}")
+
+    async def update_daily_progress(self, user_id: str, study_minutes: int):
+        """更新每日契约进度"""
+        contract = await self._get_active_contract(user_id)
+        if not contract:
+            return
+
+        contract.current_minutes += study_minutes
+        if contract.current_minutes >= contract.target_study_minutes:
+            contract.current_days += 1
+            contract.current_minutes = 0  # 重置当日分钟数
+
+        await self.db.commit()
+
+        # 检查契约状态
+        await self.check_contract_status(user_id)

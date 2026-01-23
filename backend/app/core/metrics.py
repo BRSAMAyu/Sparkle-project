@@ -226,3 +226,65 @@ COLLABORATION_LATENCY = get_or_create_metric(
     ['workflow_type'],
     buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
 )
+
+# ============ Phase 4: Preference Inference Metrics ============
+
+PREFERENCE_INFERENCE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_inference_total',
+    'Total number of preference inferences from feedback',
+    ['preference_key', 'direction', 'source']  # source: feedback, behavior
+)
+
+PREFERENCE_INFERENCE_CONFIDENCE = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_inference_confidence',
+    'Current confidence level for inferred preferences',
+    ['preference_key']
+)
+
+PREFERENCE_DECAY_APPLIED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_decay_applied_total',
+    'Total number of preference decay operations',
+    ['preference_key', 'action']  # action: decay, reset
+)
+
+# ============ Phase 4: Preference Event Latency Metrics ============
+
+PREFERENCE_EVENT_E2E_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_preference_event_e2e_latency_seconds',
+    'End-to-end latency from preference update to cache invalidation',
+    ['event_type', 'source'],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+)
+
+PREFERENCE_EVENT_CONSUME_LAG = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_event_consume_lag_seconds',
+    'Time lag between event publish and consumer processing',
+    ['consumer_group']
+)
+
+PREFERENCE_EVENT_STREAM_LENGTH = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_event_stream_length',
+    'Number of pending events in Redis Stream',
+    ['stream_key']
+)
+
+CACHE_INVALIDATION_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_cache_invalidation_latency_seconds',
+    'Time from cache invalidation call to completion',
+    ['cache_type'],
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
+)
+
+PREFERENCE_EVENT_ERRORS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_event_errors_total',
+    'Total preference event processing errors',
+    ['error_type', 'consumer_group']
+)

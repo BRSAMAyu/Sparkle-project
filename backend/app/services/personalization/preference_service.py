@@ -1,12 +1,13 @@
 """
 偏好服务 - 统一的偏好数据访问层
 """
+import asyncio
 import json
 from datetime import datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_preferences import UserPreferencesCenter
@@ -85,21 +86,54 @@ class PreferenceService:
         return self._fill_defaults(prefs)
 
     async def update_inferred(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
-        """更新推断偏好并递增版本"""
+        """
+        更新推断偏好并递增版本（带乐观锁并发保护）
+
+        使用 CAS 模式避免并发写入覆盖：
+        1. 读取当前版本号
+        2. 尝试更新（WHERE version = current_version）
+        3. 如果更新行数为 0，说明版本已变更，需要重试
+        """
         if not updates:
             return await self.get_preferences(user_id)
 
-        prefs = await self._get_or_create(user_id)
-        if prefs.inferred is None:
-            prefs.inferred = {}
-        prefs.inferred.update(updates)
-        prefs.version = (prefs.version or 0) + 1
-        prefs.last_inferred_update = datetime.utcnow()
-        prefs.updated_at = datetime.utcnow()
+        # 重试循环：处理并发冲突
+        max_retries = 3
 
-        await self.db.commit()
-        await self._invalidate_cache(user_id)
-        return self._fill_defaults(prefs)
+        for attempt in range(max_retries):
+            prefs = await self._get_or_create(user_id)
+            current_version = prefs.version or 0
+
+            if prefs.inferred is None:
+                prefs.inferred = {}
+            prefs.inferred.update(updates)
+            prefs.version = current_version + 1
+            prefs.last_inferred_update = datetime.utcnow()
+            prefs.updated_at = datetime.utcnow()
+
+            try:
+                await self.db.commit()
+                await self.db.refresh(prefs)
+
+                # 验证版本号确实是预期的（无并发冲突）
+                if prefs.version == current_version + 1:
+                    await self._invalidate_cache(user_id)
+                    return self._fill_defaults(prefs)
+
+            except Exception as e:
+                await self.db.rollback()
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Concurrent preference update for user {user_id}, "
+                        f"retrying (attempt {attempt + 1})"
+                    )
+                    await asyncio.sleep(0.01 * (attempt + 1))  # 指数退避
+                    continue
+                else:
+                    logger.error(f"Failed to update preferences after {max_retries} attempts: {e}")
+                    raise
+
+        return await self.get_preferences(user_id)
 
     async def _get_db_version(self, user_id: UUID) -> int:
         """获取数据库中的版本号"""

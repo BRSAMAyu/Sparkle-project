@@ -17,7 +17,8 @@ from app.services.push_strategies import (
     SprintStrategy,
     MemoryStrategy,
     InactivityStrategy,
-    CuriosityStrategy
+    CuriosityStrategy,
+    EmptyCapsuleStrategy,
 )
 
 class PushService:
@@ -72,6 +73,7 @@ class PushService:
         strategies = [
             SprintStrategy(self.db),
             MemoryStrategy(self.db),
+            EmptyCapsuleStrategy(self.db),
             CuriosityStrategy(self.db),
             InactivityStrategy(self.db),
         ]
