@@ -2,14 +2,6 @@
 ///
 /// Represents a predicted action suggestion from the signals pipeline.
 class CandidateActionModel {
-  final String id;
-  final String actionType; // "break", "review", "clarify", "plan_split"
-  final String title;
-  final String reason;
-  final double confidence;
-  final String timingHint; // "now", "in_5min", "after_current_task"
-  final String payloadSeed;
-  final Map<String, dynamic> metadata;
 
   const CandidateActionModel({
     required this.id,
@@ -34,9 +26,16 @@ class CandidateActionModel {
       metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     );
   }
+  final String id;
+  final String actionType; // "break", "review", "clarify", "plan_split"
+  final String title;
+  final String reason;
+  final double confidence;
+  final String timingHint; // "now", "in_5min", "after_current_task"
+  final String payloadSeed;
+  final Map<String, dynamic> metadata;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'id': id,
       'action_type': actionType,
       'title': title,
@@ -46,7 +45,6 @@ class CandidateActionModel {
       'payload_seed': payloadSeed,
       'metadata': metadata,
     };
-  }
 
   /// Get icon for action type
   String getIcon() {

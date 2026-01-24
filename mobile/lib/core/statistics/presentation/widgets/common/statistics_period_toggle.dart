@@ -8,6 +8,14 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 /// Displays a segmented control or tab bar for selecting
 /// today/week/month/year periods.
 class StatisticsPeriodToggle extends StatelessWidget {
+
+  const StatisticsPeriodToggle({
+    super.key,
+    required this.selectedPeriod,
+    required this.onPeriodChanged,
+    this.showCustomOption = false,
+    this.isCompact = false,
+  });
   /// Currently selected period
   final StatisticsPeriod selectedPeriod;
 
@@ -19,14 +27,6 @@ class StatisticsPeriodToggle extends StatelessWidget {
 
   /// Whether to use compact mode (smaller widgets)
   final bool isCompact;
-
-  const StatisticsPeriodToggle({
-    super.key,
-    required this.selectedPeriod,
-    required this.onPeriodChanged,
-    this.showCustomOption = false,
-    this.isCompact = false,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +63,6 @@ class StatisticsPeriodToggle extends StatelessWidget {
 
 /// Individual period button
 class _PeriodButton extends StatefulWidget {
-  final StatisticsPeriod period;
-  final bool isSelected;
-  final bool isCompact;
-  final VoidCallback onTap;
 
   const _PeriodButton({
     required this.period,
@@ -74,6 +70,10 @@ class _PeriodButton extends StatefulWidget {
     required this.isCompact,
     required this.onTap,
   });
+  final StatisticsPeriod period;
+  final bool isSelected;
+  final bool isCompact;
+  final VoidCallback onTap;
 
   @override
   State<_PeriodButton> createState() => _PeriodButtonState();
@@ -97,7 +97,7 @@ class _PeriodButtonState extends State<_PeriodButton>
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: StatisticsAnimationConfig.cardCurve,
-    ));
+    ),);
   }
 
   @override
@@ -121,11 +121,11 @@ class _PeriodButtonState extends State<_PeriodButton>
   @override
   Widget build(BuildContext context) {
     final padding = widget.isCompact
-        ? EdgeInsets.symmetric(
+        ? const EdgeInsets.symmetric(
             horizontal: DS.md,
             vertical: DS.xs,
           )
-        : EdgeInsets.symmetric(
+        : const EdgeInsets.symmetric(
             horizontal: DS.lg,
             vertical: DS.sm,
           );
@@ -172,9 +172,6 @@ class _PeriodButtonState extends State<_PeriodButton>
 
 /// Dropdown-style period selector
 class StatisticsPeriodDropdown extends StatelessWidget {
-  final StatisticsPeriod selectedPeriod;
-  final ValueChanged<StatisticsPeriod> onPeriodChanged;
-  final bool showCustomOption;
 
   const StatisticsPeriodDropdown({
     super.key,
@@ -182,10 +179,12 @@ class StatisticsPeriodDropdown extends StatelessWidget {
     required this.onPeriodChanged,
     this.showCustomOption = false,
   });
+  final StatisticsPeriod selectedPeriod;
+  final ValueChanged<StatisticsPeriod> onPeriodChanged;
+  final bool showCustomOption;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.sm),
       decoration: BoxDecoration(
         color: DS.neutral100,
@@ -216,7 +215,6 @@ class StatisticsPeriodDropdown extends StatelessWidget {
         ),
       ),
     );
-  }
 
   List<DropdownMenuItem<StatisticsPeriod>> _buildItems() {
     final periods = showCustomOption
@@ -228,11 +226,9 @@ class StatisticsPeriodDropdown extends StatelessWidget {
             StatisticsPeriod.year,
           ];
 
-    return periods.map((period) {
-      return DropdownMenuItem<StatisticsPeriod>(
+    return periods.map((period) => DropdownMenuItem<StatisticsPeriod>(
         value: period,
         child: Text(period.label),
-      );
-    }).toList();
+      )).toList();
   }
 }

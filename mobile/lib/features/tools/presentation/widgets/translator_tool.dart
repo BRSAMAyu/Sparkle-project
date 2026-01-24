@@ -521,8 +521,7 @@ class _LanguageDropdown extends StatelessWidget {
   final ValueChanged<Language> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
+  Widget build(BuildContext context) => DropdownButtonHideUnderline(
       child: DropdownButtonFormField<Language>(
         value: value,
         items: items
@@ -549,5 +548,4 @@ class _LanguageDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
     );
-  }
 }

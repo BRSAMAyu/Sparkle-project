@@ -767,7 +767,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 处理 Plan Review Status Event
   void _handlePlanReviewStatus(PlanReviewStatusEvent event) {
     debugPrint(
-        '📥 Plan review status received: ${event.status} for ${event.reviewId}');
+        '📥 Plan review status received: ${event.status} for ${event.reviewId}',);
 
     // Show user-friendly message
     final message = event.message ?? _getPlanReviewStatusMessage(event.status);

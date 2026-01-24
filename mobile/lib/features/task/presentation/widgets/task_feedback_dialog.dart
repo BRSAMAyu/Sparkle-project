@@ -90,7 +90,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.auto_awesome,
-                        color: Colors.white, size: 24),
+                        color: Colors.white, size: 24,),
                   ),
                   const SizedBox(width: DS.spacing12),
                   Text(
@@ -123,7 +123,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                     ),
                                 strong: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: DS.primaryDark),
+                                    color: DS.primaryDark,),
                               ),
                             ),
                           ),
@@ -197,7 +197,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                           border: OutlineInputBorder(
                             borderRadius: DS.borderRadius8,
                             borderSide:
-                                BorderSide(color: DS.neutral300, width: 1),
+                                BorderSide(color: DS.neutral300),
                           ),
                           filled: true,
                           fillColor: DS.neutral50,
@@ -211,7 +211,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                         Row(
                           children: [
                             Icon(Icons.arrow_forward,
-                                size: 18, color: DS.brandPrimaryConst),
+                                size: 18, color: DS.brandPrimaryConst,),
                             const SizedBox(width: DS.xs),
                             Text(
                               '下一步建议',
@@ -225,7 +225,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                         ...widget.result.nextActions.map((action) => _NextActionCard(
                               action: action,
                               onTap: () => _handleNextAction(action),
-                            )),
+                            ),),
                       ],
                     ],
                   ),
@@ -276,8 +276,7 @@ class _StarRating extends StatelessWidget {
   final ValueChanged<int> onRatingChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(5, (index) {
         final starValue = index + 1;
@@ -295,7 +294,6 @@ class _StarRating extends StatelessWidget {
         );
       }),
     );
-  }
 }
 
 class _NextActionCard extends StatelessWidget {
@@ -354,7 +352,6 @@ class _NextActionCard extends StatelessWidget {
             borderRadius: DS.borderRadius12,
             border: Border.all(
               color: typeColor.withValues(alpha: 0.3),
-              width: 1,
             ),
           ),
           child: Row(

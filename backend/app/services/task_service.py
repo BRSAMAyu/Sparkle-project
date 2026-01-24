@@ -74,6 +74,16 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_created(db_obj)
+            except Exception as e:
+                logger.warning(f"Failed to sync task creation with plan state: {e}")
+
         return db_obj
 
     @staticmethod
@@ -121,6 +131,14 @@ class TaskService:
         if db_obj.plan_id:
             from app.services.plan_service import PlanService
             await PlanService.update_progress(db, db_obj.plan_id, db_obj.user_id)
+
+            # Sync with PlanState
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_completed(db_obj, actual_minutes)
+            except Exception as e:
+                logger.warning(f"Failed to sync task completion with plan state: {e}")
 
         if db_obj.knowledge_node_id:
             from app.services.galaxy_service import GalaxyService

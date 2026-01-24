@@ -32,8 +32,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -54,10 +53,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Container(
+  Widget _buildHeader() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
@@ -86,7 +83,6 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
   Widget _buildContent() {
     if (_isAnalyzing) {
@@ -166,9 +162,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
             ),
           ),
           const SizedBox(height: 12),
-          ...List.generate(_intents.length, (index) {
-            return _buildIntentItem(_intents[index], index + 1);
-          }),
+          ...List.generate(_intents.length, (index) => _buildIntentItem(_intents[index], index + 1)),
           const SizedBox(height: 12),
           _buildExecutionPlan(),
         ],
@@ -176,8 +170,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     );
   }
 
-  Widget _buildIntentItem(_IntentItem intent, int index) {
-    return Container(
+  Widget _buildIntentItem(_IntentItem intent, int index) => Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -257,10 +250,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
-  Widget _buildExecutionPlan() {
-    return Container(
+  Widget _buildExecutionPlan() => Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.blue[50],
@@ -290,10 +281,8 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
-  Widget _buildActions() {
-    return Container(
+  Widget _buildActions() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
@@ -326,7 +315,6 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
         ],
       ),
     );
-  }
 
   Color _getIntentColor(String type) {
     switch (type) {
@@ -397,7 +385,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
     final buffer = StringBuffer();
     for (var i = 0; i < _intents.length; i++) {
       if (i > 0) buffer.write(' → ');
-      buffer.write('${_getIntentLabel(_intents[i].type)}');
+      buffer.write(_getIntentLabel(_intents[i].type));
     }
 
     return buffer.toString();

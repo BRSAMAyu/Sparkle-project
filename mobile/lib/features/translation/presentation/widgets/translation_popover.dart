@@ -222,7 +222,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ 未知错误: ${e.toString()}'),
+            content: Text('❌ 未知错误: ${e}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -231,8 +231,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       constraints: const BoxConstraints(maxWidth: 300),
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
@@ -300,10 +299,8 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         ],
       ),
     );
-  }
 
-  Widget _buildLoading() {
-    return const Row(
+  Widget _buildLoading() => const Row(
       children: [
         SizedBox(
           width: 16,
@@ -314,10 +311,8 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         Text('翻译中...', style: TextStyle(fontSize: 14)),
       ],
     );
-  }
 
-  Widget _buildError() {
-    return Row(
+  Widget _buildError() => Row(
       children: [
         Icon(Icons.error_outline, size: 16, color: DS.error),
         const SizedBox(width: DS.sm),
@@ -329,7 +324,6 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
         ),
       ],
     );
-  }
 
   Widget _buildTranslation() {
     if (_result == null) return const SizedBox.shrink();
@@ -411,7 +405,6 @@ void showTranslationPopover(
 }) {
   showDialog(
     context: context,
-    barrierDismissible: true,
     barrierColor: Colors.black26,
     builder: (context) => Dialog(
       backgroundColor: Colors.transparent,

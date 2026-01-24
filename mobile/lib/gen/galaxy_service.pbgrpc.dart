@@ -24,9 +24,9 @@ class GalaxyServiceClient extends $grpc.Client {
 
   GalaxyServiceClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
-      $core.Iterable<$grpc.ClientInterceptor>? interceptors})
+      $core.Iterable<$grpc.ClientInterceptor>? interceptors,})
       : super(channel, options: options,
-        interceptors: interceptors);
+        interceptors: interceptors,);
   static final _$updateNodeMastery = $grpc.ClientMethod<$3.UpdateNodeMasteryRequest, $3.UpdateNodeMasteryResponse>(
       '/galaxy.v1.GalaxyService/UpdateNodeMastery',
       ($3.UpdateNodeMasteryRequest value) => value.writeToBuffer(),
@@ -51,14 +51,14 @@ abstract class GalaxyServiceBase extends $grpc.Service {
         false,
         false,
         ($core.List<$core.int> value) => $3.UpdateNodeMasteryRequest.fromBuffer(value),
-        ($3.UpdateNodeMasteryResponse value) => value.writeToBuffer()));
+        ($3.UpdateNodeMasteryResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$3.SyncCollaborativeGalaxyRequest, $3.SyncCollaborativeGalaxyResponse>(
         'SyncCollaborativeGalaxy',
         syncCollaborativeGalaxy_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $3.SyncCollaborativeGalaxyRequest.fromBuffer(value),
-        ($3.SyncCollaborativeGalaxyResponse value) => value.writeToBuffer()));
+        ($3.SyncCollaborativeGalaxyResponse value) => value.writeToBuffer(),),);
   }
   $core.String get $name => 'galaxy.v1.GalaxyService';
 

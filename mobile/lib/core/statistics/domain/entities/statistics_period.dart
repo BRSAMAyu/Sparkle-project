@@ -68,10 +68,10 @@ extension StatisticsPeriodExt on StatisticsPeriod {
         );
 
       case StatisticsPeriod.month:
-        return DateTime(now.year, now.month, 1);
+        return DateTime(now.year, now.month);
 
       case StatisticsPeriod.year:
-        return DateTime(now.year, 1, 1);
+        return DateTime(now.year, 1);
 
       case StatisticsPeriod.custom:
         return customStart ??
@@ -127,7 +127,7 @@ extension StatisticsPeriodExt on StatisticsPeriod {
 
   /// Get the next period (for cycling in UI)
   StatisticsPeriod get next {
-    final values = StatisticsPeriod.values;
+    const values = StatisticsPeriod.values;
     final currentIndex = values.indexOf(this);
     final nextIndex = (currentIndex + 1) % (values.length - 1); // Skip custom
     return values[nextIndex];
@@ -135,7 +135,7 @@ extension StatisticsPeriodExt on StatisticsPeriod {
 
   /// Get the previous period (for cycling in UI)
   StatisticsPeriod get previous {
-    final values = StatisticsPeriod.values;
+    const values = StatisticsPeriod.values;
     final currentIndex = values.indexOf(this);
     final prevIndex = (currentIndex - 1) % (values.length - 1);
     if (prevIndex < 0) return values[values.length - 2]; // Skip custom
@@ -143,23 +143,21 @@ extension StatisticsPeriodExt on StatisticsPeriod {
   }
 
   /// Parse from string code
-  static StatisticsPeriod fromCode(String code) {
-    return StatisticsPeriod.values.firstWhere(
+  static StatisticsPeriod fromCode(String code) => StatisticsPeriod.values.firstWhere(
       (period) => period.name == code,
       orElse: () => StatisticsPeriod.today,
     );
-  }
 }
 
 /// Data class for custom date range
 class StatisticsCustomPeriod {
-  final DateTime start;
-  final DateTime end;
 
   const StatisticsCustomPeriod({
     required this.start,
     required this.end,
   });
+  final DateTime start;
+  final DateTime end;
 
   /// Get the period type
   StatisticsPeriod get period => StatisticsPeriod.custom;
@@ -174,10 +172,8 @@ class StatisticsCustomPeriod {
   StatisticsCustomPeriod copyWith({
     DateTime? start,
     DateTime? end,
-  }) {
-    return StatisticsCustomPeriod(
+  }) => StatisticsCustomPeriod(
       start: start ?? this.start,
       end: end ?? this.end,
     );
-  }
 }

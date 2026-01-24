@@ -65,8 +65,7 @@ class TaskBoardCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildView(TaskViewMode mode) {
-    return KeyedSubtree(
+  Widget _buildView(TaskViewMode mode) => KeyedSubtree(
       key: ValueKey(mode),
       child: switch (mode) {
         TaskViewMode.schedule => const ScheduleView(),
@@ -74,11 +73,9 @@ class TaskBoardCard extends ConsumerWidget {
         TaskViewMode.plan => const PlanView(),
       },
     );
-  }
 
   /// Dual-column layout for tablet/desktop
-  Widget _buildDualColumnView(TaskViewMode mode) {
-    return KeyedSubtree(
+  Widget _buildDualColumnView(TaskViewMode mode) => KeyedSubtree(
       key: ValueKey('${mode}_dual'),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -104,10 +101,8 @@ class TaskBoardCard extends ConsumerWidget {
         },
       ),
     );
-  }
 
-  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) {
-    return Container(
+  Widget _buildSidePanel(BuildContext context, TaskViewMode mode) => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfacePrimary.withValues(alpha: 0.5),
@@ -128,10 +123,8 @@ class TaskBoardCard extends ConsumerWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildPanelContent(TaskViewMode mode) {
-    return switch (mode) {
+  Widget _buildPanelContent(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -182,7 +175,6 @@ class TaskBoardCard extends ConsumerWidget {
           ],
         ),
     };
-  }
 }
 
 class _PanelItem extends StatelessWidget {

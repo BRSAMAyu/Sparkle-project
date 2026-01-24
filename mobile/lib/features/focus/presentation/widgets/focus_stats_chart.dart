@@ -44,11 +44,11 @@ class FocusStatsChart extends StatelessWidget {
     final sortedKeys = dailyData.keys.toList()..sort();
     final spots = <FlSpot>[];
 
-    for (int i = 0; i < sortedKeys.length; i++) {
+    for (var i = 0; i < sortedKeys.length; i++) {
       spots.add(FlSpot(
         i.toDouble(),
         (dailyData[sortedKeys[i]] ?? 0).toDouble(),
-      ));
+      ),);
     }
 
     return spots;
@@ -154,8 +154,7 @@ class _LineChart extends StatelessWidget {
   final double maxValue;
 
   @override
-  Widget build(BuildContext context) {
-    return LineChart(
+  Widget build(BuildContext context) => LineChart(
       LineChartData(
         gridData: const FlGridData(show: false),
         titlesData: FlTitlesData(
@@ -221,5 +220,4 @@ class _LineChart extends StatelessWidget {
         maxY: maxValue > 0 ? maxValue * 1.2 : 10,
       ),
     );
-  }
 }

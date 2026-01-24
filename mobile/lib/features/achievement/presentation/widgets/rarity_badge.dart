@@ -34,7 +34,6 @@ class RarityBadge extends StatelessWidget {
           borderRadius: DS.borderRadius8,
           border: Border.all(
             color: colors.border,
-            width: 1,
           ),
         ),
         child: Row(
@@ -105,7 +104,6 @@ class RarityBadge extends StatelessWidget {
           background: DS.neutral200,
           border: DS.neutral400,
           text: DS.neutral700,
-          gradient: null,
         );
       case AchievementRarity.rare:
         return _RarityColors(

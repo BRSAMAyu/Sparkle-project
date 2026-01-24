@@ -24,9 +24,9 @@ class AgentServiceV2Client extends $grpc.Client {
 
   AgentServiceV2Client($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
-      $core.Iterable<$grpc.ClientInterceptor>? interceptors})
+      $core.Iterable<$grpc.ClientInterceptor>? interceptors,})
       : super(channel, options: options,
-        interceptors: interceptors);
+        interceptors: interceptors,);
   static final _$streamChat = $grpc.ClientMethod<$1.ChatRequestV2, $1.ChatResponseV2>(
       '/sparkle.agent.v2.AgentServiceV2/StreamChat',
       ($1.ChatRequestV2 value) => value.writeToBuffer(),
@@ -57,21 +57,21 @@ abstract class AgentServiceV2ServiceBase extends $grpc.Service {
         false,
         true,
         ($core.List<$core.int> value) => $1.ChatRequestV2.fromBuffer(value),
-        ($1.ChatResponseV2 value) => value.writeToBuffer()));
+        ($1.ChatResponseV2 value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$1.ProfileRequestV2, $1.ProfileResponseV2>(
         'GetUserProfile',
         getUserProfile_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $1.ProfileRequestV2.fromBuffer(value),
-        ($1.ProfileResponseV2 value) => value.writeToBuffer()));
+        ($1.ProfileResponseV2 value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$1.WeeklyReportRequest, $1.WeeklyReport>(
         'GetWeeklyReport',
         getWeeklyReport_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $1.WeeklyReportRequest.fromBuffer(value),
-        ($1.WeeklyReport value) => value.writeToBuffer()));
+        ($1.WeeklyReport value) => value.writeToBuffer(),),);
   }
   $core.String get $name => 'sparkle.agent.v2.AgentServiceV2';
 

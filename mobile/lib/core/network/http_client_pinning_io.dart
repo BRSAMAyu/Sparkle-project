@@ -11,7 +11,7 @@ void configureDioForPinning(Dio dio, String? sha256Pin) {
 
   dio.httpClientAdapter = IOHttpClientAdapter(
     createHttpClient: () {
-      final context = SecurityContext(withTrustedRoots: false);
+      final context = SecurityContext();
       final client = HttpClient(context: context);
       client.badCertificateCallback = (cert, host, port) {
         final actual = sha256.convert(cert.der).toString();

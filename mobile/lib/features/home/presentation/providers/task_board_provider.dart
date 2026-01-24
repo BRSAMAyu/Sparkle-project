@@ -83,7 +83,7 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
   }
 
   void clearPlanSelection() {
-    state = state.copyWith(selectedPlanId: null);
+    state = state.copyWith();
   }
 
   void collapseAll() {
@@ -94,7 +94,7 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
 /// Task board provider
 final taskBoardProvider =
     StateNotifierProvider<TaskBoardNotifier, TaskBoardState>(
-  (ref) => TaskBoardNotifier(ref),
+  TaskBoardNotifier.new,
 );
 
 /// Grouped tasks for schedule view
@@ -153,7 +153,7 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
   }
 
   // Sort by priority within each group
-  final sortByPriority = (TaskModel a, TaskModel b) =>
+  int sortByPriority(TaskModel a, TaskModel b) =>
       b.priority.compareTo(a.priority);
 
   overDue.sort(sortByPriority);

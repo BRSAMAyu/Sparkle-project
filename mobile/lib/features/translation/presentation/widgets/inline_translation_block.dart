@@ -61,7 +61,6 @@ class _InlineTranslationBlockState
         sourceLang: widget.sourceLang,
         targetLang: widget.targetLang,
         domain: widget.domain,
-        style: 'natural', // Use natural style for inline blocks
       );
 
       if (mounted) {
@@ -90,8 +89,7 @@ class _InlineTranslationBlockState
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(vertical: DS.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,10 +163,8 @@ class _InlineTranslationBlockState
         ],
       ),
     );
-  }
 
-  Widget _buildLoading() {
-    return Container(
+  Widget _buildLoading() => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -186,10 +182,8 @@ class _InlineTranslationBlockState
         ],
       ),
     );
-  }
 
-  Widget _buildError() {
-    return Container(
+  Widget _buildError() => Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
         color: DS.error.withOpacity(0.1),
@@ -208,7 +202,6 @@ class _InlineTranslationBlockState
         ],
       ),
     );
-  }
 
   Widget _buildTranslation() {
     if (_result == null) return const SizedBox.shrink();

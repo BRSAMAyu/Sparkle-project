@@ -262,7 +262,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('需要麦克风权限才能使用语音输入'),
+            content: const Text('需要麦克风权限才能使用语音输入'),
             backgroundColor: DS.error,
           ),
         );
@@ -296,7 +296,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('未登录，请先登录'),
+            content: const Text('未登录，请先登录'),
             backgroundColor: DS.error,
           ),
         );

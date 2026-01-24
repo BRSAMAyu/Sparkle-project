@@ -88,6 +88,8 @@ from app.models.achievement import (
     StudyBuddy,
     UserTitle,
 )
+from app.models.plan_state import PlanState, PlanStateStatus
+from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 
 __all__ = [
     "BaseModel",
@@ -208,4 +210,10 @@ __all__ = [
     "UserGalaxySkin",
     "StudyBuddy",
     "UserTitle",
+    # Plan State
+    "PlanState",
+    "PlanStateStatus",
+    # Task Feedback
+    "TaskFeedback",
+    "TaskFeedbackCategory",
 ]

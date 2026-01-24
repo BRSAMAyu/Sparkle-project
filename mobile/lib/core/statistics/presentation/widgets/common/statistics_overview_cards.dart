@@ -5,6 +5,18 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// A single statistics metric card
 class StatisticsMetricCard extends StatelessWidget {
+
+  const StatisticsMetricCard({
+    super.key,
+    required this.title,
+    required this.value,
+    this.unit,
+    this.changePercentage,
+    this.icon,
+    this.backgroundColor,
+    this.valueColor,
+    this.isLoading = false,
+  });
   /// Card title (e.g., "Total Minutes")
   final String title;
 
@@ -29,21 +41,8 @@ class StatisticsMetricCard extends StatelessWidget {
   /// Whether to show a loading state
   final bool isLoading;
 
-  const StatisticsMetricCard({
-    super.key,
-    required this.title,
-    required this.value,
-    this.unit,
-    this.changePercentage,
-    this.icon,
-    this.backgroundColor,
-    this.valueColor,
-    this.isLoading = false,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: backgroundColor ?? DS.white,
@@ -64,10 +63,8 @@ class StatisticsMetricCard extends StatelessWidget {
               ],
             ),
     );
-  }
 
-  Widget _buildIcon() {
-    return Container(
+  Widget _buildIcon() => Container(
       padding: EdgeInsets.all(DS.sm),
       decoration: BoxDecoration(
         color: (valueColor ?? DS.brandPrimary).withValues(alpha: 0.1),
@@ -79,16 +76,13 @@ class StatisticsMetricCard extends StatelessWidget {
         color: valueColor ?? DS.brandPrimary,
       ),
     );
-  }
 
-  Widget _buildTitle() {
-    return Text(
+  Widget _buildTitle() => Text(
       title,
       style: DS.captionStyle.copyWith(
         color: DS.neutral500,
       ),
     );
-  }
 
   Widget _buildValue() {
     final unitText = unit != null ? ' $unit' : '';
@@ -105,7 +99,7 @@ class StatisticsMetricCard extends StatelessWidget {
         ),
         if (unit != null)
           Padding(
-            padding: EdgeInsets.only(bottom: 4, left: DS.xs),
+            padding: const EdgeInsets.only(bottom: 4, left: DS.xs),
             child: Text(
               unitText,
               style: DS.captionStyle.copyWith(
@@ -124,18 +118,18 @@ class StatisticsMetricCard extends StatelessWidget {
     final sign = isPositive ? '+' : '';
 
     return Container(
-      margin: EdgeInsets.only(top: DS.xs),
+      margin: const EdgeInsets.only(top: DS.xs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '$arrow ${sign}${changePercentage!.toStringAsFixed(1)}%',
+            '$arrow $sign${changePercentage!.toStringAsFixed(1)}%',
             style: DS.captionStyle.copyWith(
               color: color,
               fontWeight: DS.fontWeightMedium,
             ),
           ),
-          SizedBox(width: DS.xs),
+          const SizedBox(width: DS.xs),
           Text(
             '较上期',
             style: DS.captionStyle.copyWith(
@@ -147,8 +141,7 @@ class StatisticsMetricCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLoading() {
-    return Column(
+  Widget _buildLoading() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -170,11 +163,18 @@ class StatisticsMetricCard extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 /// A grid of overview cards for quick statistics summary
 class StatisticsOverviewCards extends StatelessWidget {
+
+  const StatisticsOverviewCards({
+    super.key,
+    required this.cards,
+    this.crossAxisCount = 2,
+    this.spacing,
+    this.padding,
+  });
   /// List of card data to display
   final List<OverviewCardData> cards;
 
@@ -187,17 +187,8 @@ class StatisticsOverviewCards extends StatelessWidget {
   /// Padding around the grid
   final EdgeInsetsGeometry? padding;
 
-  const StatisticsOverviewCards({
-    super.key,
-    required this.cards,
-    this.crossAxisCount = 2,
-    this.spacing,
-    this.padding,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: padding ?? EdgeInsets.zero,
       child: GridView.builder(
         shrinkWrap: true,
@@ -214,10 +205,8 @@ class StatisticsOverviewCards extends StatelessWidget {
         },
       ),
     );
-  }
 
-  Widget _buildCardWithAnimation(OverviewCardData data, int index) {
-    return TweenAnimationBuilder<double>(
+  Widget _buildCardWithAnimation(OverviewCardData data, int index) => TweenAnimationBuilder<double>(
       key: ValueKey(data.id),
       tween: Tween(begin: 0.0, end: 1.0),
       duration: StatisticsAnimationConfig.cardEntrance,
@@ -242,37 +231,10 @@ class StatisticsOverviewCards extends StatelessWidget {
         isLoading: data.isLoading,
       ),
     );
-  }
 }
 
 /// Data class for overview card
 class OverviewCardData {
-  /// Unique identifier
-  final String id;
-
-  /// Card title
-  final String title;
-
-  /// Display value
-  final String value;
-
-  /// Unit label
-  final String? unit;
-
-  /// Change percentage
-  final double? changePercentage;
-
-  /// Icon
-  final IconData? icon;
-
-  /// Background color
-  final Color? backgroundColor;
-
-  /// Value color
-  final Color? valueColor;
-
-  /// Whether to show loading state
-  final bool isLoading;
 
   const OverviewCardData({
     required this.id,
@@ -317,16 +279,36 @@ class OverviewCardData {
       isLoading: true,
     );
   }
+  /// Unique identifier
+  final String id;
+
+  /// Card title
+  final String title;
+
+  /// Display value
+  final String value;
+
+  /// Unit label
+  final String? unit;
+
+  /// Change percentage
+  final double? changePercentage;
+
+  /// Icon
+  final IconData? icon;
+
+  /// Background color
+  final Color? backgroundColor;
+
+  /// Value color
+  final Color? valueColor;
+
+  /// Whether to show loading state
+  final bool isLoading;
 }
 
 /// Compact single-row statistics bar for tight spaces
 class StatisticsMetricBar extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? unit;
-  final double? changePercentage;
-  final Color? valueColor;
-  final bool isLoading;
 
   const StatisticsMetricBar({
     super.key,
@@ -337,6 +319,12 @@ class StatisticsMetricBar extends StatelessWidget {
     this.valueColor,
     this.isLoading = false,
   });
+  final String label;
+  final String value;
+  final String? unit;
+  final double? changePercentage;
+  final Color? valueColor;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +340,7 @@ class StatisticsMetricBar extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: DS.sm),
+          const SizedBox(width: DS.sm),
           Container(
             width: 60,
             height: 14,
@@ -384,7 +372,7 @@ class StatisticsMetricBar extends StatelessWidget {
               ),
             ),
             if (unit != null) ...[
-              SizedBox(width: DS.xs),
+              const SizedBox(width: DS.xs),
               Text(
                 unit!,
                 style: DS.captionStyle.copyWith(
@@ -393,7 +381,7 @@ class StatisticsMetricBar extends StatelessWidget {
               ),
             ],
             if (changePercentage != null) ...[
-              SizedBox(width: DS.sm),
+              const SizedBox(width: DS.sm),
               _buildChangeIndicator(),
             ],
           ],
@@ -412,7 +400,7 @@ class StatisticsMetricBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: color),
-        SizedBox(width: 2),
+        const SizedBox(width: 2),
         Text(
           '$sign${changePercentage!.toStringAsFixed(1)}%',
           style: DS.captionStyle.copyWith(

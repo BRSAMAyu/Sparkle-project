@@ -4,21 +4,21 @@ library;
 // 实体
 export '../../shared/entities/achievement_model.dart'
     show
+        AchievementMapData,
+        AchievementMapNode,
         AchievementModel,
         AchievementRarity,
-        AchievementType,
-        VisualEffectType,
-        ContractStatus,
-        UserAchievementProgress,
-        AchievementWithProgress,
-        StreakStats,
-        SparkContract,
-        GalaxySkin,
-        UserTitle,
         AchievementStats,
-        AchievementMapNode,
-        AchievementMapData,
-        AchievementUnlockEvent;
+        AchievementType,
+        AchievementUnlockEvent,
+        AchievementWithProgress,
+        ContractStatus,
+        GalaxySkin,
+        SparkContract,
+        StreakStats,
+        UserAchievementProgress,
+        UserTitle,
+        VisualEffectType;
 
 // 数据层
 export 'data/repositories/achievement_repository.dart'

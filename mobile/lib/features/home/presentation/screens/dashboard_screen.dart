@@ -153,9 +153,9 @@ class DashboardScreen extends ConsumerWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: const IntentPredictionBar(),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+                  child: IntentPredictionBar(),
                 ),
               ),
             ),
@@ -326,8 +326,7 @@ class _StreakCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
@@ -378,5 +377,4 @@ class _StreakCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }

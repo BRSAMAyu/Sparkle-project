@@ -45,7 +45,7 @@ class _NotesToolState extends State<NotesTool> {
     await prefs.remove(_notesKey);
     await prefs.remove(_notesTimestampKey);
     if (mounted) {
-      setState(() => _controller.clear());
+      setState(_controller.clear);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('笔记已清空')),
       );

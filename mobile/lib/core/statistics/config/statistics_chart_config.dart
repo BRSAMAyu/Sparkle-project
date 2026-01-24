@@ -181,7 +181,7 @@ class StatisticsChartConfig {
   static const double gridThickness = 1.0;
 
   /// Grid line dash pattern (null = solid)
-  static const List<int>? gridDashPattern = [4, 4];
+  static const List<int> gridDashPattern = [4, 4];
 
   /// Axis line thickness
   static const double axisThickness = 0.0; // Hidden by default
@@ -267,13 +267,10 @@ class StatisticsChartConfig {
   // ============================================
 
   /// Get a predefined color for an index
-  static Color getColorForIndex(int index) {
-    return pieColors[index % pieColors.length];
-  }
+  static Color getColorForIndex(int index) => pieColors[index % pieColors.length];
 
   /// Get gradient for line chart
-  static LinearGradient getLineGradient({Color? color}) {
-    return LinearGradient(
+  static LinearGradient getLineGradient({Color? color}) => LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
@@ -281,18 +278,15 @@ class StatisticsChartConfig {
         (color ?? primaryColor).withValues(alpha: 0.0),
       ],
     );
-  }
 
   /// Get gradient for bar chart
-  static LinearGradient getBarGradient({Color? color}) {
-    return LinearGradient(
+  static LinearGradient getBarGradient({Color? color}) => LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: color != null
           ? [color, color.withValues(alpha: 0.7)]
           : barGradientColors,
     );
-  }
 
   /// Get color based on trend
   static Color getTrendColor(double? changePercentage) {
@@ -329,8 +323,7 @@ class StatisticsChartDataHelper {
     required List<String> xLabels,
     double minY = 0,
     double? maxY,
-  }) {
-    return LineChartData(
+  }) => LineChartData(
       lineBarsData: lineBarsData,
       minX: 0,
       maxX: (xLabels.length - 1).toDouble(),
@@ -411,7 +404,6 @@ class StatisticsChartDataHelper {
         ),
       ),
     );
-  }
 
   /// Get default bar chart data with styling applied
   static BarChartData getDefaultBarChartData({
@@ -419,8 +411,7 @@ class StatisticsChartDataHelper {
     required List<String> xLabels,
     double minY = 0,
     double? maxY,
-  }) {
-    return BarChartData(
+  }) => BarChartData(
       barGroups: barGroups,
       minY: minY,
       maxY: maxY,
@@ -480,11 +471,10 @@ class StatisticsChartDataHelper {
       ),
       borderData: FlBorderData(show: false),
     );
-  }
 
   /// Calculate interval for X axis labels
   static double _getInterval(int labelCount) {
-    final maxLabels = StatisticsChartConfig.maxXLabels;
+    const maxLabels = StatisticsChartConfig.maxXLabels;
     if (labelCount <= maxLabels) return 1;
     return (labelCount / maxLabels).ceil().toDouble();
   }

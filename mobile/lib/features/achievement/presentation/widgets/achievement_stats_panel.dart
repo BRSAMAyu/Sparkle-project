@@ -24,8 +24,7 @@ class AchievementStatsPanel extends StatelessWidget {
     return _buildFullStats();
   }
 
-  Widget _buildFullStats() {
-    return Container(
+  Widget _buildFullStats() => Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -77,10 +76,8 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildCompactStats() {
-    return Container(
+  Widget _buildCompactStats() => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -107,10 +104,8 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -142,10 +137,8 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildCompactStatItem(String value, String label) {
-    return Column(
+  Widget _buildCompactStatItem(String value, String label) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -165,15 +158,12 @@ class AchievementStatsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildVerticalDivider() {
-    return Container(
+  Widget _buildVerticalDivider() => Container(
       width: 1,
       height: 24,
       color: DS.border,
     );
-  }
 
   Widget _buildOverallProgressBar() {
     final progress = stats.unlockedPercentage / 100;
@@ -222,8 +212,7 @@ class AchievementStatsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildRarityDistribution() {
-    return Column(
+  Widget _buildRarityDistribution() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -267,10 +256,8 @@ class AchievementStatsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildRarityBarItem(String label, int count, Color color) {
-    return Row(
+  Widget _buildRarityBarItem(String label, int count, Color color) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -305,10 +292,8 @@ class AchievementStatsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildHiddenStat() {
-    return Container(
+  Widget _buildHiddenStat() => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -340,7 +325,6 @@ class AchievementStatsPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// 稀有度分布饼图组件
@@ -381,8 +365,7 @@ class RarityPieChart extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyChart() {
-    return SizedBox(
+  Widget _buildEmptyChart() => SizedBox(
       width: size,
       height: size,
       child: Container(
@@ -399,7 +382,6 @@ class RarityPieChart extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PieSection {
@@ -420,7 +402,7 @@ class _PieChartPainter extends CustomPainter {
 
     final total = sections.fold<int>(0, (sum, s) => sum + s.count);
 
-    double startAngle = -math.pi / 2;
+    var startAngle = -math.pi / 2;
 
     for (final section in sections) {
       if (section.count == 0) continue;
@@ -456,7 +438,5 @@ class _PieChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PieChartPainter oldDelegate) {
-    return oldDelegate.sections != sections;
-  }
+  bool shouldRepaint(_PieChartPainter oldDelegate) => oldDelegate.sections != sections;
 }

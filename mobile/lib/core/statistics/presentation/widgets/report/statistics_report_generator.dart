@@ -8,6 +8,16 @@ import 'package:sparkle/core/statistics/domain/services/statistics_export_servic
 
 /// Configuration for PNG report generation
 class ReportConfig {
+
+  const ReportConfig({
+    this.size = const ExportDimensions(1080, 1920),
+    this.pixelRatio = 2.0,
+    this.backgroundColor = const Color(0xFF6366F1),
+    this.primaryColor = const Color(0xFFFFFFFF),
+    this.secondaryColor = const Color(0xFFFFFFFF),
+    this.includeWatermark = true,
+    this.watermarkText = '星火AI学习助手',
+  });
   /// Size of the report
   final ExportDimensions size;
 
@@ -29,19 +39,8 @@ class ReportConfig {
   /// Watermark text
   final String watermarkText;
 
-  const ReportConfig({
-    this.size = const ExportDimensions(1080, 1920),
-    this.pixelRatio = 2.0,
-    this.backgroundColor = const Color(0xFF6366F1),
-    this.primaryColor = const Color(0xFFFFFFFF),
-    this.secondaryColor = const Color(0xFFFFFFFF),
-    this.includeWatermark = true,
-    this.watermarkText = '星火AI学习助手',
-  });
-
   /// Get a landscape config
-  ReportConfig toLandscape() {
-    return ReportConfig(
+  ReportConfig toLandscape() => ReportConfig(
       size: ExportDimensions(size.height, size.width),
       pixelRatio: pixelRatio,
       backgroundColor: backgroundColor,
@@ -50,11 +49,16 @@ class ReportConfig {
       includeWatermark: includeWatermark,
       watermarkText: watermarkText,
     );
-  }
 }
 
 /// Report section data
 class ReportSection {
+
+  const ReportSection({
+    required this.title,
+    required this.content,
+    this.enabled = true,
+  });
   /// Title of the section
   final String title;
 
@@ -63,12 +67,6 @@ class ReportSection {
 
   /// Whether this section should be included
   final bool enabled;
-
-  const ReportSection({
-    required this.title,
-    required this.content,
-    this.enabled = true,
-  });
 }
 
 /// Statistics report generator
@@ -208,7 +206,7 @@ class StatisticsReportGenerator {
     final availableHeight = size.height * 0.65;
     final sectionHeight = availableHeight / enabledSections.length;
 
-    for (int i = 0; i < enabledSections.length; i++) {
+    for (var i = 0; i < enabledSections.length; i++) {
       final section = enabledSections[i];
       final sectionY = startY + sectionHeight * i;
 
@@ -284,16 +282,11 @@ class StatisticsReportGenerator {
   }
 
   /// Format date for display
-  static String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
-  }
+  static String _formatDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
 }
 
 /// Widget for generating a report preview
 class ReportPreviewWidget extends StatefulWidget {
-  final StatisticsEntity statistics;
-  final List<ReportSection> sections;
-  final ReportConfig config;
 
   const ReportPreviewWidget({
     super.key,
@@ -301,17 +294,19 @@ class ReportPreviewWidget extends StatefulWidget {
     required this.sections,
     this.config = const ReportConfig(),
   });
+  final StatisticsEntity statistics;
+  final List<ReportSection> sections;
+  final ReportConfig config;
 
   @override
   State<ReportPreviewWidget> createState() => _ReportPreviewWidgetState();
 }
 
 class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
-  bool _isGenerating = false;
+  final bool _isGenerating = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -344,10 +339,8 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
         ),
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Padding(
+  Widget _buildHeader() => Padding(
       padding: EdgeInsets.all(DS.xl),
       child: Column(
         children: [
@@ -378,10 +371,8 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
         ],
       ),
     );
-  }
 
-  Widget _buildSectionCard(ReportSection section) {
-    return Container(
+  Widget _buildSectionCard(ReportSection section) => Container(
       margin: EdgeInsets.only(bottom: DS.md),
       padding: EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
@@ -404,13 +395,12 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
         ],
       ),
     );
-  }
 
   Widget _buildFooter() {
     if (!widget.config.includeWatermark) return const SizedBox.shrink();
 
     return Padding(
-      padding: EdgeInsets.all(DS.lg),
+      padding: const EdgeInsets.all(DS.lg),
       child: Text(
         widget.config.watermarkText,
         style: TextStyle(

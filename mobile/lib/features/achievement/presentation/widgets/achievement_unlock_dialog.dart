@@ -29,8 +29,7 @@ class AchievementUnlockDialog extends StatefulWidget {
     AchievementUnlockEvent event, {
     VoidCallback? onShare,
     bool barrierDismissible = true,
-  }) {
-    return showGeneralDialog(
+  }) => showGeneralDialog(
       context: context,
       barrierDismissible: barrierDismissible,
       barrierLabel: 'Achievement Unlock',
@@ -50,7 +49,6 @@ class AchievementUnlockDialog extends StatefulWidget {
         );
       },
     );
-  }
 }
 
 class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
@@ -122,12 +120,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       case AchievementRarity.rare:
         // 金色光晕 + 缓慢旋转
         _glowController.repeat(reverse: true);
-        break;
       case AchievementRarity.epic:
         // 紫色脉动光圈 + 扩散波纹
         _glowController.repeat(reverse: true);
         _particleController.repeat();
-        break;
       case AchievementRarity.legendary:
         // 彩虹粒子爆炸 + 屏幕震动效果
         _rotateController.repeat();
@@ -142,7 +138,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
             }
           });
         }
-        break;
     }
   }
 
@@ -154,17 +149,14 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         break;
       case AchievementRarity.rare:
         HapticFeedback.lightImpact();
-        break;
       case AchievementRarity.epic:
         HapticFeedback.mediumImpact();
-        break;
       case AchievementRarity.legendary:
         HapticFeedback.heavyImpact();
         // 传说级额外震动
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted) HapticFeedback.heavyImpact();
         });
-        break;
     }
   }
 
@@ -290,7 +282,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 borderRadius: DS.borderRadius12,
                 border: Border.all(
                   color: Colors.amber,
-                  width: 1,
                 ),
               ),
               child: Row(
@@ -354,8 +345,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
 
     return AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
+      builder: (context, child) => Transform.scale(
           scale: _scaleAnimation.value,
           child: AnimatedBuilder(
             animation: _rotateAnimation,
@@ -405,8 +395,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               );
             },
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -425,8 +414,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     }
   }
 
-  Widget _buildGlowingRings() {
-    return AnimatedBuilder(
+  Widget _buildGlowingRings() => AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
         return Container(
@@ -442,10 +430,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         );
       },
     );
-  }
 
-  Widget _buildPulsingWaves() {
-    return AnimatedBuilder(
+  Widget _buildPulsingWaves() => AnimatedBuilder(
       animation: _particleController,
       builder: (context, child) {
         return Container(
@@ -463,10 +449,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         );
       },
     );
-  }
 
-  Widget _buildRainbowExplosion() {
-    return AnimatedBuilder(
+  Widget _buildRainbowExplosion() => AnimatedBuilder(
       animation: _particleController,
       builder: (context, child) {
         final progress = _particleController.value;
@@ -476,10 +460,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         );
       },
     );
-  }
 
-  Widget _buildParticleOverlay() {
-    return Positioned.fill(
+  Widget _buildParticleOverlay() => Positioned.fill(
       child: CustomPaint(
         painter: _ParticlePainter(
           rarity: widget.event.rarity,
@@ -487,7 +469,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         ),
       ),
     );
-  }
 
   Widget _buildActionButton({
     required IconData icon,
@@ -758,7 +739,7 @@ class _ParticlePainter extends CustomPainter {
     final particleCount = rarity == AchievementRarity.legendary ? 50 : 20;
     final baseColor = _getParticleBaseColor();
 
-    for (int i = 0; i < particleCount; i++) {
+    for (var i = 0; i < particleCount; i++) {
       final angle = (i / particleCount) * 2 * math.pi + progress * 0.5;
       final distance = 50 + progress * 150;
       final x = center.dx + math.cos(angle) * distance;
@@ -812,7 +793,7 @@ class _RainbowExplosionPainter extends CustomPainter {
       const Color(0xFF4D96FF),
     ];
 
-    for (int i = 0; i < colors.length; i++) {
+    for (var i = 0; i < colors.length; i++) {
       final radius = 80 + progress * 120 + i * 30;
       final paint = Paint()
         ..color = colors[i].withValues(alpha: (0.3 - progress * 0.25).clamp(0.0, 0.3))

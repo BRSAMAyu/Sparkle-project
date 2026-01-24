@@ -68,7 +68,7 @@ class LocalTranslationRepository {
       isFavorited: isFavorited,
     );
 
-    return await _collection.put(record);
+    return _collection.put(record);
   }
 
   /// Get all translation records
@@ -154,7 +154,7 @@ class LocalTranslationRepository {
         .group((q) => q
             .originalTextContains(lowerQuery, caseSensitive: false)
             .or()
-            .translatedTextContains(lowerQuery, caseSensitive: false))
+            .translatedTextContains(lowerQuery, caseSensitive: false),)
         .sortByCreatedAtDesc()
         .limit(50)
         .findAll();
@@ -191,14 +191,10 @@ class LocalTranslationRepository {
   }
 
   /// Delete a translation record
-  Future<bool> delete(Id id) async {
-    return await _collection.delete(id);
-  }
+  Future<bool> delete(Id id) async => await _collection.delete(id);
 
   /// Delete all records
-  Future<bool> deleteAll() async {
-    return await _collection.clear();
-  }
+  Future<bool> deleteAll() async => await _collection.clear();
 
   /// Delete favorites only
   Future<int> deleteFavorites() async {
@@ -206,7 +202,7 @@ class LocalTranslationRepository {
         .filter()
         .isFavoritedEqualTo(true)
         .findAll();
-    return await _collection.deleteAll(favorites.map((r) => r.id).toList());
+    return _collection.deleteAll(favorites.map((r) => r.id).toList());
   }
 
   /// Get statistics
@@ -240,8 +236,7 @@ class LocalTranslationRepository {
   }
 
   /// Convert TranslationRecord to TranslationHistoryItem
-  TranslationHistoryItem _toHistoryItem(TranslationRecord record) {
-    return TranslationHistoryItem(
+  TranslationHistoryItem _toHistoryItem(TranslationRecord record) => TranslationHistoryItem(
       id: record.id,
       originalText: record.originalText,
       translatedText: record.translatedText,
@@ -253,7 +248,6 @@ class LocalTranslationRepository {
       createdAt: record.createdAt,
       lastViewedAt: record.lastViewedAt,
     );
-  }
 
   /// Check if a similar translation exists (to avoid duplicates)
   Future<TranslationHistoryItem?> findSimilar({

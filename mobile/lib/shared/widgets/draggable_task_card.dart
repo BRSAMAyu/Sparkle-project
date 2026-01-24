@@ -117,7 +117,7 @@ class DraggableTaskCard extends ConsumerWidget {
                       Row(
                         children: [
                           Icon(Icons.calendar_today,
-                              size: 12, color: DS.brandPrimary54),
+                              size: 12, color: DS.brandPrimary54,),
                           const SizedBox(width: 4),
                           Text(
                             task.dueDate != null
@@ -214,8 +214,7 @@ class CalendarDayDragTarget extends ConsumerWidget {
           onTaskDropped?.call(result.task, result.newDueDate);
         }
       },
-      builder: (context, candidateData, rejectedData) {
-        return Container(
+      builder: (context, candidateData, rejectedData) => Container(
           decoration: isHovered
               ? BoxDecoration(
                   border: Border.all(
@@ -226,12 +225,9 @@ class CalendarDayDragTarget extends ConsumerWidget {
                 )
               : null,
           child: child,
-        );
-      },
+        ),
     );
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 }

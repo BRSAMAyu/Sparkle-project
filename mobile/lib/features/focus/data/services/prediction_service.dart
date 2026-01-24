@@ -1,7 +1,8 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
-import 'dart:convert';
 
 /// Service for requesting behavior predictions from the signals pipeline
 class PredictionService {

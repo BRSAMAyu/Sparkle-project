@@ -37,16 +37,12 @@ void main() {
     test('Should handle null contexts gracefully', () {
       final hashWithNull = HashUtils.generateTranslationFingerprint(
         text: 'hello',
-        contextBefore: null,
-        contextAfter: null,
-        pageNo: null,
       );
 
       final hashWithEmpty = HashUtils.generateTranslationFingerprint(
         text: 'hello',
         contextBefore: '',
         contextAfter: '',
-        pageNo: null,
       );
 
       expect(hashWithNull, equals(hashWithEmpty));

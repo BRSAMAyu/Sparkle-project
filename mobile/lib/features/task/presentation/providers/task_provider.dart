@@ -6,7 +6,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, taskNotificationSchedulerProvider, TaskReminderConfig, taskReminderConfigProvider;
+import 'package:sparkle/core/services/task_notification_scheduler.dart' show TaskNotificationScheduler, TaskReminderConfig, taskNotificationSchedulerProvider, taskReminderConfigProvider;
 
 // A dummy filter class for now
 class TaskFilter {}

@@ -18,8 +18,7 @@ class IntentAnalysisButton extends ConsumerWidget {
   final VoidCallback onConfirm;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: () => _showIntentPreview(context),
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -52,7 +51,6 @@ class IntentAnalysisButton extends ConsumerWidget {
         ),
       ),
     );
-  }
 
   Future<void> _showIntentPreview(BuildContext context) async {
     final result = await showModalBottomSheet<bool>(
@@ -65,7 +63,7 @@ class IntentAnalysisButton extends ConsumerWidget {
       ),
     );
 
-    if (result == true) {
+    if (result ?? false) {
       onConfirm();
     }
   }

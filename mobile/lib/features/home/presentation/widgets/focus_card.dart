@@ -125,6 +125,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   const SizedBox(height: DS.md),
                   // Nudge Message
                   Flexible(
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -147,10 +149,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                ,),
                   ),
                 ],
               ),
@@ -171,10 +171,10 @@ class _FocusCardState extends ConsumerState<FocusCard>
                 _buildMetric(context, '$tasksCompleted', '今日完成'),
               ],
             ),
-          ],
+          ,],
         ),
       ),
-    );
+    )
   }
 
   Widget _buildMetric(BuildContext context, String value, String label) {

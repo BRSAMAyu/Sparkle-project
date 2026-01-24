@@ -9,26 +9,34 @@ enum SubTaskStatus {
   final String value;
   const SubTaskStatus(this.value);
 
-  static SubTaskStatus fromString(String value) {
-    return SubTaskStatus.values.firstWhere(
+  static SubTaskStatus fromString(String value) => SubTaskStatus.values.firstWhere(
       (e) => e.value == value,
       orElse: () => SubTaskStatus.pending,
     );
-  }
 }
 
 /// Subtask model
 class SubTaskModel extends BaseModel {
+
+  factory SubTaskModel.fromJson(Map<String, dynamic> json) => SubTaskModel(
+        id: json['id'] as String,
+        parentTaskId: json['parent_task_id'] as String,
+        title: json['title'] as String,
+        description: json['description'] as String?,
+        order: json['order'] as int,
+        status: SubTaskStatus.fromString(json['status'] as String),
+        completedAt: json['completed_at'] == null
+            ? null
+            : DateTime.parse(json['completed_at'] as String),
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
+      );
   SubTaskModel({
     required this.id,
     required this.parentTaskId,
     required this.title,
-    this.description,
-    required this.order,
-    required this.status,
+    required this.order, required this.status, required this.createdAt, required this.updatedAt, this.description,
     this.completedAt,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   final String id;
@@ -55,20 +63,6 @@ class SubTaskModel extends BaseModel {
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
-
-  factory SubTaskModel.fromJson(Map<String, dynamic> json) => SubTaskModel(
-        id: json['id'] as String,
-        parentTaskId: json['parent_task_id'] as String,
-        title: json['title'] as String,
-        description: json['description'] as String?,
-        order: json['order'] as int,
-        status: SubTaskStatus.fromString(json['status'] as String),
-        completedAt: json['completed_at'] == null
-            ? null
-            : DateTime.parse(json['completed_at'] as String),
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
 
   SubTaskModel copyWith({
     String? id,

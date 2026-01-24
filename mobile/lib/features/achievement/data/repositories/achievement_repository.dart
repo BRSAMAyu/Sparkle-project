@@ -81,7 +81,7 @@ class AchievementRepository {
 
       final achievements = dataList
           .map((json) => AchievementWithProgress.fromJson(
-              json as Map<String, dynamic>))
+              json as Map<String, dynamic>,),)
           .toList();
 
       final meta = payload['meta'] as Map<String, dynamic>? ?? {};
@@ -255,7 +255,7 @@ class AchievementRepository {
 
       final skins = dataList?.map((json) => GalaxySkin.fromJson(
         json as Map<String, dynamic>,
-      )).toList() ?? [];
+      ),).toList() ?? [];
 
       return GalaxySkinListResponse(
         skins: skins,
@@ -294,7 +294,7 @@ class AchievementRepository {
 
       return dataList?.map((json) => UserTitle.fromJson(
         json as Map<String, dynamic>,
-      )).toList() ?? [];
+      ),).toList() ?? [];
     } on DioException catch (e) {
       return _handleDioError(e, 'getTitles');
     }
@@ -342,7 +342,7 @@ class AchievementRepository {
 
       return unlockedList?.map((json) => AchievementUnlockEvent.fromJson(
         json as Map<String, dynamic>,
-      )).toList() ?? [];
+      ),).toList() ?? [];
     } on DioException catch (e) {
       return _handleDioError(e, 'processEvent');
     }
@@ -350,8 +350,7 @@ class AchievementRepository {
 
   // ========== Demo Data ==========
 
-  AchievementListResponse _getDemoAchievements() {
-    return AchievementListResponse(
+  AchievementListResponse _getDemoAchievements() => AchievementListResponse(
       achievements: [
         AchievementWithProgress(
           achievement: AchievementModel(
@@ -433,10 +432,8 @@ class AchievementRepository {
         'hidden': {'total': 5, 'unlocked': 1},
       },
     );
-  }
 
-  AchievementMapData _getDemoAchievementMap() {
-    return AchievementMapData(
+  AchievementMapData _getDemoAchievementMap() => AchievementMapData(
       nodes: [
         AchievementMapNode(
           id: 'streak_7',
@@ -476,10 +473,8 @@ class AchievementRepository {
         {'id': 'hidden', 'name': 'hidden', 'count': 3},
       ],
     );
-  }
 
-  GalaxySkinListResponse _getDemoGalaxySkins() {
-    return GalaxySkinListResponse(
+  GalaxySkinListResponse _getDemoGalaxySkins() => GalaxySkinListResponse(
       skins: [
         GalaxySkin(
           id: 'default',
@@ -515,10 +510,8 @@ class AchievementRepository {
       ],
       equippedSkinId: 'default',
     );
-  }
 
-  List<UserTitle> _getDemoTitles() {
-    return [
+  List<UserTitle> _getDemoTitles() => [
       UserTitle(
         userId: 'demo_user',
         titleId: 'early_explorer',
@@ -536,7 +529,6 @@ class AchievementRepository {
         isEquipped: false,
       ),
     ];
-  }
 }
 
 // ========== Response Models ==========
