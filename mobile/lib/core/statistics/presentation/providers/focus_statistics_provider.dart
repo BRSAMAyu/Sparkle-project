@@ -44,7 +44,7 @@ class FocusStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalMinutes.toDouble();
 
-  const FocusStatisticsData({
+  FocusStatisticsData({
     required this.id,
     required this.period,
     required this.lastRefreshedAt,
@@ -218,7 +218,6 @@ class FocusStatsRepository extends HybridStatisticsRepository<FocusStatisticsDat
   }
 
   List<DailyFocusData> _generateMockDailyData(StatisticsPeriod period) {
-    final now = DateTime.now();
     final start = period.getStartTime();
     final end = period.getEndTime();
 
@@ -264,9 +263,9 @@ class FocusStatistics extends _$FocusStatistics {
         period,
         forceRefresh: forceRefresh,
       );
-      state = state.withData(data, period: period);
+      state = state.withData(data, newPeriod: period);
     } catch (e) {
-      state = state.withError('加载失败: ${e.toString()}');
+      state = state.withError('加载失败: $e');
     }
   }
 

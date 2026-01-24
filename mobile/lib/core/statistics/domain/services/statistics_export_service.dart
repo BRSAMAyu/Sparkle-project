@@ -128,34 +128,34 @@ class StatisticsExportConfig {
 /// Predefined export sizes
 class ExportSize {
   /// Mobile portrait (1080x1920)
-  static const mobilePortrait = _ExportSize(Size(1080, 1920), 'mobilePortrait');
+  static const mobilePortrait = _ExportSize(ExportDimensions(1080, 1920), 'mobilePortrait');
 
   /// Mobile landscape (1920x1080)
-  static const mobileLandscape = _ExportSize(Size(1920, 1080), 'mobileLandscape');
+  static const mobileLandscape = _ExportSize(ExportDimensions(1920, 1080), 'mobileLandscape');
 
   /// Square (1080x1080)
-  static const square = _ExportSize(Size(1080, 1080), 'square');
+  static const square = _ExportSize(ExportDimensions(1080, 1080), 'square');
 
   /// Instagram story (1080x1920)
-  static const instagramStory = _ExportSize(Size(1080, 1920), 'instagramStory');
+  static const instagramStory = _ExportSize(ExportDimensions(1080, 1920), 'instagramStory');
 
   /// Twitter post (1200x675)
-  static const twitterPost = _ExportSize(Size(1200, 675), 'twitterPost');
+  static const twitterPost = _ExportSize(ExportDimensions(1200, 675), 'twitterPost');
 }
 
 class _ExportSize {
-  final Size size;
+  final ExportDimensions size;
   final String name;
 
   const _ExportSize(this.size, this.name);
 }
 
 /// Size class for export dimensions
-class Size {
+class ExportDimensions {
   final double width;
   final double height;
 
-  const Size(this.width, this.height);
+  const ExportDimensions(this.width, this.height);
 }
 
 /// Statistics export service interface

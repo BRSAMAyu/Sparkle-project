@@ -476,7 +476,7 @@ class FocusStatistics extends _$FocusStatistics {
 
 /// Local repository provider
 @riverpod
-FocusStatisticsRepository localStatisticsRepo(LocalDatabaseRef ref) {
+FocusStatisticsRepository localStatisticsRepo(Ref ref) {
   final db = ref.watch(localDatabaseProvider);
   return FocusStatisticsRepository(db.isar);
 }

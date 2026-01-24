@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
-import 'capsule_generation_job_model.dart';
-import 'capsule_feedback_model.dart';
-import 'capsule_stats_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_stats_model.dart';
 
 /// 胶囊仓库 - 支持增强功能
 class CapsuleRepository {

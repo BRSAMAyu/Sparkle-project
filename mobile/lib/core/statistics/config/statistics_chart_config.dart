@@ -181,7 +181,7 @@ class StatisticsChartConfig {
   static const double gridThickness = 1.0;
 
   /// Grid line dash pattern (null = solid)
-  static const List<double>? gridDashPattern = [4, 4];
+  static const List<int>? gridDashPattern = [4, 4];
 
   /// Axis line thickness
   static const double axisThickness = 0.0; // Hidden by default
@@ -319,10 +319,12 @@ enum LegendPosition {
   right,
 }
 
-/// Extension for FlChartData with default styling
-extension FlChartDataExtension on FlChartData {
+/// Helper class for creating styled chart data
+class StatisticsChartDataHelper {
+  StatisticsChartDataHelper._();
+
   /// Get default line chart data with styling applied
-  LineChartData getDefaultLineChartData({
+  static LineChartData getDefaultLineChartData({
     required List<LineChartBarData> lineBarsData,
     required List<String> xLabels,
     double minY = 0,
@@ -392,15 +394,13 @@ extension FlChartDataExtension on FlChartData {
         ),
       ),
       borderData: FlBorderData(show: false),
-      touchData: FlTouchData(
+      lineTouchData: LineTouchData(
         enabled: StatisticsChartConfig.touchEnabled,
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (touchedSpot) =>
-              StatisticsChartConfig.tooltipBgColor,
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((spot) {
               return LineTooltipItem(
-                '${spot.y.toStringAsFixed(1)}',
+                spot.y.toStringAsFixed(1),
                 TextStyle(
                   color: StatisticsChartConfig.tooltipTextColor,
                   fontSize: 12,
@@ -414,7 +414,7 @@ extension FlChartDataExtension on FlChartData {
   }
 
   /// Get default bar chart data with styling applied
-  BarChartData getDefaultBarChartData({
+  static BarChartData getDefaultBarChartData({
     required List<BarChartGroupData> barGroups,
     required List<String> xLabels,
     double minY = 0,

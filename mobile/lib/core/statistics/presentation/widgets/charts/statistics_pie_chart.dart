@@ -134,17 +134,16 @@ class StatisticsPieChart extends StatelessWidget {
     return sections.asMap().entries.map((entry) {
       final index = entry.key;
       final section = entry.value;
-      final percentage = total > 0 ? (section.value / total) : 0;
+      final percentage = total > 0 ? (section.value / total) : 0.0;
       final angle = percentage * 360;
       final midAngle = startAngle + angle / 2;
 
       final color = section.color ?? colors[index % colors.length];
-      final isTouched = false; // Can be made interactive
 
       final sectionData = PieChartSectionData(
         value: section.value,
         title: showLabels ? '${(percentage * 100).toInt()}%' : '',
-        radius: effectiveRadius() * (isTouched ? 1.1 : 1),
+        radius: effectiveRadius(),
         color: color,
         titleStyle: TextStyle(
           fontSize: showLabels ? 12 : 0,

@@ -9,7 +9,7 @@ import 'package:sparkle/core/statistics/domain/services/statistics_export_servic
 /// Configuration for PNG report generation
 class ReportConfig {
   /// Size of the report
-  final Size size;
+  final ExportDimensions size;
 
   /// Pixel ratio for higher resolution (default: 2.0)
   final double pixelRatio;
@@ -30,7 +30,7 @@ class ReportConfig {
   final String watermarkText;
 
   const ReportConfig({
-    this.size = const Size(1080, 1920),
+    this.size = const ExportDimensions(1080, 1920),
     this.pixelRatio = 2.0,
     this.backgroundColor = const Color(0xFF6366F1),
     this.primaryColor = const Color(0xFFFFFFFF),
@@ -42,7 +42,7 @@ class ReportConfig {
   /// Get a landscape config
   ReportConfig toLandscape() {
     return ReportConfig(
-      size: Size(size.height, size.width),
+      size: ExportDimensions(size.height, size.width),
       pixelRatio: pixelRatio,
       backgroundColor: backgroundColor,
       primaryColor: primaryColor,
@@ -84,7 +84,7 @@ class StatisticsReportGenerator {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    final size = Size(
+    final size = ExportDimensions(
       config.size.width * config.pixelRatio,
       config.size.height * config.pixelRatio,
     );
@@ -115,7 +115,7 @@ class StatisticsReportGenerator {
   /// Draw the background gradient
   static Future<void> _drawBackground(
     Canvas canvas,
-    Size size,
+    ExportDimensions size,
     ReportConfig config,
   ) async {
     final gradient = LinearGradient(
@@ -135,7 +135,7 @@ class StatisticsReportGenerator {
   /// Draw the header section
   static Future<void> _drawHeader(
     Canvas canvas,
-    Size size,
+    ExportDimensions size,
     StatisticsEntity statistics,
     ReportConfig config,
   ) async {
@@ -197,7 +197,7 @@ class StatisticsReportGenerator {
   /// Draw the content sections
   static Future<void> _drawSections(
     Canvas canvas,
-    Size size,
+    ExportDimensions size,
     List<ReportSection> sections,
     ReportConfig config,
   ) async {
@@ -255,7 +255,7 @@ class StatisticsReportGenerator {
   /// Draw the footer section
   static Future<void> _drawFooter(
     Canvas canvas,
-    Size size,
+    ExportDimensions size,
     ReportConfig config,
   ) async {
     if (!config.includeWatermark) return;
