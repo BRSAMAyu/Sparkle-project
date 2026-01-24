@@ -11,13 +11,18 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import uuid
 
-from app.database import get_db
+from app.db.session import AsyncSessionLocal
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.user import User
-from app.api.dependencies import get_current_user
+from app.api.deps import get_current_user
 from loguru import logger
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 class FeedbackRequest(BaseModel):

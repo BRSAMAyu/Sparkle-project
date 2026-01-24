@@ -180,7 +180,7 @@ SQL
 # 4. Verify tool preferences are being learned
 python3 << PYSCRIPT
 from app.services.tool_history_service import ToolHistoryService
-from app.database import SessionLocal
+from app.core.database import SessionLocal
 
 db = SessionLocal()
 service = ToolHistoryService(db)

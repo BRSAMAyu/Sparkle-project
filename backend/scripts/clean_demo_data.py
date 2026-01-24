@@ -16,7 +16,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
-from app.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.candidate_feedback import CandidateActionFeedback
 
