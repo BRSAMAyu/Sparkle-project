@@ -74,21 +74,21 @@ class PlanFeedbackService:
                 feedback.feedback_type = "plan_disagree"
             feedback.source = "user"
 
-        # 转换为 feedback_log 格式
+        # 转换为 feedback_log 格式 (keep review comments/details)
         feedback_entry = feedback.to_dict()
+        feedback_entry["applied_adjustment"] = {
+            "decision": feedback.decision,
+            "priority": feedback.priority,
+            "review_id": feedback.review_id,
+            "review_decision": feedback.review_decision,
+        }
 
-        # 写入 PlanState
-        state = await self._plan_state_service.append_feedback(
+        # 写入 PlanState (append full entry)
+        state = await self._plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,
-            feedback_type=feedback.feedback_type,
-            content=feedback.content,
-            applied_adjustment={
-                "decision": feedback.decision,
-                "priority": feedback.priority,
-                "review_id": feedback.review_id,
-                "review_decision": feedback.review_decision,
-            }
+            patch={"feedback_log": feedback_entry},
+            bump_version=True,
         )
 
         logger.info(
@@ -149,6 +149,55 @@ class PlanFeedbackService:
         )
 
         return state.to_dict() if state else None
+
+    async def track_rejection(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        is_rejection: bool,
+    ) -> tuple[int, bool]:
+        """
+        P0-2: Track consecutive rejections. Returns (count, should_rollback).
+
+        Args:
+            user_id: 用户 ID
+            plan_id: 计划 ID
+            is_rejection: True if this is a rejection, False to reset counter
+
+        Returns:
+            tuple[int, bool]: (current count, should trigger rollback)
+        """
+        state = await self._plan_state_service.get_plan_state(user_id, plan_id)
+        if not state:
+            return (0, False)
+
+        # Calculate new count: increment on rejection, reset on approval
+        current_count = state.consecutive_rejection_count or 0
+        new_count = current_count + 1 if is_rejection else 0
+
+        # Update the count
+        await self._plan_state_service.upsert_plan_state(
+            user_id=user_id,
+            plan_id=plan_id,
+            patch={"consecutive_rejection_count": new_count},
+            bump_version=False,  # Don't bump version for rejection tracking
+        )
+
+        # Check if rollback should be triggered (>= 2 consecutive rejections)
+        should_rollback = new_count >= 2
+        if should_rollback:
+            # Set rollback flag in constraints
+            await self._plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"constraints": {"require_phase_rollback": True}},
+                bump_version=False,
+            )
+            logger.info(
+                f"Phase rollback triggered: plan_id={plan_id}, rejection_count={new_count}"
+            )
+
+        return (new_count, should_rollback)
 
     async def get_pending_feedback(
         self,
@@ -211,26 +260,28 @@ class PlanFeedbackService:
                 if user_decision == "reject":
                     entry["applied_adjustment"]["priority"] = "high"
                 entry["source"] = "user"
+                entry["decision"] = user_decision
+                if user_decision == "reject":
+                    entry["priority"] = "high"
                 if user_comment:
                     entry["user_comment"] = user_comment
                 updated = True
                 break
 
         if updated:
-            # 保存更新
-            from app.models.plan_state import PlanState
-            state.updated_at = PlanState.__table__.columns.updated_at.default.arg.now()  # type: ignore
-            await self.db.commit()
-            await self.db.refresh(state)
-
-            # 更新缓存
-            await self._set_cache(state)
+            # 保存更新 (use service to bump version and cache)
+            state = await self._plan_state_service.replace_feedback_log(
+                user_id=user_id,
+                plan_id=plan_id,
+                feedback_log=state.feedback_log,
+                bump_version=True,
+            )
 
             logger.info(
                 f"Updated feedback decision: plan_id={plan_id}, review_id={review_id}, decision={user_decision}"
             )
 
-            return state.to_dict()
+            return state.to_dict() if state else None
 
         return None
 

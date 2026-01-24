@@ -127,7 +127,9 @@ class PlanContextBuilder:
 
         # Include recent task summaries (lightweight)
         if include_recent_tasks and state.task_summaries:
-            context["recent_tasks"] = (state.task_summaries or [])[:max_recent_tasks]
+            summaries = (state.task_summaries or [])[:max_recent_tasks]
+            context["task_summaries"] = summaries
+            context["recent_tasks"] = summaries
 
         # Include feedback_log (optional, truncated)
         if include_feedback_log and state.feedback_log:

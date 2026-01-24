@@ -132,3 +132,53 @@ class WebSearchContentSize(str, Enum):
     """返回内容长度"""
     MEDIUM = "medium"   # 摘要信息
     HIGH = "high"       # 详细内容
+
+
+# ============ P0-3: 任务查询和修改工具参数 ============
+
+class TaskStatusFilter(str, Enum):
+    """任务状态筛选"""
+    ALL = "all"
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class QueryPlanTasksParams(BaseModel):
+    """查询计划内任务列表的参数"""
+    plan_id: str = Field(..., description="计划 ID (必填)")
+    status_filter: TaskStatusFilter = Field(
+        default=TaskStatusFilter.ALL,
+        description="任务状态筛选：all/pending/in_progress/completed/abandoned"
+    )
+    type_filter: Optional[TaskType] = Field(
+        default=None,
+        description="任务类型筛选 (可选)"
+    )
+    limit: int = Field(
+        default=10,
+        description="返回数量限制",
+        ge=1,
+        le=50
+    )
+
+
+class ModifyPlanTaskParams(BaseModel):
+    """修改计划内任务属性的参数"""
+    task_id: str = Field(..., description="任务 ID (必填)")
+    title: Optional[str] = Field(None, description="新标题", max_length=100)
+    status: Optional[str] = Field(
+        None,
+        description="新状态: pending/in_progress/completed/abandoned"
+    )
+    priority: Optional[int] = Field(
+        None,
+        description="新优先级 1-5，5 最高",
+        ge=1,
+        le=5
+    )
+    guide_content: Optional[str] = Field(
+        None,
+        description="执行指南内容 (Markdown)"
+    )

@@ -84,6 +84,9 @@ class PlanState(BaseModel):
     # Version control (optimistic locking)
     version = Column(Integer, nullable=False, default=1)
 
+    # P0-2: Rejection tracking for phase rollback
+    consecutive_rejection_count = Column(Integer, nullable=False, default=0)
+
     # Status management
     status = Column(
         String(20),
@@ -113,6 +116,7 @@ class PlanState(BaseModel):
             "feedback_log": self.feedback_log or [],
             "constraints": self.constraints or {},
             "version": self.version,
+            "consecutive_rejection_count": self.consecutive_rejection_count or 0,
             "status": self.status,
             "archived_at": self.archived_at.isoformat() if self.archived_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -150,6 +154,7 @@ class PlanState(BaseModel):
             feedback_log=data.get("feedback_log", []),
             constraints=data.get("constraints", {}),
             version=data.get("version", 1),
+            consecutive_rejection_count=data.get("consecutive_rejection_count", 0),
             status=data.get("status", PlanStateStatus.ACTIVE.value),
             archived_at=parse_datetime(data.get("archived_at")),
             created_at=parse_datetime(data.get("created_at")),

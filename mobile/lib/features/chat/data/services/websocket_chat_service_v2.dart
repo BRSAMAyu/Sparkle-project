@@ -492,6 +492,7 @@ class WebSocketChatServiceV2 {
     String? token,
     List<String>? fileIds,
     bool includeReferences = false,
+    String? chatMode,
   }) {
     // 更新 session ID
     _currentSessionId = sessionId ?? _currentSessionId ?? _generateSessionId();
@@ -512,6 +513,7 @@ class WebSocketChatServiceV2 {
       if (extraContext != null) 'extra_context': extraContext,
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
       if (includeReferences) 'include_references': true,
+      if (chatMode != null) 'chat_mode': chatMode,
     };
 
     // 发送或排队

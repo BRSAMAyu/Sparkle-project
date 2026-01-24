@@ -183,6 +183,70 @@ class PlanRepository {
       return _handleDioError(e, 'generateTasks');
     }
   }
+
+  Future<void> archivePlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      if (index != -1) {
+        final existing = DemoDataService().demoPlans[index];
+        DemoDataService().demoPlans[index] = PlanModel(
+          id: existing.id,
+          userId: existing.userId,
+          name: existing.name,
+          type: existing.type,
+          dailyAvailableMinutes: existing.dailyAvailableMinutes,
+          masteryLevel: existing.masteryLevel,
+          progress: existing.progress,
+          isActive: false,
+          createdAt: existing.createdAt,
+          updatedAt: DateTime.now(),
+          description: existing.description,
+          targetDate: existing.targetDate,
+          subject: existing.subject,
+          totalEstimatedHours: existing.totalEstimatedHours,
+          tasks: existing.tasks,
+        );
+      }
+      return;
+    }
+    try {
+      await _apiClient.post<dynamic>(ApiEndpoints.planArchive(id));
+    } on DioException catch (e) {
+      return _handleDioError(e, 'archivePlan');
+    }
+  }
+
+  Future<void> restorePlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      final index = DemoDataService().demoPlans.indexWhere((p) => p.id == id);
+      if (index != -1) {
+        final existing = DemoDataService().demoPlans[index];
+        DemoDataService().demoPlans[index] = PlanModel(
+          id: existing.id,
+          userId: existing.userId,
+          name: existing.name,
+          type: existing.type,
+          dailyAvailableMinutes: existing.dailyAvailableMinutes,
+          masteryLevel: existing.masteryLevel,
+          progress: existing.progress,
+          isActive: true,
+          createdAt: existing.createdAt,
+          updatedAt: DateTime.now(),
+          description: existing.description,
+          targetDate: existing.targetDate,
+          subject: existing.subject,
+          totalEstimatedHours: existing.totalEstimatedHours,
+          tasks: existing.tasks,
+        );
+      }
+      return;
+    }
+    try {
+      await _apiClient.post<dynamic>(ApiEndpoints.planRestore(id));
+    } on DioException catch (e) {
+      return _handleDioError(e, 'restorePlan');
+    }
+  }
 }
 
 final planRepositoryProvider = Provider<PlanRepository>(

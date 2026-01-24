@@ -470,6 +470,27 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Trigger follow-up actions based on decision
             updated_plan_id = ""
+
+            # P0-2: Track consecutive rejections for phase rollback
+            if plan_id:
+                try:
+                    from app.services.plan_feedback_service import get_plan_feedback_service
+                    async with self.db_session_factory() as db:
+                        feedback_svc = get_plan_feedback_service(db, self.orchestrator.redis)
+                        is_rejection = proto_decision == agent_service_pb2.REJECT
+                        count, should_rollback = await feedback_svc.track_rejection(
+                            user_id=uuid.UUID(user_id),
+                            plan_id=uuid.UUID(plan_id),
+                            is_rejection=is_rejection,
+                        )
+                        if should_rollback:
+                            logger.info(
+                                f"Phase rollback will be triggered for plan {plan_id} "
+                                f"(rejection_count={count})"
+                            )
+                except Exception as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
+
             if proto_decision == agent_service_pb2.APPROVE:
                 # Resume plan execution after approval
                 await plan_review_service.resume_plan_after_approval(

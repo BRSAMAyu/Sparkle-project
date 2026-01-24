@@ -14,6 +14,7 @@ import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dar
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
@@ -309,7 +310,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               onTogglePomodoro: _togglePomodoro,
                               onSetPreset: _setPresetDuration,
                             ),
-                            const SizedBox(height: DS.spacing40),
+                            const SizedBox(height: DS.spacing24),
+
+                            // Plan Context Summary (if task has a plan)
+                            if (activeTask.planId != null)
+                              PlanContextSummary(planId: activeTask.planId!),
+                            if (activeTask.planId != null)
+                              const SizedBox(height: DS.spacing16),
 
                             // 2. Task Guide Area
                             DecoratedBox(
