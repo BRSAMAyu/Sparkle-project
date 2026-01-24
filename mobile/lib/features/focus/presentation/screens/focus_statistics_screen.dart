@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart' as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_heatmap.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_overview_cards.dart';
@@ -19,8 +18,6 @@ class FocusStatisticsScreen extends ConsumerStatefulWidget {
 }
 
 class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
-  final _refreshController = RefreshController(initialRefresh: false);
-
   @override
   void initState() {
     super.initState();
@@ -30,24 +27,17 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _refreshController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadAllData() async {
-    await ref.read(focusStatisticsProvider.notifier).refresh();
+    await ref.read(feature.focusStatisticsProvider.notifier).refresh();
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(focusStatisticsProvider.notifier).refresh();
-    _refreshController.refreshCompleted();
+    await ref.read(feature.focusStatisticsProvider.notifier).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(focusStatisticsProvider);
+    final state = ref.watch(feature.focusStatisticsProvider);
 
     return Scaffold(
       backgroundColor: DS.neutral50,
@@ -63,11 +53,10 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
           ),
         ],
       ),
-      body: SmartRefresher(
-        controller: _refreshController,
+      body: RefreshIndicator(
         onRefresh: _onRefresh,
-        enablePullUp: false,
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +66,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
                 child: FocusStatsPeriodToggle(
                   period: state.period,
                   onChanged: (period) {
-                    ref.read(focusStatisticsProvider.notifier).setPeriod(period);
+                    ref.read(feature.focusStatisticsProvider.notifier).setPeriod(period);
                   },
                 ),
               ),
@@ -122,7 +111,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
                   sessions: state.sessionHistory,
                   hasMore: state.sessionHistory.length >= 20,
                   onLoadMore: () {
-                    ref.read(focusStatisticsProvider.notifier).loadSessionHistory(
+                    ref.read(feature.focusStatisticsProvider.notifier).loadSessionHistory(
                           limit: state.sessionHistory.length + 20,
                         );
                   },

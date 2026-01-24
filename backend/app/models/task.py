@@ -109,6 +109,14 @@ class Task(BaseModel):
         order_by="SubTask.order"
     )
 
+    # Task feedbacks relationship
+    feedbacks = relationship(
+        "TaskFeedback",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     def __repr__(self):
         return f"<Task(title={self.title}, status={self.status})>"
 

@@ -7,7 +7,7 @@ part of 'focus_statistics_provider.dart';
 // **************************************************************************
 
 String _$localStatisticsRepoHash() =>
-    r'211c2ef8cee5a9a8553192fd23be0f11c7a4f658';
+    r'd0b5e9289c0450955c3c5a905d9d8c4d5d49dc0d';
 
 /// Local repository provider
 ///

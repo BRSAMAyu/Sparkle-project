@@ -15,10 +15,11 @@ from app.core.cache import cache_service
 from app.models.user import User
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.task import (
-    TaskCreate, TaskUpdate, TaskDetail, TaskCompleteRequest, 
+    TaskCreate, TaskUpdate, TaskDetail, TaskCompleteRequest,
     TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse,
     TaskRecommendationResponse
 )
+from app.schemas.task_feedback import TaskFeedbackCreate, TaskFeedbackResponse, TaskFeedbackStats
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
 from app.services.feedback_service import feedback_service
@@ -423,3 +424,100 @@ async def confirm_generated_tasks(
         "count": len(tasks),
         "data": [TaskDetail.model_validate(t) for t in tasks]
     }
+
+# ========== Task Feedback Endpoints ==========
+
+@router.post("/{task_id}/feedback", response_model=Dict[str, Any])
+async def submit_task_feedback(
+    feedback_in: TaskFeedbackCreate,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    提交任务反馈
+
+    - 验证任务所有权
+    - 验证任务状态（必须是COMPLETED）
+    - 支持重复提交（更新现有反馈）
+    - 自动推断并更新用户偏好
+    """
+    from app.services.task_feedback_service import TaskFeedbackService
+
+    service = TaskFeedbackService(db, cache_service.redis)
+
+    try:
+        feedback = await service.submit_feedback(
+            user_id=current_user.id,
+            task_id=task_id,
+            completion_quality=feedback_in.completion_quality,
+            feedback_text=feedback_in.feedback_text,
+            category=feedback_in.category,
+        )
+        return {
+            "success": True,
+            "data": TaskFeedbackResponse.model_validate(feedback)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{task_id}/feedback", response_model=Dict[str, Any])
+async def get_task_feedback(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取任务的反馈历史
+
+    返回该任务的所有反馈记录（按创建时间倒序）
+    """
+    from app.services.task_feedback_service import TaskFeedbackService
+
+    # 验证任务所有权
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise NotFoundError(message="Task not found")
+
+    service = TaskFeedbackService(db)
+    feedbacks = await service.get_task_feedbacks(task_id)
+
+    return {
+        "success": True,
+        "data": [TaskFeedbackResponse.model_validate(f) for f in feedbacks],
+        "total": len(feedbacks)
+    }
+
+
+@router.get("/feedback/stats", response_model=Dict[str, Any])
+async def get_user_feedback_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取当前用户的任务反馈统计
+
+    Returns:
+        - total_feedbacks: 总反馈数
+        - avg_completion_quality: 平均完成质量评分
+        - category_distribution: 反馈分类分布
+        - recent_feedbacks: 最近的反馈记录
+    """
+    from app.services.task_feedback_service import TaskFeedbackService
+
+    service = TaskFeedbackService(db)
+    stats = await service.get_user_task_feedback_stats(current_user.id)
+
+    return {
+        "success": True,
+        "data": {
+            "total_feedbacks": stats["total_feedbacks"],
+            "avg_completion_quality": stats["avg_completion_quality"],
+            "category_distribution": stats["category_distribution"],
+            "recent_feedbacks": [
+                TaskFeedbackResponse.model_validate(f) for f in stats["recent_feedbacks"]
+            ],
+        }
+    }
+

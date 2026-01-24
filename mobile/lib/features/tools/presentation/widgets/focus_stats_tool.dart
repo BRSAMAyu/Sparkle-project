@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
+import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart' as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
 
@@ -20,15 +20,15 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
     super.initState();
     // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(focusStatisticsProvider.notifier).loadTodayStats();
-      ref.read(focusStatisticsProvider.notifier).loadWeeklyStats();
-      ref.read(focusStatisticsProvider.notifier).loadSessionHistory(limit: 5);
+      ref.read(feature.focusStatisticsProvider.notifier).loadTodayStats();
+      ref.read(feature.focusStatisticsProvider.notifier).loadWeeklyStats();
+      ref.read(feature.focusStatisticsProvider.notifier).loadSessionHistory(limit: 5);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(focusStatisticsProvider);
+    final state = ref.watch(feature.focusStatisticsProvider);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing24),

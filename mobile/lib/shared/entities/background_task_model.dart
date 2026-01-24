@@ -40,7 +40,7 @@ enum BackgroundTaskStatus {
 
 /// Background task model
 class BackgroundTaskModel extends BaseModel {
-  const BackgroundTaskModel({
+  BackgroundTaskModel({
     required this.id,
     required this.userId,
     required this.taskType,
