@@ -35,10 +35,10 @@ class _TaskReminderSettingsScreenState
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.areNotificationsEnabled();
-      if (!granted && mounted) {
+      if ((granted ?? false) == false && mounted) {
         _showPermissionDialog();
       }
-      return granted;
+      return granted ?? false;
     }
     return true;
   }
@@ -49,7 +49,7 @@ class _TaskReminderSettingsScreenState
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.requestNotificationsPermission();
-      if (!granted && mounted) {
+      if ((granted ?? false) == false && mounted) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('通知权限被拒绝，您将无法收到任务提醒')),
@@ -147,7 +147,7 @@ class _TaskReminderSettingsScreenState
             ),
           ),
         ),
-        ...TaskReminderConfig.defaultReminders.map((minutes) {
+        ...TaskReminderSettingsConfigExt.defaultReminders.map((minutes) {
           return CheckboxListTile(
             title: Text(
               _formatReminderTime(minutes),
@@ -185,7 +185,7 @@ class _TaskReminderSettingsScreenState
           final tasks = await taskRepo.getTasks();
           final config = ref.read(taskReminderConfigProvider);
 
-          await scheduler.refreshAllReminders(tasks.tasks, config: config);
+          await scheduler.refreshAllReminders(tasks.items, config: config);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -259,6 +259,6 @@ class _TaskReminderSettingsScreenState
   }
 }
 
-extension on TaskReminderConfig {
+extension TaskReminderSettingsConfigExt on TaskReminderConfig {
   static const List<int> defaultReminders = [1440, 60, 15]; // 1 day, 1 hour, 15 min
 }

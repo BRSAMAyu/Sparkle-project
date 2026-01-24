@@ -70,7 +70,7 @@ class _NotesToolState extends State<NotesTool> {
       padding: const EdgeInsets.all(DS.xl),
       height: 600,
       decoration: BoxDecoration(
-        color: isDark ? DS.neutral900 : DS.surfaceBaseElevated,
+        color: isDark ? DS.neutral900 : DS.surfacePrimaryElevated,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),

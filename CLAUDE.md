@@ -28,9 +28,9 @@ Before any action, classify the task:
 
 | Level | Indicators | Protocol |
 |-------|-----------|----------|
-| **L1 Atomic** | Single file, <50 lines, typo/config | Execute immediately, no explanation |
+| **L1 Atomic** | Single file, <50 lines, typo/config | Execute immediately |
 | **L2 Local** | 2-5 files, same language, single feature | Brief intent statement → Execute |
-| **L3 Cross-Boundary** | Proto change, Go↔Python, DB schema | 🔍 **Plan Required** (see below) |
+| **L3 Cross-Boundary** | Proto change, Go↔Python↔Flutter, DB schema | 🔍 **Plan Required** (see below) |
 | **L4 Architectural** | New subsystem, major refactor, design pattern | 📋 **Deep Analysis Required** |
 
 ### 🔍 Planning Protocol (L3+)
@@ -92,20 +92,32 @@ Proto Definition  →  Generated Code  →  Implementation
 
 | Domain | Source of Truth | Generated From | Never Edit Directly |
 |--------|-----------------|----------------|---------------------|
-| **API Contract** | `proto/agent_service.proto` | `make proto-gen` | `backend/gateway/gen/`, `backend/app/gen/` |
+| **API Contract** | `proto/*.proto` (buf.yaml) | `make proto-gen` (Buf) | `backend/gateway/gen/`, `backend/app/gen/`, `mobile/lib/gen/` |
 | **DB Schema (Go)** | `backend/gateway/internal/db/schema.sql` | `make sync-db` | `backend/gateway/internal/db/models.go` |
 | **DB Schema (Py)** | Alembic migrations | `alembic upgrade head` | SQLAlchemy models (must match) |
 | **Design Tokens** | `mobile/lib/core/design/design_system.dart` | Manual | Component hardcoded values |
+
+### Proto Files Overview
+
+```
+proto/
+├── agent_service.proto      # Main agent RPC (StreamChat, SubmitPlanReview, etc.)
+├── agent_service_v2.proto   # V2 agent definitions (future/enhanced features)
+├── galaxy_service.proto     # Knowledge graph / Galaxy service
+├── error_book.proto         # Error archive /错题本 system
+└── websocket.proto          # WebSocket message types
+```
 
 ### Change Propagation Flowchart
 
 ```
 Proto Change?
     │
-    ├─→ make proto-gen
+    ├─→ make proto-gen (uses buf.build, falls back to protoc)
     │       │
     │       ├─→ Update Go client (backend/gateway/internal/agent/client.go)
-    │       └─→ Update Python service (backend/app/services/agent_grpc_service.py)
+    │       ├─→ Update Python service (backend/app/services/agent_grpc_service.py)
+    │       └─→ Update Flutter: make mobile-gen
     │
 DB Schema Change?
     │
@@ -191,8 +203,9 @@ When exploring unfamiliar territory, prioritize these files:
 
 ```
 ★★★★★ (Core Logic)
-├── proto/agent_service.proto              # API contract
-├── backend/app/orchestration/orchestrator.py  # AI brain
+├── proto/agent_service.proto              # Main API contract
+├── proto/galaxy_service.proto             # Knowledge graph API
+├── backend/app/orchestration/orchestrator.py  # AI brain (LangGraph FSM)
 ├── backend/gateway/internal/handler/websocket.go  # Real-time hub
 └── mobile/lib/core/services/chat_service.dart  # Client connection
 
@@ -208,7 +221,9 @@ When exploring unfamiliar territory, prioritize these files:
 ★★★☆☆ (Supporting Infrastructure)
 ├── backend/gateway/internal/db/schema.sql     # DB structure
 ├── backend/app/orchestration/dynamic_tool_registry.py  # Tool system
+├── backend/alembic/                          # DB migrations
 ├── docker-compose.yml                         # Service definitions
+├── buf.yaml / buf.gen.yaml                    # Proto generation config
 └── mobile/lib/core/design/design_system.dart  # UI tokens
 ```
 
@@ -220,29 +235,47 @@ When exploring unfamiliar territory, prioritize these files:
 
 ```bash
 # === DAILY WORKFLOW ===
-make dev-all              # Start everything (3 terminals)
-make proto-gen            # After proto changes
-make sync-db              # After DB changes
+make dev-all              # Start infrastructure (DB + Redis + MinIO)
+make proto-gen            # After proto changes (uses buf or protoc fallback)
+make sync-db              # After DB changes (migrate + dump + sqlc)
 
 # === COMPONENT STARTUP ===
 make gateway-dev          # Go Gateway with hot reload
 make grpc-server          # Python gRPC server
-flutter run               # Mobile app
+make mobile-run            # Flutter mobile app
+
+# === CELERY TASK QUEUE ===
+make celery-up            # Start Celery worker + beat (optional flower: FLOWER_ENABLE=1)
+make celery-status        # Check Celery services status
+make celery-logs-worker   # View worker logs
+make celery-flush         # Flush Redis queues
+make celery-stop          # Stop all Celery services
+
+# === PROTO GENERATION (Buf-based) ===
+make proto-gen            # Generate Go/Python/Dart from proto (via buf)
+make proto-lint           # Lint proto files
+make proto-breaking       # Check for breaking changes vs main branch
+make mobile-proto         # Generate only Dart protobufs
+make mobile-gen           # Generate Dart protobufs + run build_runner
+
+# === TESTING ===
+cd backend && pytest                    # Python tests (pytest.ini: asyncio_mode=auto)
+cd backend && pytest tests/test_specific.py -v  # Single Python test file
+cd backend/gateway && go test ./...     # Go tests
+cd mobile && flutter test               # Flutter tests
 
 # === DEBUGGING ===
 docker compose logs -f gateway      # Go logs
 docker compose logs -f grpc-server  # Python logs
 grpcurl -plaintext localhost:50051 list  # List gRPC services
 
-# === TESTING ===
-cd backend && pytest                    # Python tests
-cd backend/gateway && go test ./...     # Go tests
-cd mobile && flutter test               # Flutter tests
-
 # === UTILITIES ===
-cd mobile && ./fix_final_const.sh       # Fix Flutter const errors
-alembic revision -m "desc"              # New migration
+alembic revision -m "desc"              # New Alembic migration
 alembic upgrade head                    # Apply migrations
+make env-check                          # Config + connectivity self-check
+make smoke                              # Health check on all services
+make init-rag                           # Initialize Redis search index (RAG v2.0)
+make sync-rag                           # Sync PG knowledge nodes to Redis
 ```
 
 ### Command Decision Tree
@@ -596,6 +629,7 @@ Before considering any task complete:
 
 ---
 
-**Document Version**: 2.0.0 (Opus 4.5 Optimized)
-**Last Updated**: 2025-12-28
+**Document Version**: 2.1.0 (Opus 4.5 Optimized)
+**Last Updated**: 2026-01-24
 **Project Version**: Sparkle MVP v0.3.0
+**Current Branch**: 层级state系统 (Hierarchical State System)

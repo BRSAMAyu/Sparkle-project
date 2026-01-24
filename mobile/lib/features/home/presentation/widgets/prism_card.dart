@@ -176,7 +176,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildTag(BuildContext context, String text) => Container(

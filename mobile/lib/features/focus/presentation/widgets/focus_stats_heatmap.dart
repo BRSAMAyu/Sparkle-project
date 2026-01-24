@@ -20,7 +20,7 @@ class FocusStatsHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 140,
         child: Center(
           child: Text(

@@ -644,7 +644,7 @@ class _FeatureChip extends StatelessWidget {
             Icon(icon, size: 14, color: DS.primaryBase),
             const SizedBox(width: 4),
             Text(label,
-                style: const TextStyle(fontSize: 12, color: DS.neutral700),),
+                style: TextStyle(fontSize: 12, color: DS.neutral700),),
           ],
         ),
       );

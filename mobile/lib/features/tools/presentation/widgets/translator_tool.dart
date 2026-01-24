@@ -215,7 +215,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         padding: const EdgeInsets.all(DS.xl),
         height: 580,
         decoration: BoxDecoration(
-          color: DS.designSystem.color(DS.tokens.colorBackgroundPrimary),
+          color: DS.surfacePrimary,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
