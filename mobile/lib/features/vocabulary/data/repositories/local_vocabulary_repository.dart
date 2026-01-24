@@ -141,7 +141,6 @@ class LocalVocabularyRepository {
   }) async {
     final words = await _vocabWordCollection
         .filter()
-        .sortByCreatedAt()
         .offset(offset)
         .limit(limit)
         .findAll();
@@ -183,34 +182,40 @@ class LocalVocabularyRepository {
             .filter()
             .nextReviewAtLessThan(now)
             .or()
-            .nextReviewAtIsNull();
+            .nextReviewAtIsNull()
+            .build();
       case VocabFilter.highImportance:
         return _vocabWordCollection
             .filter()
-            .importanceGreaterThan(3);
+            .importanceGreaterThan(3)
+            .build();
       case VocabFilter.mediumImportance:
         return _vocabWordCollection
             .filter()
-            .importanceEqualTo(3);
+            .importanceEqualTo(3)
+            .build();
       case VocabFilter.lowImportance:
         return _vocabWordCollection
             .filter()
-            .importanceLessThan(3);
+            .importanceLessThan(3)
+            .build();
       case VocabFilter.byTag:
         if (tagFilter == null) {
-          return _vocabWordCollection.filter();
+          return _vocabWordCollection.filter().build();
         }
         return _vocabWordCollection
             .filter()
-            .tagsElementContains(tagFilter);
+            .tagsElementContains(tagFilter)
+            .build();
       case VocabFilter.all:
       default:
         if (tagFilter != null) {
           return _vocabWordCollection
               .filter()
-              .tagsElementContains(tagFilter);
+              .tagsElementContains(tagFilter)
+              .build();
         }
-        return _vocabWordCollection.filter();
+        return _vocabWordCollection.filter().build();
     }
   }
 
@@ -263,7 +268,8 @@ class LocalVocabularyRepository {
   /// Delete all words
   Future<bool> deleteAll() async {
     await _vocabReviewCollection.clear();
-    return await _vocabWordCollection.clear();
+    await _vocabWordCollection.clear();
+    return true;
   }
 
   /// Search words
@@ -278,7 +284,6 @@ class LocalVocabularyRepository {
             .definitionContains(lowerQuery, caseSensitive: false)
             .or()
             .tagsElementContains(lowerQuery))
-        .sortByCreatedAt()
         .limit(50)
         .findAll();
 

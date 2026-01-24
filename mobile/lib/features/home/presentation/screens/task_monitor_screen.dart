@@ -139,7 +139,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           _buildFilterChips(state.selectedFilter),
           Expanded(
             child: state.isLoading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
                     ),

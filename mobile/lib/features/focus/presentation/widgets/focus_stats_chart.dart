@@ -16,7 +16,7 @@ class FocusStatsChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dailyData.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 120,
         child: Center(
           child: Text(
@@ -77,7 +77,7 @@ class _BarChart extends StatelessWidget {
         barTouchData: BarTouchData(
           enabled: true,
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (_) => DS.neutral800,
+            tooltipBgColor: DS.neutral800,
             tooltipPadding: const EdgeInsets.all(DS.sm),
             tooltipMargin: 8,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {

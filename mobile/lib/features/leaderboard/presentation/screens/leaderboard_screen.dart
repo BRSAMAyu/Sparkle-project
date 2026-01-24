@@ -70,7 +70,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   Widget _buildLeaderboardTab(LeaderboardType type) {
     final state = ref.watch(leaderboardProvider);
-    final leaderboard = state.getData(type);
+    final leaderboard = state.getLeaderboard(type);
 
     if (leaderboard == null) {
       return _buildEmptyView(type);
@@ -259,10 +259,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       leading: CircleAvatar(
         backgroundColor: _getRankColor(entry.rank),
         backgroundImage: entry.avatarUrl != null
-            ? DecorationImage(
-                image: NetworkImage(entry.avatarUrl!),
-                fit: BoxFit.cover,
-              )
+            ? NetworkImage(entry.avatarUrl!)
             : null,
         child: entry.avatarUrl == null
             ? Text(
@@ -336,8 +333,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   Color _getRankColor(int rank) {
     if (rank == 1) return Colors.amber;
-    if (rank == 2) return Colors.grey[400];
-    if (rank == 3) return Colors.brown[400];
+    if (rank == 2) return Colors.grey[400]!;
+    if (rank == 3) return Colors.brown[400]!;
     return Colors.blue;
   }
 
