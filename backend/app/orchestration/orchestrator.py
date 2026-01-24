@@ -1012,12 +1012,16 @@ class ChatOrchestrator:
                             if conversation_context:
                                 conversation_history = conversation_context.get("messages", [])
 
+                            # Phase 4: Pass plan_id for version tracking
+                            plan_id_for_planner = str(plan_id) if plan_id else None
+
                             executable_plan = await self.lang_graph_planner.plan(
                                 message=user_message,
                                 snapshot=snapshot,
                                 user_id=user_id,
                                 session_id=session_id,
-                                conversation_history=conversation_history
+                                conversation_history=conversation_history,
+                                plan_id=plan_id_for_planner,  # Phase 4
                             )
 
                             # === Phase 3: Log planning observability ===
@@ -1067,7 +1071,8 @@ class ChatOrchestrator:
                                         snapshot=snapshot,
                                         user_id=user_id,
                                         session_id=session_id,
-                                        conversation_history=conversation_history
+                                        conversation_history=conversation_history,
+                                        plan_id=plan_id_for_planner,  # Phase 4
                                     )
                                     current_versions = await self._load_context_versions(user_id)
                                     version_check = await self.snapshot_manager.compare_versions(
@@ -1171,6 +1176,106 @@ class ChatOrchestrator:
                                 await self.langgraph_breaker.on_failure("preflight_blocked")
                                 return
 
+                            # === Phase 4: Plan version conflict check before execution ===
+                            if plan_id and hasattr(executable_plan, 'plan_version'):
+                                from app.services.plan_state_service import PlanStateService
+                                from app.services.plan_feedback_service import get_plan_feedback_service
+
+                                plan_state_service = PlanStateService(active_db, self.redis)
+                                feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                current_state = await plan_state_service.get_plan_state(
+                                    uuid.UUID(user_id), uuid.UUID(plan_id)
+                                )
+
+                                if current_state and current_state.version != executable_plan.plan_version:
+                                    # 版本冲突
+                                    logger.warning(
+                                        f"Plan version conflict: {executable_plan.plan_version} -> {current_state.version}"
+                                    )
+
+                                    # 记录到 PlanScope.feedback_log
+                                    await feedback_service.append_user_feedback(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        content=(
+                                            f"Plan version conflict detected: "
+                                            f"planned v{executable_plan.plan_version}, "
+                                            f"current v{current_state.version}"
+                                        ),
+                                        decision="supplement",
+                                        priority="high"
+                                    )
+
+                                    # 根据 confidence 决定策略
+                                    if executable_plan.confidence >= 0.7:
+                                        # 高置信度: 自动 replan
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                        ))
+
+                                        # 创建新快照并重规划
+                                        new_snapshot = await self.snapshot_manager.create_snapshot(
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            db_session=active_db
+                                        )
+                                        executable_plan = await self.lang_graph_planner.replan(
+                                            message=user_message,
+                                            snapshot=new_snapshot,
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            previous_plan=executable_plan,
+                                            conflict_info={
+                                                "has_conflict": True,
+                                                "old_version": executable_plan.plan_version,
+                                                "new_version": current_state.version,
+                                            }
+                                        )
+
+                                        # 更新 state 中的 plan
+                                        state.context_data["executable_plan"] = executable_plan
+                                    else:
+                                        # 低置信度: HITL 确认
+                                        tool_calls_payload = [
+                                            {"id": tc.id, "name": tc.name, "params": tc.params}
+                                            for tc in executable_plan.tool_calls
+                                        ]
+                                        action_id = await pending_actions_store.save(
+                                            tool_name="__plan_version_conflict__",
+                                            arguments={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "tool_calls": tool_calls_payload,
+                                            },
+                                            user_id=str(user_id),
+                                            description=(
+                                                f"计划版本已变更 (v{executable_plan.plan_version} -> v{current_state.version})，"
+                                                f"是否继续执行？"
+                                            ),
+                                            preview_data={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "confidence": executable_plan.confidence,
+                                                "tool_calls": tool_calls_payload,
+                                            }
+                                        )
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict").inc()
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=(
+                                                f"\n\n⚠️ 检测到状态变更，需要确认后继续执行。\n"
+                                                f"action_id={action_id}"
+                                            ),
+                                            metadata={
+                                                "requires_hitl": "true",
+                                                "action_id": action_id,
+                                                "reason": "plan_version_conflict",
+                                            }
+                                        ))
+                                        return
+
                             # 6. Plan Review (User Confirmation Loop)
                             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
                                 review_result = await plan_review_service.review_plan(
@@ -1178,6 +1283,20 @@ class ChatOrchestrator:
                                     user_message=user_message,
                                     user_context=user_context_payload or {}
                                 )
+
+                                # === Phase 4: Write review feedback to PlanScope (时机1: 审查完成后) ===
+                                if plan_id:
+                                    from app.services.plan_feedback_service import get_plan_feedback_service
+                                    feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                    # 写入审查结果到 feedback_log
+                                    await feedback_service.append_review_feedback(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        review_result=review_result,
+                                        user_decision=None,  # 尚未确认
+                                    )
+                                    logger.info(f"Review feedback written for plan {plan_id}")
 
                                 # Check if plan requires user action
                                 if review_result.decision in [

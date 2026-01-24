@@ -340,6 +340,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     NextAction action,
     int position,
     bool selected,
+    int displayedActionsCount,
   ) async {
     try {
       final selection = NextActionSelectionSubmission.fromAction(
@@ -347,6 +348,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         action: action,
         selected: selected,
         displayPosition: position,
+        displayedActionsCount: displayedActionsCount,
       );
       await _taskRepository.recordNextActionSelection(taskId, selection);
     } catch (e) {

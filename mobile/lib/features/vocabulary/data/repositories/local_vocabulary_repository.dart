@@ -277,8 +277,8 @@ class LocalVocabularyRepository {
             .or()
             .definitionContains(lowerQuery, caseSensitive: false)
             .or()
-            .tagsElementContains(lowerQuery),)
-        .sortByCreatedAtDesc()
+            .tagsElementContains(lowerQuery))
+        .sortByCreatedAt()
         .limit(50)
         .findAll();
 

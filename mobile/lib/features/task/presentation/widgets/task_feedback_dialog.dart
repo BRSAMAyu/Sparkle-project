@@ -174,12 +174,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     // Mark that user interacted with an action (don't record skip)
     _hasRecordedSkip = true;
 
-    // Record the selection
+    // Record the selection with displayedActionsCount
     ref.read(taskListProvider.notifier).recordNextActionSelection(
           widget.taskId,
           action,
           position,
           true,
+          widget.result.nextActions.length,
         );
 
     widget.onClose();

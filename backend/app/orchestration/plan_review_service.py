@@ -439,6 +439,7 @@ Please review this plan and provide your assessment."""
         user_id: str,
         user_comment: Optional[str] = None,
         modifications: Optional[Dict[str, Any]] = None,
+        db_session: Optional[Any] = None,  # Phase 4: for feedback writing
     ) -> Dict[str, Any]:
         """
         Handle user feedback on a plan review.
@@ -449,6 +450,7 @@ Please review this plan and provide your assessment."""
             user_id: User ID
             user_comment: Optional user comment
             modifications: Optional user-provided modifications
+            db_session: Database session for feedback writing (Phase 4)
 
         Returns:
             Status dictionary
@@ -463,9 +465,40 @@ Please review this plan and provide your assessment."""
             }
 
         preview_data = action.get("preview_data", {})
+        plan_id = preview_data.get("plan_id")
         logger.info(
-            f"User {user_decision} review {review_id} for plan {preview_data.get('plan_id')}"
+            f"User {user_decision} review {review_id} for plan {plan_id}"
         )
+
+        # === Phase 4: 时机2: Write user decision to feedback_log ===
+        if db_session and plan_id:
+            try:
+                from app.services.plan_feedback_service import get_plan_feedback_service
+                from uuid import UUID
+
+                feedback_service = get_plan_feedback_service(db_session, self.redis)
+
+                # Update the existing review feedback entry
+                await feedback_service.update_feedback_decision(
+                    user_id=UUID(user_id),
+                    plan_id=UUID(plan_id),
+                    review_id=review_id,
+                    user_decision=user_decision,
+                    user_comment=user_comment,
+                )
+
+                # Also add a new user_feedback entry
+                await feedback_service.append_user_feedback(
+                    user_id=UUID(user_id),
+                    plan_id=UUID(plan_id),
+                    content=user_comment or f"User decision: {user_decision}",
+                    decision=user_decision,
+                    priority="high" if user_decision == "reject" else "normal",
+                )
+
+                logger.info(f"User decision feedback written for plan {plan_id}")
+            except Exception as e:
+                logger.warning(f"Failed to write user decision feedback: {e}")
 
         # Clean up the stored action
         await pending_actions_store.delete(review_id, user_id)
@@ -474,7 +507,7 @@ Please review this plan and provide your assessment."""
             "status": "success",
             "user_decision": user_decision,
             "review_id": review_id,
-            "plan_id": preview_data.get("plan_id"),
+            "plan_id": plan_id,
             "message": f"Review {user_decision} by user",
         }
 

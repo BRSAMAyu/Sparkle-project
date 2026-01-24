@@ -112,16 +112,17 @@ class NextActionSelectionService:
             logger.debug(f"[NextActionSelection] Unknown action_type: {action_type}")
             return
 
-        # 计算偏好更新量
+        # 计算偏好更新量（全部使用扁平结构，便于查询和更新）
         updates: Dict[str, float] = {}
 
         if selected:
-            # 选择了某类action，增加偏好
-            updates["action_type_preference"] = {action_type: 0.1}
+            # 使用 ACTION_PREFERENCE_MAPPING 映射到对应的偏好字段
+            preference_field = self.ACTION_PREFERENCE_MAPPING[action_type]
+            updates[preference_field] = 0.05  # 增加该类型偏好
 
-            # 特定类型的偏好更新
+            # 特定类型的额外偏好更新
             if action_type == "rest_break":
-                # 用户选择了休息，可能表示疲劳
+                # 用户选择了休息，可能表示疲劳敏感
                 updates["fatigue_sensitive"] = 0.05
             elif action_type == "quick_review":
                 # 用户喜欢回顾，强化深度偏好
@@ -249,7 +250,3 @@ class NextActionSelectionService:
             )
         )
         return result.scalar() or 0
-
-
-# Singleton instance
-next_action_selection_service = NextActionSelectionService
