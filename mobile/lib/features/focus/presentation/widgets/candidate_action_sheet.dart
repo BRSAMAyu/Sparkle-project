@@ -117,7 +117,7 @@ class _CandidateActionSheetState extends State<CandidateActionSheet> {
                 candidate: candidate,
                 onAccept: () => _handleAccept(candidate),
                 onDismiss: () => _handleDismiss(candidate),
-              )),
+              ),),
 
           const SizedBox(height: DS.sm),
 
@@ -153,7 +153,6 @@ class _CandidateActionSheetState extends State<CandidateActionSheet> {
       candidateId: candidate.id,
       actionType: candidate.actionType,
       feedbackType: feedbackType,
-      executed: false, // Will be updated later if action is completed
     );
   }
 }

@@ -31,14 +31,14 @@ class TranslationRecord {
 
 @collection
 class TranslationWordLink {
+
+  TranslationWordLink();
   Id id = Isar.autoIncrement;
 
   @Index()
   late int translationRecordId;
 
   late String word;
-
-  TranslationWordLink();
 }
 
 extension TranslationRecordExtension on TranslationRecord {

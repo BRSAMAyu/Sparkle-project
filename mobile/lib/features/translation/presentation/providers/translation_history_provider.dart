@@ -176,13 +176,11 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     required String originalText,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async {
-    return await _repository.findSimilar(
+  }) async => await _repository.findSimilar(
       originalText: originalText,
       sourceLanguage: sourceLanguage,
       targetLanguage: targetLanguage,
     );
-  }
 }
 
 /// Repository provider
@@ -207,4 +205,4 @@ final localTranslationRepositoryProvider =
 /// History state provider
 final translationHistoryProvider =
     StateNotifierProvider<TranslationHistoryNotifier, TranslationHistoryState>(
-        (ref) => TranslationHistoryNotifier(ref.watch(localTranslationRepositoryProvider)));
+        (ref) => TranslationHistoryNotifier(ref.watch(localTranslationRepositoryProvider)),);

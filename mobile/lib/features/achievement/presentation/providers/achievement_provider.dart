@@ -357,7 +357,7 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     try {
       final success = await _repository.cancelContract();
       if (success) {
-        state = state.copyWith(activeContract: null);
+        state = state.copyWith();
       }
       return success;
     } catch (e) {

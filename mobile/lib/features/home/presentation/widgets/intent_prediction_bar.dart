@@ -47,8 +47,7 @@ class _PredictionChip extends StatelessWidget {
   final PredictedAction prediction;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: prediction.action,
       borderRadius: DS.borderRadiusFull,
       child: Container(
@@ -86,5 +85,4 @@ class _PredictionChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }

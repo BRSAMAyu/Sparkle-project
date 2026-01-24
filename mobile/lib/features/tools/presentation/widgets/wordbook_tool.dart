@@ -95,7 +95,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   }
 
   void _showImportanceDialog(VocabWordItem word) {
-    int selectedImportance = word.importance;
+    var selectedImportance = word.importance;
 
     showDialog(
       context: context,
@@ -428,7 +428,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ],
               ),
             );
-            if (confirmed == true && mounted) {
+            if ((confirmed ?? false) && mounted) {
               await ref.read(localVocabularyProvider.notifier).delete(word.id);
             }
           },
@@ -616,8 +616,7 @@ class _FilterChip extends StatelessWidget {
   final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -661,7 +660,6 @@ class _FilterChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 单词卡片组件 (本地版本)
@@ -745,13 +743,11 @@ class _WordCard extends StatelessWidget {
                   onTap: onTap,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: List.generate(5, (index) {
-                      return Icon(
+                    children: List.generate(5, (index) => Icon(
                         Icons.star,
                         size: 16,
                         color: index < word.importance ? Colors.amber : DS.neutral300,
-                      );
-                    }),
+                      )),
                   ),
                 ),
                 const SizedBox(width: DS.sm),

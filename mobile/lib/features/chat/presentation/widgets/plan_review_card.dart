@@ -179,7 +179,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       ).animate(CurvedAnimation(
         parent: _slideInController,
         curve: Curves.easeOut,
-      )),
+      ),),
       child: GestureDetector(
         onTapDown: showActions ? (_) => _pressController.forward() : null,
         onTapUp: showActions ? (_) => _pressController.reverse() : null,
@@ -349,22 +349,18 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         label = '已通过';
         bgColor = DS.success.withValues(alpha: 0.1);
         textColor = DS.success;
-        break;
       case ReviewDecision.rejected:
         label = '未通过';
         bgColor = DS.error.withValues(alpha: 0.1);
         textColor = DS.error;
-        break;
       case ReviewDecision.needsModification:
         label = '需修改';
         bgColor = DS.warning.withValues(alpha: 0.1);
         textColor = DS.warning;
-        break;
       case ReviewDecision.requiresConfirmation:
         label = '待确认';
         bgColor = DS.info.withValues(alpha: 0.1);
         textColor = DS.info;
-        break;
     }
 
     return Container(
@@ -416,8 +412,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     );
   }
 
-  Widget _buildCommentGroup(String title, List<ReviewComment> comments, Color color) {
-    return Column(
+  Widget _buildCommentGroup(String title, List<ReviewComment> comments, Color color) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -434,10 +429,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
             )),
       ],
     );
-  }
 
-  Widget _buildCommentItem(ReviewComment comment, Color color) {
-    return Container(
+  Widget _buildCommentItem(ReviewComment comment, Color color) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.06),
@@ -493,10 +486,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ],
       ),
     );
-  }
 
-  Widget _buildConfidenceBar() {
-    return Column(
+  Widget _buildConfidenceBar() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -535,7 +526,6 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ),
       ],
     );
-  }
 
   Widget _buildActionButtons(ReviewDecision decision, LinearGradient gradient) {
     // For rejected plans, only show retry option

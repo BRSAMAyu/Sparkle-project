@@ -431,7 +431,6 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: DS.prismPurple.withValues(alpha: 0.3),
-                      width: 1,
                     ),
                   ),
                   child: Column(

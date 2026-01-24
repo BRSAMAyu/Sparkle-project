@@ -45,8 +45,7 @@ class _ViewTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
+  Widget build(BuildContext context) => AnimatedContainer(
       duration: DS.quick,
       curve: DS.curveEaseOut,
       decoration: BoxDecoration(
@@ -82,21 +81,16 @@ class _ViewTab extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  IconData _getIcon(TaskViewMode mode) {
-    return switch (mode) {
+  IconData _getIcon(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => Icons.calendar_today_rounded,
       TaskViewMode.priority => Icons.flag_rounded,
       TaskViewMode.plan => Icons.view_week_rounded,
     };
-  }
 
-  String _getLabel(TaskViewMode mode) {
-    return switch (mode) {
+  String _getLabel(TaskViewMode mode) => switch (mode) {
       TaskViewMode.schedule => '日程',
       TaskViewMode.priority => '重要性',
       TaskViewMode.plan => '方案',
     };
-  }
 }

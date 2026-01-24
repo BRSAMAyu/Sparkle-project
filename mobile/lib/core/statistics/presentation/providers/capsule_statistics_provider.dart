@@ -8,6 +8,18 @@ part 'capsule_statistics_provider.g.dart';
 
 /// Capsule statistics entity
 class CapsuleStatisticsData extends StatisticsEntity {
+
+  CapsuleStatisticsData({
+    required this.id,
+    required this.period,
+    required this.lastRefreshedAt,
+    required this.isFromCache,
+    required this.totalOpened,
+    required this.totalCollected,
+    required this.totalShared,
+    required this.averageEngagement,
+    required this.byCategory,
+  });
   @override
   final String id;
 
@@ -41,18 +53,6 @@ class CapsuleStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalOpened.toDouble();
 
-  CapsuleStatisticsData({
-    required this.id,
-    required this.period,
-    required this.lastRefreshedAt,
-    required this.isFromCache,
-    required this.totalOpened,
-    required this.totalCollected,
-    required this.totalShared,
-    required this.averageEngagement,
-    required this.byCategory,
-  });
-
   @override
   double? calculateChange(StatisticsEntity? previous) {
     if (previous == null || previous is! CapsuleStatisticsData) {
@@ -74,8 +74,7 @@ class CapsuleStatisticsData extends StatisticsEntity {
     int? totalShared,
     double? averageEngagement,
     Map<String, int>? byCategory,
-  }) {
-    return CapsuleStatisticsData(
+  }) => CapsuleStatisticsData(
       id: id ?? this.id,
       period: period ?? this.period,
       lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
@@ -86,7 +85,6 @@ class CapsuleStatisticsData extends StatisticsEntity {
       averageEngagement: averageEngagement ?? this.averageEngagement,
       byCategory: byCategory ?? this.byCategory,
     );
-  }
 }
 
 /// Repository for capsule statistics
@@ -123,8 +121,7 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
   }
 
   @override
-  CapsuleStatisticsData deserializeEntity(Map<String, dynamic> json) {
-    return CapsuleStatisticsData(
+  CapsuleStatisticsData deserializeEntity(Map<String, dynamic> json) => CapsuleStatisticsData(
       id: json['id'] as String,
       period: StatisticsPeriodExt.fromCode(json['period'] as String),
       lastRefreshedAt: DateTime.parse(json['lastRefreshedAt'] as String),
@@ -135,11 +132,9 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
       averageEngagement: json['averageEngagement'] as double,
       byCategory: Map<String, int>.from(json['byCategory'] as Map),
     );
-  }
 
   @override
-  Map<String, dynamic> serializeEntity(CapsuleStatisticsData entity) {
-    return {
+  Map<String, dynamic> serializeEntity(CapsuleStatisticsData entity) => {
       'id': entity.id,
       'type': entity.type.code,
       'period': entity.period.name,
@@ -151,7 +146,6 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
       'averageEngagement': entity.averageEngagement,
       'byCategory': entity.byCategory,
     };
-  }
 
   int _generateMockOpened(StatisticsPeriod period) {
     switch (period) {
@@ -168,13 +162,9 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
     }
   }
 
-  int _generateMockCollected(StatisticsPeriod period) {
-    return (_generateMockOpened(period) * 1.5).toInt();
-  }
+  int _generateMockCollected(StatisticsPeriod period) => (_generateMockOpened(period) * 1.5).toInt();
 
-  int _generateMockShared(StatisticsPeriod period) {
-    return (_generateMockOpened(period) * 0.3).toInt();
-  }
+  int _generateMockShared(StatisticsPeriod period) => (_generateMockOpened(period) * 0.3).toInt();
 }
 
 /// Provider for capsule statistics repository
@@ -188,9 +178,7 @@ CapsuleStatsRepository capsuleStatsRepository(CapsuleStatsRepositoryRef ref) {
 @riverpod
 class CapsuleStatistics extends _$CapsuleStatistics {
   @override
-  StatisticsState<CapsuleStatisticsData> build() {
-    return const StatisticsState.initial();
-  }
+  StatisticsState<CapsuleStatisticsData> build() => const StatisticsState.initial();
 
   Future<void> load(
     StatisticsPeriod period, {

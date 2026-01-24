@@ -9,9 +9,6 @@ final translationServiceProvider = Provider<TranslationService>((ref) {
 
 /// Translation segment data
 class TranslationSegmentData {
-  final String id;
-  final String translation;
-  final List<String> notes;
 
   TranslationSegmentData({
     required this.id,
@@ -29,13 +26,13 @@ class TranslationSegmentData {
           [],
     );
   }
+  final String id;
+  final String translation;
+  final List<String> notes;
 }
 
 /// Translation recommendation data
 class TranslationRecommendation {
-  final bool shouldCreateCard;
-  final String? reason;
-  final int dailyQuotaRemaining;
 
   TranslationRecommendation({
     required this.shouldCreateCard,
@@ -50,15 +47,13 @@ class TranslationRecommendation {
       dailyQuotaRemaining: json['daily_quota_remaining'] as int? ?? 0,
     );
   }
+  final bool shouldCreateCard;
+  final String? reason;
+  final int dailyQuotaRemaining;
 }
 
 /// Translation result
 class TranslationResult {
-  final bool success;
-  final String translation;
-  final List<TranslationSegmentData> segments;
-  final TranslationRecommendation? recommendation;
-  final Map<String, dynamic> meta;
 
   TranslationResult({
     required this.success,
@@ -82,6 +77,11 @@ class TranslationResult {
       meta: json['meta'] as Map<String, dynamic>,
     );
   }
+  final bool success;
+  final String translation;
+  final List<TranslationSegmentData> segments;
+  final TranslationRecommendation? recommendation;
+  final Map<String, dynamic> meta;
 
   /// Check if result was from cache
   bool get isCacheHit => meta['cache_hit'] == true;
@@ -102,9 +102,9 @@ class TranslationResult {
 
 /// Translation service for API calls
 class TranslationService {
-  final ApiClient _apiClient;
 
   TranslationService(this._apiClient);
+  final ApiClient _apiClient;
 
   /// Translate text from one language to another
   ///

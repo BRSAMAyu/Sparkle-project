@@ -169,7 +169,7 @@ class AchievementCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                _buildIcon(size: 48),
+                _buildIcon(),
                 const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: Column(
@@ -519,14 +519,12 @@ class AchievementGridCard extends StatelessWidget {
   final bool showProgress;
 
   @override
-  Widget build(BuildContext context) {
-    return AchievementCard(
+  Widget build(BuildContext context) => AchievementCard(
       achievement: achievement,
       onTap: onTap,
       style: AchievementCardStyle.standard,
       showProgress: showProgress,
     );
-  }
 }
 
 /// 成就列表卡片（用于列表布局）
@@ -543,14 +541,12 @@ class AchievementListCard extends StatelessWidget {
   final bool showProgress;
 
   @override
-  Widget build(BuildContext context) {
-    return AchievementCard(
+  Widget build(BuildContext context) => AchievementCard(
       achievement: achievement,
       onTap: onTap,
       style: AchievementCardStyle.compact,
       showProgress: showProgress,
     );
-  }
 }
 
 /// 成就详情卡片（用于详情页）
@@ -565,11 +561,9 @@ class AchievementDetailCard extends StatelessWidget {
   final bool showProgress;
 
   @override
-  Widget build(BuildContext context) {
-    return AchievementCard(
+  Widget build(BuildContext context) => AchievementCard(
       achievement: achievement,
       style: AchievementCardStyle.full,
       showProgress: showProgress,
     );
-  }
 }

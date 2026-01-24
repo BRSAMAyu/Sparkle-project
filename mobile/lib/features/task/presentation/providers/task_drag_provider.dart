@@ -76,6 +76,4 @@ class TaskDragNotifier extends StateNotifier<TaskDragState> {
 
 /// Provider for task drag state
 final taskDragProvider =
-    StateNotifierProvider<TaskDragNotifier, TaskDragState>((ref) {
-  return TaskDragNotifier();
-});
+    StateNotifierProvider<TaskDragNotifier, TaskDragState>((ref) => TaskDragNotifier());

@@ -32,6 +32,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 {preference_instructions}
 
+{plan_context_section}
+
 ## 对话历史
 {conversation_history_section}
 
@@ -41,6 +43,7 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 3. 根据 exploration_level 决定是否扩展话题
 4. 保持角色一致性
 5. 提供准确、有帮助的回答
+6. 如果有活跃计划上下文，优先考虑计划相关的任务和目标
 """
 
 
@@ -53,6 +56,7 @@ def build_system_prompt(
     conversation_history: dict = None,
     prompt_version: str = "v1",
     agent_role: AgentRole = AgentRole.GENERATION,
+    plan_context: dict = None,
 ) -> str:
     """
     构建完整的 System Prompt，深度集成用户偏好
@@ -62,6 +66,7 @@ def build_system_prompt(
         conversation_history: 对话历史（从ContextPruner获取）
         prompt_version: prompt版本（v1/v2）
         agent_role: Agent角色（用于获取角色专用prompt）
+        plan_context: 计划上下文（从PlanContextBuilder获取）
 
     Returns:
         完整的系统prompt字符串
@@ -89,12 +94,16 @@ def build_system_prompt(
 
     conversation_history_section = _format_conversation_history(conversation_history)
 
+    # 2.5 格式化计划上下文
+    plan_context_section = _format_plan_context(plan_context)
+
     # 3. 如果是通用模板，进行完整渲染
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
         prompt = base_prompt.format(
             user_context=formatted_user_context,
             conversation_history_section=conversation_history_section,
             preference_instructions=preference_instructions,
+            plan_context_section=plan_context_section,
         )
     else:
         # 角色专用模板，简单替换
@@ -253,6 +262,71 @@ def _get_default_preference_instructions(user_context: dict) -> str:
 - 回答深度：{depth_text}
 - 探索倾向：{curiosity_text}
 """
+
+
+def _format_plan_context(plan_context: dict = None) -> str:
+    """
+    格式化计划上下文
+
+    Args:
+        plan_context: 计划上下文字典（从PlanContextBuilder获取）
+
+    Returns:
+        格式化后的计划上下文字符串，为空时返回空字符串
+    """
+    if not plan_context or not isinstance(plan_context, dict):
+        return ""
+
+    lines = ["## 当前计划上下文"]
+
+    # Plan ID and status
+    plan_id = plan_context.get("plan_id")
+    status = plan_context.get("status")
+    if plan_id:
+        lines.append(f"计划ID: {plan_id}")
+    if status:
+        lines.append(f"状态: {status}")
+
+    # Facts (core plan-level knowledge)
+    facts = plan_context.get("facts", {})
+    if facts:
+        lines.append("\n### 计划事实")
+        for key, value in facts.items():
+            lines.append(f"- {key}: {value}")
+
+    # Task summary
+    task_summary = plan_context.get("task_summary")
+    if task_summary:
+        total = task_summary.get("total", 0)
+        completed = task_summary.get("completed", 0)
+        rate = task_summary.get("avg_completion_rate")
+        rate_str = f" ({rate:.0%})" if rate is not None else ""
+        lines.append(f"\n### 任务进度: {completed}/{total}{rate_str}")
+
+        # By type breakdown
+        by_type = task_summary.get("by_type", {})
+        if by_type:
+            for task_type, stats in by_type.items():
+                t_total = stats.get("total", 0)
+                t_completed = stats.get("completed", 0)
+                lines.append(f"  - {task_type}: {t_completed}/{t_total}")
+
+    # Milestones
+    milestones = plan_context.get("milestones", [])
+    if milestones:
+        lines.append("\n### 已达成里程碑")
+        for m in milestones:
+            title = m.get("title", "未知")
+            lines.append(f"- {title}")
+
+    # Constraints
+    constraints = plan_context.get("constraints", {})
+    if constraints:
+        lines.append("\n### 运行时约束")
+        for key, value in constraints.items():
+            lines.append(f"- {key}: {value}")
+
+    return "\n".join(lines)
 
 
 def format_user_context(context: dict) -> str:

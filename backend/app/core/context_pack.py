@@ -26,6 +26,7 @@ from app.services.context_pack_telemetry_service import ContextPackTelemetryServ
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
 from app.services.ltm_rollout_service import LtmRolloutService
+from app.core.plan_context import PlanContextBuilder
 
 
 @lru_cache(maxsize=1)
@@ -169,9 +170,10 @@ class ContextPack:
     budget_remaining: Dict[str, int]
     pack_id: Optional[UUID] = None
     metadata: Optional[Dict[str, Any]] = None
+    plan_context: Optional[Dict[str, Any]] = None  # PlanScope context
 
     def to_prompt_context(self) -> Dict[str, Any]:
-        return {
+        result = {
             "preferences": self.preferences,
             "active_goals": self.goals,
             "episodic_memories": self.episodic_memories,
@@ -184,6 +186,10 @@ class ContextPack:
                 "metadata": self.metadata or {},
             },
         }
+        # Include plan_context if present (non-empty)
+        if self.plan_context:
+            result["plan_context"] = self.plan_context
+        return result
 
 
 class ContextPackBuilder:
@@ -202,6 +208,7 @@ class ContextPackBuilder:
         intent: str,
         request_id: Optional[str] = None,
         trace_id: Optional[str] = None,
+        plan_id: Optional[UUID] = None,
     ) -> ContextPack:
         rollout_enabled = True
         if settings.ENABLE_LTM_ROLLOUT:
@@ -211,6 +218,16 @@ class ContextPackBuilder:
         budgets = await self.scheduler.allocate(intent, user_id=user_id)
         CONTEXT_PACK_BUILD.labels(intent=intent).inc()
         CONTEXT_PACK_INTENT.labels(intent=intent).inc()
+
+        # Build plan context if plan_id is provided
+        plan_context: Optional[Dict[str, Any]] = None
+        if plan_id:
+            try:
+                plan_builder = PlanContextBuilder(self.db)
+                plan_context = await plan_builder.build(user_id, plan_id)
+            except Exception as e:
+                logger.warning(f"Failed to build plan context: {e}")
+                plan_context = None
 
         conflict_enabled = settings.ENABLE_MEMORY_CONFLICT_RESOLUTION and rollout_enabled
         resolver = MemoryConflictResolver() if conflict_enabled else None
@@ -474,4 +491,5 @@ class ContextPackBuilder:
             budget_remaining=budget_remaining,
             pack_id=pack_id,
             metadata=metadata or None,
+            plan_context=plan_context,
         )

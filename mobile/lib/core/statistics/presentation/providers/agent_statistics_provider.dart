@@ -8,6 +8,18 @@ part 'agent_statistics_provider.g.dart';
 
 /// Agent statistics entity
 class AgentStatisticsData extends StatisticsEntity {
+
+  AgentStatisticsData({
+    required this.id,
+    required this.period,
+    required this.lastRefreshedAt,
+    required this.isFromCache,
+    required this.totalCalls,
+    required this.averageResponseTime,
+    required this.totalTokens,
+    required this.successRate,
+    required this.callsByAgent,
+  });
   @override
   final String id;
 
@@ -41,18 +53,6 @@ class AgentStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalCalls.toDouble();
 
-  AgentStatisticsData({
-    required this.id,
-    required this.period,
-    required this.lastRefreshedAt,
-    required this.isFromCache,
-    required this.totalCalls,
-    required this.averageResponseTime,
-    required this.totalTokens,
-    required this.successRate,
-    required this.callsByAgent,
-  });
-
   @override
   double? calculateChange(StatisticsEntity? previous) {
     if (previous == null || previous is! AgentStatisticsData) {
@@ -74,8 +74,7 @@ class AgentStatisticsData extends StatisticsEntity {
     int? totalTokens,
     double? successRate,
     Map<String, int>? callsByAgent,
-  }) {
-    return AgentStatisticsData(
+  }) => AgentStatisticsData(
       id: id ?? this.id,
       period: period ?? this.period,
       lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
@@ -86,7 +85,6 @@ class AgentStatisticsData extends StatisticsEntity {
       successRate: successRate ?? this.successRate,
       callsByAgent: callsByAgent ?? this.callsByAgent,
     );
-  }
 }
 
 /// Repository for agent statistics
@@ -123,8 +121,7 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
   }
 
   @override
-  AgentStatisticsData deserializeEntity(Map<String, dynamic> json) {
-    return AgentStatisticsData(
+  AgentStatisticsData deserializeEntity(Map<String, dynamic> json) => AgentStatisticsData(
       id: json['id'] as String,
       period: StatisticsPeriodExt.fromCode(json['period'] as String),
       lastRefreshedAt: DateTime.parse(json['lastRefreshedAt'] as String),
@@ -135,11 +132,9 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
       successRate: json['successRate'] as double,
       callsByAgent: Map<String, int>.from(json['callsByAgent'] as Map),
     );
-  }
 
   @override
-  Map<String, dynamic> serializeEntity(AgentStatisticsData entity) {
-    return {
+  Map<String, dynamic> serializeEntity(AgentStatisticsData entity) => {
       'id': entity.id,
       'type': entity.type.code,
       'period': entity.period.name,
@@ -151,7 +146,6 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
       'successRate': entity.successRate,
       'callsByAgent': entity.callsByAgent,
     };
-  }
 
   int _generateMockCalls(StatisticsPeriod period) {
     switch (period) {
@@ -168,9 +162,7 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
     }
   }
 
-  int _generateMockTokens(StatisticsPeriod period) {
-    return _generateMockCalls(period) * 500;
-  }
+  int _generateMockTokens(StatisticsPeriod period) => _generateMockCalls(period) * 500;
 }
 
 /// Provider for agent statistics repository
@@ -184,9 +176,7 @@ AgentStatsRepository agentStatsRepository(AgentStatsRepositoryRef ref) {
 @riverpod
 class AgentStatistics extends _$AgentStatistics {
   @override
-  StatisticsState<AgentStatisticsData> build() {
-    return const StatisticsState.initial();
-  }
+  StatisticsState<AgentStatisticsData> build() => const StatisticsState.initial();
 
   Future<void> load(
     StatisticsPeriod period, {

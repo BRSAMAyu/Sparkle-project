@@ -1,4 +1,4 @@
-import 'statistics_period.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
 
 /// Statistics type enumeration
 enum StatisticsType {
@@ -106,10 +106,8 @@ extension StatisticsTypeExt on StatisticsType {
   }
 
   /// Parse from string code
-  static StatisticsType fromCode(String code) {
-    return StatisticsType.values.firstWhere(
+  static StatisticsType fromCode(String code) => StatisticsType.values.firstWhere(
       (type) => type.code == code,
       orElse: () => StatisticsType.learning,
     );
-  }
 }

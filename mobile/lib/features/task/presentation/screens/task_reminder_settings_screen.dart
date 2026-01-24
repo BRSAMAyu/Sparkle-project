@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show
-        TaskReminderConfig,
-        taskReminderConfigProvider,
         TaskNotificationScheduler,
-        taskNotificationSchedulerProvider;
+        TaskReminderConfig,
+        taskNotificationSchedulerProvider,
+        taskReminderConfigProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
     show taskListProvider;
@@ -119,8 +119,7 @@ class _TaskReminderSettingsScreenState
     );
   }
 
-  Widget _buildEnableSwitch(TaskReminderConfig config) {
-    return SwitchListTile(
+  Widget _buildEnableSwitch(TaskReminderConfig config) => SwitchListTile(
       title: Text('启用任务提醒', style: TextStyle(color: DS.brandPrimary)),
       subtitle: Text(
         '在任务到期前发送通知',
@@ -133,10 +132,8 @@ class _TaskReminderSettingsScreenState
       },
       activeColor: DS.primaryBase,
     );
-  }
 
-  Widget _buildReminderTimesSection(TaskReminderConfig config) {
-    return Column(
+  Widget _buildReminderTimesSection(TaskReminderConfig config) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -178,10 +175,8 @@ class _TaskReminderSettingsScreenState
         }),
       ],
     );
-  }
 
-  Widget _buildRefreshButton() {
-    return Padding(
+  Widget _buildRefreshButton() => Padding(
       padding: const EdgeInsets.all(16),
       child: FilledButton.tonalIcon(
         onPressed: () async {
@@ -209,10 +204,8 @@ class _TaskReminderSettingsScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildInfoSection() {
-    return Padding(
+  Widget _buildInfoSection() => Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -252,7 +245,6 @@ class _TaskReminderSettingsScreenState
         ),
       ),
     );
-  }
 
   String _formatReminderTime(int minutes) {
     if (minutes >= 1440) {

@@ -24,9 +24,9 @@ class AgentServiceClient extends $grpc.Client {
 
   AgentServiceClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
-      $core.Iterable<$grpc.ClientInterceptor>? interceptors})
+      $core.Iterable<$grpc.ClientInterceptor>? interceptors,})
       : super(channel, options: options,
-        interceptors: interceptors);
+        interceptors: interceptors,);
   static final _$streamChat = $grpc.ClientMethod<$0.ChatRequest, $0.ChatResponse>(
       '/agent.v1.AgentService/StreamChat',
       ($0.ChatRequest value) => value.writeToBuffer(),
@@ -69,35 +69,35 @@ abstract class AgentServiceBase extends $grpc.Service {
         false,
         true,
         ($core.List<$core.int> value) => $0.ChatRequest.fromBuffer(value),
-        ($0.ChatResponse value) => value.writeToBuffer()));
+        ($0.ChatResponse value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$0.MemoryQuery, $0.MemoryResult>(
         'RetrieveMemory',
         retrieveMemory_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.MemoryQuery.fromBuffer(value),
-        ($0.MemoryResult value) => value.writeToBuffer()));
+        ($0.MemoryResult value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$0.ProfileRequest, $0.UserProfile>(
         'GetUserProfile',
         getUserProfile_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.ProfileRequest.fromBuffer(value),
-        ($0.UserProfile value) => value.writeToBuffer()));
+        ($0.UserProfile value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$0.WeeklyReportRequest, $0.WeeklyReport>(
         'GetWeeklyReport',
         getWeeklyReport_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.WeeklyReportRequest.fromBuffer(value),
-        ($0.WeeklyReport value) => value.writeToBuffer()));
+        ($0.WeeklyReport value) => value.writeToBuffer(),),);
     $addMethod($grpc.ServiceMethod<$0.ResponseFeedbackRequest, $0.ResponseFeedbackResponse>(
         'SubmitResponseFeedback',
         submitResponseFeedback_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.ResponseFeedbackRequest.fromBuffer(value),
-        ($0.ResponseFeedbackResponse value) => value.writeToBuffer()));
+        ($0.ResponseFeedbackResponse value) => value.writeToBuffer(),),);
   }
   $core.String get $name => 'agent.v1.AgentService';
 

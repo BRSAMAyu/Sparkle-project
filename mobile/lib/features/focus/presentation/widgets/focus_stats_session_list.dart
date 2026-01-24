@@ -141,8 +141,7 @@ class _SessionItem extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusIcon(bool isCompleted) {
-    return Container(
+  Widget _buildStatusIcon(bool isCompleted) => Container(
       width: 32,
       height: 32,
       decoration: BoxDecoration(
@@ -157,7 +156,6 @@ class _SessionItem extends StatelessWidget {
         size: 18,
       ),
     );
-  }
 
   Widget _buildFocusTypeBadge(String focusType) {
     final isPomodoro = focusType == 'pomodoro';

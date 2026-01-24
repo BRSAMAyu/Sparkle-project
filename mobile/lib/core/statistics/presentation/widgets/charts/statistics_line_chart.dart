@@ -6,6 +6,20 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Line chart widget for statistics data visualization
 class StatisticsLineChart extends StatelessWidget {
+
+  const StatisticsLineChart({
+    super.key,
+    required this.dataPoints,
+    this.lineColor,
+    this.showPoints = true,
+    this.fillArea = true,
+    this.xLabels,
+    this.maxY,
+    this.minY = 0,
+    this.unit,
+    this.isHorizontal = false,
+    this.tooltipFormatter,
+  });
   /// Data points to display
   final List<StatisticsDataPoint> dataPoints;
 
@@ -36,20 +50,6 @@ class StatisticsLineChart extends StatelessWidget {
   /// Custom tooltip formatter
   final String Function(double value)? tooltipFormatter;
 
-  const StatisticsLineChart({
-    super.key,
-    required this.dataPoints,
-    this.lineColor,
-    this.showPoints = true,
-    this.fillArea = true,
-    this.xLabels,
-    this.maxY,
-    this.minY = 0,
-    this.unit,
-    this.isHorizontal = false,
-    this.tooltipFormatter,
-  });
-
   @override
   Widget build(BuildContext context) {
     if (dataPoints.isEmpty) {
@@ -62,7 +62,7 @@ class StatisticsLineChart extends StatelessWidget {
     return AspectRatio(
       aspectRatio: isHorizontal ? 2.5 : 1.6,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
+        padding: const EdgeInsets.fromLTRB(
           DS.sm,
           DS.lg,
           DS.sm,
@@ -82,7 +82,7 @@ class StatisticsLineChart extends StatelessWidget {
     final points = dataPoints.map((p) => FlSpot(
       dataPoints.indexOf(p).toDouble(),
       p.value,
-    )).toList();
+    ),).toList();
 
     return LineChartData(
       lineBarsData: [
@@ -95,21 +95,19 @@ class StatisticsLineChart extends StatelessWidget {
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: showPoints,
-            getDotPainter: (spot, percent, barData, index) {
-              return FlDotCirclePainter(
+            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
                 radius: StatisticsChartConfig.pointRadius,
                 color: baseColor,
                 strokeWidth: 2,
                 strokeColor: DS.white,
-              );
-            },
+              ),
           ),
           belowBarData: fillArea
               ? BarAreaData(
                   show: true,
                   gradient: StatisticsChartConfig.getLineGradient(color: baseColor),
                 )
-              : BarAreaData(show: false),
+              : BarAreaData(),
         ),
       ],
       minX: 0,
@@ -117,19 +115,15 @@ class StatisticsLineChart extends StatelessWidget {
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: StatisticsChartConfig.showVerticalGrid,
         horizontalInterval: maxY != null ? (maxY! - minY) / 4 : null,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
             dashArray: StatisticsChartConfig.gridDashPattern,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -142,7 +136,7 @@ class StatisticsLineChart extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     labels[index],
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: StatisticsChartConfig.axisLabelSize,
                       color: StatisticsChartConfig.axisLabelColor,
                     ),
@@ -158,31 +152,27 @@ class StatisticsLineChart extends StatelessWidget {
             showTitles: true,
             reservedSize: 40,
             interval: maxY != null ? (maxY! - minY) / 4 : null,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 _formatYValue(value),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),
       lineTouchData: LineTouchData(
-        enabled: StatisticsChartConfig.touchEnabled,
         touchTooltipData: LineTouchTooltipData(
           tooltipBgColor: StatisticsChartConfig.tooltipBgColor,
-          getTooltipItems: (touchedSpots) {
-            return touchedSpots.map((spot) {
+          getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
               final value = spot.y;
               final text = tooltipFormatter?.call(value) ??
                   _formatYValue(value);
@@ -195,15 +185,13 @@ class StatisticsLineChart extends StatelessWidget {
                   fontWeight: DS.fontWeightMedium,
                 ),
               );
-            }).toList();
-          },
+            }).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
+  Widget _buildEmptyState() => Container(
       height: 200,
       alignment: Alignment.center,
       child: Column(
@@ -224,7 +212,6 @@ class StatisticsLineChart extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String _formatLabel(DateTime timestamp) {
     final now = DateTime.now();
@@ -246,7 +233,7 @@ class StatisticsLineChart extends StatelessWidget {
   }
 
   double _getInterval(int labelCount) {
-    final maxLabels = StatisticsChartConfig.maxXLabels;
+    const maxLabels = StatisticsChartConfig.maxXLabels;
     if (labelCount <= maxLabels) return 1;
     return (labelCount / maxLabels).ceil().toDouble();
   }
@@ -254,6 +241,19 @@ class StatisticsLineChart extends StatelessWidget {
 
 /// Line chart with dual series for comparison
 class StatisticsDualLineChart extends StatelessWidget {
+
+  const StatisticsDualLineChart({
+    super.key,
+    required this.primaryData,
+    required this.secondaryData,
+    this.primaryColor,
+    this.secondaryColor,
+    this.xLabels,
+    this.maxY,
+    this.minY = 0,
+    this.primaryLabel,
+    this.secondaryLabel,
+  });
   /// Primary data series
   final List<StatisticsDataPoint> primaryData;
 
@@ -279,19 +279,6 @@ class StatisticsDualLineChart extends StatelessWidget {
   final String? primaryLabel;
   final String? secondaryLabel;
 
-  const StatisticsDualLineChart({
-    super.key,
-    required this.primaryData,
-    required this.secondaryData,
-    this.primaryColor,
-    this.secondaryColor,
-    this.xLabels,
-    this.maxY,
-    this.minY = 0,
-    this.primaryLabel,
-    this.secondaryLabel,
-  });
-
   @override
   Widget build(BuildContext context) {
     if (primaryData.isEmpty && secondaryData.isEmpty) {
@@ -303,7 +290,7 @@ class StatisticsDualLineChart extends StatelessWidget {
         AspectRatio(
           aspectRatio: 1.6,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(DS.sm, DS.lg, DS.sm, DS.sm),
+            padding: const EdgeInsets.fromLTRB(DS.sm, DS.lg, DS.sm, DS.sm),
             child: LineChart(
               _buildChartData(),
               duration: StatisticsAnimationConfig.chartUpdate,
@@ -321,13 +308,9 @@ class StatisticsDualLineChart extends StatelessWidget {
     final pColor = primaryColor ?? StatisticsChartConfig.primaryColor;
     final sColor = secondaryColor ?? StatisticsChartConfig.secondaryColor;
 
-    final primarySpots = primaryData.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.value);
-    }).toList();
+    final primarySpots = primaryData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.value)).toList();
 
-    final secondarySpots = secondaryData.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.value);
-    }).toList();
+    final secondarySpots = secondaryData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.value)).toList();
 
     return LineChartData(
       lineBarsData: [
@@ -337,7 +320,7 @@ class StatisticsDualLineChart extends StatelessWidget {
           curveSmoothness: StatisticsChartConfig.lineSmoothness,
           color: pColor,
           barWidth: StatisticsChartConfig.lineWidth,
-          dotData: FlDotData(show: false),
+          dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(
             show: true,
             gradient: StatisticsChartConfig.getLineGradient(color: pColor),
@@ -349,7 +332,7 @@ class StatisticsDualLineChart extends StatelessWidget {
           curveSmoothness: StatisticsChartConfig.lineSmoothness,
           color: sColor,
           barWidth: StatisticsChartConfig.lineWidth,
-          dotData: FlDotData(show: false),
+          dotData: const FlDotData(show: false),
         ),
       ],
       minX: 0,
@@ -361,17 +344,13 @@ class StatisticsDualLineChart extends StatelessWidget {
       minY: minY,
       maxY: maxY,
       gridData: FlGridData(
-        show: StatisticsChartConfig.showHorizontalGrid,
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
+        getDrawingHorizontalLine: (value) => FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
-          );
-        },
+          ),
       ),
       titlesData: FlTitlesData(
-        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -383,7 +362,7 @@ class StatisticsDualLineChart extends StatelessWidget {
                 if (index >= 0 && index < labels.length) {
                   return Text(
                     labels[index],
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: StatisticsChartConfig.axisLabelSize,
                       color: StatisticsChartConfig.axisLabelColor,
                     ),
@@ -398,30 +377,27 @@ class StatisticsDualLineChart extends StatelessWidget {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 40,
-            getTitlesWidget: (value, meta) {
-              return Text(
+            getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(
                   fontSize: StatisticsChartConfig.axisLabelSize,
                   color: StatisticsChartConfig.axisLabelColor,
                 ),
-              );
-            },
+              ),
           ),
         ),
         topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
         rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
+          
         ),
       ),
       borderData: FlBorderData(show: false),
     );
   }
 
-  Widget _buildLegend() {
-    return Padding(
+  Widget _buildLegend() => Padding(
       padding: EdgeInsets.symmetric(horizontal: DS.lg),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -434,10 +410,8 @@ class StatisticsDualLineChart extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildLegendItem(String label, Color? color) {
-    return Row(
+  Widget _buildLegendItem(String label, Color? color) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -457,5 +431,4 @@ class StatisticsDualLineChart extends StatelessWidget {
         ),
       ],
     );
-  }
 }

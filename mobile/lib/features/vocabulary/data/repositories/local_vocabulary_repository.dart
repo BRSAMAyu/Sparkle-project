@@ -7,20 +7,14 @@ class VocabWordItem {
   const VocabWordItem({
     required this.id,
     required this.word,
-    this.phonetic,
+    required this.importance, required this.reviewCount, required this.correctReviewCount, required this.createdAt, required this.updatedAt, required this.tags, this.phonetic,
     this.definition,
     this.exampleSentence,
     this.partOfSpeech,
-    required this.importance,
     this.nextReviewAt,
-    required this.reviewCount,
     this.lastReviewAt,
-    required this.correctReviewCount,
     this.sourceTranslationId,
     this.taskId,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.tags,
   });
 
   final Id id;
@@ -125,7 +119,7 @@ class LocalVocabularyRepository {
       tags: tags,
     );
 
-    return await _vocabWordCollection.put(newWord);
+    return _vocabWordCollection.put(newWord);
   }
 
   /// Get word by word string
@@ -171,7 +165,7 @@ class LocalVocabularyRepository {
   /// Get due count
   Future<int> getDueCount() async {
     final now = DateTime.now();
-    return await _vocabWordCollection
+    return _vocabWordCollection
         .filter()
         .nextReviewAtLessThan(now)
         .or()
@@ -263,7 +257,7 @@ class LocalVocabularyRepository {
         .filter()
         .vocabWordIdEqualTo(id)
         .deleteAll();
-    return await _vocabWordCollection.delete(id);
+    return _vocabWordCollection.delete(id);
   }
 
   /// Delete all words
@@ -283,7 +277,7 @@ class LocalVocabularyRepository {
             .or()
             .definitionContains(lowerQuery, caseSensitive: false)
             .or()
-            .tagsElementContains(lowerQuery))
+            .tagsElementContains(lowerQuery),)
         .sortByCreatedAtDesc()
         .limit(50)
         .findAll();
@@ -326,17 +320,14 @@ class LocalVocabularyRepository {
   }
 
   /// Get review history for a word
-  Future<List<VocabReview>> getReviewHistory(Id wordId) async {
-    return await _vocabReviewCollection
+  Future<List<VocabReview>> getReviewHistory(Id wordId) async => await _vocabReviewCollection
         .filter()
         .vocabWordIdEqualTo(wordId)
         .sortByReviewedAtDesc()
         .findAll();
-  }
 
   /// Convert VocabWord to VocabWordItem
-  VocabWordItem _toItem(VocabWord word) {
-    return VocabWordItem(
+  VocabWordItem _toItem(VocabWord word) => VocabWordItem(
       id: word.id,
       word: word.word,
       phonetic: word.phonetic,
@@ -354,5 +345,4 @@ class LocalVocabularyRepository {
       updatedAt: word.updatedAt,
       tags: List.from(word.tags),
     );
-  }
 }

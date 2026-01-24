@@ -129,7 +129,7 @@ class TaskRepository {
           .where((t) =>
               t.dueDate != null &&
               t.dueDate!.isAfter(start.subtract(const Duration(days: 1))) &&
-              t.dueDate!.isBefore(end.add(const Duration(days: 1))))
+              t.dueDate!.isBefore(end.add(const Duration(days: 1))),)
           .toList();
     }
     try {
@@ -200,13 +200,13 @@ class TaskRepository {
     if (DemoDataService.isDemoMode) {
       final newTask = await createTask(task, generateGuide: generateGuide);
       // Mock nudges for demo
-      final nudges = task.estimatedMinutes != null && task.estimatedMinutes! < 30
+      final nudges = task.estimatedMinutes < 30
           ? [
               TaskNudge(
                 type: 'time_adjustment',
                 title: '检测到规划乐观偏差',
-                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes! * 130 ~/ 100} 分钟',
-                suggestedValue: task.estimatedMinutes! * 130 ~/ 100,
+                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟',
+                suggestedValue: task.estimatedMinutes * 130 ~/ 100,
                 confidence: 0.8,
               ),
             ]
@@ -450,7 +450,7 @@ class TaskRepository {
         ApiEndpoints.taskFeedback(taskId),
         data: feedback.toJson(),
       );
-    } on DioException catch (e) {
+    } on DioException {
       // Feedback is optional - fail silently
       // Log for debugging but don't throw
       return;

@@ -7,14 +7,12 @@ import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
 
-// Use different implementations for web and other platforms
-import 'local_database_web.dart' if (dart.library.io) 'local_database_native.dart';
+part 'local_database.g.dart';
 
 // Global provider for the database instance
 final localDatabaseProvider = Provider<LocalDatabase>((ref) => LocalDatabase());
 
 enum SyncStatus {
-// ... existing code ...
   pending,
   synced,
   conflict,
@@ -119,47 +117,50 @@ class OutboxItem {
   String? error;
 }
 
+/// LocalDatabase class - handles Isar database initialization and access
 class LocalDatabase {
   factory LocalDatabase() => _instance;
 
   LocalDatabase._internal();
   static final LocalDatabase _instance = LocalDatabase._internal();
-  late Isar isar;
 
+  late Isar _isar;
+
+  /// Get the underlying Isar instance
+  Isar get isar => _isar;
+
+  /// Initialize the database
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
-    // In production, you would fetch a secure key from SecureStorage
-    // final secureStorage = const FlutterSecureStorage();
-    // final encryptionKey = await secureStorage.read(key: 'db_key');
 
-    isar = await Isar.open(
+    _isar = await Isar.open(
       [
         LocalKnowledgeNodeSchema,
         PendingUpdateSchema,
         LocalCRDTSnapshotSchema,
         OutboxItemSchema,
-        UserAnalyticsEventSchema, // Added for Edge AI
+        UserAnalyticsEventSchema,
         TranslationRecordSchema,
         TranslationWordLinkSchema,
         VocabWordSchema,
         VocabReviewSchema,
-        FocusSessionRecordSchema, // Added for focus statistics
-        CachedStatisticsModelSchema, // Added for unified statistics caching
+        FocusSessionRecordSchema,
+        CachedStatisticsModelSchema,
       ],
       directory: dir.path,
     );
   }
 
   // Convenience accessors for collections
-  IsarCollection<TranslationRecord> get translationRecords => isar.translationRecords;
-  IsarCollection<TranslationWordLink> get translationWordLinks => isar.translationWordLinks;
-  IsarCollection<VocabWord> get vocabWords => isar.vocabWords;
-  IsarCollection<VocabReview> get vocabReviews => isar.vocabReviews;
-  IsarCollection<LocalKnowledgeNode> get knowledgeNodes => isar.localKnowledgeNodes;
-  IsarCollection<PendingUpdate> get pendingUpdates => isar.pendingUpdates;
-  IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => isar.localCRDTSnapshots;
-  IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
-  IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
-  IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
-  IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
+  IsarCollection<TranslationRecord> get translationRecords => _isar.translationRecords;
+  IsarCollection<TranslationWordLink> get translationWordLinks => _isar.translationWordLinks;
+  IsarCollection<VocabWord> get vocabWords => _isar.vocabWords;
+  IsarCollection<VocabReview> get vocabReviews => _isar.vocabReviews;
+  IsarCollection<LocalKnowledgeNode> get knowledgeNodes => _isar.localKnowledgeNodes;
+  IsarCollection<PendingUpdate> get pendingUpdates => _isar.pendingUpdates;
+  IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => _isar.localCRDTSnapshots;
+  IsarCollection<OutboxItem> get outboxItems => _isar.outboxItems;
+  IsarCollection<UserAnalyticsEvent> get analyticsEvents => _isar.userAnalyticsEvents;
+  IsarCollection<FocusSessionRecord> get focusSessionRecords => _isar.focusSessionRecords;
+  IsarCollection<CachedStatisticsModel> get cachedStatistics => _isar.cachedStatisticsModels;
 }

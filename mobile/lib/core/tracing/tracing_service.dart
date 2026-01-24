@@ -13,8 +13,8 @@ abstract class TracingServiceBase {
 
 // 简化的Span类替代
 class MockSpan {
-  final String name;
   MockSpan(this.name);
+  final String name;
   void end() {} // 空实现
   void recordException(Object error, {StackTrace? stackTrace}) {} // 空实现
   void setStatus(Object status, String description) {} // 空实现

@@ -14,9 +14,9 @@ import 'package:uuid/uuid.dart';
 // Import task calendar provider
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart'
     show
+        TaskCalendarNotifier,
         TaskDaySummary,
-        taskCalendarProvider,
-        TaskCalendarNotifier;
+        taskCalendarProvider;
 
 // Import drag and drop components
 import 'package:sparkle/shared/widgets/draggable_task_card.dart'
@@ -78,7 +78,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       // Update the task with new due date
       final taskUpdate = TaskUpdate(dueDate: newDueDate);
       await ref.read(taskListProvider.notifier).updateTask(task.id, taskUpdate);
@@ -386,7 +386,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     .toList();
 
             // Show task markers
-            final List<Widget> taskMarkers = [];
+            final taskMarkers = <Widget>[];
             if (taskSummary != null && taskSummary.hasTasks) {
               final today = DateTime.now();
               final isToday = date.year == today.year &&
@@ -434,7 +434,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 );
               } else {
                 // Show dots for 1-3 tasks
-                for (int i = 0; i < taskSummary.total && i < 3; i++) {
+                for (var i = 0; i < taskSummary.total && i < 3; i++) {
                   taskMarkers.add(
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 1.0),
@@ -464,27 +464,21 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               ),
             );
           },
-          defaultBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+          defaultBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, false),
-            );
-          },
-          todayBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+            ),
+          todayBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, true),
-            );
-          },
-          selectedBuilder: (context, day, focusedDay) {
-            return CalendarDayDragTarget(
+            ),
+          selectedBuilder: (context, day, focusedDay) => CalendarDayDragTarget(
               date: day,
               onTaskDropped: _handleTaskDropped,
               child: _buildCalendarCell(day, false, isSelected: true),
-            );
-          },
+            ),
         ),
       );
 

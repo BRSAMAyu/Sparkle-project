@@ -138,7 +138,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
               action: () => _navigateToTaskCreate(text),
             ),
           ]);
-          break;
         case IntentType.capsule:
           typingPredictions.addAll([
             PredictedAction(
@@ -155,7 +154,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
               action: _navigateToPatterns,
             ),
           ]);
-          break;
         case IntentType.chat:
           typingPredictions.addAll([
             PredictedAction(
@@ -166,7 +164,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
               action: () => _sendChatMessage(text),
             ),
           ]);
-          break;
       }
     } else if (text.length > 3) {
       // Generic predictions for longer input
@@ -301,7 +298,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
 /// Intent prediction provider
 final intentPredictionProvider =
     StateNotifierProvider<IntentPredictionNotifier, IntentPredictionState>(
-  (ref) => IntentPredictionNotifier(ref),
+  IntentPredictionNotifier.new,
 );
 
 /// Current visible predictions provider (combines idle and typing)

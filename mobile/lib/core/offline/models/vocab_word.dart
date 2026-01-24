@@ -4,6 +4,8 @@ part 'vocab_word.g.dart';
 
 @collection
 class VocabWord {
+
+  VocabWord();
   Id id = Isar.autoIncrement;
 
   // Word information
@@ -38,8 +40,6 @@ class VocabWord {
 
   // Tags
   List<String> tags = [];
-
-  VocabWord();
 
   /// Calculate next review time based on importance and accuracy
   DateTime calculateNextReview(bool remembered) {
@@ -177,6 +177,8 @@ class VocabWord {
 /// Collection for review history tracking
 @collection
 class VocabReview {
+
+  VocabReview();
   Id id = Isar.autoIncrement;
 
   @Index()
@@ -185,8 +187,6 @@ class VocabReview {
   late bool remembered;
   late int responseTimeMs;
   late DateTime reviewedAt;
-
-  VocabReview();
 
   static VocabReview create({
     required int vocabWordId,

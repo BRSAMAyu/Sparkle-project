@@ -85,18 +85,15 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
     );
   }
 
-  Widget _buildProgressIndicator() {
-    return Consumer(
+  Widget _buildProgressIndicator() => Consumer(
       builder: (context, ref, child) {
         // Get subtasks from parent state (will be passed through parameters)
         // For now, this is a placeholder - in real use, we'd get state from a provider
         return const SizedBox.sh();
       },
     );
-  }
 
-  Widget _buildQuickAddInput() {
-    return Row(
+  Widget _buildQuickAddInput() => Row(
       children: [
         Expanded(
           child: TextField(
@@ -138,20 +135,16 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
         ),
       ],
     );
-  }
 
-  Widget _buildSubtaskList() {
-    return Consumer(
+  Widget _buildSubtaskList() => Consumer(
       builder: (context, ref, child) {
         // This will be populated by parent state
         // For now, show empty state
         return _buildEmptyState();
       },
     );
-  }
 
-  Widget _buildEmptyState() {
-    return Container(
+  Widget _buildEmptyState() => Container(
       padding: const EdgeInsets.all(DS.lg),
       alignment: Alignment.center,
       child: Column(
@@ -172,7 +165,6 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
         ],
       ),
     );
-  }
 }
 
 /// Single subtask item widget
@@ -193,8 +185,7 @@ class SubtaskItemWidget extends StatelessWidget {
   final bool isDragging;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.only(bottom: DS.xs),
       decoration: BoxDecoration(
         color: isDragging ? DS.brandPrimary10 : DS.surfaceBase,
@@ -261,7 +252,6 @@ class SubtaskItemWidget extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// Subtask progress indicator widget
