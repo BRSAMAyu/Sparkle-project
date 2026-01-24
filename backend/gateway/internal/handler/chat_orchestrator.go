@@ -830,6 +830,26 @@ func (r *envelopeResponder) SendMeta(meta map[string]interface{}) error {
 	return r.writeEnvelope(payload, traceparentFromContext(r.ctx))
 }
 
+func (r *envelopeResponder) SendPlanReviewStatus(reviewID, status string, data map[string]interface{}) {
+	statusMsg := map[string]interface{}{
+		"review_id":  reviewID,
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+	}
+	for k, v := range data {
+		statusMsg[k] = v
+	}
+	raw, _ := json.Marshal(statusMsg)
+	payload := map[string]json.RawMessage{
+		"plan_review_status": raw,
+	}
+	if err := r.writeEnvelope(payload, traceparentFromContext(r.ctx)); err != nil {
+		log.Printf("Failed to send plan review status: %v", err)
+	} else {
+		log.Printf("✅ Plan review status sent: status=%s, review_id=%s", status, reviewID)
+	}
+}
+
 func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, traceparent string) error {
 	envOut := wsEnvelopeOut{
 		Traceparent: traceparent,
@@ -1035,6 +1055,7 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 		return fmt.Errorf("unsupported chat_request input")
 	}
 	input.SessionID = req.GetSessionId()
+	input.ChatMode = req.GetChatMode()
 	input.Nickname = req.GetUserProfile().GetNickname()
 	input.FileIds = req.GetFileIds()
 	input.IncludeReferences = req.GetIncludeReferences()

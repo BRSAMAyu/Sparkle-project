@@ -53,6 +53,25 @@ class RequestRouter:
         "第一步", "第一步", "首先", "first"
     }
 
+    # Vision: Translation Keywords (5c)
+    TRANSLATION_KEYWORDS = {
+        "翻译", "translate", "解释意思", "what does this mean",
+        "怎么说", "in english", "in chinese"
+    }
+
+    # Vision: Prism/Behavior Keywords (5b, 15)
+    PRISM_KEYWORDS = {
+        "行为分析", "behavior analysis", "我的画像", "user profile",
+        "认知棱镜", "cognitive prism", "学习习惯", "study habits",
+        "周报", "weekly report", "日报", "daily report"
+    }
+
+    # Vision: Sprint Keywords (5d)
+    SPRINT_KEYWORDS = {
+        "冲刺", "sprint", "专注模式", "focus mode",
+        "突击", "cram", "考试冲刺"
+    }
+
     def __init__(self, redis_client=None):
         self.redis = redis_client
 
@@ -67,7 +86,8 @@ class RequestRouter:
         规则 (优先级顺序):
         1. 高风险 → direct (安全优先，最高优先级)
         2. 复杂规划 → langgraph
-        3. 其他 → direct
+        3. 特殊功能 (Translation/Prism/Sprint) → direct (Specific Tools)
+        4. 其他 → direct
 
         Args:
             message: 用户消息
@@ -99,13 +119,22 @@ class RequestRouter:
             logger.info(f"High risk detected, forcing direct mode: {intent}")
 
         # === 优先级2: 复杂意图 → langgraph (仅在非高风险时) ===
-        elif self._is_complex_intent(message):
+        elif self._is_complex_intent(message) and intent not in ["translation", "sprint", "prism"]:
+            # Note: Translation/Sprint might be complex, but usually handled by specific tools/flows better in Direct or specialized nodes.
+            # For now, we prioritize specific intent detection.
             execution_mode = "langgraph"
             confidence = 0.8
             reason = f"Intent: {intent}, complex routing via LangGraph"
             logger.info(f"Complex intent detected, using LangGraph: {intent}")
 
-        # === 优先级3: 默认 → direct ===
+        # === 优先级3: 特殊意图 → direct (with tool intent) ===
+        elif intent in ["translation", "prism", "sprint"]:
+            execution_mode = "direct"
+            confidence = 0.85
+            reason = f"Intent: {intent}, specialized feature routing"
+            logger.info(f"Specialized intent detected: {intent}")
+
+        # === 优先级4: 默认 → direct ===
         else:
             execution_mode = "direct"
             confidence = 0.7
@@ -126,6 +155,15 @@ class RequestRouter:
         """
         msg_lower = message.lower()
 
+        # Specialized Intents (High Priority)
+        if any(k in msg_lower for k in self.TRANSLATION_KEYWORDS):
+            return "translation"
+        if any(k in msg_lower for k in self.PRISM_KEYWORDS):
+            return "prism"
+        if any(k in msg_lower for k in self.SPRINT_KEYWORDS):
+            return "sprint"
+
+        # Standard Intents
         if any(k in msg_lower for k in ["创建", "create", "新建", "添加", "add", "new"]):
             return "create"
         if any(k in msg_lower for k in ["查询", "query", "获取", "get", "搜索", "search", "看看"]):

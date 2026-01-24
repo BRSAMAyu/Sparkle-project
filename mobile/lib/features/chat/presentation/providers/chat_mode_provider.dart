@@ -1,25 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
-import 'package:sparkle/features/chat/data/models/chat_mode.dart' as cm;
 
 /// Chat Mode Provider
 ///
 /// Simple state provider for the current chat mode.
 /// Defaults to standard mode.
-final chatModeProvider = StateProvider<ChatMode>((ref) => ChatMode.standard);
+final chatModeProvider = StateProvider<ChatMode>((ref) => standard);
 
 /// Chat Mode Notifier Provider
 ///
 /// StateNotifier provider for more complex chat mode state management.
 /// Use this for mode changes with additional side effects.
 final chatModeNotifierProvider =
-    StateNotifierProvider<ChatModeNotifier, ChatMode>(ChatModeNotifier.new);
+    StateNotifierProvider<ChatModeNotifier, ChatMode>((ref) => ChatModeNotifier());
 
 /// Chat Mode Notifier
 ///
 /// Manages the current chat mode with persistence support.
 class ChatModeNotifier extends StateNotifier<ChatMode> {
-  ChatModeNotifier() : super(ChatMode.standard);
+  ChatModeNotifier() : super(standard);
 
   /// Set the chat mode
   void setMode(ChatMode mode) {
@@ -28,15 +27,15 @@ class ChatModeNotifier extends StateNotifier<ChatMode> {
 
   /// Reset to standard mode
   void resetToStandard() {
-    state = ChatMode.standard;
+    state = standard;
   }
 
   /// Toggle between standard and the last multi-agent mode
   void toggleMode(ChatMode? preferredMode) {
-    if (state == ChatMode.standard && preferredMode != null) {
+    if (state.apiValue == 'standard' && preferredMode != null) {
       state = preferredMode;
     } else {
-      state = ChatMode.standard;
+      state = standard;
     }
   }
 
@@ -50,4 +49,4 @@ class ChatModeNotifier extends StateNotifier<ChatMode> {
 ///
 /// Remembers the last multi-agent mode the user selected.
 final lastMultiAgentModeProvider =
-    StateProvider<ChatMode?>((ref) => cm.ChatMode.deepAnalysis);
+    StateProvider<ChatMode?>((ref) => deepAnalysis);

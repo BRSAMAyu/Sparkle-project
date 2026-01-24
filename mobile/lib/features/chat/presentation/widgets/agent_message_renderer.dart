@@ -101,6 +101,7 @@ class AgentMessageRenderer extends StatelessWidget {
         return PlanCard(data: widget.data);
 
       case 'plan_context_summary':
+      case 'plan_state':  // Legacy alias for compatibility
         return PlanContextSummary(contextData: widget.data);
 
       default:

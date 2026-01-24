@@ -51,12 +51,14 @@ from app.api.v1 import (
     recommendations,
     leaderboards,
     monitoring,
+    suggestions, # Vision Item 3
 )
 from app.api.v1 import graph_monitor, graphrag_trace
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(suggestions.router, prefix="/suggestions", tags=["suggestions"]) # Vision Item 3
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
 api_router.include_router(interventions.router, tags=["interventions"])
