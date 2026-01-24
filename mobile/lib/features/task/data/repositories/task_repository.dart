@@ -1,9 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
+import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 
@@ -114,7 +118,48 @@ class TaskRepository {
     }
   }
 
-  Future<TaskModel> createTask(TaskCreate task) async {
+  /// Get tasks within a date range (for calendar markers)
+  Future<List<TaskModel>> getTasksByDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      return DemoDataService()
+          .demoTasks
+          .where((t) =>
+              t.dueDate != null &&
+              t.dueDate!.isAfter(start.subtract(const Duration(days: 1))) &&
+              t.dueDate!.isBefore(end.add(const Duration(days: 1))))
+          .toList();
+    }
+    try {
+      final dateFormat = DateFormat('yyyy-MM-dd');
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.tasks,
+        queryParameters: {
+          'due_date_start': dateFormat.format(start),
+          'due_date_end': dateFormat.format(end),
+          'page_size': 100, // Load all tasks for the month
+          'page': 1,
+        },
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('getTasksByDateRange response is empty');
+      }
+      final dataList = payload['data'] as List<dynamic>?;
+      if (dataList == null) {
+        return [];
+      }
+      return dataList
+          .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getTasksByDateRange');
+    }
+  }
+
+  Future<TaskModel> createTask(TaskCreate task, {bool generateGuide = false}) async {
     if (DemoDataService.isDemoMode) {
       // Mock creation
       final newTask = TaskModel(
@@ -131,6 +176,7 @@ class TaskRepository {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         dueDate: task.dueDate,
+        guideContent: generateGuide ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段' : null,
       );
       DemoDataService().demoTasks.add(newTask);
       return newTask;
@@ -139,12 +185,53 @@ class TaskRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.tasks,
         data: task.toJson(),
+        queryParameters: generateGuide ? {'generate_guide': 'true'} : null,
       );
       final payload =
           _unwrapResponseMap(response.data, action: 'createTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'createTask');
+    }
+  }
+
+  /// Create task and return nudges if available
+  Future<TaskCreateResult> createTaskWithNudges(TaskCreate task, {bool generateGuide = false}) async {
+    if (DemoDataService.isDemoMode) {
+      final newTask = await createTask(task, generateGuide: generateGuide);
+      // Mock nudges for demo
+      final nudges = task.estimatedMinutes != null && task.estimatedMinutes! < 30
+          ? [
+              TaskNudge(
+                type: 'time_adjustment',
+                title: '检测到规划乐观偏差',
+                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes! * 130 ~/ 100} 分钟',
+                suggestedValue: task.estimatedMinutes! * 130 ~/ 100,
+                confidence: 0.8,
+              ),
+            ]
+          : <TaskNudge>[];
+      return TaskCreateResult(task: newTask, nudges: nudges);
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.tasks,
+        data: task.toJson(),
+        queryParameters: generateGuide ? {'generate_guide': 'true'} : null,
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('createTaskWithNudges response is empty');
+      }
+      final taskData = payload['data'] as Map<String, dynamic>?;
+      final nudgesData = payload['nudges'] as List<dynamic>?;
+      final taskModel = TaskModel.fromJson(taskData ?? payload);
+      final nudges = nudgesData
+          ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
+          .toList() ?? <TaskNudge>[];
+      return TaskCreateResult(task: taskModel, nudges: nudges);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'createTaskWithNudges');
     }
   }
 
@@ -228,11 +315,32 @@ class TaskRepository {
               userNote: note,
             );
         DemoDataService().demoTasks[existingIndex] = updated;
+        // Demo mode: include mock next actions
         return TaskCompletionResult(
           task: updated.toJson(),
           feedback: 'Mock feedback: Great job!',
-          flameUpdate: {'level': 15, 'brightness': 85},
-          statsUpdate: {'total_minutes': 100},
+          flameUpdate: {'level': 15, 'brightness_change': 10},
+          statsUpdate: {'total_minutes': 100, 'streak_days': 7},
+          nextActions: const [
+            NextAction(
+              type: NextActionType.quickReview,
+              title: '快速回顾',
+              description: '回顾刚才的核心要点',
+              estimatedMinutes: 5,
+              energyCost: 1,
+              difficulty: 1,
+              reason: '及时回顾对抗遗忘',
+            ),
+            NextAction(
+              type: NextActionType.lightExpand,
+              title: '拓展: 相关概念',
+              description: '了解相关知识点',
+              estimatedMinutes: 10,
+              energyCost: 2,
+              difficulty: 2,
+              reason: '加深理解',
+            ),
+          ],
         );
       }
     }
@@ -327,6 +435,26 @@ class TaskRepository {
       return rawData;
     }
     return [];
+  }
+
+  Future<void> submitTaskFeedback(
+    String taskId,
+    TaskFeedbackSubmission feedback,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      // Demo mode: no-op - feedback is optional
+      return;
+    }
+    try {
+      await _apiClient.post<void>(
+        ApiEndpoints.taskFeedback(taskId),
+        data: feedback.toJson(),
+      );
+    } on DioException catch (e) {
+      // Feedback is optional - fail silently
+      // Log for debugging but don't throw
+      return;
+    }
   }
 }
 

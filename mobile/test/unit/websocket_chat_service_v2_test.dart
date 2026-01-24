@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -144,6 +144,31 @@ void main() {
       final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
           as Map<String, dynamic>;
       expect(sentJson['message'], 'Hello');
+    });
+
+    test('Sends response feedback payload', () async {
+      service.sendMessage(message: 'init', userId: 'user1');
+      await Future<void>.delayed(Duration.zero);
+
+      mockChannel.mockSink.sentData.clear();
+
+      service.sendResponseFeedback(
+        responseId: 'resp-1',
+        feedbackType: 'up',
+        workflowId: 'standard_chat',
+        promptVersion: 'v1',
+        traceId: 'trace-1',
+      );
+
+      expect(mockChannel.mockSink.sentData.length, 1);
+      final sentJson = json.decode(mockChannel.mockSink.sentData.first as String)
+          as Map<String, dynamic>;
+      expect(sentJson['type'], 'response_feedback');
+      expect(sentJson['response_id'], 'resp-1');
+      expect(sentJson['feedback_type'], 'up');
+      expect(sentJson['workflow_id'], 'standard_chat');
+      expect(sentJson['prompt_version'], 'v1');
+      expect(sentJson['trace_id'], 'trace-1');
     });
 
     test('Queues messages when disconnected and flushes on connect', () async {
@@ -316,5 +341,148 @@ void main() {
     // 5. ✅ Web平台错误测试
     // Note: Cannot easily test kIsWeb constant in unit test without conditional import logic
     // or flutter_test mechanics. We skip this for unit test as it relies on platform constants.
+
+    // ============================================================================
+    // Plan Review Event Flow Tests
+    // ============================================================================
+
+    group('Plan Review Event Flow', () {
+      late WebSocketChatServiceV2 planService;
+      late MockWebSocketChannel planChannel;
+
+      setUp(() {
+        planChannel = MockWebSocketChannel();
+        planService = WebSocketChatServiceV2(
+          baseUrl: 'ws://test.com',
+          channelFactory: (uri, {headers}) => planChannel,
+        );
+      });
+
+      tearDown(() {
+        planService.dispose();
+        unawaited(planChannel.close());
+      });
+
+      test('Parses plan review from delta metadata', () async {
+        // Connect
+        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Simulate incoming delta with plan review metadata
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': 'Some text...',
+          'metadata': {
+            'requires_review': true,
+            'review_data': {
+              'plan_id': 'plan-123',
+              'review_id': 'review-456',
+              'overall_score': 85,
+              'issues': [
+                {
+                  'category': 'completeness',
+                  'severity': 'medium',
+                  'description': 'Missing detailed steps',
+                }
+              ],
+            },
+          },
+        });
+        planChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Should receive PlanReviewWidgetEvent instead of TextEvent
+        expect(events.length, 1);
+        expect(events.first, isA<PlanReviewWidgetEvent>());
+
+        final reviewEvent = events.first as PlanReviewWidgetEvent;
+        expect(reviewEvent.reviewData['plan_id'], 'plan-123');
+        expect(reviewEvent.reviewData['review_id'], 'review-456');
+        expect(reviewEvent.reviewData['overall_score'], 85);
+
+        await sub.cancel();
+      });
+
+      test('Parses regular delta without plan review metadata', () async {
+        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Simulate regular delta without metadata
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': 'Hello World',
+        });
+        planChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(events.length, 1);
+        expect(events.first, isA<TextEvent>());
+        expect((events.first as TextEvent).content, 'Hello World');
+        expect((events.first as TextEvent).metadata, null);
+
+        await sub.cancel();
+      });
+
+      test('Parses delta with metadata but no review flag', () async {
+        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Delta with metadata but requires_review is false/null
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': 'Some text',
+          'metadata': {
+            'some_other_field': 'value',
+          },
+        });
+        planChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(events.length, 1);
+        expect(events.first, isA<TextEvent>());
+        expect((events.first as TextEvent).metadata?['some_other_field'], 'value');
+
+        await sub.cancel();
+      });
+
+      test('Handles incomplete review data gracefully', () async {
+        final stream = planService.sendMessage(message: 'init', userId: 'user1');
+
+        final events = <ChatStreamEvent>[];
+        final sub = stream.listen(events.add);
+
+        // Delta with requires_review but incomplete review_data
+        final incomingJson = json.encode({
+          'type': 'delta',
+          'delta': 'Text',
+          'metadata': {
+            'requires_review': true,
+            'review_data': {
+              'plan_id': 'plan-123',
+              // Missing review_id and other fields
+            },
+          },
+        });
+        planChannel.simulateIncomingMessage(incomingJson);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Should still emit PlanReviewWidgetEvent with available data
+        expect(events.length, 1);
+        expect(events.first, isA<PlanReviewWidgetEvent>());
+        expect((events.first as PlanReviewWidgetEvent).reviewData['plan_id'], 'plan-123');
+
+        await sub.cancel();
+      });
+    });
   });
 }

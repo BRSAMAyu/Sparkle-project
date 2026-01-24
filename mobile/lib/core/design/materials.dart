@@ -105,24 +105,49 @@ class AppMaterials {
   /// **NeoGlass** (The Hero Material)
   /// Used for: CuriosityCapsule, FocusCard, OmniBar.
   /// Features: Frosted glass, subtle noise, rim light.
+  /// Dark mode: Subtle glass effect with brand accent glow.
   static SparkleMaterial get neoGlass {
     final colors = ThemeManager().current.colors;
     final isDark = colors.brightness == Brightness.dark;
-    
+
     // Performance degradation
     final enableBlur = PerformanceService.instance.enableBlur;
     final enableNoise = PerformanceService.instance.currentTier.value == PerformanceTier.ultra;
 
+    if (isDark) {
+      // Dark mode: subtle elevated surface with warm glow
+      return SparkleMaterial(
+        blurSigma: enableBlur ? 12.0 : 0.0,
+        noiseOpacity: enableNoise ? 0.02 : 0.0,
+        noiseColor: colors.noiseColor,
+        backgroundGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.surfaceSecondary.withValues(alpha: 0.9),
+            colors.surfaceTertiary.withValues(alpha: 0.7),
+          ],
+        ),
+        rimLightColor: colors.brandPrimary.withValues(alpha: 0.15),
+        glowColor: colors.brandPrimary.withValues(alpha: 0.05),
+        borderWidth: 1.0,
+        borderColor: colors.brandPrimary.withValues(alpha: 0.2),
+        shadows: ThemeManager().current.shadows.medium,
+      );
+    }
+
+    // Light mode: clean frosted glass
     return SparkleMaterial(
       blurSigma: enableBlur ? 15.0 : 0.0,
-      noiseOpacity: (enableNoise && isDark) ? 0.03 : (enableNoise ? 0.05 : 0.0),
+      noiseOpacity: enableNoise ? 0.05 : 0.0,
       noiseColor: colors.noiseColor,
       backgroundGradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: isDark
-            ? [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.02)]
-            : [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.15)],
+        colors: [
+          Colors.white.withValues(alpha: 0.7),
+          Colors.white.withValues(alpha: 0.85),
+        ],
       ),
       rimLightColor: colors.rimLight,
       borderWidth: 1.0,
@@ -156,11 +181,26 @@ class AppMaterials {
     );
   }
 
-  /// **Ceramic** (Light Mode Standard)
+  /// **Ceramic** (Standard Cards)
   /// Used for: Standard Cards, Bento Grid items.
   /// Features: Matte, opaque, tactile, soft shadows.
+  /// Dark mode: Uses elevated surface with subtle brand accent.
   static SparkleMaterial get ceramic {
     final colors = ThemeManager().current.colors;
+    final isDark = colors.brightness == Brightness.dark;
+
+    if (isDark) {
+      // Dark mode: elevated surface with subtle warmth
+      return SparkleMaterial(
+        backgroundColor: colors.surfaceSecondary,
+        shadows: ThemeManager().current.shadows.small,
+        borderColor: colors.brandPrimary.withValues(alpha: 0.15),
+        borderWidth: 1.0,
+        rimLightColor: colors.brandPrimary.withValues(alpha: 0.1),
+      );
+    }
+
+    // Light mode: clean white surface
     return SparkleMaterial(
       backgroundColor: colors.surfaceSecondary,
       shadows: ThemeManager().current.shadows.small,

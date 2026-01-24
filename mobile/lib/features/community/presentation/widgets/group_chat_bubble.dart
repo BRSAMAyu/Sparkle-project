@@ -22,11 +22,11 @@ class GroupChatBubble extends ConsumerStatefulWidget {
   });
   final MessageInfo message;
   final String? groupId;
-  final Function(MessageInfo message)? onRevoke;
-  final Function(MessageInfo message)? onQuote;
-  final Function(MessageInfo message, String content)? onEdit;
-  final Function(MessageInfo message, String emoji)? onReaction;
-  final Function(MessageInfo message)? onThread;
+  final void Function(MessageInfo message)? onRevoke;
+  final void Function(MessageInfo message)? onQuote;
+  final void Function(MessageInfo message, String content)? onEdit;
+  final void Function(MessageInfo message, String emoji)? onReaction;
+  final void Function(MessageInfo message)? onThread;
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -71,7 +71,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final canRevoke = isMe &&
         DateTime.now().difference(widget.message.createdAt).inHours < 24;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DecoratedBox(

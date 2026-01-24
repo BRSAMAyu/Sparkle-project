@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/i_cognitive_repository.dart';
@@ -91,8 +93,10 @@ final cognitiveRepositoryProvider = Provider<ICognitiveRepository>((ref) {
   }
 
   final apiClient = ref.watch(apiClientProvider);
+  final localDb = ref.watch(localDatabaseProvider);
+  final syncEngine = ref.watch(syncEngineProvider);
   final apiRepo = ApiCognitiveRepository(apiClient);
-  final localRepo = LocalCognitiveRepository();
+  final localRepo = LocalCognitiveRepository(localDb: localDb);
 
-  return SyncCognitiveRepository(apiRepo, localRepo);
+  return SyncCognitiveRepository(apiRepo, localRepo, syncEngine);
 });

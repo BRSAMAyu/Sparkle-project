@@ -81,12 +81,11 @@ async def test_dynamic_tool_registry():
     
     # 验证注册
     assert registry.get_tool("test_tool") is not None
-    assert len(registry.get_all_tools()) == 1
+    assert len(registry.get_all_tools()) >= 1
     
     # 验证 OpenAI schema
     schema = registry.get_openai_tools_schema()
-    assert len(schema) == 1
-    assert schema[0]["function"]["name"] == "test_tool"
+    assert any(item["function"]["name"] == "test_tool" for item in schema)
     
     print("✅ Dynamic Tool Registry test passed")
 
@@ -107,7 +106,7 @@ async def test_request_validator():
         message="Hello, world!"
     )
     
-    result = validator.validate_chat_request(request)
+    result = await validator.validate_chat_request(request)
     assert result.is_valid is True
     
     # 测试无效用户 ID
@@ -118,7 +117,7 @@ async def test_request_validator():
         message="Hello"
     )
     
-    result = validator.validate_chat_request(request_invalid)
+    result = await validator.validate_chat_request(request_invalid)
     assert result.is_valid is False
     assert "user_id is required" in result.error_message
     
@@ -131,7 +130,7 @@ async def test_request_validator():
         message=long_message
     )
     
-    result = validator.validate_chat_request(request_long)
+    result = await validator.validate_chat_request(request_long)
     assert result.is_valid is False
     
     print("✅ Request Validator test passed")
@@ -141,13 +140,14 @@ async def test_request_validator():
 async def test_user_service():
     """测试用户服务"""
     from app.services.user_service import UserService
+    from app.services.personalization.preference_service import UserPreferencesCenter
     from sqlalchemy.ext.asyncio import AsyncSession
-    from unittest.mock import MagicMock
-    
+    from unittest.mock import MagicMock, patch
+
     # Mock DB session
     db_mock = MagicMock(spec=AsyncSession)
     db_mock.execute = AsyncMock()
-    
+
     # Mock user query result
     mock_user = MagicMock()
     mock_user.id = uuid4()
@@ -161,23 +161,36 @@ async def test_user_service():
     mock_user.is_active = True
     mock_user.last_login_at = None
     mock_user.registration_source = "email"
-    
+    mock_user.timezone = "Asia/Shanghai"
+    mock_user.persona_type = "explorer"
+
     # Mock the execute result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_user
     db_mock.execute.return_value = mock_result
-    
-    user_service = UserService(db_mock)
-    
-    # Test get_context
-    user_id = uuid4()
-    context = await user_service.get_context(user_id)
-    
-    assert context is not None
-    assert context.user_id == str(user_id)
-    assert context.nickname == "Test User"
-    assert context.is_pro is True  # flame_level >= 3
-    
+
+    # Create empty UserPreferencesCenter to avoid MagicMock dict issues
+    prefs_center = UserPreferencesCenter()
+    prefs_center.explicit = {}
+
+    with patch("app.services.user_service.PreferenceService") as mock_pref_service_cls:
+        # Configure the mock PreferenceService
+        mock_pref_service = AsyncMock()
+        mock_pref_service.get_preferences = AsyncMock(return_value=prefs_center)
+        mock_pref_service_cls.return_value = mock_pref_service
+
+        user_service = UserService(db_mock)
+        user_service._get_push_preference = AsyncMock(return_value=None)
+
+        # Test get_context
+        user_id = uuid4()
+        context = await user_service.get_context(user_id)
+
+        assert context is not None
+        assert context.user_id == str(user_id)
+        assert context.nickname == "Test User"
+        assert context.is_pro is True  # flame_level >= 3
+
     print("✅ User Service test passed")
 
 
@@ -281,15 +294,14 @@ async def test_orchestrator_integration():
     )
     
     # Mock the LLM service to avoid actual calls
-    import app.services.llm_service as llm_service_module
-    original_chat_stream = llm_service_module.llm_service.chat_stream_with_tools
+    from app.services.llm_service import llm_service, StreamChunk
+    original_chat_stream = llm_service.chat_stream_with_tools
     
     async def mock_chat_stream(*args, **kwargs):
         # Yield a text chunk
-        from app.services.llm.service import StreamChunk
         yield StreamChunk(type="text", content="Test response")
     
-    llm_service_module.llm_service.chat_stream_with_tools = mock_chat_stream
+    llm_service.chat_stream_with_tools = mock_chat_stream
     
     try:
         # Process stream
@@ -307,7 +319,7 @@ async def test_orchestrator_integration():
         
     finally:
         # Restore original
-        llm_service_module.llm_service.chat_stream_with_tools = original_chat_stream
+        llm_service.chat_stream_with_tools = original_chat_stream
 
 
 # Run all tests

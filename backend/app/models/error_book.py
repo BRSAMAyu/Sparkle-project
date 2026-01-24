@@ -2,11 +2,16 @@
 Error Book Models (SQLAlchemy) - Phase 4 Optimized
 """
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Float, Boolean, DateTime, ForeignKey, func, Index
+from sqlalchemy import Column, String, Text, Integer, Float, Boolean, DateTime, ForeignKey, func, Index, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+ArrayStringCompat = ARRAY(String).with_variant(JSON(), "sqlite")
+ArrayUUIDCompat = ARRAY(UUID(as_uuid=True)).with_variant(JSON(), "sqlite")
+ArrayTextCompat = ARRAY(Text).with_variant(JSON(), "sqlite")
 
 class ErrorRecord(Base):
     """
@@ -39,18 +44,18 @@ class ErrorRecord(Base):
     
     # --- AI 智能分析 (JSONB) ---
     # 结构: { "error_type": "...", "root_cause": "...", "study_suggestions": "...", "ocr_text": "..." }
-    latest_analysis = Column(JSONB, nullable=True)
+    latest_analysis = Column(JSONBCompat, nullable=True)
     
     # 认知维度标签 (e.g., ['logic', 'memory'])
-    cognitive_tags = Column(ARRAY(String), default=list)
+    cognitive_tags = Column(ArrayStringCompat, default=list)
     # AI 深度分析摘要 (Text)
     ai_analysis_summary = Column(Text, nullable=True)
     
     # --- 知识图谱关联 ---
     # 强关联: 已存在的知识点 ID
-    linked_knowledge_node_ids = Column(ARRAY(UUID(as_uuid=True)), default=list)
+    linked_knowledge_node_ids = Column(ArrayUUIDCompat, default=list)
     # 弱关联: AI 建议创建的新概念/标签 (解决冷启动问题)
-    suggested_concepts = Column(ARRAY(Text), default=list)
+    suggested_concepts = Column(ArrayTextCompat, default=list)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

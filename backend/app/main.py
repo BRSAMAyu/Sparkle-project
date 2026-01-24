@@ -2,8 +2,9 @@
 Sparkle Backend - FastAPI Application Entry Point
 """
 import os
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException, Depends, APIRouter
+import asyncio
+from contextlib import asynccontextmanager, suppress
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -15,6 +16,11 @@ from app.services.job_service import JobService
 from app.services.subject_service import SubjectService
 from app.services.scheduler_service import scheduler_service
 from app.core.cache import cache_service
+from app.core.pending_actions import pending_actions_store
+from app.services.user_service import UserService
+from app.services.preference_event_consumer import PreferenceEventConsumer
+from app.services.galaxy_event_consumer import GalaxyEventConsumer
+from app.services.task_event_consumer import TaskEventConsumer
 from app.core.access_control import verify_token
 from app.core.idempotency import get_idempotency_store
 from app.api.middleware import IdempotencyMiddleware
@@ -54,22 +60,53 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
 
+    # 版本兼容性检查 (passlib/bcrypt)
+    try:
+        import passlib
+        import bcrypt
+        logger.info(f"Auth deps: passlib={passlib.__version__}, bcrypt={bcrypt.__version__}")
+        # 验证兼容性: passlib 1.7.4 与 bcrypt 5.0+ 不兼容
+        if passlib.__version__.startswith("1.7."):
+            try:
+                bcrypt_ver = tuple(map(int, bcrypt.__version__.split(".")[:2]))
+                if bcrypt_ver >= (5, 0):
+                    logger.warning(f"⚠️  passlib {passlib.__version__} may be incompatible with bcrypt {bcrypt.__version__}. Consider downgrading to bcrypt<5.0.0")
+            except Exception:
+                pass
+    except ImportError:
+        logger.warning("passlib or bcrypt not installed")
+
     # Ensure upload directory exists
     if not os.path.exists(settings.UPLOAD_DIR):
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
     # Initialize Cache (Redis)
     await cache_service.init_redis()
+    pending_actions_store.set_redis(cache_service.redis)
     # Initialize WebSocket Redis
     await manager.init_redis()
 
-    start_sync_worker = None
-    stop_sync_worker = None
-    if settings.ENABLE_GRAPH_SYNC_WORKER:
-        try:
-            from app.workers.graph_sync_worker import start_sync_worker, stop_sync_worker
-        except ImportError as exc:
-            logger.warning(f"Graph sync worker not available; skipping startup: {exc}")
+    preference_consumer_task = None
+    if cache_service.redis:
+        user_service = UserService(None, cache_service.redis)
+        consumer = PreferenceEventConsumer(cache_service.redis, user_service)
+        preference_consumer_task = asyncio.create_task(consumer.start())
+        app.state.preference_consumer_task = preference_consumer_task
+
+    # Start Galaxy event consumer
+    galaxy_consumer_task = None
+    if cache_service.redis:
+        from app.core.event_bus import event_bus
+        galaxy_consumer = GalaxyEventConsumer(event_bus=event_bus)
+        galaxy_consumer_task = asyncio.create_task(galaxy_consumer.start())
+        app.state.galaxy_consumer_task = galaxy_consumer_task
+
+    # Start Task event consumer
+    task_consumer_task = None
+    if cache_service.redis:
+        task_consumer = TaskEventConsumer(event_bus=event_bus)
+        task_consumer_task = asyncio.create_task(task_consumer.start())
+        app.state.task_consumer_task = task_consumer_task
 
     async with AsyncSessionLocal() as db:
         try:
@@ -111,6 +148,27 @@ async def lifespan(app: FastAPI):
     # 停止知识拓展后台任务
     await stop_expansion_worker()
     
+    # Stop preference event consumer
+    preference_consumer_task = getattr(app.state, "preference_consumer_task", None)
+    if preference_consumer_task:
+        preference_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await preference_consumer_task
+
+    # Stop galaxy event consumer
+    galaxy_consumer_task = getattr(app.state, "galaxy_consumer_task", None)
+    if galaxy_consumer_task:
+        galaxy_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await galaxy_consumer_task
+
+    # Stop task event consumer
+    task_consumer_task = getattr(app.state, "task_consumer_task", None)
+    if task_consumer_task:
+        task_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task_consumer_task
+
     # Close Cache
     await cache_service.close()
     # Close WebSocket Redis
@@ -150,9 +208,33 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        # 开发环境下建议注释掉 HSTS，否则浏览器会强制跳转 HTTPS 导致无法访问
-        # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        if settings.DEBUG:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-src 'none'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self';"
+            )
+        else:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-src 'none'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self';"
+            )
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -239,12 +321,14 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
 async def generic_exception_handler(request: Request, exc: Exception):
     """全局未捕获异常处理器"""
     logger.exception(f"Unhandled exception: {exc}")
+    content = {
+        "success": False,
+        "error_code": "InternalServerError",
+        "message": "An unexpected error occurred",
+    }
+    if settings.DEBUG:
+        content["detail"] = str(exc)
     return JSONResponse(
         status_code=500,
-        content={
-            "success": False,
-            "error_code": "InternalServerError",
-            "message": "An unexpected error occurred",
-            "detail": str(exc) if settings.DEBUG else None
-        },
+        content=content,
     )

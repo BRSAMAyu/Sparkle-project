@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
-import 'package:sparkle/features/chat/presentation/providers/theme_provider.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 
 void main() {
   Future<void> pumpWithApp(WidgetTester tester, Widget child) async {
@@ -125,8 +125,6 @@ void main() {
             ),
           ),
         );
-
-        final initialCount = updateCount;
 
         // Update provider (Simulate update by rebuilding or interacting if we could)
         // Since we can't easily trigger a change without interacting with ThemeManager,

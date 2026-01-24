@@ -205,4 +205,15 @@ yarn-error.log*
 .gemini/
 gha-creds-*.json
 .gocache/
-\n# macOS metadata\n._*\n**/.DS_Store\n\n# Python\n**/__pycache__/\n\n# Data\npostgres_data/\nredis_data/\n.gocache/
+
+# macOS metadata
+._*
+**/.DS_Store
+
+# Python
+**/__pycache__/
+
+# Data
+postgres_data/
+redis_data/
+minio_data/

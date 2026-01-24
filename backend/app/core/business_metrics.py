@@ -82,6 +82,43 @@ COLLABORATION_LATENCY = get_or_create_metric(
     ['workflow_type']
 )
 
+# ========== HITL Metrics ==========
+HITL_REQUESTED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_requested_total',
+    'HITL approvals requested',
+    ['reason']
+)
+
+HITL_APPROVED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_approved_total',
+    'HITL approvals approved',
+    ['reason']
+)
+
+HITL_REJECTED = get_or_create_metric(
+    Counter,
+    'sparkle_hitl_rejected_total',
+    'HITL approvals rejected',
+    ['reason']
+)
+
+# ========== Task Loop Metrics ==========
+TASK_LOOP_COMPLETED = get_or_create_metric(
+    Counter,
+    'sparkle_task_loop_completed_total',
+    'Completed task execution loops',
+    ['source']
+)
+
+COMPENSATION_TRIGGERED = get_or_create_metric(
+    Counter,
+    'sparkle_compensation_triggered_total',
+    'Compensation triggers',
+    ['reason']
+)
+
 AGENT_INTERACTION_COUNT = get_or_create_metric(
     Counter,
     'sparkle_agent_interactions_total',
@@ -143,6 +180,105 @@ EVENT_DEDUPE_TOTAL = get_or_create_metric(
     'sparkle_event_dedupe_total',
     'Event dedupe hits',
     ['source']
+)
+
+# ========== Memory Metrics ==========
+MEMORY_WRITE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_write_total',
+    'Memory write outcomes',
+    ['type', 'status']
+)
+
+EVIDENCE_MISSING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_evidence_missing_total',
+    'Evidence missing count',
+    ['type']
+)
+
+MEMORY_JOB_RUNS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_job_runs_total',
+    'Memory job run outcomes',
+    ['job', 'status']
+)
+
+EVIDENCE_MISSING_CURRENT = get_or_create_metric(
+    Gauge,
+    'sparkle_evidence_missing_current',
+    'Current evidence missing counts',
+    ['type']
+)
+
+REPAIR_SUCCESS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_evidence_repair_success_total',
+    'Evidence repair success count',
+)
+
+MEMORY_RETRACTION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_retraction_total',
+    'Memory retraction count',
+    ['type']
+)
+
+MEMORY_CORRECTION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_correction_total',
+    'Memory correction count',
+    ['type', 'action']
+)
+
+MEMORY_SETTINGS_UPDATE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_settings_update_total',
+    'Memory settings update count',
+)
+
+# ========== Context Pack Metrics ==========
+CONTEXT_PACK_BUILD = get_or_create_metric(
+    Counter,
+    'sparkle_context_pack_build_total',
+    'Context pack build count',
+    ['intent']
+)
+
+CONTEXT_PACK_OVER_BUDGET = get_or_create_metric(
+    Counter,
+    'sparkle_context_pack_over_budget_total',
+    'Context pack over budget count',
+    ['intent', 'section']
+)
+
+CONTEXT_PACK_INTENT = get_or_create_metric(
+    Counter,
+    'sparkle_context_pack_intent_total',
+    'Context pack intent distribution',
+    ['intent']
+)
+
+# ========== LTM Eval Metrics ==========
+LTM_EVAL_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ltm_eval_total',
+    'LTM evaluation runs',
+    ['status']
+)
+
+LTM_EVAL_CASE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_ltm_eval_case_total',
+    'LTM evaluation cases',
+    ['case_id', 'status']
+)
+
+LTM_EVAL_AVG_SCORE = get_or_create_metric(
+    Gauge,
+    'sparkle_ltm_eval_avg_score',
+    'Average LTM evaluation score',
+    []
 )
 
 EVENT_STREAM_LAG = get_or_create_metric(

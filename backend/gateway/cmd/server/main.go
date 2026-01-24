@@ -94,7 +94,12 @@ func main() {
 
 	// Initialize Services
 	quotaService := service.NewQuotaService(rdb)
-	chatHistoryService := service.NewChatHistoryService(rdb)
+	// Use cache strategy configuration for chat history TTL
+	chatHistoryTTL := cfg.CacheStrategy.GoRedisCache.ChatHistoryTTL
+	if chatHistoryTTL == 0 {
+		chatHistoryTTL = 30 * time.Minute // Default
+	}
+	chatHistoryService := service.NewChatHistoryServiceWithTTL(rdb, chatHistoryTTL)
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(pool) // P0: Add user context service
@@ -132,9 +137,9 @@ func main() {
 
 	// Initialize Handlers
 	wsFactory := handler.NewWebSocketFactory(cfg)
+	wsTicketHandler := handler.NewWSTicketHandler(cfg, rdb)
 	fileEventHub := service.NewFileEventHub()
-	signalHub := service.NewSignalHub()
-	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub)
+	fileEventHandler := handler.NewFileEventHandler(wsFactory, fileEventHub, cfg)
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		galaxyClient,
@@ -144,6 +149,7 @@ func main() {
 		semanticCacheService,
 		billingService,
 		wsFactory,
+		cfg,
 		userContextService, // P0: Pass user context service
 		taskCommandService, // P0: Pass task command service
 		cfg.BackendURL,
@@ -154,6 +160,15 @@ func main() {
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(chatHistoryService, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(fileStorageService, fileMetadataService, fileProcessingClient)
+	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
+	interventionProxyHandler := handler.NewInterventionProxyHandler(cfg.BackendURL)
+	dataConsistencyHandler := handler.NewDataConsistencyHandler(chatHistoryService, queries, rdb)
+
+	// STT Handler for Speech-to-Text WebSocket proxy
+	sttHandler := handler.NewSTTHandler(cfg.BackendURL+"/api/v1/stt/stream", logger.Log)
+
+	// WebSocket Proxy for Python Community WebSocket
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger.Log)
 
 	// Auth Service
 	appleAuthService, err := service.NewAppleAuthService(cfg)
@@ -349,13 +364,27 @@ func main() {
 
 	// Apply Security Headers
 	r.Use(middleware.SecurityHeadersMiddleware())
+	if cfg.CORSEnabled {
+		r.Use(middleware.CORSMiddleware(cfg))
+	}
 
 	// WebSocket Route (Go Native)
-	r.GET("/ws/chat", middleware.AuthMiddleware(cfg), chatOrchestrator.HandleWebSocket)
-	r.GET("/ws/files", middleware.AuthMiddleware(cfg), fileEventHandler.HandleWebSocket)
+	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), chatOrchestrator.HandleWebSocket)
+	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), fileEventHandler.HandleWebSocket)
+	r.GET("/ws/stt", middleware.WsAuthMiddleware(cfg, rdb), sttHandler.HandleWebSocket)
+
+	// Community WebSocket Proxy Routes (must be before NoRoute)
+	// These routes proxy WebSocket connections to Python backend
+	r.GET("/api/v1/community/groups/:group_id/ws",
+		middleware.WsAuthMiddleware(cfg, rdb),
+		wsProxy.HandleCommunityWS)
+	r.GET("/api/v1/community/ws/connect",
+		middleware.WsAuthMiddleware(cfg, rdb),
+		wsProxy.HandlePersonalWS)
 
 	// Middleware
 	authMiddleware := middleware.AuthMiddleware(cfg)
+	authRateLimit := middleware.AuthRateLimitMiddleware()
 
 	// API Routes
 	api := r.Group("/api/v1")
@@ -367,7 +396,13 @@ func main() {
 		api.GET("/health/cqrs", cqrsHealthHandler)
 
 		// Auth
-		api.POST("/auth/apple", authHandler.AppleLogin)
+		api.POST("/auth/apple", authRateLimit, authHandler.AppleLogin)
+		api.POST(
+			"/ws/ticket",
+			authMiddleware,
+			middleware.UserBasedRateLimit(cfg.WSTicketRateRPS, cfg.WSTicketRateBurst),
+			wsTicketHandler.Issue,
+		)
 
 		// Go Optimized Endpoints
 		api.GET("/groups/:group_id/messages", authMiddleware, groupChatHandler.GetMessages)
@@ -380,6 +415,17 @@ func main() {
 
 		// File Routes
 		fileHandler.RegisterRoutes(api, authMiddleware)
+
+		// Data Consistency Routes
+		dataConsistencyHandler.RegisterRoutes(api)
+
+		// Intervention Routes (proxy to Python backend)
+		api.Any("/interventions/*path", authMiddleware, interventionProxyHandler.Proxy)
+	}
+
+	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg))
+	{
+		internal.POST("/interventions/push", interventionPushHandler.HandlePush)
 	}
 
 	// Internal Routes (Gateway <-> Backend)
@@ -640,7 +686,12 @@ func main() {
 	}
 
 	// Reverse Proxy for Python Backend (REST API)
-	targetURL, err := url.Parse("http://localhost:8000")
+	// Use BACKEND_URL from config (defaults to http://localhost:8000)
+	backendURL := cfg.BackendURL
+	if backendURL == "" {
+		backendURL = "http://sparkle_api:8000" // Docker network
+	}
+	targetURL, err := url.Parse(backendURL)
 	if err != nil {
 		log.Fatalf("Failed to parse Python backend URL: %v", err)
 	}
@@ -670,6 +721,12 @@ func main() {
 			strings.HasPrefix(path, "/docs") ||
 			strings.HasPrefix(path, "/redoc") ||
 			strings.HasPrefix(path, "/openapi.json") {
+			if strings.HasPrefix(path, "/api/v1/auth") {
+				authRateLimit(c)
+				if c.IsAborted() {
+					return
+				}
+			}
 			proxy.ServeHTTP(c.Writer, c.Request)
 			return
 		}

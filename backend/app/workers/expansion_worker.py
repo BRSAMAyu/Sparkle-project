@@ -140,7 +140,10 @@ async def start_expansion_worker():
     """启动拓展 Worker"""
     global expansion_worker
     expansion_worker = ExpansionWorker(poll_interval=30)
-    asyncio.create_task(expansion_worker.start())
+    # Note: Don't await the task, let it run in background
+    task = asyncio.create_task(expansion_worker.start())
+    # Keep a reference to prevent garbage collection
+    expansion_worker._task = task
 
 
 async def stop_expansion_worker():

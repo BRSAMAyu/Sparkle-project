@@ -12,7 +12,7 @@ import json
 from loguru import logger
 
 from app.models.error_book import ErrorRecord
-from app.models.galaxy import KnowledgeNode
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
     ErrorRecordCreate, ErrorRecordUpdate, ErrorQueryParams,
     ErrorAnalysisResult, ReviewAction, ReviewPerformanceEnum,
@@ -240,20 +240,30 @@ class ErrorBookService:
 
     async def _search_knowledge_nodes(self, user_id: UUID, text: str, limit: int = 3) -> List[KnowledgeNode]:
         # Generate embedding
-        embedding = await embedding_service.get_embedding(text)
+        embedding = await embedding_service.get_embedding(text, text_type="query")
         
         # PGVector search
         # Note: This requires the KnowledgeNode model to have the `embedding` column and pgvector extension
         # We assume KnowledgeNode.embedding is mapped.
-        stmt = select(KnowledgeNode).order_by(
-            KnowledgeNode.embedding.l2_distance(embedding)
-        ).limit(limit)
-        
-        # Filter by user? Global vs User nodes?
-        # Assuming global syllabus nodes + user specific nodes.
-        # But KnowledgeNode table usually has user_id.
-        # For now, search all visible nodes (public or user's).
-        # stmt = stmt.where(or_(KnowledgeNode.user_id == user_id, KnowledgeNode.is_public == True))
+        stmt = (
+            select(KnowledgeNode)
+            .outerjoin(
+                UserNodeStatus,
+                and_(
+                    UserNodeStatus.node_id == KnowledgeNode.id,
+                    UserNodeStatus.user_id == user_id,
+                ),
+            )
+            .where(
+                KnowledgeNode.not_deleted_filter(),
+                or_(
+                    KnowledgeNode.is_seed == True,
+                    UserNodeStatus.user_id.isnot(None),
+                ),
+            )
+            .order_by(KnowledgeNode.embedding.l2_distance(embedding))
+            .limit(limit)
+        )
         
         result = await self.db.execute(stmt)
         return result.scalars().all()

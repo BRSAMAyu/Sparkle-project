@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
-import 'package:sparkle/features/chat/presentation/providers/mindfulness_provider.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
-import 'package:sparkle/features/knowledge/data/models/focus_session_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
+import 'package:sparkle/features/focus/presentation/widgets/focus_agent_sheet.dart';
 import 'package:sparkle/features/task/task.dart';
-import 'package:sparkle/presentation/widgets/focus/focus_agent_sheet.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class FakeFocusRepository implements FocusRepository {
@@ -42,6 +42,55 @@ class FakeFocusRepository implements FocusRepository {
     required String taskType,
   }) =>
       Future.error(UnimplementedError());
+
+  @override
+  Future<FocusWeeklyStatsResponse> getWeeklyStats() async {
+    return const FocusWeeklyStatsResponse(
+      periodStart: '2024-01-01',
+      periodEnd: '2024-01-07',
+      totalMinutes: 0,
+      sessionCount: 0,
+      avgDuration: 0,
+      dailyBreakdown: {},
+      focusTypeDistribution: {},
+      streakDays: 0,
+      longestStreak: 0,
+    );
+  }
+
+  @override
+  Future<FocusMonthlyStatsResponse> getMonthlyStats() async {
+    return const FocusMonthlyStatsResponse(
+      periodStart: '2024-01-01',
+      periodEnd: '2024-01-31',
+      totalMinutes: 0,
+      sessionCount: 0,
+      avgDuration: 0,
+      dailyBreakdown: {},
+      weeklyBreakdown: {},
+      focusTypeDistribution: {},
+      streakDays: 0,
+      longestStreak: 0,
+    );
+  }
+
+  @override
+  Future<FocusSessionHistoryResponse> getSessionHistory({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    return FocusSessionHistoryResponse(
+      sessions: [],
+      totalCount: 0,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<Map<String, double>> getHeatmapData({int days = 90}) async {
+    return {};
+  }
 }
 
 class FakeTaskChatNotifier extends TaskChatNotifier {

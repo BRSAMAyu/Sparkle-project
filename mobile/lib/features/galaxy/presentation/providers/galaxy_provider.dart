@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -189,7 +190,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _initPerformanceMonitor();
   }
   final EnhancedGalaxyRepository _repository;
-  StreamSubscription? _eventsSubscription;
+  StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
 
@@ -246,8 +247,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
-  String? _lastEventId;
-
   void _initEventsListener() {
     _eventsSubscription?.cancel();
     _eventsSubscription = _repository.getGalaxyEventsStream(lastEventId: _lastEventId).listen(
@@ -264,7 +263,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
           _handleEvidencePack(event.jsonData);
         }
       },
-      onError: (error, stack) {
+      onError: (Object error, StackTrace stack) {
         debugPrint('Galaxy events stream error: $error');
         _scheduleEventsReconnect();
       },
@@ -715,16 +714,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
 
   AggregationLevel _levelForScale(double scale) {
-    if (scale < 0.2) {
+    if (scale < 0.15) {
       return AggregationLevel.universe;
     }
-    if (scale < 0.4) {
+    if (scale < 0.3) {
       return AggregationLevel.galaxy;
     }
-    if (scale < 0.6) {
+    if (scale < 0.5) {
       return AggregationLevel.cluster;
     }
-    if (scale < 0.8) {
+    if (scale < 0.7) {
       return AggregationLevel.nebula;
     }
     return AggregationLevel.full;
@@ -774,22 +773,25 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     switch (level) {
       case AggregationLevel.universe:
-        // Universe level: No individual nodes, handled by clusters/sectors
-        return [];
-
-      case AggregationLevel.galaxy:
-        // Galaxy level: Only root nodes (importance=5 or no parent)
+        // Universe level: Only show highest importance nodes (sector roots)
+        // Changed from empty to show important nodes for better UX
         filteredNodes = nodes
             .where((n) => n.importance >= 5 || n.parentId == null)
             .toList();
 
+      case AggregationLevel.galaxy:
+        // Galaxy level: Root nodes and important ones (importance >= 3)
+        filteredNodes = nodes
+            .where((n) => n.importance >= 3 || n.parentId == null)
+            .toList();
+
       case AggregationLevel.cluster:
-        // Cluster level: Importance >= 3
-        filteredNodes = nodes.where((n) => n.importance >= 3).toList();
+        // Cluster level: Show most nodes (importance >= 2)
+        filteredNodes = nodes.where((n) => n.importance >= 2).toList();
 
       case AggregationLevel.nebula:
-        // Nebula level: Importance >= 2
-        filteredNodes = nodes.where((n) => n.importance >= 2).toList();
+        // Nebula level: Show almost all nodes (importance >= 1)
+        filteredNodes = nodes.where((n) => n.importance >= 1).toList();
 
       case AggregationLevel.full:
         // Full level: All nodes
@@ -813,8 +815,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // 2. Viewport Culling
     if (viewport == null) return filteredNodes;
 
-    // Expand viewport slightly for smooth entry
-    final cullingRect = viewport.inflate(100);
+    // Expand viewport significantly for smooth panning (was 100)
+    final cullingRect = viewport.inflate(500);
 
     return filteredNodes.where((node) {
       final pos = posMap[node.id];

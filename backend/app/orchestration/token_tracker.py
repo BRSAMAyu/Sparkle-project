@@ -133,7 +133,12 @@ class TokenTracker:
 
         key = f"user:daily_tokens:{user_id}:{date}"
         result = await self.redis.get(key)
-        return int(result) if result else 0
+        if not result:
+            return 0
+        try:
+            return int(result)
+        except (TypeError, ValueError):
+            return 0
 
     async def check_quota(
         self,

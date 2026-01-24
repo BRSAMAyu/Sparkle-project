@@ -146,6 +146,41 @@ class ChatRepository {
     );
   }
 
+  void sendResponseFeedback({
+    required String responseId,
+    required String feedbackType,
+    List<String>? reasons,
+    String? freeText,
+    String? workflowId,
+    String? promptVersion,
+    String? traceId,
+    Map<String, dynamic>? meta,
+  }) {
+    _wsService.sendResponseFeedback(
+      responseId: responseId,
+      feedbackType: feedbackType,
+      reasons: reasons,
+      freeText: freeText,
+      workflowId: workflowId,
+      promptVersion: promptVersion,
+      traceId: traceId,
+      meta: meta,
+    );
+  }
+
+  /// 发送计划审查反馈
+  void sendPlanReviewFeedback({
+    required String reviewId,
+    required String userDecision,
+    String? userComment,
+  }) {
+    _wsService.sendPlanReviewFeedback(
+      reviewId: reviewId,
+      userDecision: userDecision,
+      userComment: userComment,
+    );
+  }
+
   /// 流式聊天（SSE - 保留用于向后兼容）
   @Deprecated('Use chatStream with WebSocket instead')
   Stream<ChatStreamEvent> chatStreamSSE(

@@ -3,6 +3,7 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 from fastapi import APIRouter
+from app.config import settings
 
 from app.api.v1 import (
     assets,
@@ -24,6 +25,7 @@ from app.api.v1 import (
     stt,
     focus,
     vocabulary,
+    translation,
     audit,
     dlq_admin,
     health_production,
@@ -38,9 +40,19 @@ from app.api.v1 import (
     interventions,
     events,
     nightly_reviews,
-    translation,
-    signals,
+    feedback_admin,
+    memory,
+    memory_settings,
+    memory_admin,
+    preferences,
+    seed_libraries,
+    achievements,
+    multi_intent,
+    recommendations,
+    leaderboards,
+    monitoring,
 )
+from app.api.v1 import graph_monitor, graphrag_trace
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -50,6 +62,7 @@ api_router.include_router(files.router, tags=["files"])
 api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
 api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
+api_router.include_router(feedback_admin.router)
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
@@ -71,11 +84,21 @@ api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(translation.router, prefix="/translation", tags=["translation"])
-api_router.include_router(assets.router)  # Prefix "/assets" defined in router
-api_router.include_router(signals.router)  # Prefix "/signals" defined in router
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
-# api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
-# api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
+api_router.include_router(memory.router, tags=["memory"])
+api_router.include_router(memory_settings.router, tags=["memory"])
+api_router.include_router(memory_admin.router)
+api_router.include_router(preferences.router)
+api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
+api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
+api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
+api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
+# WebSocket monitoring endpoints
+api_router.include_router(monitoring.router, prefix="/ws", tags=["WebSocket Monitoring"])
+if settings.ENABLE_GRAPHRAG_MONITOR_API:
+    api_router.include_router(graph_monitor.router, prefix="/monitor/graph", tags=["GraphRAG"])
+    api_router.include_router(graphrag_trace.router, tags=["GraphRAG Trace"])
 api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 
@@ -100,5 +123,9 @@ async def api_root():
             "/capsules",
             "/omnibar",
             "/dashboard",
+            "/multi-intent",
+            "/recommendations",
+            "/leaderboards",
+            "/ws",
         ],
     }

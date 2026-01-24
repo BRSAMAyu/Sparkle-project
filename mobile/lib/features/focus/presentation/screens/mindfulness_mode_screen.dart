@@ -145,7 +145,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
       if (mounted) {
         // Show Reflection Dialog
-        await showDialog(
+        await showDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (context) => const ReflectionDialog(),
@@ -266,36 +266,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 分心计数
-            if (state.interruptionCount > 0)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: DS.warning.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.visibility_off_rounded,
-                      color: DS.warning,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '分心 ${state.interruptionCount} 次',
-                      style: TextStyle(
-                        color: DS.warning,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              const SizedBox(width: 80),
+            // 返回任务按钮
+            _buildBackToTaskButton(),
 
             // 正念模式标题
             Row(
@@ -334,6 +306,67 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           ],
         ),
       );
+
+  Widget _buildBackToTaskButton() => TextButton.icon(
+        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        label: const Text('返回任务'),
+        style: TextButton.styleFrom(
+          foregroundColor: DS.brandPrimary.withValues(alpha: 0.6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        ),
+        onPressed: () async {
+          await _returnToTaskExecution();
+        },
+      );
+
+  Future<void> _returnToTaskExecution() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: DS.deepSpaceSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          '返回任务执行',
+          style: TextStyle(
+            color: DS.brandPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '专注记录将暂停并返回任务页面',
+          style: TextStyle(
+            color: DS.brandPrimary.withValues(alpha: 0.7),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('取消',
+                style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              '确认返回',
+              style: TextStyle(
+                color: DS.primaryBase,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(mindfulnessProvider.notifier).stop();
+      if (mounted) {
+        context.push('/tasks/${widget.taskId}/execute');
+      }
+    }
+  }
 
   Widget _buildTaskCard(TaskModel task) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 40),

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"mime"
 	"net/http"
 	"path"
 	"strconv"
@@ -15,6 +16,28 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"golang.org/x/time/rate"
 )
+
+var allowedMimeTypesByExt = map[string]map[string]bool{
+	".bin":  {"application/octet-stream": true},
+	".csv":  {"text/csv": true},
+	".gif":  {"image/gif": true},
+	".jpeg": {"image/jpeg": true},
+	".jpg":  {"image/jpeg": true},
+	".json": {"application/json": true},
+	".md":   {"text/markdown": true, "text/plain": true},
+	".pdf":  {"application/pdf": true},
+	".png":  {"image/png": true},
+	".txt":  {"text/plain": true},
+	".webp": {"image/webp": true},
+	".zip":  {"application/zip": true, "application/x-zip-compressed": true},
+	".doc":  {"application/msword": true},
+	".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true},
+	".xls":  {"application/vnd.ms-excel": true},
+	".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true},
+	".ppt":  {"application/vnd.ms-powerpoint": true},
+	".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation": true},
+	".svg":  {"image/svg+xml": true},
+}
 
 type FileHandler struct {
 	storage    FileStorageProvider
@@ -30,10 +53,10 @@ func NewFileHandler(
 	processor FileProcessingProvider,
 ) *FileHandler {
 	return &FileHandler{
-		storage:    storage,
-		metadata:   metadata,
-		processor:  processor,
-		limiters:   make(map[string]*rate.Limiter),
+		storage:   storage,
+		metadata:  metadata,
+		processor: processor,
+		limiters:  make(map[string]*rate.Limiter),
 	}
 }
 
@@ -109,10 +132,25 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		return
 	}
 
+	mimeType, err := normalizeMimeType(req.MimeType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mime_type"})
+		return
+	}
+
 	filename := sanitizeFilename(req.Filename)
 	ext := strings.ToLower(path.Ext(filename))
 	if ext == "" {
-		ext = ".bin"
+		inferredExt, ok := inferExtensionFromMimeType(mimeType)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported mime_type"})
+			return
+		}
+		ext = inferredExt
+	}
+	if !isAllowedMimeType(ext, mimeType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "mime_type does not match filename extension"})
+		return
 	}
 	fileID := uuid.New()
 	objectKey := userID.String() + "/" + fileID.String() + "/original" + ext
@@ -122,7 +160,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		fileID,
 		userID,
 		filename,
-		req.MimeType,
+		mimeType,
 		req.FileSize,
 		h.storage.Bucket(),
 		objectKey,
@@ -135,7 +173,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 	url, fields, err := h.storage.PresignPost(
 		c.Request.Context(),
 		objectKey,
-		req.MimeType,
+		mimeType,
 		1,
 		h.storage.MaxUploadSize(),
 	)
@@ -432,6 +470,34 @@ func sanitizeFilename(name string) string {
 		return "file"
 	}
 	return base
+}
+
+func normalizeMimeType(raw string) (string, error) {
+	mediaType, _, err := mime.ParseMediaType(raw)
+	if err != nil {
+		return "", err
+	}
+	if !strings.Contains(mediaType, "/") {
+		return "", errors.New("invalid mime type")
+	}
+	return strings.ToLower(mediaType), nil
+}
+
+func inferExtensionFromMimeType(mimeType string) (string, bool) {
+	for ext, allowed := range allowedMimeTypesByExt {
+		if allowed[mimeType] {
+			return ext, true
+		}
+	}
+	return "", false
+}
+
+func isAllowedMimeType(ext string, mimeType string) bool {
+	allowed, ok := allowedMimeTypesByExt[ext]
+	if !ok {
+		return false
+	}
+	return allowed[mimeType]
 }
 
 func parseIntQuery(c *gin.Context, key string, fallback int) int {

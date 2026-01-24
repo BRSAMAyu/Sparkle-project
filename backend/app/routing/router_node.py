@@ -109,6 +109,30 @@ class RouterNode:
 
         return state
 
+    def _extract_capability(self, message: str) -> Optional[str]:
+        """Lightweight capability extraction used for routing hints."""
+        if not message:
+            return None
+        text = message.lower()
+        if any(k in text for k in ("plan", "schedule", "study plan", "复习计划", "考试")):
+            return "planner"
+        if any(k in text for k in ("task", "todo", "任务")):
+            return "task_manager"
+        if any(k in text for k in ("summarize", "summary", "总结")):
+            return "summarizer"
+        return None
+
+    def _simple_route(self, message: str) -> Optional[str]:
+        """Fallback routing when advanced routing yields no candidates."""
+        if not self.routes:
+            return None
+        capability = self._extract_capability(message)
+        if capability:
+            for route in self.routes:
+                if capability in route:
+                    return route
+        return random.choice(self.routes)
+
     @track_routing_decision(method="hybrid")
     async def find_route_with_metrics(self, current: str, query: str, context: Dict) -> Optional[str]:
         """Route with metrics tracking"""

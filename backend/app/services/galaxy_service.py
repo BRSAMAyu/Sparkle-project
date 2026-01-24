@@ -487,9 +487,27 @@ class GalaxyService:
             })
             
             await self.db.flush()
-            
+
+            # ========== Achievement Integration ==========
+            try:
+                from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+                achievement_engine = AchievementEngine(self.db)
+
+                # Node mastered event (when mastery reaches 80%+)
+                if new_mastery >= 80:
+                    await achievement_engine.process_event(
+                        user_id=str(user_id),
+                        event_type=AchievementEvent.NODE_MASTERED,
+                        node_id=str(node_id),
+                        mastery_score=new_mastery,
+                    )
+            except Exception as e:
+                logger.warning(f"Achievement processing failed in update_node_mastery: {e}")
+            # ============================================
+
             return {
-                "success": True, 
+                "success": True,
                 "old_mastery": int(old_mastery),
                 "new_mastery": new_mastery,
                 "current_revision": new_revision

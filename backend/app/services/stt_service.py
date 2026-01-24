@@ -9,57 +9,45 @@ import asyncio
 
 from app.config import settings
 from app.services.llm_service import llm_service
-# We'll use the LLM provider's client if available, or create a new OpenAI client for audio
-from app.services.llm.providers import OpenAICompatibleProvider
+from app.services.stt.providers.base import STTProvider
+
 
 class STTService:
     def __init__(self):
         self.upload_dir = settings.UPLOAD_DIR
         os.makedirs(self.upload_dir, exist_ok=True)
-        
-        # Initialize OpenAI client for Audio (Whisper)
-        # Assuming the LLM_API_KEY and BASE_URL work for Audio, or strictly OpenAI
-        # For this implementation, we try to use the configured LLM settings.
-        # If the provider is NOT openai, this might fail if they don't support /audio/transcriptions.
-        # So we default to OpenAI logic or fallback.
-        
-        # Note: Many "OpenAI Compatible" providers (like DeepSeek, Qwen) do NOT support Audio API.
-        # We really need a real OpenAI key or a specific ASR provider.
-        # For robustness, we will try to use the 'openai' package directly with settings.
+
+        # Initialize STT Provider based on configuration
+        self.provider: Optional[STTProvider] = None
+        self._init_provider()
+
+    def _init_provider(self):
+        """根据配置初始化STT Provider"""
+        # 默认只支持讯飞
         try:
-            from openai import AsyncOpenAI
-            self.client = AsyncOpenAI(
-                api_key=settings.LLM_API_KEY,
-                base_url=settings.LLM_API_BASE_URL
-            )
-        except ImportError:
-            logger.error("OpenAI package not found. STT will not work.")
-            self.client = None
+            from app.services.stt.providers.xunfei_provider import XunFeiProvider
+            self.provider = XunFeiProvider()
+            logger.info("STT Provider initialized: xunfei")
+        except Exception as e:
+            logger.error(f"Failed to initialize XunFeiProvider: {e}")
+            self.provider = None
 
     async def transcribe_file(self, file_path: str, language: Optional[str] = None) -> Dict[str, Any]:
         """
-        Transcribe an audio file using OpenAI Whisper API.
+        Transcribe an audio file using configured STT Provider.
         """
-        if not self.client:
-            return {"text": "STT Service Unavailable (Client Init Failed)", "error": True}
+        if not self.provider:
+            return {"text": "STT Service Unavailable (Provider Not Initialized)", "error": True}
 
         if not os.path.exists(file_path):
             return {"text": "", "error": "File not found"}
 
         try:
-            logger.info(f"Transcribing file: {file_path}")
-            
-            with open(file_path, "rb") as audio_file:
-                # Call OpenAI Whisper API
-                # model="whisper-1" is standard
-                transcript = await self.client.audio.transcriptions.create(
-                    model="whisper-1", 
-                    file=audio_file,
-                    language=language,
-                    response_format="json"
-                )
-            
-            return {"text": transcript.text, "error": False}
+            logger.info(f"Transcribing file: {file_path} using {settings.STT_PROVIDER}")
+
+            text = await self.provider.transcribe_file(file_path, language=language)
+
+            return {"text": text, "error": False}
         except Exception as e:
             logger.error(f"Transcription failed: {e}")
             # Mock response in Demo Mode if failure
@@ -103,49 +91,42 @@ class STTService:
 
     async def handle_websocket_stream(self, websocket: WebSocket):
         """
-        Handle WebSocket audio stream.
-        Current implementation strategy:
-        - Receive chunks of audio bytes.
-        - Buffer until a silence threshold or size threshold.
-        - Save to temp file.
-        - Transcribe.
-        - Send back partial/final result.
+        Handle WebSocket audio stream using configured STT Provider.
+
+        This method creates an audio stream generator and passes it to the provider
+        for real-time transcription. Results are streamed back to the client.
         """
         await websocket.accept()
-        
+
         session_id = str(uuid.uuid4())
-        temp_filename = os.path.join(self.upload_dir, f"stream_{session_id}.webm")
-        
-        # Buffer config
-        CHUNK_THRESHOLD = 100 * 1024 # 100KB buffer (approx 3-5 seconds of audio depending on codec)
-        buffer = bytearray()
-        
+        logger.info(f"WebSocket STT stream started: {session_id}")
+
+        if not self.provider:
+            await websocket.send_json({
+                "type": "error",
+                "content": "STT Service Unavailable (Provider Not Initialized)"
+            })
+            await websocket.close()
+            return
+
         try:
-            while True:
-                # Receive data
-                # We expect bytes (audio) or text (control commands)
-                data = await websocket.receive()
-                
-                if "bytes" in data:
-                    chunk = data["bytes"]
-                    buffer.extend(chunk)
-                    
-                    if len(buffer) >= CHUNK_THRESHOLD:
-                        # Process buffer
-                        await self._process_buffer(websocket, buffer, temp_filename)
-                        buffer = bytearray() # Clear buffer
-                        
-                elif "text" in data:
-                    text = data["text"]
-                    if text == "STOP":
-                        # Process remaining buffer
-                        if len(buffer) > 0:
-                            await self._process_buffer(websocket, buffer, temp_filename)
-                        
-                        # Send completion signal
-                        await websocket.send_json({"type": "status", "content": "completed"})
-                        break
-                        
+            # Create audio stream generator from WebSocket
+            audio_stream = self._create_audio_stream_generator(websocket)
+
+            # Transcribe using the provider
+            async for text in self.provider.transcribe_stream(audio_stream):
+                await websocket.send_json({
+                    "type": "transcription",
+                    "text": text,
+                    "is_final": False
+                })
+
+            # Send completion signal
+            await websocket.send_json({
+                "type": "status",
+                "content": "completed"
+            })
+
         except WebSocketDisconnect:
             logger.info(f"WebSocket disconnected: {session_id}")
         except Exception as e:
@@ -153,41 +134,40 @@ class STTService:
             await websocket.send_json({"type": "error", "content": str(e)})
         finally:
             # Cleanup
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
+            if self.provider:
+                await self.provider.close()
 
-    async def _process_buffer(self, websocket: WebSocket, audio_data: bytearray, filename: str):
-        """Helper to write buffer to file and transcribe"""
-        # Write to temp file
-        # Note: In a real streaming setup, we'd append. 
-        # But for Whisper API, we need a valid file header usually.
-        # If the client sends raw PCM, we need to wrap it.
-        # If the client sends chunks of a webm stream, simply concatenating might break headers.
-        # For simplicity in this generic implementation:
-        # We assume the client sends valid standalone chunks OR we just overwrite the file to test.
-        # 
-        # Better Strategy for "Pseudo-Streaming":
-        # Save the current buffer as a standalone file (if possible) or append to a growing file 
-        # and transcribe the *difference*? No, OpenAI transcribes the whole file.
-        #
-        # Simple Approach: Write current buffer to a file, transcribe it.
-        # This assumes the buffer contains a valid audio segment (e.g. from a client recorder that flushes on silence).
-        
-        with open(filename, "wb") as f:
-            f.write(audio_data)
-            
-        # Transcribe
-        result = await self.transcribe_file(filename)
-        
-        if not result["error"]:
-            text = result["text"]
-            # Enhance
-            # enhanced = await self.enhance_transcript(text) # Optional: might be too slow for stream
-            
-            await websocket.send_json({
-                "type": "transcription", 
-                "text": text,
-                "is_final": False 
-            })
+    async def _create_audio_stream_generator(self, websocket: WebSocket) -> AsyncGenerator[bytes, None]:
+        """
+        Create an async generator that yields audio chunks from WebSocket.
+
+        This generator handles:
+        - Receiving audio bytes
+        - Handling control messages (STOP)
+        - Proper cleanup on disconnect
+        """
+        try:
+            while True:
+                # Receive data
+                data = await websocket.receive()
+
+                if "bytes" in data:
+                    chunk = data["bytes"]
+                    if chunk:  # Only yield non-empty chunks
+                        yield chunk
+
+                elif "text" in data:
+                    text = data["text"]
+                    if text == "STOP":
+                        # Stop signal received
+                        break
+
+        except WebSocketDisconnect:
+            # Connection closed, stop the generator
+            return
+        except Exception as e:
+            logger.error(f"Error in audio stream generator: {e}")
+            raise
+
 
 stt_service = STTService()

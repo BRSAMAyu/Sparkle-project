@@ -19,6 +19,10 @@ class PlanDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('计划详情'),
         actions: [
           planAsync.maybeWhen(

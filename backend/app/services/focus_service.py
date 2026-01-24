@@ -68,14 +68,48 @@ class FocusService:
                     if task.status == "pending":
                         task.status = "in_progress"
                         task.started_at = start_time
-        
+
+        # ========== Achievement Integration ==========
+        unlocked_achievements = []
+        try:
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            achievement_engine = AchievementEngine(db)
+
+            # Check time of day for special achievements
+            hour = start_time.hour if hasattr(start_time, 'hour') else start_time.astimezone().hour
+            event_type = AchievementEvent.STUDY_MINUTES_ACCUMULATED
+
+            if 23 <= hour or hour <= 5:
+                # Night study special event
+                event_type = AchievementEvent.NIGHT_STUDY
+            elif 5 <= hour <= 8:
+                # Early bird event
+                event_type = AchievementEvent.EARLY_BIRD
+
+            unlocked = await achievement_engine.process_event(
+                user_id=str(user_id),
+                event_type=event_type,
+                study_minutes=duration_minutes,
+                session_id=str(session.id) if session else None,
+            )
+
+            if unlocked:
+                unlocked_achievements = unlocked
+        except Exception as e:
+            # Don't fail the session logging if achievement processing fails
+            import logging
+            logging.warning(f"Achievement processing failed: {e}")
+        # ============================================
+
         return {
             "session": session,
             "rewards": {
                 "flame_earned": flame_earned,
                 "leveled_up": leveled_up,
                 "new_level": new_level
-            }
+            },
+            "unlocked_achievements": unlocked_achievements
         }
 
     @staticmethod
@@ -166,5 +200,280 @@ class FocusService:
                 {"role": "user", "content": prompt}
             ]
         )
+
+    @staticmethod
+    async def get_weekly_stats(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> Dict[str, Any]:
+        """Get focus stats for the current week (Monday to Sunday)"""
+        now = datetime.datetime.now()
+        week_start = (now - datetime.timedelta(days=now.weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        week_end = week_start + datetime.timedelta(days=7)
+
+        # Get all sessions for this week
+        stmt = select(FocusSession).where(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= week_start,
+            FocusSession.start_time < week_end,
+            FocusSession.status == FocusStatus.COMPLETED
+        ).order_by(FocusSession.start_time)
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+
+        # Calculate daily breakdown
+        daily_breakdown = {}
+        focus_type_distribution = {FocusType.POMODORO.value: 0, FocusType.STOPWATCH.value: 0}
+
+        for session in sessions:
+            date_key = session.start_time.strftime("%Y-%m-%d")
+            daily_breakdown[date_key] = daily_breakdown.get(date_key, 0) + session.duration_minutes
+            focus_type_distribution[session.focus_type.value] += session.duration_minutes
+
+        # Ensure all 7 days are present
+        for i in range(7):
+            day = week_start + datetime.timedelta(days=i)
+            date_key = day.strftime("%Y-%m-%d")
+            if date_key not in daily_breakdown:
+                daily_breakdown[date_key] = 0
+
+        total_minutes = sum(daily_breakdown.values())
+        session_count = len(sessions)
+        avg_duration = int(total_minutes / session_count) if session_count > 0 else 0
+
+        # Find best day
+        best_day = max(daily_breakdown, key=daily_breakdown.get) if daily_breakdown else None
+
+        # Calculate streaks
+        current_streak = await FocusService._calculate_current_streak(db, user_id)
+        longest_streak = await FocusService._calculate_longest_streak(db, user_id)
+
+        return {
+            "period_start": week_start.isoformat(),
+            "period_end": week_end.isoformat(),
+            "total_minutes": total_minutes,
+            "session_count": session_count,
+            "avg_duration": avg_duration,
+            "best_day": best_day,
+            "daily_breakdown": daily_breakdown,
+            "focus_type_distribution": focus_type_distribution,
+            "streak_days": current_streak,
+            "longest_streak": longest_streak
+        }
+
+    @staticmethod
+    async def get_monthly_stats(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> Dict[str, Any]:
+        """Get focus stats for the current month"""
+        now = datetime.datetime.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Calculate first day of next month
+        if now.month == 12:
+            next_month = now.replace(year=now.year + 1, month=1, day=1)
+        else:
+            next_month = now.replace(month=now.month + 1, day=1)
+        month_end = next_month
+
+        # Get all sessions for this month
+        stmt = select(FocusSession).where(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= month_start,
+            FocusSession.start_time < month_end,
+            FocusSession.status == FocusStatus.COMPLETED
+        ).order_by(FocusSession.start_time)
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+
+        # Calculate daily breakdown
+        daily_breakdown = {}
+        focus_type_distribution = {FocusType.POMODORO.value: 0, FocusType.STOPWATCH.value: 0}
+
+        for session in sessions:
+            date_key = session.start_time.strftime("%Y-%m-%d")
+            daily_breakdown[date_key] = daily_breakdown.get(date_key, 0) + session.duration_minutes
+            focus_type_distribution[session.focus_type.value] += session.duration_minutes
+
+        total_minutes = sum(daily_breakdown.values())
+        session_count = len(sessions)
+        avg_duration = int(total_minutes / session_count) if session_count > 0 else 0
+
+        # Find best day
+        best_day = max(daily_breakdown, key=daily_breakdown.get) if daily_breakdown else None
+
+        # Weekly breakdown
+        weekly_breakdown = {}
+        for session in sessions:
+            # Get ISO week number
+            week_key = session.start_time.strftime("%Y-W%W")
+            weekly_breakdown[week_key] = weekly_breakdown.get(week_key, 0) + session.duration_minutes
+
+        # Calculate streaks
+        current_streak = await FocusService._calculate_current_streak(db, user_id)
+        longest_streak = await FocusService._calculate_longest_streak(db, user_id)
+
+        return {
+            "period_start": month_start.isoformat(),
+            "period_end": month_end.isoformat(),
+            "total_minutes": total_minutes,
+            "session_count": session_count,
+            "avg_duration": avg_duration,
+            "best_day": best_day,
+            "daily_breakdown": daily_breakdown,
+            "weekly_breakdown": weekly_breakdown,
+            "focus_type_distribution": focus_type_distribution,
+            "streak_days": current_streak,
+            "longest_streak": longest_streak
+        }
+
+    @staticmethod
+    async def get_session_history(
+        db: AsyncSession,
+        user_id: UUID,
+        limit: int = 20,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """Get paginated session history"""
+        # Get total count
+        count_stmt = select(func.count(FocusSession.id)).where(
+            FocusSession.user_id == user_id
+        )
+        count_result = await db.execute(count_stmt)
+        total_count = count_result.scalar() or 0
+
+        # Get sessions
+        stmt = select(FocusSession).where(
+            FocusSession.user_id == user_id
+        ).order_by(desc(FocusSession.start_time)).limit(limit).offset(offset)
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+
+        session_details = []
+        for session in sessions:
+            # Get task title if task exists
+            task_title = None
+            if session.task_id:
+                task_stmt = select(Task.title).where(Task.id == session.task_id)
+                task_result = await db.execute(task_stmt)
+                task_title = task_result.scalar()
+
+            session_details.append({
+                "id": str(session.id),
+                "start_time": session.start_time.isoformat(),
+                "end_time": session.end_time.isoformat(),
+                "duration_minutes": session.duration_minutes,
+                "focus_type": session.focus_type.value,
+                "status": session.status.value,
+                "task_id": str(session.task_id) if session.task_id else None,
+                "task_title": task_title,
+                "white_noise_type": session.white_noise_type
+            })
+
+        return {
+            "sessions": session_details,
+            "total_count": total_count,
+            "limit": limit,
+            "offset": offset
+        }
+
+    @staticmethod
+    async def get_heatmap_data(
+        db: AsyncSession,
+        user_id: UUID,
+        days: int = 90
+    ) -> Dict[str, float]:
+        """Get heatmap data for the last N days"""
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=days)
+
+        stmt = select(FocusSession).where(
+            FocusSession.user_id == user_id,
+            FocusSession.start_time >= start_date,
+            FocusSession.start_time < end_date,
+            FocusSession.status == FocusStatus.COMPLETED
+        )
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+
+        heatmap_data = {}
+        for session in sessions:
+            date_key = session.start_time.strftime("%Y-%m-%d")
+            heatmap_data[date_key] = heatmap_data.get(date_key, 0.0) + session.duration_minutes
+
+        return heatmap_data
+
+    @staticmethod
+    async def _calculate_current_streak(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> int:
+        """Calculate current consecutive days streak"""
+        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        check_date = today
+        streak = 0
+
+        # Check up to 365 days back
+        for _ in range(365):
+            next_day = check_date + datetime.timedelta(days=1)
+            day_start = check_date
+            day_end = next_day
+
+            # Check if any completed session exists for this day
+            stmt = select(func.count(FocusSession.id)).where(
+                FocusSession.user_id == user_id,
+                FocusSession.start_time >= day_start,
+                FocusSession.start_time < day_end,
+                FocusSession.status == FocusStatus.COMPLETED
+            )
+            result = await db.execute(stmt)
+            count = result.scalar() or 0
+
+            if count > 0:
+                streak += 1
+                check_date = day_start - datetime.timedelta(days=1)
+            else:
+                # If checking today and no sessions, check yesterday
+                if check_date == today:
+                    check_date = day_start - datetime.timedelta(days=1)
+                    continue
+                break
+
+        return streak
+
+    @staticmethod
+    async def _calculate_longest_streak(
+        db: AsyncSession,
+        user_id: UUID
+    ) -> int:
+        """Calculate the longest consecutive days streak ever"""
+        # Get all days with completed sessions
+        stmt = select(func.date(FocusSession.start_time)).where(
+            FocusSession.user_id == user_id,
+            FocusSession.status == FocusStatus.COMPLETED
+        ).distinct().order_by(func.date(FocusSession.start_time))
+        result = await db.execute(stmt)
+        dates = [row[0] for row in result.all()]
+
+        if not dates:
+            return 0
+
+        longest_streak = 1
+        current_streak = 1
+        prev_date = dates[0]
+
+        for date in dates[1:]:
+            if (date - prev_date).days == 1:
+                current_streak += 1
+            elif (date - prev_date).days > 1:
+                longest_streak = max(longest_streak, current_streak)
+                current_streak = 1
+            prev_date = date
+
+        longest_streak = max(longest_streak, current_streak)
+        return longest_streak
 
 focus_service = FocusService()

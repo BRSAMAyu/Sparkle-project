@@ -2,13 +2,39 @@ import pytest
 import asyncio
 import httpx
 import time
+import os
+import json
+from jose import jwt as jose_jwt
+from pathlib import Path
 from typing import Dict, Any
 
 # Configuration
 GATEWAY_URL = "http://localhost:8080"
-CHAOS_API_URL = f"{GATEWAY_URL}/api/v1/chaos"
+CHAOS_API_URL = f"{GATEWAY_URL}/admin/chaos"
 CHAT_API_URL = f"{GATEWAY_URL}/api/v1/chat"
 ADMIN_SECRET = "admin_secret_key"  # Should be loaded from env
+def _load_jwt_secret() -> str:
+    env_secret = os.getenv("JWT_SECRET")
+    if env_secret:
+        return env_secret
+    for path in (Path(__file__).resolve().parents[2] / ".env", Path(__file__).resolve().parents[1] / "gateway" / ".env"):
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.startswith("JWT_SECRET="):
+                    return line.split("=", 1)[1].strip()
+    return "dev-secret-key"
+
+
+JWT_SECRET = _load_jwt_secret()
+
+
+def _create_jwt(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": int(time.time()) + 3600,
+        "type": "access",
+    }
+    return jose_jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 class ChaosController:
     def __init__(self, client: httpx.AsyncClient):
@@ -51,7 +77,9 @@ async def chaos_controller():
 
 @pytest.fixture
 async def api_client():
-    async with httpx.AsyncClient() as client:
+    token = _create_jwt("00000000-0000-0000-0000-000000000000")
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient(headers=headers) as client:
         yield client
 
 @pytest.mark.asyncio

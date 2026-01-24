@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy import select
 from app.core.age_client import get_age_client, init_age
-from app.models.knowledge import KnowledgeNode as PGKnowledgeNode, NodeRelation as PGNodeRelation
+from app.models.galaxy import KnowledgeNode as PGKnowledgeNode, NodeRelation as PGNodeRelation
 from app.models.user import User as PGUser
 from app.models.graph_models import KnowledgeVertex, UserVertex, RelationEdge
 from app.config import settings

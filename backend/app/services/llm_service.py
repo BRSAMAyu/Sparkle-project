@@ -1,15 +1,18 @@
 import json
-from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator
+import inspect
+import uuid
+from typing import List, Dict, AsyncGenerator, Optional, Any, AsyncIterator, Union
 import asyncio
 from loguru import logger
 from dataclasses import dataclass
 from opentelemetry import trace
-from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
-from app.services.circuit_breaker import circuit_breaker_service, CircuitBreakerOpenException
+from app.core.llm_router import llm_router, LLMSelection, select_model_for_agent
+from app.core.agent_profiles import AgentRole, TaskType
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -128,38 +131,188 @@ tracer = trace.get_tracer(__name__)
 
 class LLMService:
     """
-    LLM 服务
-    支持工具调用（Function Calling）
+    LLM 服务 - 支持工具调用和动态模型选择
+
+    新功能：
+    - 根据 AgentRole 和 TaskType 动态选择模型
+    - 兼容原有的 LLM_PROVIDER 环境变量配置
+    - 自动降级策略
+    - 可观测的模型选择日志
+
+    向后兼容：
+    - 保留原有的 chat/reason 模型划分
+    - 无需修改现有调用代码
     """
-    
-    def __init__(self):
-        # 根据提供商选择配置
+
+    def __init__(
+        self,
+        agent_role: Union[AgentRole, str, Any] = AgentRole.GENERATION,
+        enable_dynamic_routing: bool = True,
+    ):
+        """
+        Args:
+            agent_role: 当前服务代表的Agent角色（用于模型选择）
+            enable_dynamic_routing: 是否启用动态路由（默认True）
+                                 设为False则使用原有LLM_PROVIDER逻辑
+        """
+        self.agent_role = self._normalize_agent_role(agent_role)
+        self.enable_dynamic_routing = enable_dynamic_routing
+        self.demo_mode = bool(getattr(settings, 'DEMO_MODE', False))
+
+        # 当前选中的模型配置
+        self._current_selection: Optional[LLMSelection] = None
+        self._provider: Optional[LLMProvider] = None
+
+        # 向后兼容：保留原有的模型名称
+        self.chat_model: str = ""
+        self.reason_model: str = ""
+
+        # GLM 特有参数
+        self._extra_body: Optional[Dict[str, Any]] = None
+
+        if enable_dynamic_routing:
+            # 使用新的 LLMRouter
+            self._init_with_router()
+        else:
+            # 使用原有的 LLM_PROVIDER 逻辑
+            self._init_legacy()
+
+    def _init_with_router(self):
+        """使用 LLMRouter 初始化（推荐方式）"""
+        selection = llm_router.select_model(self.agent_role)
+        self._current_selection = selection
+
+        kwargs = llm_router.get_openai_client_kwargs(selection)
+        self._provider = OpenAICompatibleProvider(
+            api_key=kwargs["api_key"],
+            base_url=kwargs["base_url"]
+        )
+
+        self.chat_model = kwargs["model"]
+        self.reason_model = kwargs["model"]  # 默认用同一个，可按需切换
+        self._extra_body = kwargs.get("extra_body")  # 保存 GLM 特有参数
+        if not kwargs.get("api_key"):
+            self.demo_mode = True
+
+        logger.info(
+            f"[LLMRouter] {self.agent_role.value} → {kwargs['model']} "
+            f"({selection.reason})"
+        )
+        if self._extra_body:
+            logger.info(f"[LLMRouter] GLM extra_body: {self._extra_body}")
+
+    def _init_legacy(self):
+        """使用原有的 LLM_PROVIDER 环境变量初始化（向后兼容）"""
         provider_type = settings.LLM_PROVIDER.lower()
-        
-        if provider_type == "deepseek":
+
+        if provider_type == "xiaomi":
+            api_key = settings.XIAOMI_MIMO_API_KEY
+            base_url = settings.XIAOMI_MIMO_BASE_URL
+            self.chat_model = settings.XIAOMI_CHAT_MODEL
+            self.reason_model = settings.XIAOMI_CHAT_MODEL
+        elif provider_type == "deepseek":
             api_key = settings.DEEPSEEK_API_KEY
             base_url = settings.DEEPSEEK_BASE_URL
-            self.chat_model = settings.DEEPSEEK_CHAT_MODEL or settings.LLM_MODEL_NAME
-            self.reason_model = settings.DEEPSEEK_REASON_MODEL or settings.LLM_REASON_MODEL_NAME
+            self.chat_model = settings.DEEPSEEK_CHAT_MODEL
+            self.reason_model = settings.DEEPSEEK_REASON_MODEL
+        elif provider_type == "zhipu":
+            api_key = settings.ZHIPU_API_KEY
+            base_url = settings.ZHIPU_BASE_URL
+            self.chat_model = settings.ZHIPU_CHAT_MODEL
+            self.reason_model = settings.ZHIPU_TOOLS_MODEL
         else:
-            # 默认使用通用 LLM 配置 (OpenAI, Qwen 等)
             api_key = settings.LLM_API_KEY
             base_url = settings.LLM_API_BASE_URL
             self.chat_model = settings.LLM_MODEL_NAME
             self.reason_model = settings.LLM_REASON_MODEL_NAME or settings.LLM_MODEL_NAME
-            
-        self._provider_error: Optional[str] = None
-        try:
-            self.provider = OpenAICompatibleProvider(
-                api_key=api_key,
-                base_url=base_url
-            )
-        except Exception as e:
-            self.provider = None
-            self._provider_error = str(e)
-            logger.warning(f"LLM provider unavailable; LLM features disabled: {e}")
-        self.default_model = self.chat_model
-        self.demo_mode = getattr(settings, 'DEMO_MODE', False)
+
+        self._provider = OpenAICompatibleProvider(
+            api_key=api_key,
+            base_url=base_url
+        )
+        if not api_key:
+            self.demo_mode = True
+
+        logger.info(f"[Legacy] LLMService initialized with provider={provider_type}")
+
+    @property
+    def provider(self) -> LLMProvider:
+        """获取当前provider（向后兼容）"""
+        if self._provider is None:
+            self._init_with_router()
+        return self._provider
+
+    @property
+    def default_model(self) -> str:
+        """获取默认模型（向后兼容）"""
+        return self.chat_model
+
+    def switch_model_for_task(self, task_type: TaskType):
+        """
+        根据任务类型动态切换模型
+
+        Args:
+            task_type: 任务类型（如 TaskType.DEEP_REASONING）
+        """
+        if not self.enable_dynamic_routing:
+            logger.warning("Dynamic routing is disabled, cannot switch model")
+            return
+
+        selection = llm_router.select_model(self.agent_role, task_type)
+        kwargs = llm_router.get_openai_client_kwargs(selection)
+
+        self._provider = OpenAICompatibleProvider(
+            api_key=kwargs["api_key"],
+            base_url=kwargs["base_url"]
+        )
+        self.chat_model = kwargs["model"]
+        self.reason_model = kwargs["model"]
+        self._current_selection = selection
+
+        logger.info(
+            f"[LLMRouter] Switched to {kwargs['model']} for task={task_type.value}"
+        )
+
+    def get_current_selection(self) -> Optional[LLMSelection]:
+        """获取当前的模型选择（用于观测）"""
+        return self._current_selection
+
+    @staticmethod
+    def _normalize_agent_role(agent_role: Union[AgentRole, str, Any]) -> AgentRole:
+        if isinstance(agent_role, AgentRole):
+            return agent_role
+        if isinstance(agent_role, str):
+            role_value = agent_role.lower()
+            role_aliases = {
+                "math": AgentRole.MATH_AGENT,
+                "code": AgentRole.CODE_AGENT,
+                "writing": AgentRole.WRITING_AGENT,
+                "science": AgentRole.SCIENCE_AGENT,
+                "search": AgentRole.SEARCH_AGENT,
+            }
+            if role_value in role_aliases:
+                return role_aliases[role_value]
+            try:
+                return AgentRole(role_value)
+            except ValueError:
+                return AgentRole.GENERATION
+        role_value = getattr(agent_role, "value", None)
+        if role_value:
+            role_value = str(role_value).lower()
+            role_aliases = {
+                "math": AgentRole.MATH_AGENT,
+                "code": AgentRole.CODE_AGENT,
+                "writing": AgentRole.WRITING_AGENT,
+                "science": AgentRole.SCIENCE_AGENT,
+                "search": AgentRole.SEARCH_AGENT,
+            }
+            if role_value in role_aliases:
+                return role_aliases[role_value]
+            try:
+                return AgentRole(role_value)
+            except ValueError:
+                return AgentRole.GENERATION
+        return AgentRole.GENERATION
 
     def _check_demo_match(self, messages: List[Dict[str, str]]) -> Optional[str]:
         """
@@ -326,6 +479,7 @@ class LLMService:
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         temperature: float = 0.7,
+        user_context: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
@@ -337,8 +491,10 @@ class LLMService:
                 detail=f"LLM provider unavailable: {self._provider_error or 'missing dependency'}"
             )
         model = model or self.chat_model
+        temperature = self._resolve_temperature(user_context, temperature)
         with tracer.start_as_current_span("llm_stream_chat") as span:
             span.set_attribute("llm.model", model)
+            span.set_attribute("llm.temperature", temperature)
             
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
             mock_response = self._check_demo_match(messages)
@@ -354,24 +510,13 @@ class LLMService:
                 return
 
             logger.debug(f"Starting stream chat with model: {model}")
-            
-            try:
-                await circuit_breaker_service.check("primary_llm")
-                
-                async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
-                    yield chunk
-                    
-                # We only record success if the stream completes without error? 
-                # Streaming is tricky. Let's record success at the end.
-                await circuit_breaker_service.record_success("primary_llm")
-                
-            except CircuitBreakerOpenException:
-                logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
-                raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
-            except Exception as e:
-                await circuit_breaker_service.record_failure("primary_llm")
-                logger.error(f"LLM Stream Chat Error: {e}")
-                raise e
+            stream = self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs)
+            if inspect.isawaitable(stream) and not hasattr(stream, "__aiter__"):
+                stream = await stream
+            if not hasattr(stream, "__aiter__"):
+                raise TypeError("stream_chat must return an async iterator")
+            async for chunk in stream:
+                yield chunk
 
     async def chat_with_tools(
         self,
@@ -384,10 +529,10 @@ class LLMService:
         带工具调用的聊天
         """
         messages = [{"role": "system", "content": system_prompt}]
-        
+
         if conversation_history:
             messages.extend(conversation_history)
-        
+
         messages.append({"role": "user", "content": user_message})
 
         if not self.provider:
@@ -399,14 +544,21 @@ class LLMService:
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
-                
-                response = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    temperature=0.7,
-                )
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "temperature": 0.7,
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                response = await self.provider.client.chat.completions.create(**request_params)
                 
                 choice = response.choices[0]
                 message = choice.message
@@ -459,12 +611,19 @@ class LLMService:
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_continue_after_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
-                
-                response = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    temperature=0.7,
-                )
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                response = await self.provider.client.chat.completions.create(**request_params)
                 choice = response.choices[0]
                 message = choice.message
                 
@@ -485,7 +644,9 @@ class LLMService:
         self,
         system_prompt: str,
         user_message: str,
-        tools: List[Dict[str, Any]]
+        tools: List[Dict[str, Any]],
+        user_context: Optional[Dict[str, Any]] = None,
+        temperature: float = 0.7,
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
@@ -494,6 +655,7 @@ class LLMService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
+        temperature = self._resolve_temperature(user_context, temperature)
 
         if not self.provider:
             raise HTTPException(
@@ -504,16 +666,24 @@ class LLMService:
         if hasattr(self.provider, 'client'):
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
-                
-                stream = await self.provider.client.chat.completions.create(
-                    model=self.default_model,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    stream=True,
-                    temperature=0.7,
-                    stream_options={"include_usage": True}
-                )
+                span.set_attribute("llm.temperature", temperature)
+
+                # 构建 API 请求参数
+                request_params = {
+                    "model": self.default_model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "stream": True,
+                    "temperature": temperature,
+                    "stream_options": {"include_usage": True}
+                }
+
+                # 添加 GLM 特有参数
+                if self._extra_body:
+                    request_params.update(self._extra_body)
+
+                stream = await self.provider.client.chat.completions.create(**request_params)
 
                 collected_tool_call_chunks = {}
                 usage_data = None
@@ -565,21 +735,50 @@ class LLMService:
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
 
+    @staticmethod
+    def _resolve_temperature(user_context: Optional[Dict[str, Any]], default: float) -> float:
+        if not user_context or not isinstance(user_context, dict):
+            return default
+        llm_profile = user_context.get("llm_profile", {}) or {}
+        if not isinstance(llm_profile, dict):
+            return default
+        try:
+            return float(llm_profile.get("temperature", default))
+        except (TypeError, ValueError):
+            return default
+
     async def generate_push_content(
         self,
         user_nickname: str,
         persona: str,
         trigger_type: str,
-        context_data: Dict
+        context_data: Dict,
+        depth_preference: float = 0.5,
+        curiosity_preference: float = 0.5,
     ) -> Dict[str, str]:
         """
         Generate "irresistible" push notification content based on persona.
         """
+        if depth_preference > 0.7:
+            detail_instruction = "Provide detailed context and concrete next steps."
+        elif depth_preference < 0.3:
+            detail_instruction = "Keep it extremely brief, one sentence if possible."
+        else:
+            detail_instruction = "Use moderate detail, 2-3 sentences."
+
+        exploration_instruction = ""
+        if curiosity_preference > 0.6:
+            exploration_instruction = "Add one related fun fact or curiosity hook."
+
         persona_prompts = {
-            "coach": "Role: Strict, discipline-focused Study Coach. Tone: Stern, urgent, authoritative.",
-            "anime": "Role: Gentle, cute, energetic Anime Assistant. Tone: Sweet, encouraging."
+            "coach": f"Role: Strict Study Coach. Tone: Urgent, disciplined. {detail_instruction}",
+            "anime": f"Role: Cute Anime Assistant. Tone: Sweet, encouraging, use emoticons. {detail_instruction}",
+            "mentor": f"Role: Wise Mentor. Tone: Insightful, patient. {detail_instruction}",
+            "friend": f"Role: Friendly Study Buddy. Tone: Casual, supportive. {detail_instruction}",
         }
         selected_persona_prompt = persona_prompts.get(persona, persona_prompts["coach"])
+        if exploration_instruction:
+            selected_persona_prompt = f"{selected_persona_prompt} {exploration_instruction}"
         
         trigger_desc = ""
         if trigger_type == "memory":
@@ -610,5 +809,150 @@ class LLMService:
             logger.error(f"Failed to generate push content: {e}")
             return {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
 
-# Singleton instance
-llm_service = LLMService()
+# ==========================================
+# 全局单例 - 向后兼容
+# ==========================================
+
+# 默认单例（使用新的动态路由）
+llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+
+# 创建专用角色的服务实例（按需使用）
+def get_llm_service(agent_role: Union[AgentRole, str]) -> LLMService:
+    """
+    获取指定角色的LLM服务实例
+
+    Args:
+        agent_role: Agent角色（如 "galaxy_guide", "exam_oracle" 等）
+
+    Example:
+        # 在 galaxy_guide 节点中使用
+        galaxy_llm = get_llm_service("galaxy_guide")
+        response = await galaxy_llm.chat(messages)
+    """
+    return LLMService(agent_role=agent_role, enable_dynamic_routing=True)
+
+
+def get_llm_service_for_task(task_type: TaskType) -> LLMService:
+    """
+    获取适合特定任务的LLM服务实例
+
+    Args:
+        task_type: 任务类型（如 TaskType.DEEP_REASONING）
+
+    Example:
+        # 深度推理任务使用更强的模型
+        reason_llm = get_llm_service_for_task(TaskType.DEEP_REASONING)
+        response = await reason_llm.chat(messages)
+    """
+    from app.core.llm_router import select_model_for_task
+    selection = select_model_for_task(task_type)
+    return LLMService(agent_role=selection.agent_role, enable_dynamic_routing=True)
+
+
+# ==========================================
+# 种子内容库集成 (Seed Content Library Integration)
+# ==========================================
+
+async def build_prompt_with_seed_examples(
+    system_prompt: str,
+    user_message: str,
+    user_id: str,
+    subject: Optional[str] = None,
+    db: Optional[AsyncSession] = None,
+    count: int = 3,
+) -> List[Dict[str, str]]:
+    """
+    使用种子库的 few-shot 示例增强 prompt
+
+    Args:
+        system_prompt: 原始系统提示
+        user_message: 用户消息
+        user_id: 用户ID
+        subject: 学科筛选
+        db: 数据库会话 (可选)
+        count: 需要的示例数量
+
+    Returns:
+        增强后的消息列表
+    """
+    from app.services.seed_library_service import SeedLibraryService
+    from app.db.session import get_db
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # 尝试获取 few-shot 示例
+    if db is None:
+        db_gen = get_db()
+        db = await db_gen.__anext__()
+
+    try:
+        seed_service = SeedLibraryService()
+        examples = await seed_service.get_few_shot_examples(
+            db=db,
+            user_id=uuid.UUID(user_id) if isinstance(user_id, str) else user_id,
+            subject=subject,
+            count=count,
+        )
+
+        if examples:
+            # 添加 few-shot 示例到消息中
+            few_shot_section = "以下是参考示例：\n\n"
+            for i, example in enumerate(examples, 1):
+                few_shot_section += f"### 示例 {i}\n"
+                few_shot_section += f"**问题：** {example.get('input', '')}\n"
+                few_shot_section += f"**解答：** {example.get('output', '')}\n"
+                if example.get('explanation'):
+                    few_shot_section += f"**说明：** {example['explanation']}\n"
+                few_shot_section += "\n"
+
+            # 将示例添加到系统提示后
+            messages[0]["content"] = f"{system_prompt}\n\n{few_shot_section}"
+            logger.debug(f"Added {len(examples)} few-shot examples to prompt")
+
+    except Exception as e:
+        logger.warning(f"Failed to fetch few-shot examples: {e}, using original prompt")
+    finally:
+        # db 是从 get_db() 获取的，不要关闭
+        pass
+
+    messages.append({"role": "user", "content": user_message})
+    return messages
+
+
+async def get_reply_template(
+    template_key: str,
+    user_id: str,
+    language: str = "zh",
+    db: Optional[AsyncSession] = None,
+) -> Optional[str]:
+    """
+    获取回复模板
+
+    Args:
+        template_key: 模板标识
+        user_id: 用户ID
+        language: 语言
+        db: 数据库会话 (可选)
+
+    Returns:
+        模板内容或 None
+    """
+    from app.services.seed_library_service import SeedLibraryService
+    from app.db.session import get_db
+
+    if db is None:
+        db_gen = get_db()
+        db = await db_gen.__anext__()
+
+    try:
+        seed_service = SeedLibraryService()
+        template = await seed_service.get_reply_template(
+            db=db,
+            template_key=template_key,
+            user_id=uuid.UUID(user_id) if isinstance(user_id, str) else user_id,
+            language=language,
+        )
+        return template
+    except Exception as e:
+        logger.warning(f"Failed to fetch reply template '{template_key}': {e}")
+        return None

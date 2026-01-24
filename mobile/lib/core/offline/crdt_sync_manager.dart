@@ -13,6 +13,7 @@ enum SyncType {
 
 class CRDTSyncManager {
   CRDTSyncManager(this._localDb, this._syncEngine);
+  // ignore: unused_field
   final LocalDatabase _localDb;
   final SyncEngine _syncEngine;
   
@@ -36,10 +37,15 @@ class CRDTSyncManager {
 
     // 3. If local change, queue for sync
     if (origin == 'local') {
-      await _syncEngine.enqueue('crdt_update', {
-        'data': base64Encode(update),
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
+      await _syncEngine.enqueue(
+        topic: 'crdt',
+        opType: 'update',
+        payload: {
+          'data': base64Encode(update),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+        entityType: 'crdt_snapshot',
+      );
     }
   }
 

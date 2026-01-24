@@ -37,6 +37,7 @@ import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
+import 'package:sparkle/core/utils/theme_utils.dart';
 
 export 'components/atoms/sparkle_button_v2.dart';
 export 'materials.dart';
@@ -47,6 +48,7 @@ export 'tokens_v2/spacing_token.dart';
 export 'tokens_v2/theme_manager.dart';
 export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
+export '../statistics/statistics.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -213,6 +215,15 @@ class SparkleColorAliases {
   Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
 }
 
+/// Responsive breakpoints for phone layouts.
+class Breakpoints {
+  const Breakpoints._();
+
+  static const double narrow = 360.0;
+  static const double standard = 390.0;
+  static const double wide = 428.0;
+}
+
 /// 设计令牌快捷访问
 class DS {
   DS._();
@@ -247,6 +258,9 @@ class DS {
   static Color get success => _theme.colors.semanticSuccess;
   static Color get warning => _theme.colors.semanticWarning;
   static Color get error => _theme.colors.semanticError;
+  static Color get semanticSuccess => _theme.colors.semanticSuccess;
+  static Color get semanticWarning => _theme.colors.semanticWarning;
+  static Color get semanticError => _theme.colors.semanticError;
   static Color get info => _theme.colors.semanticInfo;
   static Color get primaryBase => brandPrimary;
   static Color get secondaryBase => brandSecondary;
@@ -269,15 +283,26 @@ class DS {
   static Color get surfacePrimary => _theme.colors.surfacePrimary;
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
+  static Color get surfacePrimaryElevated => _blend(
+        surfacePrimary,
+        surfaceTertiary,
+        _isDark ? 0.35 : 0.12,
+      );
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
+  static Color get surfaceBase => surfaceSecondary; // Alias for backward compatibility
 
   // Text colors
   static Color get textPrimary => _theme.colors.textPrimary;
   static Color get textSecondary => _theme.colors.textSecondary;
   static Color get textTertiary =>
       _theme.colors.textSecondary.withValues(alpha: 0.6); // Derived
+  static Color get textOnPrimary => ThemeUtils.getContrastSafeText(
+        brandPrimary,
+        darkText: neutral900,
+      );
+  static Color get onBrandPrimary => textOnPrimary;
   static Color get border => _isDark ? neutral600 : neutral300;
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
@@ -344,9 +369,9 @@ class DS {
 
   // Special surfaces and accents
   static Color get deepSpaceStart =>
-      _blend(neutral900, brandPrimary, _isDark ? 0.12 : 0.22);
+      _blend(neutral900, brandPrimary, _isDark ? 0.08 : 0.28);
   static Color get deepSpaceEnd =>
-      _blend(neutral800, brandSecondary, _isDark ? 0.1 : 0.18);
+      _blend(neutral800, brandSecondary, _isDark ? 0.06 : 0.24);
   static Color get deepSpaceSurface =>
       _blend(surfacePrimary, deepSpaceStart, 0.6);
   static Color get glassBackground =>
@@ -357,6 +382,8 @@ class DS {
   static Color get prismGreen => success;
   static Color get prismPurple => brandSecondary;
   static Color get flameCore => _blend(warning, brandPrimary, 0.4);
+  static Color get capsuleAccent =>
+      _shiftLightness(brandSecondary, _isDark ? 0.12 : -0.05);
 
   // Gradients
   static LinearGradient get primaryGradient =>
@@ -417,6 +444,9 @@ class DS {
   // Layout and sizing
   static const double breakpointTablet = 768.0;
   static const double breakpointDesktop = 1024.0;
+  static const double breakpointNarrow = Breakpoints.narrow;
+  static const double breakpointStandard = Breakpoints.standard;
+  static const double breakpointWide = Breakpoints.wide;
   static const double contentMaxWidthTablet = 720.0;
   static const double contentMaxWidthDesktop = 1200.0;
   static const double touchTargetMinSize = 48.0;
@@ -529,6 +559,7 @@ class DS {
   static Color get statusInvisible => _theme.colors.statusInvisible;
 
   // 中性色
+  static Color get neutral0 => Colors.white;
   static Color get neutral50 =>
       _blend(surfacePrimary, _theme.colors.neutral200, 0.4);
   static Color get neutral100 =>
@@ -543,6 +574,61 @@ class DS {
   static Color get neutral800 =>
       _blend(_theme.colors.neutral600, _theme.colors.textPrimary, 0.7);
   static Color get neutral900 => _theme.colors.textPrimary;
+
+  // 聊天气泡颜色
+  static Color get chatBubbleUser => _theme.colors.chatBubbleUser;
+  static Color get chatBubbleUserText => _theme.colors.chatBubbleUserText;
+  static Color get chatBubbleOther => _theme.colors.chatBubbleOther;
+  static Color get chatBubbleOtherText => _theme.colors.chatBubbleOtherText;
+
+  // Galaxy专用颜色
+  static Color get galaxyBackground => _theme.colors.galaxyBackground;
+  static Color get galaxyShadow => _theme.colors.galaxyShadow;
+
+  // ============================================
+  // 向后兼容属性（用于统计模块）
+  // ============================================
+
+  /// 文本样式快捷方式
+  static TextStyle get textStyle => TextStyle(
+    fontSize: fontSizeBase,
+    fontWeight: fontWeightRegular,
+    color: textPrimary,
+  );
+
+  static TextStyle get headlineStyle => TextStyle(
+    fontSize: fontSizeLg,
+    fontWeight: fontWeightSemibold,
+    color: textPrimary,
+  );
+
+  static TextStyle get bodyStyle => TextStyle(
+    fontSize: fontSizeBase,
+    fontWeight: fontWeightRegular,
+    color: textSecondary,
+  );
+
+  static TextStyle get captionStyle => TextStyle(
+    fontSize: fontSizeSm,
+    fontWeight: fontWeightRegular,
+    color: textTertiary,
+  );
+
+  /// 颜色快捷方式
+  static const Color white = Colors.white;
+  static const Color black = Colors.black;
+
+  /// 圆角快捷方式（用于DSC替代）
+  static const double borderRadiusSM = radius8;
+  static const double borderRadiusMD = radius12;
+  static const double borderRadiusLG = radius16;
+  static const double borderRadiusXL = radius20;
+
+  /// 字体大小快捷方式（别名）
+  static const double fontSizeSM = fontSizeSm;
+  static const double fontSizeMD = fontSizeBase;
+  static const double fontSizeLG = fontSizeLg;
+  static const double fontSizeXL = fontSizeXl;
 }
 
 /// Extension on Color to provide Material Design shade-like methods

@@ -21,6 +21,8 @@ Page<dynamic> _buildTransitionPage({
     );
 
 class UserRoutes {
+  static const String profile = '/profile';
+
   static List<RouteBase> get routes => [
     GoRoute(
         path: '/settings/learning-mode',

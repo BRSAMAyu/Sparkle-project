@@ -381,6 +381,27 @@ class ProductionChatOrchestrator:
             user_context = await user_service.get_context(uuid.UUID(user_id))
             analytics = await user_service.get_analytics_summary(uuid.UUID(user_id))
 
+            llm_profile_data = None
+            preference_version = 0
+            try:
+                from app.services.personalization import get_personalization_engine
+
+                engine = get_personalization_engine(db_session, self.redis)
+                llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
+                prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
+                preference_version = prefs.version
+                llm_profile_data = {
+                    "system_prompt_additions": llm_profile.system_prompt_additions,
+                    "verbosity_target": llm_profile.verbosity_target,
+                    "temperature": llm_profile.temperature,
+                    "should_ask_clarifying": llm_profile.should_ask_clarifying,
+                    "should_provide_examples": llm_profile.should_provide_examples,
+                    "exploration_level": llm_profile.exploration_level,
+                    "tone": llm_profile.tone,
+                }
+            except Exception as e:
+                logger.warning(f"Failed to build LLM profile: {e}")
+
             if user_context:
                 return {
                     "user_context": user_context,
@@ -388,11 +409,16 @@ class ProductionChatOrchestrator:
                     "preferences": {
                         "depth_preference": user_context.preferences.get("depth_preference", 0.5),
                         "curiosity_preference": user_context.preferences.get("curiosity_preference", 0.5),
-                    }
+                    },
+                    "preference_version": preference_version,
+                    "llm_profile": llm_profile_data,
                 }
             else:
                 logger.warning(f"User {user_id} not found, using fallback")
-                return self._get_fallback_context()
+                fallback = self._get_fallback_context()
+                fallback["preference_version"] = preference_version
+                fallback["llm_profile"] = llm_profile_data
+                return fallback
 
         except Exception as e:
             logger.error(f"Failed to build user context: {e}")
@@ -403,7 +429,9 @@ class ProductionChatOrchestrator:
         return {
             "user_context": None,
             "analytics_summary": {"is_active": True, "engagement_level": "medium"},
-            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5}
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "preference_version": 0,
+            "llm_profile": None,
         }
 
     async def _build_conversation_context(self, session_id: str, user_id: str) -> Dict[str, Any]:
@@ -514,14 +542,18 @@ class ProductionChatOrchestrator:
         """
         start_time = time.time()
         request_id = request.request_id
+        response_id = str(uuid.uuid4())
         session_id = request.session_id
         user_id = request.user_id
+        workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
+        prompt_version = (context_data or {}).get("prompt_version", "v1")
+        trace_id = format(trace.get_current_span().get_span_context().trace_id, "032x")
 
         # 消息去重检查
         if await self.message_tracker.is_processed(request_id):
             logger.warning(f"Duplicate request detected: {request_id}")
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -538,7 +570,7 @@ class ProductionChatOrchestrator:
             state = self.circuit_breaker.get_state()
             logger.error(f"Circuit breaker is {state}, rejecting request")
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -554,7 +586,7 @@ class ProductionChatOrchestrator:
         session_tracked = await self._track_session(session_id, add=True)
         if not session_tracked:
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(
@@ -581,11 +613,19 @@ class ProductionChatOrchestrator:
                 cached_response = await self._check_idempotency(session_id, request_id)
             if cached_response:
                 logger.info(f"Cache hit for {session_id}/{request_id}")
+                cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
+                metadata_map = {}
+                if isinstance(cached_metadata, dict):
+                    metadata_map = {str(k): str(v) for k, v in cached_metadata.items()}
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
-                    full_text=cached_response.get("full_text", ""),
+                    trace_id=trace_id,
+                    workflow_id=workflow_id,
+                    prompt_version=prompt_version,
+                    metadata=metadata_map,
+                    full_text=cached_response.get("full_text") or cached_response.get("message", ""),
                     finish_reason=agent_service_pb2.STOP
                 )
                 return
@@ -716,7 +756,7 @@ class ProductionChatOrchestrator:
                 
                 # Yield initial status
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     status_update=agent_service_pb2.AgentStatus(
@@ -741,7 +781,7 @@ class ProductionChatOrchestrator:
                 
                 # Send "Done" status
                 yield agent_service_pb2.ChatResponse(
-                    response_id=f"resp_{uuid.uuid4()}",
+                    response_id=response_id,
                     created_at=int(datetime.now().timestamp()),
                     request_id=request_id,
                     status_update=agent_service_pb2.AgentStatus(
@@ -758,7 +798,7 @@ class ProductionChatOrchestrator:
                          content = msg["content"]
                          prefix = f"**[{msg.get('name', 'Agent')}]**: "
                          yield agent_service_pb2.ChatResponse(
-                            response_id=f"resp_{uuid.uuid4()}",
+                            response_id=response_id,
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             full_text=prefix + content
@@ -777,7 +817,7 @@ class ProductionChatOrchestrator:
 
             # 发送思考状态
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 status_update=agent_service_pb2.AgentStatus(
@@ -805,12 +845,13 @@ class ProductionChatOrchestrator:
                     async for chunk in llm_service.chat_stream_with_tools(
                         system_prompt=base_system_prompt,
                         user_message=user_message,
-                        tools=tools
+                        tools=tools,
+                        user_context=user_context_data,
                     ):
                         if chunk.type == "text":
                             full_response += chunk.content
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 delta=chunk.content
@@ -819,7 +860,7 @@ class ProductionChatOrchestrator:
                         elif chunk.type == "tool_call_end":
                             await self._update_state(session_id, STATE_TOOL_CALLING, f"Calling {chunk.tool_name}...")
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 status_update=agent_service_pb2.AgentStatus(
@@ -837,7 +878,7 @@ class ProductionChatOrchestrator:
                             total_prompt_tokens = chunk.prompt_tokens or 0
                             total_completion_tokens = chunk.completion_tokens or 0
                             yield agent_service_pb2.ChatResponse(
-                                response_id=f"resp_{uuid.uuid4()}",
+                                response_id=response_id,
                                 created_at=int(datetime.now().timestamp()),
                                 request_id=request_id,
                                 usage=agent_service_pb2.Usage(
@@ -863,6 +904,37 @@ class ProductionChatOrchestrator:
                 requires_confirmation=False,
                 confirmation_data=None
             )
+            llm_profile_meta = {}
+            if isinstance(user_context_data, dict):
+                llm_profile_meta = user_context_data.get("llm_profile") or {}
+                if not isinstance(llm_profile_meta, dict):
+                    llm_profile_meta = {}
+            response_metadata = {
+                "response_id": response_id,
+                "trace_id": trace_id,
+                "preference_version": (user_context_data or {}).get("preference_version", 0),
+                "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+            }
+            final_response_data["metadata"] = response_metadata
+
+            try:
+                from app.services.decision_record_service import DecisionRecordService
+
+                decision_service = DecisionRecordService(self.db)
+                await decision_service.record_decision(
+                    user_id=uuid.UUID(str(user_id)),
+                    module="ai",
+                    action="generate_response",
+                    preference_version=(user_context_data or {}).get("preference_version", 0),
+                    preferences_snapshot={
+                        "verbosity": llm_profile_meta.get("verbosity_target"),
+                        "temperature": llm_profile_meta.get("temperature"),
+                        "tone": llm_profile_meta.get("tone"),
+                    },
+                    outcome=f"Generated response with {len(full_response)} chars",
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record decision: {e}")
 
             # 缓存响应
             await self._cache_response(session_id, request_id, final_response_data)
@@ -875,9 +947,13 @@ class ProductionChatOrchestrator:
 
             # 发送最终响应
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                metadata={str(k): str(v) for k, v in final_response_data.get("metadata", {}).items()},
                 full_text=final_response_data.get("message", full_response),
                 finish_reason=agent_service_pb2.STOP
             )
@@ -905,7 +981,7 @@ class ProductionChatOrchestrator:
 
             # 发送错误响应
             yield agent_service_pb2.ChatResponse(
-                response_id=f"resp_{uuid.uuid4()}",
+                response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
                 request_id=request_id,
                 error=agent_service_pb2.Error(

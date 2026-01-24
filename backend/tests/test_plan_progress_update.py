@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import Task, TaskStatus
-from app.models.plan import Plan
+from app.models.task import Task, TaskStatus, TaskType
+from app.models.plan import Plan, PlanType
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 
@@ -33,7 +33,7 @@ async def test_plan_progress_updates_on_task_completion(db_session: AsyncSession
         id=uuid4(),
         user_id=user_id,
         name="期末数学复习",
-        type="exam_prep",
+        type=PlanType.SPRINT,
         subject="数学",
         progress=0.0,  # Initially 0%
         target_date=datetime.utcnow() + timedelta(days=7),
@@ -51,7 +51,7 @@ async def test_plan_progress_updates_on_task_completion(db_session: AsyncSession
             user_id=user_id,
             plan_id=plan.id,
             title=f"复习任务 {i+1}",
-            type="review",
+            type=TaskType.LEARNING,
             status=TaskStatus.PENDING,
             estimated_minutes=30,
         )
@@ -108,7 +108,7 @@ async def test_plan_progress_update_via_api_endpoint(db_session: AsyncSession):
         id=uuid4(),
         user_id=user_id,
         name="期末英语复习",
-        type="exam_prep",
+        type=PlanType.SPRINT,
         subject="英语",
         progress=0.0,
         target_date=datetime.utcnow() + timedelta(days=5),
@@ -122,7 +122,7 @@ async def test_plan_progress_update_via_api_endpoint(db_session: AsyncSession):
         user_id=user_id,
         plan_id=plan.id,
         title="背单词",
-        type="memorization",
+        type=TaskType.LEARNING,
         status=TaskStatus.PENDING,
         estimated_minutes=20,
     )
@@ -131,7 +131,7 @@ async def test_plan_progress_update_via_api_endpoint(db_session: AsyncSession):
         user_id=user_id,
         plan_id=plan.id,
         title="做听力",
-        type="practice",
+        type=TaskType.TRAINING,
         status=TaskStatus.PENDING,
         estimated_minutes=30,
     )
@@ -166,7 +166,7 @@ async def test_plan_progress_with_no_tasks(db_session: AsyncSession):
         id=uuid4(),
         user_id=user_id,
         name="空计划",
-        type="sprint",
+        type=PlanType.SPRINT,
         progress=0.0,
         is_active=True,
     )
@@ -192,7 +192,7 @@ async def test_plan_progress_ignores_other_users_tasks(db_session: AsyncSession)
         id=uuid4(),
         user_id=user_a,
         name="User A's Plan",
-        type="sprint",
+        type=PlanType.SPRINT,
         progress=0.0,
         is_active=True,
     )

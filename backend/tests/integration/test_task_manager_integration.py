@@ -174,7 +174,7 @@ class TestTaskManagerIntegration:
             return "success"
 
         task = await task_manager.spawn_with_retry(
-            flaky_task(),
+            flaky_task,
             task_name="retry_task",
             max_retries=3,
             retry_delay=0.05

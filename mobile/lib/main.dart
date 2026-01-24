@@ -9,6 +9,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/chat/chat.dart';
+import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
 
 void main() async {
   try {
@@ -22,6 +23,13 @@ void main() async {
 
     // Register Chat Adapters
     ChatCacheService.registerAdapters();
+
+    // Initialize Local Database (Isar)
+    await LocalDatabase().init();
+
+    // Migrate legacy Hive cognitive queue into Outbox
+    await LocalCognitiveRepository(localDb: LocalDatabase())
+        .migrateToOutboxIfNeeded();
 
     // Initialize SharedPrefs
     await SharedPreferences.getInstance();
@@ -39,8 +47,8 @@ void main() async {
     DemoDataService.isDemoMode = isDemoMode;
 
     // TODO: Open Hive boxes
-    await Hive.openBox('settings');
-    await Hive.openBox('user');
+    await Hive.openBox<dynamic>('settings');
+    await Hive.openBox<dynamic>('user');
 
     runApp(
       const ProviderScope(

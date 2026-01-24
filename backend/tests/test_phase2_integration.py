@@ -23,8 +23,7 @@ async def test_full_agent_flow_with_redis():
     """
     from app.orchestration.orchestrator import ChatOrchestrator
     from app.gen.agent.v1 import agent_service_pb2
-    from app.services.llm.service import StreamChunk
-    import app.services.llm_service as llm_service_module
+    from app.services.llm_service import StreamChunk, llm_service
     
     # Setup mocks
     redis_mock = AsyncMock()
@@ -85,7 +84,7 @@ async def test_full_agent_flow_with_redis():
         mock_ks.return_value = mock_ks_instance
         
         # Mock LLM service
-        original_chat_stream = llm_service_module.llm_service.chat_stream_with_tools
+        original_chat_stream = llm_service.chat_stream_with_tools
         
         async def mock_chat_stream(*args, **kwargs):
             # Simulate LLM response with tool call
@@ -97,7 +96,7 @@ async def test_full_agent_flow_with_redis():
                 full_arguments={"title": "Learn Python", "estimated_minutes": 30}
             )
         
-        llm_service_module.llm_service.chat_stream_with_tools = mock_chat_stream
+        llm_service.chat_stream_with_tools = mock_chat_stream
         
         try:
             # Create orchestrator
@@ -127,7 +126,7 @@ async def test_full_agent_flow_with_redis():
             print("✅ Full Agent Flow test passed")
             
         finally:
-            llm_service_module.llm_service.chat_stream_with_tools = original_chat_stream
+            llm_service.chat_stream_with_tools = original_chat_stream
 
 
 @pytest.mark.asyncio
@@ -159,13 +158,13 @@ async def test_idempotency_flow():
     )
     
     # Mock LLM
-    import app.services.llm_service as llm_service_module
-    original = llm_service_module.llm_service.chat_stream_with_tools
+    from app.services.llm_service import llm_service, StreamChunk
+    original = llm_service.chat_stream_with_tools
     
     async def mock_stream(*args, **kwargs):
         yield StreamChunk(type="text", content="First response")
     
-    llm_service_module.llm_service.chat_stream_with_tools = mock_stream
+    llm_service.chat_stream_with_tools = mock_stream
     
     try:
         # First request
@@ -193,7 +192,7 @@ async def test_idempotency_flow():
         print("✅ Idempotency test passed")
         
     finally:
-        llm_service_module.llm_service.chat_stream_with_tools = original
+        llm_service.chat_stream_with_tools = original
 
 
 @pytest.mark.asyncio
@@ -233,14 +232,14 @@ async def test_concurrent_session_protection():
     )
     
     # Mock LLM
-    import app.services.llm_service as llm_service_module
-    original = llm_service_module.llm_service.chat_stream_with_tools
+    from app.services.llm_service import llm_service
+    original = llm_service.chat_stream_with_tools
     
     async def slow_stream(*args, **kwargs):
         await asyncio.sleep(0.1)  # Simulate slow processing
         yield StreamChunk(type="text", content="Response")
     
-    llm_service_module.llm_service.chat_stream_with_tools = slow_stream
+    llm_service.chat_stream_with_tools = slow_stream
     
     try:
         # Start two concurrent requests
@@ -278,7 +277,7 @@ async def test_concurrent_session_protection():
         print("✅ Concurrent session protection test passed")
         
     finally:
-        llm_service_module.llm_service.chat_stream_with_tools = original
+        llm_service.chat_stream_with_tools = original
 
 
 if __name__ == "__main__":

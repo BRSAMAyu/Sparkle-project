@@ -4,11 +4,13 @@ STT (Speech to Text) API
 """
 from typing import Any
 from fastapi import APIRouter, UploadFile, File, WebSocket, Form, Depends, HTTPException, status
+from typing import Optional
 from app.services.stt_service import stt_service
 import os
 import uuid
 from app.config import settings
 from app.api.deps import get_current_user
+from app.config import settings
 from app.core.security import decode_token
 from app.utils.helpers import save_upload_file
 
@@ -67,7 +69,7 @@ async def websocket_endpoint(websocket: WebSocket):
     Client sends binary audio chunks.
     Server returns JSON: {"type": "transcription", "text": "...", "is_final": bool}
     """
-    token = websocket.query_params.get("token")
+    token = _extract_ws_token(websocket)
     if not token:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -77,3 +79,27 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     await stt_service.handle_websocket_stream(websocket)
+
+
+def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
+    auth_header = websocket.headers.get("authorization")
+    if auth_header:
+        parts = auth_header.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return parts[1].strip()
+
+    protocol = websocket.headers.get("sec-websocket-protocol")
+    if protocol:
+        for part in protocol.split(","):
+            candidate = part.strip()
+            lower = candidate.lower()
+            if lower.startswith("bearer "):
+                return candidate[7:].strip()
+            if lower.startswith("token="):
+                return candidate[6:].strip()
+            if lower.startswith("token:"):
+                return candidate[6:].strip()
+
+    if settings.WS_ALLOW_QUERY_TOKEN:
+        return websocket.query_params.get("token")
+    return None

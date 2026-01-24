@@ -120,9 +120,7 @@ make grpc-server
 make gateway-run
 ```
 
-> 全容器栈启动：`make dev-up-all`
-> Flower 监控默认不启动，如需启动：
-> `COMPOSE_PROFILES=flower make dev-up-all` 或 `FLOWER_ENABLE=1 make celery-up`
+本地开发以仓库根目录 `.env` 为唯一真源；云端/生产通过环境变量注入配置即可。
 
 ### 后端启动（详细步骤）
 
@@ -133,13 +131,10 @@ docker compose up -d
 # 2. 初始化Python环境
 cd backend
 pip install -r requirements.txt
-pip install -r requirements-llm.txt            # 可选：LLM/向量检索相关功能
-pip install -r requirements-ingestion.txt      # 可选：文档解析（PDF/DOCX/PPTX）
-pip install -r requirements-reporting.txt      # 可选：报告/PDF 生成
-pip install -r requirements-agent-graph.txt    # 可选：V2 Agent Graph (langgraph)
+cd ..
 cp .env.example .env
-# 编辑 .env 配置数据库和API密钥（sync URL 可用，运行时自动转 asyncpg）
-# 例：DATABASE_URL=postgresql://user:pass@localhost:5432/sparkle_db?sslmode=require
+# 编辑根目录 .env 配置数据库和API密钥
+cd backend
 alembic upgrade head
 
 # 3. 启动Python gRPC服务
@@ -152,17 +147,29 @@ go build -o bin/gateway ./cmd/server
 ./bin/gateway
 ```
 
-### 本地数据重置（当数据库密码不一致导致认证失败）
-
+可选自检：
 ```bash
-make db-reset   # 仅清理 postgres_data
-make dev-reset  # 清理 postgres/redis/minio 数据
+make env-check
 ```
 
-### 云数据库连接说明（最小路径）
+快速验收：
+```bash
+make smoke
+```
 
-- 本地 Docker DB：`DATABASE_URL` 指向 `localhost:5432`（主机运行）或 `sparkle_db:5432`（容器内）
-- 云 DB：使用标准连接串，并追加 `?sslmode=require`（或 `verify-full` + `sslrootcert=/path/to/ca.pem`）
+迁移异常处理（安全默认）
+```bash
+# 发生 revision mismatch / 多 head 时，make sync-db 会输出诊断并失败
+# 明确确认后可用以下方式进行保守 stamp（无 --purge）：
+FORCE_STAMP=1 make sync-db
+```
+
+OpenTelemetry（可选）
+```bash
+# 本地建议关闭或指向本地 collector
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+# 如果未设置，将不会启用 exporter
+```
 
 ### 移动端启动
 

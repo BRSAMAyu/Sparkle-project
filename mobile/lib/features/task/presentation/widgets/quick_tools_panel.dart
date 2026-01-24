@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/features/tools/presentation/widgets/breathing_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/calculator_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/flash_capsule_tool.dart';
@@ -16,7 +17,7 @@ class QuickToolsPanel extends StatelessWidget {
   final String? taskId;
 
   void _showTool(BuildContext context, Widget tool) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -29,7 +30,11 @@ class QuickToolsPanel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Wrap(
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = SparkleContextExtension(context).colors;
+
+    return Wrap(
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
@@ -85,6 +90,7 @@ class QuickToolsPanel extends StatelessWidget {
           ),
         ],
       );
+  }
 }
 
 class _ToolButton extends StatelessWidget {
@@ -100,25 +106,60 @@ class _ToolButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: DS.brandPrimaryConst,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: DS.shadowSm,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Use appropriate colors based on theme
+    final bgColor = isDark
+        ? color.withValues(alpha: 0.15)  // Semi-transparent for dark mode
+        : color.withValues(alpha: 0.1);   // Lighter for light mode
+
+    final surfaceColor = isDark
+        ? DS.neutral800
+        : DS.neutral100;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: bgColor,
+            width: 1.5,
           ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: DS.xs),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500,),),
-            ],
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-      );
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark ? DS.neutral300 : DS.neutral700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

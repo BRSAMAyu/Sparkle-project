@@ -3,6 +3,7 @@
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
 import json
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -10,6 +11,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.db.session import get_db
+from app.config import settings
 from app.core.security import decode_token
 from app.api.deps import get_current_user
 from app.core.websocket import manager
@@ -515,7 +517,7 @@ async def search_users(
 async def websocket_endpoint(
     websocket: WebSocket,
     group_id: UUID,
-    token: str = Query(...),
+    token: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -523,8 +525,14 @@ async def websocket_endpoint(
     连接地址: ws://host/api/v1/community/groups/{group_id}/ws?token={jwt_token}
     """
     try:
+        auth_token = token if settings.WS_ALLOW_QUERY_TOKEN else None
+        auth_token = auth_token or _extract_ws_token(websocket)
+        if not auth_token:
+            await websocket.close(code=4003)
+            return
+
         # 验证 Token
-        payload = decode_token(token, expected_type="access")
+        payload = decode_token(auth_token, expected_type="access")
         user_id = payload.get("sub")
         if not user_id:
             await websocket.close(code=4003)
@@ -570,6 +578,30 @@ async def websocket_endpoint(
             pass
 
 
+def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
+    auth_header = websocket.headers.get("authorization")
+    if auth_header:
+        parts = auth_header.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return parts[1].strip()
+
+    protocol = websocket.headers.get("sec-websocket-protocol")
+    if protocol:
+        for part in protocol.split(","):
+            candidate = part.strip()
+            lower = candidate.lower()
+            if lower.startswith("bearer "):
+                return candidate[7:].strip()
+            if lower.startswith("token="):
+                return candidate[6:].strip()
+            if lower.startswith("token:"):
+                return candidate[6:].strip()
+
+    if settings.WS_ALLOW_QUERY_TOKEN:
+        return websocket.query_params.get("token")
+    return None
+
+
 # ============ 群组管理 ============
 
 @router.post("/groups", response_model=GroupInfo, summary="创建群组")
@@ -613,6 +645,15 @@ async def join_group(
     try:
         await GroupService.join_group(db, group_id, current_user.id)
         await db.commit()
+
+        # Broadcast member joined event
+        await manager.broadcast({
+            "type": "member_joined",
+            "group_id": str(group_id),
+            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -628,6 +669,15 @@ async def leave_group(
     try:
         await GroupService.leave_group(db, group_id, current_user.id)
         await db.commit()
+
+        # Broadcast member left event
+        await manager.broadcast({
+            "type": "member_left",
+            "group_id": str(group_id),
+            "user_id": str(current_user.id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -659,6 +709,16 @@ async def transfer_group_owner(
     try:
         await GroupService.transfer_owner(db, group_id, current_user.id, new_owner_id)
         await db.commit()
+
+        # Broadcast owner transfer event
+        await manager.broadcast({
+            "type": "owner_transferred",
+            "group_id": str(group_id),
+            "old_owner_id": str(current_user.id),
+            "new_owner_id": str(new_owner_id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1269,6 +1329,16 @@ async def checkin(
     try:
         result = await CheckinService.checkin(db, current_user.id, data)
         await db.commit()
+
+        # Broadcast member checkin event
+        await manager.broadcast({
+            "type": "member_checkin",
+            "group_id": str(data.group_id),
+            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
+            "duration": data.today_duration_minutes,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(data.group_id))
+
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1287,6 +1357,19 @@ async def create_group_task(
     try:
         task = await GroupTaskService.create_task(db, group_id, current_user.id, data)
         await db.commit()
+
+        # Broadcast task created event
+        await manager.broadcast({
+            "type": "task_created",
+            "group_id": str(group_id),
+            "task": {
+                "id": str(task.id),
+                "title": task.title,
+                "description": task.description,
+                "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
 
         return GroupTaskInfo(
             id=task.id,
@@ -1724,6 +1807,15 @@ async def update_group_moderation_settings(
     try:
         group = await ModerationService.update_moderation_settings(db, group_id, current_user.id, data)
         await db.commit()
+
+        # Broadcast settings updated event
+        await manager.broadcast({
+            "type": "group_settings_updated",
+            "group_id": str(group_id),
+            "settings": data.model_dump(mode='json'),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }, str(group_id))
+
         return {
             "success": True,
             "mute_all": group.mute_all,

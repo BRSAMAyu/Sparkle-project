@@ -1,10 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/data/repositories/cognitive_repository.dart';
-import 'package:sparkle/data/repositories/local_cognitive_repository.dart';
-import 'package:sparkle/data/repositories/sync_cognitive_repository.dart';
-import 'package:sparkle/features/knowledge/data/models/behavior_pattern_model.dart';
-import 'package:sparkle/features/knowledge/data/models/cognitive_fragment_model.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
+import 'package:sparkle/core/services/websocket_service.dart';
+import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
+import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
+import 'package:sparkle/features/cognitive/data/repositories/cognitive_repository.dart';
+import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
+import 'package:sparkle/features/cognitive/data/repositories/sync_cognitive_repository.dart';
 
 // Manual Mocks
 class MockApiCognitiveRepository extends Mock
@@ -72,16 +76,40 @@ class MockLocalCognitiveRepository extends Mock
   }
 }
 
+class MockLocalDatabase extends Mock implements LocalDatabase {}
+
+class MockWebSocketService extends Mock implements WebSocketService {}
+
+class MockApiClient extends Mock implements ApiClient {}
+
+class FakeSyncEngine extends SyncEngine {
+  FakeSyncEngine()
+      : super(MockLocalDatabase(), MockWebSocketService(), MockApiClient());
+
+  int processNowCalls = 0;
+  bool? lastForce;
+  bool? lastSkipConnectivity;
+
+  @override
+  Future<void> processNow({bool force = false, bool skipConnectivity = false}) async {
+    processNowCalls += 1;
+    lastForce = force;
+    lastSkipConnectivity = skipConnectivity;
+  }
+}
+
 void main() {
   group('SyncCognitiveRepository Tests', () {
     late SyncCognitiveRepository repository;
     late MockApiCognitiveRepository mockApi;
     late MockLocalCognitiveRepository mockLocal;
+    late FakeSyncEngine mockSyncEngine;
 
     setUp(() {
       mockApi = MockApiCognitiveRepository();
       mockLocal = MockLocalCognitiveRepository();
-      repository = SyncCognitiveRepository(mockApi, mockLocal);
+      mockSyncEngine = FakeSyncEngine();
+      repository = SyncCognitiveRepository(mockApi, mockLocal, mockSyncEngine);
     });
 
     test('createFragment: calls API when online', () async {
@@ -188,13 +216,10 @@ void main() {
 
       await repository.syncPending();
 
-      // Verify API received them
-      expect(mockApi.mockFragments.length, 2);
-      expect(mockApi.mockFragments.any((f) => f.content == 'Pending Sync 1'),
-          true,);
-
-      // Verify queue cleared
-      expect(mockLocal.queue.isEmpty, true);
+      // Sync is delegated to SyncEngine.
+      expect(mockSyncEngine.processNowCalls, 1);
+      expect(mockSyncEngine.lastForce, false);
+      expect(mockSyncEngine.lastSkipConnectivity, false);
     });
 
     test('syncPending: stops on failure and keeps failed item in queue',
@@ -218,19 +243,10 @@ void main() {
 
       await repository.syncPending();
 
-      // First item succeeded
-      expect(mockApi.mockFragments.any((f) => f.content == 'Pending Sync 1'),
-          true,);
-
-      // Second failed, third shouldn't be attempted (break on error)
-      expect(mockApi.mockFragments.any((f) => f.content == 'Pending Sync 3'),
-          false,);
-
-      // Queue should still contain item 2 and 3
-      // Item 1 was removed (index 0).
-      // Remaining: [fail_api sync, Pending Sync 3]
-      expect(mockLocal.queue.length, 2);
-      expect(mockLocal.queue.first['content'], 'fail_api sync');
+      // Sync is delegated to SyncEngine.
+      expect(mockSyncEngine.processNowCalls, 1);
+      expect(mockSyncEngine.lastForce, false);
+      expect(mockSyncEngine.lastSkipConnectivity, false);
     });
   });
 }

@@ -109,3 +109,26 @@ class GetUserContextParams(BaseModel):
     include_active_plans: bool = Field(default=True, description="是否包含进行中的计划")
     include_error_records: bool = Field(default=False, description="是否包含错题记录")
     days_range: int = Field(default=7, description="查询天数范围", ge=1, le=30)
+
+# ============ 翻译工具参数 ============
+
+class TranslateParams(BaseModel):
+    """翻译参数"""
+    text: str = Field(..., description="需要翻译的文本", max_length=5000)
+    target_language: str = Field(..., description="目标语言", examples=["中文", "English", "日本語"])
+    source_language: str = Field(default="auto", description="源语言，默认为自动检测")
+
+# ============ 联网搜索工具参数 ============
+
+class WebSearchRecencyFilter(str, Enum):
+    """搜索时间范围"""
+    ONE_DAY = "oneDay"
+    ONE_WEEK = "oneWeek"
+    ONE_MONTH = "oneMonth"
+    ONE_YEAR = "oneYear"
+    NO_LIMIT = "noLimit"
+
+class WebSearchContentSize(str, Enum):
+    """返回内容长度"""
+    MEDIUM = "medium"   # 摘要信息
+    HIGH = "high"       # 详细内容

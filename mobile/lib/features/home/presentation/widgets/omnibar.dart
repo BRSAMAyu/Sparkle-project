@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/home/data/repositories/omnibar_repository.dart';
+import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -21,8 +27,9 @@ class _OmniBarState extends ConsumerState<OmniBar>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final AudioRecordingService _recordingService = AudioRecordingService();
   bool _isLoading = false;
-  String? _intentType; // 'TASK', 'CAPSULE', 'CHAT'
+  IntentType? _intentType;
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -42,25 +49,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
   }
 
   void _onTextChanged() {
-    final text = _controller.text.toLowerCase();
-    String? newIntent;
-    // Bilingual support for keywords
-    if (text.contains('提醒') ||
-        text.contains('做') ||
-        text.contains('任务') ||
-        text.contains('task') ||
-        text.contains('remind') ||
-        text.contains('todo')) {
-      newIntent = 'TASK';
-    } else if (text.contains('烦') ||
-        text.contains('想') ||
-        text.contains('！') ||
-        text.contains('feel') ||
-        text.contains('think')) {
-      newIntent = 'CAPSULE';
-    } else if (text.length > 10) {
-      newIntent = 'CHAT';
-    }
+    final text = _controller.text;
+    final newIntent = IntentClassifier.classify(text);
+
+    // Notify intent prediction provider
+    ref.read(intentPredictionProvider.notifier).onInputChanged(text);
 
     if (newIntent != _intentType) {
       setState(() => _intentType = newIntent);
@@ -77,6 +70,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     _controller.dispose();
     _focusNode.dispose();
     _glowController.dispose();
+    _recordingService.dispose();
     super.dispose();
   }
 
@@ -93,6 +87,8 @@ class _OmniBarState extends ConsumerState<OmniBar>
         _controller.clear();
         _focusNode.unfocus();
         setState(() => _intentType = null);
+        // Clear intent prediction
+        ref.read(intentPredictionProvider.notifier).onInputCleared();
       }
     } catch (e) {
       if (mounted) {
@@ -121,11 +117,11 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   Color _getIntentColor() {
     switch (_intentType) {
-      case 'TASK':
+      case IntentType.task:
         return DS.successAccent;
-      case 'CAPSULE':
-        return Colors.purpleAccent;
-      case 'CHAT':
+      case IntentType.capsule:
+        return DS.capsuleAccent;
+      case IntentType.chat:
         return DS.brandPrimaryAccent;
       default:
         return DS.textSecondary.withValues(alpha: 0.15);
@@ -136,94 +132,123 @@ class _OmniBarState extends ConsumerState<OmniBar>
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
 
-    return AnimatedBuilder(
-      animation: _glowAnimation,
-      builder: (context, child) {
-        final color = _getIntentColor();
-        
-        // Base neoGlass material
-        final material = AppMaterials.neoGlass.copyWith(
-           // Higher opacity for floating dock
-           backgroundColor: context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),
-           // Dynamic border based on glow
-           borderColor: color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
-           borderWidth: 1.5,
-           // Dynamic shadow/glow
-           shadows: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.2 * _glowAnimation.value),
-                blurRadius: 12,
-                spreadRadius: 2,
-              ),
-              ...context.sparkleShadows.medium,
-           ],
-        );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < DS.breakpointNarrow;
+        final horizontalPadding = isNarrow ? 8.0 : 12.0;
+        final verticalPadding = isNarrow ? 2.0 : 4.0;
+        final iconSize = isNarrow ? 20.0 : 24.0;
 
-        return MaterialStyler(
-          material: material,
-          borderRadius: BorderRadius.circular(32),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  onSubmitted: enterToSend ? (_) => _submit() : null,
-                  style: context.sparkleTypography.bodyLarge.copyWith(
-                    color: DS.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: _isListening
-                        ? 'Listening...'
-                        : (widget.hintText ?? 'Tell me what you think...'),
-                    hintStyle: context.sparkleTypography.bodyLarge.copyWith(
-                      color: _isListening
-                          ? DS.brandPrimary
-                          : DS.textSecondary.withValues(alpha: 0.5),
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  cursorColor: DS.brandPrimary,
+        return AnimatedBuilder(
+          animation: _glowAnimation,
+          builder: (context, child) {
+            final color = _getIntentColor();
+            final glowBlur = isNarrow ? 8.0 : 12.0;
+            final glowSpread = isNarrow ? 1.0 : 2.0;
+
+            // Base neoGlass material
+            final material = AppMaterials.neoGlass.copyWith(
+              // Higher opacity for floating dock
+              backgroundColor:
+                  context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),
+              // Dynamic border based on glow
+              borderColor:
+                  color.withValues(alpha: 0.3 + _glowAnimation.value * 0.4),
+              borderWidth: 1.5,
+              // Dynamic shadow/glow
+              shadows: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.2 * _glowAnimation.value),
+                  blurRadius: glowBlur,
+                  spreadRadius: glowSpread,
                 ),
+                ...context.sparkleShadows.medium,
+              ],
+            );
+
+            return MaterialStyler(
+              material: material,
+              borderRadius: BorderRadius.circular(32),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
-              if (_isLoading)
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
-                      ),),
-                )
-              else if (_controller.text.isEmpty && !_isListening)
-                IconButton(
-                  icon: Icon(Icons.mic, color: DS.brandPrimary),
-                  onPressed: _toggleListening,
-                  tooltip: '语音输入',
-                )
-              else
-                IconButton(
-                  icon: Icon(
-                    _isListening
-                        ? Icons.stop_circle_outlined
-                        : (_intentType == 'CHAT'
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      onSubmitted: enterToSend ? (_) => _submit() : null,
+                      style: context.sparkleTypography.bodyLarge.copyWith(
+                        color: DS.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: _isListening
+                            ? 'Listening...'
+                            : (widget.hintText ?? 'Tell me what you think...'),
+                        hintStyle: context.sparkleTypography.bodyLarge.copyWith(
+                          color: _isListening
+                              ? DS.brandPrimary
+                              : DS.textSecondary.withValues(alpha: 0.5),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      cursorColor: DS.brandPrimary,
+                    ),
+                  ),
+                  if (_isLoading)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                        ),
+                      ),
+                    )
+                  else if (_controller.text.isEmpty && !_isListening)
+                    IconButton(
+                      icon: Icon(Icons.mic,
+                          color: DS.brandPrimary, size: iconSize,),
+                      onPressed: _toggleListening,
+                      tooltip: '语音输入',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: DS.touchTargetMinSize,
+                        minHeight: DS.touchTargetMinSize,
+                      ),
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(
+                        _isListening
+                            ? Icons.stop_circle_outlined
+                        : (_intentType == IntentType.chat
                             ? Icons.auto_awesome
                             : Icons.arrow_upward_rounded),
-                    color: _isListening
-                        ? DS.error
-                        : (_intentType != null
-                            ? color
-                            : DS.textSecondary.withValues(alpha: 0.7)),
-                    size: 24,
-                  ),
-                  onPressed: _isListening ? _toggleListening : _submit,
-                ),
-            ],
-          ),
+                        color: _isListening
+                            ? DS.error
+                            : (_intentType != null
+                                ? color
+                                : DS.textSecondary.withValues(alpha: 0.7)),
+                        size: iconSize,
+                      ),
+                      onPressed: _isListening ? _toggleListening : _submit,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: DS.touchTargetMinSize,
+                        minHeight: DS.touchTargetMinSize,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -231,31 +256,113 @@ class _OmniBarState extends ConsumerState<OmniBar>
 
   bool _isListening = false;
 
-  void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-    });
+  Future<bool> _checkPermissions() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('需要麦克风权限才能使用语音输入'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+      return false;
+    }
+    return true;
+  }
 
+  Future<void> _toggleListening() async {
     if (_isListening) {
-      _glowController.repeat(reverse: true);
-      // Feature: Implement WebSocket audio streaming
-      // See: lib/core/services/websocket_service.dart
-      // For UI demo, simulate text input after 2 seconds
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _isListening) {
-          setState(() {
-            _isListening = false;
-            _controller.text = '创建一个复习离散数学的计划';
-            _onTextChanged();
-            _glowController.stop();
-            _glowController.reset();
-            _glowController.forward();
-          });
-        }
+      // Stop listening
+      await _recordingService.stopRecording();
+      setState(() {
+        _isListening = false;
       });
-    } else {
       _glowController.stop();
       _glowController.reset();
+      return;
+    }
+
+    // Start listening
+    final hasPermission = await _checkPermissions();
+    if (!hasPermission) {
+      return;
+    }
+
+    // Get auth token
+    final authToken = await ref.read(authRepositoryProvider).getAccessToken();
+    if (authToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('未登录，请先登录'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+    _glowController.repeat(reverse: true);
+
+    final wsUrl = '${ApiConstants.wsBaseUrl}${ApiConstants.wsStt}';
+
+    try {
+      await _recordingService.startRecording(
+        wsUrl: wsUrl,
+        authToken: authToken,
+        onTranscription: (text) {
+          if (mounted) {
+            setState(() {
+              _controller.text = text;
+            });
+            _onTextChanged();
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+            });
+            _glowController.stop();
+            _glowController.reset();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('语音识别失败: $error'),
+                backgroundColor: DS.error,
+              ),
+            );
+          }
+        },
+        onCompleted: () {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+            });
+            _glowController.stop();
+            _glowController.reset();
+          }
+        },
+        maxDuration: const Duration(seconds: 30),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+        _glowController.stop();
+        _glowController.reset();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('启动录音失败: $e'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
     }
   }
 }

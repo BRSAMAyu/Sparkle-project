@@ -4,20 +4,52 @@ WebSocket 测试客户端
 """
 import asyncio
 import json
+import os
+import time
+from jose import jwt as jose_jwt
+from pathlib import Path
 import websockets
 from loguru import logger
+
+
+def _load_jwt_secret() -> str:
+    env_secret = os.getenv("JWT_SECRET")
+    if env_secret:
+        return env_secret
+    for path in (Path(__file__).resolve().parents[1] / ".env", Path(__file__).resolve().parent / "gateway" / ".env"):
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.startswith("JWT_SECRET="):
+                    return line.split("=", 1)[1].strip()
+    return "dev-secret-key"
+
+
+JWT_SECRET = _load_jwt_secret()
+
+
+def _create_jwt(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": int(time.time()) + 3600,
+    }
+    return jose_jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
 async def test_websocket_chat():
     """
     测试 WebSocket 流式对话
     """
-    uri = "ws://localhost:8080/ws/chat?user_id=test_user"
+    user_id = DEFAULT_USER_ID
+    token = _create_jwt(user_id)
+    uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
 
+    headers = {"Authorization": f"Bearer {token}"}
     logger.info(f"🔌 Connecting to WebSocket: {uri}")
 
     try:
-        async with websockets.connect(uri) as websocket:
+        async with websockets.connect(uri, additional_headers=headers) as websocket:
             logger.success("✅ WebSocket connected!")
 
             # 发送测试消息
@@ -104,11 +136,14 @@ async def test_multiple_messages():
     """
     测试多轮对话
     """
-    uri = "ws://localhost:8080/ws/chat?user_id=test_user"
+    user_id = DEFAULT_USER_ID
+    token = _create_jwt(user_id)
+    uri = f"ws://localhost:8080/ws/chat?user_id={user_id}&token={token}"
 
+    headers = {"Authorization": f"Bearer {token}"}
     logger.info(f"🔌 Testing multiple messages...")
 
-    async with websockets.connect(uri) as websocket:
+    async with websockets.connect(uri, additional_headers=headers) as websocket:
         messages = [
             "帮我制定高数复习计划",
             "什么是微积分？",

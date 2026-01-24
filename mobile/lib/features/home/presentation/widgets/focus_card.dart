@@ -43,6 +43,9 @@ class _FocusCardState extends ConsumerState<FocusCard>
     final flameLevel = dashboardState.flame.level;
     final tasksCompleted = dashboardState.flame.tasksCompleted;
     final nudgeMessage = dashboardState.flame.nudgeMessage;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerColor = isDark ? DS.textPrimary : DS.textSecondary;
+    final secondaryColor = isDark ? DS.textPrimary : DS.textSecondary;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -54,6 +57,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
         padding: const EdgeInsets.all(DS.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Row(
@@ -62,7 +66,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                 Text(
                   '专注核心',
                   style: context.sparkleTypography.labelSmall.copyWith(
-                    color: DS.textSecondary.withValues(alpha: 0.7),
+                    color: headerColor.withValues(alpha: 0.85),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -80,15 +84,16 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
-                      color: DS.textSecondary,
+                      color: secondaryColor,
                     ),
                   ),
                 ),
               ],
             ),
 
-            Expanded(
+            Flexible(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Flame Animation
@@ -97,8 +102,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     builder: (context, child) => Transform.scale(
                       scale: _flameAnimation.value,
                       child: Container(
-                        width: 60,
-                        height: 60,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
                             colors: [
@@ -112,32 +117,35 @@ class _FocusCardState extends ConsumerState<FocusCard>
                         child: Icon(
                           Icons.local_fire_department_rounded,
                           color: DS.warning,
-                          size: 32,
+                          size: 28,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: DS.md),
                   // Nudge Message
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: SizedBox(
-                  height: 40,
-                  child: Text(
-                    nudgeMessage,
-                    textAlign: TextAlign.center,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontSize: 11,
-                      height: 1.3,
-                      color: DS.textSecondary.withValues(alpha: 0.9),
-                      fontStyle: FontStyle.italic,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        nudgeMessage,
+                        textAlign: TextAlign.center,
+                        style: context.sparkleTypography.bodyMedium.copyWith(
+                          fontSize: 10,
+                          height: 1.3,
+                          color: secondaryColor.withValues(alpha: 0.9),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -169,27 +177,30 @@ class _FocusCardState extends ConsumerState<FocusCard>
     );
   }
 
-  Widget _buildMetric(BuildContext context, String value, String label) =>
-      Column(
-        children: [
-          Text(
-            value,
-            style: context.sparkleTypography.titleLarge.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: DS.textSecondary,
-            ),
+  Widget _buildMetric(BuildContext context, String value, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = isDark ? DS.textPrimary : DS.textSecondary;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: context.sparkleTypography.titleLarge.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: secondaryColor,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: context.sparkleTypography.labelSmall.copyWith(
-              fontSize: 10,
-              color: DS.textSecondary.withValues(alpha: 0.6),
-            ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: context.sparkleTypography.labelSmall.copyWith(
+            fontSize: 10,
+            color: secondaryColor.withValues(alpha: 0.7),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
   String _formatFocusTime(int minutes) {
     if (minutes < 60) return '${minutes}m';

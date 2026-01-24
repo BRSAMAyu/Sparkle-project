@@ -688,3 +688,49 @@ class OfflineMessageQueue(BaseModel):
         Index('idx_offline_queue_user_status', 'user_id', 'status'),
         UniqueConstraint('user_id', 'client_nonce', name='uq_offline_queue_nonce'),
     )
+
+
+# ============ 动态广场系统 (Post) ============
+
+class Post(BaseModel):
+    """
+    社区动态表
+    """
+    __tablename__ = "posts"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    content = Column(Text, nullable=True)
+    image_urls = Column(JSON, nullable=True)  # List[str]
+    topic = Column(String(100), nullable=True)
+    
+    # 可见性控制
+    visibility = Column(String(20), default="public", nullable=False) # public, friends, private
+
+    # 统计
+    like_count = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+
+    # 关系
+    user = relationship("User")
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+
+
+class PostLike(BaseModel):
+    """
+    动态点赞表
+    """
+    __tablename__ = "post_likes"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # 关系
+    user = relationship("User")
+    post = relationship("Post", back_populates="likes")
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'post_id', name='uq_post_like'),
+        Index('idx_post_like_user', 'user_id'),
+        Index('idx_post_like_post', 'post_id'),
+    )
