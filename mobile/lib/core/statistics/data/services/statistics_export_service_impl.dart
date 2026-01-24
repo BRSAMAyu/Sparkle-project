@@ -2,11 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 import 'package:sparkle/core/statistics/domain/services/statistics_export_service.dart';
-
-// part 'statistics_export_service_impl.g.dart';
 
 /// Default implementation of the statistics export service
 ///
@@ -122,7 +119,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       // Create a simple placeholder preview
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      final size = Size(200, 200);
+      final size = ExportDimensions(200, 200);
 
       // Draw background
       final bgPaint = Paint()..color = Colors.white;
@@ -225,9 +222,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     // 3. Apply the scale factor for high-resolution output
 
     // Use a default size for now - the ExportSize configuration needs to be refactored
-    const size = Size(1080, 1920);
+    const size = ExportDimensions(1080, 1920);
 
-    final scaledSize = Size(
+    final scaledSize = ExportDimensions(
       size.width * config.pngScale,
       size.height * config.pngScale,
     );
@@ -386,9 +383,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   Future<void> _drawPngReportData(
     Canvas canvas,
     T statistics,
-    Size size,
+    ExportDimensions size,
     StatisticsExportConfig config,
-  }) async {
+  ) async {
     // Default: draw a placeholder message
     final msgPainter = TextPainter(
       text: TextSpan(
@@ -397,8 +394,8 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
           fontSize: 28 * config.pngScale,
           color: Colors.white.withValues(alpha: 0.8),
         ),
-        textAlign: TextAlign.center,
       ),
+      textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
     msgPainter.layout(maxWidth: size.width - 100 * config.pngScale);

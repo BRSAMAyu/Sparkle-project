@@ -41,7 +41,7 @@ class AgentStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalCalls.toDouble();
 
-  const AgentStatisticsData({
+  AgentStatisticsData({
     required this.id,
     required this.period,
     required this.lastRefreshedAt,
@@ -200,9 +200,9 @@ class AgentStatistics extends _$AgentStatistics {
         period,
         forceRefresh: forceRefresh,
       );
-      state = state.withData(data, period: period);
+      state = state.withData(data, newPeriod: period);
     } catch (e) {
-      state = state.withError('加载失败: ${e.toString()}');
+      state = state.withError('加载失败: $e');
     }
   }
 

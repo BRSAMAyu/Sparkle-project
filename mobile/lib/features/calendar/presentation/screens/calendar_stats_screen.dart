@@ -23,7 +23,6 @@ import 'package:sparkle/shared/widgets/draggable_task_card.dart'
     show CalendarDayDragTarget;
 
 // Import task provider for updating tasks
-import 'package:sparkle/features/task/data/models/task_create.dart' show TaskUpdate;
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
     show taskListProvider;
 import 'package:sparkle/shared/entities/task_model.dart';

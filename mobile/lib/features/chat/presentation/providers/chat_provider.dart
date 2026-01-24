@@ -42,6 +42,8 @@ class ChatState {
     this.lastActionStatus,
     this.lastActionMessage,
     this.attachedFiles = const [],
+    this.pendingPlanReview,
+    this.pendingReviewActionId,
   });
   final bool isLoading;
   final bool isSending;

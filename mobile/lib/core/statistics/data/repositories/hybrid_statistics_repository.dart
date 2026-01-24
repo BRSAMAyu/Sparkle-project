@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:isar/isar.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
@@ -361,12 +362,13 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
 
     final totalSize = allEntries.fold<int>(
       0,
-      (sum, entry) => sum + entry.dataSize,
+      (int sum, CachedStatisticsModel entry) => sum + entry.dataSize,
     );
 
     if (totalSize > cacheConfig.warmCacheMaxSizeBytes) {
       // Sort by last accessed time and remove oldest
-      allEntries.sort((a, b) => a.lastAccessedAt.compareTo(b.lastAccessedAt));
+      allEntries.sort((CachedStatisticsModel a, CachedStatisticsModel b) =>
+          a.lastAccessedAt.compareTo(b.lastAccessedAt));
 
       var currentSize = totalSize;
       int index = 0;
@@ -426,8 +428,8 @@ class _CacheEntry<T extends StatisticsEntity> {
 
 /// Extension for DateTime comparison
 extension DateTimeComparison on DateTime {
-  bool isBefore(DateTime other) =>
-      isAtSameMomentAs(other) || super.isBefore(other);
+  bool isBeforeOrSame(DateTime other) =>
+      isAtSameMomentAs(other) || isBefore(other);
 }
 
 /// Provider for hybrid cache config
