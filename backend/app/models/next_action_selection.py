@@ -4,16 +4,48 @@ Next Action Selection Model
 追踪用户对任务完成后的next_action建议的选择行为，
 用于个性化推荐和偏好学习。
 """
+import json
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, TypeDecorator, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import BaseModel, GUID
 
-JSONBCompat = JSONB(astext_type=String).with_variant(JSONB(), "sqlite")
+
+class JSONCompat(TypeDecorator):
+    """
+    跨数据库兼容的 JSON 类型
+
+    - PostgreSQL: 使用 JSONB 类型
+    - SQLite/其他: 使用 TEXT 存储 JSON 字符串
+    """
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB(astext_type=Text))
+        else:
+            return dialect.type_descriptor(Text())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        return json.dumps(value, ensure_ascii=False)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
 
 
 class NextActionSelection(BaseModel):
@@ -42,7 +74,7 @@ class NextActionSelection(BaseModel):
     displayed_actions_count = Column(Integer, nullable=True)  # 总共显示了多少个建议
 
     # 额外上下文信息
-    context = Column(JSONBCompat, nullable=True)  # 扩展信息
+    context = Column(JSONCompat, nullable=True)  # 扩展信息
 
     def __repr__(self):
         return f"<NextActionSelection(user_id={self.user_id}, action_type={self.action_type}, selected={self.selected})>"

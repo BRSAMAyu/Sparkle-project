@@ -263,7 +263,7 @@ class LocalTranslationRepository {
         .sourceLanguageEqualTo(sourceLanguage)
         .and()
         .targetLanguageEqualTo(targetLanguage)
-        .sortByCreatedAtDesc()
+        .sortByCreatedAt()
         .limit(1)
         .findAll();
 
