@@ -49,9 +49,11 @@ class PlanContextBuilder:
         user_id: UUID,
         plan_id: Optional[UUID],
         include_task_index: bool = True,
+        include_recent_tasks: bool = True,
         include_feedback_log: bool = False,
         max_milestones: int = 5,
         max_feedback_entries: int = 10,
+        max_recent_tasks: int = 5,
     ) -> Dict[str, Any]:
         """
         Build plan context from PlanState.
@@ -122,6 +124,10 @@ class PlanContextBuilder:
                     k: {"total": v.get("total", 0), "completed": v.get("completed", 0)}
                     for k, v in by_type.items()
                 }
+
+        # Include recent task summaries (lightweight)
+        if include_recent_tasks and state.task_summaries:
+            context["recent_tasks"] = (state.task_summaries or [])[:max_recent_tasks]
 
         # Include feedback_log (optional, truncated)
         if include_feedback_log and state.feedback_log:

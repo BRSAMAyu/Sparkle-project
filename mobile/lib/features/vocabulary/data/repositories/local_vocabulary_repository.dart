@@ -141,7 +141,7 @@ class LocalVocabularyRepository {
   }) async {
     final words = await _vocabWordCollection
         .filter()
-        .sortByCreatedAtDesc()
+        .sortByCreatedAt()
         .offset(offset)
         .limit(limit)
         .findAll();
@@ -301,7 +301,7 @@ class LocalVocabularyRepository {
     final dueCount = await getDueCount();
     final highImportance = await _vocabWordCollection
         .filter()
-        .importanceGreaterThanOrEqualTo(4)
+        .importanceGreaterThan(3)
         .count();
 
     // Get review stats

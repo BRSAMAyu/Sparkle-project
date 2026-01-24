@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
@@ -29,16 +30,34 @@ class TaskFeedbackDialog extends ConsumerStatefulWidget {
 class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   int? _rating;
   final _feedbackController = TextEditingController();
+  bool _hasRecordedSkip = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _feedbackController.dispose();
+    // Track skip if user hasn't interacted with any next action
+    _recordSkipIfNeeded();
     super.dispose();
   }
 
-  void _handleSubmit() {
+  void _recordSkipIfNeeded() {
+    if (!_hasRecordedSkip && widget.result.nextActions.isNotEmpty) {
+      ref.read(taskListProvider.notifier).recordNextActionsSkip(
+            widget.taskId,
+            widget.result.nextActions,
+          );
+    }
+  }
+
+  Future<void> _handleSubmit() async {
+    if (_isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+
+    TaskFeedbackResponse? response;
     if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
-      ref.read(taskListProvider.notifier).submitTaskFeedback(
+      response = await ref.read(taskListProvider.notifier).submitTaskFeedbackWithResponse(
             widget.taskId,
             TaskFeedbackSubmission(
               completionQuality: _rating,
@@ -48,10 +67,121 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
             ),
           );
     }
+
+    setState(() => _isSubmitting = false);
+
+    // Show success message
+    if (mounted) {
+      _showFeedbackSuccess(response);
+    }
     widget.onClose();
   }
 
-  void _handleNextAction(NextAction action) {
+  void _showFeedbackSuccess(TaskFeedbackResponse? response) {
+    if (!mounted) return;
+
+    final message = response?.message ?? '反馈已提交';
+    final hasPreferenceUpdates = response?.preferenceUpdates != null;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: DS.semanticSuccess),
+            const SizedBox(width: DS.spacing12),
+            Text(message),
+            if (hasPreferenceUpdates) ...[
+              const SizedBox(width: DS.spacing8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
+                decoration: BoxDecoration(
+                  color: DS.semanticSuccess.withValues(alpha: 0.2),
+                  borderRadius: DS.borderRadius4,
+                ),
+                child: Text(
+                  '偏好已更新',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: DS.semanticSuccess,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        backgroundColor: DS.neutral800,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        action: response?.preferenceUpdates != null
+            ? SnackBarAction(
+                label: '查看',
+                textColor: DS.semanticSuccess,
+                onPressed: () {
+                  _showPreferenceDetailDialog(response!.preferenceUpdates!);
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  void _showPreferenceDetailDialog(PreferenceUpdates updates) {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('偏好更新'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (updates.depthPreference != null) ...[
+              Text('深度偏好: ${_formatDelta(updates.depthPreference)}'),
+              const SizedBox(height: DS.sm),
+            ],
+            if (updates.difficultyPreference != null) ...[
+              Text('难度偏好: ${_formatDelta(updates.difficultyPreference)}'),
+            ],
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '这些偏好将用于个性化推荐你的下一步学习内容。',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDelta(double? delta) {
+    if (delta == null) return '-';
+    final sign = delta >= 0 ? '+' : '';
+    return '$sign${delta.toStringAsFixed(2)}';
+  }
+
+  void _handleNextAction(NextAction action, int position) {
+    // Mark that user interacted with an action (don't record skip)
+    _hasRecordedSkip = true;
+
+    // Record the selection
+    ref.read(taskListProvider.notifier).recordNextActionSelection(
+          widget.taskId,
+          action,
+          position,
+          true,
+        );
+
     widget.onClose();
     if (action.existingTaskId != null) {
       context.go('/tasks/${action.existingTaskId}/execute');
@@ -222,9 +352,10 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                           ],
                         ),
                         const SizedBox(height: DS.sm),
-                        ...widget.result.nextActions.map((action) => _NextActionCard(
-                              action: action,
-                              onTap: () => _handleNextAction(action),
+                        ...widget.result.nextActions.asMap().entries.map((entry) => _NextActionCard(
+                              action: entry.value,
+                              position: entry.key,
+                              onTap: () => _handleNextAction(entry.value, entry.key),
                             ),),
                       ],
                     ],
@@ -300,10 +431,12 @@ class _NextActionCard extends StatelessWidget {
   const _NextActionCard({
     required this.action,
     required this.onTap,
+    this.position = 0,
   });
 
   final NextAction action;
   final VoidCallback onTap;
+  final int position;
 
   IconData _getTypeIcon(NextActionType type) {
     switch (type) {

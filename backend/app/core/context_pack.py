@@ -197,10 +197,12 @@ class ContextPackBuilder:
         self,
         db: AsyncSession,
         scheduler: Optional[ContextBudgetScheduler] = None,
+        redis=None,
     ) -> None:
         self.db = db
         self.memory_service = MemoryService(db)
         self.scheduler = scheduler or ContextBudgetScheduler(db=db)
+        self.redis = redis
 
     async def build(
         self,
@@ -223,7 +225,7 @@ class ContextPackBuilder:
         plan_context: Optional[Dict[str, Any]] = None
         if plan_id:
             try:
-                plan_builder = PlanContextBuilder(self.db, self.scheduler.redis)
+                plan_builder = PlanContextBuilder(self.db, self.redis)
                 plan_context = await plan_builder.build(user_id, plan_id)
             except Exception as e:
                 logger.warning(f"Failed to build plan context: {e}")

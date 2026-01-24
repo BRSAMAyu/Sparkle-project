@@ -140,7 +140,7 @@ class IntentRepository {
       throw Exception('No data in response from intent types API');
     }
 
-    final typesList = data['types'] as List?;
+    final typesList = data['intent_types'] as List?;
     if (typesList == null) {
       return const [];
     }
@@ -148,5 +148,52 @@ class IntentRepository {
     return typesList
         .map((e) => IntentTypeMetadata.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Analyze and optionally execute intents in one call
+  ///
+  /// Calls POST /multi-intent/analyze-and-execute
+  ///
+  /// This endpoint handles the entire flow:
+  /// - Single intent or auto_execute=true: Returns execution_result
+  /// - Multi intent and auto_execute=false: Returns preview with needs_confirmation=true
+  ///
+  /// Request body:
+  /// ```json
+  /// {
+  ///   "message": "用户消息",
+  ///   "auto_execute": false,
+  ///   "context": {}
+  /// }
+  /// ```
+  Future<AnalyzeAndExecuteResponse> analyzeAndExecute(
+    String message, {
+    bool autoExecute = false,
+    Map<String, dynamic>? context,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiEndpoints.multiIntentAnalyzeExecute,
+      data: {
+        'message': message,
+        'auto_execute': autoExecute,
+        if (context != null) 'context': context,
+      },
+    );
+
+    final responseData = response.data;
+    if (responseData == null) {
+      throw Exception('Empty response from analyze and execute API');
+    }
+
+    if (responseData['success'] != true) {
+      throw Exception(responseData['error'] ?? 'Analyze and execute failed');
+    }
+
+    final data = responseData['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      throw Exception('No data in response from analyze and execute API');
+    }
+
+    return AnalyzeAndExecuteResponse.fromJson(data);
   }
 }

@@ -21,6 +21,7 @@ from app.orchestration.prompts import build_system_prompt
 from app.orchestration.error_handler import AgentErrorHandler
 from app.core.pending_actions import pending_actions_store
 from app.core.business_metrics import HITL_APPROVED, HITL_REJECTED
+from app.core.cache import cache_service
 from app.models.chat import ChatMessage, MessageRole
 
 router = APIRouter()
@@ -611,20 +612,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
             intent = "chat"
             if settings.USE_CONTEXT_INTENT_ROUTER and payload is not None:
                 intent = IntentRouter().get_intent(payload)
-            pack_builder = ContextPackBuilder(db)
+            pack_builder = ContextPackBuilder(db, redis=cache_service.redis)
             request_id = payload.get("request_id") if payload else None
             trace_id = payload.get("trace_id") if payload else None
 
             # Extract plan_id from payload for PlanScope context
             plan_id = None
-            if payload:
-                plan_id_str = payload.get("plan_id") or payload.get("extra_context", {}).get("plan_id")
+            if payload and isinstance(payload.get("context"), dict):
+                plan_id_str = payload["context"].get("plan_id")
                 if plan_id_str:
                     try:
-                        from uuid import UUID
-                        plan_id = UUID(plan_id_str)
-                    except (ValueError, AttributeError):
-                        pass
+                        plan_id = UUID(str(plan_id_str))
+                    except (ValueError, TypeError):
+                        plan_id = None
 
             pack = await pack_builder.build(
                 user_id,

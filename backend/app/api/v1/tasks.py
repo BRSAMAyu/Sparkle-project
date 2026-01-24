@@ -19,7 +19,10 @@ from app.schemas.task import (
     TaskStart, TaskAbandon, TaskSummary, TaskSuggestionRequest, TaskSuggestionResponse,
     TaskRecommendationResponse
 )
-from app.schemas.task_feedback import TaskFeedbackCreate, TaskFeedbackResponse, TaskFeedbackStats
+from app.schemas.task_feedback import (
+    TaskFeedbackCreate, TaskFeedbackResponse, TaskFeedbackStats,
+    NextActionSelectionCreate, TaskFeedbackSubmitResponse
+)
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
 from app.services.feedback_service import feedback_service
@@ -430,7 +433,7 @@ async def confirm_generated_tasks(
 
 # ========== Task Feedback Endpoints ==========
 
-@router.post("/{task_id}/feedback", response_model=Dict[str, Any])
+@router.post("/{task_id}/feedback", response_model=TaskFeedbackSubmitResponse)
 async def submit_task_feedback(
     feedback_in: TaskFeedbackCreate,
     task_id: UUID = Path(..., description="Task ID"),
@@ -438,12 +441,13 @@ async def submit_task_feedback(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    提交任务反馈
+    提交任务反馈（v2.1 增强）
 
     - 验证任务所有权
     - 验证任务状态（必须是COMPLETED）
     - 支持重复提交（更新现有反馈）
     - 自动推断并更新用户偏好
+    - 返回偏好更新详情
     """
     from app.services.task_feedback_service import TaskFeedbackService
 
@@ -457,10 +461,21 @@ async def submit_task_feedback(
             feedback_text=feedback_in.feedback_text,
             category=feedback_in.category,
         )
-        return {
-            "success": True,
-            "data": TaskFeedbackResponse.model_validate(feedback)
-        }
+
+        # 构建偏好更新详情
+        preference_updates = None
+        if feedback.inferred_depth_delta is not None or feedback.inferred_difficulty_delta is not None:
+            preference_updates = {
+                "depth_preference": feedback.inferred_depth_delta,
+                "difficulty_preference": feedback.inferred_difficulty_delta,
+            }
+
+        return TaskFeedbackSubmitResponse(
+            success=True,
+            message="偏好已更新" if preference_updates else "反馈已提交",
+            data=TaskFeedbackResponse.model_validate(feedback),
+            preference_updates=preference_updates,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -523,3 +538,53 @@ async def get_user_feedback_stats(
             ],
         }
     }
+
+
+@router.post("/{task_id}/next-action-selection", response_model=Dict[str, Any])
+async def record_next_action_selection(
+    selection_in: NextActionSelectionCreate,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    记录用户对next_action的选择行为
+
+    用于追踪用户对next_action建议的交互，从而学习用户偏好。
+
+    Args:
+        task_id: 任务ID
+        selection_in: 选择数据
+
+    Returns:
+        记录结果
+    """
+    from app.services.next_action_selection_service import NextActionSelectionService
+
+    # 验证task_id匹配
+    if selection_in.task_id != task_id:
+        raise HTTPException(
+            status_code=400,
+            detail="task_id in path does not match task_id in body"
+        )
+
+    service = NextActionSelectionService(db, cache_service.redis)
+
+    try:
+        selection = await service.record_selection(
+            user_id=current_user.id,
+            task_id=selection_in.task_id,
+            action_type=selection_in.action_type,
+            action_title=selection_in.action_title,
+            selected=selection_in.selected,
+            skipped=selection_in.skipped,
+            display_position=selection_in.display_position,
+            displayed_actions_count=selection_in.displayed_actions_count,
+            context=selection_in.context,
+        )
+        return {
+            "success": True,
+            "data": selection.to_dict()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
