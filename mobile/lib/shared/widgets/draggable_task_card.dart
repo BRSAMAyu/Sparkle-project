@@ -43,7 +43,6 @@ class DraggableTaskCard extends ConsumerWidget {
     return LongPressDraggable<TaskModel>(
       data: task,
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      affinity: Axis.vertical,
       maxSimultaneousDrags: 1,
       onDragStarted: () {
         HapticFeedback.mediumImpact();
@@ -198,11 +197,9 @@ class CalendarDayDragTarget extends ConsumerWidget {
         _isSameDay(dragState.hoveredDate!, date);
 
     return DragTarget<TaskModel>(
-      onWillAccept: (data) {
-        if (data != null) {
-          ref.read(taskDragProvider.notifier).updateHover(date);
-        }
-        return data != null;
+      onWillAcceptWithDetails: (details) {
+        ref.read(taskDragProvider.notifier).updateHover(date);
+        return true;
       },
       onMove: (details) {
         ref.read(taskDragProvider.notifier).updateHover(date);
@@ -210,7 +207,7 @@ class CalendarDayDragTarget extends ConsumerWidget {
       onLeave: (data) {
         // Clear hover when leaving
       },
-      onAccept: (task) {
+      onAcceptWithDetails: (details) {
         final result =
             ref.read(taskDragProvider.notifier).dropOnDate(date);
         if (result != null) {

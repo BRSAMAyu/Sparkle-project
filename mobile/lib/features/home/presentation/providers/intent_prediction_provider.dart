@@ -236,7 +236,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   void _navigateToCalendar() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/calendar');
+      GoRouter.of(context).push('/calendar-stats');
     }
   }
 
