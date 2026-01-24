@@ -45,7 +45,6 @@ from app.orchestration.validator import RequestValidator, ValidationResult
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.token_tracker import TokenTracker
-from app.orchestration.collaboration_workflows import create_collaboration_workflow, WorkflowState
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.gen.agent.v1 import agent_service_pb2
 from app.config import settings
@@ -274,9 +273,6 @@ class ProductionChatOrchestrator:
                 f"circuit_breaker={enable_circuit_breaker}, "
                 f"max_concurrent={max_concurrent_sessions}"
             )
-        
-        # Initialize Workflow Engine
-        self.workflow = create_collaboration_workflow()
 
         # 工具注册
         self._ensure_tools_registered()
@@ -641,6 +637,29 @@ class ProductionChatOrchestrator:
                     user_context_data = await self._build_user_context(user_id, active_db)
                     conversation_context = await self._build_conversation_context(session_id, user_id)
 
+                # PlanScope: Extract plan_id and build plan_context
+                plan_context = None
+                try:
+                    from google.protobuf.json_format import MessageToDict
+                    if request.HasField("extra_context"):
+                        request_context = MessageToDict(request.extra_context)
+                        plan_id_str = request_context.get("plan_id") if request_context else None
+                        if plan_id_str and active_db:
+                            try:
+                                from uuid import UUID
+                                from app.core.plan_context import PlanContextBuilder
+                                plan_id = UUID(plan_id_str)
+                                plan_builder = PlanContextBuilder(active_db, self.redis)
+                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                if plan_context:
+                                    logger.info(f"Built plan_context for plan_id={plan_id}")
+                            except (ValueError, AttributeError) as e:
+                                logger.warning(f"Invalid plan_id in extra_context: {e}")
+                            except Exception as e:
+                                logger.warning(f"Failed to build plan context: {e}")
+                except Exception as e:
+                    logger.debug(f"Could not extract plan_context from request: {e}")
+
                 # P4: Tool Preference Routing
                 preferred_tools_hint = ""
                 try:
@@ -725,7 +744,8 @@ class ProductionChatOrchestrator:
             # 构建 Prompt
             base_system_prompt = build_system_prompt(
                 user_context_data,
-                conversation_history=conversation_context
+                conversation_history=conversation_context,
+                plan_context=plan_context,
             )
 
             if preferred_tools_hint:
@@ -734,85 +754,6 @@ class ProductionChatOrchestrator:
             if knowledge_context:
                 base_system_prompt += f"\n\n## 检索到的知识背景\n{knowledge_context}"
 
-            # ------------------------------------------------------------------
-            # P2: Workflow Engine Integration
-            # ------------------------------------------------------------------
-            use_workflow = False
-            if request.HasField("extra_context"):
-                try:
-                    # extra_context is a Struct, converted to dict earlier if needed, 
-                    # but here we access the proto Struct directly or Convert
-                    # Actually request.extra_context is a google.protobuf.Struct
-                    # We can helper convert it or access fields if we know how.
-                    # Easier: check fields map.
-                    if "use_workflow" in request.extra_context.fields:
-                         if request.extra_context.fields["use_workflow"].bool_value:
-                             use_workflow = True
-                except Exception:
-                    pass
-
-            if use_workflow:
-                logger.info(f"🚀 Triggering Collaboration Workflow for session {session_id}")
-                
-                # Yield initial status
-                yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING,
-                        details="Initializing multi-agent workflow..."
-                    )
-                )
-
-                # Initialize State
-                initial_state = WorkflowState()
-                user_msg = request.message if request.HasField("message") else "Proceed"
-                initial_state.append_message("user", user_msg)
-                initial_state.context_data["user_id"] = user_id
-                initial_state.context_data["session_id"] = session_id
-                
-                # Run Workflow
-                final_state = await self.workflow.invoke(initial_state)
-                
-                # Process Results
-                # Yield execution logs as status updates or partials?
-                # For now, just yield the final "assistant" messages added by the workflow.
-                
-                # Send "Done" status
-                yield agent_service_pb2.ChatResponse(
-                    response_id=response_id,
-                    created_at=int(datetime.now().timestamp()),
-                    request_id=request_id,
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.DONE,
-                        details="Workflow completed"
-                    )
-                )
-
-                # Send all new assistant messages
-                for msg in final_state.messages:
-                    if msg["role"] == "assistant":
-                         # We can stream these or send as full text.
-                         # Since workflow is done, sending as full text chunks is fine.
-                         content = msg["content"]
-                         prefix = f"**[{msg.get('name', 'Agent')}]**: "
-                         yield agent_service_pb2.ChatResponse(
-                            response_id=response_id,
-                            created_at=int(datetime.now().timestamp()),
-                            request_id=request_id,
-                            full_text=prefix + content
-                        )
-
-                # Record metrics and log success
-                if self.enable_metrics:
-                    REQUEST_COUNTER.labels(status="success_workflow", session_id=session_id).inc()
-                self._log_request(session_id, request_id, user_id, time.time() - start_time, "success_workflow")
-                
-                # Release lock and return
-                await self._release_session_lock(session_id, request_id)
-                await self._track_session(session_id, add=False)
-                return
             # ------------------------------------------------------------------
 
             # 发送思考状态

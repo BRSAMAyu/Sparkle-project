@@ -614,11 +614,24 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Di
             pack_builder = ContextPackBuilder(db)
             request_id = payload.get("request_id") if payload else None
             trace_id = payload.get("trace_id") if payload else None
+
+            # Extract plan_id from payload for PlanScope context
+            plan_id = None
+            if payload:
+                plan_id_str = payload.get("plan_id") or payload.get("extra_context", {}).get("plan_id")
+                if plan_id_str:
+                    try:
+                        from uuid import UUID
+                        plan_id = UUID(plan_id_str)
+                    except (ValueError, AttributeError):
+                        pass
+
             pack = await pack_builder.build(
                 user_id,
                 intent=intent,
                 request_id=request_id,
                 trace_id=trace_id,
+                plan_id=plan_id,
             )
             return pack.to_prompt_context()
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
+import 'package:sparkle/features/intent/data/models/intent_data.dart';
+import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
 
 /// Intent Analysis Button
 ///
@@ -18,7 +20,7 @@ class IntentAnalysisButton extends ConsumerWidget {
   final VoidCallback onConfirm;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context, WidgetRef ref) => InkWell(
       onTap: () => _showIntentPreview(context),
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -72,7 +74,7 @@ class IntentAnalysisButton extends ConsumerWidget {
 /// Intent Analysis Button for Chat Input
 ///
 /// A smaller version that integrates directly into the chat input bar
-class IntentAnalysisChip extends StatefulWidget {
+class IntentAnalysisChip extends ConsumerStatefulWidget {
   const IntentAnalysisChip({
     required this.message,
     required this.onAnalyzed,
@@ -83,10 +85,10 @@ class IntentAnalysisChip extends StatefulWidget {
   final Function(List<IntentData> intents) onAnalyzed;
 
   @override
-  State<IntentAnalysisChip> createState() => _IntentAnalysisChipState();
+  ConsumerState<IntentAnalysisChip> createState() => _IntentAnalysisChipState();
 }
 
-class _IntentAnalysisChipState extends State<IntentAnalysisChip> {
+class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
   bool _isAnalyzing = false;
 
   @override
@@ -161,12 +163,11 @@ class _IntentAnalysisChipState extends State<IntentAnalysisChip> {
     setState(() => _isAnalyzing = true);
 
     try {
-      // Call API to analyze intents
-      // This would integrate with your API client
-      final intents = await _analyzeMessage(widget.message);
+      final repository = ref.read(intentRepositoryProvider);
+      final response = await repository.previewIntents(widget.message);
 
       if (mounted) {
-        widget.onAnalyzed(intents);
+        widget.onAnalyzed(response.detectedIntents);
         setState(() => _isAnalyzing = false);
       }
     } catch (e) {
@@ -178,42 +179,4 @@ class _IntentAnalysisChipState extends State<IntentAnalysisChip> {
       }
     }
   }
-
-  Future<List<IntentData>> _analyzeMessage(String message) async {
-    // TODO: Integrate with actual API
-    // For now, return mock data
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    return [
-      IntentData(
-        type: 'knowledge_query',
-        confidence: 0.9,
-        content: '复习Python闭包',
-        agentRole: 'galaxy_guide',
-      ),
-      IntentData(
-        type: 'time_planning',
-        confidence: 0.85,
-        content: '制定明天的学习计划',
-        agentRole: 'time_tutor',
-      ),
-    ];
-  }
-}
-
-/// Intent Data Model
-class IntentData {
-  IntentData({
-    required this.type,
-    required this.confidence,
-    required this.content,
-    this.agentRole,
-    this.entities = const {},
-  });
-
-  final String type;
-  final double confidence;
-  final String content;
-  final String? agentRole;
-  final Map<String, dynamic> entities;
 }

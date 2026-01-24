@@ -139,8 +139,8 @@ class LocalVocabularyRepository {
     int limit = 100,
     int offset = 0,
   }) async {
-    final query = _buildFilterQuery(filter, tagFilter);
-    final words = await query
+    final words = await _vocabWordCollection
+        .filter()
         .sortByCreatedAtDesc()
         .offset(offset)
         .limit(limit)
@@ -187,7 +187,7 @@ class LocalVocabularyRepository {
       case VocabFilter.highImportance:
         return _vocabWordCollection
             .filter()
-            .importanceGreaterThanOrEqualTo(4);
+            .importanceGreaterThan(3);
       case VocabFilter.mediumImportance:
         return _vocabWordCollection
             .filter()
@@ -202,13 +202,13 @@ class LocalVocabularyRepository {
         }
         return _vocabWordCollection
             .filter()
-            .tagsContains(tagFilter);
+            .tagsElementContains(tagFilter);
       case VocabFilter.all:
       default:
         if (tagFilter != null) {
           return _vocabWordCollection
               .filter()
-              .tagsContains(tagFilter);
+              .tagsElementContains(tagFilter);
         }
         return _vocabWordCollection.filter();
     }

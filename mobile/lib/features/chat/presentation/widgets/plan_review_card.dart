@@ -107,12 +107,15 @@ class PlanReviewCard extends StatefulWidget {
     this.onApprove,
     this.onReject,
     this.onModify,
+    this.onDecision,
   });
 
   final PlanReviewResult review;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onModify;
+  /// Callback for user decision with the decision type
+  final Future<bool> Function(ReviewDecision decision)? onDecision;
 
   @override
   State<PlanReviewCard> createState() => _PlanReviewCardState();
@@ -124,6 +127,10 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
   late AnimationController _slideInController;
+
+  // Submission state
+  bool _isSubmitting = false;
+  bool _isSubmitted = false;
 
   @override
   void initState() {
@@ -157,6 +164,40 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     super.dispose();
   }
 
+  /// Handle user decision on the plan review
+  Future<void> _handleDecision(ReviewDecision decision) async {
+    if (_isSubmitting || _isSubmitted) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // Use new callback if provided
+      if (widget.onDecision != null) {
+        final success = await widget.onDecision!(decision);
+        if (success) {
+          setState(() => _isSubmitted = true);
+        }
+      } else {
+        // Fall back to legacy callbacks
+        switch (decision) {
+          case ReviewDecision.approved:
+            widget.onApprove?.call();
+          case ReviewDecision.rejected:
+            widget.onReject?.call();
+          case ReviewDecision.needsModification:
+            widget.onModify?.call();
+          case ReviewDecision.requiresConfirmation:
+            widget.onApprove?.call();
+        }
+        setState(() => _isSubmitted = true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final decision = widget.review.decision;
@@ -166,9 +207,11 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     final title = _getDecisionTitle(decision);
 
     // For approved plans, don't show action buttons (auto-approved)
-    final showActions = !widget.review.autoApproved &&
+    final showActions = !_isSubmitted &&
+        !widget.review.autoApproved &&
         decision != ReviewDecision.approved &&
-        (widget.onApprove != null ||
+        (widget.onDecision != null ||
+            widget.onApprove != null ||
             widget.onReject != null ||
             widget.onModify != null);
 
@@ -534,9 +577,9 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           CustomButton.primary(
-            text: '重新描述',
+            text: _isSubmitting ? '提交中...' : '重新描述',
             icon: Icons.refresh_rounded,
-            onPressed: widget.onReject,
+            onPressed: _isSubmitting ? null : () => _handleDecision(decision),
             size: CustomButtonSize.small,
           ),
         ],
@@ -548,18 +591,18 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (widget.onReject != null)
+          if (widget.onReject != null || widget.onDecision != null)
             CustomButton.text(
               text: '取消',
-              onPressed: widget.onReject,
+              onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
               size: CustomButtonSize.small,
             ),
           const SizedBox(width: DS.spacing8),
-          if (widget.onModify != null)
+          if (widget.onModify != null || widget.onDecision != null)
             CustomButton.primary(
-              text: '修改计划',
+              text: _isSubmitting ? '提交中...' : '修改计划',
               icon: Icons.edit_rounded,
-              onPressed: widget.onModify,
+              onPressed: _isSubmitting ? null : () => _handleDecision(decision),
               size: CustomButtonSize.small,
               customGradient: gradient,
             ),
@@ -571,21 +614,23 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (widget.onReject != null)
+        if (widget.onReject != null || widget.onDecision != null)
           CustomButton.text(
             text: '取消',
-            onPressed: widget.onReject,
+            onPressed: _isSubmitting ? null : () => _handleDecision(ReviewDecision.rejected),
             size: CustomButtonSize.small,
           ),
         const SizedBox(width: DS.spacing8),
-        if (widget.onApprove != null)
+        if (widget.onApprove != null || widget.onDecision != null)
           CustomButton.primary(
-            text: '批准执行',
+            text: _isSubmitting ? '提交中...' : '批准执行',
             icon: Icons.check_rounded,
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              widget.onApprove?.call();
-            },
+            onPressed: _isSubmitting
+                ? null
+                : () {
+                    HapticFeedback.mediumImpact();
+                    _handleDecision(ReviewDecision.approved);
+                  },
             size: CustomButtonSize.small,
             customGradient: gradient,
           ),

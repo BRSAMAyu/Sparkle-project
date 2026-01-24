@@ -67,6 +67,8 @@ class TaskStateSyncService:
                 plan_id=task.plan_id,
                 task_type=task.type.value if task.type else "UNKNOWN",
             )
+            # Also sync task summaries after creation
+            await self.sync_task_summaries(task.user_id, task.plan_id)
             logger.info(
                 f"Synced task creation: task_id={task.id}, plan_id={task.plan_id}"
             )
@@ -99,6 +101,8 @@ class TaskStateSyncService:
                 task_type=task.type.value if task.type else "UNKNOWN",
                 actual_minutes=actual_minutes or task.actual_minutes,
             )
+            # Also sync task summaries after completion
+            await self.sync_task_summaries(task.user_id, task.plan_id)
             logger.info(
                 f"Synced task completion: task_id={task.id}, plan_id={task.plan_id}"
             )
@@ -126,6 +130,39 @@ class TaskStateSyncService:
         # For now, we only track completion events
         if task.status == TaskStatus.COMPLETED and old_status != TaskStatus.COMPLETED:
             await self.on_task_completed(task)
+            # Also sync task summaries after completion
+            await self.sync_task_summaries(task.user_id, task.plan_id)
+
+    async def sync_task_summaries(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        limit: int = 10,
+    ) -> None:
+        """
+        Store recent N task summaries in PlanState.task_summaries.
+
+        This provides a hybrid approach: recent tasks are cached in PlanState
+        for quick access, while full task details are still available via DB queries.
+
+        Args:
+            user_id: User ID
+            plan_id: Plan ID
+            limit: Maximum number of recent tasks to store
+        """
+        try:
+            summaries = await self.get_task_summaries(user_id, plan_id, limit)
+            await self._plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"task_summaries": summaries},
+                bump_version=False,  # Don't bump version for cache update
+            )
+            logger.debug(
+                f"Synced task summaries: plan_id={plan_id}, count={len(summaries)}"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to sync task summaries: {e}")
 
     async def rebuild_task_index(
         self,

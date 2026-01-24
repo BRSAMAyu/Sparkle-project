@@ -92,24 +92,49 @@ class TaskService:
     ) -> Task:
         """Update task"""
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
+        # Track status change for sync
+        old_status = db_obj.status
+        status_changed = "status" in update_data
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
-            
+
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan and status changed
+        if db_obj.plan_id and status_changed:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task update with plan state: {e}")
+
         return db_obj
 
     @staticmethod
     async def start(db: AsyncSession, db_obj: Task) -> Task:
         """Start task"""
+        old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
         db_obj.started_at = datetime.utcnow()
-        
+
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task start with plan state: {e}")
+
         return db_obj
 
     @staticmethod
@@ -198,6 +223,15 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+
+        # Sync with PlanState if task belongs to a plan
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=TaskStatus(db_obj.status) if reason else None)
+            except Exception as e:
+                logger.warning(f"Failed to sync task abandonment with plan state: {e}")
 
         # Publish task abandonment event for cognitive analysis
         from app.core.event_bus import event_bus, TaskAbandoned

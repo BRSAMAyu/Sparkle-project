@@ -11,6 +11,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -177,6 +178,115 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final _Debouncer _streamDebouncer =
       _Debouncer(const Duration(milliseconds: 50));
   bool _isDisposed = false;
+
+  // Plan review service (lazy initialized)
+  PlanReviewGrpcService? _planReviewService;
+
+  /// Submit plan review decision via gRPC
+  Future<bool> submitPlanReview({
+    required ReviewDecision decision,
+    String? userComment,
+  }) async {
+    final review = state.pendingPlanReview;
+    if (review == null) {
+      debugPrint('⚠️ No pending plan review to submit');
+      return false;
+    }
+
+    // Get current user
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    if (user == null) {
+      debugPrint('⚠️ User not authenticated');
+      state = state.copyWith(
+        lastActionStatus: 'error',
+        lastActionMessage: '请先登录',
+      );
+      return false;
+    }
+
+    // Get access token
+    final authRepository = _ref.read(authRepositoryProvider);
+    final authToken = await authRepository.getAccessToken();
+
+    try {
+      _planReviewService ??= PlanReviewGrpcService();
+
+      // Map ReviewDecision to UserReviewDecision
+      final grpcDecision = _mapReviewDecision(decision);
+
+      final result = await _planReviewService!.submitReview(
+        userId: user.id,
+        planId: review.planId,
+        reviewId: review.reviewId,
+        decision: grpcDecision,
+        userComment: userComment,
+        authToken: authToken,
+      );
+
+      if (result.success) {
+        // Update state with success message
+        state = state.copyWith(
+          lastActionStatus: 'submitted',
+          lastActionMessage: result.message ?? _getSuccessMessage(decision),
+          clearPendingReview: true,
+        );
+
+        // Clear feedback message after delay
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            state = state.copyWith(clearActionFeedback: true);
+          }
+        });
+
+        debugPrint('✅ Plan review submitted: ${decision.name}');
+        return true;
+      } else {
+        // Update state with error message
+        state = state.copyWith(
+          lastActionStatus: 'error',
+          lastActionMessage: result.message ?? '提交失败',
+        );
+        debugPrint('❌ Plan review failed: ${result.message}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Plan review error: $e');
+      state = state.copyWith(
+        lastActionStatus: 'error',
+        lastActionMessage: '网络错误，请重试',
+      );
+      return false;
+    }
+  }
+
+  /// Map ReviewDecision from UI to UserReviewDecision for gRPC
+  UserReviewDecision _mapReviewDecision(ReviewDecision decision) {
+    switch (decision) {
+      case ReviewDecision.approved:
+        return UserReviewDecision.approve;
+      case ReviewDecision.rejected:
+        return UserReviewDecision.reject;
+      case ReviewDecision.needsModification:
+        return UserReviewDecision.modify;
+      case ReviewDecision.requiresConfirmation:
+        return UserReviewDecision.acknowledge;
+    }
+  }
+
+  /// Get user-friendly success message
+  String _getSuccessMessage(ReviewDecision decision) {
+    switch (decision) {
+      case ReviewDecision.approved:
+        return '✅ 已批准';
+      case ReviewDecision.rejected:
+        return '❌ 已取消';
+      case ReviewDecision.needsModification:
+        return '📝 已请求修改';
+      case ReviewDecision.requiresConfirmation:
+        return '✅ 已确认';
+    }
+  }
 
   /// 手动触发重连
   Future<void> reconnect() async {
