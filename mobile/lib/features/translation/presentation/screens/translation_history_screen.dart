@@ -161,13 +161,13 @@ class _TranslationHistoryScreenState
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'deleteAll',
                   child: Row(
                     children: [
                       Icon(Icons.delete_forever, color: DS.error),
                       SizedBox(width: DS.sm),
-                      Text('清空历史'),
+                      const Text('清空历史'),
                     ],
                   ),
                 ),

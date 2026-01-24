@@ -65,14 +65,14 @@ class DataConsistencyChecker {
       final pythonDbMessage = pythonDbResult.message;
 
       // 检查关键字段是否一致
-      if (flutterMessage.content != goGatewayMessage.content ||
-          flutterMessage.content != pythonDbMessage.content) {
+      if (flutterMessage?.content != goGatewayMessage?.content ||
+          flutterMessage?.content != pythonDbMessage?.content) {
         // 内容不一致
         return false;
       }
 
-      if (flutterMessage.role != goGatewayMessage.role ||
-          flutterMessage.role != pythonDbMessage.role) {
+      if (flutterMessage?.role != goGatewayMessage?.role ||
+          flutterMessage?.role != pythonDbMessage?.role) {
         // 角色不一致
         return false;
       }
@@ -101,10 +101,10 @@ class DataConsistencyChecker {
       final message = history.firstWhere(
         (msg) => msg.id == messageId,
         orElse: () => ChatMessageModel(
+          conversationId: conversationId,
           id: '',
           content: '',
-          role: '',
-          timestamp: DateTime.now(),
+          role: MessageRole.user,
         ),
       );
 

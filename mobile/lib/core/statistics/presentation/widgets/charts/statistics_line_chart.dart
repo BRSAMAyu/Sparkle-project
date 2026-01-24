@@ -109,7 +109,7 @@ class StatisticsLineChart extends StatelessWidget {
                   show: true,
                   gradient: StatisticsChartConfig.getLineGradient(color: baseColor),
                 )
-              : const BarAreaData(show: false),
+              : BarAreaData(show: false),
         ),
       ],
       minX: 0,
@@ -124,7 +124,7 @@ class StatisticsLineChart extends StatelessWidget {
           return FlLine(
             color: StatisticsChartConfig.gridColor,
             strokeWidth: StatisticsChartConfig.gridThickness,
-            dashArray: StatisticsChartConfig.gridDashPattern.map((e) => e.toInt()).toList(),
+            dashArray: StatisticsChartConfig.gridDashPattern,
           );
         },
       ),
@@ -177,14 +177,10 @@ class StatisticsLineChart extends StatelessWidget {
         ),
       ),
       borderData: FlBorderData(show: false),
-      touchData: FlTouchData(
+      lineTouchData: LineTouchData(
         enabled: StatisticsChartConfig.touchEnabled,
-        getTouchedSpot: (FlChartTouchInput touch) {
-          return TouchedSpot(null, null);
-        },
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (touchedSpot) =>
-              StatisticsChartConfig.tooltipBgColor,
+          tooltipBgColor: StatisticsChartConfig.tooltipBgColor,
           getTooltipItems: (touchedSpots) {
             return touchedSpots.map((spot) {
               final value = spot.y;

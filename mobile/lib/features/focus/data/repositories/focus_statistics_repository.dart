@@ -87,7 +87,7 @@ class FocusStatisticsRepository {
 
     final sessions = await _collection
         .where()
-        .startTimeGreaterThanOrEqualTo(monthStart)
+        .startTimeGreaterThan(monthStart)
         .filter()
         .statusEqualTo('completed')
         .findAll();
@@ -113,19 +113,19 @@ class FocusStatisticsRepository {
         .findAll();
 
     // Daily breakdown
-    final dailyBreakdown = <String, int>{};
-    final focusTypeDistribution = <String, int>{
-      'pomodoro': 0,
-      'stopwatch': 0,
+    final dailyBreakdown = <String, double>{};
+    final focusTypeDistribution = <String, double>{
+      'pomodoro': 0.0,
+      'stopwatch': 0.0,
     };
 
     for (final session in sessions) {
       final dateKey = session.dateKey;
       dailyBreakdown[dateKey] =
-          (dailyBreakdown[dateKey] ?? 0) + session.durationMinutes;
+          (dailyBreakdown[dateKey] ?? 0.0) + session.durationMinutes.toDouble();
       focusTypeDistribution[session.focusType] =
-          (focusTypeDistribution[session.focusType] ?? 0) +
-              session.durationMinutes;
+          (focusTypeDistribution[session.focusType] ?? 0.0) +
+              session.durationMinutes.toDouble();
     }
 
     // Ensure all 7 days are present
@@ -163,32 +163,32 @@ class FocusStatisticsRepository {
 
     final sessions = await _collection
         .where()
-        .startTimeGreaterThanOrEqualTo(monthStart)
+        .startTimeGreaterThan(monthStart)
         .filter()
         .statusEqualTo('completed')
         .findAll();
 
     // Daily breakdown
-    final dailyBreakdown = <String, int>{};
-    final weeklyBreakdown = <String, int>{};
-    final focusTypeDistribution = <String, int>{
-      'pomodoro': 0,
-      'stopwatch': 0,
+    final dailyBreakdown = <String, double>{};
+    final weeklyBreakdown = <String, double>{};
+    final focusTypeDistribution = <String, double>{
+      'pomodoro': 0.0,
+      'stopwatch': 0.0,
     };
 
     for (final session in sessions) {
       final dateKey = session.dateKey;
       dailyBreakdown[dateKey] =
-          (dailyBreakdown[dateKey] ?? 0) + session.durationMinutes;
+          (dailyBreakdown[dateKey] ?? 0.0) + session.durationMinutes.toDouble();
       focusTypeDistribution[session.focusType] =
-          (focusTypeDistribution[session.focusType] ?? 0) +
-              session.durationMinutes;
+          (focusTypeDistribution[session.focusType] ?? 0.0) +
+              session.durationMinutes.toDouble();
 
       // Weekly breakdown
       final weekKey =
           '${session.startTime.year}-W${_getWeekNumber(session.startTime).toString().padLeft(2, '0')}';
       weeklyBreakdown[weekKey] =
-          (weeklyBreakdown[weekKey] ?? 0) + session.durationMinutes;
+          (weeklyBreakdown[weekKey] ?? 0.0) + session.durationMinutes.toDouble();
     }
 
     final totalMinutes = sessions.fold<int>(

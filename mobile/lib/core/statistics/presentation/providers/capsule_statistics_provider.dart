@@ -41,7 +41,7 @@ class CapsuleStatisticsData extends StatisticsEntity {
   @override
   double getPrimaryValue() => totalOpened.toDouble();
 
-  const CapsuleStatisticsData({
+  CapsuleStatisticsData({
     required this.id,
     required this.period,
     required this.lastRefreshedAt,
@@ -204,9 +204,9 @@ class CapsuleStatistics extends _$CapsuleStatistics {
         period,
         forceRefresh: forceRefresh,
       );
-      state = state.withData(data, period: period);
+      state = state.withData(data, newPeriod: period);
     } catch (e) {
-      state = state.withError('加载失败: ${e.toString()}');
+      state = state.withError('加载失败: $e');
     }
   }
 

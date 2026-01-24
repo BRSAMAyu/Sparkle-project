@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
+import 'package:sparkle/features/cognitive/data/models/capsule_stats_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
-import 'capsule_generation_job_model.dart';
-import 'capsule_feedback_model.dart';
-import 'capsule_stats_model.dart';
 
 /// 胶囊列表状态通知器
 class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleModel>>> {

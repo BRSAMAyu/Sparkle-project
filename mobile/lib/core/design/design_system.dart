@@ -291,6 +291,7 @@ class DS {
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
+  static Color get surfaceBase => surfaceSecondary; // Alias for backward compatibility
 
   // Text colors
   static Color get textPrimary => _theme.colors.textPrimary;
@@ -558,6 +559,7 @@ class DS {
   static Color get statusInvisible => _theme.colors.statusInvisible;
 
   // 中性色
+  static Color get neutral0 => Colors.white;
   static Color get neutral50 =>
       _blend(surfacePrimary, _theme.colors.neutral200, 0.4);
   static Color get neutral100 =>

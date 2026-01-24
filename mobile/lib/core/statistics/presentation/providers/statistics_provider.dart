@@ -1,7 +1,4 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
-
-part 'statistics_provider.g.dart';
 
 /// State for statistics provider
 class StatisticsState<T> {
@@ -45,7 +42,7 @@ class StatisticsState<T> {
         lastPeriod = period;
 
   /// Data loaded state
-  StatisticsState withData(T newData, {StatisticsPeriod? newPeriod}) {
+  StatisticsState<T> withData(T newData, {StatisticsPeriod? newPeriod}) {
     return StatisticsState<T>(
       data: newData,
       isLoading: false,
@@ -56,7 +53,7 @@ class StatisticsState<T> {
   }
 
   /// Error state
-  StatisticsState withError(String newErrorMessage) {
+  StatisticsState<T> withError(String newErrorMessage) {
     return StatisticsState<T>(
       data: data,
       isLoading: false,
