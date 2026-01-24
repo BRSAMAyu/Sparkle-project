@@ -41,6 +41,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   // State
   bool _isEntering = true;
+  bool _hasCentered = false;
+  bool _loadingTimedOut = false;
 
   // Active animations
   final List<_ActiveEnergyTransfer> _activeEnergyTransfers = [];
@@ -72,48 +74,30 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     // Start Performance Monitoring
     PerformanceService.instance.startMonitoring();
 
-    _focusSubscription =
-        ref.listenManual<GalaxyState>(galaxyProvider, (previous, next) {
-      final focusBounds = next.focusBounds;
-      if (focusBounds != null && focusBounds != previous?.focusBounds) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _animateToBounds(focusBounds);
-          ref.read(galaxyProvider.notifier).clearFocusBounds();
-          ref.read(galaxyProvider.notifier).clearFocusNode();
-        });
-        return;
-      }
+    // Initial load
+    unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
+    unawaited(_renderEngine.prewarm());
 
-      final focusId = next.focusNodeId;
-      if (focusId != null && focusId != previous?.focusNodeId) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _animateToNode(focusId);
-          ref.read(galaxyProvider.notifier).clearFocusNode();
-        });
-      }
+    // Hide loading indicator after 5 seconds (timeout mechanism)
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _loadingTimedOut = true);
     });
+  }
 
-    // Defer initial centering until we know screen size (in build) or post frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final size = MediaQuery.of(context).size;
-      final canvasCenter = ref.read(galaxyProvider).canvasCenter;
+  void _performInitialCentering(Size size) {
+    // Start at 0.15 scale (Universe View) centered
+    const initialScale = 0.15;
+    
+    // To center canvas point (_canvasCenter, _canvasCenter) at screen center (w/2, h/2) with scale S:
+    // Tx = w/2 - _canvasCenter * S
+    final tx = size.width / 2 - _canvasCenter * initialScale;
+    final ty = size.height / 2 - _canvasCenter * initialScale;
 
-      // Start at 0.15 scale (Universe View) centered
-      const initialScale = 0.15;
-      // To center canvas point at screen center (w/2, h/2) with scale S:
-      // Tx = w/2 - canvasCenter * S
-      final tx = size.width / 2 - canvasCenter * initialScale;
-      final ty = size.height / 2 - canvasCenter * initialScale;
-
-      _transformationController.value = Matrix4.identity()
-        ..translate(tx, ty)
-        ..scale(initialScale);
-
-      unawaited(ref.read(galaxyProvider.notifier).loadGalaxy());
-      unawaited(_renderEngine.prewarm());
-    });
+    // Use standard Matrix4 methods to avoid deprecation warnings
+    // T * S transformation
+    _transformationController.value = Matrix4.identity()
+      ..translate(tx, ty)
+      ..scale(initialScale);
   }
 
   @override
@@ -155,10 +139,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       inverseMatrix,
       Offset(size.width, size.height),
     );
-    final canvasCenter = ref.read(galaxyProvider).canvasCenter;
-    final viewport = Rect.fromPoints(topLeft, bottomRight)
-        .shift(Offset(-canvasCenter, -canvasCenter));
-    ref.read(galaxyProvider.notifier).updateViewport(viewport);
+    
+    // Absolute Viewport (Canvas Coordinates 0..5000) - For Painter
+    final absoluteViewport = Rect.fromPoints(topLeft, bottomRight);
+    
+    // Relative Viewport (Center Relative -2500..2500) - For Provider Culling
+    final relativeViewport = absoluteViewport.shift(
+        const Offset(-_canvasCenter, -_canvasCenter),
+    );
+        
+    ref.read(galaxyProvider.notifier).updateViewport(relativeViewport);
   }
 
   /// Convert a canvas position (in the star map space) to screen coordinates
@@ -506,12 +496,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _showSearchDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => GalaxySearchDialog(
-        onNodeSelected: (nodeId) {
-          _animateToNode(nodeId);
-        },
+        onNodeSelected: _animateToNode,
       ),
     );
   }
@@ -524,7 +512,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final safePadding = MediaQuery.of(context).padding;
 
     return Scaffold(
-      backgroundColor: DS.brandPrimary, // Deep space
+      backgroundColor: DS.galaxyBackground, // Deep space background
       body: Stack(
         children: [
           Positioned.fill(
@@ -542,40 +530,49 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ),
 
           // 1. Star Map (Interactive)
-          GestureDetector(
-            onPanStart: (details) {
-              _hasDragged = true;
-              _dragStartOffset = details.localPosition;
-            },
-            onPanUpdate: (details) {
-              // Track if user actually dragged significant distance
-              if (_dragStartOffset != null) {
-                final distance =
-                    (details.localPosition - _dragStartOffset!).distance;
-                if (distance > 10) {
-                  _hasDragged = true;
-                }
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (!_hasCentered &&
+                  constraints.maxWidth > 0 &&
+                  constraints.maxHeight > 0) {
+                _performInitialCentering(constraints.biggest);
+                _hasCentered = true;
               }
-            },
-            onPanEnd: (details) {
-              // Reset after a short delay to allow tap detection
-              Future.delayed(const Duration(milliseconds: 100), () {
-                _hasDragged = false;
-                _dragStartOffset = null;
-              });
-            },
-            onTapUp: _handleTapUp,
-            onLongPressStart: _handleLongPressStart,
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
-              minScale: 0.1,
-              maxScale: 3.0,
-              constrained: false, // Infinite canvas
-              child: SizedBox(
-                width: canvasSize,
-                height: canvasSize,
-                child: AnimatedBuilder(
+
+              return GestureDetector(
+                onPanStart: (details) {
+                  _hasDragged = true;
+                  _dragStartOffset = details.localPosition;
+                },
+                onPanUpdate: (details) {
+                  // Track if user actually dragged significant distance
+                  if (_dragStartOffset != null) {
+                    final distance =
+                        (details.localPosition - _dragStartOffset!).distance;
+                    if (distance > 10) {
+                      _hasDragged = true;
+                    }
+                  }
+                },
+                onPanEnd: (details) {
+                  // Reset after a short delay to allow tap detection
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    _hasDragged = false;
+                    _dragStartOffset = null;
+                  });
+                },
+                onTapUp: _handleTapUp,
+                onLongPressStart: _handleLongPressStart,
+                child: InteractiveViewer(
+                  transformationController: _transformationController,
+                  boundaryMargin: const EdgeInsets.all(2000), // Huge scroll area
+                  minScale: 0.1,
+                  maxScale: 3.0,
+                  constrained: false, // Infinite canvas
+                  child: SizedBox(
+                    width: _canvasSize,
+                    height: _canvasSize,
+                    child: AnimatedBuilder(
                   animation: Listenable.merge([
                     _transformationController,
                     _selectionPulseController,
@@ -595,9 +592,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       inverseMatrix,
                       Offset(screenSize.width, screenSize.height),
                     );
-                    final viewport =
-                        Rect.fromPoints(topLeft, bottomRight).shift(
-                            Offset(-canvasCenter, -canvasCenter),);
+                    
+                    // Absolute Viewport for Painter
+                    final absoluteViewport = Rect.fromPoints(topLeft, bottomRight);
 
                     // Convert to Compact models with centered positions for rendering
                     final compactNodes =
@@ -629,13 +626,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       performanceTier: PerformanceService.instance.currentTier.value,
                       currentDpr: PerformanceService.instance.currentDpr.value,
                       aggregationLevel: galaxyState.aggregationLevel,
-                      clusters: _centerClusters(
-                        galaxyState.clusters,
-                        canvasCenter,
-                        canvasCenter,
-                      ),
-                      viewport: viewport,
-                      center: Offset(canvasCenter, canvasCenter),
+                      clusters: _centerClusters(galaxyState.clusters,
+                          _canvasCenter, _canvasCenter,),
+                      viewport: absoluteViewport, // Use absolute for painter
+                      center:
+                          const Offset(_canvasCenter, _canvasCenter),
                       selectedNodeIdHash: selectedHash,
                       highlightedNodeIdHashes: highlightedHashes,
                       highlightRevision: galaxyState.highlightRevision,
@@ -710,7 +705,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 ),
               ),
             ),
-          ),
+          );
+        },
+      ),
 
           // 2. Entrance Animation Layer
           if (_isEntering)
@@ -733,8 +730,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                 final tx = size.width / 2 - canvasCenter * targetScale;
                 final ty = size.height / 2 - canvasCenter * targetScale;
                 final targetMatrix = Matrix4.identity()
-                  ..translate(tx, ty)
-                  ..scale(targetScale);
+                  ..translateByDouble(tx, ty, 0, 1)
+                  ..scaleByDouble(targetScale, targetScale, 1.0, 1);
 
                 final animation = Matrix4Tween(
                   begin: startMatrix,
@@ -781,13 +778,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ),
 
           // 5. UI Overlays (Back button)
-          if (!_isEntering && Navigator.canPop(context))
+          if (!_isEntering)
             Positioned(
               top: safePadding.top + 8,
               left: 16,
               child: IconButton(
                 icon: Icon(Icons.arrow_back, color: DS.brandPrimary),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
               ),
             ),
 
@@ -854,13 +851,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               left: 30, // Slightly indented
               child: FloatingActionButton.small(
                 heroTag: 'guide_btn',
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
                 foregroundColor: DS.brandPrimary,
-                elevation: 0,
+                elevation: 2,
                 shape: CircleBorder(
                     side: BorderSide(
-                        color: DS.brandPrimary.withValues(alpha: 0.3),),),
-                child: const Icon(Icons.explore),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? DS.neutral700
+                            : DS.neutral300,),),
+                child: Icon(Icons.explore, color: DS.brandPrimary),
                 onPressed: () async {
                   final nodeId =
                       await ref.read(galaxyProvider.notifier).predictNextNode();
@@ -893,7 +894,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               right: 20,
               child: FloatingActionButton(
                 mini: true,
-                backgroundColor: DS.brandPrimary.withValues(alpha: 0.9),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.9),
+                foregroundColor: DS.brandPrimary,
+                elevation: 4,
+                heroTag: 'spark_bolt',
                 child: Icon(Icons.bolt, color: DS.brandPrimary),
                 onPressed: () {
                   // Pick a random node to spark for demo
@@ -908,7 +914,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
           if (galaxyState.isLoading &&
               galaxyState.nodes.isEmpty &&
-              !_isEntering)
+              !_isEntering &&
+              !_loadingTimedOut)
             const Center(child: CircularProgressIndicator()),
 
           if (!_isEntering &&
@@ -966,11 +973,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ),
     );
   }
-
-  // Helper to shift logical (0,0) to center of the star map canvas
-  Map<String, Offset> _centerPositions(
-          Map<String, Offset> raw, double cx, double cy,) =>
-      raw.map((key, value) => MapEntry(key, value + Offset(cx, cy)));
 
   // Helper to shift cluster positions to center of the star map canvas
   Map<String, ClusterInfo> _centerClusters(

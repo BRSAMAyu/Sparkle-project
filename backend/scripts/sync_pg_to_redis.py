@@ -70,7 +70,7 @@ async def sync_data():
             logger.error(f"⚠️ Failed to embed node {node.id}: {e}")
             # Fallback to dummy embedding for testing
             logger.warning("Using dummy embeddings for testing...")
-            embeddings = [[0.0] * 1536 for _ in chunks]
+            embeddings = [[0.0] * settings.EMBEDDING_DIM for _ in chunks]
 
         for i, (chunk_text, vector) in enumerate(zip(chunks, embeddings)):
             key = f"sparkle:chunk:{node.id}:{i}"

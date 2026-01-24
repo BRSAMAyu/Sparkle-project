@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
+import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
+import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
+import 'package:sparkle/features/user/presentation/widgets/preference_controller_2d.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -22,6 +27,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   double _curiosity = 0.5;
   bool _notificationsEnabled = true;
   bool _smartReminders = true;
+  bool _isGenerating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +36,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: Text(l10n
             .schedulePreferences,), // Using generic settings title from l10n or keeping consistent
         actions: [
           TextButton(
             onPressed: () {
               // TODO: Save all settings
-              Navigator.pop(context);
+              if (context.mounted) {
+                context.pop();
+              }
             },
             child: Text(l10n.confirm),
           ),
@@ -63,6 +75,62 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   _curiosity = c;
                 });
               },
+            ),
+            const SizedBox(height: DS.spacing32),
+
+            // ========== 胶囊生成区域 ==========
+            _buildSectionHeader(Icons.auto_awesome, '胶囊生成'),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              '调整偏好并生成专属好奇心胶囊',
+              style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
+            ),
+            const SizedBox(height: DS.spacing16),
+
+            // 二维控制面板
+            PreferenceController2D(
+              initialDepth: _depth,
+              initialCuriosity: _curiosity,
+              onPreferenceChanged: (offset) {
+                setState(() {
+                  _curiosity = offset.dx;
+                  _depth = offset.dy;
+                });
+              },
+            ),
+            const SizedBox(height: DS.spacing16),
+
+            // 生成预览卡片
+            CapsuleGenerationPreview(
+              depthPreference: _depth,
+              curiosityPreference: _curiosity,
+            ),
+            const SizedBox(height: DS.spacing16),
+
+            // 立即生成按钮
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isGenerating
+                    ? null
+                    : () => _requestCapsuleGeneration(context),
+                icon: _isGenerating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome),
+                label: Text(_isGenerating ? '生成中...' : '立即生成胶囊'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DS.primaryBase,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: DS.borderRadius12,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: DS.spacing32),
             _buildSectionHeader(Icons.schedule, l10n.weeklyAgenda),
@@ -131,11 +199,28 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               onChanged: (v) => setState(() => _smartReminders = v),
               activeThumbColor: DS.primaryBase,
             ),
+            const SizedBox(height: DS.spacing32),
+            _buildSectionHeader(Icons.sync, '同步'),
+            const SizedBox(height: DS.spacing16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.sync),
+              title: const Text('同步中心'),
+              subtitle: const Text('查看离线队列状态与重试'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SyncCenterScreen(),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: DS.spacing64),
             Center(
               child: GestureDetector(
                 onLongPress: () {
-                  showDialog(
+                  showDialog<void>(
                     context: context,
                     builder: (context) => const ChaosControlDialog(),
                   );
@@ -152,6 +237,65 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _requestCapsuleGeneration(BuildContext context) async {
+    setState(() => _isGenerating = true);
+
+    try {
+      final notifier = ref.read(generationJobsProvider.notifier);
+
+      // 根据好奇心偏好计算生成数量
+      final requestedCount = _curiosity < 0.3
+          ? 1
+          : _curiosity < 0.7
+              ? 2
+              : 3;
+
+      final taskId = await notifier.requestBatchGeneration(
+        depthPreference: _depth,
+        curiosityPreference: _curiosity,
+        requestedCount: requestedCount,
+      );
+
+      if (mounted) {
+        if (taskId != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✨ 胶囊生成任务已创建'),
+              backgroundColor: DS.success,
+              action: SnackBarAction(
+                label: '查看',
+                textColor: Colors.white,
+                onPressed: () {
+                  // TODO: 导航到任务状态页
+                },
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('生成失败，请稍后重试'),
+              backgroundColor: DS.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('生成失败: $e'),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
+    }
   }
 
   Widget _buildSectionHeader(IconData icon, String title) => Row(

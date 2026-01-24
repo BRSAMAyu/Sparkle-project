@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 
@@ -22,6 +23,10 @@ class ThemeSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('主题设置'),
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -91,7 +96,7 @@ class _ThemeModeSection extends StatelessWidget {
   });
 
   final AppThemeMode currentMode;
-  final Function(AppThemeMode) onModeChanged;
+  final void Function(AppThemeMode) onModeChanged;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -118,7 +123,7 @@ class _SegmentedThemeButton extends StatelessWidget {
   });
 
   final AppThemeMode currentMode;
-  final Function(AppThemeMode) onModeChanged;
+  final void Function(AppThemeMode) onModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +194,7 @@ class _BrandPresetSection extends StatelessWidget {
   });
 
   final BrandPreset currentPreset;
-  final Function(BrandPreset) onPresetChanged;
+  final void Function(BrandPreset) onPresetChanged;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -249,7 +254,7 @@ class _HighContrastSection extends StatelessWidget {
   });
 
   final bool highContrast;
-  final Function(bool) onToggled;
+  final void Function(bool) onToggled;
 
   @override
   Widget build(BuildContext context) => Container(

@@ -145,6 +145,38 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    # 胶囊反馈关系
+    capsule_feedbacks = relationship(
+        "CapsuleFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 任务反馈关系
+    task_feedbacks = relationship(
+        "TaskFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 胶囊收藏关系
+    capsule_favorites = relationship(
+        "CapsuleFavorite",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
+    # 胶囊生成任务关系
+    capsule_generation_jobs = relationship(
+        "CapsuleGenerationJob",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     # 安全审计日志关系
     security_audit_logs = relationship(
         "SecurityAuditLog",
@@ -215,6 +247,39 @@ class PushPreference(BaseModel):
 
     def __repr__(self):
         return f"<PushPreference(user_id={self.user_id}, timezone={self.timezone})>"
+
+
+class UserDevice(BaseModel):
+    """
+    用户设备令牌表 (v3.2)
+    用于推送通知和离线消息推送
+    """
+    __tablename__ = "user_devices"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 设备标识
+    device_id = Column(String(255), nullable=False, index=True)  # 设备唯一标识
+    platform = Column(String(50), nullable=False)  # ios, android, web
+
+    # 推送令牌
+    push_token = Column(String(500), nullable=False, index=True)  # FCM/APNs token
+    token_type = Column(String(50), nullable=False)  # fcm, apns, huawei
+
+    # 设备信息
+    device_name = Column(String(100), nullable=True)  # iPhone 14 Pro, Xiaomi 13, etc.
+    app_version = Column(String(50), nullable=True)  # 应用版本
+    os_version = Column(String(50), nullable=True)  # iOS 17.0, Android 14, etc.
+
+    # 状态
+    is_active = Column(Boolean, default=True, nullable=False)  # 令牌是否有效
+    last_used_at = Column(DateTime, nullable=True)  # 最后使用时间
+
+    # 元数据 (使用 device_metadata 避免 SQLAlchemy 保留字冲突)
+    device_metadata = Column(JSON, nullable=True)  # 额外设备信息
+
+    def __repr__(self):
+        return f"<UserDevice(user_id={self.user_id}, platform={self.platform}, is_active={self.is_active})>"
 
 
 class LoginAttempt(BaseModel):

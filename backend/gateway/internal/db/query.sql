@@ -26,10 +26,15 @@ VALUES ($1, $2, $3, $4, $5, NOW())
 RETURNING id, created_at;
 
 -- name: GetChatHistory :many
-SELECT * FROM chat_messages 
-WHERE session_id = $1 
+SELECT * FROM chat_messages
+WHERE session_id = $1
 AND created_at > $2
 ORDER BY created_at ASC;
+
+-- name: GetMessageByID :one
+SELECT * FROM chat_messages
+WHERE id = $1 AND session_id = $2
+LIMIT 1;
 
 -- name: GetGroupMessages :many
 SELECT
@@ -113,9 +118,9 @@ SELECT COUNT(*) FROM event_outbox WHERE published_at IS NULL;
 
 -- name: InsertEventStoreEntry :exec
 INSERT INTO event_store (
-    id, aggregate_type, aggregate_id, event_type,
+    aggregate_type, aggregate_id, event_type,
     event_version, sequence_number, payload, metadata, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: GetEventsByAggregate :many
 SELECT id, aggregate_type, aggregate_id, event_type,
@@ -154,7 +159,7 @@ SELECT EXISTS(
 -- name: MarkEventProcessed :exec
 INSERT INTO processed_events (event_id, consumer_group, processed_at)
 VALUES ($1, $2, NOW())
-ON CONFLICT (event_id) DO NOTHING;
+ON CONFLICT (event_id, consumer_group) DO NOTHING;
 
 -- name: CleanupOldProcessedEvents :execrows
 DELETE FROM processed_events

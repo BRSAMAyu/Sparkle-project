@@ -1,12 +1,8 @@
-.PHONY: dev-up dev-up-all dev-preflight dev-reset db-reset sync-db proto-gen db-migrate db-dump db-sqlc db-validate
+.PHONY: dev-up sync-db proto-gen db-migrate db-dump db-sqlc db-validate env-check smoke
 
 DB_CONTAINER=sparkle_db
-DB_USER=postgres
-DB_NAME=sparkle
-DB_PASSWORD ?= change-me
-REDIS_PASSWORD ?= change-me
-FLOWER_IMAGE ?= mher/flower:1.2.0
-FLOWER_ENABLE ?= 0
+DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
+DB_NAME?=$(if $(POSTGRES_DB),$(POSTGRES_DB),sparkle)
 
 # macOS-specific check: Unset CC/CXX if they interfere with Flutter
 _check_macos_env:
@@ -42,7 +38,38 @@ sync-db: db-migrate db-dump db-sqlc
 
 db-migrate:
 	@echo "🔄 Running Python Alembic Migrations..."
-	cd backend && alembic upgrade head
+	cd backend && ( \
+		set -e; \
+		heads_output="$$(alembic heads 2>&1)" || { echo "❌ Failed to read Alembic heads."; echo "$$heads_output"; exit 1; }; \
+		heads_count="$$(printf "%s\n" "$$heads_output" | rg -c "^[0-9a-f]" || true)"; \
+		if [ "$$heads_count" -ne 1 ]; then \
+			echo "❌ Alembic head mismatch detected (expected 1 head, got $$heads_count)."; \
+			echo "alembic heads:"; printf "%s\n" "$$heads_output"; \
+			echo "alembic current:"; alembic current || true; \
+			echo "alembic history (last 20 lines):"; alembic history | tail -n 20 || true; \
+			if [ "$$FORCE_STAMP" = "1" ]; then \
+				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				alembic stamp heads; \
+			else \
+				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
+				exit 1; \
+			fi; \
+		fi; \
+		if ! alembic upgrade head; then \
+			echo "❌ Alembic upgrade failed. Diagnostic output:"; \
+			echo "alembic heads:"; alembic heads || true; \
+			echo "alembic current:"; alembic current || true; \
+			echo "alembic history (last 20 lines):"; alembic history | tail -n 20 || true; \
+			if [ "$$FORCE_STAMP" = "1" ]; then \
+				echo "⚠️ FORCE_STAMP=1 set. Stamping heads (no purge) to reconcile state."; \
+				alembic stamp heads; \
+				alembic upgrade head; \
+			else \
+				echo "Set FORCE_STAMP=1 to stamp heads after you confirm the desired revision."; \
+				exit 1; \
+			fi; \
+		fi; \
+	)
 
 db-validate:
 	@echo "🔍 Checking if $(DB_CONTAINER) is running..."
@@ -52,7 +79,9 @@ db-dump: db-validate
 	@echo "🧾 Dumping Schema (Structure Only)..."
 	mkdir -p backend/gateway/internal/db
 	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | \
-		grep -v '^\\' > backend/gateway/internal/db/schema.sql
+		grep -v '^\\' | \
+		sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public', false);/g" | \
+		sed "s/public\.//g" > backend/gateway/internal/db/schema.sql
 
 db-sqlc:
 	@echo "⚡ Generating Go Code via SQLC..."
@@ -66,6 +95,17 @@ init-rag:
 sync-rag:
 	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
 	python backend/scripts/sync_pg_to_redis.py
+
+smoke:
+	@set -e; \
+	echo "🔎 Running config self-check..."; \
+	python backend/scripts/check_config_effective.py; \
+	echo "🔎 Checking backend health..."; \
+	curl -fsS http://localhost:8000/health > /dev/null || (echo "❌ Backend /health failed" && exit 1); \
+	echo "🔎 Checking gateway health..."; \
+	curl -fsS http://localhost:8080/api/v1/health > /dev/null || (echo "❌ Gateway /api/v1/health failed" && exit 1); \
+	curl -fsS http://localhost:8080/api/v1/health/cqrs > /dev/null || (echo "❌ Gateway /api/v1/health/cqrs failed" && exit 1); \
+	echo "✅ Smoke checks passed."
 
 # 生成 Protobuf 代码 (使用 Buf 工具链)
 # P1: Modernized protocol management with buf.build
@@ -240,14 +280,24 @@ dev-all:
 	@echo "   make celery-status     # Check Celery services"
 	@echo "   make celery-logs-worker # View worker logs"
 
-db-reset:
-	@echo "🧹 Resetting local Postgres data (destructive)..."
-	@docker compose stop sparkle_db >/dev/null 2>&1 || true
-	@rm -rf postgres_data
-	@echo "✅ Postgres data cleared. Run 'make dev-up' to recreate."
+# Mobile Development
+mobile-proto:
+	@echo "🚀 Generating Dart Protobufs..."
+	@mkdir -p mobile/lib/gen
+	@export PATH="$$PATH":"$$HOME/.pub-cache/bin" && buf generate --template buf.gen.dart.yaml
 
-dev-reset:
-	@echo "🧹 Resetting local dev data (destructive)..."
-	@docker compose down >/dev/null 2>&1 || true
-	@rm -rf postgres_data redis_data minio_data flower_data
-	@echo "✅ Local dev data cleared. Run 'make dev-up' to recreate."
+mobile-gen: mobile-proto
+	@echo "🏗️ Running Build Runner..."
+	cd mobile && flutter pub get && dart run build_runner build --delete-conflicting-outputs
+
+mobile-run:
+	@echo "🚀 Starting Mobile App..."
+	@if [[ "$$OSTYPE" == "darwin"* ]]; then \
+		echo "🍎 macOS detected. Unsetting CC/CXX..."; \
+		unset CC CXX; \
+	fi; \
+	cd mobile && flutter run
+# 配置自检
+env-check:
+	@echo "🔍 Checking effective config + connectivity..."
+	cd backend && python scripts/check_config_effective.py

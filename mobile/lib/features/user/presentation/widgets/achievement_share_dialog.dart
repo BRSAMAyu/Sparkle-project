@@ -250,7 +250,7 @@ void showAchievementShareDialog(
   required String achievementType,
   required Map<String, dynamic> data,
 }) {
-  showDialog(
+  showDialog<void>(
     context: context,
     builder: (context) => AchievementShareDialog(
       achievementType: achievementType,

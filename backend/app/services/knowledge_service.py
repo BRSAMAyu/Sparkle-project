@@ -2,20 +2,29 @@
 Knowledge Retrieval Service (RAG)
 Wraps GalaxyService to provide context for the AI Agent
 """
+from dataclasses import dataclass
+import time
 from typing import List, Optional
 from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-import asyncio
-
-import uuid
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.services.galaxy_service import GalaxyService
+from app.services.embedding_service import embedding_service
 from app.services.llm_service import llm_service
 from app.schemas.galaxy import SearchResultItem
-from app.services.galaxy.rag_router import RagRouter
-from app.core.sse import sse_manager
-from google.protobuf import json_format
+from app.models.galaxy import KnowledgeNode
+from app.core.metrics import RAG_RETRIEVAL_LATENCY
+
+
+@dataclass
+class KnowledgeSearchHit:
+    id: UUID
+    name: str
+    description: str
+    similarity: float
 
 class KnowledgeService:
     def __init__(self, db_session: AsyncSession):
@@ -177,3 +186,74 @@ class KnowledgeService:
         except Exception as e:
             logger.error(f"Failed to retrieve knowledge context: {e}")
             return ""
+
+    async def semantic_search(
+        self,
+        query: str,
+        top_k: int = 5,
+        min_similarity: float = 0.3,
+        subject_id: Optional[int] = None
+    ) -> List[KnowledgeSearchHit]:
+        """
+        Minimal vector search for GraphRAG path.
+
+        Returns:
+            List of KnowledgeSearchHit with similarity scores.
+        """
+        if not query:
+            return []
+
+        try:
+            start_time = time.time()
+            query_embedding = await embedding_service.get_embedding(query, text_type="query")
+            stmt = (
+                select(
+                    KnowledgeNode,
+                    KnowledgeNode.embedding.cosine_distance(query_embedding).label("distance")
+                )
+                .options(
+                    selectinload(KnowledgeNode.subject),
+                    selectinload(KnowledgeNode.parent)
+                )
+                .where(KnowledgeNode.embedding.isnot(None))
+            )
+            if subject_id:
+                stmt = stmt.where(KnowledgeNode.subject_id == subject_id)
+
+            stmt = stmt.order_by("distance").limit(top_k)
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            hits: List[KnowledgeSearchHit] = []
+            for node, distance in rows:
+                if distance is None:
+                    continue
+                similarity = max(0.0, 1.0 - float(distance))
+                if similarity < min_similarity:
+                    continue
+                hits.append(
+                    KnowledgeSearchHit(
+                        id=node.id,
+                        name=node.name,
+                        description=node.description or "",
+                        similarity=similarity
+                    )
+                )
+
+            RAG_RETRIEVAL_LATENCY.labels(source="pgvector", stage="retrieve").observe(
+                time.time() - start_time
+            )
+            return hits
+        except Exception as e:
+            logger.error(f"Semantic search failed: {e}")
+            return []
+
+    async def get_knowledge_version(self) -> Optional[str]:
+        """
+        Return cached knowledge version used for semantic cache keys.
+        """
+        try:
+            return await self.galaxy_service.retrieval._get_knowledge_version()
+        except Exception as e:
+            logger.warning(f"Failed to fetch knowledge version: {e}")
+            return None

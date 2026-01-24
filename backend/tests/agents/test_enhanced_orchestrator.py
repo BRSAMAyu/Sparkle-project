@@ -225,18 +225,20 @@ class TestErrorHandling:
         for agent in orchestrator.specialist_agents:
             agent.can_handle = Mock(return_value=0.0)
 
-        # 应该降级到 fallback_llm
-        with patch("app.agents.enhanced_orchestrator.llm_service") as mock_llm:
-            mock_llm.chat = AsyncMock(return_value="LLM 降级响应")
+        # Force default workflow to trigger fallback routing logic
+        with patch.object(orchestrator, "_select_workflow_type", new=AsyncMock(return_value="default")):
+            # 应该降级到 fallback_llm
+            with patch("app.services.llm_service.llm_service") as mock_llm:
+                mock_llm.chat = AsyncMock(return_value="LLM 降级响应")
 
-            response = await orchestrator.process(sample_context)
+                response = await orchestrator.process(sample_context)
 
-            # 验证调用了 LLM
-            mock_llm.chat.assert_called_once()
+                # 验证调用了 LLM
+                mock_llm.chat.assert_called_once()
 
-            # 验证返回了降级响应
-            assert isinstance(response, AgentResponse)
-            assert response.metadata.get("fallback") is True
+                # 验证返回了降级响应
+                assert isinstance(response, AgentResponse)
+                assert response.metadata.get("fallback") is True
 
 
 class TestPerformance:

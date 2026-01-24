@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -9,12 +11,15 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const defaultMaxVisitors = 10000
+
 // RateLimiter 速率限制器
 type RateLimiter struct {
-	visitors map[string]*visitor
-	mu       sync.RWMutex
-	rate     rate.Limit // 每秒允许的请求数
-	burst    int        // 突发请求容量
+	visitors    map[string]*visitor
+	mu          sync.RWMutex
+	rate        rate.Limit // 每秒允许的请求数
+	burst       int        // 突发请求容量
+	maxVisitors int
 }
 
 // visitor 访问者信息
@@ -25,10 +30,16 @@ type visitor struct {
 
 // NewRateLimiter 创建新的速率限制器
 func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
+	return NewRateLimiterWithMax(r, b, defaultMaxVisitors)
+}
+
+// NewRateLimiterWithMax 创建新的速率限制器并限制最大访客数
+func NewRateLimiterWithMax(r rate.Limit, b int, maxVisitors int) *RateLimiter {
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		rate:     r,
-		burst:    b,
+		visitors:    make(map[string]*visitor),
+		rate:        r,
+		burst:       b,
+		maxVisitors: maxVisitors,
 	}
 
 	// 启动清理过期访问者的goroutine
@@ -44,6 +55,9 @@ func (rl *RateLimiter) getVisitor(ip string) *rate.Limiter {
 
 	v, exists := rl.visitors[ip]
 	if !exists {
+		if rl.maxVisitors > 0 && len(rl.visitors) >= rl.maxVisitors {
+			rl.evictOldest(len(rl.visitors) - rl.maxVisitors + 1)
+		}
 		limiter := rate.NewLimiter(rl.rate, rl.burst)
 		rl.visitors[ip] = &visitor{limiter, time.Now()}
 		return limiter
@@ -65,6 +79,32 @@ func (rl *RateLimiter) cleanupVisitors() {
 			}
 		}
 		rl.mu.Unlock()
+	}
+}
+
+func (rl *RateLimiter) evictOldest(count int) {
+	if count <= 0 {
+		count = 1
+	}
+
+	entries := make([]struct {
+		key      string
+		lastSeen time.Time
+	}, 0, len(rl.visitors))
+
+	for key, v := range rl.visitors {
+		entries = append(entries, struct {
+			key      string
+			lastSeen time.Time
+		}{key: key, lastSeen: v.lastSeen})
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].lastSeen.Before(entries[j].lastSeen)
+	})
+
+	for i := 0; i < count && i < len(entries); i++ {
+		delete(rl.visitors, entries[i].key)
 	}
 }
 
@@ -105,8 +145,8 @@ func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 		}
 
 		// 添加速率限制头部信息
-		c.Header("X-RateLimit-Limit", string(rune(rl.burst)))
-		c.Header("X-RateLimit-Remaining", string(rune(int(limiter.Tokens()))))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(rl.burst))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(int(limiter.Tokens())))
 		c.Header("X-RateLimit-Reset", time.Now().Add(time.Second).Format(time.RFC3339))
 
 		c.Next()
@@ -150,8 +190,8 @@ func UserBasedRateLimit(requestsPerSecond float64, burst int) gin.HandlerFunc {
 		}
 
 		// 添加速率限制头部信息
-		c.Header("X-RateLimit-Limit", string(rune(rl.burst)))
-		c.Header("X-RateLimit-Remaining", string(rune(int(limiter.Tokens()))))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(rl.burst))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(int(limiter.Tokens())))
 		c.Header("X-RateLimit-Reset", time.Now().Add(time.Second).Format(time.RFC3339))
 
 		c.Next()

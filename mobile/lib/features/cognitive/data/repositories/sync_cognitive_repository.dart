@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/cognitive_repository.dart'; // ApiCognitiveRepository
@@ -9,10 +10,15 @@ import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_rep
 import 'package:uuid/uuid.dart';
 
 class SyncCognitiveRepository implements ICognitiveRepository {
-  SyncCognitiveRepository(this._apiRepository, this._localRepository);
+  SyncCognitiveRepository(
+    this._apiRepository,
+    this._localRepository,
+    this._syncEngine,
+  );
 
   final ApiCognitiveRepository _apiRepository;
   final LocalCognitiveRepository _localRepository;
+  final SyncEngine _syncEngine;
   final _uuid = const Uuid();
 
   @override
@@ -106,47 +112,7 @@ class SyncCognitiveRepository implements ICognitiveRepository {
 
   /// Try to sync pending fragments
   Future<void> syncPending() async {
-    final pending = (await _localRepository.getQueueRaw())
-        .cast<Map<String, dynamic>>();
-    if (pending.isEmpty) return;
-
-    debugPrint('🔄 Syncing ${pending.length} pending fragments...');
-
-    // Process in order
-    // Note: This is a simple implementation.
-    // Robust way: lock the queue, process, remove success ones.
-
-    // We iterate backwards to allow safe removal or use a copy
-    // Actually, simple queue consumption:
-
-    final toRemoveIndices = <int>[];
-
-    for (var i = 0; i < pending.length; i++) {
-      final item = pending[i];
-      try {
-        final data = CognitiveFragmentCreate(
-          id: item['id'] as String?,
-          content: (item['content'] as String?) ?? '',
-          sourceType: (item['source_type'] as String?) ?? 'unknown',
-          taskId: item['task_id'] as String?,
-        );
-
-        await _apiRepository.createFragment(data);
-        toRemoveIndices.add(i);
-      } catch (e) {
-        debugPrint('❌ Sync failed for item $i: $e');
-        // Stop on first error to preserve order? Or continue?
-        // Let's stop to avoid out-of-order issues if significant
-        break;
-      }
-    }
-
-    // Remove synced items (in reverse order to keep indices valid)
-    for (final index in toRemoveIndices.reversed) {
-      await _localRepository.removeFromQueue(index);
-    }
-
-    debugPrint('✅ Synced ${toRemoveIndices.length} items.');
+    await _syncEngine.processNow();
   }
 
   void _syncPendingInBackground() {

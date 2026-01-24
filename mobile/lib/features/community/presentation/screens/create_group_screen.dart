@@ -151,7 +151,12 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           }
         },
         child: Scaffold(
-          appBar: AppBar(title: const Text('Create Group')),
+          appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Create Group'),),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(DS.spacing16),
             child: Form(

@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentService_StreamChat_FullMethodName      = "/agent.v1.AgentService/StreamChat"
-	AgentService_RetrieveMemory_FullMethodName  = "/agent.v1.AgentService/RetrieveMemory"
-	AgentService_GetUserProfile_FullMethodName  = "/agent.v1.AgentService/GetUserProfile"
-	AgentService_GetWeeklyReport_FullMethodName = "/agent.v1.AgentService/GetWeeklyReport"
+	AgentService_StreamChat_FullMethodName             = "/agent.v1.AgentService/StreamChat"
+	AgentService_RetrieveMemory_FullMethodName         = "/agent.v1.AgentService/RetrieveMemory"
+	AgentService_GetUserProfile_FullMethodName         = "/agent.v1.AgentService/GetUserProfile"
+	AgentService_GetWeeklyReport_FullMethodName        = "/agent.v1.AgentService/GetWeeklyReport"
+	AgentService_SubmitResponseFeedback_FullMethodName = "/agent.v1.AgentService/SubmitResponseFeedback"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -42,6 +43,8 @@ type AgentServiceClient interface {
 	GetUserProfile(ctx context.Context, in *ProfileRequest, opts ...grpc.CallOption) (*UserProfile, error)
 	// GetWeeklyReport generates or retrieves a weekly summary for the user.
 	GetWeeklyReport(ctx context.Context, in *WeeklyReportRequest, opts ...grpc.CallOption) (*WeeklyReport, error)
+	// SubmitResponseFeedback records user feedback for an AI response.
+	SubmitResponseFeedback(ctx context.Context, in *ResponseFeedbackRequest, opts ...grpc.CallOption) (*ResponseFeedbackResponse, error)
 }
 
 type agentServiceClient struct {
@@ -101,6 +104,16 @@ func (c *agentServiceClient) GetWeeklyReport(ctx context.Context, in *WeeklyRepo
 	return out, nil
 }
 
+func (c *agentServiceClient) SubmitResponseFeedback(ctx context.Context, in *ResponseFeedbackRequest, opts ...grpc.CallOption) (*ResponseFeedbackResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResponseFeedbackResponse)
+	err := c.cc.Invoke(ctx, AgentService_SubmitResponseFeedback_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -118,6 +131,8 @@ type AgentServiceServer interface {
 	GetUserProfile(context.Context, *ProfileRequest) (*UserProfile, error)
 	// GetWeeklyReport generates or retrieves a weekly summary for the user.
 	GetWeeklyReport(context.Context, *WeeklyReportRequest) (*WeeklyReport, error)
+	// SubmitResponseFeedback records user feedback for an AI response.
+	SubmitResponseFeedback(context.Context, *ResponseFeedbackRequest) (*ResponseFeedbackResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -139,6 +154,9 @@ func (UnimplementedAgentServiceServer) GetUserProfile(context.Context, *ProfileR
 }
 func (UnimplementedAgentServiceServer) GetWeeklyReport(context.Context, *WeeklyReportRequest) (*WeeklyReport, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetWeeklyReport not implemented")
+}
+func (UnimplementedAgentServiceServer) SubmitResponseFeedback(context.Context, *ResponseFeedbackRequest) (*ResponseFeedbackResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitResponseFeedback not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -226,6 +244,24 @@ func _AgentService_GetWeeklyReport_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_SubmitResponseFeedback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResponseFeedbackRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).SubmitResponseFeedback(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_SubmitResponseFeedback_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).SubmitResponseFeedback(ctx, req.(*ResponseFeedbackRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -244,6 +280,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetWeeklyReport",
 			Handler:    _AgentService_GetWeeklyReport_Handler,
+		},
+		{
+			MethodName: "SubmitResponseFeedback",
+			Handler:    _AgentService_SubmitResponseFeedback_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

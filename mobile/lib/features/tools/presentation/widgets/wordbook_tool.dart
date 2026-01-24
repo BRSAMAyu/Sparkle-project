@@ -3,11 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
-import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
+import 'package:sparkle/features/vocabulary/data/repositories/local_vocabulary_repository.dart';
+import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
-/// 生词本工具 - 查看和复习生词
+/// 生词本工具 - 查看和复习生词 (本地存储版本)
 class WordbookTool extends ConsumerStatefulWidget {
   const WordbookTool({super.key});
 
@@ -21,13 +23,12 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   bool _isReviewMode = false;
   int _currentReviewIndex = 0;
   bool _showAnswer = false;
+  List<VocabWordItem> _sessionWords = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // 获取复习列表
-    ref.read(vocabularyProvider.notifier).fetchReviewList();
   }
 
   @override
@@ -37,49 +38,164 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   }
 
   void _startReview() {
+    final dueWords = ref.read(localVocabularyProvider).dueWords;
+    if (dueWords.isEmpty) return;
+
     setState(() {
+      _sessionWords = List.from(dueWords); // Create snapshot for session
       _isReviewMode = true;
       _currentReviewIndex = 0;
       _showAnswer = false;
     });
   }
 
-  Future<void> _handleReview(bool success) async {
-    final reviewList = ref.read(vocabularyProvider).reviewList;
-    if (_currentReviewIndex < reviewList.length) {
-      final word = reviewList[_currentReviewIndex];
-      await ref.read(vocabularyProvider.notifier).recordReview(
-            word['id'].toString(),
-            success,
+  Future<void> _handleReview(bool remembered) async {
+    if (_currentReviewIndex < _sessionWords.length) {
+      final word = _sessionWords[_currentReviewIndex];
+      final startTime = DateTime.now();
+
+      await ref.read(localVocabularyProvider.notifier).recordReview(
+            word.id,
+            remembered,
+            responseTimeMs: DateTime.now().difference(startTime).inMilliseconds,
           );
+
       HapticFeedback.lightImpact();
     }
 
-    // 移动到下一个
-    final newList = ref.read(vocabularyProvider).reviewList;
-    if (_currentReviewIndex >= newList.length) {
-      // 复习完成
+    // Advance to next word in session
+    if (_currentReviewIndex >= _sessionWords.length - 1) {
+      // Review complete
       setState(() {
         _isReviewMode = false;
+        _sessionWords = [];
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('太棒了！今日复习完成'),
+            content: Text(_getReviewCompletionMessage()),
             backgroundColor: DS.success,
           ),
         );
       }
     } else {
       setState(() {
+        _currentReviewIndex++;
         _showAnswer = false;
       });
     }
   }
 
+  String _getReviewCompletionMessage() {
+    // We can check the *actual* remaining count from provider if we want,
+    // or just say "Session Complete".
+    // The provider's dueCount might still have items if we didn't review all of them in one go?
+    // But _startReview takes ALL due words.
+    return '复习完成！';
+  }
+
+  void _showImportanceDialog(VocabWordItem word) {
+    int selectedImportance = word.importance;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('设置重要程度'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                word.word,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+              const Text('选择重要程度'),
+              const SizedBox(height: DS.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starValue = index + 1;
+                  return Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedImportance = starValue;
+                          });
+                        },
+                        child: Icon(
+                          Icons.star,
+                          size: 36,
+                          color: selectedImportance >= starValue
+                              ? Colors.amber
+                              : DS.neutral300,
+                        ),
+                      ),
+                      Text(
+                        '$starValue',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: DS.neutral600,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+              const SizedBox(height: DS.md),
+              Text(
+                _getImportanceLabel(selectedImportance),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: DS.neutral500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref
+                    .read(localVocabularyProvider.notifier)
+                    .updateImportance(word.id, selectedImportance);
+                if (mounted) Navigator.pop(context);
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getImportanceLabel(int importance) {
+    switch (importance) {
+      case 1:
+        return '偶尔需要';
+      case 2:
+        return '不太重要';
+      case 3:
+        return '一般';
+      case 4:
+        return '比较重要';
+      case 5:
+        return '非常重要';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(vocabularyProvider);
+    final state = ref.watch(localVocabularyProvider);
 
     if (_isReviewMode) {
       return _buildReviewMode(state);
@@ -132,7 +248,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               ),
               const Spacer(),
               // Review count badge
-              if (state.reviewList.isNotEmpty)
+              if (state.dueCount > 0)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -141,7 +257,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${state.reviewList.length} 待复习',
+                    '${state.dueCount} 待复习',
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
                       fontSize: 12,
@@ -151,6 +267,45 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 ),
             ],
           ),
+          const SizedBox(height: DS.lg),
+
+          // Filter chips
+          if (state.totalCount > 0)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: '全部',
+                    count: state.totalCount,
+                    isSelected: state.filter == VocabFilter.all,
+                    onTap: () => ref
+                        .read(localVocabularyProvider.notifier)
+                        .setFilter(VocabFilter.all),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  _FilterChip(
+                    label: '待复习',
+                    count: state.dueCount,
+                    isSelected: state.filter == VocabFilter.dueForReview,
+                    onTap: () => ref
+                        .read(localVocabularyProvider.notifier)
+                        .setFilter(VocabFilter.dueForReview),
+                  ),
+                  const SizedBox(width: DS.sm),
+                  _FilterChip(
+                    label: '重要',
+                    count: state.statistics['highImportance'] ?? 0,
+                    isSelected: state.filter == VocabFilter.highImportance,
+                    icon: Icons.star,
+                    onTap: () => ref
+                        .read(localVocabularyProvider.notifier)
+                        .setFilter(VocabFilter.highImportance),
+                  ),
+                ],
+              ),
+            ),
+
           const SizedBox(height: DS.lg),
 
           // Tab Bar
@@ -170,9 +325,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               labelColor: DS.success,
               unselectedLabelColor: DS.neutral500,
               dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: '待复习'),
-                Tab(text: '全部'),
+              tabs: [
+                Tab(text: '待复习 (${state.dueCount})'),
+                Tab(text: '全部 (${state.totalCount})'),
               ],
             ),
           ),
@@ -185,14 +340,14 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildReviewList(state.reviewList),
-                      _buildAllWords(state.wordbook),
+                      _buildWordList(state.dueWords, isReviewList: true),
+                      _buildWordList(state.words, isReviewList: false),
                     ],
                   ),
           ),
 
           // Start Review Button
-          if (state.reviewList.isNotEmpty)
+          if (state.dueCount > 0)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: CustomButton.primary(
@@ -209,127 +364,85 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
     );
   }
 
-  Widget _buildReviewList(List<dynamic> reviewList) {
-    if (reviewList.isEmpty) {
+  Widget _buildWordList(List<VocabWordItem> words, {required bool isReviewList}) {
+    if (words.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.check_circle_outline_rounded,
+              isReviewList
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.library_books_outlined,
               size: 64,
-              color: DS.success.withValues(alpha: 0.5),
+              color: isReviewList
+                  ? DS.success.withValues(alpha: 0.5)
+                  : DS.neutral300,
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '太棒了！暂无待复习单词',
+              isReviewList ? '太棒了！暂无待复习单词' : '生词本空空如也',
               style: TextStyle(
                 color: DS.neutral500,
                 fontSize: 16,
               ),
             ),
+            if (!isReviewList) ...[
+              const SizedBox(height: DS.sm),
+              Text(
+                '使用查词工具添加生词',
+                style: TextStyle(
+                  color: DS.neutral400,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ],
         ),
       );
     }
 
     return ListView.builder(
-      itemCount: reviewList.length,
+      itemCount: words.length,
       itemBuilder: (context, index) {
-        final word = reviewList[index];
+        final word = words[index];
         return _WordCard(
-          word: (word['word'] as String?) ?? '',
-          phonetic: word['phonetic'] as String?,
-          definition: (word['definition'] as String?) ?? '',
-          dueText: _getDueText(word['next_review_at'] as String?),
-          onTap: () => _startReviewAt(index),
+          word: word,
+          onTap: () => _showImportanceDialog(word),
+          onDelete: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('删除单词'),
+                content: Text('确定要从生词本中删除 "${word.word}" 吗？'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: FilledButton.styleFrom(backgroundColor: DS.error),
+                    child: const Text('删除'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true && mounted) {
+              await ref.read(localVocabularyProvider.notifier).delete(word.id);
+            }
+          },
         );
       },
     );
   }
 
-  Widget _buildAllWords(List<dynamic> wordbook) {
-    if (wordbook.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.library_books_outlined,
-              size: 64,
-              color: DS.neutral300,
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              '生词本空空如也',
-              style: TextStyle(
-                color: DS.neutral500,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: DS.sm),
-            Text(
-              '使用查词工具添加生词',
-              style: TextStyle(
-                color: DS.neutral400,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: wordbook.length,
-      itemBuilder: (context, index) {
-        final word = wordbook[index] as Map<String, dynamic>;
-        return _WordCard(
-          word: (word['word'] as String?) ?? '',
-          phonetic: word['phonetic'] as String?,
-          definition: (word['definition'] as String?) ?? '',
-          masteryLevel: (word['mastery_level'] as int?) ?? 0,
-        );
-      },
-    );
-  }
-
-  void _startReviewAt(int index) {
-    setState(() {
-      _isReviewMode = true;
-      _currentReviewIndex = index;
-      _showAnswer = false;
-    });
-  }
-
-  String _getDueText(String? nextReviewAt) {
-    if (nextReviewAt == null) return '';
-    try {
-      final date = DateTime.parse(nextReviewAt);
-      final now = DateTime.now();
-      final diff = date.difference(now);
-
-      if (diff.isNegative) {
-        return '已到期';
-      } else if (diff.inDays == 0) {
-        return '今天到期';
-      } else if (diff.inDays == 1) {
-        return '明天到期';
-      } else {
-        return '${diff.inDays}天后';
-      }
-    } catch (_) {
-      return '';
-    }
-  }
-
-  Widget _buildReviewMode(VocabularyState state) {
-    final reviewList = state.reviewList;
-    if (_currentReviewIndex >= reviewList.length) {
+  Widget _buildReviewMode(LocalVocabularyState state) {
+    if (_currentReviewIndex >= _sessionWords.length) {
       return const SizedBox.shrink();
     }
 
-    final word = reviewList[_currentReviewIndex];
+    final word = _sessionWords[_currentReviewIndex];
 
     return Container(
       padding: const EdgeInsets.all(DS.xl),
@@ -352,13 +465,13 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                 onPressed: () => setState(() => _isReviewMode = false),
               ),
               Text(
-                '${_currentReviewIndex + 1} / ${reviewList.length}',
+                '${_currentReviewIndex + 1} / ${_sessionWords.length}',
                 style: TextStyle(
                   color: DS.neutral500,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: DS.xxxl), // Balance
+              const SizedBox(width: DS.xxxl),
             ],
           ),
           const SizedBox(height: DS.xxl),
@@ -389,16 +502,16 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      (word['word'] as String?) ?? '',
+                      word.word,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: DS.fontWeightBold,
                               ),
                     ),
-                    if (word['phonetic'] != null) ...[
+                    if (word.phonetic != null) ...[
                       const SizedBox(height: DS.sm),
                       Text(
-                        word['phonetic'] as String,
+                        word.phonetic!,
                         style: TextStyle(
                           color: DS.neutral500,
                           fontSize: 18,
@@ -415,13 +528,25 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                       ),
                       const SizedBox(height: DS.xl),
                       Text(
-                        (word['definition'] as String?) ?? '',
+                        word.definition ?? '暂无释义',
                         style: const TextStyle(
                           fontSize: 18,
                           height: 1.5,
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      if (word.exampleSentence != null) ...[
+                        const SizedBox(height: DS.md),
+                        Text(
+                          word.exampleSentence!,
+                          style: TextStyle(
+                            color: DS.neutral600,
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ] else ...[
                       Text(
                         '点击显示释义',
@@ -475,22 +600,81 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   }
 }
 
-/// 单词卡片组件
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.count,
+    this.icon,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final int? count;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? DS.success : DS.neutral100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? DS.success : DS.neutral200,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? DS.brandPrimaryConst : DS.neutral600,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? DS.brandPrimaryConst : DS.neutral700,
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            if (count != null) ...[
+              const SizedBox(width: 4),
+              Text(
+                '($count)',
+                style: TextStyle(
+                  color: isSelected ? DS.brandPrimaryConst : DS.neutral600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 单词卡片组件 (本地版本)
 class _WordCard extends StatelessWidget {
   const _WordCard({
     required this.word,
-    required this.definition,
-    this.phonetic,
-    this.dueText,
-    this.masteryLevel,
-    this.onTap,
+    required this.onTap,
+    required this.onDelete,
   });
-  final String word;
-  final String? phonetic;
-  final String definition;
-  final String? dueText;
-  final int? masteryLevel;
-  final VoidCallback? onTap;
+
+  final VocabWordItem word;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -514,16 +698,16 @@ class _WordCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            word,
+                            word.word,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (phonetic != null) ...[
+                          if (word.phonetic != null) ...[
                             const SizedBox(width: DS.sm),
                             Text(
-                              phonetic!,
+                              word.phonetic!,
                               style: TextStyle(
                                 color: DS.neutral500,
                                 fontSize: 14,
@@ -535,7 +719,7 @@ class _WordCard extends StatelessWidget {
                       ),
                       const SizedBox(height: DS.xs),
                       Text(
-                        definition,
+                        word.definition ?? '暂无释义',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -543,54 +727,45 @@ class _WordCard extends StatelessWidget {
                           fontSize: 14,
                         ),
                       ),
+                      if (word.daysUntilReview != null) ...[
+                        const SizedBox(height: DS.sm),
+                        Text(
+                          word.isDueForReview ? '今天到期' : '还有 ${word.daysUntilReview} 天',
+                          style: TextStyle(
+                            color: word.isDueForReview ? DS.warning : DS.neutral400,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                if (dueText != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: dueText == '已到期'
-                          ? DS.error.withValues(alpha: 0.1)
-                          : DS.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      dueText!,
-                      style: TextStyle(
-                        color: dueText == '已到期' ? DS.error : DS.warning,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                // Importance stars
+                GestureDetector(
+                  onTap: onTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        Icons.star,
+                        size: 16,
+                        color: index < word.importance ? Colors.amber : DS.neutral300,
+                      );
+                    }),
                   ),
-                if (masteryLevel != null)
-                  _MasteryIndicator(level: masteryLevel!),
+                ),
+                const SizedBox(width: DS.sm),
+                IconButton(
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: DS.error.withValues(alpha: 0.7),
+                  ),
+                  onPressed: onDelete,
+                ),
               ],
-            ),
-          ),
-        ),
-      );
-}
-
-/// 掌握程度指示器
-class _MasteryIndicator extends StatelessWidget {
-  const _MasteryIndicator({required this.level});
-  final int level;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(
-          7,
-          (index) => Container(
-            width: 4,
-            height: 16,
-            margin: const EdgeInsets.only(left: 2),
-            decoration: BoxDecoration(
-              color: index < level ? DS.success : DS.neutral200,
-              borderRadius: BorderRadius.circular(2),
             ),
           ),
         ),

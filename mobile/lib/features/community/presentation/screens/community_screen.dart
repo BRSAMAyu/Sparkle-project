@@ -18,7 +18,9 @@ class CommunityScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (ctx) => const CreatePostScreen()),
+            MaterialPageRoute<void>(
+              builder: (ctx) => const CreatePostScreen(),
+            ),
           );
         },
         backgroundColor: DS.primaryBase,

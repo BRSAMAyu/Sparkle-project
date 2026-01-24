@@ -93,6 +93,9 @@ celery_app.conf.update(
     worker_log_level="INFO",
 )
 
+# Ensure tasks are registered when importing celery_app.
+from app.core import celery_tasks  # noqa: F401
+
 # =============================================================================
 # 任务定义
 # =============================================================================
@@ -308,6 +311,163 @@ def daily_report(self):
         raise self.retry(exc=exc, countdown=300)
 
 
+@celery_app.task(bind=True, max_retries=3, name="generate_capsules_batch")
+def generate_capsules_batch(
+    self,
+    user_id: str,
+    depth_preference: float = 0.5,
+    curiosity_preference: float = 0.5,
+    generation_type: str = "daily",
+    requested_count: int = 1,
+):
+    """
+    异步批量生成胶囊 (Celery 任务)
+
+    Args:
+        user_id: 用户ID
+        depth_preference: 深度偏好 (0.0-1.0)
+        curiosity_preference: 好奇心偏好 (0.0-1.0)
+        generation_type: 生成类型 (daily/weekly/manual/push_triggered)
+        requested_count: 请求生成的数量
+
+    Returns:
+        dict: 生成结果 {
+            "job_id": str,
+            "status": str,
+            "capsule_count": int,
+            "capsule_ids": list[str],
+        }
+    """
+    import asyncio
+    from uuid import UUID
+    from app.db.session import AsyncSessionLocal
+    from app.services.capsule_generation_service import capsule_generation_service
+    from app.services.notification_service import NotificationService
+    from loguru import logger
+
+    async def _generate():
+        async with AsyncSessionLocal() as session:
+            try:
+                # 调用生成服务
+                job = await capsule_generation_service.generate_capsules_batch(
+                    user_id=UUID(user_id),
+                    db=session,
+                    depth_preference=depth_preference,
+                    curiosity_preference=curiosity_preference,
+                    generation_type=generation_type,
+                    requested_count=requested_count,
+                )
+
+                result = {
+                    "job_id": str(job.id),
+                    "status": job.status,
+                    "capsule_count": job.actual_count or 0,
+                    "capsule_ids": [str(cid) for cid in (job.capsule_ids or [])],
+                }
+
+                # 如果生成成功，发送通知
+                if job.status == "completed" and result["capsule_count"] > 0:
+                    notification_service = NotificationService(session)
+                    await notification_service.create_system_notification(
+                        user_id=user_id,
+                        message=f"✨ 为你生成了 {result['capsule_count']} 个好奇心胶囊！",
+                        notification_type="capsule",
+                        metadata={
+                            "job_id": str(job.id),
+                            "capsule_count": result["capsule_count"],
+                        },
+                    )
+                    logger.info(f"✅ Celery: Sent notification for capsule job {job.id}")
+
+                logger.info(f"✅ Celery: Generated {result['capsule_count']} capsules for user {user_id}")
+                return result
+
+            except Exception as e:
+                logger.error(f"❌ Celery: Failed to generate capsules for {user_id}: {e}")
+                raise
+
+    try:
+        return asyncio.run(_generate())
+    except Exception as exc:
+        logger.error(f"Capsule generation task failed: {exc}")
+        # 指数退避重试
+        countdown = 60 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown)
+
+
+@celery_app.task(bind=True, max_retries=2, name="generate_daily_capsules_for_all")
+def generate_daily_capsules_for_all(self):
+    """
+    为所有活跃用户生成每日胶囊 (定时任务)
+
+    仅为好奇心偏好 > 0.3 的用户生成
+
+    Returns:
+        dict: 生成统计
+    """
+    import asyncio
+    from app.db.session import AsyncSessionLocal
+    from app.services.user_service import get_active_users
+    from app.services.personalization.preference_service import PreferenceService
+    from loguru import logger
+
+    async def _generate():
+        async with AsyncSessionLocal() as session:
+            try:
+                # 获取活跃用户
+                users = await get_active_users(session, days=7)
+                pref_service = PreferenceService(session)
+
+                stats = {
+                    "total_users": len(users),
+                    "eligible_users": 0,
+                    "generated_jobs": 0,
+                    "skipped_users": 0,
+                }
+
+                for user in users:
+                    try:
+                        # 获取用户偏好
+                        prefs = await pref_service.get_preferences(user.id)
+                        curiosity_pref = (prefs.explicit or {}).get("curiosity_preference", 0.5)
+
+                        # 只为高好奇心偏好的用户生成
+                        if curiosity_pref < 0.3:
+                            stats["skipped_users"] += 1
+                            continue
+
+                        # 调度异步生成任务
+                        celery_app.send_task(
+                            "generate_capsules_batch",
+                            args=(
+                                str(user.id),
+                                0.5,  # depth_preference - 默认中等
+                                curiosity_pref,
+                                "daily",
+                                1,  # 每日1个
+                            ),
+                            queue="default",
+                        )
+                        stats["eligible_users"] += 1
+                        stats["generated_jobs"] += 1
+
+                    except Exception as e:
+                        logger.warning(f"Failed to schedule capsule for user {user.id}: {e}")
+                        stats["skipped_users"] += 1
+
+                logger.info(f"✅ Celery: Scheduled {stats['generated_jobs']} daily capsule jobs")
+                return stats
+
+            except Exception as e:
+                logger.error(f"❌ Celery: Failed to generate daily capsules: {e}")
+                raise
+
+    try:
+        return asyncio.run(_generate())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=300)
+
+
 # =============================================================================
 # 周期任务 (Beat Schedule)
 # =============================================================================
@@ -336,10 +496,20 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "low_priority"}
     },
 
-    # 每天凌晨3点运行信号学习分析
-    "signals-learning-daily": {
-        "task": "signals_learning_daily",
-        "schedule": 86400.0,  # 24小时
+    # ========== 胶囊生成任务 ==========
+
+    # 每天早上8点生成每日胶囊
+    "daily-capsules-generation": {
+        "task": "generate_daily_capsules_for_all",
+        "schedule": 86400.0,  # 每天
+        "args": (),
+        "options": {"queue": "default"}
+    },
+
+    # 每周日上午9点生成深度胶囊
+    "weekly-deep-capsules": {
+        "task": "generate_daily_capsules_for_all",
+        "schedule": 604800.0,  # 7天
         "args": (),
         "options": {"queue": "default"}
     },
@@ -390,12 +560,15 @@ def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, qu
     if kwargs is None:
         kwargs = {}
 
-    task = celery_app.send_task(
-        task_name,
-        args=args,
-        kwargs=kwargs,
-        queue=queue
-    )
+    try:
+        task = celery_app.send_task(
+            task_name,
+            args=args,
+            kwargs=kwargs,
+            queue=queue
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Broker connection error: {exc}") from exc
 
     logger.info(f"📅 Scheduled task: {task_name} (ID: {task.id}, Queue: {queue})")
     return task.id

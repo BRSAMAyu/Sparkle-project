@@ -27,6 +27,7 @@ class ValidationResult:
     sanitized_text: str
     violations: List[str]
     action: str  # "allow", "block", "sanitize"
+    risk_score: float = 0.0  # 0.0 - 1.0
 
 
 class LLMOutputValidator:
@@ -44,11 +45,11 @@ class LLMOutputValidator:
     # 敏感信息泄露模式
     SENSITIVE_PATTERNS = [
         # 密钥类 (高风险)
-        (r"api[_-]?key\s*[:：]\s*[A-Za-z0-9]{20,}", "API Key 泄露"),
-        (r"secret\s*[:：]\s*[A-Za-z0-9]{20,}", "Secret 泄露"),
-        (r"token\s*[:：]\s*[A-Za-z0-9]{20,}", "Token 泄露"),
-        (r"password\s*[:：]\s*\S{8,}", "密码泄露"),
-        (r"private[_-]?key\s*[:：]\s*-----BEGIN", "私钥泄露"),
+        (r"api\s*[_-]?key\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "API Key 泄露"),
+        (r"secret\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "Secret 泄露"),
+        (r"token\s*[:：]\s*[A-Za-z0-9_\-]{20,}", "Token 泄露"),
+        (r"(?:password|密码)\s*(?:是\s*)?[:：]\s*\S{8,}", "密码泄露"),
+        (r"(?:private[_-]?key|私钥)\s*[:：]\s*-----BEGIN", "私钥泄露"),
 
         # 金融类 (高风险)
         (r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b", "信用卡号"),
@@ -98,7 +99,7 @@ class LLMOutputValidator:
     COMPLIANCE_PATTERNS = [
         (r"暴力|杀|死|伤害", "暴力内容"),
         (r"色情|性|裸", "色情内容"),
-        (r"歧视|仇恨|种族", "仇恨言论"),
+        (r"歧视|仇恨|种族", "歧视内容"),
         (r"炸弹|恐怖|袭击", "恐怖内容"),
     ]
 
@@ -139,16 +140,19 @@ class LLMOutputValidator:
             ValidationResult: 验证结果
         """
         if not text or not isinstance(text, str):
-            return ValidationResult(True, "", [], "allow")
+            return ValidationResult(True, "", [], "allow", risk_score=0.0)
 
         violations = []
         sanitized_text = text
         action = "allow"
+        security_violation = False
+        code_block_violation = False
 
         # Layer 1: 长度限制
         if len(text) > self.MAX_OUTPUT_LENGTH:
             violations.append(f"输出过长: {len(text)} > {self.MAX_OUTPUT_LENGTH}")
-            sanitized_text = text[:self.MAX_OUTPUT_LENGTH] + "... [截断]"
+            suffix = "... [截断]"
+            sanitized_text = text[:self.MAX_OUTPUT_LENGTH - len(suffix)] + suffix
             action = "sanitize"
 
         # Layer 2: 敏感信息泄露检测
@@ -157,10 +161,7 @@ class LLMOutputValidator:
             violations.extend(sensitive_result.violations)
             sanitized_text = sensitive_result.sanitized_text
             action = "sanitize" if action == "allow" else action
-
-            # 如果是严格模式且检测到高风险信息,直接阻断
-            if self.strict_mode and sensitive_result.high_risk:
-                action = "block"
+            security_violation = True
 
         # Layer 3: 恶意指令过滤
         malicious_result = self._filter_malicious_instructions(sanitized_text)
@@ -168,6 +169,7 @@ class LLMOutputValidator:
             violations.extend(malicious_result.violations)
             sanitized_text = malicious_result.sanitized_text
             action = "block"  # 恶意指令必须阻断
+            security_violation = True
 
         # Layer 4: 代码注入防护
         code_result = self._filter_code_injection(sanitized_text)
@@ -175,6 +177,7 @@ class LLMOutputValidator:
             violations.extend(code_result.violations)
             sanitized_text = code_result.sanitized_text
             action = "sanitize" if action == "allow" else action
+            security_violation = True
 
         # Layer 5: 内容合规性检查 (可选,可配置)
         if self.strict_mode:
@@ -183,12 +186,14 @@ class LLMOutputValidator:
                 violations.extend(compliance_result.violations)
                 # 合规性问题通常需要人工审核
                 action = "sanitize"
+                security_violation = True
 
         # Layer 6: 代码块数量检查
         code_block_count = sanitized_text.count("```")
         if code_block_count > self.MAX_CODE_BLOCKS * 2:  # 每个代码块需要 ```
             violations.append(f"代码块过多: {code_block_count//2} > {self.MAX_CODE_BLOCKS}")
             action = "sanitize"
+            code_block_violation = True
 
         # 记录安全事件
         if violations:
@@ -197,13 +202,17 @@ class LLMOutputValidator:
                 f"Action: {action}, Violations: {violations}"
             )
 
-        is_valid = action != "block"
+        is_valid = action != "block" and not security_violation and not code_block_violation
+        risk_score = 0.0
+        if security_violation or code_block_violation:
+            risk_score = 0.4 if action == "sanitize" else 1.0
 
         return ValidationResult(
             is_valid=is_valid,
             sanitized_text=sanitized_text,
             violations=violations,
-            action=action
+            action=action,
+            risk_score=risk_score
         )
 
     def _detect_sensitive_info(self, text: str) -> 'DetectionResult':
@@ -212,7 +221,13 @@ class LLMOutputValidator:
         sanitized_text = text
         high_risk = False
 
-        for pattern, description in self._compiled_patterns['sensitive']:
+        patterns = self._compiled_patterns['sensitive']
+        if self.strict_mode:
+            patterns = patterns + [
+                (re.compile(r"api\s*[_-]?key\s*[:：]?\s*\S+", re.IGNORECASE), "API Key 泄露"),
+            ]
+
+        for pattern, description in patterns:
             matches = pattern.findall(sanitized_text)
             if matches:
                 for match in matches:
@@ -328,7 +343,8 @@ class LLMOutputValidator:
         if len(text) <= max_len:
             return text
 
-        return text[:max_len] + "... [内容已截断]"
+        suffix = "... [内容已截断]"
+        return text[:max_len - len(suffix)] + suffix
 
     def sanitize_html(self, text: str) -> str:
         """

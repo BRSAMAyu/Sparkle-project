@@ -65,7 +65,7 @@ class FocusActionCard extends StatelessWidget {
               customGradient: DS.secondaryGradient,
               onPressed: () {
                 HapticFeedback.selectionClick();
-                context.push('/focus/mindfulness/${taskModel.id}');
+                context.push('/tasks/${taskModel.id}/execute');
               },
               size: CustomButtonSize.small,
             ),

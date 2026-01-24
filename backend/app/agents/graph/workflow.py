@@ -1,19 +1,26 @@
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode
+from loguru import logger
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.nodes.router import router_node
 from app.agents.graph.nodes.galaxy_guide import galaxy_guide_node, search_knowledge_graph, get_prerequisites
 from app.agents.graph.nodes.exam_oracle import exam_oracle_node, analyze_past_papers, predict_exam_focus
 from app.agents.graph.nodes.time_tutor import time_tutor_node, create_study_task, suggest_pomodoro_schedule
+# Phase 3: Import collaboration nodes
+from app.agents.graph.nodes.collaboration import (
+    collaboration_node,
+    collaboration_aggregator_node,
+    _analyze_collaboration_needs
+)
 
 # --- 1. 条件边逻辑 (Conditional Edges) ---
 
 def route_after_router(state: SparkleState):
     """Router 节点后的分支逻辑"""
     target = state.get("next_step")
-    
+
     if target == "galaxy_guide":
         return "galaxy_guide"
     elif target == "exam_oracle":
@@ -21,7 +28,7 @@ def route_after_router(state: SparkleState):
     elif target == "time_tutor":
         return "time_tutor"
     elif target == "study_buddy":
-        return "study_buddy" # 暂未实现，可指向 TimeTutor 或 GalaxyGuide 兜底
+        return "study_buddy"  # 暂未实现，可指向 TimeTutor 或 GalaxyGuide 兜底
     elif target == "human_assist":
         return "human_node"
     else:
@@ -31,15 +38,31 @@ def route_after_router(state: SparkleState):
 def route_after_agent(state: SparkleState):
     """Agent 节点后的逻辑 (处理工具调用)"""
     last_message = state["messages"][-1]
-    
+
     # 如果 Agent 想要调用工具
     if last_message.tool_calls:
         return "tools"
-    
+
     # 否则任务结束
     return END
 
-# --- 2. 构建图 (Graph Construction) ---
+def route_after_agent_planning(state: SparkleState):
+    """Agent 节点后的逻辑 (规划模式 - 不执行工具)
+
+    Phase 2: 在规划模式下，当 Agent 生成 tool_calls 时，
+    我们停止执行并返回计划，不实际执行工具。
+    """
+    last_message = state["messages"][-1]
+
+    # 如果 Agent 想要调用工具，在规划模式下我们直接结束
+    # tool_calls 会被提取到 ExecutablePlan 中
+    if last_message.tool_calls:
+        return END
+
+    # 否则任务结束
+    return END
+
+# --- 2. 构建标准图 (Graph Construction) ---
 
 workflow = StateGraph(SparkleState)
 
@@ -60,7 +83,7 @@ workflow.add_node("tools", tool_node)
 
 # (C) 添加虚拟人工节点
 def human_node(state: SparkleState):
-    pass 
+    pass
 workflow.add_node("human_node", human_node)
 
 # --- 3. 连接边 (Edges) ---
@@ -76,7 +99,7 @@ workflow.add_conditional_edges(
         "galaxy_guide": "galaxy_guide",
         "exam_oracle": "exam_oracle",
         "time_tutor": "time_tutor",
-        "study_buddy": "time_tutor", # 暂时 fallback
+        "study_buddy": "time_tutor",  # 暂时 fallback
         "human_node": "human_node",
         END: END
     }
@@ -103,9 +126,9 @@ for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor"]:
 
 # 修正：为每个 Agent 建立回边是 LangGraph 的标准做法，但这需要条件边。
 # 简便方案：让 Tools 节点执行完后，统一路由回 Router (让 Router 决定是否结束)。
-workflow.add_edge("tools", "router") 
+workflow.add_edge("tools", "router")
 
-# --- 4. 编译 (Compile) ---
+# --- 4. 编译标准图 (Compile) ---
 
 checkpointer = MemorySaver()
 
@@ -113,3 +136,156 @@ sparkle_graph = workflow.compile(
     checkpointer=checkpointer,
     interrupt_before=["human_node"]
 )
+
+
+# ==========================================
+# Phase 2: Planning-Only Graph (No Tool Execution)
+# ==========================================
+
+def create_planning_graph():
+    """Create a planning-only graph that does NOT execute tools (Phase 3: with collaboration support).
+
+    This graph is used by LangGraphPlanner to generate ExecutablePlan.
+    It will route through agents but stop when tool_calls are generated,
+    without actually executing them.
+
+    Phase 3: Now supports multi-agent collaboration nodes.
+    This ensures "planning without execution" constraint.
+    """
+    planning_workflow = StateGraph(SparkleState)
+
+    # Add the same agent nodes (they do the planning/reasoning)
+    planning_workflow.add_node("router", router_node)
+    # Phase 3: Add collaboration node
+    planning_workflow.add_node("collaboration", collaboration_node)
+    planning_workflow.add_node("galaxy_guide", galaxy_guide_node)
+    planning_workflow.add_node("exam_oracle", exam_oracle_node)
+    planning_workflow.add_node("time_tutor", time_tutor_node)
+    # Phase 3: Add aggregator node
+    planning_workflow.add_node("aggregator", collaboration_aggregator_node)
+
+    # NO ToolNode in planning graph!
+    # We stop at tool_calls generation
+
+    # Entry point
+    planning_workflow.set_entry_point("router")
+
+    # Router -> Collaboration or Direct Agent (Phase 3 routing)
+    planning_workflow.add_conditional_edges(
+        "router",
+        route_after_router_with_collaboration,
+        {
+            "collaboration": "collaboration",
+            "galaxy_guide": "galaxy_guide",
+            "exam_oracle": "exam_oracle",
+            "time_tutor": "time_tutor",
+            END: END
+        }
+    )
+
+    # Collaboration -> Agents (sequential execution)
+    planning_workflow.add_conditional_edges(
+        "collaboration",
+        route_after_collaboration,
+        {
+            "galaxy_guide": "galaxy_guide",
+            "exam_oracle": "exam_oracle",
+            "time_tutor": "time_tutor",
+            "aggregator": "aggregator"  # All done, aggregate results
+        }
+    )
+
+    # Agents -> Back to Collaboration or Aggregator
+    for agent_name in ["galaxy_guide", "exam_oracle", "time_tutor"]:
+        planning_workflow.add_conditional_edges(
+            agent_name,
+            route_after_agent_in_collaboration,
+            {
+                "continue_collaboration": "collaboration",
+                "aggregator": "aggregator",
+                END: END
+            }
+        )
+
+    # Aggregator -> End
+    planning_workflow.add_edge("aggregator", END)
+
+    # Compile with checkpointer
+    planning_checkpointer = MemorySaver()
+
+    return planning_workflow.compile(
+        checkpointer=planning_checkpointer
+    )
+
+
+# ============ Phase 3: Collaboration Routing Functions ============
+
+def route_after_router_with_collaboration(state: SparkleState):
+    """Router 后的路由（支持协作模式） (Phase 3)"""
+    target = state.get("next_step")
+    collaboration_mode = state.get("collaboration_mode")
+
+    # If collaboration_mode not set yet, analyze to decide
+    if not collaboration_mode:
+        last_message = state["messages"][-1] if state.get("messages") else None
+        user_message = last_message.content if last_message else ""
+        collaboration_plan = _analyze_collaboration_needs(user_message)
+        collaboration_mode = collaboration_plan["mode"]
+        if collaboration_mode != "single":
+            state["collaboration_mode"] = collaboration_plan["mode"]
+            state["collaboration_agents"] = collaboration_plan["agents"]
+            state["collaboration_order"] = collaboration_plan["order"]
+            state["collaboration_index"] = 0
+            return "collaboration"
+
+    if collaboration_mode and collaboration_mode != "single":
+        return "collaboration"
+
+    if target == "galaxy_guide":
+        return "galaxy_guide"
+    elif target == "exam_oracle":
+        return "exam_oracle"
+    elif target == "time_tutor":
+        return "time_tutor"
+    else:
+        return "time_tutor"
+
+
+def route_after_collaboration(state: SparkleState):
+    """协作节点后的路由 (Phase 3)"""
+    # Collaboration node sets next_step explicitly
+    next_step = state.get("next_step")
+    if next_step:
+        return next_step
+    return "aggregator"
+
+
+def route_after_agent_in_collaboration(state: SparkleState):
+    """Agent 执行后的路由（协作模式） (Phase 3)"""
+    collaboration_mode = state.get("collaboration_mode", "single")
+    collaboration_order = state.get("collaboration_order", [])
+    collaboration_index = state.get("collaboration_index", 0)
+
+    if collaboration_mode != "single" and len(collaboration_order) > 1:
+        # Check if more agents need to execute
+        if collaboration_index < len(collaboration_order):
+            return "continue_collaboration"
+
+    return "aggregator"
+
+
+# Singleton instance for planning graph
+_planning_graph = None
+
+
+def get_planning_graph():
+    """Get the planning-only graph instance (singleton) (Phase 3: with collaboration support)."""
+    global _planning_graph
+    if _planning_graph is None:
+        _planning_graph = create_planning_graph()
+        logger.info("Planning-only graph created (Phase 3: with collaboration support)")
+    return _planning_graph
+
+
+# Export for use in LangGraphPlanner
+sparkle_planning_graph = get_planning_graph()

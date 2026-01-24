@@ -13,12 +13,14 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.llm_service import llm_service, LLMResponse, StreamChunk
 from app.services.analytics_service import AnalyticsService
+from app.config import settings
 from app.tools.registry import tool_registry
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.error_handler import AgentErrorHandler
 from app.core.pending_actions import pending_actions_store
+from app.core.business_metrics import HITL_APPROVED, HITL_REJECTED
 from app.models.chat import ChatMessage, MessageRole
 
 router = APIRouter()
@@ -61,7 +63,7 @@ async def chat_with_task_context(
     error_handler = AgentErrorHandler()
     
     # 2. Build Context
-    user_context = await get_user_context(db, current_user.id)
+    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
     
     # Inject Task Context specifically
     task_context = {
@@ -186,7 +188,7 @@ async def chat(
     error_handler = AgentErrorHandler()
     
     # 1. 构建上下文和对话历史
-    user_context = await get_user_context(db, current_user.id)
+    user_context = await get_user_context(db, current_user.id, payload={"context": request.context})
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
@@ -330,7 +332,7 @@ async def chat_stream(
         user_id_uuid = current_user.id
         
         # Build context
-        user_context = await get_user_context(db, user_id_uuid)
+        user_context = await get_user_context(db, user_id_uuid, payload={"context": request.context})
         conversation_history_raw = await get_conversation_history(
             db, user_id_uuid, request.conversation_id
         )
@@ -352,6 +354,7 @@ async def chat_stream(
             system_prompt=system_prompt,
             user_message=request.message,
             tools=tool_registry.get_openai_tools_schema(),
+            user_context=user_context,
         ):
             if chunk.type == "text":
                 collected_text_content += chunk.content
@@ -484,6 +487,8 @@ async def confirm_action(
 
     # 如果用户取消操作
     if not confirmed:
+        reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+        HITL_REJECTED.labels(reason=reason).inc()
         await pending_actions_store.delete(action_id, str(current_user.id))
         return {"status": "cancelled", "message": "操作已取消"}
 
@@ -492,6 +497,54 @@ async def confirm_action(
     error_handler = AgentErrorHandler()
 
     try:
+        if pending_action["tool_name"] == "__plan__":
+            tool_calls = pending_action.get("arguments", {}).get("tool_calls", [])
+            results = []
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("name")
+                arguments = tool_call.get("params") or {}
+                compensation_call = tool_call.get("compensation_call")
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except Exception:
+                        arguments = {}
+
+                result = await tool_executor.execute_tool_call(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    user_id=str(current_user.id),
+                    db_session=db,
+                    compensation_call=compensation_call
+                )
+
+                # 错误处理与自我修正
+                if not result.success and error_handler.should_retry(result):
+                    original_request = {
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(arguments)
+                        }
+                    }
+                    result = await error_handler.handle_tool_error(
+                        llm_service=llm_service,
+                        tool_result=result,
+                        original_request=original_request,
+                        retry_count=0,
+                        user_id=str(current_user.id),
+                        db_session=db
+                    )
+
+                results.append(result.model_dump())
+
+                if not result.success:
+                    break
+
+            reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+            HITL_APPROVED.labels(reason=reason).inc()
+            await pending_actions_store.delete(action_id, str(current_user.id))
+            return {"status": "executed", "results": results}
+
         result = await tool_executor.execute_tool_call(
             tool_name=pending_action["tool_name"],
             arguments=pending_action["arguments"],
@@ -516,6 +569,9 @@ async def confirm_action(
                 db_session=db
             )
 
+        reason = pending_action.get("preview_data", {}).get("reason", "unknown")
+        HITL_APPROVED.labels(reason=reason).inc()
+
         # 删除已处理的待确认操作
         await pending_actions_store.delete(action_id, str(current_user.id))
 
@@ -528,7 +584,7 @@ async def confirm_action(
 
 # ============辅助函数 ============ 
 
-async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
+async def get_user_context(db: AsyncSession, user_id: UUID, payload: Optional[Dict[str, Any]] = None) -> dict:
     """
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
@@ -536,7 +592,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
     from datetime import datetime, timedelta
     from app.models.task import Task
     from app.models.plan import Plan
-    from app.models.knowledge import UserNodeStatus
+    from app.models.galaxy import UserNodeStatus
 
     context = {
         "recent_tasks": [],
@@ -548,6 +604,24 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
     }
 
     try:
+        if settings.USE_CONTEXT_PACK:
+            from app.core.context_pack import ContextPackBuilder
+            from app.core.intent_router import IntentRouter
+
+            intent = "chat"
+            if settings.USE_CONTEXT_INTENT_ROUTER and payload is not None:
+                intent = IntentRouter().get_intent(payload)
+            pack_builder = ContextPackBuilder(db)
+            request_id = payload.get("request_id") if payload else None
+            trace_id = payload.get("trace_id") if payload else None
+            pack = await pack_builder.build(
+                user_id,
+                intent=intent,
+                request_id=request_id,
+                trace_id=trace_id,
+            )
+            return pack.to_prompt_context()
+
         # 0. 获取 Analytics Summary
         analytics_service = AnalyticsService(db)
         # Ensure today's stats are up to date (optional, might be slow for every chat, maybe skip calculation here and just read?)
@@ -563,9 +637,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID) -> dict:
         if user:
             context["flame_level"] = user.flame_level or 1
             context["flame_brightness"] = user.flame_brightness or 0
+
+            try:
+                from app.services.personalization.preference_service import PreferenceService
+
+                pref_service = PreferenceService(db)
+                prefs_center = await pref_service.get_preferences(user_id)
+                explicit = prefs_center.explicit if prefs_center else {}
+            except Exception:
+                explicit = {}
+
             context["learning_preferences"] = {
-                "depth_preference": user.depth_preference,
-                "curiosity_preference": user.curiosity_preference
+                "depth_preference": explicit.get("depth_preference", user.depth_preference),
+                "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
             }
 
         # 2. 获取近期任务（最近7天）

@@ -165,7 +165,6 @@ func NewEventStoreRepository(pool *pgxpool.Pool) *EventStoreRepository {
 // SaveWithTx saves an event to the event store within an existing transaction.
 func (r *EventStoreRepository) SaveWithTx(ctx context.Context, tx pgx.Tx, entry *event.EventStoreEntry) error {
 	params := db.InsertEventStoreEntryParams{
-		ID:             toPgUUID(entry.ID),
 		AggregateType:  string(entry.AggregateType),
 		AggregateID:    toPgUUID(entry.AggregateID),
 		EventType:      string(entry.EventType),
@@ -298,8 +297,7 @@ func (r *ProcessedEventsRepository) MarkProcessed(ctx context.Context, eventID, 
 		EventID:       eventID,
 		ConsumerGroup: consumerGroup,
 	}
-	err := r.queries.MarkEventProcessed(ctx, params)
-	if err != nil {
+	if err := r.queries.MarkEventProcessed(ctx, params); err != nil {
 		return fmt.Errorf("mark processed: %w", err)
 	}
 
@@ -386,7 +384,7 @@ func (c *TransactionContext) SaveEventToStore(ctx context.Context, domainEvent *
 	}
 
 	entry := &event.EventStoreEntry{
-		ID:             uuid.MustParse(domainEvent.ID),
+		ID:             uuid.Nil,
 		AggregateType:  domainEvent.AggregateType,
 		AggregateID:    domainEvent.AggregateID,
 		EventType:      domainEvent.Type,

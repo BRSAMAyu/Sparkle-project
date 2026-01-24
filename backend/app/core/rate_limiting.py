@@ -19,7 +19,7 @@ def get_real_ip(request: Request) -> str:
 
 limiter = Limiter(
     key_func=get_real_ip,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["600 per minute"]
 )
 
 def setup_rate_limiting(app: FastAPI):

@@ -4,6 +4,7 @@ import json
 import uuid
 import asyncio
 import re
+import time
 
 from app.orchestration.statechart_engine import StateGraph, WorkflowState, GraphEventType, GraphEvent
 from app.services.llm_service import llm_service
@@ -19,6 +20,8 @@ from app.agents.collaboration_workflows import (
     ErrorDiagnosisWorkflow
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
+from app.core.pending_actions import pending_actions_store
+from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 
 # ==========================================
 # Nodes
@@ -139,18 +142,22 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     """LLM Generation (Streaming)."""
     # We need to access the 'stream_callback' from context to yield tokens
     stream_callback = state.context_data.get("stream_callback")
-    
+
     # Cast to Dict to satisfy type checker
     user_context = state.context_data.get("user_context", {})
-    if not isinstance(user_context, dict):
+    # Ensure user_context is never None
+    if user_context is None or not isinstance(user_context, dict):
         user_context = {}
 
-    conversation_context = state.context_data.get("conversation_context") or {
-        "messages": state.messages[:-1]
-    }
+    conversation_context = state.context_data.get("conversation_context")
+    if conversation_context is None or not isinstance(conversation_context, dict):
+        conversation_context = {"messages": state.messages[:-1]}
+    prompt_version = state.context_data.get("prompt_version") or "v1"
+
     system_prompt = build_system_prompt(
         user_context,
-        conversation_history=conversation_context
+        conversation_history=conversation_context,
+        prompt_version=prompt_version
     )
 
     knowledge_context = state.context_data.get("knowledge_context") or ""
@@ -171,7 +178,8 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     async for chunk in llm_service.chat_stream_with_tools(
         system_prompt=system_prompt,
         user_message=user_message,
-        tools=tools
+        tools=tools,
+        user_context=user_context,
     ):
         if chunk.type == "text":
             full_response += chunk.content
@@ -209,24 +217,184 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     return state
 
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
-    """Execute Tools."""
-    tool_calls = state.context_data.get("tool_calls", [])
-    executor = ToolExecutor() # Should be injected or cached
+    """Execute Tools with Grounding Validation (Phase 1 & Phase 2).
+
+    Phase 2: Now consumes executable_plan from LangGraph planner.
+    """
+    executor = ToolExecutor()  # Should be injected or cached
 
     stream_callback = state.context_data.get("stream_callback")
     user_id = state.context_data.get("user_id", "")
+    session_id = state.context_data.get("session_id", "")
     db_session = state.context_data.get("db_session")
+    redis_client = state.context_data.get("redis_client")
+
+    # === Phase 2: Check for executable_plan from LangGraph planner ===
+    executable_plan = state.context_data.get("executable_plan")
+    snapshot = state.context_data.get("snapshot")
+
+    if executable_plan and executable_plan.source == "langgraph":
+        logger.info(
+            f"Executing LangGraph plan: {len(executable_plan.tool_calls)} tool calls, "
+            f"plan_id={executable_plan.plan_id}"
+        )
+
+        # Use snapshot for validation if available
+        validator = state.context_data.get("grounding_validator")
+        if validator:
+            from app.orchestration.schemas import ValidationResult
+            # Re-validate with snapshot (business rules check)
+            validation_result = await validator.validate_plan(executable_plan, snapshot)
+
+            if not validation_result.is_valid:
+                logger.error(f"LangGraph plan validation failed: {validation_result.failure_reason}")
+                if stream_callback:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=f"\n\n⚠️ 计划执行被拒绝: {validation_result.failure_reason}"
+                    ))
+                state.context_data["validation_failed"] = True
+                state.next_step = "__end__"
+                return state
+
+            if validation_result.requires_confirmation or validation_result.requires_hitl:
+                logger.warning(f"LangGraph plan requires confirmation: {validation_result.risk_flags}")
+                action_id = await _queue_hitl_action(
+                    user_id=str(user_id),
+                    reason="risk_flags",
+                    description="高风险操作需要确认",
+                    tool_calls=executable_plan.tool_calls,
+                    plan_id=executable_plan.plan_id,
+                    snapshot_id=getattr(snapshot, "snapshot_id", None)
+                )
+                if stream_callback:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
+                              f"action_id={action_id}",
+                        metadata={
+                            "requires_hitl": "true",
+                            "action_id": action_id,
+                            "reason": "risk_flags"
+                        }
+                    ))
+                state.context_data["validation_failed"] = True
+                state.next_step = "__end__"
+                return state
+
+        # Execute tool calls from the plan
+        start_time = time.time()
+
+        for tool_call_spec in executable_plan.tool_calls:
+            tool_args = tool_call_spec.params
+            if isinstance(tool_args, str):
+                try:
+                    tool_args = json.loads(tool_args)
+                except Exception:
+                    tool_args = {}
+            await _execute_single_tool(
+                tool_name=tool_call_spec.name,
+                tool_args=tool_args,
+                tool_call_id=tool_call_spec.id,
+                stream_callback=stream_callback,
+                user_id=user_id,
+                db_session=db_session,
+                executor=executor,
+                state=state,
+                compensation_call=tool_call_spec.compensation_call
+            )
+
+        # Write feedback for LangGraph plan
+        await _write_feedback(
+            state=state,
+            user_id=user_id,
+            session_id=session_id,
+            redis_client=redis_client,
+            start_time=start_time,
+            tool_count=len(executable_plan.tool_calls),
+            plan_id=executable_plan.plan_id
+        )
+
+        # Clear executable_plan and loop back
+        state.context_data["executable_plan"] = None
+        state.next_step = "generation"
+        return state
+
+    # === Phase 1: Original LLM tool_calls path ===
+    tool_calls = state.context_data.get("tool_calls", [])
+    if not tool_calls:
+        state.next_step = "__end__"
+        return state
+
+    # Grounding Validation
+    validator = state.context_data.get("grounding_validator")
+    if validator:
+        from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
+
+        def _prepare_params(tc) -> dict:
+            """准备参数用于验证和执行"""
+            if isinstance(tc.full_arguments, dict):
+                return tc.full_arguments
+            elif isinstance(tc.full_arguments, str):
+                try:
+                    import json
+                    return {"_raw_json": tc.full_arguments}
+                except:
+                    return {"_raw": tc.full_arguments}
+            return {}
+
+        plan = ExecutablePlan(
+            context_version=state.context_data.get("plan_metadata", {}).get("context_version", "v0"),
+            source="fast_path",
+            rationale=state.context_data.get("plan_metadata", {}).get("route_reason", ""),
+            tool_calls=[
+                ToolCallSpec(
+                    id=tc.tool_call_id or str(uuid.uuid4()),
+                    name=tc.tool_name,
+                    params=_prepare_params(tc),
+                    point_of_no_return=tc.tool_name in ["delete_task", "delete_plan"]
+                )
+                for tc in tool_calls
+            ]
+        )
+
+        validation_result = await validator.validate_plan(plan)
+
+        if not validation_result.is_valid:
+            logger.error(f"Grounding validation failed: {validation_result.failure_reason}")
+            if stream_callback:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 执行被拒绝: {validation_result.failure_reason}"
+                ))
+            state.context_data["validation_failed"] = True
+            state.next_step = "__end__"
+            return state
+
+        if validation_result.requires_confirmation or validation_result.requires_hitl:
+            logger.warning(f"Plan requires confirmation: {validation_result.risk_flags}")
+            action_id = await _queue_hitl_action(
+                user_id=str(user_id),
+                reason="risk_flags",
+                description="高风险操作需要确认",
+                tool_calls=plan.tool_calls,
+                plan_id=plan.plan_id,
+                snapshot_id=None
+            )
+            if stream_callback:
+                await stream_callback(agent_service_pb2.ChatResponse(
+                    delta=f"\n\n⚠️ 该操作需要确认才能执行: {', '.join(validation_result.risk_flags)}\n"
+                          f"action_id={action_id}",
+                    metadata={
+                        "requires_hitl": "true",
+                        "action_id": action_id,
+                        "reason": "risk_flags"
+                    }
+                ))
+            state.context_data["validation_failed"] = True
+            state.next_step = "__end__"
+            return state
+
+    start_time = time.time()
 
     for tc in tool_calls:
-        if stream_callback:
-            await stream_callback(agent_service_pb2.ChatResponse(
-                status_update=agent_service_pb2.AgentStatus(
-                    state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                    details=f"Executing {tc.tool_name}...",
-                    active_agent=agent_service_pb2.ORCHESTRATOR
-                )
-            ))
-
         # Parse arguments if needed (ToolExecutor expects dict)
         args = tc.full_arguments
         if isinstance(args, str):
@@ -235,45 +403,31 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             except:
                 args = {}
 
-        result = await executor.execute_tool_call(
+        await _execute_single_tool(
             tool_name=tc.tool_name,
-            arguments=args,
+            tool_args=args,
+            tool_call_id=tc.tool_call_id or str(uuid.uuid4()),
+            stream_callback=stream_callback,
             user_id=user_id,
-            db_session=db_session
+            db_session=db_session,
+            executor=executor,
+            state=state
         )
 
-        if stream_callback:
-            data_struct = struct_pb2.Struct()
-            if result.data:
-                data_struct.update(result.data)
-            widget_struct = struct_pb2.Struct()
-            if result.widget_data:
-                widget_struct.update(result.widget_data)
-
-            await stream_callback(agent_service_pb2.ChatResponse(
-                tool_result=agent_service_pb2.ToolResultPayload(
-                    tool_name=result.tool_name,
-                    success=result.success,
-                    data=data_struct,
-                    error_message=result.error_message or "",
-                    suggestion=result.suggestion or "",
-                    widget_type=result.widget_type or "",
-                    widget_data=widget_struct,
-                    tool_call_id=tc.tool_call_id
-                )
-            ))
-
-        # ToolResult object to JSON
-        result_json = json.dumps({
-            "success": result.success,
-            "result": result.data,
-            "error": result.error_message
-        })
-        state.append_message("tool", result_json, name=tc.tool_name)
+    # Write feedback for Phase 1 LLM tool_calls
+    plan_id = state.context_data.get("plan_metadata", {}).get("plan_id", str(uuid.uuid4()))
+    await _write_feedback(
+        state=state,
+        user_id=user_id,
+        session_id=session_id,
+        redis_client=redis_client,
+        start_time=start_time,
+        tool_count=len(tool_calls),
+        plan_id=plan_id
+    )
 
     # Clear tool calls and loop back to generation
     state.context_data["tool_calls"] = []
-    # If we want to feed result back to LLM:
     state.next_step = "generation"
 
     return state
@@ -680,9 +834,183 @@ async def router_node(state: WorkflowState) -> WorkflowState:
     from app.routing.router_node import RouterNode
     redis_client = state.context_data.get("redis_client")
     user_id = str(state.context_data.get("user_id", ""))
-    
+
     # Define available routes (even if mapped to generation later)
     routes = ["generation", "math_agent", "code_agent", "tool_execution"]
-    
+
     router = RouterNode(routes=routes, redis_client=redis_client, user_id=user_id)
     return await router(state)
+
+
+# ==========================================
+# Phase 2 Helper Functions
+# ==========================================
+
+async def _execute_single_tool(
+    tool_name: str,
+    tool_args: dict,
+    tool_call_id: str,
+    stream_callback,
+    user_id: str,
+    db_session,
+    executor,
+    state: WorkflowState,
+    compensation_call: Optional[Dict[str, Any]] = None
+) -> None:
+    """Execute a single tool call and stream results.
+
+    Used by tool_execution_node for both LLM tool_calls and LangGraph executable_plan.
+    """
+    if stream_callback:
+        await stream_callback(agent_service_pb2.ChatResponse(
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                details=f"Executing {tool_name}...",
+                active_agent=agent_service_pb2.ORCHESTRATOR
+            )
+        ))
+
+    result = await executor.execute_tool_call(
+        tool_name=tool_name,
+        arguments=tool_args,
+        user_id=user_id,
+        db_session=db_session,
+        compensation_call=compensation_call
+    )
+
+    if stream_callback:
+        data_struct = struct_pb2.Struct()
+        if result.data:
+            data_struct.update(result.data)
+        widget_struct = struct_pb2.Struct()
+        if result.widget_data:
+            widget_struct.update(result.widget_data)
+
+        await stream_callback(agent_service_pb2.ChatResponse(
+            tool_result=agent_service_pb2.ToolResultPayload(
+                tool_name=result.tool_name,
+                success=result.success,
+                data=data_struct,
+                error_message=result.error_message or "",
+                suggestion=result.suggestion or "",
+                widget_type=result.widget_type or "",
+                widget_data=widget_struct,
+                tool_call_id=tool_call_id
+            )
+        ))
+
+    # Add tool result to message history
+    result_json = json.dumps({
+        "success": result.success,
+        "result": result.data,
+        "error": result.error_message
+    })
+    state.append_message("tool", result_json, name=tool_name)
+
+
+async def _write_feedback(
+    state: WorkflowState,
+    user_id: str,
+    session_id: str,
+    redis_client,
+    start_time: float,
+    tool_count: int,
+    plan_id: str
+) -> None:
+    """Write feedback payload to Redis and logs.
+
+    Shared by both Phase 1 (LLM tool_calls) and Phase 2 (LangGraph executable_plan).
+    """
+    if not redis_client or not start_time:
+        return
+
+    from app.orchestration.schemas import FeedbackPayload
+    from dataclasses import asdict
+
+    duration_seconds = time.time() - start_time
+
+    feedback = FeedbackPayload(
+        task_id=plan_id,
+        user_id=user_id,
+        session_id=session_id,
+        context_version=state.context_data.get("plan_metadata", {}).get("context_version", "v0"),
+        completion={
+            "status": "completed",
+            "duration_seconds": round(duration_seconds, 2),
+            "attempts": 1,
+            "tool_count": tool_count
+        },
+        signals={
+            "clicked_next": False,
+            "delayed": False,
+            "abandoned": False
+        }
+    )
+
+    feedback_dict = asdict(feedback)
+
+    # 1. Write to Redis (TTL 7 days)
+    feedback_key = f"feedback:{user_id}:{session_id}:{feedback.task_id}"
+    try:
+        await redis_client.setex(
+            feedback_key,
+            7 * 24 * 3600,
+            json.dumps(feedback_dict, ensure_ascii=False)
+        )
+        logger.info(f"Feedback written to Redis: {feedback_key}")
+    except Exception as e:
+        logger.warning(f"Failed to write feedback to Redis: {e}")
+
+    # 2. Write structured log
+    logger.info(
+        "FeedbackPayload: user={}, session={}, task={}, status={}, duration={}s",
+        user_id,
+        session_id,
+        feedback.task_id,
+        feedback.completion.get("status"),
+        feedback.completion.get("duration_seconds")
+    )
+
+    TASK_LOOP_COMPLETED.labels(source="standard_workflow").inc()
+
+
+def _serialize_tool_calls(tool_calls: List[Any]) -> List[Dict[str, Any]]:
+    payload = []
+    for tool_call in tool_calls:
+        payload.append({
+            "id": getattr(tool_call, "id", None) or getattr(tool_call, "tool_call_id", None),
+            "name": getattr(tool_call, "name", None) or getattr(tool_call, "tool_name", None),
+            "params": getattr(tool_call, "params", None) or getattr(tool_call, "full_arguments", None),
+            "compensation_call": getattr(tool_call, "compensation_call", None),
+        })
+    return payload
+
+
+async def _queue_hitl_action(
+    *,
+    user_id: str,
+    reason: str,
+    description: str,
+    tool_calls: List[Any],
+    plan_id: Optional[str] = None,
+    snapshot_id: Optional[str] = None
+) -> str:
+    action_id = await pending_actions_store.save(
+        tool_name="__plan__",
+        arguments={
+            "plan_id": plan_id,
+            "snapshot_id": snapshot_id,
+            "tool_calls": _serialize_tool_calls(tool_calls),
+            "reason": reason
+        },
+        user_id=user_id,
+        description=description,
+        preview_data={
+            "plan_id": plan_id,
+            "snapshot_id": snapshot_id,
+            "reason": reason,
+            "tool_calls": _serialize_tool_calls(tool_calls)
+        }
+    )
+    HITL_REQUESTED.labels(reason=reason).inc()
+    return action_id

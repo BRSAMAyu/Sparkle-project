@@ -1,9 +1,10 @@
 // ignore_for_file: unused_field
 
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
-import 'package:sparkle/features/knowledge/data/models/chat_message_model.dart';
-import 'package:sparkle/features/knowledge/data/models/reasoning_step_model.dart';
 
 /// Mock Data Test for Chain of Thought Visualization
 ///
@@ -11,7 +12,15 @@ import 'package:sparkle/features/knowledge/data/models/reasoning_step_model.dart
 /// without needing a live backend connection.
 
 void main() {
-  runApp(const TestApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('Reasoning visualization demo renders', (tester) async {
+    await tester.pumpWidget(const TestApp());
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Chain of Thought Visualization'), findsOneWidget);
+    expect(find.textContaining('实时推理过程'), findsOneWidget);
+  });
 }
 
 class TestApp extends StatelessWidget {

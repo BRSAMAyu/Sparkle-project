@@ -14,8 +14,13 @@ from app.schemas.intervention import (
     InterventionSettingsResponse,
     InterventionFeedbackRequest,
     InterventionFeedbackResponse,
+    InterventionTriggerRequest,
+    PassiveSignalRequest,
+    BehavioralOutcomeRequest,
 )
 from app.services.intervention_service import InterventionService
+from app.services.passive_signal_tracker import PassiveSignalTracker
+from app.services.behavioral_outcome_tracker import BehavioralOutcomeTracker
 
 router = APIRouter(prefix="/interventions", tags=["interventions"])
 
@@ -61,6 +66,23 @@ async def create_request(
     return request
 
 
+@router.post("/request", response_model=InterventionRequestResponse)
+async def request_intervention(
+    payload: InterventionTriggerRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = InterventionService(db)
+    request, _delivery = await service.create_adaptive_intervention(
+        user_id=current_user.id,
+        trigger_event=payload.type,
+        urgency=payload.urgency,
+        context=payload.context,
+        edge_state=payload.edge_state.model_dump() if payload.edge_state else None,
+    )
+    return request
+
+
 @router.get("/requests/recent", response_model=List[InterventionRequestResponse])
 async def list_recent(
     limit: int = 20,
@@ -88,5 +110,41 @@ async def submit_feedback(
         user_id=current_user.id,
         feedback_type=payload.feedback_type,
         extra_data=payload.extra_data,
+        idempotency_key=payload.idempotency_key,
     )
     return feedback
+
+
+@router.post("/passive-signals")
+async def record_passive_signal(
+    payload: PassiveSignalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tracker = PassiveSignalTracker(db)
+    signal = await tracker.record(
+        user_id=current_user.id,
+        signal_type=payload.signal_type,
+        intervention_id=payload.intervention_id,
+        context=payload.context,
+        timestamp=payload.timestamp,
+    )
+    return {"id": str(signal.id), "status": "ok"}
+
+
+@router.post("/outcomes")
+async def record_outcome(
+    payload: BehavioralOutcomeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tracker = BehavioralOutcomeTracker(db)
+    outcome = await tracker.record(
+        user_id=current_user.id,
+        intervention_id=payload.intervention_id,
+        outcome_type=payload.outcome_type,
+        time_to_outcome=payload.time_to_outcome,
+        success=payload.success,
+        context=payload.context,
+    )
+    return {"id": str(outcome.id), "status": "ok"}

@@ -12,7 +12,8 @@ from .task_tools import (
 from .knowledge_tools import CreateKnowledgeNodeTool, QueryKnowledgeTool, LinkNodesTool
 from .ops_tools import CheckSystemStatusTool, QueryErrorLogsTool
 from .plan_tools import CreatePlanTool
-from .focus_tools import SuggestFocusSessionTool
+from .focus_tools import SuggestFocusSessionTool, HunyuanTranslateTool
+from .web_search_tool import WebSearchProTool
 
 class ToolRegistry:
     """
@@ -45,6 +46,9 @@ class ToolRegistry:
             CreatePlanTool(),
             # 专注工具
             SuggestFocusSessionTool(),
+            HunyuanTranslateTool(),
+            # 联网搜索工具
+            WebSearchProTool(),
             # 运维工具 (AIOps)
             CheckSystemStatusTool(),
             QueryErrorLogsTool(),

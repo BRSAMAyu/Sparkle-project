@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -34,9 +35,18 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   TaskSuggestionResponse? _suggestions;
   bool _isLoadingSuggestions = false;
 
+  // Nudge suggestions state
+  List<TaskNudge> _nudges = [];
+  bool _showNudgesAfterCreation = false;
+
   @override
   void initState() {
     super.initState();
+    // Read pre-filled title from query parameter
+    final titleQueryParam = GoRouterState.of(context).uri.queryParameters['title'];
+    if (titleQueryParam != null && titleQueryParam.isNotEmpty) {
+      _titleController.text = titleQueryParam;
+    }
     _titleController.addListener(_onTitleChanged);
   }
 
@@ -129,13 +139,32 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         knowledgeNodeId: _selectedKnowledgeNodeId,
       );
 
-      await ref.read(taskRepositoryProvider).createTask(taskCreate);
+      // Use createTaskWithNudges to get behavioral suggestions
+      final result = await ref.read(taskRepositoryProvider).createTaskWithNudges(
+            taskCreate,
+            generateGuide: _generateGuide,
+          );
 
       if (mounted) {
-        context.pop(); // Go back to task list
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('任务创建成功')),
-        );
+        if (result.nudges.isNotEmpty) {
+          // Show nudges instead of navigating back
+          setState(() {
+            _nudges = result.nudges;
+            _showNudgesAfterCreation = true;
+            _isSubmitting = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('任务已创建，但有以下建议'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          context.pop(); // Go back to task list
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('任务创建成功')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -144,12 +173,36 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && _nudges.isEmpty) {
         setState(() {
           _isSubmitting = false;
         });
       }
     }
+  }
+
+  void _applyNudge(TaskNudge nudge) {
+    setState(() {
+      if (nudge.type == 'time_adjustment' && nudge.suggestedValue != null) {
+        _estimatedMinutes = nudge.suggestedValue!;
+      }
+      // Remove the applied nudge from the list
+      _nudges = _nudges.where((n) => n != nudge).toList();
+      if (_nudges.isEmpty) {
+        _showNudgesAfterCreation = false;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已应用: ${nudge.title}')),
+    );
+  }
+
+  void _dismissNudges() {
+    setState(() {
+      _nudges = [];
+      _showNudgesAfterCreation = false;
+    });
+    context.pop(); // Go back to task list
   }
 
   @override
@@ -367,6 +420,110 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 onChanged: (v) => setState(() => _generateGuide = v),
                 secondary: const Icon(Icons.auto_awesome),
               ),
+
+              // Nudge Suggestions (shown after task creation)
+              if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
+                const SizedBox(height: DS.lg),
+                Container(
+                  padding: const EdgeInsets.all(DS.md),
+                  decoration: BoxDecoration(
+                    color: DS.prismPurple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: DS.prismPurple.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb, color: DS.prismPurple, size: 20),
+                          const SizedBox(width: DS.sm),
+                          const Text(
+                            '行为模式建议',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.sm),
+                      ..._nudges.map(
+                        (nudge) => Padding(
+                          padding: const EdgeInsets.only(bottom: DS.sm),
+                          child: Card(
+                            elevation: 0,
+                            color: DS.prismPurple.withValues(alpha: 0.05),
+                            child: Padding(
+                              padding: const EdgeInsets.all(DS.sm),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          nudge.title,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      if (nudge.suggestedValue != null)
+                                        TextButton(
+                                          onPressed: () => _applyNudge(nudge),
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: DS.sm,
+                                              vertical: 4,
+                                            ),
+                                          ),
+                                          child: const Text('应用'),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    nudge.message,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  if (nudge.confidence != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '置信度: ${(nudge.confidence! * 100).toInt()}%',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: DS.sm),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: _dismissNudges,
+                            child: const Text('忽略建议'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.xxl),
 
               // Submit Button

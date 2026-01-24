@@ -4,12 +4,13 @@ Cognitive Prism Models
 """
 import uuid
 import enum
-from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float, Enum
+from sqlalchemy import Column, String, Text, ForeignKey, Integer, Boolean, JSON, Float, Enum, DateTime
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 
 from app.models.base import BaseModel, GUID
 
+VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 class AnalysisStatus(str, enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
@@ -61,7 +62,7 @@ class CognitiveFragment(BaseModel):
     severity = Column(Integer, default=1, nullable=False) # 1-5
 
     # 语义向量
-    embedding = Column(Vector(1536), nullable=True)
+    embedding = Column(VectorCompat, nullable=True)
 
     # 关系
     user = relationship("User", backref="cognitive_fragments")
@@ -91,6 +92,8 @@ class BehaviorPattern(BaseModel):
     frequency = Column(Integer, default=1)        # Occurrences count
     
     is_archived = Column(Boolean, default=False) # 用户是否已克服此定式
+    last_observed_at = Column(DateTime, nullable=True)
+    last_decay_at = Column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User", backref="behavior_patterns")

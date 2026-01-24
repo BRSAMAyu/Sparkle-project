@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
@@ -167,7 +169,7 @@ class ProfileScreen extends ConsumerWidget {
               gradient: DS.primaryGradient,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const EditProfileScreen(),
                   ),
                 );
@@ -181,12 +183,28 @@ class ProfileScreen extends ConsumerWidget {
               gradient: DS.secondaryGradient,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const UnifiedSettingsScreen(),
                   ),
                 );
               },
             ),
+            if (AppFeatureFlags.enableUserMemoryControls) ...[
+              const Divider(height: 1, indent: 60),
+              _buildSettingsTile(
+                context,
+                icon: Icons.memory_rounded,
+                title: '记忆控制',
+                gradient: DS.primaryGradient,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MemorySettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
             const Divider(height: 1, indent: 60),
             _buildSettingsTile(
               context,
@@ -216,7 +234,7 @@ class ProfileScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentLocale = ref.read(localeProvider);
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.language),
@@ -252,7 +270,7 @@ class ProfileScreen extends ConsumerWidget {
 
   void _showLogoutDialog(
       BuildContext context, WidgetRef ref, AppLocalizations l10n,) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.logout),

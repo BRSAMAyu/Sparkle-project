@@ -1,0 +1,322 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
+
+/// 语音输入按钮组件
+/// 长按开始录音，松开停止录音
+class VoiceInputButton extends ConsumerStatefulWidget {
+
+  const VoiceInputButton({
+    super.key,
+    required this.onTranscription,
+    required this.onError,
+    this.onRecordingStarted,
+    this.onRecordingStopped,
+  });
+  final void Function(String text) onTranscription;
+  final void Function(String error) onError;
+  final VoidCallback? onRecordingStarted;
+  final VoidCallback? onRecordingStopped;
+
+  @override
+  ConsumerState<VoiceInputButton> createState() => _VoiceInputButtonState();
+}
+
+class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
+    with SingleTickerProviderStateMixin {
+  final AudioRecordingService _recordingService = AudioRecordingService();
+  bool _isRecording = false;
+  bool _isProcessing = false;
+  int _recordingDuration = 0;
+  Timer? _durationTimer;
+  AnimationController? _animationController;
+  String? _currentTranscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _durationTimer?.cancel();
+    _animationController?.dispose();
+    _recordingService.dispose();
+    super.dispose();
+  }
+
+  /// 检查麦克风权限
+  Future<bool> _checkPermissions() async {
+    final status = await Permission.microphone.request();
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        _showPermissionDialog();
+      }
+      return false;
+    }
+    return status.isGranted;
+  }
+
+  /// 显示权限申请对话框
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('需要麦克风权限'),
+        content: const Text('语音输入需要访问您的麦克风。请在设置中授予麦克风权限。'),
+        actions: [
+          TextButton(
+            child: const Text('取消'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text('去设置'),
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 开始录音
+  Future<void> _startRecording() async {
+    if (_isRecording) return;
+
+    // 检查权限
+    final hasPermission = await _checkPermissions();
+    if (!hasPermission) {
+      widget.onError('没有麦克风权限');
+      return;
+    }
+
+    setState(() {
+      _isRecording = true;
+      _isProcessing = false;
+      _recordingDuration = 0;
+      _currentTranscription = null;
+    });
+
+    _animationController?.forward();
+
+    // 启动时长计时器
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _recordingDuration++;
+        });
+      }
+    });
+
+    // 获取WebSocket URL和认证令牌
+    final wsUrl = '${ApiConstants.wsBaseUrl}${ApiConstants.wsStt}';
+    final authToken = await ref.read(authRepositoryProvider).getAccessToken();
+
+    if (authToken == null) {
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+          _isProcessing = false;
+        });
+        _animationController?.reverse();
+        widget.onError('未登录，请先登录');
+      }
+      return;
+    }
+
+    try {
+      await _recordingService.startRecording(
+        wsUrl: wsUrl,
+        authToken: authToken,
+        onTranscription: (text) {
+          if (mounted) {
+            setState(() {
+              _currentTranscription = text;
+              _isProcessing = false;
+            });
+            // 实时更新父组件的文本
+            widget.onTranscription(text);
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isRecording = false;
+              _isProcessing = false;
+            });
+            _animationController?.reverse();
+            widget.onError(error);
+          }
+        },
+        onCompleted: () {
+          if (mounted) {
+            setState(() {
+              _isRecording = false;
+              _isProcessing = false;
+            });
+            _animationController?.reverse();
+            widget.onRecordingStopped?.call();
+          }
+        },
+        maxDuration: const Duration(seconds: 60), // 最长录制60秒
+      );
+
+      widget.onRecordingStarted?.call();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isRecording = false;
+          _isProcessing = false;
+        });
+        _animationController?.reverse();
+        widget.onError('启动录音失败: $e');
+      }
+    }
+  }
+
+  /// 停止录音
+  Future<void> _stopRecording() async {
+    if (!_isRecording) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    await _recordingService.stopRecording();
+
+    _durationTimer?.cancel();
+    _durationTimer = null;
+
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _isProcessing = false;
+      });
+      _animationController?.reverse();
+      widget.onRecordingStopped?.call();
+    }
+  }
+
+  /// 取消录音
+  Future<void> _cancelRecording() async {
+    if (!_isRecording) return;
+
+    await _recordingService.cancelRecording();
+
+    _durationTimer?.cancel();
+    _durationTimer = null;
+
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _isProcessing = false;
+        _currentTranscription = null;
+      });
+      _animationController?.reverse();
+      widget.onRecordingStopped?.call();
+    }
+  }
+
+  /// 格式化时长显示
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return "${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onLongPressStart: (_) => _startRecording(),
+      onLongPressEnd: (_) => _stopRecording(),
+      onLongPressCancel: _cancelRecording,
+      child: AnimatedBuilder(
+        animation: _animationController!,
+        builder: (context, child) {
+          final scale = 1.0 + (_animationController?.value ?? 0) * 0.1;
+          return Transform.scale(
+            scale: scale,
+            child: child,
+          );
+        },
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _isRecording
+                ? DS.brandPrimary
+                : (isDark ? DS.neutral800 : DS.neutral200),
+            shape: BoxShape.circle,
+            boxShadow: _isRecording
+                ? [
+                    BoxShadow(
+                      color: DS.brandPrimary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: _buildButtonContent(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtonContent() {
+    if (_isProcessing) {
+      return SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: DS.brandPrimary,
+        ),
+      );
+    }
+
+    if (_isRecording) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.mic,
+            color: DS.brandPrimary,
+            size: 20,
+          ),
+          Text(
+            _formatDuration(_recordingDuration),
+            style: TextStyle(
+              fontSize: 8,
+              color: DS.brandPrimary,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Icon(
+      Icons.mic_none,
+      color: DS.neutral600,
+      size: 20,
+    );
+  }
+}

@@ -27,7 +27,7 @@ async def _process_document_task(task_id: str, file_path: str, options: dict):
 async def clean_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    options: str = Form("{}", description="JSON string of options (e.g. {'enable_ocr': true})")
+    options: str = Form("{}", description="JSON options (e.g. {'enable_ocr': true, 'ocr_engine': 'deepseek', 'ocr_prompt_mode': 'markdown' | 'ocr' | 'figure'})")
 ):
     """
     Starts an asynchronous document cleaning task.

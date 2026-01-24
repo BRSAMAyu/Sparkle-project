@@ -15,7 +15,7 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from app.config import settings
+from app.config import settings, to_sync_database_url
 from app.db.session import Base
 from app.db.url import to_sync_database_url
 
@@ -28,7 +28,7 @@ from app.models import (
     KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord, NodeExpansionQueue, ExpansionFeedback,
     # Community models
     Friendship, Group, GroupMember, GroupMessage, GroupTask,
-    GroupTaskClaim, SharedResource, PrivateMessage,
+    GroupTaskClaim, SharedResource, PrivateMessage, Post, PostLike,
     # Cognitive models
     CognitiveFragment, BehaviorPattern,
     # Analytics models
@@ -45,15 +45,17 @@ from app.models import (
     TrackingEvent, UserStateSnapshot,
     # Phase 2 models
     StrategyNode, SemanticLink,
-    NightlyReview
+    NightlyReview,
+    # Seed Content Library
+    SeedLibrary, SeedItem, UserLibrarySubscription,
 )  # noqa: F401
 
 # this is the Alembic Config object
 config = context.config
 
 # Override sqlalchemy.url from settings
-# Convert asyncpg URL to sync driver for Alembic migrations
 database_url = to_sync_database_url(settings.DATABASE_URL)
+# Fix for configparser interpolation error when using special characters like %
 database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 

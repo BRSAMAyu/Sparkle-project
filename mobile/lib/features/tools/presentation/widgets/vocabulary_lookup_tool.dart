@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
+import 'package:sparkle/features/vocabulary/presentation/providers/local_vocabulary_provider.dart';
 
 /// 查词工具 - 快速词典查询
 class VocabularyLookupTool extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class VocabularyLookupTool extends ConsumerStatefulWidget {
 class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  bool _isInLocalWordbook = false;
 
   @override
   void initState() {
@@ -39,9 +41,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     super.dispose();
   }
 
-  void _lookup() {
+  void _lookup() async {
     final word = _controller.text.trim();
     if (word.isNotEmpty) {
+      // Check if word is already in local wordbook
+      final localWord = await ref.read(localVocabularyProvider.notifier).getByWord(word);
+      setState(() {
+        _isInLocalWordbook = localWord != null;
+      });
+
       ref.read(vocabularyProvider.notifier).lookup(word);
       // 同时获取关联词
       ref.read(vocabularyProvider.notifier).fetchAssociations(word);
@@ -63,14 +71,20 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       definition = definitions;
     }
 
-    final success = await ref.read(vocabularyProvider.notifier).addToWordbook(
+    // Add to local wordbook
+    await ref.read(localVocabularyProvider.notifier).addWord(
           word: word,
           definition: definition,
           phonetic: result['phonetic'] as String?,
           taskId: widget.taskId,
+          importance: 3,
         );
 
-    if (success && mounted) {
+    setState(() {
+      _isInLocalWordbook = true;
+    });
+
+    if (mounted) {
       HapticFeedback.mediumImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -79,6 +93,34 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  Future<void> _removeFromWordbook() async {
+    final state = ref.read(vocabularyProvider);
+    final result = state.lookupResult;
+    if (result == null) return;
+
+    final word = result['word'] as String? ?? _controller.text;
+    final localWord = await ref.read(localVocabularyProvider.notifier).getByWord(word);
+
+    if (localWord != null) {
+      await ref.read(localVocabularyProvider.notifier).delete(localWord.id);
+
+      setState(() {
+        _isInLocalWordbook = false;
+      });
+
+      if (mounted) {
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已从生词本移除 "$word"'),
+            backgroundColor: DS.neutral500,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -202,14 +244,20 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           if (state.lookupResult != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: CustomButton.primary(
-                text: '加入生词本',
-                icon: Icons.add_rounded,
-                onPressed: state.isLoading ? null : _addToWordbook,
-                customGradient: const LinearGradient(
-                  colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
-                ),
-              ),
+              child: _isInLocalWordbook
+                  ? CustomButton.secondary(
+                      text: '已在生词本中',
+                      icon: Icons.check_rounded,
+                      onPressed: state.isLoading ? null : _removeFromWordbook,
+                    )
+                  : CustomButton.primary(
+                      text: '加入生词本',
+                      icon: Icons.add_rounded,
+                      onPressed: state.isLoading ? null : _addToWordbook,
+                      customGradient: const LinearGradient(
+                        colors: [Color(0xFF00BCD4), Color(0xFF26C6DA)],
+                      ),
+                    ),
             ),
         ],
       ),

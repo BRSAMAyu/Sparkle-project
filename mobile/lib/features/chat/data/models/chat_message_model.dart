@@ -33,6 +33,10 @@ class ChatMessageModel {
     this.reasoningSummary,
     this.isReasoningComplete,
     this.meta,
+    this.responseId,
+    this.traceId,
+    this.workflowId,
+    this.promptVersion,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -79,6 +83,14 @@ class ChatMessageModel {
   final bool? isReasoningComplete; // For real-time updates
 
   final MessageMeta? meta;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? responseId;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? traceId;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? workflowId;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? promptVersion;
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
   ChatMessageModel copyWith({
@@ -100,6 +112,10 @@ class ChatMessageModel {
     String? reasoningSummary,
     bool? isReasoningComplete,
     MessageMeta? meta,
+    String? responseId,
+    String? traceId,
+    String? workflowId,
+    String? promptVersion,
   }) =>
       ChatMessageModel(
         id: id ?? this.id,
@@ -120,6 +136,10 @@ class ChatMessageModel {
         reasoningSummary: reasoningSummary ?? this.reasoningSummary,
         isReasoningComplete: isReasoningComplete ?? this.isReasoningComplete,
         meta: meta ?? this.meta,
+        responseId: responseId ?? this.responseId,
+        traceId: traceId ?? this.traceId,
+        workflowId: workflowId ?? this.workflowId,
+        promptVersion: promptVersion ?? this.promptVersion,
       );
 }
 

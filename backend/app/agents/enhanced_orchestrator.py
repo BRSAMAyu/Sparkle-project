@@ -147,7 +147,8 @@ class EnhancedOrchestratorAgent(BaseAgent):
             patterns = {
                 "task_decomposition": {
                     "keywords": ["计划", "plan", "准备", "prepare", "复习", "review",
-                                "考试", "exam", "冲刺", "sprint", "学习路径", "学什么"],
+                                "考试", "exam", "冲刺", "sprint", "学习路径", "学什么",
+                                "学习计划", "复习计划", "计划表", "学会", "一个月", "一个月内"],
                     "weight": 1.0
                 },
                 "progressive_exploration": {
@@ -158,7 +159,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 },
                 "error_diagnosis": {
                     "keywords": ["错题", "wrong", "错误", "error", "mistake", "不明白", "confused",
-                                "不懂", "don't understand", "搞混", "混淆", "做错了", "failed"],
+                                "不懂", "don't understand", "搞混", "混淆", "做错了", "做错", "failed"],
                     "weight": 1.2  # 错题诊断优先级稍高
                 }
             }

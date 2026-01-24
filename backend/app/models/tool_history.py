@@ -25,14 +25,14 @@ class UserToolHistory(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Foreign key to users table
-    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
 
     # Tool information
-    tool_name = Column(String(100), nullable=False, index=True)
+    tool_name = Column(String(100), nullable=False)
     tool_category = Column(String(50), nullable=True)  # plan, task, focus, etc.
 
     # Execution result
-    success = Column(Boolean, nullable=False, index=True)
+    success = Column(Boolean, nullable=False)
     execution_time_ms = Column(Integer, nullable=True)  # 执行时间（毫秒）
 
     # Error tracking
@@ -53,7 +53,7 @@ class UserToolHistory(Base):
     was_helpful = Column(Boolean, nullable=True)  # Derived from downstream actions
 
     # Temporal info
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Indexes for efficient querying

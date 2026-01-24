@@ -21,14 +21,17 @@ class ChatBubble extends StatefulWidget {
     this.onRevoke,
     this.onActionConfirm,
     this.onActionDismiss,
+    this.onResponseFeedback,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
   final String? currentUserId;
-  final Function(dynamic message)? onQuote;
-  final Function(dynamic message)? onRevoke;
-  final Function(WidgetPayload action)? onActionConfirm;
-  final Function(WidgetPayload action)? onActionDismiss;
+  final void Function(dynamic message)? onQuote;
+  final void Function(dynamic message)? onRevoke;
+  final void Function(WidgetPayload action)? onActionConfirm;
+  final void Function(WidgetPayload action)? onActionDismiss;
+  final void Function(ChatMessageModel message, String feedbackType)?
+      onResponseFeedback;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -119,6 +122,10 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           ? (widget.message as PrivateMessageInfo).createdAt
           : (widget.message as MessageInfo).createdAt;
 
+  String? get _responseId => (widget.message is ChatMessageModel)
+      ? (widget.message as ChatMessageModel).responseId
+      : null;
+
   void _handleDoubleTap() {
     if (_isUser || _isRevoked || !mounted) return;
     setState(() => _showHeart = true);
@@ -134,7 +141,7 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
     final canRevoke =
         _isUser && DateTime.now().difference(_createdAt).inHours < 24;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DecoratedBox(
@@ -146,6 +153,34 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (!_isUser &&
+                  _responseId != null &&
+                  _responseId!.isNotEmpty &&
+                  widget.onResponseFeedback != null &&
+                  widget.message is ChatMessageModel)
+                ListTile(
+                  leading: const Icon(Icons.thumb_up_alt_rounded),
+                  title: const Text('有帮助'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel, 'up',);
+                  },
+                ),
+              if (!_isUser &&
+                  _responseId != null &&
+                  _responseId!.isNotEmpty &&
+                  widget.onResponseFeedback != null &&
+                  widget.message is ChatMessageModel)
+                ListTile(
+                  leading: const Icon(Icons.thumb_down_alt_rounded),
+                  title: const Text('没帮助'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onResponseFeedback!(
+                        widget.message as ChatMessageModel, 'down',);
+                  },
+                ),
               if (widget.onQuote != null &&
                   widget.message is PrivateMessageInfo)
                 ListTile(
@@ -591,7 +626,9 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isUser ? Colors.white : Colors.white,),),),
+                          color: isUser
+                              ? DS.onBrandPrimary
+                              : DS.onBrandPrimary,),),),
         ),
       ),
     );
@@ -600,28 +637,28 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
   MarkdownStyleSheet _getMarkdownStyle(BuildContext context, bool isUser) =>
       MarkdownStyleSheet(
         p: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 16,
             height: 1.4,),
         h1: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.textPrimary,
+            color: isUser ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
             fontSize: 24,
             fontWeight: FontWeight.bold,),
         code: TextStyle(
             backgroundColor: isUser
-                ? Colors.white.withValues(alpha: 0.2)
+                ? DS.chatBubbleUserText.withValues(alpha: 0.2)
                 : context.sparkleColors.surfaceTertiary,
             fontFamily: 'monospace',
             fontSize: 14,
             color:
-                isUser ? Colors.white : context.sparkleColors.brandSecondary,),
+                isUser ? DS.chatBubbleUserText : context.sparkleColors.brandSecondary,),
         codeblockDecoration: BoxDecoration(
             color: isUser
-                ? Colors.white.withValues(alpha: 0.1)
+                ? DS.chatBubbleUserText.withValues(alpha: 0.1)
                 : context.sparkleColors.surfaceTertiary,
             borderRadius: BorderRadius.circular(12),),
         a: TextStyle(
-            color: isUser ? Colors.white : context.sparkleColors.brandPrimary,
+            color: isUser ? DS.chatBubbleUserText : context.sparkleColors.brandPrimary,
             decoration: TextDecoration.underline,),
       );
 
@@ -669,30 +706,5 @@ class _ChatBubbleState extends State<ChatBubble> with TickerProviderStateMixin {
                   color: DS.brandPrimary26,
                   offset: const Offset(0, 4),),
             ],),),
-      );
-}
-
-class _MetaTag extends StatelessWidget {
-  const _MetaTag({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontFamily: 'monospace',
-          ),
-        ),
       );
 }

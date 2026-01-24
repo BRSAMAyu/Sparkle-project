@@ -139,6 +139,44 @@ These are the files you'll touch most often. Memorize their roles.
 7. backend/app/services/llm_service.py            # LLM abstraction
 ```
 
+#### Request Flow (Plan Review)
+```
+1. backend/app/orchestration/plan_review_service.py  # Review orchestration
+   ↓ Two-tier review (rule-based + LLM-based)
+2. backend/app/orchestration/orchestrator.py         # Invokes review
+   ↓ Stream response with review result
+3. backend/gateway/internal/handler/websocket.go     # Forwards to client
+   ↓ WebSocket message with delta + metadata
+4. mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart  # Parses delta
+   ↓ Detects metadata['requires_review'] == true
+5. Emits PlanReviewWidgetEvent(reviewData: metadata)
+   ↓
+6. mobile/lib/features/chat/presentation/providers/chat_provider.dart  # State update
+   ↓
+7. mobile/lib/features/chat/presentation/widgets/plan_review_card.dart  # UI rendering
+```
+
+**Event Flow Detail:**
+```json
+// Backend sends:
+{
+  "type": "delta",
+  "delta": "Review completed...",
+  "metadata": {
+    "requires_review": true,
+    "review_data": {
+      "plan_id": "plan-123",
+      "review_id": "review-456",
+      "overall_score": 85,
+      "issues": [...]
+    }
+  }
+}
+
+// Flutter receives and emits:
+PlanReviewWidgetEvent(reviewData: {...})
+```
+
 #### State Management Layers
 ```
 Flutter State:    Riverpod providers → mobile/lib/presentation/providers/
@@ -161,8 +199,11 @@ When exploring unfamiliar territory, prioritize these files:
 ★★★★☆ (Integration Points)
 ├── backend/gateway/internal/agent/client.go   # Go→Python bridge
 ├── backend/app/services/agent_grpc_service.py # Python gRPC impl
+├── backend/app/orchestration/plan_review_service.py  # Plan review orchestration
 ├── backend/gateway/internal/service/*.go      # Business services
-└── mobile/lib/presentation/providers/*.dart   # State providers
+├── mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart  # WebSocket client
+├── mobile/lib/features/chat/presentation/providers/*.dart   # State providers
+└── mobile/lib/features/chat/presentation/widgets/plan_review_card.dart  # Plan review UI
 
 ★★★☆☆ (Supporting Infrastructure)
 ├── backend/gateway/internal/db/schema.sql     # DB structure
@@ -339,6 +380,48 @@ Example: Add "learning streak" feature
 5. Flutter Layer:
    - Provider in presentation/providers/
    - UI widget in presentation/widgets/
+```
+
+### Pattern 5: Backend-Driven Widget Events (Plan Review Style)
+
+```
+Example: Plan review results sent as WebSocket events
+
+1. Python Backend (orchestrator.py):
+   - Generate review result using plan_review_service.py
+   - Send review data in metadata field of delta response:
+     await stream_callback(ChatResponse(
+         content=ChatResponse_Delta(
+             delta="Some text...",
+             metadata={
+                 "requires_review": True,
+                 "review_data": review_result.to_dict()
+             }
+         )
+     ))
+
+2. Go Gateway (websocket.go):
+   - Forwards response unchanged to Flutter client
+   - No special handling needed
+
+3. Flutter WebSocket Service (websocket_chat_service_v2.dart):
+   - Parse delta message
+   - Check if metadata['requires_review'] == true
+   - Emit PlanReviewWidgetEvent(reviewData: metadata)
+   - Otherwise emit TextEvent with metadata
+
+4. Flutter Event Model (chat_stream_events.dart):
+   - Add metadata field to ChatStreamEvent base class
+   - Create PlanReviewWidgetEvent with reviewData field
+
+5. Flutter UI (plan_review_card.dart):
+   - Listen for PlanReviewWidgetEvent in chat provider
+   - Display review card with animations
+   - Handle user actions (approve, reject, modify)
+
+6. User Feedback Loop:
+   - User submits decision via SubmitPlanReview gRPC
+   - Backend processes and updates plan accordingly
 ```
 
 ---

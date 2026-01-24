@@ -16,8 +16,8 @@ class AgentMessageRenderer extends StatelessWidget {
     this.onConfirmation,
   });
   final ChatMessageModel message;
-  final Function(String taskId)? onTaskAction;
-  final Function(String actionId, bool confirmed)? onConfirmation;
+  final void Function(String taskId)? onTaskAction;
+  final void Function(String actionId, bool confirmed)? onConfirmation;
 
   @override
   Widget build(BuildContext context) => Column(

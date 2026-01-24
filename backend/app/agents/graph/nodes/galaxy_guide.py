@@ -1,5 +1,5 @@
 from typing import List
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 
 from app.agents.graph.state import SparkleState
@@ -24,6 +24,10 @@ async def galaxy_guide_node(state: SparkleState):
     负责解释概念、查询图谱
     """
     messages = state["messages"]
+    collaboration_context = state.get("collaboration_context")
+    if collaboration_context:
+        messages = list(messages)
+        messages.append(HumanMessage(content=collaboration_context))
     
     # 获取 DeepSeek 或强推理模型
     llm = LLMFactory.get_llm("galaxy_guide")

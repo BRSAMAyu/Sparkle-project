@@ -1,75 +1,32 @@
 // ignore_for_file: cascade_invocations
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
-import 'package:logger/logger.dart';
 import 'package:sparkle/core/offline/conflict_resolver.dart';
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/outbox_dedupe_key.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
-import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:uuid/uuid.dart';
-
-class BusinessException implements Exception {
-  BusinessException(this.message);
-  final String message;
-  @override
-  String toString() => message;
-}
-
-class UpdateNodeMasteryMessage {
-  UpdateNodeMasteryMessage({
-    required this.nodeId,
-    required this.mastery,
-    required this.timestamp,
-    required this.requestId,
-    required this.revision,
-    required this.traceId,
-  });
-  final String nodeId;
-  final int mastery;
-  final DateTime timestamp;
-  final String requestId;
-  final int revision;
-  final String traceId;
-
-  Map<String, dynamic> toJson() => {
-        'type': 'update_node_mastery',
-        'trace_id': traceId,
-        'payload': {
-          'nodeId': nodeId,
-          'mastery': mastery,
-          'version': timestamp.toIso8601String(), // Keep for legacy/audit
-          'requestId': requestId,
-          'revision': revision,
-        },
-      };
-}
 
 class OfflineSyncQueue {
   OfflineSyncQueue(
     this._localDb,
-    this._wsService,
     this._connectivity, {
+    required SyncEngine syncEngine,
     PerformanceMonitor? performanceMonitor,
-  }) : _performanceMonitor = performanceMonitor ?? PerformanceMonitor() {
-    _listenForAcks();
-  }
+  })  : _syncEngine = syncEngine,
+        _performanceMonitor = performanceMonitor ?? PerformanceMonitor();
   final LocalDatabase _localDb;
-  final WebSocketService _wsService;
   final Connectivity _connectivity;
+  final SyncEngine _syncEngine;
   final PerformanceMonitor _performanceMonitor;
-  final Logger _logger = Logger();
   final ConflictResolver _conflictResolver = ConflictResolver();
   final Uuid _uuid = const Uuid();
-
-  void _listenForAcks() {
-    // This global listener is kept for general monitoring or other message types.
-    // Specific ACK handling is done via _waitForAck's temporary listeners or a centralized dispatcher.
-    // For now, we keep this empty or for logging, as _waitForAck attaches its own listener.
-  }
 
   void dispose() {}
 
@@ -115,11 +72,32 @@ class OfflineSyncQueue {
             ..requestId = requestId
             ..revision = currentRevision,
         );
+
+        await _localDb.isar.outboxItems.put(
+          OutboxItem()
+            ..uuid = _uuid.v4()
+            ..type = 'mastery_update'
+            ..topic = 'knowledge'
+            ..opType = 'update'
+            ..entityType = 'knowledge_node'
+            ..entityId = nodeId
+            ..payloadJson = jsonEncode({
+              'nodeId': nodeId,
+              'mastery': mastery,
+              'revision': currentRevision,
+            })
+            ..dedupeKey = OutboxDedupeKey.knowledgeUpdate(nodeId, requestId)
+            ..createdAt = DateTime.now()
+            ..priority = 10
+            ..requiresAuth = true
+            ..traceId = TracingService.instance.createTraceId()
+            ..status = SyncStatus.pending,
+        );
       });
 
       // 3. Try sync if online
       if (await _isOnline()) {
-        await syncPendingUpdates();
+        await _syncEngine.processNow();
       }
 
       // 记录同步成功
@@ -151,150 +129,7 @@ class OfflineSyncQueue {
   }
 
   Future<void> syncPendingUpdates() async {
-    final startTime = DateTime.now();
-    final pending = await _localDb.isar.pendingUpdates
-        .filter()
-        .syncedEqualTo(false)
-        .sortByCreatedAt()
-        .findAll();
-
-    if (pending.isEmpty) return;
-
-    // 跟踪批量同步开始
-    _performanceMonitor.trackOfflineSync(
-      syncType: 'batch_sync',
-      itemCount: pending.length,
-      success: false, // 初始状态
-      durationMs: 0,
-    );
-
-    var successCount = 0;
-    var failureCount = 0;
-
-    for (final update in pending) {
-      try {
-        // Mark as waiting for ACK
-        await _localDb.isar.writeTxn(() async {
-          update.syncStatus = SyncStatus.waitingAck;
-          await _localDb.isar.pendingUpdates.put(update);
-        });
-
-        // Ensure requestId exists (for migration of old pending updates)
-        final reqId = update.requestId ?? _uuid.v4();
-
-        // Send to server
-      final message = UpdateNodeMasteryMessage(
-        nodeId: update.nodeId,
-        mastery: update.newMastery,
-        timestamp: update.timestamp,
-        requestId: reqId,
-        revision: update.revision,
-        traceId: TracingService.instance.createTraceId(),
-      );
-
-        final ackFuture = _waitForAck(reqId);
-
-        _wsService.send(message.toJson());
-
-        // Wait for ACK with timeout
-        await ackFuture.timeout(const Duration(seconds: 5));
-
-        // Mark as synced
-        await _localDb.isar.writeTxn(() async {
-          update.synced = true;
-          update.syncStatus = SyncStatus.synced;
-          update.requestId ??= reqId;
-          await _localDb.isar.pendingUpdates.put(update);
-
-          // Update local node status
-          final node = await _localDb.isar.localKnowledgeNodes
-              .filter()
-              .serverIdEqualTo(update.nodeId)
-              .findFirst();
-
-          if (node != null) {
-            node.syncStatus = SyncStatus.synced;
-            await _localDb.isar.localKnowledgeNodes.put(node);
-          }
-        });
-
-        successCount++;
-      } catch (e) {
-        failureCount++;
-
-        if (e is TimeoutException) {
-          _logger.w('Sync timed out for update ${update.id}');
-          await _localDb.isar.writeTxn(() async {
-            update.syncStatus =
-                SyncStatus.pending; // Revert to pending to retry later
-            await _localDb.isar.pendingUpdates.put(update);
-          });
-        } else if (e is BusinessException) {
-          // Permanent Error (e.g., stale update / conflict)
-          _logger.e('Sync failed permanently for update ${update.id}: $e');
-
-          await _localDb.isar.writeTxn(() async {
-            update.synced = true; // Remove from active queue
-            update.error = e.message;
-            update.syncStatus = SyncStatus.failed;
-            await _localDb.isar.pendingUpdates.put(update);
-          });
-
-          // Trigger conflict resolution if needed
-          if (e.message.contains('conflict') || e.message.contains('stale')) {
-            // Request latest state from server
-            // requestNodeSync(update.nodeId);
-          }
-
-          continue;
-        } else {
-          // Transient Error
-          _logger.i('Transient sync error, pausing queue: $e');
-          await _localDb.isar.writeTxn(() async {
-            update.syncStatus = SyncStatus.pending;
-            await _localDb.isar.pendingUpdates.put(update);
-          });
-          break; // Stop queue processing
-        }
-      }
-    }
-
-    // 记录批量同步结果
-    final duration = DateTime.now().difference(startTime);
-    final success = failureCount == 0; // 如果没有失败，则认为成功
-
-    _performanceMonitor.trackOfflineSync(
-      syncType: 'batch_sync',
-      itemCount: pending.length,
-      success: success,
-      error: failureCount > 0 ? '$failureCount个项目同步失败' : null,
-      durationMs: duration.inMilliseconds,
-    );
-
-    _logger.i(
-        '批量同步完成: 成功 $successCount, 失败 $failureCount, 耗时 ${duration.inMilliseconds}ms',);
-  }
-
-  Future<void> _waitForAck(String requestId) {
-    final completer = Completer<void>();
-    late final StreamSubscription<dynamic> subscription;
-
-    subscription = _wsService.stream.listen((message) {
-      if (message is! Map) return;
-      final type = message['type'];
-      final payload = message['payload'];
-      if (payload is! Map || payload['requestId'] != requestId) return;
-
-      if (type == 'ack_node_mastery') {
-        completer.complete();
-      } else if (type == 'error_node_mastery') {
-        completer.completeError(
-          BusinessException((payload['error'] as String?) ?? 'Unknown error'),
-        );
-      }
-    });
-
-    return completer.future.whenComplete(subscription.cancel);
+    await _syncEngine.processNow();
   }
 
   // Handle server-side updates (conflict resolution)

@@ -196,7 +196,7 @@ class StateGraph:
                         state = new_state
 
             except Exception as e:
-                logger.error(f"❌ Error in node '{current_node_name}': {e}", exc_info=True)
+                logger.exception("❌ Error in node '{}' : {}", current_node_name, e)
                 state.errors.append(f"[{self.name}] Node {current_node_name} failed: {str(e)}")
                 await self._emit_event(GraphEventType.ERROR, current_node_name, state, str(e))
                 break # Or handle error transition

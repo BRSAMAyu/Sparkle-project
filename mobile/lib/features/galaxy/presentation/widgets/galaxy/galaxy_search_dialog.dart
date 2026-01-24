@@ -11,7 +11,7 @@ class GalaxySearchDialog extends ConsumerStatefulWidget {
     required this.onNodeSelected,
     super.key,
   });
-  final Function(String nodeId) onNodeSelected;
+  final void Function(String nodeId) onNodeSelected;
 
   @override
   ConsumerState<GalaxySearchDialog> createState() => _GalaxySearchDialogState();

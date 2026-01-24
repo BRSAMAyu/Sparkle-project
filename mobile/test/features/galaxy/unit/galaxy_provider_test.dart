@@ -78,6 +78,8 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeEnhancedGalaxyRepository mockRepository;
   late ProviderContainer container;
 
@@ -477,8 +479,6 @@ void main() {
       test('handles nodes_expanded and triggers reload', () async {
         final eventsController = StreamController<SSEEvent>();
         mockRepository.eventsStream = eventsController.stream;
-
-        final notifier = container.read(galaxyProvider.notifier);
 
         // Simulate expansion event
         eventsController.add(SSEEvent(

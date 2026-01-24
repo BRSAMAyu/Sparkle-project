@@ -1,0 +1,211 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/features/task/task.dart';
+
+/// Task board view mode
+enum TaskViewMode { schedule, priority, plan }
+
+/// Task board state
+class TaskBoardState {
+  TaskBoardState({
+    this.currentView = TaskViewMode.schedule,
+    this.expandedTaskIds = const {},
+    this.selectedPlanId,
+  });
+
+  final TaskViewMode currentView;
+  final Set<String> expandedTaskIds;
+  final String? selectedPlanId;
+
+  TaskBoardState copyWith({
+    TaskViewMode? currentView,
+    Set<String>? expandedTaskIds,
+    String? selectedPlanId,
+  }) =>
+      TaskBoardState(
+        currentView: currentView ?? this.currentView,
+        expandedTaskIds: expandedTaskIds ?? this.expandedTaskIds,
+        selectedPlanId: selectedPlanId ?? this.selectedPlanId,
+      );
+}
+
+/// Task board notifier
+class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
+  TaskBoardNotifier(this._ref) : super(TaskBoardState()) {
+    // Initialize default view based on sprint status
+    _initializeDefaultView();
+  }
+
+  final Ref _ref;
+
+  void _initializeDefaultView() {
+    final dashboardState = _ref.read(dashboardProvider);
+    // If sprint is active, default to plan view
+    final defaultView = dashboardState.sprint != null
+        ? TaskViewMode.plan
+        : TaskViewMode.schedule;
+    state = TaskBoardState(currentView: defaultView);
+  }
+
+  void switchView(TaskViewMode view) {
+    state = state.copyWith(currentView: view);
+  }
+
+  void toggleTaskExpansion(String taskId) {
+    final newExpanded = Set<String>.from(state.expandedTaskIds);
+    if (newExpanded.contains(taskId)) {
+      newExpanded.remove(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    state = state.copyWith(expandedTaskIds: newExpanded);
+  }
+
+  void expandTask(String taskId) {
+    if (!state.expandedTaskIds.contains(taskId)) {
+      final newExpanded = Set<String>.from(state.expandedTaskIds);
+      newExpanded.add(taskId);
+      state = state.copyWith(expandedTaskIds: newExpanded);
+    }
+  }
+
+  void collapseTask(String taskId) {
+    if (state.expandedTaskIds.contains(taskId)) {
+      final newExpanded = Set<String>.from(state.expandedTaskIds);
+      newExpanded.remove(taskId);
+      state = state.copyWith(expandedTaskIds: newExpanded);
+    }
+  }
+
+  void selectPlan(String planId) {
+    state = state.copyWith(selectedPlanId: planId);
+  }
+
+  void clearPlanSelection() {
+    state = state.copyWith(selectedPlanId: null);
+  }
+
+  void collapseAll() {
+    state = state.copyWith(expandedTaskIds: {});
+  }
+}
+
+/// Task board provider
+final taskBoardProvider =
+    StateNotifierProvider<TaskBoardNotifier, TaskBoardState>(
+  (ref) => TaskBoardNotifier(ref),
+);
+
+/// Grouped tasks for schedule view
+class ScheduleGroup {
+  ScheduleGroup({
+    required this.title,
+    required this.tasks,
+    this.isEmpty = false,
+  });
+
+  final String title;
+  final List<TaskModel> tasks;
+  final bool isEmpty;
+}
+
+/// Schedule view grouped tasks provider
+final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  final tasks = taskState.tasks
+      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .toList();
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final tomorrow = today.add(const Duration(days: 1));
+  final weekEnd = today.add(const Duration(days: 7));
+
+  final overDue = <TaskModel>[];
+  final todayTasks = <TaskModel>[];
+  final tomorrowTasks = <TaskModel>[];
+  final thisWeek = <TaskModel>[];
+  final later = <TaskModel>[];
+  final noDate = <TaskModel>[];
+
+  for (final task in tasks) {
+    if (task.dueDate == null) {
+      noDate.add(task);
+    } else {
+      final dueDate = DateTime(
+        task.dueDate!.year,
+        task.dueDate!.month,
+        task.dueDate!.day,
+      );
+      if (dueDate.isBefore(today)) {
+        overDue.add(task);
+      } else if (dueDate == today) {
+        todayTasks.add(task);
+      } else if (dueDate == tomorrow) {
+        tomorrowTasks.add(task);
+      } else if (dueDate.isBefore(weekEnd)) {
+        thisWeek.add(task);
+      } else {
+        later.add(task);
+      }
+    }
+  }
+
+  // Sort by priority within each group
+  final sortByPriority = (TaskModel a, TaskModel b) =>
+      b.priority.compareTo(a.priority);
+
+  overDue.sort(sortByPriority);
+  todayTasks.sort(sortByPriority);
+  tomorrowTasks.sort(sortByPriority);
+  thisWeek.sort(sortByPriority);
+  later.sort(sortByPriority);
+  noDate.sort(sortByPriority);
+
+  return [
+    if (overDue.isNotEmpty) ScheduleGroup(title: '已逾期', tasks: overDue),
+    if (todayTasks.isNotEmpty) ScheduleGroup(title: '今天', tasks: todayTasks),
+    if (tomorrowTasks.isNotEmpty) ScheduleGroup(title: '明天', tasks: tomorrowTasks),
+    if (thisWeek.isNotEmpty) ScheduleGroup(title: '本周', tasks: thisWeek),
+    if (later.isNotEmpty) ScheduleGroup(title: '更晚', tasks: later),
+    if (noDate.isNotEmpty) ScheduleGroup(title: '无日期', tasks: noDate),
+    if (tasks.isEmpty)
+      ScheduleGroup(title: '', tasks: [], isEmpty: true),
+  ];
+});
+
+/// Priority view sorted tasks provider
+final priorityTasksProvider = Provider<List<TaskModel>>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  final tasks = taskState.tasks
+      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .toList()
+    ..sort((a, b) => b.priority.compareTo(a.priority));
+  return tasks;
+});
+
+/// Plan view grouped tasks provider
+final planGroupsProvider = Provider<Map<String?, List<TaskModel>>>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  final tasks = taskState.tasks
+      .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+      .toList();
+
+  final groups = <String?, List<TaskModel>>{};
+
+  for (final task in tasks) {
+    final planId = task.planId;
+    if (!groups.containsKey(planId)) {
+      groups[planId] = [];
+    }
+    groups[planId]!.add(task);
+  }
+
+  // Sort tasks within each plan by priority
+  for (final planTasks in groups.values) {
+    planTasks.sort((a, b) => b.priority.compareTo(a.priority));
+  }
+
+  return groups;
+});

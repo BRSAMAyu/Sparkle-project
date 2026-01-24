@@ -139,6 +139,7 @@ class ThemeManager extends ChangeNotifier {
   }
 
   @override
+  // ignore: must_call_super
   void dispose() {
     // Prevent disposal of the singleton instance by Riverpod or other owners.
     // This instance is meant to live for the entire application lifecycle.
@@ -241,6 +242,14 @@ class SparkleColors {
     required this.neutral400,
     required this.neutral500,
     required this.neutral600,
+    // Chat bubble colors
+    required this.chatBubbleUser,
+    required this.chatBubbleUserText,
+    required this.chatBubbleOther,
+    required this.chatBubbleOtherText,
+    // Galaxy colors
+    required this.galaxyBackground,
+    required this.galaxyShadow,
   });
 
   factory SparkleColors.light({bool highContrast = false}) {
@@ -279,6 +288,14 @@ class SparkleColors {
         neutral400: Color(0xFFBDBDBD),
         neutral500: Color(0xFF9E9E9E),
         neutral600: Color(0xFF757575),
+        // Chat bubble colors
+        chatBubbleUser: Color(0xFF5C6BC0),
+        chatBubbleUserText: Colors.white,
+        chatBubbleOther: Color(0xFFF5F5F5),
+        chatBubbleOtherText: Color(0xFF121212),
+        // Galaxy colors
+        galaxyBackground: Color(0xFF1A1A2E),
+        galaxyShadow: Color(0xFF0D0D1A),
       );
     }
     return const SparkleColors(
@@ -315,6 +332,14 @@ class SparkleColors {
       neutral400: Color(0xFFBDBDBD),
       neutral500: Color(0xFF9E9E9E),
       neutral600: Color(0xFF757575),
+      // Chat bubble colors
+      chatBubbleUser: Color(0xFF5C6BC0),
+      chatBubbleUserText: Colors.white,
+      chatBubbleOther: Color(0xFFF5F5F5),
+      chatBubbleOtherText: Color(0xFF121212),
+      // Galaxy colors
+      galaxyBackground: Color(0xFF1A1A2E),
+      galaxyShadow: Color(0xFF0D0D1A),
     );
   }
 
@@ -349,11 +374,19 @@ class SparkleColors {
         statusOnline: Color(0xFF2ECC71),
         statusOffline: Color(0xFF95A5A6),
         statusInvisible: Color(0xFF34495E),
-        neutral200: Color(0xFF000000),
-        neutral300: Color(0xFF000000),
-        neutral400: Color(0xFF000000),
-        neutral500: Color(0xFF000000),
-        neutral600: Color(0xFF000000),
+        neutral200: Color(0xFF2D2D2D),
+        neutral300: Color(0xFF424242),
+        neutral400: Color(0xFF616161),
+        neutral500: Color(0xFF757575),
+        neutral600: Color(0xFF9E9E9E),
+        // Chat bubble colors
+        chatBubbleUser: Color(0xFF5C6BC0),
+        chatBubbleUserText: Colors.white,
+        chatBubbleOther: Color(0xFF2D2D2D),
+        chatBubbleOtherText: Color(0xFFF5F5F5),
+        // Galaxy colors
+        galaxyBackground: Color(0xFF000814),
+        galaxyShadow: Color(0xFF000408),
       );
     }
     return const SparkleColors(
@@ -385,11 +418,19 @@ class SparkleColors {
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFF000000),
-      neutral300: Color(0xFF000000),
-      neutral400: Color(0xFF000000),
-      neutral500: Color(0xFF000000),
-      neutral600: Color(0xFF000000),
+      neutral200: Color(0xFF2D2D2D),
+      neutral300: Color(0xFF424242),
+      neutral400: Color(0xFF616161),
+      neutral500: Color(0xFF757575),
+      neutral600: Color(0xFF9E9E9E),
+      // Chat bubble colors
+      chatBubbleUser: Color(0xFF5C6BC0),
+      chatBubbleUserText: Colors.white,
+      chatBubbleOther: Color(0xFF2D2D2D),
+      chatBubbleOtherText: Color(0xFFF5F5F5),
+      // Galaxy colors
+      galaxyBackground: Color(0xFF000814),
+      galaxyShadow: Color(0xFF000408),
     );
   }
   final Color brandPrimary;
@@ -435,6 +476,16 @@ class SparkleColors {
   final Color neutral500;
   final Color neutral600;
 
+  // Chat bubble colors
+  final Color chatBubbleUser;
+  final Color chatBubbleUserText;
+  final Color chatBubbleOther;
+  final Color chatBubbleOtherText;
+
+  // Galaxy colors
+  final Color galaxyBackground;
+  final Color galaxyShadow;
+
   final Brightness brightness;
 
   SparkleColors copyWith({
@@ -470,6 +521,12 @@ class SparkleColors {
     Color? neutral400,
     Color? neutral500,
     Color? neutral600,
+    Color? chatBubbleUser,
+    Color? chatBubbleUserText,
+    Color? chatBubbleOther,
+    Color? chatBubbleOtherText,
+    Color? galaxyBackground,
+    Color? galaxyShadow,
   }) =>
       SparkleColors(
         brandPrimary: brandPrimary ?? this.brandPrimary,
@@ -505,6 +562,12 @@ class SparkleColors {
         neutral400: neutral400 ?? this.neutral400,
         neutral500: neutral500 ?? this.neutral500,
         neutral600: neutral600 ?? this.neutral600,
+        chatBubbleUser: chatBubbleUser ?? this.chatBubbleUser,
+        chatBubbleUserText: chatBubbleUserText ?? this.chatBubbleUserText,
+        chatBubbleOther: chatBubbleOther ?? this.chatBubbleOther,
+        chatBubbleOtherText: chatBubbleOtherText ?? this.chatBubbleOtherText,
+        galaxyBackground: galaxyBackground ?? this.galaxyBackground,
+        galaxyShadow: galaxyShadow ?? this.galaxyShadow,
       );
 
   SparkleColors toHighContrast(bool enabled) => brightness == Brightness.light

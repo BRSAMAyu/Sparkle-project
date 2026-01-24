@@ -27,3 +27,12 @@ class AppConstants {
   static const double defaultDepthPreference = 0.5;
   static const double defaultCuriosityPreference = 0.5;
 }
+
+class AppFeatureFlags {
+  static bool enableMemoryPanelV2 = true;
+  static bool enableEvidenceViewer = true;
+  static bool enableMemoryExplain = true;
+  static bool enableMemoryRetraction = true;
+  static bool enableMemoryCorrection = true;
+  static bool enableUserMemoryControls = true;
+}

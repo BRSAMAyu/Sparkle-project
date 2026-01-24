@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/screens/add_error_screen.dart';
@@ -64,6 +65,10 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: _showSearch ? _buildSearchField() : const Text('错题档案'),
         actions: [
           IconButton(
@@ -115,7 +120,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           if (filterState.cognitiveDimension != null)
              Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
               child: Row(
                 children: [
                   Icon(Icons.psychology, size: 16, color: theme.colorScheme.primary),

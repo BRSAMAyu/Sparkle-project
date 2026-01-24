@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
@@ -69,7 +70,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (source == 'preset') {
       if (!mounted) return;
-      showDialog(
+      showDialog<void>(
         context: context,
         builder: (context) => AvatarSelectionDialog(
           currentAvatarUrl: user?.avatarUrl,
@@ -186,6 +187,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('编辑资料'),
         centerTitle: true,
         actions: [
@@ -340,8 +345,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const PasswordResetScreen(),),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PasswordResetScreen(),
+                    ),
                   );
                 },
               ),

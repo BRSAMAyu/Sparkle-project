@@ -6,7 +6,10 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+import httpx
+
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -22,6 +25,11 @@ from app.schemas.intervention import (
     InterventionRequestCreate,
     InterventionFeedbackType,
 )
+from app.scaffolding.intent_generator import IntentGenerator
+from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
+from app.services.template_registry import TemplateRegistry
+from app.services.template_service import TemplateService
+from app.learning.prompt_bandit import PromptBandit
 
 
 _NON_SILENT_LEVELS = {
@@ -36,6 +44,13 @@ class GuardrailDecision:
     action: str
     final_level: str
     reasons: List[str]
+
+
+@dataclass
+class DeliveryResult:
+    delivered: bool
+    method: str
+    error: Optional[str] = None
 
 
 class InterventionService:
@@ -131,6 +146,11 @@ class InterventionService:
             reason=payload.reason.model_dump(),
             content=payload.content,
             cooldown_policy=payload.cooldown_policy.model_dump() if payload.cooldown_policy else None,
+            delivery_method=payload.delivery_method,
+            template_id=payload.template_id,
+            template_variant_id=payload.template_variant_id,
+            scaffolding_level=payload.scaffolding_level,
+            intent_type=payload.intent_type,
             schema_version=payload.schema_version,
             policy_version=payload.policy_version,
             model_version=payload.model_version,
@@ -179,20 +199,189 @@ class InterventionService:
         user_id: UUID,
         feedback_type: InterventionFeedbackType,
         extra_data: Optional[Dict[str, Any]],
+        idempotency_key: Optional[str] = None,
     ) -> InterventionFeedback:
+        dedupe_key = idempotency_key or f"{request.id}:{feedback_type.value}"
+
+        existing = await self._get_feedback_by_idempotency(
+            request_id=request.id,
+            user_id=user_id,
+            feedback_type=feedback_type.value,
+            idempotency_key=dedupe_key,
+        )
+        if existing:
+            return existing
+
         feedback = InterventionFeedback(
             request_id=request.id,
             user_id=user_id,
             feedback_type=feedback_type.value,
-            extra_data=extra_data,
+            extra_data=self._sanitize_extra_data(extra_data),
+            idempotency_key=dedupe_key,
         )
         self.db.add(feedback)
 
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            existing = await self._get_feedback_by_idempotency(
+                request_id=request.id,
+                user_id=user_id,
+                feedback_type=feedback_type.value,
+                idempotency_key=dedupe_key,
+            )
+            if existing:
+                return existing
+            raise
+
         await self._apply_feedback_policy(request, feedback_type)
+        await self._apply_scaffolding_feedback(request, user_id, feedback_type, extra_data)
+        await self._update_template_bandit(request, feedback_type)
 
         await self.db.commit()
         await self.db.refresh(feedback)
         return feedback
+
+    async def _get_feedback_by_idempotency(
+        self,
+        request_id: UUID,
+        user_id: UUID,
+        feedback_type: str,
+        idempotency_key: str,
+    ) -> Optional[InterventionFeedback]:
+        result = await self.db.execute(
+            select(InterventionFeedback)
+            .where(InterventionFeedback.request_id == request_id)
+            .where(InterventionFeedback.user_id == user_id)
+            .where(InterventionFeedback.feedback_type == feedback_type)
+            .where(InterventionFeedback.idempotency_key == idempotency_key)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_adaptive_intervention(
+        self,
+        user_id: UUID,
+        trigger_event: str,
+        urgency: float,
+        context: Dict[str, Any],
+        edge_state: Optional[Dict[str, Any]] = None,
+    ) -> tuple[InterventionRequest, DeliveryResult]:
+        fsm = ScaffoldingFSM(self.db)
+        scaffolding_state = await fsm.get_state(user_id)
+        generator = IntentGenerator()
+        intent = generator.generate_intent(
+            trigger_event=trigger_event,
+            urgency=urgency,
+            context=context,
+            edge_state=edge_state or {},
+            scaffolding_state=fsm.snapshot(scaffolding_state),
+        )
+
+        registry = TemplateRegistry()
+        bandit = PromptBandit(redis_client=cache_service.redis)
+        template_service = TemplateService(registry, bandit)
+        selected = await template_service.select_variant(
+            intent_type=intent.intent_type,
+            support_level=scaffolding_state.support_level,
+            user_id=str(user_id),
+        )
+        rendered_message = template_service.render(selected, intent.context_variables)
+
+        level = self._map_delivery_level(intent.urgency)
+        reason = {
+            "explanation_text": context.get("explanation") or "triggered intervention",
+            "confidence": intent.urgency,
+            "evidence_refs": [
+                {
+                    "type": "edge_state",
+                    "id": context.get("edge_state_id", "local"),
+                    "schema_version": "edge_state.v1",
+                    "user_deleted": False,
+                }
+            ],
+            "decision_trace": [trigger_event],
+        }
+        payload = InterventionRequestCreate(
+            user_id=user_id,
+            topic=context.get("topic"),
+            reason=reason,
+            level=level,
+            content={
+                "rendered_message": rendered_message,
+                "intent_type": intent.intent_type,
+                "template_id": selected.template_id,
+                "scaffolding_level": scaffolding_state.support_level,
+                "context_variables": intent.context_variables,
+            },
+            context=None,
+            schema_version="intervention.v2",
+            delivery_method="websocket",
+            template_id=selected.template_id,
+            template_variant_id=selected.variant_id,
+            scaffolding_level=scaffolding_state.support_level,
+            intent_type=intent.intent_type,
+        )
+
+        request = await self.create_request(
+            actor_id=user_id,
+            actor_is_admin=False,
+            payload=payload,
+            default_timezone=None,
+        )
+
+        await fsm.register_intervention(
+            user_id=user_id,
+            intervention_id=request.id,
+            intent_type=intent.intent_type,
+            template_variant_id=selected.variant_id,
+        )
+
+        delivery = await self.deliver_intervention_realtime(user_id, request, rendered_message)
+        return request, delivery
+
+    async def deliver_intervention_realtime(
+        self,
+        user_id: UUID,
+        request: InterventionRequest,
+        rendered_message: str,
+    ) -> DeliveryResult:
+        if not settings.INTERNAL_API_KEY or not getattr(settings, "GATEWAY_INTERNAL_URL", ""):
+            return DeliveryResult(delivered=False, method="websocket", error="gateway_not_configured")
+
+        payload = {
+            "user_id": str(user_id),
+            "intervention": {
+                "intervention_id": str(request.id),
+                "level": (request.final_level or request.requested_level).lower(),
+                "content": {
+                    "rendered_message": rendered_message,
+                    "intent_type": request.intent_type or "",
+                    "template_id": request.template_id or "",
+                    "scaffolding_level": request.scaffolding_level or 0,
+                    "context_variables": request.content.get("context_variables", {})
+                    if isinstance(request.content, dict)
+                    else {},
+                },
+                "actions": self._default_actions(request.intent_type),
+                "expires_at": int(request.expires_at.timestamp() * 1000) if request.expires_at else 0,
+            },
+        }
+
+        headers = {"X-Internal-API-Key": settings.INTERNAL_API_KEY}
+        url = f"{settings.GATEWAY_INTERNAL_URL.rstrip('/')}/internal/interventions/push"
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    return DeliveryResult(delivered=True, method="websocket")
+                return DeliveryResult(
+                    delivered=False,
+                    method="websocket",
+                    error=f"gateway_status_{response.status_code}",
+                )
+        except Exception as exc:
+            return DeliveryResult(delivered=False, method="websocket", error=str(exc))
 
     async def _evaluate_guardrails(
         self,
@@ -324,3 +513,66 @@ class InterventionService:
         else:
             global_key = f"intervention:cooldown:{request.user_id}"
             await cache_service.set(global_key, policy_name or "mute_all", ttl=ttl_seconds)
+
+    async def _apply_scaffolding_feedback(
+        self,
+        request: InterventionRequest,
+        user_id: UUID,
+        feedback_type: InterventionFeedbackType,
+        extra_data: Optional[Dict[str, Any]],
+    ) -> None:
+        success_actions = {
+            InterventionFeedbackType.ACCEPT,
+            InterventionFeedbackType.OPEN_DETAIL,
+        }
+        success = feedback_type in success_actions
+        fsm = ScaffoldingFSM(self.db)
+        await fsm.apply_feedback(
+            user_id=user_id,
+            success=success,
+            feedback=feedback_type.value,
+            weight=1.0,
+        )
+
+    async def _update_template_bandit(
+        self,
+        request: InterventionRequest,
+        feedback_type: InterventionFeedbackType,
+    ) -> None:
+        if not request.template_variant_id or not request.intent_type or not cache_service.redis:
+            return
+        reward = 1 if feedback_type in (InterventionFeedbackType.ACCEPT, InterventionFeedbackType.OPEN_DETAIL) else 0
+        workflow_id = f"intervention:{request.intent_type}:{request.scaffolding_level or 3}"
+        bandit = PromptBandit(redis_client=cache_service.redis)
+        await bandit.update(workflow_id, request.template_variant_id, reward)
+
+    def _map_delivery_level(self, urgency: float) -> InterventionLevel:
+        if urgency >= 0.7:
+            return InterventionLevel.FULL_SCREEN_MODAL
+        if urgency >= 0.4:
+            return InterventionLevel.CARD
+        if urgency >= 0.2:
+            return InterventionLevel.TOAST
+        return InterventionLevel.SILENT_MARKER
+
+    def _default_actions(self, intent_type: Optional[str]) -> List[Dict[str, str]]:
+        if intent_type == "suggest_break":
+            return [
+                {"id": "start_now", "label": "开始", "type": "primary"},
+                {"id": "snooze", "label": "稍后", "type": "secondary"},
+            ]
+        return [
+            {"id": "start_now", "label": "开始", "type": "primary"},
+            {"id": "dismiss", "label": "关闭", "type": "secondary"},
+        ]
+
+    def _sanitize_extra_data(self, extra_data: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not extra_data:
+            return extra_data
+        sanitized: Dict[str, Any] = {}
+        for key, value in extra_data.items():
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                sanitized[key] = value
+            else:
+                sanitized[key] = str(value)
+        return sanitized

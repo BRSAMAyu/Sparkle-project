@@ -18,6 +18,10 @@ class FocusMainScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: DS.deepSpaceStart,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('选择专注任务'),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -94,7 +98,7 @@ class FocusMainScreen extends ConsumerWidget {
           trailing:
               Icon(Icons.arrow_forward_ios, color: DS.brandPrimary54, size: 16),
           onTap: () {
-            context.push('/focus/mindfulness/${task.id}');
+            context.push('/tasks/${task.id}/execute');
           },
         ),
       );
@@ -118,7 +122,7 @@ class FocusMainScreen extends ConsumerWidget {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
-            context.push('/focus/mindfulness/${dummyTask.id}');
+            context.push('/tasks/${dummyTask.id}/execute');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: DS.primaryBase,

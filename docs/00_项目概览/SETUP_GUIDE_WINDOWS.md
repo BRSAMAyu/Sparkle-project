@@ -245,10 +245,10 @@ cd sparkle-flutter
 
 ```bash
 # 复制环境模板
-cp .env.example .env.local
+cp .env.example .env
 
 # 编辑环境文件
-nano .env.local
+nano .env
 ```
 
 **在 nano 编辑器中**:
@@ -307,6 +307,24 @@ make sync-db
 
 # 生成 Protobuf 代码
 make proto-gen
+```
+
+快速验收：
+```bash
+make smoke
+```
+
+迁移异常处理（安全默认）
+```bash
+# 发生 revision mismatch / 多 head 时，make sync-db 会输出诊断并失败
+# 明确确认后可用以下方式进行保守 stamp（无 --purge）：
+FORCE_STAMP=1 make sync-db
+```
+
+OpenTelemetry（可选）
+```bash
+# 本地建议关闭或指向本地 collector
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
 ### 6. 配置 Flutter 移动端

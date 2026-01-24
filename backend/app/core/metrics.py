@@ -46,6 +46,24 @@ CACHE_HIT_COUNT = get_or_create_metric(
     ['cache_name', 'result']  # result: hit, miss
 )
 
+SEMANTIC_CACHE_HIT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_hit_total',
+    'Total semantic cache hits'
+)
+
+SEMANTIC_CACHE_MISS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_miss_total',
+    'Total semantic cache misses'
+)
+
+SEMANTIC_CACHE_BYPASS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_semantic_cache_bypass_total',
+    'Total semantic cache bypasses'
+)
+
 # 4. 工具执行指标
 TOOL_EXECUTION_COUNT = get_or_create_metric(
     Counter,
@@ -72,7 +90,22 @@ RAG_RETRIEVAL_LATENCY = get_or_create_metric(
     Histogram,
     'sparkle_rag_retrieval_seconds',
     'RAG retrieval latency',
+    ['source', 'stage'],
     buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+)
+
+RETRIEVAL_TIMEOUT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_retrieval_timeout_total',
+    'Total retrieval timeouts',
+    ['source', 'stage']
+)
+
+RETRIEVAL_ERROR_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_retrieval_error_total',
+    'Total retrieval errors',
+    ['source', 'stage']
 )
 
 ACTIVE_WEBSOCKET_CONNECTIONS = get_or_create_metric(
@@ -87,42 +120,40 @@ OUTBOX_PENDING_EVENTS = get_or_create_metric(
     'Number of pending events in the outbox table'
 )
 
-# 6. 文档质量门禁指标
-DOC_QUALITY_CHECK_COUNT = get_or_create_metric(
+# 6. Response Feedback & Bandit
+RESPONSE_FEEDBACK_INGESTED = get_or_create_metric(
     Counter,
-    'sparkle_doc_quality_checks_total',
-    'Total number of document quality checks',
-    ['doc_type', 'result']  # result: passed, failed
+    'sparkle_response_feedback_ingested_total',
+    'Total response feedback ingested',
+    ['type']  # type: up, down
 )
 
-DOC_QUALITY_SCORE = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_quality_score',
-    'Distribution of document quality scores',
-    ['doc_type'],
-    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-)
-
-DOC_GARBLED_RATIO = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_garbled_ratio',
-    'Distribution of garbled character ratios',
-    ['doc_type'],
-    buckets=[0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5]
-)
-
-DOC_OCR_CONFIDENCE = get_or_create_metric(
-    Histogram,
-    'sparkle_doc_ocr_confidence',
-    'Distribution of OCR confidence scores',
-    buckets=[0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0]
-)
-
-DOC_QUALITY_ISSUES = get_or_create_metric(
+RESPONSE_FEEDBACK_DEDUPE_TOTAL = get_or_create_metric(
     Counter,
-    'sparkle_doc_quality_issues_total',
-    'Count of specific quality issues detected',
-    ['issue_type']  # garbled, too_short, low_chinese_ratio, repeated_headers, etc.
+    'sparkle_response_feedback_dedup_total',
+    'Total response feedback deduplicated'
+)
+
+PROMPT_BANDIT_UPDATES_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_updates_total',
+    'Total prompt bandit updates',
+    ['workflow_id']
+)
+
+PROMPT_BANDIT_STATE_MISSING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_prompt_bandit_state_missing_total',
+    'Total prompt bandit state misses',
+    ['workflow_id']
+)
+
+FEEDBACK_TO_EFFECT_SECONDS = get_or_create_metric(
+    Histogram,
+    'sparkle_feedback_to_effect_seconds',
+    'Time from feedback ingestion to prompt selection effect',
+    ['workflow_id', 'prompt_version'],
+    buckets=[60, 300, 900, 1800, 3600, 14400, 86400]
 )
 
 # 装饰器：用于测量函数执行时间并记录指标
@@ -148,3 +179,112 @@ def track_latency(module, method):
             finally:
                 latency = time.time() - start_time
                 REQUEST_LATENCY.labels(module=module, method=method).observe(latency)
+
+
+# ============ Phase 3: Circuit Breaker & Collaboration Metrics ============
+
+LANGGRAPH_PLANNING_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_langgraph_planning_total',
+    'Total number of LangGraph planning operations',
+    ['collaboration_mode', 'agents_count']
+)
+
+LANGGRAPH_PLANNING_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_langgraph_planning_latency_seconds',
+    'LangGraph planning latency in seconds',
+    ['collaboration_mode'],
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+CIRCUIT_BREAKER_TRIPS = get_or_create_metric(
+    Counter,
+    'sparkle_circuit_breaker_trips_total',
+    'Total number of circuit breaker trips',
+    ['circuit_name']
+)
+
+CIRCUIT_BREAKER_RESETS = get_or_create_metric(
+    Counter,
+    'sparkle_circuit_breaker_resets_total',
+    'Total number of circuit breaker resets',
+    ['circuit_name']
+)
+
+COLLABORATION_SUCCESS = get_or_create_metric(
+    Counter,
+    'sparkle_collaboration_total',
+    'Total number of collaboration operations',
+    ['workflow_type', 'agents_used', 'outcome']
+)
+
+COLLABORATION_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_collaboration_latency_seconds',
+    'Collaboration latency in seconds',
+    ['workflow_type'],
+    buckets=[0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
+)
+
+# ============ Phase 4: Preference Inference Metrics ============
+
+PREFERENCE_INFERENCE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_inference_total',
+    'Total number of preference inferences from feedback',
+    ['preference_key', 'direction', 'source']  # source: feedback, behavior
+)
+
+PREFERENCE_INFERENCE_CONFIDENCE = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_inference_confidence',
+    'Current confidence level for inferred preferences',
+    ['preference_key']
+)
+
+PREFERENCE_DECAY_APPLIED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_decay_applied_total',
+    'Total number of preference decay operations',
+    ['preference_key', 'action']  # action: decay, reset
+)
+
+# ============ Phase 4: Preference Event Latency Metrics ============
+
+PREFERENCE_EVENT_E2E_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_preference_event_e2e_latency_seconds',
+    'End-to-end latency from preference update to cache invalidation',
+    ['event_type', 'source'],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+)
+
+PREFERENCE_EVENT_CONSUME_LAG = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_event_consume_lag_seconds',
+    'Time lag between event publish and consumer processing',
+    ['consumer_group']
+)
+
+PREFERENCE_EVENT_STREAM_LENGTH = get_or_create_metric(
+    Gauge,
+    'sparkle_preference_event_stream_length',
+    'Number of pending events in Redis Stream',
+    ['stream_key']
+)
+
+CACHE_INVALIDATION_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_cache_invalidation_latency_seconds',
+    'Time from cache invalidation call to completion',
+    ['cache_type'],
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
+)
+
+PREFERENCE_EVENT_ERRORS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_preference_event_errors_total',
+    'Total preference event processing errors',
+    ['error_type', 'consumer_group']
+)

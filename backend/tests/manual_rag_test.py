@@ -23,7 +23,7 @@ async def mock_chat_stream(*args, **kwargs):
 
 # Mock Embedding Service
 async def mock_get_embedding(text: str) -> List[float]:
-    return [0.0] * 1536
+    return [0.0] * 1024
 
 async def test_rag_flow():
     # Setup

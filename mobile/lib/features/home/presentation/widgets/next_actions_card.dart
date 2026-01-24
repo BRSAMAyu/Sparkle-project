@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,70 +18,65 @@ class NextActionsCard extends ConsumerWidget {
     final dashboardState = ref.watch(dashboardProvider);
     final nextActions = dashboardState.nextActions;
 
-    return ClipRRect(
+    return MaterialStyler(
+      material: AppMaterials.ceramic,
       borderRadius: DS.borderRadius20,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: DS.glassBackground,
-            borderRadius: DS.borderRadius20,
-            border: Border.all(color: DS.glassBorder),
-          ),
-          padding: const EdgeInsets.all(DS.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(DS.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '下一步',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: DS.brandPrimaryConst,
-                    ),
+              Flexible(
+                child: Text(
+                  '下一步',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: DS.textPrimary,
                   ),
-                  if (onViewAll != null)
-                    GestureDetector(
-                      onTap: onViewAll,
-                      child: Icon(Icons.more_horiz_rounded,
-                          color: DS.brandPrimary70Const, size: 16,),
-                    ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(height: DS.md),
-              Expanded(
-                child: nextActions.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.separated(
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: nextActions.length.clamp(0, 1),
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: DS.sm),
-                        itemBuilder: (context, index) =>
-                            _NextActionItem(task: nextActions[index]),
-                      ),
-              ),
+              if (onViewAll != null)
+                GestureDetector(
+                  onTap: onViewAll,
+                  child: Icon(Icons.more_horiz_rounded,
+                      color: DS.textSecondary, size: 16,),
+                ),
             ],
           ),
-        ),
+          const SizedBox(height: DS.md),
+          Flexible(
+            child: nextActions.isEmpty
+                ? _buildEmptyState(context)
+                : ListView.separated(
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: nextActions.length.clamp(0, 1),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: DS.sm),
+                    itemBuilder: (context, index) =>
+                        _NextActionItem(task: nextActions[index]),
+                  ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyState() => Center(
+  Widget _buildEmptyState(BuildContext context) => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.done_all_rounded,
-                color: DS.brandPrimary.withAlpha(50), size: 24,),
+                color: DS.textSecondary.withValues(alpha: 0.5), size: 24,),
             const SizedBox(height: DS.xs),
             Text(
               '清空啦',
               style: TextStyle(
-                  fontSize: 10, color: DS.brandPrimary.withAlpha(100),),
+                  fontSize: 10, color: DS.textSecondary,),
             ),
           ],
         ),
@@ -96,12 +91,12 @@ class _NextActionItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => GestureDetector(
         onTap: () {
           final taskModel = _toTaskModel(task);
-          context.push('/focus/mindfulness/${taskModel.id}');
+          context.push('/tasks/${taskModel.id}/execute');
         },
         child: Container(
           padding: const EdgeInsets.all(DS.sm),
           decoration: BoxDecoration(
-            color: DS.brandPrimary.withAlpha(10),
+            color: DS.brandPrimary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -112,7 +107,7 @@ class _NextActionItem extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: DS.brandPrimaryConst,
+                  color: DS.textPrimary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -133,18 +128,22 @@ class _NextActionItem extends ConsumerWidget {
                     child: Text(
                       '${task.estimatedMinutes}m',
                       style: TextStyle(
-                          fontSize: 9, color: DS.brandPrimary.withAlpha(120),),
+                          fontSize: 9, color: DS.textSecondary,),
                     ),
                   ),
                   GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(taskListProvider.notifier)
-                          .completeTask(task.id, task.estimatedMinutes, null);
-                      ref.read(dashboardProvider.notifier).refresh();
+                    onTap: () {
+                      unawaited(
+                        ref
+                            .read(taskListProvider.notifier)
+                            .completeTask(task.id, task.estimatedMinutes, null)
+                            .then((_) {
+                          ref.read(dashboardProvider.notifier).refresh();
+                        }),
+                      );
                     },
                     child: Icon(Icons.check_circle_outline_rounded,
-                        color: DS.brandPrimary.withAlpha(150), size: 14,),
+                        color: DS.brandPrimary.withValues(alpha: 0.7), size: 14,),
                   ),
                 ],
               ),

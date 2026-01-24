@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,8 +22,10 @@ import (
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
+	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,6 +34,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"golang.org/x/time/rate"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
@@ -103,22 +107,24 @@ var stringBuilderPool = sync.Pool{
 var sanitizer = bluemonday.UGCPolicy()
 
 type ChatOrchestrator struct {
-	agentClient  *agent.Client
-	galaxyClient *galaxy.Client
-	queries      *db.Queries
-	chatHistory  *service.ChatHistoryService
-	quota        *service.QuotaService
-	semantic     *service.SemanticCacheService
-	billing      *service.CostCalculator
-	wsFactory    *WebSocketFactory
-	userContext  *service.UserContextService
-	taskCommand  *service.TaskCommandService
-	backendURL   string
-	httpClient   *http.Client
-	signalHub    *service.SignalHub
+	agentClient   *agent.Client
+	galaxyClient  *galaxy.Client
+	queries       *db.Queries
+	chatHistory   *service.ChatHistoryService
+	quota         *service.QuotaService
+	semantic      *service.SemanticCacheService
+	billing       *service.CostCalculator
+	wsFactory     *WebSocketFactory
+	cfg           *config.Config
+	userContext   *service.UserContextService
+	taskCommand   *service.TaskCommandService
+	backendURL    string
+	httpClient    *http.Client
+	wsConnections map[string]*websocket.Conn
+	wsMutex       sync.RWMutex
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
@@ -128,13 +134,14 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		semantic:     sc,
 		billing:      bc,
 		wsFactory:    wsFactory,
+		cfg:          cfg,
 		userContext:  uc,
 		taskCommand:  tc,
 		backendURL:   strings.TrimRight(backendURL, "/"),
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		signalHub: signalHub,
+		wsConnections: make(map[string]*websocket.Conn),
 	}
 }
 
@@ -144,9 +151,17 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	if h.wsFactory != nil {
 		upgrader = h.wsFactory.CreateUpgrader()
 	} else {
+		if !isDevelopmentEnv() {
+			log.Printf("[ERROR] WebSocketFactory missing in non-development environment")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "WebSocket configuration error"})
+			return
+		}
 		// Fallback to development upgrader (for backward compatibility)
 		upgrader = DefaultUpgrader()
 		log.Printf("[WARNING] Using development WebSocket upgrader - configure WebSocketFactory for production")
+	}
+	if selected := selectWebSocketSubprotocol(c.Request); selected != "" {
+		upgrader.Subprotocols = []string{selected}
 	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -167,10 +182,32 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	authToken := c.GetString("auth_token")
 
 	log.Printf("WebSocket connected for user: %s", userID)
-	if h.signalHub != nil {
-		h.signalHub.Register(userID, conn)
-		defer h.signalHub.Unregister(userID, conn)
+	authMethod := c.GetString("ws_auth_method")
+	if authMethod == "" {
+		authMethod = "unknown"
 	}
+	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
+	h.registerConnection(userID, conn)
+	defer h.unregisterConnection(userID)
+
+	readLimit := int64(0)
+	msgRate := 0.0
+	msgBurst := 0
+	if h.cfg != nil {
+		readLimit = h.cfg.WSMaxMessageBytes
+		msgRate = h.cfg.WSMessageRateRPS
+		msgBurst = h.cfg.WSMessageRateBurst
+	}
+	if readLimit > 0 {
+		conn.SetReadLimit(readLimit)
+	}
+	if msgRate <= 0 {
+		msgRate = 1
+	}
+	if msgBurst <= 0 {
+		msgBurst = 1
+	}
+	msgLimiter := rate.NewLimiter(rate.Limit(msgRate), msgBurst)
 
 	tracer := otel.Tracer("chat-orchestrator")
 
@@ -179,9 +216,17 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		// Read message from WebSocket client
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
+			if errors.Is(err, websocket.ErrReadLimit) {
+				_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
+			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
 			}
+			break
+		}
+
+		if !msgLimiter.Allow() {
+			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
 			break
 		}
 
@@ -221,6 +266,12 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				case "intervention_feedback":
 					h.handleInterventionFeedback(conn, msgMap, userID, authToken)
 					return false
+				case "response_feedback":
+					h.handleResponseFeedback(conn, msgMap, userID, c.Request.Context())
+					return false
+				case "plan_review_feedback":
+					h.handlePlanReviewFeedback(conn, msgMap, userID)
+					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID)
 					return false
@@ -243,6 +294,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					chatInputPool.Put(input)
 				}()
 
+				traceIDFromClient, _ := msgMap["trace_id"].(string)
+
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
@@ -255,11 +308,18 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 
-				ctx, span := tracer.Start(c.Request.Context(), "HandleMessage")
+				msgCtx := c.Request.Context()
+				if traceIDFromClient != "" {
+					msgCtx = agent.WithTraceID(msgCtx, traceIDFromClient)
+				}
+				ctx, span := tracer.Start(msgCtx, "HandleMessage")
 				span.SetAttributes(
 					attribute.String("user_id", userID),
 					attribute.String("session_id", input.SessionID),
 				)
+				if traceIDFromClient != "" {
+					span.SetAttributes(attribute.String("trace_id", traceIDFromClient))
+				}
 				defer span.End()
 
 				return h.handleChatMessage(ctx, conn, userID, input, "")
@@ -329,6 +389,22 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					return false
 				}
 				h.handleInterventionFeedbackWithResponder(responder, msgMap, userID, authToken)
+				return false
+			case "response_feedback":
+				msgMap, err := decodePayloadMap(envelope.Payload["response_feedback"])
+				if err != nil {
+					responder.SendError("invalid_argument", "Invalid response_feedback payload", false)
+					return false
+				}
+				h.handleResponseFeedbackWithResponder(msgCtx, responder, msgMap, userID)
+				return false
+			case "plan_review_feedback":
+				msgMap, err := decodePayloadMap(envelope.Payload["plan_review_feedback"])
+				if err != nil {
+					responder.SendError("invalid_argument", "Invalid plan_review_feedback payload", false)
+					return false
+				}
+				h.handlePlanReviewFeedbackWithResponder(responder, msgMap, userID)
 				return false
 			default:
 				responder.SendError("invalid_argument", "Unknown payload type", false)
@@ -433,16 +509,20 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, res
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	result := map[string]interface{}{
-		"response_id": resp.ResponseId,
-		"created_at":  resp.CreatedAt,
-		"request_id":  resp.RequestId,
+		"response_id":    resp.ResponseId,
+		"created_at":     resp.CreatedAt,
+		"request_id":     resp.RequestId,
+		"trace_id":       resp.TraceId,
+		"workflow_id":    resp.WorkflowId,
+		"prompt_version": resp.PromptVersion,
+		"metadata":       resp.Metadata,
 	}
 
 	// Handle oneof content field
 	switch content := resp.Content.(type) {
 	case *agentv1.ChatResponse_Delta:
 		result["type"] = "delta"
-		result["delta"] = content.Delta
+		result["delta"] = sanitizer.Sanitize(content.Delta)
 	case *agentv1.ChatResponse_ToolCall:
 		result["type"] = "tool_call"
 		result["tool_call"] = map[string]interface{}{
@@ -454,11 +534,11 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		result["type"] = "status_update"
 		result["status"] = map[string]interface{}{
 			"state":   content.StatusUpdate.State.String(),
-			"details": content.StatusUpdate.Details,
+			"details": sanitizer.Sanitize(content.StatusUpdate.Details),
 		}
 	case *agentv1.ChatResponse_FullText:
 		result["type"] = "full_text"
-		result["full_text"] = content.FullText
+		result["full_text"] = sanitizer.Sanitize(content.FullText)
 	case *agentv1.ChatResponse_Error:
 		result["type"] = "error"
 		result["error"] = map[string]interface{}{
@@ -668,6 +748,27 @@ func (r *envelopeResponder) SendInterventionAck(requestID, status, message strin
 	}
 }
 
+func (r *envelopeResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	payload := map[string]json.RawMessage{}
+	ack := map[string]interface{}{
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		ack["message"] = message
+	}
+	raw, err := json.Marshal(ack)
+	if err != nil {
+		log.Printf("Failed to encode response feedback ack: %v", err)
+		return
+	}
+	payload["response_feedback_ack"] = raw
+	if err := r.writeEnvelope(payload, traceparentFromContext(r.ctx)); err != nil {
+		log.Printf("Failed to send response feedback ack: %v", err)
+	}
+}
+
 func (r *envelopeResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
 	payload := map[string]json.RawMessage{}
 	body := map[string]interface{}{
@@ -801,6 +902,19 @@ func (r *protobufResponder) SendInterventionAck(requestID, status, message strin
 	r.sendProto("intervention_feedback_ack", raw)
 }
 
+func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	ack := map[string]interface{}{
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		ack["message"] = message
+	}
+	raw, _ := json.Marshal(ack)
+	r.sendProto("response_feedback_ack", raw)
+}
+
 func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
 	body := map[string]interface{}{
 		"node_id":   nodeID,
@@ -892,6 +1006,8 @@ func envelopePayloadType(payload map[string]json.RawMessage) string {
 		return "update_node_mastery"
 	case payload["intervention_feedback"] != nil:
 		return "intervention_feedback"
+	case payload["response_feedback"] != nil:
+		return "response_feedback"
 	default:
 		return ""
 	}
@@ -980,6 +1096,10 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	startTime := time.Now()
 	isCacheHit := false
+	traceID := ""
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		traceID = span.SpanContext().TraceID().String()
+	}
 
 	// P0: Semantic Cache Check
 	if h.semantic != nil {
@@ -993,11 +1113,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 			// Construct cached response
 			resp := &agentv1.ChatResponse{
-				ResponseId:   fmt.Sprintf("resp_cache_%d", time.Now().UnixNano()),
-				CreatedAt:    int64(time.Now().Unix()),
-				RequestId:    requestID,
-				Content:      &agentv1.ChatResponse_FullText{FullText: cachedResp},
-				FinishReason: agentv1.FinishReason_STOP,
+				ResponseId:    uuid.New().String(),
+				CreatedAt:     int64(time.Now().Unix()),
+				RequestId:     requestID,
+				TraceId:       traceID,
+				WorkflowId:    "standard_chat",
+				PromptVersion: "v1",
+				Content:       &agentv1.ChatResponse_FullText{FullText: cachedResp},
+				FinishReason:  agentv1.FinishReason_STOP,
 			}
 
 			// Send response
@@ -1077,12 +1200,18 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if reqID == "" {
 		reqID = fmt.Sprintf("req_%s", uuid.New().String())
 	}
+	if traceID != "" {
+		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, userID, input.SessionID, reqID)
+	}
 
 	var dailyLimit int64
 	var dailyUsageStart int64
+	skipQuota := false
 	if h.quota != nil {
 		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
-		if dailyLimit > 0 {
+		if dailyLimit <= 0 || isDevelopmentEnv() {
+			skipQuota = true
+		} else {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
 			} else {
@@ -1091,7 +1220,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
-	if h.quota != nil {
+	if h.quota != nil && !skipQuota {
 		quotaCtx, quotaSpan := tracer.Start(ctx, "quota.reserve")
 		remaining, err := h.quota.ReserveRequest(quotaCtx, userID, reqID, 24*time.Hour)
 		quotaSpan.End()
@@ -1183,7 +1312,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var outputRuneCount int
 	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
 	for {
+		// Trace each streaming response
+		_, streamSpan := tracer.Start(ctx, "stream.receive")
 		resp, err := stream.Recv()
+		streamSpan.End()
+
 		if err == io.EOF {
 			// Stream ended normally
 			break
@@ -1238,10 +1371,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 		}
 
+		// Trace response processing and forwarding
+		_, respSpan := tracer.Start(ctx, "stream.process_response")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			if err := r.SendChatResponse(resp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				respSpan.End()
 				return true
 			}
 		default:
@@ -1251,9 +1387,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			// Forward to WebSocket client
 			if err := conn.WriteJSON(jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
+				respSpan.End()
 				return true
 			}
 		}
+		respSpan.End()
 	}
 	fullText = textBuilder.String()
 
@@ -1367,6 +1505,14 @@ type interventionResponder interface {
 	SendInterventionAck(requestID, status, message string)
 }
 
+type responseFeedbackResponder interface {
+	SendResponseFeedbackAck(responseID, status, message string)
+}
+
+type planReviewStatusSender interface {
+	SendPlanReviewStatus(reviewID, status string, data map[string]interface{})
+}
+
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
 	tracer := otel.Tracer("chat-orchestrator")
@@ -1452,6 +1598,46 @@ func (s legacyInterventionResponder) SendInterventionAck(requestID, status, mess
 	}
 	if err := s.conn.WriteJSON(payload); err != nil {
 		log.Printf("Failed to send intervention feedback ack: %v", err)
+	}
+}
+
+type legacyResponseFeedbackResponder struct {
+	conn *websocket.Conn
+}
+
+func (s legacyResponseFeedbackResponder) SendResponseFeedbackAck(responseID, status, message string) {
+	payload := map[string]interface{}{
+		"type":        "response_feedback_ack",
+		"response_id": responseID,
+		"status":      status,
+		"timestamp":   time.Now().Unix(),
+	}
+	if message != "" {
+		payload["message"] = message
+	}
+	if err := s.conn.WriteJSON(payload); err != nil {
+		log.Printf("Failed to send response feedback ack: %v", err)
+	}
+}
+
+type legacyPlanReviewStatusSender struct {
+	conn *websocket.Conn
+}
+
+func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status string, data map[string]interface{}) {
+	statusMsg := map[string]interface{}{
+		"type":       "plan_review_status",
+		"review_id":  reviewID,
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+	}
+	for k, v := range data {
+		statusMsg[k] = v
+	}
+	if err := s.conn.WriteJSON(statusMsg); err != nil {
+		log.Printf("Failed to send plan review status: %v", err)
+	} else {
+		log.Printf("✅ Plan review status sent: status=%s, review_id=%s", status, reviewID)
 	}
 }
 
@@ -1698,6 +1884,113 @@ func (h *ChatOrchestrator) handleInterventionFeedbackWithResponder(responder int
 	responder.SendInterventionAck(requestID, "ok", "")
 }
 
+func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Context, responder responseFeedbackResponder, msgMap map[string]interface{}, userID string) {
+	responseID, ok := msgMap["response_id"].(string)
+	if !ok || responseID == "" {
+		log.Printf("Invalid response_feedback: missing response_id")
+		responder.SendResponseFeedbackAck("", "failed", "missing response_id")
+		return
+	}
+
+	feedbackTypeRaw, ok := msgMap["feedback_type"].(string)
+	if !ok || feedbackTypeRaw == "" {
+		log.Printf("Invalid response_feedback: missing feedback_type")
+		responder.SendResponseFeedbackAck(responseID, "failed", "missing feedback_type")
+		return
+	}
+
+	feedbackType := agentv1.FeedbackType_FEEDBACK_TYPE_UP
+	switch strings.ToLower(feedbackTypeRaw) {
+	case "up", "thumbs_up", "like":
+		feedbackType = agentv1.FeedbackType_FEEDBACK_TYPE_UP
+	case "down", "thumbs_down", "dislike":
+		feedbackType = agentv1.FeedbackType_FEEDBACK_TYPE_DOWN
+	default:
+		log.Printf("Invalid response_feedback: unknown feedback_type=%s", feedbackTypeRaw)
+		responder.SendResponseFeedbackAck(responseID, "failed", "invalid feedback_type")
+		return
+	}
+
+	traceID, _ := msgMap["trace_id"].(string)
+	if traceID == "" {
+		if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+			traceID = span.SpanContext().TraceID().String()
+		}
+	}
+
+	reasonMap := map[string]agentv1.FeedbackReason{
+		"inaccurate":    agentv1.FeedbackReason_FEEDBACK_REASON_INACCURATE,
+		"incomplete":    agentv1.FeedbackReason_FEEDBACK_REASON_INCOMPLETE,
+		"verbose":       agentv1.FeedbackReason_FEEDBACK_REASON_VERBOSE,
+		"formatting":    agentv1.FeedbackReason_FEEDBACK_REASON_FORMATTING,
+		"misaligned":    agentv1.FeedbackReason_FEEDBACK_REASON_MISALIGNED,
+		"too_hard":      agentv1.FeedbackReason_FEEDBACK_REASON_TOO_HARD,
+		"too_simple":    agentv1.FeedbackReason_FEEDBACK_REASON_TOO_SIMPLE,
+		"unspecified":   agentv1.FeedbackReason_FEEDBACK_REASON_UNSPECIFIED,
+		"format":        agentv1.FeedbackReason_FEEDBACK_REASON_FORMATTING,
+		"not_aligned":   agentv1.FeedbackReason_FEEDBACK_REASON_MISALIGNED,
+		"not_accurate":  agentv1.FeedbackReason_FEEDBACK_REASON_INACCURATE,
+		"not_complete":  agentv1.FeedbackReason_FEEDBACK_REASON_INCOMPLETE,
+		"too_verbose":   agentv1.FeedbackReason_FEEDBACK_REASON_VERBOSE,
+		"too_difficult": agentv1.FeedbackReason_FEEDBACK_REASON_TOO_HARD,
+		"too_easy":      agentv1.FeedbackReason_FEEDBACK_REASON_TOO_SIMPLE,
+	}
+
+	reasons := []agentv1.FeedbackReason{}
+	if raw, ok := msgMap["reasons"].([]interface{}); ok {
+		for _, item := range raw {
+			if text, ok := item.(string); ok {
+				if reason, ok := reasonMap[strings.ToLower(text)]; ok {
+					reasons = append(reasons, reason)
+				}
+			}
+		}
+	}
+
+	freeText, _ := msgMap["free_text"].(string)
+	workflowID, _ := msgMap["workflow_id"].(string)
+	promptVersion, _ := msgMap["prompt_version"].(string)
+
+	meta := map[string]string{}
+	if raw, ok := msgMap["meta"].(map[string]interface{}); ok {
+		for key, val := range raw {
+			meta[key] = fmt.Sprint(val)
+		}
+	}
+
+	if h.agentClient == nil {
+		log.Printf("Agent client not initialized for response feedback")
+		responder.SendResponseFeedbackAck(responseID, "failed", "service unavailable")
+		return
+	}
+
+	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", userID, responseID, traceID)
+
+	req := &agentv1.ResponseFeedbackRequest{
+		UserId:        userID,
+		ResponseId:    responseID,
+		TraceId:       traceID,
+		FeedbackType:  feedbackType,
+		Reasons:       reasons,
+		FreeText:      freeText,
+		WorkflowId:    workflowID,
+		PromptVersion: promptVersion,
+		Meta:          meta,
+	}
+
+	feedbackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	resp, err := h.agentClient.SubmitResponseFeedback(feedbackCtx, req)
+	if err != nil || resp == nil || !resp.Success {
+		log.Printf("Failed to submit response feedback: %v", err)
+		responder.SendResponseFeedbackAck(responseID, "failed", "submit failed")
+		return
+	}
+
+	responder.SendResponseFeedbackAck(responseID, "ok", "")
+}
+
 // handleActionFeedback processes action confirmation/dismissal feedback from user
 func (h *ChatOrchestrator) handleActionFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
 	h.handleActionFeedbackWithResponder(legacyActionStatusSender{conn: conn}, msgMap, userID)
@@ -1745,6 +2038,62 @@ func (h *ChatOrchestrator) sendInterventionAck(conn *websocket.Conn, requestID, 
 	}
 }
 
+func (h *ChatOrchestrator) handleResponseFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handleResponseFeedbackWithResponder(ctx, legacyResponseFeedbackResponder{conn: conn}, msgMap, userID)
+}
+
+// handlePlanReviewFeedback processes user feedback on plan reviews (legacy wrapper)
+func (h *ChatOrchestrator) handlePlanReviewFeedback(conn *websocket.Conn, msgMap map[string]interface{}, userID string) {
+	h.handlePlanReviewFeedbackWithResponder(legacyPlanReviewStatusSender{conn: conn}, msgMap, userID)
+}
+
+// handlePlanReviewFeedbackWithResponder processes user feedback on plan reviews
+func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(sender planReviewStatusSender, msgMap map[string]interface{}, userID string) {
+	reviewID, ok := msgMap["review_id"].(string)
+	if !ok {
+		log.Printf("Invalid plan review feedback: missing review_id field")
+		return
+	}
+
+	userDecision, ok := msgMap["user_decision"].(string)
+	if !ok {
+		log.Printf("Invalid plan review feedback: missing user_decision field")
+		return
+	}
+
+	userComment, _ := msgMap["user_comment"].(string)
+
+	log.Printf("Plan review feedback from user %s: review_id=%s, decision=%s, comment=%s",
+		userID, reviewID, userDecision, userComment)
+
+	// For now, we just acknowledge the feedback
+	// In the future, this could trigger re-planning or execution
+	status := "acknowledged"
+	message := ""
+
+	switch userDecision {
+	case "approve":
+		status = "approved"
+		message = "计划已批准，正在执行..."
+	case "reject":
+		status = "rejected"
+		message = "计划已取消"
+	case "modify":
+		status = "modify_requested"
+		message = "请提供修改要求..."
+	default:
+		log.Printf("Unknown user decision: %s", userDecision)
+		status = "unknown"
+		message = "未知操作"
+	}
+
+	sender.SendPlanReviewStatus(reviewID, status, map[string]interface{}{
+		"message":       message,
+		"user_decision": userDecision,
+		"timestamp":     time.Now().Unix(),
+	})
+}
+
 // handleFocusCompleted processes focus session completion events
 func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, userID string) {
 	sessionID, ok := msgMap["session_id"].(string)
@@ -1790,4 +2139,83 @@ func (h *ChatOrchestrator) sendError(conn *websocket.Conn, opType, nodeID, versi
 			"error":   message,
 		},
 	})
+}
+
+func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn) {
+	h.wsMutex.Lock()
+	defer h.wsMutex.Unlock()
+	if existing, ok := h.wsConnections[userID]; ok && existing != conn {
+		_ = existing.Close()
+	}
+	h.wsConnections[userID] = conn
+
+	// Publish connection event to Redis for cross-instance synchronization
+	if h.chatHistory != nil {
+		go func() {
+			ctx := context.Background()
+			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "connected")
+		}()
+	}
+}
+
+func (h *ChatOrchestrator) unregisterConnection(userID string) {
+	h.wsMutex.Lock()
+	defer h.wsMutex.Unlock()
+	delete(h.wsConnections, userID)
+
+	// Publish disconnection event to Redis for cross-instance synchronization
+	if h.chatHistory != nil {
+		go func() {
+			ctx := context.Background()
+			_ = h.chatHistory.PublishConnectionEvent(ctx, userID, "disconnected")
+		}()
+	}
+}
+
+func (h *ChatOrchestrator) getConnection(userID string) (*websocket.Conn, bool) {
+	h.wsMutex.RLock()
+	defer h.wsMutex.RUnlock()
+	conn, ok := h.wsConnections[userID]
+	return conn, ok
+}
+
+// PushIntervention sends an intervention push message to a connected WebSocket client.
+func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.InterventionPushMessage) error {
+	conn, exists := h.getConnection(userID)
+	if !exists {
+		return fmt.Errorf("no active WebSocket connection for user %s", userID)
+	}
+
+	message := map[string]interface{}{
+		"type":            "intervention_push",
+		"intervention_id": intervention.InterventionId,
+		"level":           intervention.Level,
+		"content": map[string]interface{}{
+			"rendered_message":  intervention.Content.GetRenderedMessage(),
+			"intent_type":       intervention.Content.GetIntentType(),
+			"template_id":       intervention.Content.GetTemplateId(),
+			"scaffolding_level": intervention.Content.GetScaffoldingLevel(),
+			"context_variables": intervention.Content.GetContextVariables(),
+		},
+		"actions":    convertInterventionActions(intervention.Actions),
+		"expires_at": intervention.ExpiresAt,
+	}
+
+	if err := conn.WriteJSON(message); err != nil {
+		h.unregisterConnection(userID)
+		return fmt.Errorf("failed to send intervention: %w", err)
+	}
+	return nil
+}
+
+func convertInterventionActions(actions []*pbws.InterventionAction) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(actions))
+	for i, action := range actions {
+		result[i] = map[string]interface{}{
+			"id":    action.Id,
+			"label": action.Label,
+			"type":  action.Type,
+		}
+	}
+	return result
 }
