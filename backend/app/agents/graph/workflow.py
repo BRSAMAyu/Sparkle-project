@@ -224,6 +224,14 @@ def route_after_router_with_collaboration(state: SparkleState):
     """Router 后的路由（支持协作模式） (Phase 3)"""
     target = state.get("next_step")
     collaboration_mode = state.get("collaboration_mode")
+    review_feedback = state.get("review_feedback")
+
+    # Vision Item 8: Review Loop
+    # If there is review feedback (Modify/Reject), we force a re-collaboration/planning cycle
+    if review_feedback and review_feedback.get("decision") in ["modify", "reject"]:
+        # Reset collaboration index to restart or adjust plan
+        state["collaboration_index"] = 0
+        return "collaboration"
 
     # If collaboration_mode not set yet, analyze to decide
     if not collaboration_mode:

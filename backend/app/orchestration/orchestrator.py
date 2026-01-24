@@ -1003,6 +1003,7 @@ class ChatOrchestrator:
                     try:
                         # Execute multi-agent workflow and stream responses
                         async for response in execute_multi_agent_workflow(
+                            orchestrator=self,
                             chat_mode=chat_mode,
                             message=user_message,
                             user_id=user_id,

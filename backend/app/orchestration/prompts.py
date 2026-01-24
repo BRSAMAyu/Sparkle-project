@@ -274,6 +274,11 @@ def _format_plan_context(plan_context: dict = None) -> str:
     """
     格式化计划上下文
 
+    设计原则：
+    - 人类可读：将机器字段名转换为自然语言描述
+    - LLM 友好：添加显式引用指令，引导 LLM 在回复中引用这些信息
+    - 信息聚焦：优先展示用户最关心的信息（计划名、进度、偏好）
+
     Args:
         plan_context: 计划上下文字典（从PlanContextBuilder获取）
 
@@ -283,54 +288,90 @@ def _format_plan_context(plan_context: dict = None) -> str:
     if not plan_context or not isinstance(plan_context, dict):
         return ""
 
-    lines = ["## 当前计划上下文"]
+    # 【强调标题】让 LLM 注意到这部分的重要性
+    lines = ["## 用户学习计划（请在回复中适当引用以下信息）"]
 
-    # Plan ID and status
-    plan_id = plan_context.get("plan_id")
+    # 【计划标题】用户可识别的名称，而非 UUID
+    plan_title = plan_context.get("plan_title") or plan_context.get("title") or plan_context.get("name")
+    if plan_title:
+        lines.append(f"**计划名称**: {plan_title}")
+
+    # 状态（如果不是 active 可以提示）
     status = plan_context.get("status")
-    if plan_id:
-        lines.append(f"计划ID: {plan_id}")
-    if status:
-        lines.append(f"状态: {status}")
+    if status and status != "active":
+        lines.append(f"**状态**: {status}")
 
-    # Facts (core plan-level knowledge)
+    # 【优化格式】将机器字段名转换为可读描述
     facts = plan_context.get("facts", {})
-    if facts:
-        lines.append("\n### 计划事实")
-        for key, value in facts.items():
-            lines.append(f"- {key}: {value}")
+    if facts or plan_context.get("task_summary"):
+        lines.append("\n**我知道关于你**:")
 
-    # Task summary
+    # 难度偏好 - 同时显示数值和可读描述
+    if "difficulty_preference" in facts:
+        d = facts["difficulty_preference"]
+        if d > 0.7:
+            desc = "有挑战性的"
+        elif d < 0.3:
+            desc = "轻松入门的"
+        else:
+            desc = "适中难度的"
+        lines.append(f"- 你偏好{desc}学习内容 (难度偏好: {d})")
+
+    # 学习时长偏好
+    if "session_length_preference" in facts:
+        minutes = facts["session_length_preference"]
+        lines.append(f"- 单次学习约 {minutes} 分钟 (session_length_preference: {minutes})")
+
+    # 其他事实（用可读方式展示）
+    other_facts = {k: v for k, v in facts.items()
+                   if k not in ("difficulty_preference", "session_length_preference")}
+    for key, value in other_facts.items():
+        # 将下划线命名转换为空格分隔的描述
+        readable_key = key.replace("_", " ")
+        lines.append(f"- {readable_key}: {value}")
+
+    # 【任务进度】更直观的展示
     task_summary = plan_context.get("task_summary")
     if task_summary:
-        total = task_summary.get("total", 0)
         completed = task_summary.get("completed", 0)
+        total = task_summary.get("total", 0)
         rate = task_summary.get("avg_completion_rate")
-        rate_str = f" ({rate:.0%})" if rate is not None else ""
-        lines.append(f"\n### 任务进度: {completed}/{total}{rate_str}")
+        rate_str = f"，完成率 {rate:.0%}" if rate is not None else ""
+        lines.append(f"- 已完成 {completed}/{total} 个任务{rate_str}")
 
-        # By type breakdown
-        by_type = task_summary.get("by_type", {})
-        if by_type:
-            for task_type, stats in by_type.items():
-                t_total = stats.get("total", 0)
-                t_completed = stats.get("completed", 0)
-                lines.append(f"  - {task_type}: {t_completed}/{t_total}")
+    # 【最近任务】帮助 LLM 了解用户最近在做什么
+    task_summaries = plan_context.get("task_summaries") or plan_context.get("recent_tasks")
+    if task_summaries:
+        recent = task_summaries[:2] if len(task_summaries) > 2 else task_summaries
+        lines.append("\n**最近在做**:")
+        for t in recent:
+            if isinstance(t, dict):
+                title = t.get("title") or t.get("name") or t.get("description", "任务")
+                lines.append(f"- {title}")
 
-    # Milestones
+    # 【最近反馈】如果有的话
+    recent_feedback = plan_context.get("recent_feedback")
+    if recent_feedback:
+        lines.append("\n**最近的反馈**:")
+        for f in recent_feedback[:2]:
+            if isinstance(f, dict):
+                content = f.get("content") or f.get("message", "")
+                if content:
+                    lines.append(f"- {content}")
+
+    # 【里程碑】已完成的成就
     milestones = plan_context.get("milestones", [])
     if milestones:
-        lines.append("\n### 已达成里程碑")
-        for m in milestones:
-            title = m.get("title", "未知")
+        lines.append("\n**已达成里程碑**:")
+        for m in milestones[:3]:  # 只显示最近3个
+            title = m.get("title", "里程碑")
             lines.append(f"- {title}")
 
-    # Constraints
-    constraints = plan_context.get("constraints", {})
-    if constraints:
-        lines.append("\n### 运行时约束")
-        for key, value in constraints.items():
-            lines.append(f"- {key}: {value}")
+    # 【显式引用指令】引导 LLM 在回复中引用这些信息
+    lines.append("\n**回复要求**:")
+    lines.append("- 如果用户问题与计划相关，请用'根据你的计划...'或'你之前提到...'来引用")
+    lines.append("- 避免重复询问已知信息")
+    lines.append("- 优先使用上述偏好信息来调整回复风格和深度")
 
     return "\n".join(lines)
 

@@ -24,7 +24,7 @@ class ChatModeSelectorPill extends ConsumerWidget {
     final currentMode = ref.watch(chatModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (currentMode == ChatMode.standard) {
+    if (currentMode.apiValue == 'standard') {
       return AnimatedSwitcher(
         duration: AnimationSystem.normal,
         switchInCurve: AnimationSystem.smooth,
@@ -60,9 +60,9 @@ class ChatModeSelectorPill extends ConsumerWidget {
         builder: (context) => const ChatModeSelectorSheet(),
       ).then((selectedMode) {
         if (selectedMode != null) {
-          ref.read(chatModeProvider.notifier).setMode(selectedMode);
+          ref.read(chatModeNotifierProvider.notifier).setMode(selectedMode);
           // Also update last multi-agent mode if not standard
-          if (selectedMode != ChatMode.standard) {
+          if (selectedMode.apiValue != 'standard') {
             ref.read(lastMultiAgentModeProvider.notifier).state = selectedMode;
           }
         }
