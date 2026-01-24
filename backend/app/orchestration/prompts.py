@@ -19,6 +19,7 @@ Prompt 管理系统 - 统一的Agent Prompt管理
 
 from typing import Dict, Optional, Any
 from app.core.agent_profiles import AgentRole, agent_profile_registry
+from app.core.plan_context import merge_plan_context
 
 
 # ============================================
@@ -76,6 +77,11 @@ def build_system_prompt(
         user_context = {}
     if conversation_history is None:
         conversation_history = {}
+    if plan_context is None and isinstance(user_context, dict):
+        plan_context = user_context.get("plan_context")
+
+    if plan_context and isinstance(user_context, dict):
+        user_context = merge_plan_context(user_context, plan_context)
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
     profile = agent_profile_registry.get_profile(agent_role)

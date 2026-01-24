@@ -36,7 +36,10 @@ class NextStepService:
         actual = completed_task.actual_minutes or estimated
         fatigue_ratio = actual / estimated if estimated > 0 else 1.0
 
-        # 2. Gather context (Plan & Galaxy)
+        # 2. Get user action preferences (if available)
+        action_preferences = await self._get_user_action_preferences(user.id, db)
+
+        # 3. Gather context (Plan & Galaxy)
         plan_context = None
         related_node_name = None
         
@@ -54,22 +57,23 @@ class NextStepService:
             # Let's try to fetch node name if possible, but keep it light.
             pass
 
-        # 3. Try LLM Generation with Timeout
+        # 4. Try LLM Generation with Timeout
         try:
             # Set a strict timeout for the LLM call to ensure UI responsiveness
             return await asyncio.wait_for(
-                self._generate_with_llm(completed_task, fatigue_ratio, plan_context),
+                self._generate_with_llm(completed_task, fatigue_ratio, plan_context, action_preferences),
                 timeout=3.0
             )
         except (asyncio.TimeoutError, Exception) as e:
             logger.warning(f"Next step generation failed or timed out: {e}. Using fallback.")
-            return await self._rule_based_fallback(completed_task, fatigue_ratio, db)
+            return await self._rule_based_fallback(completed_task, fatigue_ratio, db, action_preferences)
 
     async def _generate_with_llm(
-        self, 
-        task: Task, 
-        fatigue_ratio: float, 
-        plan_context: Optional[Dict]
+        self,
+        task: Task,
+        fatigue_ratio: float,
+        plan_context: Optional[Dict],
+        action_preferences: Optional[Dict[str, float]] = None
     ) -> List[NextActionSuggestion]:
         
         llm = get_llm_service(AgentRole.TIME_TUTOR)
@@ -315,7 +319,13 @@ class NextStepService:
             can_quick_create=True
         )
 
-    async def _rule_based_fallback(self, task: Task, fatigue_ratio: float, db: AsyncSession) -> List[NextActionSuggestion]:
+    async def _rule_based_fallback(
+        self,
+        task: Task,
+        fatigue_ratio: float,
+        db: AsyncSession,
+        action_preferences: Optional[Dict[str, float]] = None
+    ) -> List[NextActionSuggestion]:
         """使用配置的规则引擎生成建议"""
         suggestions = []
 
@@ -346,6 +356,60 @@ class NextStepService:
         if not suggestions:
             suggestions.append(self._create_review_suggestion(task))
 
+        # 5. 根据用户偏好排序
+        if action_preferences:
+            suggestions = self._sort_by_preferences(suggestions, action_preferences)
+
         return suggestions[:settings.NEXT_STEP_MAX_RECOMMENDATIONS]
+
+    def _sort_by_preferences(
+        self,
+        suggestions: List[NextActionSuggestion],
+        preferences: Dict[str, float]
+    ) -> List[NextActionSuggestion]:
+        """
+        根据用户偏好排序建议
+
+        Args:
+            suggestions: 原始建议列表
+            preferences: 用户偏好 {action_type: selection_rate}
+
+        Returns:
+            排序后的建议列表
+        """
+        def get_score(suggestion: NextActionSuggestion) -> float:
+            # 获取该类型的偏好分数
+            action_type_str = suggestion.type.value if hasattr(suggestion.type, 'value') else str(suggestion.type)
+            return preferences.get(action_type_str, 0.0)
+
+        # 按偏好分数降序排序
+        return sorted(suggestions, key=get_score, reverse=True)
+
+    async def _get_user_action_preferences(
+        self,
+        user_id: UUID,
+        db: AsyncSession
+    ) -> Optional[Dict[str, float]]:
+        """
+        获取用户对各类型action的选择偏好
+
+        Args:
+            user_id: 用户ID
+            db: 数据库会话
+
+        Returns:
+            {action_type: selection_rate} 字典，如果没有数据则返回None
+        """
+        try:
+            from app.services.next_action_selection_service import NextActionSelectionService
+
+            service = NextActionSelectionService(db)
+            preferences = await service.get_user_action_preferences(user_id, days=30)
+
+            # 只有有数据时才返回
+            return preferences if preferences else None
+        except Exception as e:
+            logger.warning(f"Failed to get user action preferences: {e}")
+            return None
 
 next_step_service = NextStepService()

@@ -130,7 +130,7 @@ class TaskStateSyncService:
         # For now, we only track completion events
         if task.status == TaskStatus.COMPLETED and old_status != TaskStatus.COMPLETED:
             await self.on_task_completed(task)
-            # Also sync task summaries after completion
+        else:
             await self.sync_task_summaries(task.user_id, task.plan_id)
 
     async def sync_task_summaries(

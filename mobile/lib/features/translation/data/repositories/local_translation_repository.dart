@@ -82,11 +82,12 @@ class LocalTranslationRepository {
 
     switch (sortOrder) {
       case TranslationSortOrder.newestFirst:
-        records = await _buildFilterQuery(filter)
-            .sortByCreatedAtDesc()
+        final tempRecords = await _buildFilterQuery(filter)
+            .sortByCreatedAt()
             .offset(offset)
             .limit(limit)
             .findAll();
+        records = tempRecords.reversed.toList();
       case TranslationSortOrder.oldestFirst:
         records = await _buildFilterQuery(filter)
             .sortByCreatedAt()
@@ -94,26 +95,28 @@ class LocalTranslationRepository {
             .limit(limit)
             .findAll();
       case TranslationSortOrder.highestRating:
-        records = await _buildFilterQuery(filter)
-            .sortByRatingDesc()
-            .thenByCreatedAtDesc()
+        final tempRecords2 = await _buildFilterQuery(filter)
+            .sortByRating()
+            .thenByCreatedAt()
             .offset(offset)
             .limit(limit)
             .findAll();
+        records = tempRecords2.reversed.toList();
       case TranslationSortOrder.lowestRating:
         records = await _buildFilterQuery(filter)
             .sortByRating()
-            .thenByCreatedAtDesc()
+            .thenByCreatedAt()
             .offset(offset)
             .limit(limit)
             .findAll();
       case TranslationSortOrder.mostViewed:
-        records = await _buildFilterQuery(filter)
-            .sortByViewCountDesc()
-            .thenByCreatedAtDesc()
+        final tempRecords3 = await _buildFilterQuery(filter)
+            .sortByViewCount()
+            .thenByCreatedAt()
             .offset(offset)
             .limit(limit)
             .findAll();
+        records = tempRecords3.reversed.toList();
     }
 
     return records.map(_toHistoryItem).toList();
@@ -152,8 +155,8 @@ class LocalTranslationRepository {
         .group((q) => q
             .originalTextContains(lowerQuery, caseSensitive: false)
             .or()
-            .translatedTextContains(lowerQuery, caseSensitive: false),)
-        .sortByCreatedAtDesc()
+            .translatedTextContains(lowerQuery, caseSensitive: false))
+        .sortByCreatedAt()
         .limit(50)
         .findAll();
 

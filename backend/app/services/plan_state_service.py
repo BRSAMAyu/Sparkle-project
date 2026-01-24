@@ -176,6 +176,7 @@ class PlanStateService:
             facts=initial_facts or {},
             milestones=[],
             task_index={"total": 0, "completed": 0, "by_type": {}},
+            task_summaries=[],
             feedback_log=[],
             constraints=initial_constraints or {},
             version=1,
@@ -239,6 +240,11 @@ class PlanStateService:
             current_index = state.task_index or {}
             self._deep_merge(current_index, patch["task_index"])
             state.task_index = current_index
+
+        if "task_summaries" in patch:
+            summaries = patch["task_summaries"]
+            if isinstance(summaries, list):
+                state.task_summaries = summaries
 
         if "feedback_log" in patch:
             current_log = state.feedback_log or []

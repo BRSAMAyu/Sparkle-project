@@ -116,6 +116,7 @@ class GetPlanStateTool(BaseTool):
                     for m in (state.milestones or [])[-5:]  # Last 5 milestones
                 ],
                 "task_index": state.task_index or {},
+                "task_summaries": (state.task_summaries or [])[:10],
                 "constraints": state.constraints or {},
             }
 

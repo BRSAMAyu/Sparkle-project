@@ -89,6 +89,7 @@ class IntentPreviewResponse {
     required this.detectedIntents,
     this.executionPlan,
     this.estimatedTime,
+    this.suggestedAgentRoles,
   });
 
   factory IntentPreviewResponse.fromJson(Map<String, dynamic> json) {
@@ -99,6 +100,9 @@ class IntentPreviewResponse {
           .toList(),
       executionPlan: json['execution_plan'] as String?,
       estimatedTime: json['estimated_time'] as int?,
+      suggestedAgentRoles: (json['suggested_agent_roles'] as List?)
+          ?.map((e) => e as String)
+          .toList(),
     );
   }
 
@@ -114,12 +118,16 @@ class IntentPreviewResponse {
   /// Estimated execution time in seconds
   final int? estimatedTime;
 
+  /// Suggested agent roles for handling the detected intents
+  final List<String>? suggestedAgentRoles;
+
   Map<String, dynamic> toJson() {
     return {
       'original_message': originalMessage,
       'detected_intents': detectedIntents.map((e) => e.toJson()).toList(),
       if (executionPlan != null) 'execution_plan': executionPlan,
       if (estimatedTime != null) 'estimated_time': estimatedTime,
+      if (suggestedAgentRoles != null) 'suggested_agent_roles': suggestedAgentRoles,
     };
   }
 
@@ -190,4 +198,63 @@ class IntentTypeMetadata {
   final String label;
   final String description;
   final String? agentRole;
+}
+
+/// Result from intent execution
+class IntentExecuteResult {
+  const IntentExecuteResult({
+    required this.success,
+    this.results,
+    this.errorMessage,
+  });
+
+  factory IntentExecuteResult.fromJson(Map<String, dynamic> json) {
+    return IntentExecuteResult(
+      success: json['success'] as bool? ?? false,
+      results: json['results'] as List<dynamic>?,
+      errorMessage: json['error_message'] as String?,
+    );
+  }
+
+  final bool success;
+  final List<dynamic>? results;
+  final String? errorMessage;
+}
+
+/// Response from analyze-and-execute endpoint
+///
+/// This endpoint handles the entire flow:
+/// - Single intent or auto_execute=true: Returns execution_result
+/// - Multi intent and auto_execute=false: Returns preview with needs_confirmation=true
+class AnalyzeAndExecuteResponse {
+  const AnalyzeAndExecuteResponse({
+    required this.isSuccess,
+    required this.isMultiIntent,
+    required this.autoExecuted,
+    this.preview,
+    this.executionResult,
+    this.needsConfirmation = false,
+  });
+
+  factory AnalyzeAndExecuteResponse.fromJson(Map<String, dynamic> json) {
+    return AnalyzeAndExecuteResponse(
+      isSuccess: json['success'] as bool? ?? false,
+      isMultiIntent: json['is_multi_intent'] as bool? ?? false,
+      autoExecuted: json['auto_executed'] as bool? ?? false,
+      needsConfirmation: json['needs_confirmation'] as bool? ?? false,
+      preview: json['preview'] != null
+          ? IntentPreviewResponse.fromJson(json['preview'] as Map<String, dynamic>)
+          : null,
+      executionResult: json['execution_result'] != null
+          ? IntentExecuteResult.fromJson(json['execution_result'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  final bool isSuccess;
+  final bool isMultiIntent;
+  final bool autoExecuted;
+  final bool needsConfirmation;
+  final IntentPreviewResponse? preview;
+  final IntentExecuteResult? executionResult;
 }
