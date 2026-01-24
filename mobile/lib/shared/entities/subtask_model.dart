@@ -19,7 +19,7 @@ enum SubTaskStatus {
 
 /// Subtask model
 class SubTaskModel extends BaseModel {
-  const SubTaskModel({
+  SubTaskModel({
     required this.id,
     required this.parentTaskId,
     required this.title,
@@ -144,7 +144,7 @@ class SubTaskUpdate {
   Map<String, dynamic> toJson() => {
         if (title != null) 'title': title,
         if (description != null) 'description': description,
-        if (status != null) 'status': status.value,
+        if (status != null) 'status': status!.value,
         if (order != null) 'order': order,
       };
 

@@ -129,7 +129,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-      vsvsync: this,
+      vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
@@ -144,7 +144,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
 
     _slideInController = AnimationController(
       vsync: this,
-      duration: SparkleMotion.medium,
+      duration: SparkleMotion.normal,
     );
     _slideInController.forward();
   }
@@ -272,7 +272,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                                   child: Icon(
                                     icon,
                                     color: Colors.white,
-                                    size: DS.iconSizeMd,
+                                    size: DS.iconSizeBase,
                                   ),
                                 ),
                               ),

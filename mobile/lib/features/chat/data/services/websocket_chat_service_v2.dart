@@ -34,12 +34,27 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
     switch (type) {
       case 'delta':
+        final metadata = data['metadata'] as Map<String, dynamic>?;
+
+        // Check if this delta contains plan review data
+        if (metadata != null && metadata['requires_review'] == true) {
+          final reviewData = metadata['review_data'] as Map<String, dynamic>?;
+          return PlanReviewWidgetEvent(
+            reviewData: reviewData ?? metadata,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+
         return TextEvent(
           content: data['delta'] as String? ?? '',
           responseId: responseId,
           traceId: traceId,
           workflowId: workflowId,
           promptVersion: promptVersion,
+          metadata: metadata,
         );
 
       case 'status_update':

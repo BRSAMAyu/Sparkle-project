@@ -8,12 +8,14 @@ abstract class ChatStreamEvent {
     this.traceId,
     this.workflowId,
     this.promptVersion,
+    this.metadata,
   });
 
   final String? responseId;
   final String? traceId;
   final String? workflowId;
   final String? promptVersion;
+  final Map<String, dynamic>? metadata;
 }
 
 /// 文本事件
@@ -24,6 +26,7 @@ class TextEvent extends ChatStreamEvent {
     super.traceId,
     super.workflowId,
     super.promptVersion,
+    super.metadata,
   });
   final String content;
 }

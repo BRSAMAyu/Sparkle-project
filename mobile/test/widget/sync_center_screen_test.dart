@@ -106,7 +106,7 @@ class _FakeApiClient implements ApiClient {
   Stream<SSEEvent> postStream(String path, {Object? data}) => const Stream<SSEEvent>.empty();
 
   @override
-  Future<Response<T>> post<T>(String path, {Object? data}) {
+  Future<Response<T>> post<T>(String path, {Object? data, Map<String, dynamic>? queryParameters}) {
     throw UnimplementedError();
   }
 

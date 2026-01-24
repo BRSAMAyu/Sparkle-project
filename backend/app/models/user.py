@@ -153,6 +153,14 @@ class User(BaseModel):
         lazy="dynamic"
     )
 
+    # 任务反馈关系
+    task_feedbacks = relationship(
+        "TaskFeedback",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     # 胶囊收藏关系
     capsule_favorites = relationship(
         "CapsuleFavorite",
