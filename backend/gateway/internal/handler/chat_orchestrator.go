@@ -54,6 +54,7 @@ type chatInput struct {
 	FileIds           []string               `json:"file_ids,omitempty"`
 	IncludeReferences bool                   `json:"include_references,omitempty"`
 	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
+	ChatMode          string                 `json:"chat_mode,omitempty"`
 }
 
 type wsMode int
@@ -94,6 +95,7 @@ func (c *chatInput) Reset() {
 	c.FileIds = nil
 	c.IncludeReferences = false
 	c.ExtraContext = nil
+	c.ChatMode = ""
 }
 
 // stringBuilderPool reuses string builders for text accumulation
@@ -1254,6 +1256,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		},
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
+		ChatMode:          input.ChatMode,
 		UserProfile: &agentv1.UserProfile{
 			Nickname:     input.Nickname,
 			Timezone:     "Asia/Shanghai",

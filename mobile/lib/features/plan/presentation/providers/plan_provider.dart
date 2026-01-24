@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 
 // 1. PlanListState Class
@@ -110,6 +111,24 @@ class PlanNotifier extends StateNotifier<PlanListState> {
       _ref.read(taskListProvider.notifier).refreshTasks();
       // Invalidate the plan details to show the new tasks
       _ref.invalidate(planDetailProvider(planId));
+    });
+  }
+
+  Future<void> archivePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.archivePlan(id);
+      final activePlanId = _ref.read(activePlanProvider);
+      if (activePlanId == id) {
+        _ref.read(activePlanProvider.notifier).clearSelection();
+      }
+      await refresh();
+    });
+  }
+
+  Future<void> restorePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.restorePlan(id);
+      await refresh();
     });
   }
 

@@ -165,6 +165,20 @@ class TaskService:
             except Exception as e:
                 logger.warning(f"Failed to sync task completion with plan state: {e}")
 
+            # Append task summary for plan context
+            try:
+                from app.services.plan_state_service import PlanStateService
+                plan_state_service = PlanStateService(db, cache_service.redis)
+                summary = TaskService._build_task_summary(db_obj, actual_minutes, note)
+                await plan_state_service.append_task_summary(
+                    user_id=db_obj.user_id,
+                    plan_id=db_obj.plan_id,
+                    summary=summary,
+                    limit=20,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to append task summary: {e}")
+
         if db_obj.knowledge_node_id:
             from app.services.galaxy_service import GalaxyService
 
@@ -209,6 +223,39 @@ class TaskService:
         except Exception:
             return 1
         return max(1, min(5, int(mapped)))
+
+    @staticmethod
+    def _build_task_summary(task: Task, actual_minutes: int, note: Optional[str]) -> dict:
+        estimated = task.estimated_minutes or 0
+        delta = actual_minutes - estimated
+        if delta == 0:
+            delta_label = "0min"
+        else:
+            delta_label = f"{'+' if delta > 0 else ''}{delta}min"
+
+        sentiment = TaskService._infer_sentiment(note)
+
+        return {
+            "task_id": str(task.id),
+            "title": task.title,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "actual_vs_estimated": delta_label,
+            "user_sentiment": sentiment,
+            "key_takeaway": note if note else None,
+        }
+
+    @staticmethod
+    def _infer_sentiment(note: Optional[str]) -> str:
+        if not note:
+            return "neutral"
+        lowered = note.lower()
+        negative = ["hard", "difficult", "confusing", "stuck", "tough", "frustrated"]
+        positive = ["easy", "smooth", "clear", "good", "great", "helpful"]
+        if any(word in lowered for word in negative):
+            return "negative"
+        if any(word in lowered for word in positive):
+            return "positive"
+        return "neutral"
 
     @staticmethod
     async def abandon(

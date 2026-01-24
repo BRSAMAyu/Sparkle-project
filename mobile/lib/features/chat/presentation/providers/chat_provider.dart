@@ -13,10 +13,13 @@ import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -186,6 +189,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<bool> submitPlanReview({
     required ReviewDecision decision,
     String? userComment,
+    Map<String, String>? meta,
   }) async {
     final review = state.pendingPlanReview;
     if (review == null) {
@@ -222,6 +226,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         decision: grpcDecision,
         userComment: userComment,
         authToken: authToken,
+        meta: meta,
       );
 
       if (result.success) {
@@ -447,6 +452,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     List<ReasoningStep>? pendingReasoningSteps;
     bool? pendingReasoningActive;
     int? pendingReasoningStartTime;
+    var planContextInjected = false;
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
@@ -486,6 +492,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
       state = state.copyWith(clearAttachments: true);
+
+      // Get selected plan for chat context
+      final selectedPlanId = _ref.read(activePlanProvider);
+      final extraContext = selectedPlanId != null
+          ? {'plan_id': selectedPlanId}
+          : null;
+
+      // Get selected chat mode
+      final chatMode = _ref.read(chatModeProvider);
+      final chatModeValue = chatMode.apiValue;
+
       await for (final event in _chatRepository.chatStream(
         content,
         state.conversationId,
@@ -494,6 +511,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         token: token,
         fileIds: fileIds,
         includeReferences: fileIds.isNotEmpty,
+        extraContext: extraContext,
+        chatMode: chatModeValue,
       )) {
         if (event.responseId != null && event.responseId!.isNotEmpty) {
           responseId = event.responseId;
@@ -509,6 +528,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
 
         if (event is TextEvent) {
+          final metadata = event.metadata;
+          final planContext = metadata?['plan_context'];
+          final showPlanContext = metadata?['show_plan_context'] == true;
+          if (!planContextInjected &&
+              (planContext is Map<String, dynamic> || showPlanContext)) {
+            final data = planContext is Map<String, dynamic>
+                ? planContext
+                : {
+                    if (metadata?['plan_id'] is String)
+                      'plan_id': metadata?['plan_id'],
+                  };
+            if (data.isNotEmpty) {
+              accumulatedWidgets.add(
+                WidgetPayload(
+                  type: 'plan_context_summary',
+                  data: data,
+                ),
+              );
+              planContextInjected = true;
+            }
+          }
           // 流式文本片段（delta）
           accumulatedContent += event.content;
           pendingStreamingContent = accumulatedContent;
@@ -676,6 +716,37 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Keep demo history? Or clear?
       // Usually "Start New Session" means clear.
     }
+  }
+
+  Future<void> switchPlanSession(String? planId) async {
+    if (planId == null) {
+      state = state.copyWith(clearConversation: true, messages: []);
+      return;
+    }
+
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    final userId = user?.id ?? await _ref.read(guestServiceProvider).getGuestId();
+    final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
+          AgentSessionScope.plan,
+          planId,
+          userId,
+        );
+
+    if (state.conversationId == sessionId) {
+      return;
+    }
+
+    state = state.copyWith(
+      conversationId: sessionId,
+      messages: [],
+      clearError: true,
+      streamingContent: '',
+      clearAiStatus: true,
+      clearReasoning: true,
+    );
+
+    await loadConversationHistory(sessionId);
   }
 
   /// 确认 ActionCard

@@ -56,6 +56,8 @@ from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.circuit_breaker import (
     CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 )
+# Multi-Agent Mode Support
+from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, CHAT_MODE_STANDARD
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
 
@@ -806,6 +808,12 @@ class ChatOrchestrator:
                 # Step 3: Initialize Workflow State
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
 
+                # Step 3.5: Extract chat mode for multi-agent routing
+                chat_mode = CHAT_MODE_STANDARD
+                if request.HasField("chat_mode") and request.chat_mode:
+                    chat_mode = request.chat_mode
+                    logger.info(f"Chat mode requested: {chat_mode}")
+
                 user_message = ""
                 if request.HasField("message"):
                     user_message = request.message
@@ -880,6 +888,31 @@ class ChatOrchestrator:
                                     if user_context_payload is None:
                                         user_context_payload = {}
                                     user_context_payload["plan_context"] = plan_context
+
+                                    # P0-2: Check for phase rollback requirement
+                                    try:
+                                        from app.services.plan_state_service import PlanStateService
+                                        plan_state_svc = PlanStateService(active_db, self.redis)
+                                        plan_state = await plan_state_svc.get_plan_state(
+                                            uuid.UUID(user_id), uuid.UUID(plan_id)
+                                        )
+                                        if plan_state and plan_state.constraints.get("require_phase_rollback"):
+                                            logger.info(f"Phase rollback triggered for plan_id={plan_id}")
+                                            # Clear the flag
+                                            await plan_state_svc.upsert_plan_state(
+                                                user_id=uuid.UUID(user_id),
+                                                plan_id=uuid.UUID(plan_id),
+                                                patch={"constraints": {"require_phase_rollback": False}},
+                                                bump_version=False,
+                                            )
+                                            # Inject rollback context
+                                            plan_context["mode"] = "phase_rollback"
+                                            plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
+                                            # Get last 2 feedback entries for context
+                                            if plan_state.feedback_log:
+                                                plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
+                                    except Exception as e:
+                                        logger.warning(f"Failed to check phase rollback: {e}")
                             except Exception as e:
                                 logger.warning(f"Failed to build plan context: {e}")
 
@@ -952,6 +985,86 @@ class ChatOrchestrator:
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                 })
+
+                # === Multi-Agent Mode Routing ===
+                # Check if a specific chat mode is requested
+                if chat_mode != CHAT_MODE_STANDARD:
+                    logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+
+                    # Prepare context for multi-agent workflow
+                    multi_agent_context = {
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "user_context": user_context_payload,
+                        "conversation_context": conversation_context,
+                        "plan_context": plan_context,
+                    }
+
+                    try:
+                        # Execute multi-agent workflow and stream responses
+                        async for response in execute_multi_agent_workflow(
+                            chat_mode=chat_mode,
+                            message=user_message,
+                            user_id=user_id,
+                            session_id=session_id,
+                            context_data=multi_agent_context,
+                            stream_callback=stream_callback,
+                        ):
+                            # Add response metadata
+                            response.response_id = response_id
+                            response.created_at = int(datetime.now().timestamp())
+                            response.request_id = request_id
+                            response.trace_id = response.trace_id or trace_id
+                            response.workflow_id = f"multi_agent_{chat_mode}"
+                            await queue.put(response)
+
+                        # Signal completion
+                        await queue.put(agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            trace_id=trace_id,
+                            workflow_id=f"multi_agent_{chat_mode}",
+                            finish_reason=agent_service_pb2.STOP,
+                        ))
+
+                        # Update final state
+                        await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
+
+                        # Stream all responses from queue
+                        while True:
+                            item = await queue.get()
+                            yield item
+                            if item.finish_reason != agent_service_pb2.NULL:
+                                break
+
+                        # Log completion
+                        REQUEST_COUNT.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode,
+                            status="success"
+                        ).inc()
+                        REQUEST_LATENCY.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode
+                        ).observe(time.time() - start_time)
+
+                        return
+
+                    except Exception as e:
+                        logger.error(f"Multi-agent workflow error: {e}")
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                code="MULTI_AGENT_ERROR",
+                                message=f"多Agent协作模式执行失败: {str(e)}",
+                                retryable=True,
+                            ),
+                            finish_reason=agent_service_pb2.ERROR,
+                        )
+                        return
 
                 # === Phase 1 & Phase 2: Routing & Validation Setup ===
                 # 路由决策
@@ -1230,7 +1343,8 @@ class ChatOrchestrator:
                                                 "has_conflict": True,
                                                 "old_version": executable_plan.plan_version,
                                                 "new_version": current_state.version,
-                                            }
+                                            },
+                                            plan_id=plan_id,
                                         )
 
                                         # 更新 state 中的 plan

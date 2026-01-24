@@ -3,6 +3,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/knowledge/presentation/widgets/knowledge_card.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart'; // New widget for plan card
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -98,6 +99,9 @@ class AgentMessageRenderer extends StatelessWidget {
 
       case 'plan_card':
         return PlanCard(data: widget.data);
+
+      case 'plan_context_summary':
+        return PlanContextSummary(contextData: widget.data);
 
       default:
         // 未知类型：显示 JSON

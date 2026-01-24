@@ -251,7 +251,8 @@ class LangGraphPlanner:
         user_id: str,
         session_id: str,
         previous_plan: Optional[ExecutablePlan] = None,
-        conflict_info: Optional[Dict[str, Any]] = None
+        conflict_info: Optional[Dict[str, Any]] = None,
+        plan_id: Optional[str] = None,
     ) -> ExecutablePlan:
         """Re-plan after version conflict or validation failure
 
@@ -286,7 +287,8 @@ class LangGraphPlanner:
             message=enhanced_message,
             snapshot=snapshot,
             user_id=user_id,
-            session_id=session_id
+            session_id=session_id,
+            plan_id=plan_id,
         )
 
         # Mark as re-plan

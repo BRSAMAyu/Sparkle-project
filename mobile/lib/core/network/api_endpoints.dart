@@ -44,6 +44,8 @@ class ApiEndpoints {
   static String plan(String id) => '/plans/$id';
   static String planTasks(String id) => '/plans/$id/tasks';
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
+  static String planArchive(String id) => '/plans/$id/archive';
+  static String planRestore(String id) => '/plans/$id/restore';
 
   // Chat
   static const String chat = '/chat';

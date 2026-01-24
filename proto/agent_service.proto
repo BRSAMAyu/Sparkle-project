@@ -77,6 +77,10 @@ message ChatRequest {
 
   // Optional: List of tools currently active/available for this request
   repeated string active_tools = 12;
+
+  // Chat mode for AI collaboration strategy.
+  // Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis"
+  string chat_mode = 13;
 }
 
 // UserProfile defines key user attributes for personalization.

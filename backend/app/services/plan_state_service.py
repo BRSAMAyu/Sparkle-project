@@ -152,6 +152,7 @@ class PlanStateService:
         plan_id: UUID,
         initial_facts: Optional[Dict[str, Any]] = None,
         initial_constraints: Optional[Dict[str, Any]] = None,
+        for_write: bool = True,
     ) -> PlanState:
         """
         Get existing plan state or create a new one.
@@ -161,11 +162,14 @@ class PlanStateService:
             plan_id: Plan ID
             initial_facts: Initial facts for new state
             initial_constraints: Initial constraints for new state
+            for_write: If True, bypass cache to get session-tracked object
 
         Returns:
-            Existing or newly created PlanState
+            Existing or newly created PlanState (always session-tracked)
         """
-        existing = await self.get_plan_state(user_id, plan_id)
+        # For write operations, always get a session-tracked object from DB
+        # to avoid detached instance issues with cached objects
+        existing = await self.get_plan_state(user_id, plan_id, refresh=for_write)
         if existing:
             return existing
 
@@ -259,6 +263,16 @@ class PlanStateService:
             current_constraints.update(patch["constraints"])
             state.constraints = current_constraints
 
+        if "status" in patch:
+            state.status = patch["status"]
+
+        if "archived_at" in patch:
+            state.archived_at = patch["archived_at"]
+
+        # P0-2: Handle consecutive_rejection_count direct update
+        if "consecutive_rejection_count" in patch:
+            state.consecutive_rejection_count = patch["consecutive_rejection_count"]
+
         # Bump version if requested
         if bump_version:
             state.version = (state.version or 0) + 1
@@ -294,7 +308,8 @@ class PlanStateService:
         Returns:
             Archived PlanState or None if not found
         """
-        state = await self.get_plan_state(user_id, plan_id)
+        # Bypass cache to get session-tracked object for write operation
+        state = await self.get_plan_state(user_id, plan_id, refresh=True)
         if state is None:
             return None
 
@@ -310,6 +325,35 @@ class PlanStateService:
 
         logger.info(
             f"Archived plan state: plan_id={plan_id}"
+        )
+        return state
+
+    async def append_task_summary(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        summary: Dict[str, Any],
+        limit: int = 20,
+    ) -> Optional[PlanState]:
+        """
+        Append a task summary to PlanState.task_summaries.
+
+        Keeps the newest summaries first and trims to a fixed size.
+        """
+        state = await self.get_or_create_plan_state(user_id, plan_id)
+        summaries = state.task_summaries or []
+        summaries.insert(0, summary)
+        if len(summaries) > limit:
+            summaries = summaries[:limit]
+        state.task_summaries = summaries
+        state.updated_at = datetime.utcnow()
+
+        await self.db.commit()
+        await self.db.refresh(state)
+        await self._set_cache(state)
+
+        logger.debug(
+            f"Appended task summary: plan_id={plan_id}, count={len(summaries)}"
         )
         return state
 
@@ -464,6 +508,36 @@ class PlanStateService:
             patch={"feedback_log": feedback_entry},
             bump_version=True,
         )
+
+    async def replace_feedback_log(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        feedback_log: List[Dict[str, Any]],
+        bump_version: bool = True,
+    ) -> Optional[PlanState]:
+        """
+        Replace feedback_log entries for a plan state.
+
+        Args:
+            user_id: Owner user ID
+            plan_id: Plan ID
+            feedback_log: Full feedback list to persist
+            bump_version: Whether to increment version
+
+        Returns:
+            Updated PlanState or None
+        """
+        state = await self.get_or_create_plan_state(user_id, plan_id)
+        state.feedback_log = feedback_log
+        if bump_version:
+            state.version = (state.version or 0) + 1
+        state.updated_at = datetime.utcnow()
+
+        await self.db.commit()
+        await self.db.refresh(state)
+        await self._set_cache(state)
+        return state
 
     # ==================== Cache Operations ====================
 

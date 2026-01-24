@@ -24,6 +24,11 @@ class SprintScreen extends ConsumerWidget {
         ),
         title: const Text('My Sprint'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.archive_outlined),
+            tooltip: '历史计划',
+            onPressed: () => context.push('/plans/history'),
+          ),
           if (activeSprint != null)
             IconButton(
               icon: const Icon(Icons.open_in_new),
