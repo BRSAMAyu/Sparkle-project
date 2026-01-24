@@ -14,6 +14,7 @@ import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dar
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
@@ -266,7 +267,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             // Divider
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: DS.spacing8, vertical: DS.spacing16),
+                                  horizontal: DS.spacing8, vertical: DS.spacing16,),
                               child: Divider(
                                 height: 1,
                                 thickness: 1,
@@ -309,7 +310,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               onTogglePomodoro: _togglePomodoro,
                               onSetPreset: _setPresetDuration,
                             ),
-                            const SizedBox(height: DS.spacing40),
+                            const SizedBox(height: DS.spacing24),
+
+                            // Plan Context Summary (if task has a plan)
+                            if (activeTask.planId != null)
+                              PlanContextSummary(planId: activeTask.planId!),
+                            if (activeTask.planId != null)
+                              const SizedBox(height: DS.spacing16),
 
                             // 2. Task Guide Area
                             DecoratedBox(
@@ -547,7 +554,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.local_fire_department_rounded,
-                      color: DS.brandPrimaryConst, size: 28),
+                      color: DS.brandPrimaryConst, size: 28,),
                 ),
                 const SizedBox(width: DS.md),
                 Expanded(
@@ -563,10 +570,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ],
             ),
             const SizedBox(height: DS.md),
-            Wrap(
+            const Wrap(
               spacing: DS.md,
               runSpacing: DS.xs,
-              children: const [
+              children: [
                 _FeatureChip(icon: Icons.fullscreen, label: '全屏专注'),
                 _FeatureChip(icon: Icons.access_time_rounded, label: '翻页时钟'),
                 _FeatureChip(icon: Icons.star_rounded, label: '星空背景'),
@@ -644,7 +651,7 @@ class _FeatureChip extends StatelessWidget {
             Icon(icon, size: 14, color: DS.primaryBase),
             const SizedBox(width: 4),
             Text(label,
-                style: const TextStyle(fontSize: 12, color: DS.neutral700)),
+                style: TextStyle(fontSize: 12, color: DS.neutral700),),
           ],
         ),
       );

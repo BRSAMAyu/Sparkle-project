@@ -11,8 +11,11 @@ import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubbl
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -32,6 +35,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (next.length > (previous?.length ?? 0)) {
         _scrollToBottom();
       }
+    });
+
+    ref.listenManual(activePlanProvider, (previous, next) {
+      if (previous != next) {
+        unawaited(ref.read(chatProvider.notifier).switchPlanSession(next));
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final activePlanId = ref.read(activePlanProvider);
+      unawaited(ref.read(chatProvider.notifier).switchPlanSession(activePlanId));
     });
   }
 
@@ -317,6 +331,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
                     ),
+                  // Plan Selector Pill - allows selecting plan for chat context
+                  const PlanSelectorPill(),
+                  // Chat Mode Selector Pill - allows selecting AI collaboration mode
+                  const ChatModeSelectorPill(),
                   ChatInput(
                     enabled: !chatState.isSending,
                     onFileUploaded: (StoredFile file) {

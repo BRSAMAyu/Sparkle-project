@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'curiosity_capsule_model.dart';
+import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 
 part 'capsule_generation_job_model.g.dart';
 
@@ -16,12 +16,10 @@ enum JobStatus {
   final String label;
   final String emoji;
 
-  static JobStatus fromValue(String? value) {
-    return JobStatus.values.firstWhere(
+  static JobStatus fromValue(String? value) => JobStatus.values.firstWhere(
       (e) => e.value == value,
       orElse: () => JobStatus.pending,
     );
-  }
 }
 
 /// 生成类型
@@ -36,12 +34,10 @@ enum GenerationType {
   final String value;
   final String label;
 
-  static GenerationType fromValue(String? value) {
-    return GenerationType.values.firstWhere(
+  static GenerationType fromValue(String? value) => GenerationType.values.firstWhere(
       (e) => e.value == value,
       orElse: () => GenerationType.manual,
     );
-  }
 }
 
 @JsonSerializable()

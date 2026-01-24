@@ -14,12 +14,10 @@ enum CapsuleDepthLevel {
   final String label;
   final String emoji;
 
-  static CapsuleDepthLevel fromValue(String? value) {
-    return CapsuleDepthLevel.values.firstWhere(
+  static CapsuleDepthLevel fromValue(String? value) => CapsuleDepthLevel.values.firstWhere(
       (e) => e.value == value,
       orElse: () => CapsuleDepthLevel.medium,
     );
-  }
 }
 
 @JsonSerializable()
@@ -112,8 +110,7 @@ class CuriosityCapsuleModel {
     int? feedbackCount,
     int? shareCount,
     bool? isFavorite,
-  }) {
-    return CuriosityCapsuleModel(
+  }) => CuriosityCapsuleModel(
       id: id ?? this.id,
       title: title ?? this.title,
       content: content ?? this.content,
@@ -128,5 +125,4 @@ class CuriosityCapsuleModel {
       shareCount: shareCount ?? this.shareCount,
       isFavorite: isFavorite ?? this.isFavorite,
     );
-  }
 }

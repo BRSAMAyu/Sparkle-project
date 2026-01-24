@@ -17,8 +17,7 @@ class FocusStatsOverviewCards extends StatelessWidget {
   final int? longestStreak;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         Expanded(
           child: _StatCard(
@@ -51,7 +50,6 @@ class FocusStatsOverviewCards extends StatelessWidget {
         ),
       ],
     );
-  }
 
   String _formatDuration(int minutes) {
     final hours = minutes ~/ 60;
@@ -79,8 +77,7 @@ class _StatCard extends StatelessWidget {
   final String? subtitle;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.lg),
       decoration: BoxDecoration(
         color: iconColor.withValues(alpha: 0.1),
@@ -126,5 +123,4 @@ class _StatCard extends StatelessWidget {
         ],
       ),
     );
-  }
 }

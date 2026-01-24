@@ -32,6 +32,7 @@ class ApiEndpoints {
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
+  static String nextActionSelection(String id) => '/tasks/$id/next-action-selection';
   static const String taskSuggestions = '/tasks/suggestions';
 
   // Subtasks
@@ -43,6 +44,8 @@ class ApiEndpoints {
   static String plan(String id) => '/plans/$id';
   static String planTasks(String id) => '/plans/$id/tasks';
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
+  static String planArchive(String id) => '/plans/$id/archive';
+  static String planRestore(String id) => '/plans/$id/restore';
 
   // Chat
   static const String chat = '/chat';

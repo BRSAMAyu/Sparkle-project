@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import '../entities/statistics_entity.dart';
-import '../entities/statistics_period.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
 
 /// Export format options
 enum ExportFormat {
@@ -62,6 +62,18 @@ extension ExportFormatExt on ExportFormat {
 
 /// Configuration for export operations
 class StatisticsExportConfig {
+
+  const StatisticsExportConfig({
+    required this.format,
+    required this.period,
+    this.customStart,
+    this.customEnd,
+    this.includeCharts = true,
+    this.includeDetails = true,
+    this.pngScale = 2.0,
+    this.customSize,
+    this.includeMetadata = true,
+  });
   /// The export format
   final ExportFormat format;
 
@@ -87,18 +99,6 @@ class StatisticsExportConfig {
   /// Whether to include metadata (export time, app version, etc.)
   final bool includeMetadata;
 
-  const StatisticsExportConfig({
-    required this.format,
-    required this.period,
-    this.customStart,
-    this.customEnd,
-    this.includeCharts = true,
-    this.includeDetails = true,
-    this.pngScale = 2.0,
-    this.customSize,
-    this.includeMetadata = true,
-  });
-
   /// Copy with modified values
   StatisticsExportConfig copyWith({
     ExportFormat? format,
@@ -110,8 +110,7 @@ class StatisticsExportConfig {
     double? pngScale,
     ExportSize? customSize,
     bool? includeMetadata,
-  }) {
-    return StatisticsExportConfig(
+  }) => StatisticsExportConfig(
       format: format ?? this.format,
       period: period ?? this.period,
       customStart: customStart ?? this.customStart,
@@ -122,7 +121,6 @@ class StatisticsExportConfig {
       customSize: customSize ?? this.customSize,
       includeMetadata: includeMetadata ?? this.includeMetadata,
     );
-  }
 }
 
 /// Predefined export sizes
@@ -144,18 +142,18 @@ class ExportSize {
 }
 
 class _ExportSize {
-  final ExportDimensions size;
-  final String name;
 
   const _ExportSize(this.size, this.name);
+  final ExportDimensions size;
+  final String name;
 }
 
 /// Size class for export dimensions
 class ExportDimensions {
-  final double width;
-  final double height;
 
   const ExportDimensions(this.width, this.height);
+  final double width;
+  final double height;
 }
 
 /// Statistics export service interface

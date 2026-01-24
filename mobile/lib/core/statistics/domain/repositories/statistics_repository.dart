@@ -1,6 +1,6 @@
-import '../entities/statistics_entity.dart';
-import '../entities/statistics_period.dart';
-import '../entities/statistics_data_point.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
+import 'package:sparkle/core/statistics/domain/entities/statistics_data_point.dart';
 
 /// Error types for statistics operations
 enum StatisticsError {
@@ -101,23 +101,6 @@ abstract class StatisticsRepository<T extends StatisticsEntity> {
 
 /// Summary statistics for quick overview
 class StatisticsSummary {
-  /// Total count/sum of the primary metric
-  final double total;
-
-  /// Average value
-  final double average;
-
-  /// Maximum value
-  final double maximum;
-
-  /// Minimum value
-  final double minimum;
-
-  /// Change from previous period (percentage)
-  final double? changePercentage;
-
-  /// Trend direction (up, down, stable)
-  final StatisticsTrend trend;
 
   const StatisticsSummary({
     required this.total,
@@ -169,11 +152,26 @@ class StatisticsSummary {
       trend: trend,
     );
   }
+  /// Total count/sum of the primary metric
+  final double total;
+
+  /// Average value
+  final double average;
+
+  /// Maximum value
+  final double maximum;
+
+  /// Minimum value
+  final double minimum;
+
+  /// Change from previous period (percentage)
+  final double? changePercentage;
+
+  /// Trend direction (up, down, stable)
+  final StatisticsTrend trend;
 
   /// Summary formatted for display
-  String formatTotal({int decimalPlaces = 1}) {
-    return total.toStringAsFixed(decimalPlaces);
-  }
+  String formatTotal({int decimalPlaces = 1}) => total.toStringAsFixed(decimalPlaces);
 
   String formatChange({bool showSign = true}) {
     if (changePercentage == null) return '--';

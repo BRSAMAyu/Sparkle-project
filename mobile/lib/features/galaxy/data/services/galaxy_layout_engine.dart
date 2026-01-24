@@ -214,12 +214,10 @@ class GalaxyLayoutEngine {
         for (var i = 0; i < nodes.length; i++) {
           final nodeA = nodes[i];
           final posA = positions[nodeA.id]!;
-          if (posA == null) continue;
 
           for (var j = i + 1; j < nodes.length; j++) {
             final nodeB = nodes[j];
             final posB = positions[nodeB.id]!;
-            if (posB == null) continue;
 
             final minDist = minNodeSpacing + nodeA.radius + nodeB.radius;
             final delta = posA - posB;
@@ -485,51 +483,45 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
           final otherId =
               edge.sourceId == nodeA.id ? edge.targetId : edge.sourceId;
           final otherPos = positions[otherId]!;
-          if (otherPos != null) {
-            final delta = otherPos - posA;
-            final distance = delta.distance;
-            if (distance > 50) {
-              final attraction =
-                  edgeAttractionStrength * edge.strength * temperature;
-              force += Offset(
-                delta.dx * attraction,
-                delta.dy * attraction,
-              );
-            }
+          final delta = otherPos - posA;
+          final distance = delta.distance;
+          if (distance > 50) {
+            final attraction =
+                edgeAttractionStrength * edge.strength * temperature;
+            force += Offset(
+              delta.dx * attraction,
+              delta.dy * attraction,
+            );
           }
-        }
+                }
       }
 
       // 3. 父节点吸引力
       if (nodeA.parentId != null) {
         final parentPos = positions[nodeA.parentId]!;
-        if (parentPos != null) {
-          final delta = parentPos - posA;
-          final distance = delta.distance;
-          if (distance > 40) {
-            force += Offset(
-              delta.dx * parentAttractionStrength * temperature,
-              delta.dy * parentAttractionStrength * temperature,
-            );
-          }
+        final delta = parentPos - posA;
+        final distance = delta.distance;
+        if (distance > 40) {
+          force += Offset(
+            delta.dx * parentAttractionStrength * temperature,
+            delta.dy * parentAttractionStrength * temperature,
+          );
         }
-      }
+            }
 
       // 4. 子节点轻微吸引
       final nodeChildren = children[nodeA.id];
       if (nodeChildren != null) {
         for (final childId in nodeChildren) {
           final childPos = positions[childId]!;
-          if (childPos != null) {
-            final delta = childPos - posA;
-            if (delta.distance > 100) {
-              force += Offset(
-                delta.dx * parentAttractionStrength * 0.5 * temperature,
-                delta.dy * parentAttractionStrength * 0.5 * temperature,
-              );
-            }
+          final delta = childPos - posA;
+          if (delta.distance > 100) {
+            force += Offset(
+              delta.dx * parentAttractionStrength * 0.5 * temperature,
+              delta.dy * parentAttractionStrength * 0.5 * temperature,
+            );
           }
-        }
+                }
       }
 
       // 5. 中心引力（防止飘远）
@@ -552,7 +544,7 @@ Map<String, Offset> _forceDirectedOptimization(_LayoutOptimizationData data) {
             temperature;
       }
 
-      var newPos = posA + displacement!;
+      var newPos = posA + displacement;
 
       // 6. 约束在星域内
       final (baseAngle, sweepAngle) = sectorStyles[nodeA.id]!;

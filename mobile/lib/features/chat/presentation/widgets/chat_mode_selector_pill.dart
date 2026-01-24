@@ -1,0 +1,194 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/data/models/chat_mode.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_sheet.dart';
+
+/// Chat Mode Selector Pill Widget
+///
+/// A tappable pill widget that shows the current chat mode
+/// and allows changing it via a bottom sheet.
+///
+/// States:
+/// - Standard mode: Shows mode selector trigger with default style
+/// - Multi-agent mode: Shows selected mode with its color and icon
+class ChatModeSelectorPill extends ConsumerWidget {
+  const ChatModeSelectorPill({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(chatModeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (currentMode == ChatMode.standard) {
+      return AnimatedSwitcher(
+        duration: AnimationSystem.normal,
+        switchInCurve: AnimationSystem.smooth,
+        switchOutCurve: AnimationSystem.smooth,
+        child: _UnselectedPill(
+          key: const ValueKey('mode-pill-unselected'),
+          isDark: isDark,
+          onTap: () => _showModeSelector(context, ref),
+        ),
+      );
+    }
+
+    return AnimatedSwitcher(
+      duration: AnimationSystem.normal,
+      switchInCurve: AnimationSystem.smooth,
+      switchOutCurve: AnimationSystem.smooth,
+      child: _SelectedPill(
+        key: ValueKey('mode-pill-${currentMode.apiValue}'),
+        mode: currentMode,
+        isDark: isDark,
+        onTap: () => _showModeSelector(context, ref),
+      ),
+    );
+  }
+
+  void _showModeSelector(BuildContext context, WidgetRef ref) {
+    HapticFeedback.lightImpact();
+    unawaited(
+      showModalBottomSheet<ChatMode>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => const ChatModeSelectorSheet(),
+      ).then((selectedMode) {
+        if (selectedMode != null) {
+          ref.read(chatModeProvider.notifier).setMode(selectedMode);
+          // Also update last multi-agent mode if not standard
+          if (selectedMode != ChatMode.standard) {
+            ref.read(lastMultiAgentModeProvider.notifier).state = selectedMode;
+          }
+        }
+      }),
+    );
+  }
+}
+
+class _UnselectedPill extends StatelessWidget {
+  const _UnselectedPill({
+    super.key,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: MaterialStyler(
+          material: AppMaterials.ceramic.copyWith(
+            backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: DS.iconSizeSm,
+                color: DS.neutral500,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                '选择模式',
+                style: TextStyle(
+                  color: DS.neutral600,
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: DS.iconSizeSm,
+                color: DS.neutral500,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedPill extends StatelessWidget {
+  const _SelectedPill({
+    super.key,
+    required this.mode,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final ChatMode mode;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: MaterialStyler(
+          material: AppMaterials.neoGlass.copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                mode.color.withValues(alpha: 0.18),
+                mode.color.withValues(alpha: 0.08),
+              ],
+            ),
+            borderColor: mode.color.withValues(alpha: 0.35),
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                mode.icon,
+                size: DS.iconSizeSm,
+                color: mode.color,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                mode.label,
+                style: TextStyle(
+                  color: isDark ? DS.neutral100 : DS.neutral900,
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: DS.iconSizeSm,
+                color: DS.neutral500,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

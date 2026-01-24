@@ -118,7 +118,7 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
   /// Load tasks for a specific month and calculate summaries
   Future<void> loadTasksForMonth(DateTime month) async {
     try {
-      final start = DateTime(month.year, month.month, 1);
+      final start = DateTime(month.year, month.month);
       final end = DateTime(month.year, month.month + 1, 0);
 
       final tasks = await _taskRepository.getTasksByDateRange(start, end);
@@ -151,22 +151,18 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
               pending: existing.pending + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
-            break;
           case TaskStatus.inProgress:
             newSummary = existing.copyWith(
               inProgress: existing.inProgress + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
-            break;
           case TaskStatus.completed:
             newSummary = existing.copyWith(
               completed: existing.completed + 1,
             );
-            break;
           case TaskStatus.abandoned:
             // Don't show abandoned tasks
             newSummary = existing;
-            break;
         }
 
         summaries[dueDate] = newSummary;

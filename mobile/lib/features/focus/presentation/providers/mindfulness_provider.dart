@@ -214,7 +214,6 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           focusState: state,
           translationRequests: state.translationRequestCount,
           translationGranularity: state.lastTranslationGranularity,
-          unknownTermsSaved: 0, // TODO: Track from translation saves
         );
 
         debugPrint('📊 Context: interruptions=${state.interruptionCount}, '

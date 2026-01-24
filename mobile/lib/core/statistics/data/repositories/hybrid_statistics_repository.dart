@@ -21,6 +21,15 @@ enum CacheTier {
 
 /// Cache configuration for the hybrid repository
 class HybridCacheConfig {
+
+  const HybridCacheConfig({
+    this.hotTtlSeconds = 300, // 5 minutes
+    this.warmTtlSeconds = 86400, // 24 hours
+    this.hotCacheMaxEntries = 20,
+    this.warmCacheMaxSizeBytes = 50 * 1024 * 1024, // 50MB
+    this.enableHotCache = true,
+    this.enableWarmCache = true,
+  });
   /// Hot cache TTL in seconds (default: 5 minutes)
   final int hotTtlSeconds;
 
@@ -38,15 +47,6 @@ class HybridCacheConfig {
 
   /// Whether to enable warm cache
   final bool enableWarmCache;
-
-  const HybridCacheConfig({
-    this.hotTtlSeconds = 300, // 5 minutes
-    this.warmTtlSeconds = 86400, // 24 hours
-    this.hotCacheMaxEntries = 20,
-    this.warmCacheMaxSizeBytes = 50 * 1024 * 1024, // 50MB
-    this.enableHotCache = true,
-    this.enableWarmCache = true,
-  });
 }
 
 /// Base class for hybrid statistics repositories
@@ -59,6 +59,11 @@ class HybridCacheConfig {
 /// Subclasses must implement [fetchFromApi] to provide data source.
 abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     implements StatisticsRepository<T> {
+
+  HybridStatisticsRepository({
+    required this.database,
+    HybridCacheConfig? cacheConfig,
+  }) : cacheConfig = cacheConfig ?? const HybridCacheConfig();
   /// Reference to the local database
   final LocalDatabase database;
 
@@ -70,11 +75,6 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
 
   /// Hot cache access timestamps (for LRU eviction)
   final Map<String, DateTime> _hotCacheAccess = {};
-
-  HybridStatisticsRepository({
-    required this.database,
-    HybridCacheConfig? cacheConfig,
-  }) : cacheConfig = cacheConfig ?? const HybridCacheConfig();
 
   // ============================================
   // ABSTRACT METHODS (must implement)
@@ -368,10 +368,10 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     if (totalSize > cacheConfig.warmCacheMaxSizeBytes) {
       // Sort by last accessed time and remove oldest
       allEntries.sort((CachedStatisticsModel a, CachedStatisticsModel b) =>
-          a.lastAccessedAt.compareTo(b.lastAccessedAt));
+          a.lastAccessedAt.compareTo(b.lastAccessedAt),);
 
       var currentSize = totalSize;
-      int index = 0;
+      var index = 0;
 
       while (currentSize > cacheConfig.warmCacheMaxSizeBytes * 0.8 &&
           index < allEntries.length) {
@@ -415,10 +415,10 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
 
 /// Internal cache entry wrapper
 class _CacheEntry<T extends StatisticsEntity> {
-  final T entity;
-  final DateTime cachedAt;
 
   _CacheEntry({required this.entity, required this.cachedAt});
+  final T entity;
+  final DateTime cachedAt;
 
   bool isExpired(int ttlSeconds) {
     final age = DateTime.now().difference(cachedAt).inSeconds;
@@ -434,6 +434,4 @@ extension DateTimeComparison on DateTime {
 
 /// Provider for hybrid cache config
 @riverpod
-HybridCacheConfig hybridCacheConfig(HybridCacheConfigRef ref) {
-  return const HybridCacheConfig();
-}
+HybridCacheConfig hybridCacheConfig(HybridCacheConfigRef ref) => const HybridCacheConfig();

@@ -89,6 +89,22 @@ final $typed_data.Uint8List errorReasonDescriptor = $convert.base64Decode(
     'NFRURFRBABEhgKFFBST1ZJREVSX1VOQVZBSUxBQkxFEAISFAoQU0NIRU1BX1ZJT0xBVElPThAD'
     'EhQKEEJVREdFVF9FWEhBVVNURUQQBBILCgdUSU1FT1VUEAU=');
 
+@$core.Deprecated('Use artifactScopeDescriptor instead')
+const ArtifactScope$json = {
+  '1': 'ArtifactScope',
+  '2': [
+    {'1': 'ARTIFACT_SCOPE_UNSPECIFIED', '2': 0},
+    {'1': 'PRIVATE', '2': 1},
+    {'1': 'SHARED', '2': 2},
+    {'1': 'PUBLIC', '2': 3},
+  ],
+};
+
+/// Descriptor for `ArtifactScope`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List artifactScopeDescriptor = $convert.base64Decode(
+    'Cg1BcnRpZmFjdFNjb3BlEh4KGkFSVElGQUNUX1NDT1BFX1VOU1BFQ0lGSUVEEAASCwoHUFJJVk'
+    'FURRABEgoKBlNIQVJFRBACEgoKBlBVQkxJQxAD');
+
 @$core.Deprecated('Use messageDescriptor instead')
 const Message$json = {
   '1': 'Message',
@@ -207,6 +223,15 @@ const InferenceRequest$json = {
       '6': '.sparkle.inference.v1.InferenceRequest.MetadataEntry',
       '10': 'metadata'
     },
+    {'1': 'file_ids', '3': 15, '4': 3, '5': 9, '10': 'fileIds'},
+    {
+      '1': 'artifact_scope',
+      '3': 16,
+      '4': 1,
+      '5': 14,
+      '6': '.sparkle.inference.v1.ArtifactScope',
+      '10': 'artifactScope'
+    },
   ],
   '3': [InferenceRequest_MetadataEntry$json],
 };
@@ -235,8 +260,10 @@ final $typed_data.Uint8List inferenceRequestDescriptor = $convert.base64Decode(
     '9vbHMYDCADKAsyJC5zcGFya2xlLmluZmVyZW5jZS52MS5Ub29sRGVmaW5pdGlvblIFdG9vbHMS'
     'TQoPcmVzcG9uc2VfZm9ybWF0GA0gASgOMiQuc3BhcmtsZS5pbmZlcmVuY2UudjEuUmVzcG9uc2'
     'VGb3JtYXRSDnJlc3BvbnNlRm9ybWF0ElAKCG1ldGFkYXRhGA4gAygLMjQuc3BhcmtsZS5pbmZl'
-    'cmVuY2UudjEuSW5mZXJlbmNlUmVxdWVzdC5NZXRhZGF0YUVudHJ5UghtZXRhZGF0YRo7Cg1NZX'
-    'RhZGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
+    'cmVuY2UudjEuSW5mZXJlbmNlUmVxdWVzdC5NZXRhZGF0YUVudHJ5UghtZXRhZGF0YRIZCghmaW'
+    'xlX2lkcxgPIAMoCVIHZmlsZUlkcxJKCg5hcnRpZmFjdF9zY29wZRgQIAEoDjIjLnNwYXJrbGUu'
+    'aW5mZXJlbmNlLnYxLkFydGlmYWN0U2NvcGVSDWFydGlmYWN0U2NvcGUaOwoNTWV0YWRhdGFFbn'
+    'RyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgB');
 
 @$core.Deprecated('Use inferenceResponseDescriptor instead')
 const InferenceResponse$json = {
@@ -277,3 +304,122 @@ final $typed_data.Uint8List inferenceResponseDescriptor = $convert.base64Decode(
     'cm9yUmVhc29uUgtlcnJvclJlYXNvbhIjCg1lcnJvcl9tZXNzYWdlGAggASgJUgxlcnJvck1lc3'
     'NhZ2USIwoNcHJvbXB0X3Rva2VucxgJIAEoDVIMcHJvbXB0VG9rZW5zEisKEWNvbXBsZXRpb25f'
     'dG9rZW5zGAogASgNUhBjb21wbGV0aW9uVG9rZW5z');
+
+@$core.Deprecated('Use translationSegmentDescriptor instead')
+const TranslationSegment$json = {
+  '1': 'TranslationSegment',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'text', '3': 2, '4': 1, '5': 9, '10': 'text'},
+  ],
+};
+
+/// Descriptor for `TranslationSegment`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List translationSegmentDescriptor = $convert.base64Decode(
+    'ChJUcmFuc2xhdGlvblNlZ21lbnQSDgoCaWQYASABKAlSAmlkEhIKBHRleHQYAiABKAlSBHRleH'
+    'Q=');
+
+@$core.Deprecated('Use translationInputDescriptor instead')
+const TranslationInput$json = {
+  '1': 'TranslationInput',
+  '2': [
+    {
+      '1': 'segments',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.sparkle.inference.v1.TranslationSegment',
+      '10': 'segments'
+    },
+    {'1': 'source_lang', '3': 2, '4': 1, '5': 9, '10': 'sourceLang'},
+    {'1': 'target_lang', '3': 3, '4': 1, '5': 9, '10': 'targetLang'},
+    {'1': 'domain', '3': 4, '4': 1, '5': 9, '10': 'domain'},
+    {'1': 'style', '3': 5, '4': 1, '5': 9, '10': 'style'},
+    {'1': 'glossary_id', '3': 6, '4': 1, '5': 9, '10': 'glossaryId'},
+    {
+      '1': 'segmenter_version',
+      '3': 7,
+      '4': 1,
+      '5': 9,
+      '10': 'segmenterVersion'
+    },
+  ],
+};
+
+/// Descriptor for `TranslationInput`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List translationInputDescriptor = $convert.base64Decode(
+    'ChBUcmFuc2xhdGlvbklucHV0EkQKCHNlZ21lbnRzGAEgAygLMiguc3BhcmtsZS5pbmZlcmVuY2'
+    'UudjEuVHJhbnNsYXRpb25TZWdtZW50UghzZWdtZW50cxIfCgtzb3VyY2VfbGFuZxgCIAEoCVIK'
+    'c291cmNlTGFuZxIfCgt0YXJnZXRfbGFuZxgDIAEoCVIKdGFyZ2V0TGFuZxIWCgZkb21haW4YBC'
+    'ABKAlSBmRvbWFpbhIUCgVzdHlsZRgFIAEoCVIFc3R5bGUSHwoLZ2xvc3NhcnlfaWQYBiABKAlS'
+    'Cmdsb3NzYXJ5SWQSKwoRc2VnbWVudGVyX3ZlcnNpb24YByABKAlSEHNlZ21lbnRlclZlcnNpb2'
+    '4=');
+
+@$core.Deprecated('Use alignmentSpanDescriptor instead')
+const AlignmentSpan$json = {
+  '1': 'AlignmentSpan',
+  '2': [
+    {'1': 'source_start', '3': 1, '4': 1, '5': 5, '10': 'sourceStart'},
+    {'1': 'source_end', '3': 2, '4': 1, '5': 5, '10': 'sourceEnd'},
+    {'1': 'target_start', '3': 3, '4': 1, '5': 5, '10': 'targetStart'},
+    {'1': 'target_end', '3': 4, '4': 1, '5': 5, '10': 'targetEnd'},
+    {'1': 'type', '3': 5, '4': 1, '5': 9, '10': 'type'},
+  ],
+};
+
+/// Descriptor for `AlignmentSpan`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List alignmentSpanDescriptor = $convert.base64Decode(
+    'Cg1BbGlnbm1lbnRTcGFuEiEKDHNvdXJjZV9zdGFydBgBIAEoBVILc291cmNlU3RhcnQSHQoKc2'
+    '91cmNlX2VuZBgCIAEoBVIJc291cmNlRW5kEiEKDHRhcmdldF9zdGFydBgDIAEoBVILdGFyZ2V0'
+    'U3RhcnQSHQoKdGFyZ2V0X2VuZBgEIAEoBVIJdGFyZ2V0RW5kEhIKBHR5cGUYBSABKAlSBHR5cG'
+    'U=');
+
+@$core.Deprecated('Use translatedSegmentDescriptor instead')
+const TranslatedSegment$json = {
+  '1': 'TranslatedSegment',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'translation', '3': 2, '4': 1, '5': 9, '10': 'translation'},
+    {'1': 'notes', '3': 3, '4': 3, '5': 9, '10': 'notes'},
+    {
+      '1': 'spans',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.sparkle.inference.v1.AlignmentSpan',
+      '10': 'spans'
+    },
+  ],
+};
+
+/// Descriptor for `TranslatedSegment`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List translatedSegmentDescriptor = $convert.base64Decode(
+    'ChFUcmFuc2xhdGVkU2VnbWVudBIOCgJpZBgBIAEoCVICaWQSIAoLdHJhbnNsYXRpb24YAiABKA'
+    'lSC3RyYW5zbGF0aW9uEhQKBW5vdGVzGAMgAygJUgVub3RlcxI5CgVzcGFucxgEIAMoCzIjLnNw'
+    'YXJrbGUuaW5mZXJlbmNlLnYxLkFsaWdubWVudFNwYW5SBXNwYW5z');
+
+@$core.Deprecated('Use translationOutputDescriptor instead')
+const TranslationOutput$json = {
+  '1': 'TranslationOutput',
+  '2': [
+    {
+      '1': 'segments',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.sparkle.inference.v1.TranslatedSegment',
+      '10': 'segments'
+    },
+    {'1': 'provider', '3': 2, '4': 1, '5': 9, '10': 'provider'},
+    {'1': 'model_id', '3': 3, '4': 1, '5': 9, '10': 'modelId'},
+    {'1': 'cache_hit', '3': 4, '4': 1, '5': 8, '10': 'cacheHit'},
+    {'1': 'latency_ms', '3': 5, '4': 1, '5': 5, '10': 'latencyMs'},
+  ],
+};
+
+/// Descriptor for `TranslationOutput`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List translationOutputDescriptor = $convert.base64Decode(
+    'ChFUcmFuc2xhdGlvbk91dHB1dBJDCghzZWdtZW50cxgBIAMoCzInLnNwYXJrbGUuaW5mZXJlbm'
+    'NlLnYxLlRyYW5zbGF0ZWRTZWdtZW50UghzZWdtZW50cxIaCghwcm92aWRlchgCIAEoCVIIcHJv'
+    'dmlkZXISGQoIbW9kZWxfaWQYAyABKAlSB21vZGVsSWQSGwoJY2FjaGVfaGl0GAQgASgIUghjYW'
+    'NoZUhpdBIdCgpsYXRlbmN5X21zGAUgASgFUglsYXRlbmN5TXM=');

@@ -10,16 +10,16 @@ import 'package:sparkle/core/statistics/domain/services/statistics_export_servic
 /// Supports JSON, CSV, and PNG report exports.
 class StatisticsExportServiceImpl<T extends StatisticsEntity>
     implements StatisticsExportService<T> {
-  /// Whether to include app metadata in exports
-  final bool includeMetadata;
-
-  /// App version string (for metadata)
-  final String appVersion;
 
   StatisticsExportServiceImpl({
     this.includeMetadata = true,
     this.appVersion = '1.0.0',
   });
+  /// Whether to include app metadata in exports
+  final bool includeMetadata;
+
+  /// App version string (for metadata)
+  final String appVersion;
 
   // ============================================
   // INTERFACE IMPLEMENTATION
@@ -71,7 +71,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     buffer.writeln('📊 我的$type数据');
     buffer.writeln('📅 统计周期: $period');
     buffer.writeln('🕐 导出时间: ${_formatDateTime(date)}');
-    buffer.writeln('');
+    buffer.writeln();
     buffer.writeln('📈 数据来自 星火AI学习助手');
 
     return buffer.toString();
@@ -83,13 +83,11 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   }
 
   @override
-  List<ExportFormat> getSupportedFormats() {
-    return [
+  List<ExportFormat> getSupportedFormats() => [
       ExportFormat.json,
       ExportFormat.csv,
       ExportFormat.pngReport,
     ];
-  }
 
   @override
   Future<List<Uint8List>> exportMultiple(
@@ -119,7 +117,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       // Create a simple placeholder preview
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      final size = ExportDimensions(200, 200);
+      const size = ExportDimensions(200, 200);
 
       // Draw background
       final bgPaint = Paint()..color = Colors.white;
@@ -199,7 +197,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
 
     // Add metadata if enabled
     if (config.includeMetadata && includeMetadata) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('# Metadata');
       buffer.writeln('# App Version: $appVersion');
       buffer.writeln('# Exported At: ${DateTime.now().toIso8601String()}');
@@ -233,7 +231,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final canvas = Canvas(recorder);
 
     // Draw background gradient
-    final bgGradient = const LinearGradient(
+    const bgGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
@@ -413,11 +411,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   // ============================================
 
   /// Format datetime for display
-  String _formatDateTime(DateTime dt) {
-    return '${dt.year}年${dt.month}月${dt.day}日 '
+  String _formatDateTime(DateTime dt) => '${dt.year}年${dt.month}月${dt.day}日 '
         '${dt.hour.toString().padLeft(2, '0')}:'
         '${dt.minute.toString().padLeft(2, '0')}';
-  }
 }
 
 /// Provider for statistics export service

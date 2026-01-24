@@ -7,20 +7,14 @@ class VocabWordItem {
   const VocabWordItem({
     required this.id,
     required this.word,
-    this.phonetic,
+    required this.importance, required this.reviewCount, required this.correctReviewCount, required this.createdAt, required this.updatedAt, required this.tags, this.phonetic,
     this.definition,
     this.exampleSentence,
     this.partOfSpeech,
-    required this.importance,
     this.nextReviewAt,
-    required this.reviewCount,
     this.lastReviewAt,
-    required this.correctReviewCount,
     this.sourceTranslationId,
     this.taskId,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.tags,
   });
 
   final Id id;
@@ -125,7 +119,7 @@ class LocalVocabularyRepository {
       tags: tags,
     );
 
-    return await _vocabWordCollection.put(newWord);
+    return _vocabWordCollection.put(newWord);
   }
 
   /// Get word by word string
@@ -145,9 +139,8 @@ class LocalVocabularyRepository {
     int limit = 100,
     int offset = 0,
   }) async {
-    final query = _buildFilterQuery(filter, tagFilter);
-    final words = await query
-        .sortByCreatedAtDesc()
+    final words = await _vocabWordCollection
+        .filter()
         .offset(offset)
         .limit(limit)
         .findAll();
@@ -171,7 +164,7 @@ class LocalVocabularyRepository {
   /// Get due count
   Future<int> getDueCount() async {
     final now = DateTime.now();
-    return await _vocabWordCollection
+    return _vocabWordCollection
         .filter()
         .nextReviewAtLessThan(now)
         .or()
@@ -189,34 +182,40 @@ class LocalVocabularyRepository {
             .filter()
             .nextReviewAtLessThan(now)
             .or()
-            .nextReviewAtIsNull();
+            .nextReviewAtIsNull()
+            .build();
       case VocabFilter.highImportance:
         return _vocabWordCollection
             .filter()
-            .importanceGreaterThanOrEqualTo(4);
+            .importanceGreaterThan(3)
+            .build();
       case VocabFilter.mediumImportance:
         return _vocabWordCollection
             .filter()
-            .importanceEqualTo(3);
+            .importanceEqualTo(3)
+            .build();
       case VocabFilter.lowImportance:
         return _vocabWordCollection
             .filter()
-            .importanceLessThan(3);
+            .importanceLessThan(3)
+            .build();
       case VocabFilter.byTag:
         if (tagFilter == null) {
-          return _vocabWordCollection.filter();
+          return _vocabWordCollection.filter().build();
         }
         return _vocabWordCollection
             .filter()
-            .tagsContains(tagFilter);
+            .tagsElementContains(tagFilter)
+            .build();
       case VocabFilter.all:
       default:
         if (tagFilter != null) {
           return _vocabWordCollection
               .filter()
-              .tagsContains(tagFilter);
+              .tagsElementContains(tagFilter)
+              .build();
         }
-        return _vocabWordCollection.filter();
+        return _vocabWordCollection.filter().build();
     }
   }
 
@@ -263,13 +262,14 @@ class LocalVocabularyRepository {
         .filter()
         .vocabWordIdEqualTo(id)
         .deleteAll();
-    return await _vocabWordCollection.delete(id);
+    return _vocabWordCollection.delete(id);
   }
 
   /// Delete all words
   Future<bool> deleteAll() async {
     await _vocabReviewCollection.clear();
-    return await _vocabWordCollection.clear();
+    await _vocabWordCollection.clear();
+    return true;
   }
 
   /// Search words
@@ -284,7 +284,6 @@ class LocalVocabularyRepository {
             .definitionContains(lowerQuery, caseSensitive: false)
             .or()
             .tagsElementContains(lowerQuery))
-        .sortByCreatedAtDesc()
         .limit(50)
         .findAll();
 
@@ -307,7 +306,7 @@ class LocalVocabularyRepository {
     final dueCount = await getDueCount();
     final highImportance = await _vocabWordCollection
         .filter()
-        .importanceGreaterThanOrEqualTo(4)
+        .importanceGreaterThan(3)
         .count();
 
     // Get review stats
@@ -326,17 +325,14 @@ class LocalVocabularyRepository {
   }
 
   /// Get review history for a word
-  Future<List<VocabReview>> getReviewHistory(Id wordId) async {
-    return await _vocabReviewCollection
+  Future<List<VocabReview>> getReviewHistory(Id wordId) async => await _vocabReviewCollection
         .filter()
         .vocabWordIdEqualTo(wordId)
         .sortByReviewedAtDesc()
         .findAll();
-  }
 
   /// Convert VocabWord to VocabWordItem
-  VocabWordItem _toItem(VocabWord word) {
-    return VocabWordItem(
+  VocabWordItem _toItem(VocabWord word) => VocabWordItem(
       id: word.id,
       word: word.word,
       phonetic: word.phonetic,
@@ -354,5 +350,4 @@ class LocalVocabularyRepository {
       updatedAt: word.updatedAt,
       tags: List.from(word.tags),
     );
-  }
 }

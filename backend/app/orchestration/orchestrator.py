@@ -56,6 +56,8 @@ from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.circuit_breaker import (
     CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 )
+# Multi-Agent Mode Support
+from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow, CHAT_MODE_STANDARD
 from app.orchestration.observability_logger import observability_logger
 from app.services.shadow_prediction_service import shadow_prediction_service
 
@@ -806,6 +808,12 @@ class ChatOrchestrator:
                 # Step 3: Initialize Workflow State
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
 
+                # Step 3.5: Extract chat mode for multi-agent routing
+                chat_mode = CHAT_MODE_STANDARD
+                if request.HasField("chat_mode") and request.chat_mode:
+                    chat_mode = request.chat_mode
+                    logger.info(f"Chat mode requested: {chat_mode}")
+
                 user_message = ""
                 if request.HasField("message"):
                     user_message = request.message
@@ -835,6 +843,14 @@ class ChatOrchestrator:
                 if request_context:
                     grpc_context = {**grpc_context, **request_context}
 
+                # Extract plan_id from extra_context for PlanScope
+                plan_id = None
+                if grpc_context and "plan_id" in grpc_context:
+                    try:
+                        plan_id = uuid.UUID(grpc_context["plan_id"])
+                    except (ValueError, AttributeError):
+                        pass
+
                 overlay_versions = {}
                 if grpc_context:
                     versions = grpc_context.get("realtime_versions")
@@ -851,6 +867,7 @@ class ChatOrchestrator:
 
                 user_context_payload = None
                 conversation_context = None
+                plan_context = None
 
                 with tracer.start_as_current_span("db.build_context"):
                     if active_db and user_id:
@@ -858,6 +875,46 @@ class ChatOrchestrator:
                         # P0: Merge contexts - prioritize gRPC context (more recent) over local context
                         user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                         logger.info(f"Merged user context: {user_context_payload is not None}")
+
+                        # PlanScope: Build plan_context if plan_id is provided
+                        if plan_id:
+                            try:
+                                from app.core.plan_context import PlanContextBuilder
+                                plan_builder = PlanContextBuilder(active_db, self.redis)
+                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                if plan_context:
+                                    logger.info(f"Built plan_context for plan_id={plan_id}")
+                                    # Include plan_context in user_context_payload
+                                    if user_context_payload is None:
+                                        user_context_payload = {}
+                                    user_context_payload["plan_context"] = plan_context
+
+                                    # P0-2: Check for phase rollback requirement
+                                    try:
+                                        from app.services.plan_state_service import PlanStateService
+                                        plan_state_svc = PlanStateService(active_db, self.redis)
+                                        plan_state = await plan_state_svc.get_plan_state(
+                                            uuid.UUID(user_id), uuid.UUID(plan_id)
+                                        )
+                                        if plan_state and plan_state.constraints.get("require_phase_rollback"):
+                                            logger.info(f"Phase rollback triggered for plan_id={plan_id}")
+                                            # Clear the flag
+                                            await plan_state_svc.upsert_plan_state(
+                                                user_id=uuid.UUID(user_id),
+                                                plan_id=uuid.UUID(plan_id),
+                                                patch={"constraints": {"require_phase_rollback": False}},
+                                                bump_version=False,
+                                            )
+                                            # Inject rollback context
+                                            plan_context["mode"] = "phase_rollback"
+                                            plan_context["rollback_reason"] = "2次连续拒绝，需重新收集信息"
+                                            # Get last 2 feedback entries for context
+                                            if plan_state.feedback_log:
+                                                plan_context["previous_feedback"] = plan_state.feedback_log[-2:]
+                                    except Exception as e:
+                                        logger.warning(f"Failed to check phase rollback: {e}")
+                            except Exception as e:
+                                logger.warning(f"Failed to build plan context: {e}")
 
                         # P4: Tool Preference Routing
                         try:
@@ -922,11 +979,92 @@ class ChatOrchestrator:
                     "redis_client": self.redis,
                     "user_context": user_context_payload,
                     "conversation_context": conversation_context,
+                    "plan_context": plan_context,
                     "file_ids": list(request.file_ids),
                     "include_references": bool(request.include_references),
                     "workflow_id": workflow_id,
                     "prompt_version": prompt_version,
                 })
+
+                # === Multi-Agent Mode Routing ===
+                # Check if a specific chat mode is requested
+                if chat_mode != CHAT_MODE_STANDARD:
+                    logger.info(f"Routing to multi-agent workflow: {chat_mode}")
+
+                    # Prepare context for multi-agent workflow
+                    multi_agent_context = {
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "user_context": user_context_payload,
+                        "conversation_context": conversation_context,
+                        "plan_context": plan_context,
+                    }
+
+                    try:
+                        # Execute multi-agent workflow and stream responses
+                        async for response in execute_multi_agent_workflow(
+                            chat_mode=chat_mode,
+                            message=user_message,
+                            user_id=user_id,
+                            session_id=session_id,
+                            context_data=multi_agent_context,
+                            stream_callback=stream_callback,
+                        ):
+                            # Add response metadata
+                            response.response_id = response_id
+                            response.created_at = int(datetime.now().timestamp())
+                            response.request_id = request_id
+                            response.trace_id = response.trace_id or trace_id
+                            response.workflow_id = f"multi_agent_{chat_mode}"
+                            await queue.put(response)
+
+                        # Signal completion
+                        await queue.put(agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            trace_id=trace_id,
+                            workflow_id=f"multi_agent_{chat_mode}",
+                            finish_reason=agent_service_pb2.STOP,
+                        ))
+
+                        # Update final state
+                        await self._update_state(session_id, STATE_DONE, "Multi-agent workflow completed")
+
+                        # Stream all responses from queue
+                        while True:
+                            item = await queue.get()
+                            yield item
+                            if item.finish_reason != agent_service_pb2.NULL:
+                                break
+
+                        # Log completion
+                        REQUEST_COUNT.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode,
+                            status="success"
+                        ).inc()
+                        REQUEST_LATENCY.labels(
+                            mode="multi_agent",
+                            chat_mode=chat_mode
+                        ).observe(time.time() - start_time)
+
+                        return
+
+                    except Exception as e:
+                        logger.error(f"Multi-agent workflow error: {e}")
+                        yield agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                code="MULTI_AGENT_ERROR",
+                                message=f"多Agent协作模式执行失败: {str(e)}",
+                                retryable=True,
+                            ),
+                            finish_reason=agent_service_pb2.ERROR,
+                        )
+                        return
 
                 # === Phase 1 & Phase 2: Routing & Validation Setup ===
                 # 路由决策
@@ -987,12 +1125,16 @@ class ChatOrchestrator:
                             if conversation_context:
                                 conversation_history = conversation_context.get("messages", [])
 
+                            # Phase 4: Pass plan_id for version tracking
+                            plan_id_for_planner = str(plan_id) if plan_id else None
+
                             executable_plan = await self.lang_graph_planner.plan(
                                 message=user_message,
                                 snapshot=snapshot,
                                 user_id=user_id,
                                 session_id=session_id,
-                                conversation_history=conversation_history
+                                conversation_history=conversation_history,
+                                plan_id=plan_id_for_planner,  # Phase 4
                             )
 
                             # === Phase 3: Log planning observability ===
@@ -1042,7 +1184,8 @@ class ChatOrchestrator:
                                         snapshot=snapshot,
                                         user_id=user_id,
                                         session_id=session_id,
-                                        conversation_history=conversation_history
+                                        conversation_history=conversation_history,
+                                        plan_id=plan_id_for_planner,  # Phase 4
                                     )
                                     current_versions = await self._load_context_versions(user_id)
                                     version_check = await self.snapshot_manager.compare_versions(
@@ -1146,6 +1289,107 @@ class ChatOrchestrator:
                                 await self.langgraph_breaker.on_failure("preflight_blocked")
                                 return
 
+                            # === Phase 4: Plan version conflict check before execution ===
+                            if plan_id and hasattr(executable_plan, 'plan_version'):
+                                from app.services.plan_state_service import PlanStateService
+                                from app.services.plan_feedback_service import get_plan_feedback_service
+
+                                plan_state_service = PlanStateService(active_db, self.redis)
+                                feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                current_state = await plan_state_service.get_plan_state(
+                                    uuid.UUID(user_id), uuid.UUID(plan_id)
+                                )
+
+                                if current_state and current_state.version != executable_plan.plan_version:
+                                    # 版本冲突
+                                    logger.warning(
+                                        f"Plan version conflict: {executable_plan.plan_version} -> {current_state.version}"
+                                    )
+
+                                    # 记录到 PlanScope.feedback_log
+                                    await feedback_service.append_user_feedback(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        content=(
+                                            f"Plan version conflict detected: "
+                                            f"planned v{executable_plan.plan_version}, "
+                                            f"current v{current_state.version}"
+                                        ),
+                                        decision="supplement",
+                                        priority="high"
+                                    )
+
+                                    # 根据 confidence 决定策略
+                                    if executable_plan.confidence >= 0.7:
+                                        # 高置信度: 自动 replan
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=f"\n\n⚠️ 检测到状态变更，正在重新规划..."
+                                        ))
+
+                                        # 创建新快照并重规划
+                                        new_snapshot = await self.snapshot_manager.create_snapshot(
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            db_session=active_db
+                                        )
+                                        executable_plan = await self.lang_graph_planner.replan(
+                                            message=user_message,
+                                            snapshot=new_snapshot,
+                                            user_id=user_id,
+                                            session_id=session_id,
+                                            previous_plan=executable_plan,
+                                            conflict_info={
+                                                "has_conflict": True,
+                                                "old_version": executable_plan.plan_version,
+                                                "new_version": current_state.version,
+                                            },
+                                            plan_id=plan_id,
+                                        )
+
+                                        # 更新 state 中的 plan
+                                        state.context_data["executable_plan"] = executable_plan
+                                    else:
+                                        # 低置信度: HITL 确认
+                                        tool_calls_payload = [
+                                            {"id": tc.id, "name": tc.name, "params": tc.params}
+                                            for tc in executable_plan.tool_calls
+                                        ]
+                                        action_id = await pending_actions_store.save(
+                                            tool_name="__plan_version_conflict__",
+                                            arguments={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "tool_calls": tool_calls_payload,
+                                            },
+                                            user_id=str(user_id),
+                                            description=(
+                                                f"计划版本已变更 (v{executable_plan.plan_version} -> v{current_state.version})，"
+                                                f"是否继续执行？"
+                                            ),
+                                            preview_data={
+                                                "plan_id": executable_plan.plan_id,
+                                                "planned_version": executable_plan.plan_version,
+                                                "current_version": current_state.version,
+                                                "confidence": executable_plan.confidence,
+                                                "tool_calls": tool_calls_payload,
+                                            }
+                                        )
+                                        HITL_REQUESTED.labels(reason="plan_version_conflict").inc()
+                                        await stream_callback(agent_service_pb2.ChatResponse(
+                                            delta=(
+                                                f"\n\n⚠️ 检测到状态变更，需要确认后继续执行。\n"
+                                                f"action_id={action_id}"
+                                            ),
+                                            metadata={
+                                                "requires_hitl": "true",
+                                                "action_id": action_id,
+                                                "reason": "plan_version_conflict",
+                                            }
+                                        ))
+                                        return
+
                             # 6. Plan Review (User Confirmation Loop)
                             if executable_plan and route_decision.execution_mode in ["langgraph", "hybrid"]:
                                 review_result = await plan_review_service.review_plan(
@@ -1153,6 +1397,20 @@ class ChatOrchestrator:
                                     user_message=user_message,
                                     user_context=user_context_payload or {}
                                 )
+
+                                # === Phase 4: Write review feedback to PlanScope (时机1: 审查完成后) ===
+                                if plan_id:
+                                    from app.services.plan_feedback_service import get_plan_feedback_service
+                                    feedback_service = get_plan_feedback_service(active_db, self.redis)
+
+                                    # 写入审查结果到 feedback_log
+                                    await feedback_service.append_review_feedback(
+                                        user_id=uuid.UUID(user_id),
+                                        plan_id=uuid.UUID(plan_id),
+                                        review_result=review_result,
+                                        user_decision=None,  # 尚未确认
+                                    )
+                                    logger.info(f"Review feedback written for plan {plan_id}")
 
                                 # Check if plan requires user action
                                 if review_result.decision in [

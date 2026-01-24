@@ -133,8 +133,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SelectableText(
+  Widget build(BuildContext context) => SelectableText(
       widget.text,
       style: widget.style,
       onSelectionChanged: (selection, cause) {
@@ -191,7 +190,6 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
         );
       },
     );
-  }
 }
 
 /// Helper class for text selection management
@@ -218,8 +216,7 @@ class TranslationDemoScreen extends StatelessWidget {
   const TranslationDemoScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Translation Demo'),
       ),
@@ -260,5 +257,4 @@ Caching improves performance by reducing the number of expensive operations, suc
         ),
       ),
     );
-  }
 }

@@ -14,6 +14,8 @@ from .ops_tools import CheckSystemStatusTool, QueryErrorLogsTool
 from .plan_tools import CreatePlanTool
 from .focus_tools import SuggestFocusSessionTool, HunyuanTranslateTool
 from .web_search_tool import WebSearchProTool
+from .plan_state_tools import GetPlanStateTool, GetTaskSummaryTool, GetTaskDetailTool
+from .task_query_tool import QueryPlanTasksTool, ModifyPlanTaskTool
 
 class ToolRegistry:
     """
@@ -52,10 +54,13 @@ class ToolRegistry:
             # 运维工具 (AIOps)
             CheckSystemStatusTool(),
             QueryErrorLogsTool(),
-            # TODO: 添加更多工具
-            # CreatePlanTool(),
-            # GenerateTasksForPlanTool(),
-            # GetUserContextTool(),
+            # 计划状态工具
+            GetPlanStateTool(),
+            GetTaskSummaryTool(),
+            GetTaskDetailTool(),
+            # P0-3: 任务查询与修改工具
+            QueryPlanTasksTool(),
+            ModifyPlanTaskTool(),
         ]
         for tool in tools:
             self._tools[tool.name] = tool

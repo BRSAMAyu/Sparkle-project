@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
 from app.orchestration.orchestrator import ChatOrchestrator
+from app.orchestration.plan_review_service import plan_review_service, ReviewDecision
 from app.services.response_feedback_service import ResponseFeedbackService
 from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 
@@ -390,3 +391,154 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return agent_service_pb2.WeeklyReport()
+
+    async def SubmitPlanReview(
+        self,
+        request: agent_service_pb2.PlanReviewRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> agent_service_pb2.PlanReviewResponse:
+        """
+        Submit user feedback for a plan review.
+
+        Handles the user's decision (approve, reject, modify, acknowledge) on a plan review
+        and triggers appropriate follow-up actions.
+        """
+        try:
+            raw_metadata = context.invocation_metadata()
+            metadata = {k: v for k, v in raw_metadata} if raw_metadata else {}
+            user_id = request.user_id or metadata.get("user-id")
+
+            if not user_id:
+                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+                context.set_details("user_id is required")
+                return agent_service_pb2.PlanReviewResponse(
+                    success=False,
+                    message="Authentication required",
+                )
+
+            if not request.review_id:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("review_id is required")
+                return agent_service_pb2.PlanReviewResponse(
+                    success=False,
+                    message="review_id is required",
+                )
+
+            trace_id = request.trace_id or metadata.get("x-trace-id") or str(uuid.uuid4())
+
+            # Map proto enum to internal ReviewDecision
+            decision_map = {
+                agent_service_pb2.APPROVE: ReviewDecision.APPROVED,
+                agent_service_pb2.REJECT: ReviewDecision.REJECTED,
+                agent_service_pb2.MODIFY: ReviewDecision.NEEDS_MODIFICATION,
+                agent_service_pb2.ACKNOWLEDGE: ReviewDecision.REQUIRES_CONFIRMATION,
+            }
+
+            proto_decision = request.decision
+            if proto_decision not in decision_map:
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details(f"Invalid decision: {proto_decision}")
+                return agent_service_pb2.PlanReviewResponse(
+                    success=False,
+                    message="Invalid decision value",
+                )
+
+            user_decision = decision_map[proto_decision].value
+            plan_id = request.plan_id or ""
+
+            logger.info(
+                f"SubmitPlanReview - user={user_id}, review={request.review_id}, "
+                f"plan={plan_id}, decision={user_decision}, trace={trace_id}"
+            )
+
+            # Process the review feedback
+            result = await plan_review_service.handle_review_feedback(
+                review_id=request.review_id,
+                user_decision=user_decision,
+                user_id=user_id,
+                user_comment=request.user_comment or None,
+                modifications=dict(request.meta) if request.meta else None,
+            )
+
+            if result.get("status") != "success":
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(result.get("message", "Failed to process review"))
+                return agent_service_pb2.PlanReviewResponse(
+                    success=False,
+                    message=result.get("message", "Failed to process review"),
+                )
+
+            # Trigger follow-up actions based on decision
+            updated_plan_id = ""
+
+            # P0-2: Track consecutive rejections for phase rollback
+            if plan_id:
+                try:
+                    from app.services.plan_feedback_service import get_plan_feedback_service
+                    async with self.db_session_factory() as db:
+                        feedback_svc = get_plan_feedback_service(db, self.orchestrator.redis)
+                        is_rejection = proto_decision == agent_service_pb2.REJECT
+                        count, should_rollback = await feedback_svc.track_rejection(
+                            user_id=uuid.UUID(user_id),
+                            plan_id=uuid.UUID(plan_id),
+                            is_rejection=is_rejection,
+                        )
+                        if should_rollback:
+                            logger.info(
+                                f"Phase rollback will be triggered for plan {plan_id} "
+                                f"(rejection_count={count})"
+                            )
+                except Exception as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
+
+            if proto_decision == agent_service_pb2.APPROVE:
+                # Resume plan execution after approval
+                await plan_review_service.resume_plan_after_approval(
+                    plan_id=plan_id,
+                    user_id=user_id,
+                )
+                logger.info(f"Plan {plan_id} resumed after approval by {user_id}")
+
+            elif proto_decision == agent_service_pb2.REJECT:
+                # Handle rejection - notify and stop
+                await plan_review_service.notify_plan_rejected(
+                    plan_id=plan_id,
+                    user_id=user_id,
+                    feedback=request.user_comment or "Plan rejected by user",
+                )
+                logger.info(f"Plan {plan_id} rejected by {user_id}")
+
+            elif proto_decision == agent_service_pb2.MODIFY:
+                # Trigger replanning with user feedback
+                replan_result = await plan_review_service.trigger_replanning(
+                    plan_id=plan_id,
+                    user_id=user_id,
+                    feedback=request.user_comment or "User requested modifications",
+                )
+                updated_plan_id = replan_result.get("new_plan_id", "")
+                logger.info(f"Plan {plan_id} marked for replanning by {user_id}")
+
+            return agent_service_pb2.PlanReviewResponse(
+                success=True,
+                message=result.get("message", "Review submitted successfully"),
+                review_id=request.review_id,
+                updated_plan_id=updated_plan_id,
+            )
+
+        except grpc.aio.AioRpcError as e:
+            # gRPC level error
+            logger.error(f"SubmitPlanReview gRPC error: {e.code()}: {e.details()}")
+            context.set_code(e.code())
+            context.set_details(e.details())
+            return agent_service_pb2.PlanReviewResponse(
+                success=False,
+                message=str(e.details()),
+            )
+        except Exception as e:
+            logger.error(f"SubmitPlanReview error: {e}", exc_info=True)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return agent_service_pb2.PlanReviewResponse(
+                success=False,
+                message="Internal error processing review",
+            )

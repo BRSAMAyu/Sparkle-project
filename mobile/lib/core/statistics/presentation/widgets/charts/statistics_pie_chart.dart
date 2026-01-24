@@ -5,6 +5,13 @@ import 'package:sparkle/core/statistics/config/statistics_config.dart';
 
 /// Data class for pie chart sections
 class PieChartSection {
+
+  const PieChartSection({
+    required this.value,
+    required this.label,
+    this.color,
+    this.icon,
+  });
   /// Value of this section
   final double value;
 
@@ -16,17 +23,23 @@ class PieChartSection {
 
   /// Icon to show in the center when selected
   final IconData? icon;
-
-  const PieChartSection({
-    required this.value,
-    required this.label,
-    this.color,
-    this.icon,
-  });
 }
 
 /// Pie chart widget for statistics data visualization
 class StatisticsPieChart extends StatelessWidget {
+
+  const StatisticsPieChart({
+    super.key,
+    required this.sections,
+    this.radius,
+    this.innerRadius,
+    this.isDonut = true,
+    this.centerText,
+    this.centerWidget,
+    this.showLabels = true,
+    this.showLegend = true,
+    this.legendPosition = LegendPosition.bottom,
+  });
   /// Data sections to display
   final List<PieChartSection> sections;
 
@@ -53,19 +66,6 @@ class StatisticsPieChart extends StatelessWidget {
 
   /// Legend position
   final LegendPosition legendPosition;
-
-  const StatisticsPieChart({
-    super.key,
-    required this.sections,
-    this.radius,
-    this.innerRadius,
-    this.isDonut = true,
-    this.centerText,
-    this.centerWidget,
-    this.showLabels = true,
-    this.showLegend = true,
-    this.legendPosition = LegendPosition.bottom,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +127,7 @@ class StatisticsPieChart extends StatelessWidget {
 
   List<PieChartSectionData> _buildSections() {
     final total = sections.fold<double>(0, (sum, s) => sum + s.value);
-    final colors = StatisticsChartConfig.pieColors;
+    const colors = StatisticsChartConfig.pieColors;
 
     double startAngle = 0;
 
@@ -159,15 +159,13 @@ class StatisticsPieChart extends StatelessWidget {
     }).toList();
   }
 
-  double effectiveRadius() {
-    return radius ?? StatisticsChartConfig.pieRadius;
-  }
+  double effectiveRadius() => radius ?? StatisticsChartConfig.pieRadius;
 
   Widget? _buildBadge(PieChartSection section, double percentage, double angle) {
     if (!showLabels) return null;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: DS.sm, vertical: DS.xs),
+      padding: const EdgeInsets.symmetric(horizontal: DS.sm, vertical: DS.xs),
       decoration: BoxDecoration(
         color: section.color ??
             StatisticsChartConfig.pieColors[
@@ -186,10 +184,10 @@ class StatisticsPieChart extends StatelessWidget {
   }
 
   Widget _buildLegend() {
-    final colors = StatisticsChartConfig.pieColors;
+    const colors = StatisticsChartConfig.pieColors;
 
     return Padding(
-      padding: EdgeInsets.all(DS.md),
+      padding: const EdgeInsets.all(DS.md),
       child: Wrap(
         spacing: DS.lg,
         runSpacing: DS.sm,
@@ -209,7 +207,7 @@ class StatisticsPieChart extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(width: DS.xs),
+              const SizedBox(width: DS.xs),
               Text(
                 section.label,
                 style: StatisticsChartConfig.legendTextStyle,
@@ -221,8 +219,7 @@ class StatisticsPieChart extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
+  Widget _buildEmptyState() => Container(
       height: 200,
       alignment: Alignment.center,
       child: Column(
@@ -243,11 +240,20 @@ class StatisticsPieChart extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// Donut chart with center content
 class StatisticsDonutChart extends StatelessWidget {
+
+  const StatisticsDonutChart({
+    super.key,
+    required this.sections,
+    this.radius,
+    this.centerText,
+    this.centerValue,
+    this.centerUnit,
+    this.centerWidget,
+  });
   /// Data sections to display
   final List<PieChartSection> sections;
 
@@ -266,19 +272,8 @@ class StatisticsDonutChart extends StatelessWidget {
   /// Widget to show in the center
   final Widget? centerWidget;
 
-  const StatisticsDonutChart({
-    super.key,
-    required this.sections,
-    this.radius,
-    this.centerText,
-    this.centerValue,
-    this.centerUnit,
-    this.centerWidget,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return StatisticsPieChart(
+  Widget build(BuildContext context) => StatisticsPieChart(
       sections: sections,
       radius: radius,
       isDonut: true,
@@ -287,10 +282,8 @@ class StatisticsDonutChart extends StatelessWidget {
       showLabels: true,
       showLegend: true,
     );
-  }
 
-  Widget _buildDefaultCenterWidget() {
-    return Column(
+  Widget _buildDefaultCenterWidget() => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (centerText != null)
@@ -331,5 +324,4 @@ class StatisticsDonutChart extends StatelessWidget {
         ],
       ],
     );
-  }
 }

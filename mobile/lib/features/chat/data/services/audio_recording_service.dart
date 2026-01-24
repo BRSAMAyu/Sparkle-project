@@ -70,7 +70,7 @@ class AudioRecordingService {
       );
 
       // 3. 开始录制音频流 - 使用 startStream 获取原始 PCM 数据
-      final config = RecordConfig(
+      const config = RecordConfig(
         encoder: AudioEncoder.pcm16bits, // 获取原始 PCM 数据
         sampleRate: 16000,               // 16kHz 采样率（科大讯飞要求）
         numChannels: 1,                   // 单声道

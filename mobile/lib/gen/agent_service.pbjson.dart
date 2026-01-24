@@ -1,13 +1,15 @@
+// This is a generated file - do not edit.
 //
-//  Generated code. Do not modify.
-//  source: agent_service.proto
-//
-// @dart = 2.12
+// Generated from agent_service.proto.
+
+// @dart = 3.3
 
 // ignore_for_file: annotate_overrides, camel_case_types, comment_references
-// ignore_for_file: constant_identifier_names, library_prefixes
-// ignore_for_file: non_constant_identifier_names, prefer_final_fields
-// ignore_for_file: unnecessary_import, unnecessary_this, unused_import
+// ignore_for_file: constant_identifier_names
+// ignore_for_file: curly_braces_in_flow_control_structures
+// ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
+// ignore_for_file: unused_import
 
 import 'dart:convert' as $convert;
 import 'dart:core' as $core;
@@ -49,6 +51,24 @@ final $typed_data.Uint8List feedbackReasonDescriptor = $convert.base64Decode(
     'EAISGwoXRkVFREJBQ0tfUkVBU09OX1ZFUkJPU0UQAxIeChpGRUVEQkFDS19SRUFTT05fRk9STU'
     'FUVElORxAEEh4KGkZFRURCQUNLX1JFQVNPTl9NSVNBTElHTkVEEAUSHAoYRkVFREJBQ0tfUkVB'
     'U09OX1RPT19IQVJEEAYSHgoaRkVFREJBQ0tfUkVBU09OX1RPT19TSU1QTEUQBw==');
+
+@$core.Deprecated('Use planReviewDecisionDescriptor instead')
+const PlanReviewDecision$json = {
+  '1': 'PlanReviewDecision',
+  '2': [
+    {'1': 'PLAN_REVIEW_DECISION_UNSPECIFIED', '2': 0},
+    {'1': 'APPROVE', '2': 1},
+    {'1': 'REJECT', '2': 2},
+    {'1': 'MODIFY', '2': 3},
+    {'1': 'ACKNOWLEDGE', '2': 4},
+  ],
+};
+
+/// Descriptor for `PlanReviewDecision`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List planReviewDecisionDescriptor = $convert.base64Decode(
+    'ChJQbGFuUmV2aWV3RGVjaXNpb24SJAogUExBTl9SRVZJRVdfREVDSVNJT05fVU5TUEVDSUZJRU'
+    'QQABILCgdBUFBST1ZFEAESCgoGUkVKRUNUEAISCgoGTU9ESUZZEAMSDwoLQUNLTk9XTEVER0UQ'
+    'BA==');
 
 @$core.Deprecated('Use finishReasonDescriptor instead')
 const FinishReason$json = {
@@ -116,14 +136,56 @@ const ChatRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'session_id', '3': 2, '4': 1, '5': 9, '10': 'sessionId'},
     {'1': 'message', '3': 3, '4': 1, '5': 9, '9': 0, '10': 'message'},
-    {'1': 'tool_result', '3': 7, '4': 1, '5': 11, '6': '.agent.v1.ToolResult', '9': 0, '10': 'toolResult'},
-    {'1': 'user_profile', '3': 4, '4': 1, '5': 11, '6': '.agent.v1.UserProfile', '10': 'userProfile'},
-    {'1': 'extra_context', '3': 5, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'extraContext'},
-    {'1': 'history', '3': 6, '4': 3, '5': 11, '6': '.agent.v1.ChatMessage', '10': 'history'},
-    {'1': 'config', '3': 8, '4': 1, '5': 11, '6': '.agent.v1.ChatConfig', '10': 'config'},
+    {
+      '1': 'tool_result',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolResult',
+      '9': 0,
+      '10': 'toolResult'
+    },
+    {
+      '1': 'user_profile',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.UserProfile',
+      '10': 'userProfile'
+    },
+    {
+      '1': 'extra_context',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'extraContext'
+    },
+    {
+      '1': 'history',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatMessage',
+      '10': 'history'
+    },
+    {
+      '1': 'config',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ChatConfig',
+      '10': 'config'
+    },
     {'1': 'request_id', '3': 9, '4': 1, '5': 9, '10': 'requestId'},
     {'1': 'file_ids', '3': 10, '4': 3, '5': 9, '10': 'fileIds'},
-    {'1': 'include_references', '3': 11, '4': 1, '5': 8, '10': 'includeReferences'},
+    {
+      '1': 'include_references',
+      '3': 11,
+      '4': 1,
+      '5': 8,
+      '10': 'includeReferences'
+    },
     {'1': 'active_tools', '3': 12, '4': 3, '5': 9, '10': 'activeTools'},
   ],
   '8': [
@@ -152,7 +214,14 @@ const UserProfile$json = {
     {'1': 'timezone', '3': 2, '4': 1, '5': 9, '10': 'timezone'},
     {'1': 'language', '3': 3, '4': 1, '5': 9, '10': 'language'},
     {'1': 'is_pro', '3': 4, '4': 1, '5': 8, '10': 'isPro'},
-    {'1': 'preferences', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.UserProfile.PreferencesEntry', '10': 'preferences'},
+    {
+      '1': 'preferences',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.UserProfile.PreferencesEntry',
+      '10': 'preferences'
+    },
     {'1': 'extra_context', '3': 6, '4': 1, '5': 9, '10': 'extraContext'},
     {'1': 'level', '3': 7, '4': 1, '5': 5, '10': 'level'},
     {'1': 'avatar_url', '3': 8, '4': 1, '5': 9, '10': 'avatarUrl'},
@@ -189,8 +258,8 @@ const ProfileRequest$json = {
 };
 
 /// Descriptor for `ProfileRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List profileRequestDescriptor = $convert.base64Decode(
-    'Cg5Qcm9maWxlUmVxdWVzdBIXCgd1c2VyX2lkGAEgASgJUgZ1c2VySWQ=');
+final $typed_data.Uint8List profileRequestDescriptor = $convert
+    .base64Decode('Cg5Qcm9maWxlUmVxdWVzdBIXCgd1c2VyX2lkGAEgASgJUgZ1c2VySWQ=');
 
 @$core.Deprecated('Use weeklyReportRequestDescriptor instead')
 const WeeklyReportRequest$json = {
@@ -264,7 +333,14 @@ const ChatMessage$json = {
     {'1': 'content', '3': 2, '4': 1, '5': 9, '10': 'content'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'tool_call_id', '3': 4, '4': 1, '5': 9, '10': 'toolCallId'},
-    {'1': 'metadata', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.ChatMessage.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatMessage.MetadataEntry',
+      '10': 'metadata'
+    },
   ],
   '3': [ChatMessage_MetadataEntry$json],
 };
@@ -297,17 +373,87 @@ const ChatResponse$json = {
     {'1': 'trace_id', '3': 15, '4': 1, '5': 9, '10': 'traceId'},
     {'1': 'workflow_id', '3': 16, '4': 1, '5': 9, '10': 'workflowId'},
     {'1': 'prompt_version', '3': 17, '4': 1, '5': 9, '10': 'promptVersion'},
-    {'1': 'metadata', '3': 18, '4': 3, '5': 11, '6': '.agent.v1.ChatResponse.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'metadata',
+      '3': 18,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ChatResponse.MetadataEntry',
+      '10': 'metadata'
+    },
     {'1': 'delta', '3': 3, '4': 1, '5': 9, '9': 0, '10': 'delta'},
-    {'1': 'tool_call', '3': 4, '4': 1, '5': 11, '6': '.agent.v1.ToolCall', '9': 0, '10': 'toolCall'},
-    {'1': 'status_update', '3': 5, '4': 1, '5': 11, '6': '.agent.v1.AgentStatus', '9': 0, '10': 'statusUpdate'},
+    {
+      '1': 'tool_call',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolCall',
+      '9': 0,
+      '10': 'toolCall'
+    },
+    {
+      '1': 'status_update',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.AgentStatus',
+      '9': 0,
+      '10': 'statusUpdate'
+    },
     {'1': 'full_text', '3': 6, '4': 1, '5': 9, '9': 0, '10': 'fullText'},
-    {'1': 'error', '3': 7, '4': 1, '5': 11, '6': '.agent.v1.Error', '9': 0, '10': 'error'},
-    {'1': 'usage', '3': 8, '4': 1, '5': 11, '6': '.agent.v1.Usage', '9': 0, '10': 'usage'},
-    {'1': 'citations', '3': 11, '4': 1, '5': 11, '6': '.agent.v1.CitationBlock', '9': 0, '10': 'citations'},
-    {'1': 'tool_result', '3': 12, '4': 1, '5': 11, '6': '.agent.v1.ToolResultPayload', '9': 0, '10': 'toolResult'},
-    {'1': 'intervention', '3': 14, '4': 1, '5': 11, '6': '.agent.v1.InterventionPayload', '9': 0, '10': 'intervention'},
-    {'1': 'finish_reason', '3': 9, '4': 1, '5': 14, '6': '.agent.v1.FinishReason', '10': 'finishReason'},
+    {
+      '1': 'error',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.Error',
+      '9': 0,
+      '10': 'error'
+    },
+    {
+      '1': 'usage',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.Usage',
+      '9': 0,
+      '10': 'usage'
+    },
+    {
+      '1': 'citations',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.CitationBlock',
+      '9': 0,
+      '10': 'citations'
+    },
+    {
+      '1': 'tool_result',
+      '3': 12,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.ToolResultPayload',
+      '9': 0,
+      '10': 'toolResult'
+    },
+    {
+      '1': 'intervention',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionPayload',
+      '9': 0,
+      '10': 'intervention'
+    },
+    {
+      '1': 'finish_reason',
+      '3': 9,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.FinishReason',
+      '10': 'finishReason'
+    },
     {'1': 'timestamp', '3': 13, '4': 1, '5': 3, '10': 'timestamp'},
   ],
   '3': [ChatResponse_MetadataEntry$json],
@@ -352,12 +498,33 @@ const ResponseFeedbackRequest$json = {
     {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
     {'1': 'response_id', '3': 2, '4': 1, '5': 9, '10': 'responseId'},
     {'1': 'trace_id', '3': 3, '4': 1, '5': 9, '10': 'traceId'},
-    {'1': 'feedback_type', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.FeedbackType', '10': 'feedbackType'},
-    {'1': 'reasons', '3': 5, '4': 3, '5': 14, '6': '.agent.v1.FeedbackReason', '10': 'reasons'},
+    {
+      '1': 'feedback_type',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.FeedbackType',
+      '10': 'feedbackType'
+    },
+    {
+      '1': 'reasons',
+      '3': 5,
+      '4': 3,
+      '5': 14,
+      '6': '.agent.v1.FeedbackReason',
+      '10': 'reasons'
+    },
     {'1': 'free_text', '3': 6, '4': 1, '5': 9, '10': 'freeText'},
     {'1': 'workflow_id', '3': 7, '4': 1, '5': 9, '10': 'workflowId'},
     {'1': 'prompt_version', '3': 8, '4': 1, '5': 9, '10': 'promptVersion'},
-    {'1': 'meta', '3': 9, '4': 3, '5': 11, '6': '.agent.v1.ResponseFeedbackRequest.MetaEntry', '10': 'meta'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.ResponseFeedbackRequest.MetaEntry',
+      '10': 'meta'
+    },
   ],
   '3': [ResponseFeedbackRequest_MetaEntry$json],
 };
@@ -399,11 +566,87 @@ final $typed_data.Uint8List responseFeedbackResponseDescriptor = $convert.base64
     'ChhSZXNwb25zZUZlZWRiYWNrUmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3VjY2VzcxIYCg'
     'dtZXNzYWdlGAIgASgJUgdtZXNzYWdlEh8KC3Jlc3BvbnNlX2lkGAMgASgJUgpyZXNwb25zZUlk');
 
+@$core.Deprecated('Use planReviewRequestDescriptor instead')
+const PlanReviewRequest$json = {
+  '1': 'PlanReviewRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+    {'1': 'plan_id', '3': 2, '4': 1, '5': 9, '10': 'planId'},
+    {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
+    {
+      '1': 'decision',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.PlanReviewDecision',
+      '10': 'decision'
+    },
+    {'1': 'user_comment', '3': 5, '4': 1, '5': 9, '10': 'userComment'},
+    {'1': 'trace_id', '3': 6, '4': 1, '5': 9, '10': 'traceId'},
+    {'1': 'workflow_id', '3': 7, '4': 1, '5': 9, '10': 'workflowId'},
+    {'1': 'prompt_version', '3': 8, '4': 1, '5': 9, '10': 'promptVersion'},
+    {
+      '1': 'meta',
+      '3': 9,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.PlanReviewRequest.MetaEntry',
+      '10': 'meta'
+    },
+  ],
+  '3': [PlanReviewRequest_MetaEntry$json],
+};
+
+@$core.Deprecated('Use planReviewRequestDescriptor instead')
+const PlanReviewRequest_MetaEntry$json = {
+  '1': 'MetaEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `PlanReviewRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List planReviewRequestDescriptor = $convert.base64Decode(
+    'ChFQbGFuUmV2aWV3UmVxdWVzdBIXCgd1c2VyX2lkGAEgASgJUgZ1c2VySWQSFwoHcGxhbl9pZB'
+    'gCIAEoCVIGcGxhbklkEhsKCXJldmlld19pZBgDIAEoCVIIcmV2aWV3SWQSOAoIZGVjaXNpb24Y'
+    'BCABKA4yHC5hZ2VudC52MS5QbGFuUmV2aWV3RGVjaXNpb25SCGRlY2lzaW9uEiEKDHVzZXJfY2'
+    '9tbWVudBgFIAEoCVILdXNlckNvbW1lbnQSGQoIdHJhY2VfaWQYBiABKAlSB3RyYWNlSWQSHwoL'
+    'd29ya2Zsb3dfaWQYByABKAlSCndvcmtmbG93SWQSJQoOcHJvbXB0X3ZlcnNpb24YCCABKAlSDX'
+    'Byb21wdFZlcnNpb24SOQoEbWV0YRgJIAMoCzIlLmFnZW50LnYxLlBsYW5SZXZpZXdSZXF1ZXN0'
+    'Lk1ldGFFbnRyeVIEbWV0YRo3CglNZXRhRW50cnkSEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdW'
+    'UYAiABKAlSBXZhbHVlOgI4AQ==');
+
+@$core.Deprecated('Use planReviewResponseDescriptor instead')
+const PlanReviewResponse$json = {
+  '1': 'PlanReviewResponse',
+  '2': [
+    {'1': 'success', '3': 1, '4': 1, '5': 8, '10': 'success'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'review_id', '3': 3, '4': 1, '5': 9, '10': 'reviewId'},
+    {'1': 'updated_plan_id', '3': 4, '4': 1, '5': 9, '10': 'updatedPlanId'},
+  ],
+};
+
+/// Descriptor for `PlanReviewResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List planReviewResponseDescriptor = $convert.base64Decode(
+    'ChJQbGFuUmV2aWV3UmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3VjY2VzcxIYCgdtZXNzYW'
+    'dlGAIgASgJUgdtZXNzYWdlEhsKCXJldmlld19pZBgDIAEoCVIIcmV2aWV3SWQSJgoPdXBkYXRl'
+    'ZF9wbGFuX2lkGAQgASgJUg11cGRhdGVkUGxhbklk');
+
 @$core.Deprecated('Use citationBlockDescriptor instead')
 const CitationBlock$json = {
   '1': 'CitationBlock',
   '2': [
-    {'1': 'citations', '3': 1, '4': 3, '5': 11, '6': '.agent.v1.Citation', '10': 'citations'},
+    {
+      '1': 'citations',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.Citation',
+      '10': 'citations'
+    },
   ],
 };
 
@@ -458,11 +701,25 @@ const ToolResultPayload$json = {
   '2': [
     {'1': 'tool_name', '3': 1, '4': 1, '5': 9, '10': 'toolName'},
     {'1': 'success', '3': 2, '4': 1, '5': 8, '10': 'success'},
-    {'1': 'data', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'data'},
+    {
+      '1': 'data',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'data'
+    },
     {'1': 'error_message', '3': 4, '4': 1, '5': 9, '10': 'errorMessage'},
     {'1': 'suggestion', '3': 5, '4': 1, '5': 9, '10': 'suggestion'},
     {'1': 'widget_type', '3': 6, '4': 1, '5': 9, '10': 'widgetType'},
-    {'1': 'widget_data', '3': 7, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'widgetData'},
+    {
+      '1': 'widget_data',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'widgetData'
+    },
     {'1': 'tool_call_id', '3': 8, '4': 1, '5': 9, '10': 'toolCallId'},
   ],
 };
@@ -514,7 +771,14 @@ const InterventionReason$json = {
     {'1': 'trigger_event_id', '3': 1, '4': 1, '5': 9, '10': 'triggerEventId'},
     {'1': 'explanation_text', '3': 2, '4': 1, '5': 9, '10': 'explanationText'},
     {'1': 'confidence', '3': 3, '4': 1, '5': 2, '10': 'confidence'},
-    {'1': 'evidence_refs', '3': 4, '4': 3, '5': 11, '6': '.agent.v1.EvidenceRef', '10': 'evidenceRefs'},
+    {
+      '1': 'evidence_refs',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.EvidenceRef',
+      '10': 'evidenceRefs'
+    },
     {'1': 'decision_trace', '3': 5, '4': 3, '5': 9, '10': 'decisionTrace'},
   ],
 };
@@ -541,10 +805,38 @@ const InterventionRequest$json = {
     {'1': 'schema_version', '3': 8, '4': 1, '5': 9, '10': 'schemaVersion'},
     {'1': 'policy_version', '3': 9, '4': 1, '5': 9, '10': 'policyVersion'},
     {'1': 'model_version', '3': 10, '4': 1, '5': 9, '10': 'modelVersion'},
-    {'1': 'reason', '3': 11, '4': 1, '5': 11, '6': '.agent.v1.InterventionReason', '10': 'reason'},
-    {'1': 'level', '3': 12, '4': 1, '5': 14, '6': '.agent.v1.InterventionLevel', '10': 'level'},
-    {'1': 'on_reject', '3': 13, '4': 1, '5': 11, '6': '.agent.v1.CoolDownPolicy', '10': 'onReject'},
-    {'1': 'content', '3': 14, '4': 1, '5': 11, '6': '.google.protobuf.Struct', '10': 'content'},
+    {
+      '1': 'reason',
+      '3': 11,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionReason',
+      '10': 'reason'
+    },
+    {
+      '1': 'level',
+      '3': 12,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.InterventionLevel',
+      '10': 'level'
+    },
+    {
+      '1': 'on_reject',
+      '3': 13,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.CoolDownPolicy',
+      '10': 'onReject'
+    },
+    {
+      '1': 'content',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'content'
+    },
   ],
 };
 
@@ -566,7 +858,14 @@ final $typed_data.Uint8List interventionRequestDescriptor = $convert.base64Decod
 const InterventionPayload$json = {
   '1': 'InterventionPayload',
   '2': [
-    {'1': 'request', '3': 1, '4': 1, '5': 11, '6': '.agent.v1.InterventionRequest', '10': 'request'},
+    {
+      '1': 'request',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.InterventionRequest',
+      '10': 'request'
+    },
   ],
 };
 
@@ -579,10 +878,30 @@ final $typed_data.Uint8List interventionPayloadDescriptor = $convert.base64Decod
 const AgentStatus$json = {
   '1': 'AgentStatus',
   '2': [
-    {'1': 'state', '3': 1, '4': 1, '5': 14, '6': '.agent.v1.AgentStatus.State', '10': 'state'},
+    {
+      '1': 'state',
+      '3': 1,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.AgentStatus.State',
+      '10': 'state'
+    },
     {'1': 'details', '3': 2, '4': 1, '5': 9, '10': 'details'},
-    {'1': 'current_agent_name', '3': 3, '4': 1, '5': 9, '10': 'currentAgentName'},
-    {'1': 'active_agent', '3': 4, '4': 1, '5': 14, '6': '.agent.v1.AgentType', '10': 'activeAgent'},
+    {
+      '1': 'current_agent_name',
+      '3': 3,
+      '4': 1,
+      '5': 9,
+      '10': 'currentAgentName'
+    },
+    {
+      '1': 'active_agent',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.agent.v1.AgentType',
+      '10': 'activeAgent'
+    },
   ],
   '4': [AgentStatus_State$json],
 };
@@ -615,7 +934,14 @@ const Error$json = {
     {'1': 'code', '3': 1, '4': 1, '5': 9, '10': 'code'},
     {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
     {'1': 'retryable', '3': 3, '4': 1, '5': 8, '10': 'retryable'},
-    {'1': 'details', '3': 4, '4': 3, '5': 11, '6': '.agent.v1.Error.DetailsEntry', '10': 'details'},
+    {
+      '1': 'details',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.Error.DetailsEntry',
+      '10': 'details'
+    },
   ],
   '3': [Error_DetailsEntry$json],
 };
@@ -642,7 +968,13 @@ const Usage$json = {
   '1': 'Usage',
   '2': [
     {'1': 'prompt_tokens', '3': 1, '4': 1, '5': 5, '10': 'promptTokens'},
-    {'1': 'completion_tokens', '3': 2, '4': 1, '5': 5, '10': 'completionTokens'},
+    {
+      '1': 'completion_tokens',
+      '3': 2,
+      '4': 1,
+      '5': 5,
+      '10': 'completionTokens'
+    },
     {'1': 'total_tokens', '3': 3, '4': 1, '5': 5, '10': 'totalTokens'},
     {'1': 'cost_micro_usd', '3': 4, '4': 1, '5': 3, '10': 'costMicroUsd'},
   ],
@@ -662,7 +994,14 @@ const MemoryQuery$json = {
     {'1': 'query_text', '3': 2, '4': 1, '5': 9, '10': 'queryText'},
     {'1': 'limit', '3': 3, '4': 1, '5': 5, '10': 'limit'},
     {'1': 'min_score', '3': 4, '4': 1, '5': 2, '10': 'minScore'},
-    {'1': 'filter', '3': 5, '4': 1, '5': 11, '6': '.agent.v1.MemoryFilter', '10': 'filter'},
+    {
+      '1': 'filter',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.agent.v1.MemoryFilter',
+      '10': 'filter'
+    },
     {'1': 'hybrid_alpha', '3': 6, '4': 1, '5': 2, '10': 'hybridAlpha'},
   ],
 };
@@ -679,8 +1018,22 @@ const MemoryFilter$json = {
   '1': 'MemoryFilter',
   '2': [
     {'1': 'tags', '3': 1, '4': 3, '5': 9, '10': 'tags'},
-    {'1': 'start_time', '3': 2, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'startTime'},
-    {'1': 'end_time', '3': 3, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'endTime'},
+    {
+      '1': 'start_time',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'startTime'
+    },
+    {
+      '1': 'end_time',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'endTime'
+    },
     {'1': 'source_types', '3': 4, '4': 3, '5': 9, '10': 'sourceTypes'},
   ],
 };
@@ -696,7 +1049,14 @@ final $typed_data.Uint8List memoryFilterDescriptor = $convert.base64Decode(
 const MemoryResult$json = {
   '1': 'MemoryResult',
   '2': [
-    {'1': 'items', '3': 1, '4': 3, '5': 11, '6': '.agent.v1.MemoryItem', '10': 'items'},
+    {
+      '1': 'items',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.MemoryItem',
+      '10': 'items'
+    },
     {'1': 'total_found', '3': 2, '4': 1, '5': 5, '10': 'totalFound'},
   ],
 };
@@ -713,8 +1073,22 @@ const MemoryItem$json = {
     {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
     {'1': 'content', '3': 2, '4': 1, '5': 9, '10': 'content'},
     {'1': 'score', '3': 3, '4': 1, '5': 2, '10': 'score'},
-    {'1': 'created_at', '3': 4, '4': 1, '5': 11, '6': '.google.protobuf.Timestamp', '10': 'createdAt'},
-    {'1': 'metadata', '3': 5, '4': 3, '5': 11, '6': '.agent.v1.MemoryItem.MetadataEntry', '10': 'metadata'},
+    {
+      '1': 'created_at',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'createdAt'
+    },
+    {
+      '1': 'metadata',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.agent.v1.MemoryItem.MetadataEntry',
+      '10': 'metadata'
+    },
   ],
   '3': [MemoryItem_MetadataEntry$json],
 };
@@ -736,4 +1110,3 @@ final $typed_data.Uint8List memoryItemDescriptor = $convert.base64Decode(
     'YnVmLlRpbWVzdGFtcFIJY3JlYXRlZEF0Ej4KCG1ldGFkYXRhGAUgAygLMiIuYWdlbnQudjEuTW'
     'Vtb3J5SXRlbS5NZXRhZGF0YUVudHJ5UghtZXRhZGF0YRo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tl'
     'eRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');
-

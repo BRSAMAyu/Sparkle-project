@@ -63,14 +63,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               ? _buildErrorView()
               : TabBarView(
                   controller: _tabController,
-                  children: _tabs.map((type) => _buildLeaderboardTab(type)).toList(),
+                  children: _tabs.map(_buildLeaderboardTab).toList(),
                 ),
     );
   }
 
   Widget _buildLeaderboardTab(LeaderboardType type) {
     final state = ref.watch(leaderboardProvider);
-    final leaderboard = state.getData(type);
+    final leaderboard = state.getLeaderboard(type);
 
     if (leaderboard == null) {
       return _buildEmptyView(type);
@@ -106,8 +106,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
-  Widget _buildPodium(List<LeaderboardEntry> topThree) {
-    return Container(
+  Widget _buildPodium(List<LeaderboardEntry> topThree) => Container(
       height: 180,
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
@@ -151,15 +150,13 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
     );
-  }
 
   Widget _buildPodiumItem(
     LeaderboardEntry entry,
     double height,
     Color color,
     String emoji,
-  ) {
-    return Column(
+  ) => Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
@@ -223,7 +220,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ),
       ],
     );
-  }
 
   Widget _buildMyRankBanner(LeaderboardData leaderboard) {
     if (leaderboard.myRank == null) return const SizedBox.shrink();
@@ -259,15 +255,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
-  Widget _buildLeaderboardEntry(LeaderboardEntry entry) {
-    return ListTile(
+  Widget _buildLeaderboardEntry(LeaderboardEntry entry) => ListTile(
       leading: CircleAvatar(
         backgroundColor: _getRankColor(entry.rank),
         backgroundImage: entry.avatarUrl != null
-            ? DecorationImage(
-                image: NetworkImage(entry.avatarUrl!),
-                fit: BoxFit.cover,
-              )
+            ? NetworkImage(entry.avatarUrl!)
             : null,
         child: entry.avatarUrl == null
             ? Text(
@@ -303,10 +295,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildEmptyView(LeaderboardType type) {
-    return Center(
+  Widget _buildEmptyView(LeaderboardType type) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -319,10 +309,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
     );
-  }
 
-  Widget _buildErrorView() {
-    return Center(
+  Widget _buildErrorView() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -342,12 +330,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
     );
-  }
 
   Color _getRankColor(int rank) {
     if (rank == 1) return Colors.amber;
-    if (rank == 2) return Colors.grey[400];
-    if (rank == 3) return Colors.brown[400];
+    if (rank == 2) return Colors.grey[400]!;
+    if (rank == 3) return Colors.brown[400]!;
     return Colors.blue;
   }
 

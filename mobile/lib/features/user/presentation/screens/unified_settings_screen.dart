@@ -126,7 +126,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   backgroundColor: DS.primaryBase,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: DS.borderRadius12,
                   ),
                 ),
@@ -262,7 +262,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         if (taskId != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✨ 胶囊生成任务已创建'),
+              content: const Text('✨ 胶囊生成任务已创建'),
               backgroundColor: DS.success,
               action: SnackBarAction(
                 label: '查看',
@@ -276,7 +276,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('生成失败，请稍后重试'),
+              content: const Text('生成失败，请稍后重试'),
               backgroundColor: DS.error,
             ),
           );

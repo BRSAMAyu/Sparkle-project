@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show
-        TaskReminderConfig,
-        taskReminderConfigProvider,
         TaskNotificationScheduler,
-        taskNotificationSchedulerProvider;
+        TaskReminderConfig,
+        taskNotificationSchedulerProvider,
+        taskReminderConfigProvider;
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
     show taskListProvider;
@@ -35,10 +35,10 @@ class _TaskReminderSettingsScreenState
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.areNotificationsEnabled();
-      if (!granted && mounted) {
+      if ((granted ?? false) == false && mounted) {
         _showPermissionDialog();
       }
-      return granted;
+      return granted ?? false;
     }
     return true;
   }
@@ -49,7 +49,7 @@ class _TaskReminderSettingsScreenState
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       final granted = await android.requestNotificationsPermission();
-      if (!granted && mounted) {
+      if ((granted ?? false) == false && mounted) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('通知权限被拒绝，您将无法收到任务提醒')),
@@ -119,8 +119,7 @@ class _TaskReminderSettingsScreenState
     );
   }
 
-  Widget _buildEnableSwitch(TaskReminderConfig config) {
-    return SwitchListTile(
+  Widget _buildEnableSwitch(TaskReminderConfig config) => SwitchListTile(
       title: Text('启用任务提醒', style: TextStyle(color: DS.brandPrimary)),
       subtitle: Text(
         '在任务到期前发送通知',
@@ -133,10 +132,8 @@ class _TaskReminderSettingsScreenState
       },
       activeColor: DS.primaryBase,
     );
-  }
 
-  Widget _buildReminderTimesSection(TaskReminderConfig config) {
-    return Column(
+  Widget _buildReminderTimesSection(TaskReminderConfig config) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -150,7 +147,7 @@ class _TaskReminderSettingsScreenState
             ),
           ),
         ),
-        ...TaskReminderConfig.defaultReminders.map((minutes) {
+        ...TaskReminderSettingsConfigExt.defaultReminders.map((minutes) {
           return CheckboxListTile(
             title: Text(
               _formatReminderTime(minutes),
@@ -178,10 +175,8 @@ class _TaskReminderSettingsScreenState
         }),
       ],
     );
-  }
 
-  Widget _buildRefreshButton() {
-    return Padding(
+  Widget _buildRefreshButton() => Padding(
       padding: const EdgeInsets.all(16),
       child: FilledButton.tonalIcon(
         onPressed: () async {
@@ -190,7 +185,7 @@ class _TaskReminderSettingsScreenState
           final tasks = await taskRepo.getTasks();
           final config = ref.read(taskReminderConfigProvider);
 
-          await scheduler.refreshAllReminders(tasks.tasks, config: config);
+          await scheduler.refreshAllReminders(tasks.items, config: config);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -209,10 +204,8 @@ class _TaskReminderSettingsScreenState
         ),
       ),
     );
-  }
 
-  Widget _buildInfoSection() {
-    return Padding(
+  Widget _buildInfoSection() => Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -252,7 +245,6 @@ class _TaskReminderSettingsScreenState
         ),
       ),
     );
-  }
 
   String _formatReminderTime(int minutes) {
     if (minutes >= 1440) {
@@ -267,6 +259,6 @@ class _TaskReminderSettingsScreenState
   }
 }
 
-extension on TaskReminderConfig {
+extension TaskReminderSettingsConfigExt on TaskReminderConfig {
   static const List<int> defaultReminders = [1440, 60, 15]; // 1 day, 1 hour, 15 min
 }

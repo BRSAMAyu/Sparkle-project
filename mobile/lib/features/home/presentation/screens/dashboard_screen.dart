@@ -4,6 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/responsive_layout.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/edge_ai/presentation/edge_ai_status_screen.dart';
 import 'package:sparkle/core/edge_ai/providers/edge_ai_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -15,6 +16,7 @@ import 'package:sparkle/features/home/presentation/widgets/expanded_toolbar_sect
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/intent_prediction_bar.dart';
+import 'package:sparkle/features/home/presentation/widgets/multi_agent_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_actions_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/omnibar.dart';
@@ -42,7 +44,8 @@ class DashboardScreen extends ConsumerWidget {
 
     // Dynamic bottom spacing based on visible predictions
     final hasPredictions = predictions.isNotEmpty;
-    final bottomSpacing = hasPredictions ? 160.0 : 88.0;
+    // Updated spacing: OmniBar(16) + MultiAgentBar(~50) + IntentPredictionBar(~40) + margins
+    final bottomSpacing = hasPredictions ? 210.0 : 130.0;
 
     // Max width for floating components on larger screens
     final layoutType = getLayoutType(context);
@@ -153,12 +156,20 @@ class DashboardScreen extends ConsumerWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: floatingMaxWidth),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                  child: const IntentPredictionBar(),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+                  child: IntentPredictionBar(),
                 ),
               ),
             ),
+          ),
+
+          // Layer 3.5: MultiAgent Bar (between IntentPredictionBar and OmniBar)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 138,
+            child: const MultiAgentBar(),
           ),
 
           // Layer 4: Omni-Bar
@@ -179,7 +190,7 @@ class DashboardScreen extends ConsumerWidget {
           // Theme Toggle Button
         Positioned(
           right: 20,
-          bottom: 80,
+          bottom: 130,
           child: GestureDetector(
             onTap: () {
               ref.read(themeManagerProvider).toggleDarkMode();
@@ -326,8 +337,7 @@ class _StreakCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
@@ -378,5 +388,4 @@ class _StreakCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }

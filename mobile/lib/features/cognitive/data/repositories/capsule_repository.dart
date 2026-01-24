@@ -41,8 +41,8 @@ class CapsuleRepository {
     final response = await _apiClient.get<dynamic>('/capsules/favorites', queryParameters: {
       'limit': limit,
       'offset': offset,
-    });
-    return (response.data as List);
+    },);
+    return response.data as List;
   }
 
   /// 收藏/取消收藏胶囊
@@ -52,7 +52,7 @@ class CapsuleRepository {
   }) async {
     final response = await _apiClient.post<dynamic>('/capsules/$id/favorite', queryParameters: {
       if (note != null) 'note': note,
-    });
+    },);
     return response.data as Map<String, dynamic>;
   }
 
@@ -100,7 +100,7 @@ class CapsuleRepository {
   }) async {
     final response = await _apiClient.get<dynamic>('/capsules/generation/jobs', queryParameters: {
       'limit': limit,
-    });
+    },);
     return (response.data as List)
         .map((e) => CapsuleGenerationJobModel.fromJson(e as Map<String, dynamic>))
         .toList();

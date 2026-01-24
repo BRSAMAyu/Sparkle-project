@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/focus/data/models/candidate_action_model.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
 
@@ -10,7 +12,7 @@ import 'package:sparkle/features/focus/data/services/candidate_feedback_service.
 /// - Confidence indicator
 /// - Reason for suggestion
 /// - Accept/Dismiss buttons
-class CandidateActionSheet extends StatefulWidget {
+class CandidateActionSheet extends ConsumerStatefulWidget {
   const CandidateActionSheet({
     required this.candidates,
     this.onAccept,
@@ -23,12 +25,18 @@ class CandidateActionSheet extends StatefulWidget {
   final Function(CandidateActionModel)? onDismiss;
 
   @override
-  State<CandidateActionSheet> createState() => _CandidateActionSheetState();
+  ConsumerState<CandidateActionSheet> createState() => _CandidateActionSheetState();
 }
 
-class _CandidateActionSheetState extends State<CandidateActionSheet> {
-  final _feedbackService = CandidateFeedbackService();
+class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
+  late final CandidateFeedbackService _feedbackService;
   final Set<String> _dismissedCandidates = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _feedbackService = CandidateFeedbackService(ref.read(dioProvider));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,14 +80,14 @@ class _CandidateActionSheetState extends State<CandidateActionSheet> {
                   gradient: DS.secondaryGradient,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.lightbulb_outline,
                   color: DS.brandPrimaryConst,
                   size: 18,
                 ),
               ),
               const SizedBox(width: DS.md),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -117,7 +125,7 @@ class _CandidateActionSheetState extends State<CandidateActionSheet> {
                 candidate: candidate,
                 onAccept: () => _handleAccept(candidate),
                 onDismiss: () => _handleDismiss(candidate),
-              )),
+              ),),
 
           const SizedBox(height: DS.sm),
 
@@ -153,7 +161,6 @@ class _CandidateActionSheetState extends State<CandidateActionSheet> {
       candidateId: candidate.id,
       actionType: candidate.actionType,
       feedbackType: feedbackType,
-      executed: false, // Will be updated later if action is completed
     );
   }
 }

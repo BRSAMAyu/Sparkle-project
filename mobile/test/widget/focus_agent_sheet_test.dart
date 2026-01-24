@@ -44,8 +44,7 @@ class FakeFocusRepository implements FocusRepository {
       Future.error(UnimplementedError());
 
   @override
-  Future<FocusWeeklyStatsResponse> getWeeklyStats() async {
-    return const FocusWeeklyStatsResponse(
+  Future<FocusWeeklyStatsResponse> getWeeklyStats() async => const FocusWeeklyStatsResponse(
       periodStart: '2024-01-01',
       periodEnd: '2024-01-07',
       totalMinutes: 0,
@@ -56,11 +55,9 @@ class FakeFocusRepository implements FocusRepository {
       streakDays: 0,
       longestStreak: 0,
     );
-  }
 
   @override
-  Future<FocusMonthlyStatsResponse> getMonthlyStats() async {
-    return const FocusMonthlyStatsResponse(
+  Future<FocusMonthlyStatsResponse> getMonthlyStats() async => const FocusMonthlyStatsResponse(
       periodStart: '2024-01-01',
       periodEnd: '2024-01-31',
       totalMinutes: 0,
@@ -72,25 +69,20 @@ class FakeFocusRepository implements FocusRepository {
       streakDays: 0,
       longestStreak: 0,
     );
-  }
 
   @override
   Future<FocusSessionHistoryResponse> getSessionHistory({
     int limit = 20,
     int offset = 0,
-  }) async {
-    return FocusSessionHistoryResponse(
+  }) async => FocusSessionHistoryResponse(
       sessions: [],
       totalCount: 0,
       limit: limit,
       offset: offset,
     );
-  }
 
   @override
-  Future<Map<String, double>> getHeatmapData({int days = 90}) async {
-    return {};
-  }
+  Future<Map<String, double>> getHeatmapData({int days = 90}) async => {};
 }
 
 class FakeTaskChatNotifier extends TaskChatNotifier {

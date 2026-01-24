@@ -215,7 +215,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         padding: const EdgeInsets.all(DS.xl),
         height: 580,
         decoration: BoxDecoration(
-          color: DS.designSystem.color(DS.tokens.colorBackgroundPrimary),
+          color: DS.surfacePrimary,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -521,8 +521,7 @@ class _LanguageDropdown extends StatelessWidget {
   final ValueChanged<Language> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
+  Widget build(BuildContext context) => DropdownButtonHideUnderline(
       child: DropdownButtonFormField<Language>(
         value: value,
         items: items
@@ -549,5 +548,4 @@ class _LanguageDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
     );
-  }
 }

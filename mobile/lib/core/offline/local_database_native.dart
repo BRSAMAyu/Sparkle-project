@@ -1,81 +1,13 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/models/focus_session_record.dart';
+import 'package:sparkle/core/offline/models/translation_record.dart';
+import 'package:sparkle/core/offline/models/vocab_word.dart';
+import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 
-part 'local_database.g.dart';
-
-@collection
-class LocalKnowledgeNode {
-  Id id = Isar.autoIncrement;
-
-  @Index(unique: true)
-  late String serverId; // Corresponds to server node ID
-
-  late String name;
-  late int mastery;
-  late DateTime lastUpdated;
-
-  late int globalSparkCount; // New collaborative field
-
-  int revision = 0; // Logical clock for conflict resolution
-
-  @enumerated
-  late SyncStatus syncStatus; // pending, synced, conflict
-
-  String? error; // To store error messages
-}
-
-@collection
-class PendingUpdate {
-  Id id = Isar.autoIncrement;
-
-  late String nodeId;
-  late int newMastery;
-  late DateTime timestamp;
-  late bool synced;
-
-  @Index()
-  late DateTime createdAt;
-
-  String? requestId; // UUID for ACK matching
-  int revision = 0; // Logical clock at the time of update
-
-  String? error; // To store error messages
-
-  @enumerated
-  SyncStatus syncStatus = SyncStatus.pending;
-}
-
-@collection
-class LocalCRDTSnapshot {
-  Id id = Isar.autoIncrement;
-
-  @Index(unique: true)
-  late String galaxyId;
-
-  late List<int> updateData;
-  late DateTime timestamp;
-  late bool synced;
-}
-
-@collection
-class OutboxItem {
-  Id id = Isar.autoIncrement;
-
-  @Index()
-  late String type; // e.g. 'mastery_update', 'spark_creation'
-
-  late String payloadJson; // Serialized JSON payload
-
-  @Index()
-  late DateTime createdAt;
-
-  int retryCount = 0;
-
-  @enumerated
-  SyncStatus status = SyncStatus.pending;
-
-  String? error;
-}
+// The schemas are imported from local_database.g.dart via local_database.dart
 
 class LocalDatabase {
   factory LocalDatabase() => _instance;
@@ -91,8 +23,33 @@ class LocalDatabase {
     // final encryptionKey = await secureStorage.read(key: 'db_key');
 
     isar = await Isar.open(
-      [LocalKnowledgeNodeSchema, PendingUpdateSchema, LocalCRDTSnapshotSchema, OutboxItemSchema],
+      [
+        LocalKnowledgeNodeSchema,
+        PendingUpdateSchema,
+        LocalCRDTSnapshotSchema,
+        OutboxItemSchema,
+        UserAnalyticsEventSchema, // Added for Edge AI
+        TranslationRecordSchema,
+        TranslationWordLinkSchema,
+        VocabWordSchema,
+        VocabReviewSchema,
+        FocusSessionRecordSchema, // Added for focus statistics
+        CachedStatisticsModelSchema, // Added for unified statistics caching
+      ],
       directory: dir.path,
     );
   }
+
+  // Convenience accessors for collections
+  IsarCollection<TranslationRecord> get translationRecords => isar.translationRecords;
+  IsarCollection<TranslationWordLink> get translationWordLinks => isar.translationWordLinks;
+  IsarCollection<VocabWord> get vocabWords => isar.vocabWords;
+  IsarCollection<VocabReview> get vocabReviews => isar.vocabReviews;
+  IsarCollection<LocalKnowledgeNode> get knowledgeNodes => isar.localKnowledgeNodes;
+  IsarCollection<PendingUpdate> get pendingUpdates => isar.pendingUpdates;
+  IsarCollection<LocalCRDTSnapshot> get crdtSnapshots => isar.localCRDTSnapshots;
+  IsarCollection<OutboxItem> get outboxItems => isar.outboxItems;
+  IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
+  IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
+  IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
 }

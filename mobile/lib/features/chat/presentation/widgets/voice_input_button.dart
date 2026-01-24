@@ -13,9 +13,7 @@ import 'package:sparkle/features/chat/data/services/audio_recording_service.dart
 class VoiceInputButton extends ConsumerStatefulWidget {
 
   const VoiceInputButton({
-    super.key,
-    required this.onTranscription,
-    required this.onError,
+    required this.onTranscription, required this.onError, super.key,
     this.onRecordingStarted,
     this.onRecordingStopped,
   });

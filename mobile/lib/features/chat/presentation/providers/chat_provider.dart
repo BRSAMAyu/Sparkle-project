@@ -11,11 +11,15 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 
 // 1. ChatState Class
 class ChatState {
@@ -178,6 +182,117 @@ class ChatNotifier extends StateNotifier<ChatState> {
       _Debouncer(const Duration(milliseconds: 50));
   bool _isDisposed = false;
 
+  // Plan review service (lazy initialized)
+  PlanReviewGrpcService? _planReviewService;
+
+  /// Submit plan review decision via gRPC
+  Future<bool> submitPlanReview({
+    required ReviewDecision decision,
+    String? userComment,
+    Map<String, String>? meta,
+  }) async {
+    final review = state.pendingPlanReview;
+    if (review == null) {
+      debugPrint('⚠️ No pending plan review to submit');
+      return false;
+    }
+
+    // Get current user
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    if (user == null) {
+      debugPrint('⚠️ User not authenticated');
+      state = state.copyWith(
+        lastActionStatus: 'error',
+        lastActionMessage: '请先登录',
+      );
+      return false;
+    }
+
+    // Get access token
+    final authRepository = _ref.read(authRepositoryProvider);
+    final authToken = await authRepository.getAccessToken();
+
+    try {
+      _planReviewService ??= PlanReviewGrpcService();
+
+      // Map ReviewDecision to UserReviewDecision
+      final grpcDecision = _mapReviewDecision(decision);
+
+      final result = await _planReviewService!.submitReview(
+        userId: user.id,
+        planId: review.planId,
+        reviewId: review.reviewId,
+        decision: grpcDecision,
+        userComment: userComment,
+        authToken: authToken,
+        meta: meta,
+      );
+
+      if (result.success) {
+        // Update state with success message
+        state = state.copyWith(
+          lastActionStatus: 'submitted',
+          lastActionMessage: result.message ?? _getSuccessMessage(decision),
+          clearPendingReview: true,
+        );
+
+        // Clear feedback message after delay
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            state = state.copyWith(clearActionFeedback: true);
+          }
+        });
+
+        debugPrint('✅ Plan review submitted: ${decision.name}');
+        return true;
+      } else {
+        // Update state with error message
+        state = state.copyWith(
+          lastActionStatus: 'error',
+          lastActionMessage: result.message ?? '提交失败',
+        );
+        debugPrint('❌ Plan review failed: ${result.message}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Plan review error: $e');
+      state = state.copyWith(
+        lastActionStatus: 'error',
+        lastActionMessage: '网络错误，请重试',
+      );
+      return false;
+    }
+  }
+
+  /// Map ReviewDecision from UI to UserReviewDecision for gRPC
+  UserReviewDecision _mapReviewDecision(ReviewDecision decision) {
+    switch (decision) {
+      case ReviewDecision.approved:
+        return UserReviewDecision.approve;
+      case ReviewDecision.rejected:
+        return UserReviewDecision.reject;
+      case ReviewDecision.needsModification:
+        return UserReviewDecision.modify;
+      case ReviewDecision.requiresConfirmation:
+        return UserReviewDecision.acknowledge;
+    }
+  }
+
+  /// Get user-friendly success message
+  String _getSuccessMessage(ReviewDecision decision) {
+    switch (decision) {
+      case ReviewDecision.approved:
+        return '✅ 已批准';
+      case ReviewDecision.rejected:
+        return '❌ 已取消';
+      case ReviewDecision.needsModification:
+        return '📝 已请求修改';
+      case ReviewDecision.requiresConfirmation:
+        return '✅ 已确认';
+    }
+  }
+
   /// 手动触发重连
   Future<void> reconnect() async {
     await _chatRepository.reconnect();
@@ -337,6 +452,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     List<ReasoningStep>? pendingReasoningSteps;
     bool? pendingReasoningActive;
     int? pendingReasoningStartTime;
+    var planContextInjected = false;
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
@@ -376,6 +492,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
       state = state.copyWith(clearAttachments: true);
+
+      // Get selected plan for chat context
+      final selectedPlanId = _ref.read(activePlanProvider);
+      final extraContext = selectedPlanId != null
+          ? {'plan_id': selectedPlanId}
+          : null;
+
+      // Get selected chat mode
+      final chatMode = _ref.read(chatModeProvider);
+      final chatModeValue = chatMode.apiValue;
+
       await for (final event in _chatRepository.chatStream(
         content,
         state.conversationId,
@@ -384,6 +511,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         token: token,
         fileIds: fileIds,
         includeReferences: fileIds.isNotEmpty,
+        extraContext: extraContext,
+        chatMode: chatModeValue,
       )) {
         if (event.responseId != null && event.responseId!.isNotEmpty) {
           responseId = event.responseId;
@@ -399,6 +528,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
         }
 
         if (event is TextEvent) {
+          final metadata = event.metadata;
+          final planContext = metadata?['plan_context'];
+          final showPlanContext = metadata?['show_plan_context'] == true;
+          if (!planContextInjected &&
+              (planContext is Map<String, dynamic> || showPlanContext)) {
+            final data = planContext is Map<String, dynamic>
+                ? planContext
+                : {
+                    if (metadata?['plan_id'] is String)
+                      'plan_id': metadata?['plan_id'],
+                  };
+            if (data.isNotEmpty) {
+              accumulatedWidgets.add(
+                WidgetPayload(
+                  type: 'plan_context_summary',
+                  data: data,
+                ),
+              );
+              planContextInjected = true;
+            }
+          }
           // 流式文本片段（delta）
           accumulatedContent += event.content;
           pendingStreamingContent = accumulatedContent;
@@ -566,6 +716,37 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Keep demo history? Or clear?
       // Usually "Start New Session" means clear.
     }
+  }
+
+  Future<void> switchPlanSession(String? planId) async {
+    if (planId == null) {
+      state = state.copyWith(clearConversation: true, messages: []);
+      return;
+    }
+
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    final userId = user?.id ?? await _ref.read(guestServiceProvider).getGuestId();
+    final sessionId = _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
+          AgentSessionScope.plan,
+          planId,
+          userId,
+        );
+
+    if (state.conversationId == sessionId) {
+      return;
+    }
+
+    state = state.copyWith(
+      conversationId: sessionId,
+      messages: [],
+      clearError: true,
+      streamingContent: '',
+      clearAiStatus: true,
+      clearReasoning: true,
+    );
+
+    await loadConversationHistory(sessionId);
   }
 
   /// 确认 ActionCard
@@ -767,7 +948,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// 处理 Plan Review Status Event
   void _handlePlanReviewStatus(PlanReviewStatusEvent event) {
     debugPrint(
-        '📥 Plan review status received: ${event.status} for ${event.reviewId}');
+        '📥 Plan review status received: ${event.status} for ${event.reviewId}',);
 
     // Show user-friendly message
     final message = event.message ?? _getPlanReviewStatusMessage(event.status);

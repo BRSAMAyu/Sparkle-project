@@ -81,11 +81,7 @@ class FocusWeeklyStatsResponse with _$FocusWeeklyStatsResponse {
     @JsonKey(name: 'total_minutes') required int totalMinutes,
     @JsonKey(name: 'session_count') required int sessionCount,
     @JsonKey(name: 'avg_duration') required int avgDuration,
-    @JsonKey(name: 'best_day') String? bestDay,
-    @JsonKey(name: 'daily_breakdown') required Map<String, int> dailyBreakdown,
-    @JsonKey(name: 'focus_type_distribution') required Map<String, int> focusTypeDistribution,
-    @JsonKey(name: 'streak_days') required int streakDays,
-    @JsonKey(name: 'longest_streak') required int longestStreak,
+    @JsonKey(name: 'daily_breakdown') required Map<String, int> dailyBreakdown, @JsonKey(name: 'focus_type_distribution') required Map<String, int> focusTypeDistribution, @JsonKey(name: 'streak_days') required int streakDays, @JsonKey(name: 'longest_streak') required int longestStreak, @JsonKey(name: 'best_day') String? bestDay,
   }) = _FocusWeeklyStatsResponse;
 
   factory FocusWeeklyStatsResponse.fromJson(Map<String, dynamic> json) =>
@@ -101,12 +97,7 @@ class FocusMonthlyStatsResponse with _$FocusMonthlyStatsResponse {
     @JsonKey(name: 'total_minutes') required int totalMinutes,
     @JsonKey(name: 'session_count') required int sessionCount,
     @JsonKey(name: 'avg_duration') required int avgDuration,
-    @JsonKey(name: 'best_day') String? bestDay,
-    @JsonKey(name: 'daily_breakdown') required Map<String, int> dailyBreakdown,
-    @JsonKey(name: 'weekly_breakdown') required Map<String, int> weeklyBreakdown,
-    @JsonKey(name: 'focus_type_distribution') required Map<String, int> focusTypeDistribution,
-    @JsonKey(name: 'streak_days') required int streakDays,
-    @JsonKey(name: 'longest_streak') required int longestStreak,
+    @JsonKey(name: 'daily_breakdown') required Map<String, int> dailyBreakdown, @JsonKey(name: 'weekly_breakdown') required Map<String, int> weeklyBreakdown, @JsonKey(name: 'focus_type_distribution') required Map<String, int> focusTypeDistribution, @JsonKey(name: 'streak_days') required int streakDays, @JsonKey(name: 'longest_streak') required int longestStreak, @JsonKey(name: 'best_day') String? bestDay,
   }) = _FocusMonthlyStatsResponse;
 
   factory FocusMonthlyStatsResponse.fromJson(Map<String, dynamic> json) =>

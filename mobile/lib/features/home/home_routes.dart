@@ -1,7 +1,6 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/features/home/home.dart';
 
 Page<dynamic> _buildTransitionPage({
   required GoRouterState state,

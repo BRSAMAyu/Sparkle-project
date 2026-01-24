@@ -157,8 +157,8 @@ class _PrismCardState extends ConsumerState<PrismCard>
                               fontSize: 10,
                               color: DS.textPrimary,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -176,8 +176,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
           ],
         ),
       ),
-      ),
-    );
+    ));
   }
 
   Widget _buildTag(BuildContext context, String text) => Container(

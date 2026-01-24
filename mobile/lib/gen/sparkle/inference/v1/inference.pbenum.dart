@@ -130,5 +130,30 @@ class ErrorReason extends $pb.ProtobufEnum {
   const ErrorReason._(super.value, super.name);
 }
 
+class ArtifactScope extends $pb.ProtobufEnum {
+  static const ArtifactScope ARTIFACT_SCOPE_UNSPECIFIED =
+      ArtifactScope._(0, _omitEnumNames ? '' : 'ARTIFACT_SCOPE_UNSPECIFIED');
+  static const ArtifactScope PRIVATE =
+      ArtifactScope._(1, _omitEnumNames ? '' : 'PRIVATE');
+  static const ArtifactScope SHARED =
+      ArtifactScope._(2, _omitEnumNames ? '' : 'SHARED');
+  static const ArtifactScope PUBLIC =
+      ArtifactScope._(3, _omitEnumNames ? '' : 'PUBLIC');
+
+  static const $core.List<ArtifactScope> values = <ArtifactScope>[
+    ARTIFACT_SCOPE_UNSPECIFIED,
+    PRIVATE,
+    SHARED,
+    PUBLIC,
+  ];
+
+  static final $core.List<ArtifactScope?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 3);
+  static ArtifactScope? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const ArtifactScope._(super.value, super.name);
+}
+
 const $core.bool _omitEnumNames =
     $core.bool.fromEnvironment('protobuf.omit_enum_names');

@@ -45,7 +45,8 @@ class LangGraphPlanner:
         snapshot: StateSnapshot,
         user_id: str,
         session_id: str,
-        conversation_history: Optional[List[Dict]] = None
+        conversation_history: Optional[List[Dict]] = None,
+        plan_id: Optional[str] = None,  # Phase 4: for plan_version tracking
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -55,10 +56,16 @@ class LangGraphPlanner:
             user_id: User ID
             session_id: Session ID
             conversation_history: Optional conversation history for context
+            plan_id: Plan ID for version tracking (Phase 4)
 
         Returns:
             ExecutablePlan: Executable plan with tool_calls
         """
+        # Get plan_version from PlanState (Phase 4)
+        plan_version = 1
+        if plan_id:
+            plan_version = await self._get_plan_version(user_id, plan_id)
+
         # Build initial state
         messages = [HumanMessage(content=message)]
 
@@ -83,6 +90,9 @@ class LangGraphPlanner:
             "error": None,
             # Phase 2: Inject snapshot info
             "_snapshot": snapshot.to_dict() if snapshot else {},
+            # Phase 4: Pass plan_version and plan_id
+            "_plan_version": plan_version,
+            "_plan_id": plan_id,
         }
 
         # Execute planning graph (stops at tool_calls, does NOT execute tools)
@@ -101,13 +111,14 @@ class LangGraphPlanner:
             logger.error(f"LangGraph planning error: {e}")
             # Return empty plan on error
             return ExecutablePlan(
-                schema_version="3.0",  # Phase 3: Use v3.0
+                schema_version="4.0",  # Phase 4: Use v4.0
                 snapshot_id=snapshot.snapshot_id if snapshot else "",
                 context_version=snapshot.context_versions.get("tasks", "v0") if snapshot else "v0",
                 source="langgraph",
                 confidence=0.0,
                 rationale=f"Planning failed: {str(e)}",
-                tool_calls=[]
+                tool_calls=[],
+                plan_version=plan_version,  # Phase 4
             )
 
         # Convert to ExecutablePlan
@@ -120,7 +131,7 @@ class LangGraphPlanner:
         user_id: str,
         session_id: str
     ) -> ExecutablePlan:
-        """Convert LangGraph state to ExecutablePlan (Phase 3: with collaboration support)
+        """Convert LangGraph state to ExecutablePlan (Phase 4: with plan_version)
 
         Args:
             langgraph_state: State from LangGraph execution
@@ -139,6 +150,10 @@ class LangGraphPlanner:
         agents_involved = langgraph_state.get("collaboration_agents", [])
         collaboration_mode = langgraph_state.get("collaboration_mode", "single")
         collaboration_order = langgraph_state.get("collaboration_order", [])
+
+        # Phase 4: Extract plan_version and plan_id
+        plan_version = langgraph_state.get("_plan_version", 1)
+        plan_id = langgraph_state.get("_plan_id")
 
         def _normalize_tool_call(tc) -> Optional[Dict[str, Any]]:
             if isinstance(tc, dict):
@@ -208,7 +223,8 @@ class LangGraphPlanner:
             context_version = snapshot.context_versions.get("tasks", "v0")
 
         return ExecutablePlan(
-            schema_version="3.0",  # Phase 3: Use v3.0
+            schema_version="4.0",  # Phase 4: Use v4.0
+            plan_id=plan_id or str(uuid.uuid4()),  # Use actual plan_id if provided
             snapshot_id=snapshot.snapshot_id if snapshot else "",
             context_version=context_version,
             source="langgraph",
@@ -223,7 +239,9 @@ class LangGraphPlanner:
                 "on_validation_fail": "replan",
                 "on_version_conflict": "replan",
                 "on_execution_fail": "skip"
-            }
+            },
+            # Phase 4: Add plan_version
+            plan_version=plan_version,
         )
 
     async def replan(
@@ -233,7 +251,8 @@ class LangGraphPlanner:
         user_id: str,
         session_id: str,
         previous_plan: Optional[ExecutablePlan] = None,
-        conflict_info: Optional[Dict[str, Any]] = None
+        conflict_info: Optional[Dict[str, Any]] = None,
+        plan_id: Optional[str] = None,
     ) -> ExecutablePlan:
         """Re-plan after version conflict or validation failure
 
@@ -268,7 +287,8 @@ class LangGraphPlanner:
             message=enhanced_message,
             snapshot=snapshot,
             user_id=user_id,
-            session_id=session_id
+            session_id=session_id,
+            plan_id=plan_id,
         )
 
         # Mark as re-plan
@@ -311,3 +331,29 @@ class LangGraphPlanner:
             summary += f" [Risks: {', '.join(plan.risk_flags)}]"
 
         return summary
+
+    async def _get_plan_version(self, user_id: str, plan_id: str) -> int:
+        """获取 PlanState.version (Phase 4)
+
+        Args:
+            user_id: 用户 ID
+            plan_id: 计划 ID
+
+        Returns:
+            PlanState.version or 1 if not found
+        """
+        if not self.redis:
+            return 1
+
+        # 先从 Redis 缓存尝试
+        cache_key = f"state:plan:{plan_id}"
+        try:
+            import json
+            cached = await self.redis.get(cache_key)
+            if cached:
+                data = json.loads(cached)
+                return data.get("version", 1)
+        except Exception:
+            pass
+
+        return 1  # 默认值

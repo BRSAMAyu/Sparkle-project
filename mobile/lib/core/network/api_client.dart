@@ -238,7 +238,7 @@ class ApiClient {
 
 /// SSE 事件数据类
 class SSEEvent {
-  SSEEvent({this.id, required this.event, required this.data});
+  SSEEvent({required this.event, required this.data, this.id});
   final String? id;
   final String event;
   final String data;

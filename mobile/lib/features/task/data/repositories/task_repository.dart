@@ -6,7 +6,9 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
+import 'package:sparkle/features/task/data/models/next_action_selection_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
@@ -129,7 +131,7 @@ class TaskRepository {
           .where((t) =>
               t.dueDate != null &&
               t.dueDate!.isAfter(start.subtract(const Duration(days: 1))) &&
-              t.dueDate!.isBefore(end.add(const Duration(days: 1))))
+              t.dueDate!.isBefore(end.add(const Duration(days: 1))),)
           .toList();
     }
     try {
@@ -200,13 +202,13 @@ class TaskRepository {
     if (DemoDataService.isDemoMode) {
       final newTask = await createTask(task, generateGuide: generateGuide);
       // Mock nudges for demo
-      final nudges = task.estimatedMinutes != null && task.estimatedMinutes! < 30
+      final nudges = task.estimatedMinutes < 30
           ? [
               TaskNudge(
                 type: 'time_adjustment',
                 title: '检测到规划乐观偏差',
-                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes! * 130 ~/ 100} 分钟',
-                suggestedValue: task.estimatedMinutes! * 130 ~/ 100,
+                message: '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟',
+                suggestedValue: task.estimatedMinutes * 130 ~/ 100,
                 confidence: 0.8,
               ),
             ]
@@ -450,9 +452,89 @@ class TaskRepository {
         ApiEndpoints.taskFeedback(taskId),
         data: feedback.toJson(),
       );
-    } on DioException catch (e) {
+    } on DioException {
       // Feedback is optional - fail silently
       // Log for debugging but don't throw
+      return;
+    }
+  }
+
+  /// Submit task feedback and return the response with preference updates
+  Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
+    String taskId,
+    TaskFeedbackSubmission feedback,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      // Demo mode: return mock response
+      return TaskFeedbackResponse(
+        success: true,
+        message: '偏好已更新（演示模式）',
+        preferenceUpdates: const PreferenceUpdates(
+          depthPreference: 0.02,
+          difficultyPreference: -0.01,
+        ),
+      );
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskFeedback(taskId),
+        data: feedback.toJson(),
+      );
+      final payload = response.data;
+      if (payload == null) {
+        return null;
+      }
+      return TaskFeedbackResponse.fromJson(payload);
+    } on DioException {
+      // Feedback is optional - fail silently
+      // Log for debugging but don't throw
+      return null;
+    }
+  }
+
+  /// Record user interaction with next action suggestions
+  Future<void> recordNextActionSelection(
+    String taskId,
+    NextActionSelectionSubmission selection,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      // Demo mode: no-op
+      return;
+    }
+    try {
+      await _apiClient.post<void>(
+        ApiEndpoints.nextActionSelection(taskId),
+        data: selection.toJson(),
+      );
+    } on DioException {
+      // Selection tracking is optional - fail silently
+      return;
+    }
+  }
+
+  /// Record skip (user skipped all next action suggestions)
+  Future<void> recordNextActionsSkip(
+    String taskId,
+    List<NextAction> actions,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      // Demo mode: no-op
+      return;
+    }
+    try {
+      final skipRecords = NextActionSelectionSubmission.createSkipRecords(
+        taskId: taskId,
+        actions: actions,
+      );
+      // Send all skip records
+      for (final record in skipRecords) {
+        await _apiClient.post<void>(
+          ApiEndpoints.nextActionSelection(taskId),
+          data: record.toJson(),
+        );
+      }
+    } on DioException {
+      // Selection tracking is optional - fail silently
       return;
     }
   }

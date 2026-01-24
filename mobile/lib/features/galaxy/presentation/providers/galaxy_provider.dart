@@ -193,6 +193,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
   int _layoutRequestId = 0;
+  String? _lastEventId;
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;

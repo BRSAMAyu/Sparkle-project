@@ -14,11 +14,9 @@ class FocusStatisticsRepository {
   // ==================== Save Operations ====================
 
   /// Save a focus session to local storage
-  Future<int> saveSession(FocusSessionRecord session) async {
-    return await _isar.writeTxn(() async {
+  Future<int> saveSession(FocusSessionRecord session) async => await _isar.writeTxn(() async {
       return await _collection.put(session);
     });
-  }
 
   /// Save multiple sessions at once
   Future<void> saveSessions(List<FocusSessionRecord> sessions) async {
@@ -33,13 +31,11 @@ class FocusStatisticsRepository {
   Future<List<FocusSessionRecord>> getSessionsByDateRange(
     DateTime start,
     DateTime end,
-  ) async {
-    return await _collection
+  ) async => await _collection
         .where()
         .startTimeBetween(start, end)
         .sortByStartTimeDesc()
         .findAll();
-  }
 
   /// Get today's total focus minutes (completed sessions only)
   Future<int> getTodayTotalMinutes() async {
@@ -83,7 +79,7 @@ class FocusStatisticsRepository {
   /// Get this month's total focus minutes
   Future<int> getMonthTotalMinutes() async {
     final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month, 1);
+    final monthStart = DateTime(now.year, now.month);
 
     final sessions = await _collection
         .where()
@@ -129,7 +125,7 @@ class FocusStatisticsRepository {
     }
 
     // Ensure all 7 days are present
-    for (int i = 0; i < 7; i++) {
+    for (var i = 0; i < 7; i++) {
       final day = todayStart.add(Duration(days: i));
       final dateKey =
           '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
@@ -159,7 +155,7 @@ class FocusStatisticsRepository {
   /// Get monthly statistics breakdown
   Future<Map<String, dynamic>> getMonthlyStats() async {
     final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month, 1);
+    final monthStart = DateTime(now.year, now.month);
 
     final sessions = await _collection
         .where()
@@ -215,19 +211,15 @@ class FocusStatisticsRepository {
   Future<List<FocusSessionRecord>> getSessionHistory({
     int limit = 20,
     int offset = 0,
-  }) async {
-    return await _collection
+  }) async => await _collection
         .where()
         .sortByStartTimeDesc()
         .offset(offset)
         .limit(limit)
         .findAll();
-  }
 
   /// Get total session count
-  Future<int> getTotalSessionCount() async {
-    return await _collection.count();
-  }
+  Future<int> getTotalSessionCount() async => await _collection.count();
 
   /// Get heatmap data for the last N days
   Future<Map<DateTime, double>> getHeatmapData({int days = 90}) async {
@@ -263,10 +255,10 @@ class FocusStatisticsRepository {
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
     var checkDate = todayStart;
-    int streak = 0;
+    var streak = 0;
 
     // Check up to 365 days back
-    for (int i = 0; i < 365; i++) {
+    for (var i = 0; i < 365; i++) {
       final nextDay = checkDate.add(const Duration(days: 1));
       final dayStart = checkDate;
       final dayEnd = nextDay;
@@ -327,11 +319,11 @@ class FocusStatisticsRepository {
 
     if (dates.isEmpty) return 0;
 
-    int longestStreak = 1;
-    int currentStreak = 1;
+    var longestStreak = 1;
+    var currentStreak = 1;
     var prevDate = dates[0];
 
-    for (int i = 1; i < dates.length; i++) {
+    for (var i = 1; i < dates.length; i++) {
       final diff = dates[i].difference(prevDate).inDays;
       if (diff == 1) {
         currentStreak++;
@@ -352,13 +344,11 @@ class FocusStatisticsRepository {
   // ==================== Sync Operations ====================
 
   /// Get all unsynced sessions
-  Future<List<FocusSessionRecord>> getUnsyncedSessions() async {
-    return await _collection
+  Future<List<FocusSessionRecord>> getUnsyncedSessions() async => await _collection
         .where()
         .isSyncedEqualTo(false)
         .sortByCreatedAt()
         .findAll();
-  }
 
   /// Mark a session as synced with server ID
   Future<void> markAsSynced(int localId, String serverId) async {
@@ -390,7 +380,7 @@ class FocusStatisticsRepository {
   /// Merge server sessions into local storage
   /// Returns the number of new sessions added
   Future<int> mergeServerSessions(List<Map<String, dynamic>> serverSessions) async {
-    int newCount = 0;
+    var newCount = 0;
 
     await _isar.writeTxn(() async {
       for (final sessionData in serverSessions) {
@@ -429,11 +419,9 @@ class FocusStatisticsRepository {
   }
 
   /// Delete a session by local ID
-  Future<bool> deleteSession(int id) async {
-    return await _isar.writeTxn(() async {
+  Future<bool> deleteSession(int id) async => await _isar.writeTxn(() async {
       return await _collection.delete(id);
     });
-  }
 
   /// Clear all local data (use with caution)
   Future<void> clearAll() async {

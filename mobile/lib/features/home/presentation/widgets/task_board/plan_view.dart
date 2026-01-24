@@ -39,8 +39,7 @@ class PlanView extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing32),
       child: Column(
         children: [
@@ -59,7 +58,6 @@ class PlanView extends ConsumerWidget {
         ],
       ),
     );
-  }
 }
 
 class _PlanSection extends StatelessWidget {
@@ -72,8 +70,7 @@ class _PlanSection extends StatelessWidget {
   final List<TaskModel> tasks;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section header
@@ -122,5 +119,4 @@ class _PlanSection extends StatelessWidget {
             )),
       ],
     );
-  }
 }

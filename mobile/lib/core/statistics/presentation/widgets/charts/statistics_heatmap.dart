@@ -4,6 +4,14 @@ import 'package:sparkle/core/statistics/config/statistics_config.dart';
 
 /// Data point for heatmap visualization
 class HeatmapData {
+
+  const HeatmapData({
+    required this.x,
+    required this.y,
+    required this.value,
+    this.label,
+    this.timestamp,
+  });
   /// X coordinate (e.g., day of week, hour of day)
   final int x;
 
@@ -18,18 +26,28 @@ class HeatmapData {
 
   /// Optional timestamp for the data point
   final DateTime? timestamp;
-
-  const HeatmapData({
-    required this.x,
-    required this.y,
-    required this.value,
-    this.label,
-    this.timestamp,
-  });
 }
 
 /// Heatmap widget for statistics visualization (like GitHub contribution graph)
 class StatisticsHeatmap extends StatelessWidget {
+
+  const StatisticsHeatmap({
+    super.key,
+    required this.data,
+    required this.columns,
+    this.rows,
+    this.xLabels,
+    this.yLabels,
+    this.cellSize,
+    this.cellSpacing,
+    this.showLegend = true,
+    this.legendPosition = LegendPosition.right,
+    this.emptyColor,
+    this.lowColor,
+    this.mediumColor,
+    this.highColor,
+    this.onTap,
+  });
   /// 2D grid of data points
   final List<HeatmapData> data;
 
@@ -72,24 +90,6 @@ class StatisticsHeatmap extends StatelessWidget {
   /// Callback when a cell is tapped
   final void Function(HeatmapData)? onTap;
 
-  const StatisticsHeatmap({
-    super.key,
-    required this.data,
-    required this.columns,
-    this.rows,
-    this.xLabels,
-    this.yLabels,
-    this.cellSize,
-    this.cellSpacing,
-    this.showLegend = true,
-    this.legendPosition = LegendPosition.right,
-    this.emptyColor,
-    this.lowColor,
-    this.mediumColor,
-    this.highColor,
-    this.onTap,
-  });
-
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
@@ -115,7 +115,7 @@ class StatisticsHeatmap extends StatelessWidget {
             ),
             if (showLegend && legendPosition == LegendPosition.right)
               Padding(
-                padding: EdgeInsets.only(left: DS.md),
+                padding: const EdgeInsets.only(left: DS.md),
                 child: _buildLegend(),
               ),
           ],
@@ -144,8 +144,7 @@ class StatisticsHeatmap extends StatelessWidget {
     }
 
     return Column(
-      children: List.generate(rows, (y) {
-        return Padding(
+      children: List.generate(rows, (y) => Padding(
           padding: EdgeInsets.only(bottom: cellSpacing),
           child: Row(
             children: List.generate(columns, (x) {
@@ -158,8 +157,7 @@ class StatisticsHeatmap extends StatelessWidget {
               );
             }),
           ),
-        );
-      }),
+        )),
     );
   }
 
@@ -188,7 +186,6 @@ class StatisticsHeatmap extends StatelessWidget {
             border: item.value > 0
                 ? Border.all(
                     color: color,
-                    width: 1,
                   )
                 : null,
           ),
@@ -204,8 +201,7 @@ class StatisticsHeatmap extends StatelessWidget {
     return highColor ?? StatisticsChartConfig.heatmapHighColor;
   }
 
-  Widget _buildLegend() {
-    return Column(
+  Widget _buildLegend() => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildLegendCell(
@@ -226,10 +222,8 @@ class StatisticsHeatmap extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _buildLegendCell(Color color, String label) {
-    return Padding(
+  Widget _buildLegendCell(Color color, String label) => Padding(
       padding: EdgeInsets.only(bottom: DS.xs),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -255,7 +249,6 @@ class StatisticsHeatmap extends StatelessWidget {
         ],
       ),
     );
-  }
 
   Widget _buildXLabels(int count, double cellSize, double cellSpacing) {
     final labels = xLabels ?? [];
@@ -306,8 +299,7 @@ class StatisticsHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
+  Widget _buildEmptyState() => Container(
       height: 150,
       alignment: Alignment.center,
       child: Column(
@@ -328,11 +320,19 @@ class StatisticsHeatmap extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// GitHub-style contribution heatmap (weekly)
 class StatisticsContributionHeatmap extends StatelessWidget {
+
+  const StatisticsContributionHeatmap({
+    super.key,
+    required this.dailyData,
+    required this.startDate,
+    this.endDate,
+    this.cellSize,
+    this.onTap,
+  });
   /// Daily activity data (one value per day)
   final Map<DateTime, double> dailyData;
 
@@ -348,15 +348,6 @@ class StatisticsContributionHeatmap extends StatelessWidget {
   /// Callback when a cell is tapped
   final void Function(DateTime date, double value)? onTap;
 
-  const StatisticsContributionHeatmap({
-    super.key,
-    required this.dailyData,
-    required this.startDate,
-    this.endDate,
-    this.cellSize,
-    this.onTap,
-  });
-
   @override
   Widget build(BuildContext context) {
     final end = endDate ?? DateTime.now();
@@ -364,7 +355,7 @@ class StatisticsContributionHeatmap extends StatelessWidget {
 
     final xLabels = ['一', '三', '五'];
     final yLabels = ['一月', '二月', '三月', '四月', '五月', '六月',
-                    '七月', '八月', '九月', '十月', '十一月', '十二月'];
+                    '七月', '八月', '九月', '十月', '十一月', '十二月',];
 
     return StatisticsHeatmap(
       data: heatmapData,
@@ -372,7 +363,6 @@ class StatisticsContributionHeatmap extends StatelessWidget {
       xLabels: xLabels,
       yLabels: yLabels,
       cellSize: cellSize,
-      showLegend: true,
       legendPosition: LegendPosition.bottom,
       onTap: (item) {
         if (item.timestamp != null && onTap != null) {
@@ -404,7 +394,7 @@ class StatisticsContributionHeatmap extends StatelessWidget {
         value: value,
         timestamp: current,
         label: '${current.month}/${current.day}',
-      ));
+      ),);
 
       // Move to next day
       current = current.add(const Duration(days: 1));

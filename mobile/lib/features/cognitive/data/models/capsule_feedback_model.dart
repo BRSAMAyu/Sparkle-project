@@ -17,12 +17,10 @@ enum FeedbackCategory {
   final String value;
   final String label;
 
-  static FeedbackCategory fromValue(String? value) {
-    return FeedbackCategory.values.firstWhere(
+  static FeedbackCategory fromValue(String? value) => FeedbackCategory.values.firstWhere(
       (e) => e.value == value,
       orElse: () => FeedbackCategory.other,
     );
-  }
 }
 
 @JsonSerializable()

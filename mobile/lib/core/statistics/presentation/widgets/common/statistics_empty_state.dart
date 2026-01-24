@@ -5,6 +5,16 @@ import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
 /// Empty state widget for when no statistics data is available
 class StatisticsEmptyState extends StatelessWidget {
+
+  const StatisticsEmptyState({
+    super.key,
+    this.message,
+    this.subtitle,
+    this.icon,
+    this.actionLabel,
+    this.onAction,
+    this.isLoading = false,
+  });
   /// Message to display
   final String? message;
 
@@ -23,19 +33,8 @@ class StatisticsEmptyState extends StatelessWidget {
   /// Whether to show a loading animation
   final bool isLoading;
 
-  const StatisticsEmptyState({
-    super.key,
-    this.message,
-    this.subtitle,
-    this.icon,
-    this.actionLabel,
-    this.onAction,
-    this.isLoading = false,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: EdgeInsets.all(DS.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -44,10 +43,8 @@ class StatisticsEmptyState extends StatelessWidget {
         ],
       ),
     );
-  }
 
-  Widget _buildContent() {
-    return TweenAnimationBuilder<double>(
+  Widget _buildContent() => TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: StatisticsAnimationConfig.medium,
       curve: StatisticsAnimationConfig.easeOut,
@@ -76,7 +73,6 @@ class StatisticsEmptyState extends StatelessWidget {
         ],
       ),
     );
-  }
 
   Widget _buildIcon() {
     final iconData = icon ?? Icons.bar_chart_outlined;
@@ -97,7 +93,7 @@ class StatisticsEmptyState extends StatelessWidget {
   }
 
   Widget _buildMessage() {
-    final defaultMessage = '暂无统计数据';
+    const defaultMessage = '暂无统计数据';
     return Text(
       message ?? defaultMessage,
       style: DS.headlineStyle.copyWith(
@@ -108,18 +104,15 @@ class StatisticsEmptyState extends StatelessWidget {
     );
   }
 
-  Widget _buildSubtitle() {
-    return Text(
+  Widget _buildSubtitle() => Text(
       subtitle!,
       style: DS.bodyStyle.copyWith(
         color: DS.neutral400,
       ),
       textAlign: TextAlign.center,
     );
-  }
 
-  Widget _buildActionButton() {
-    return ElevatedButton(
+  Widget _buildActionButton() => ElevatedButton(
       onPressed: onAction,
       style: ElevatedButton.styleFrom(
         backgroundColor: DS.brandPrimary,
@@ -139,10 +132,8 @@ class StatisticsEmptyState extends StatelessWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildLoading() {
-    return SizedBox(
+  Widget _buildLoading() => SizedBox(
       width: 40,
       height: 40,
       child: CircularProgressIndicator(
@@ -150,15 +141,10 @@ class StatisticsEmptyState extends StatelessWidget {
         valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
       ),
     );
-  }
 }
 
 /// Empty state for specific statistics types
 class StatisticsEmptyStateForType extends StatelessWidget {
-  final StatisticsType type;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  final bool isLoading;
 
   const StatisticsEmptyStateForType({
     super.key,
@@ -167,10 +153,13 @@ class StatisticsEmptyStateForType extends StatelessWidget {
     this.onAction,
     this.isLoading = false,
   });
+  final StatisticsType type;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool isLoading;
 
   @override
-  Widget build(BuildContext context) {
-    return StatisticsEmptyState(
+  Widget build(BuildContext context) => StatisticsEmptyState(
       message: _getMessage(),
       subtitle: _getSubtitle(),
       icon: _getIcon(),
@@ -178,7 +167,6 @@ class StatisticsEmptyStateForType extends StatelessWidget {
       onAction: onAction,
       isLoading: isLoading,
     );
-  }
 
   String _getMessage() {
     switch (type) {
@@ -222,18 +210,17 @@ class StatisticsEmptyStateForType extends StatelessWidget {
 
 /// Error state widget for when statistics loading fails
 class StatisticsErrorState extends StatelessWidget {
-  final String? message;
-  final VoidCallback? onRetry;
 
   const StatisticsErrorState({
     super.key,
     this.message,
     this.onRetry,
   });
+  final String? message;
+  final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: EdgeInsets.all(DS.xl),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
@@ -293,6 +280,5 @@ class StatisticsErrorState extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 

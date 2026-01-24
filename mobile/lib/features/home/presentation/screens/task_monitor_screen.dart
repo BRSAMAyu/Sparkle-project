@@ -92,9 +92,7 @@ class BackgroundTaskNotifier extends StateNotifier<BackgroundTaskState> {
 
 /// Provider for background tasks
 final backgroundTaskProvider =
-    StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>((ref) {
-  return BackgroundTaskNotifier();
-});
+    StateNotifierProvider<BackgroundTaskNotifier, BackgroundTaskState>((ref) => BackgroundTaskNotifier());
 
 /// Task monitor screen
 class TaskMonitorScreen extends ConsumerStatefulWidget {
@@ -141,7 +139,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
           _buildFilterChips(state.selectedFilter),
           Expanded(
             child: state.isLoading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(DS.primaryBase),
                     ),
@@ -155,8 +153,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     );
   }
 
-  Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) {
-    return Container(
+  Widget _buildFilterChips(BackgroundTaskFilter selectedFilter) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.md, horizontal: DS.sm),
       child: Wrap(
         spacing: DS.sm,
@@ -180,10 +177,8 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         }).toList(),
       ),
     );
-  }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -203,10 +198,8 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildTaskList(List<BackgroundTaskModel> tasks) {
-    return RefreshIndicator(
+  Widget _buildTaskList(List<BackgroundTaskModel> tasks) => RefreshIndicator(
       onRefresh: () async {
         // TODO: Refresh tasks from API
       },
@@ -219,10 +212,8 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         },
       ),
     );
-  }
 
-  Widget _buildTaskCard(BackgroundTaskModel task) {
-    return Container(
+  Widget _buildTaskCard(BackgroundTaskModel task) => Container(
       margin: const EdgeInsets.only(bottom: DS.md),
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
@@ -307,7 +298,6 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildStatusIcon(BackgroundTaskStatus status) {
     IconData icon;
@@ -317,23 +307,18 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
       case BackgroundTaskStatus.pending:
         icon = Icons.schedule;
         color = DS.brandPrimary38;
-        break;
       case BackgroundTaskStatus.running:
         icon = Icons.sync;
         color = DS.primaryBase;
-        break;
       case BackgroundTaskStatus.completed:
         icon = Icons.check_circle;
         color = DS.semanticSuccess;
-        break;
       case BackgroundTaskStatus.failed:
         icon = Icons.error;
         color = DS.semanticError;
-        break;
       case BackgroundTaskStatus.cancelled:
         icon = Icons.cancel;
         color = DS.brandPrimary38;
-        break;
     }
 
     if (status == BackgroundTaskStatus.running) {
@@ -358,23 +343,18 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
       case BackgroundTaskStatus.pending:
         label = '等待中';
         color = DS.brandPrimary38;
-        break;
       case BackgroundTaskStatus.running:
         label = '运行中';
         color = DS.primaryBase;
-        break;
       case BackgroundTaskStatus.completed:
         label = '已完成';
         color = DS.semanticSuccess;
-        break;
       case BackgroundTaskStatus.failed:
         label = '失败';
         color = DS.semanticError;
-        break;
       case BackgroundTaskStatus.cancelled:
         label = '已取消';
         color = DS.brandPrimary38;
-        break;
     }
 
     return Container(
@@ -394,8 +374,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
     );
   }
 
-  Widget _buildProgressBar(BackgroundTaskModel task) {
-    return Column(
+  Widget _buildProgressBar(BackgroundTaskModel task) => Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Row(
@@ -436,7 +415,6 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         ),
       ],
     );
-  }
 
   Color _getStatusColor(BackgroundTaskStatus status) {
     switch (status) {

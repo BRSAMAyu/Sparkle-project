@@ -3,7 +3,7 @@ Plans API Endpoints - Full CRUD operations
 """
 from typing import Dict, Any, List, Optional
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
@@ -17,6 +17,9 @@ from app.schemas.plan import (
     PlanCreate, PlanUpdate, PlanDetail, PlanProgress, PlanBase
 )
 from app.services.plan_service import PlanService
+from app.services.plan_state_service import PlanStateService
+from app.models.plan_state import PlanStateStatus
+from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError, AuthorizationError
 
 router = APIRouter()
@@ -260,6 +263,94 @@ async def delete_plan(
     plan.is_active = False
     db.add(plan)
     await db.commit()
+
+
+@router.post("/{plan_id}/archive", response_model=Dict[str, Any])
+async def archive_plan_state(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Archive plan (PlanState + Plan.is_active).
+    """
+    plan = await PlanService.get_by_id(
+        db=db,
+        plan_id=plan_id,
+        user_id=current_user.id
+    )
+
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found"
+        )
+
+    if plan.is_active:
+        plan.is_active = False
+        db.add(plan)
+        await db.commit()
+
+    state_service = PlanStateService(db, cache_service.redis)
+    state = await state_service.upsert_plan_state(
+        user_id=current_user.id,
+        plan_id=plan_id,
+        patch={
+            "status": PlanStateStatus.ARCHIVED.value,
+            "archived_at": datetime.utcnow(),
+        },
+        bump_version=False,
+    )
+
+    return {
+        "plan_id": str(plan_id),
+        "status": state.status if state else PlanStateStatus.ARCHIVED.value,
+        "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,
+    }
+
+
+@router.post("/{plan_id}/restore", response_model=Dict[str, Any])
+async def restore_plan_state(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Restore an archived plan to active.
+    """
+    plan = await PlanService.get_by_id(
+        db=db,
+        plan_id=plan_id,
+        user_id=current_user.id
+    )
+
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plan {plan_id} not found"
+        )
+
+    if not plan.is_active:
+        plan.is_active = True
+        db.add(plan)
+        await db.commit()
+
+    state_service = PlanStateService(db, cache_service.redis)
+    state = await state_service.upsert_plan_state(
+        user_id=current_user.id,
+        plan_id=plan_id,
+        patch={
+            "status": PlanStateStatus.ACTIVE.value,
+            "archived_at": None,
+        },
+        bump_version=False,
+    )
+
+    return {
+        "plan_id": str(plan_id),
+        "status": state.status if state else PlanStateStatus.ACTIVE.value,
+        "archived_at": state.archived_at.isoformat() if state and state.archived_at else None,
+    }
 
 
 @router.get("/{plan_id}/progress", response_model=PlanProgress)

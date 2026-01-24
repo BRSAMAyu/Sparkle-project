@@ -344,7 +344,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text('取消',
-                style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6))),
+                style: TextStyle(color: DS.brandPrimary.withValues(alpha: 0.6)),),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -360,7 +360,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if ((confirmed ?? false) && mounted) {
       await ref.read(mindfulnessProvider.notifier).stop();
       if (mounted) {
         context.push('/tasks/${widget.taskId}/execute');

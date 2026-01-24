@@ -439,6 +439,7 @@ Please review this plan and provide your assessment."""
         user_id: str,
         user_comment: Optional[str] = None,
         modifications: Optional[Dict[str, Any]] = None,
+        db_session: Optional[Any] = None,  # Phase 4: for feedback writing
     ) -> Dict[str, Any]:
         """
         Handle user feedback on a plan review.
@@ -449,6 +450,7 @@ Please review this plan and provide your assessment."""
             user_id: User ID
             user_comment: Optional user comment
             modifications: Optional user-provided modifications
+            db_session: Database session for feedback writing (Phase 4)
 
         Returns:
             Status dictionary
@@ -463,9 +465,40 @@ Please review this plan and provide your assessment."""
             }
 
         preview_data = action.get("preview_data", {})
+        plan_id = preview_data.get("plan_id")
         logger.info(
-            f"User {user_decision} review {review_id} for plan {preview_data.get('plan_id')}"
+            f"User {user_decision} review {review_id} for plan {plan_id}"
         )
+
+        # === Phase 4: 时机2: Write user decision to feedback_log ===
+        if db_session and plan_id:
+            try:
+                from app.services.plan_feedback_service import get_plan_feedback_service
+                from uuid import UUID
+
+                feedback_service = get_plan_feedback_service(db_session, self.redis)
+
+                # Update the existing review feedback entry
+                await feedback_service.update_feedback_decision(
+                    user_id=UUID(user_id),
+                    plan_id=UUID(plan_id),
+                    review_id=review_id,
+                    user_decision=user_decision,
+                    user_comment=user_comment,
+                )
+
+                # Also add a new user_feedback entry
+                await feedback_service.append_user_feedback(
+                    user_id=UUID(user_id),
+                    plan_id=UUID(plan_id),
+                    content=user_comment or f"User decision: {user_decision}",
+                    decision=user_decision,
+                    priority="high" if user_decision == "reject" else "normal",
+                )
+
+                logger.info(f"User decision feedback written for plan {plan_id}")
+            except Exception as e:
+                logger.warning(f"Failed to write user decision feedback: {e}")
 
         # Clean up the stored action
         await pending_actions_store.delete(review_id, user_id)
@@ -474,7 +507,7 @@ Please review this plan and provide your assessment."""
             "status": "success",
             "user_decision": user_decision,
             "review_id": review_id,
-            "plan_id": preview_data.get("plan_id"),
+            "plan_id": plan_id,
             "message": f"Review {user_decision} by user",
         }
 
@@ -493,6 +526,145 @@ Please review this plan and provide your assessment."""
         # For now, plans are stored in orchestrator state
         logger.info(f"Retrieving stored plan {plan_id} for user {user_id}")
         return None
+
+    async def resume_plan_after_approval(
+        self, plan_id: str, user_id: str
+    ) -> Dict[str, Any]:
+        """
+        Resume plan execution after user approval.
+
+        This method is called when a user approves a plan review.
+        It updates the plan state to indicate it should proceed with execution.
+
+        Args:
+            plan_id: Plan ID to resume
+            user_id: User who approved
+
+        Returns:
+            Status dictionary
+        """
+        logger.info(f"Resuming plan {plan_id} after approval by user {user_id}")
+
+        # Store the approval in pending_actions for the orchestrator to pick up
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_approved__",
+            arguments={
+                "plan_id": plan_id,
+                "user_id": user_id,
+            },
+            user_id=user_id,
+            description=f"Plan {plan_id} approved by user",
+            preview_data={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "action": "resume",
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "message": "Plan approved and queued for execution",
+        }
+
+    async def notify_plan_rejected(
+        self, plan_id: str, user_id: str, feedback: str
+    ) -> Dict[str, Any]:
+        """
+        Handle plan rejection by user.
+
+        This method is called when a user rejects a plan review.
+        It stores the rejection feedback and notifies relevant systems.
+
+        Args:
+            plan_id: Plan ID that was rejected
+            user_id: User who rejected
+            feedback: User's feedback/reason for rejection
+
+        Returns:
+            Status dictionary
+        """
+        logger.info(
+            f"Plan {plan_id} rejected by user {user_id}. Feedback: {feedback[:100]}..."
+        )
+
+        # Store rejection for analytics and learning
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_rejected__",
+            arguments={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+            },
+            user_id=user_id,
+            description=f"Plan {plan_id} rejected",
+            preview_data={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "action": "rejected",
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "message": "Plan rejection recorded",
+        }
+
+    async def trigger_replanning(
+        self, plan_id: str, user_id: str, feedback: str
+    ) -> Dict[str, Any]:
+        """
+        Trigger replanning based on user feedback.
+
+        This method is called when a user requests modifications to a plan.
+        It stores the modification request and creates a new planning task.
+
+        Args:
+            plan_id: Original plan ID
+            user_id: User requesting modifications
+            feedback: User's modification request
+
+        Returns:
+            Status dictionary with new plan ID if created
+        """
+        logger.info(
+            f"Triggering replan for {plan_id} by user {user_id}. Feedback: {feedback[:100]}..."
+        )
+
+        # Generate a new plan ID for the modified plan
+        new_plan_id = f"plan-{uuid.uuid4().hex[:8]}"
+
+        # Store replanning request for the orchestrator to pick up
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_replan__",
+            arguments={
+                "original_plan_id": plan_id,
+                "new_plan_id": new_plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+            },
+            user_id=user_id,
+            description=f"Plan modification requested: {feedback[:100]}",
+            preview_data={
+                "original_plan_id": plan_id,
+                "new_plan_id": new_plan_id,
+                "user_id": user_id,
+                "action": "replan",
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "new_plan_id": new_plan_id,
+            "message": "Replanning request queued",
+        }
 
 
 # Global singleton
