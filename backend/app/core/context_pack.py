@@ -223,7 +223,7 @@ class ContextPackBuilder:
         plan_context: Optional[Dict[str, Any]] = None
         if plan_id:
             try:
-                plan_builder = PlanContextBuilder(self.db)
+                plan_builder = PlanContextBuilder(self.db, self.scheduler.redis)
                 plan_context = await plan_builder.build(user_id, plan_id)
             except Exception as e:
                 logger.warning(f"Failed to build plan context: {e}")

@@ -34,6 +34,7 @@ class PlanState(BaseModel):
     - facts: Learned facts during plan execution
     - milestones: Achievement records
     - task_index: Task completion statistics
+    - task_summaries: Recent task summaries for quick reference
     - feedback_log: User feedback history
     - constraints: Runtime constraints
 
@@ -43,6 +44,7 @@ class PlanState(BaseModel):
         facts: JSON object storing plan-specific facts
         milestones: JSON array of milestone records
         task_index: JSON object with task completion stats
+        task_summaries: JSON array of recent task summaries
         feedback_log: JSON array of feedback entries
         constraints: JSON object with runtime constraints
         version: Optimistic locking version number
@@ -75,6 +77,7 @@ class PlanState(BaseModel):
     facts = Column(JSONBCompat, nullable=False, default=dict)
     milestones = Column(JSONBCompat, nullable=False, default=list)
     task_index = Column(JSONBCompat, nullable=False, default=dict)
+    task_summaries = Column(JSONBCompat, nullable=False, default=list)
     feedback_log = Column(JSONBCompat, nullable=False, default=list)
     constraints = Column(JSONBCompat, nullable=False, default=dict)
 
@@ -106,6 +109,7 @@ class PlanState(BaseModel):
             "facts": self.facts or {},
             "milestones": self.milestones or [],
             "task_index": self.task_index or {},
+            "task_summaries": self.task_summaries or [],
             "feedback_log": self.feedback_log or [],
             "constraints": self.constraints or {},
             "version": self.version,
@@ -142,6 +146,7 @@ class PlanState(BaseModel):
             facts=data.get("facts", {}),
             milestones=data.get("milestones", []),
             task_index=data.get("task_index", {}),
+            task_summaries=data.get("task_summaries", []),
             feedback_log=data.get("feedback_log", []),
             constraints=data.get("constraints", {}),
             version=data.get("version", 1),

@@ -835,6 +835,14 @@ class ChatOrchestrator:
                 if request_context:
                     grpc_context = {**grpc_context, **request_context}
 
+                # Extract plan_id from extra_context for PlanScope
+                plan_id = None
+                if grpc_context and "plan_id" in grpc_context:
+                    try:
+                        plan_id = uuid.UUID(grpc_context["plan_id"])
+                    except (ValueError, AttributeError):
+                        pass
+
                 overlay_versions = {}
                 if grpc_context:
                     versions = grpc_context.get("realtime_versions")
@@ -851,6 +859,7 @@ class ChatOrchestrator:
 
                 user_context_payload = None
                 conversation_context = None
+                plan_context = None
 
                 with tracer.start_as_current_span("db.build_context"):
                     if active_db and user_id:
@@ -858,6 +867,21 @@ class ChatOrchestrator:
                         # P0: Merge contexts - prioritize gRPC context (more recent) over local context
                         user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                         logger.info(f"Merged user context: {user_context_payload is not None}")
+
+                        # PlanScope: Build plan_context if plan_id is provided
+                        if plan_id:
+                            try:
+                                from app.core.plan_context import PlanContextBuilder
+                                plan_builder = PlanContextBuilder(active_db, self.redis)
+                                plan_context = await plan_builder.build(uuid.UUID(user_id), plan_id)
+                                if plan_context:
+                                    logger.info(f"Built plan_context for plan_id={plan_id}")
+                                    # Include plan_context in user_context_payload
+                                    if user_context_payload is None:
+                                        user_context_payload = {}
+                                    user_context_payload["plan_context"] = plan_context
+                            except Exception as e:
+                                logger.warning(f"Failed to build plan context: {e}")
 
                         # P4: Tool Preference Routing
                         try:
@@ -922,6 +946,7 @@ class ChatOrchestrator:
                     "redis_client": self.redis,
                     "user_context": user_context_payload,
                     "conversation_context": conversation_context,
+                    "plan_context": plan_context,
                     "file_ids": list(request.file_ids),
                     "include_references": bool(request.include_references),
                     "workflow_id": workflow_id,

@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';

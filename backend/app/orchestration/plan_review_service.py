@@ -494,6 +494,145 @@ Please review this plan and provide your assessment."""
         logger.info(f"Retrieving stored plan {plan_id} for user {user_id}")
         return None
 
+    async def resume_plan_after_approval(
+        self, plan_id: str, user_id: str
+    ) -> Dict[str, Any]:
+        """
+        Resume plan execution after user approval.
+
+        This method is called when a user approves a plan review.
+        It updates the plan state to indicate it should proceed with execution.
+
+        Args:
+            plan_id: Plan ID to resume
+            user_id: User who approved
+
+        Returns:
+            Status dictionary
+        """
+        logger.info(f"Resuming plan {plan_id} after approval by user {user_id}")
+
+        # Store the approval in pending_actions for the orchestrator to pick up
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_approved__",
+            arguments={
+                "plan_id": plan_id,
+                "user_id": user_id,
+            },
+            user_id=user_id,
+            description=f"Plan {plan_id} approved by user",
+            preview_data={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "action": "resume",
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "message": "Plan approved and queued for execution",
+        }
+
+    async def notify_plan_rejected(
+        self, plan_id: str, user_id: str, feedback: str
+    ) -> Dict[str, Any]:
+        """
+        Handle plan rejection by user.
+
+        This method is called when a user rejects a plan review.
+        It stores the rejection feedback and notifies relevant systems.
+
+        Args:
+            plan_id: Plan ID that was rejected
+            user_id: User who rejected
+            feedback: User's feedback/reason for rejection
+
+        Returns:
+            Status dictionary
+        """
+        logger.info(
+            f"Plan {plan_id} rejected by user {user_id}. Feedback: {feedback[:100]}..."
+        )
+
+        # Store rejection for analytics and learning
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_rejected__",
+            arguments={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+            },
+            user_id=user_id,
+            description=f"Plan {plan_id} rejected",
+            preview_data={
+                "plan_id": plan_id,
+                "user_id": user_id,
+                "action": "rejected",
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "message": "Plan rejection recorded",
+        }
+
+    async def trigger_replanning(
+        self, plan_id: str, user_id: str, feedback: str
+    ) -> Dict[str, Any]:
+        """
+        Trigger replanning based on user feedback.
+
+        This method is called when a user requests modifications to a plan.
+        It stores the modification request and creates a new planning task.
+
+        Args:
+            plan_id: Original plan ID
+            user_id: User requesting modifications
+            feedback: User's modification request
+
+        Returns:
+            Status dictionary with new plan ID if created
+        """
+        logger.info(
+            f"Triggering replan for {plan_id} by user {user_id}. Feedback: {feedback[:100]}..."
+        )
+
+        # Generate a new plan ID for the modified plan
+        new_plan_id = f"plan-{uuid.uuid4().hex[:8]}"
+
+        # Store replanning request for the orchestrator to pick up
+        action_id = await pending_actions_store.save(
+            tool_name="__plan_replan__",
+            arguments={
+                "original_plan_id": plan_id,
+                "new_plan_id": new_plan_id,
+                "user_id": user_id,
+                "feedback": feedback,
+            },
+            user_id=user_id,
+            description=f"Plan modification requested: {feedback[:100]}",
+            preview_data={
+                "original_plan_id": plan_id,
+                "new_plan_id": new_plan_id,
+                "user_id": user_id,
+                "action": "replan",
+                "feedback": feedback,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "status": "success",
+            "action_id": action_id,
+            "new_plan_id": new_plan_id,
+            "message": "Replanning request queued",
+        }
+
 
 # Global singleton
 plan_review_service = PlanReviewService()

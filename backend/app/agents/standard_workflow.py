@@ -154,10 +154,14 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
         conversation_context = {"messages": state.messages[:-1]}
     prompt_version = state.context_data.get("prompt_version") or "v1"
 
+    # Extract plan_context from state if available
+    plan_context = state.context_data.get("plan_context")
+
     system_prompt = build_system_prompt(
         user_context,
         conversation_history=conversation_context,
-        prompt_version=prompt_version
+        prompt_version=prompt_version,
+        plan_context=plan_context,
     )
 
     knowledge_context = state.context_data.get("knowledge_context") or ""

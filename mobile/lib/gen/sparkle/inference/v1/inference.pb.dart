@@ -261,6 +261,8 @@ class InferenceRequest extends $pb.GeneratedMessage {
     $core.Iterable<ToolDefinition>? tools,
     ResponseFormat? responseFormat,
     $core.Iterable<$core.MapEntry<$core.String, $core.String>>? metadata,
+    $core.Iterable<$core.String>? fileIds,
+    ArtifactScope? artifactScope,
   }) {
     final result = create();
     if (requestId != null) result.requestId = requestId;
@@ -277,6 +279,8 @@ class InferenceRequest extends $pb.GeneratedMessage {
     if (tools != null) result.tools.addAll(tools);
     if (responseFormat != null) result.responseFormat = responseFormat;
     if (metadata != null) result.metadata.addEntries(metadata);
+    if (fileIds != null) result.fileIds.addAll(fileIds);
+    if (artifactScope != null) result.artifactScope = artifactScope;
     return result;
   }
 
@@ -318,6 +322,9 @@ class InferenceRequest extends $pb.GeneratedMessage {
         keyFieldType: $pb.PbFieldType.OS,
         valueFieldType: $pb.PbFieldType.OS,
         packageName: const $pb.PackageName('sparkle.inference.v1'))
+    ..pPS(15, _omitFieldNames ? '' : 'fileIds')
+    ..aE<ArtifactScope>(16, _omitFieldNames ? '' : 'artifactScope',
+        enumValues: ArtifactScope.values)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -448,6 +455,18 @@ class InferenceRequest extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(14)
   $pb.PbMap<$core.String, $core.String> get metadata => $_getMap(13);
+
+  @$pb.TagNumber(15)
+  $pb.PbList<$core.String> get fileIds => $_getList(14);
+
+  @$pb.TagNumber(16)
+  ArtifactScope get artifactScope => $_getN(15);
+  @$pb.TagNumber(16)
+  set artifactScope(ArtifactScope value) => $_setField(16, value);
+  @$pb.TagNumber(16)
+  $core.bool hasArtifactScope() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearArtifactScope() => $_clearField(16);
 }
 
 class InferenceResponse extends $pb.GeneratedMessage {
@@ -614,6 +633,476 @@ class InferenceResponse extends $pb.GeneratedMessage {
   $core.bool hasCompletionTokens() => $_has(9);
   @$pb.TagNumber(10)
   void clearCompletionTokens() => $_clearField(10);
+}
+
+class TranslationSegment extends $pb.GeneratedMessage {
+  factory TranslationSegment({
+    $core.String? id,
+    $core.String? text,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (text != null) result.text = text;
+    return result;
+  }
+
+  TranslationSegment._();
+
+  factory TranslationSegment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TranslationSegment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranslationSegment',
+      package: const $pb.PackageName(
+          _omitMessageNames ? '' : 'sparkle.inference.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationSegment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationSegment copyWith(void Function(TranslationSegment) updates) =>
+      super.copyWith((message) => updates(message as TranslationSegment))
+          as TranslationSegment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TranslationSegment create() => TranslationSegment._();
+  @$core.override
+  TranslationSegment createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TranslationSegment getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TranslationSegment>(create);
+  static TranslationSegment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get text => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set text($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasText() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearText() => $_clearField(2);
+}
+
+class TranslationInput extends $pb.GeneratedMessage {
+  factory TranslationInput({
+    $core.Iterable<TranslationSegment>? segments,
+    $core.String? sourceLang,
+    $core.String? targetLang,
+    $core.String? domain,
+    $core.String? style,
+    $core.String? glossaryId,
+    $core.String? segmenterVersion,
+  }) {
+    final result = create();
+    if (segments != null) result.segments.addAll(segments);
+    if (sourceLang != null) result.sourceLang = sourceLang;
+    if (targetLang != null) result.targetLang = targetLang;
+    if (domain != null) result.domain = domain;
+    if (style != null) result.style = style;
+    if (glossaryId != null) result.glossaryId = glossaryId;
+    if (segmenterVersion != null) result.segmenterVersion = segmenterVersion;
+    return result;
+  }
+
+  TranslationInput._();
+
+  factory TranslationInput.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TranslationInput.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranslationInput',
+      package: const $pb.PackageName(
+          _omitMessageNames ? '' : 'sparkle.inference.v1'),
+      createEmptyInstance: create)
+    ..pPM<TranslationSegment>(1, _omitFieldNames ? '' : 'segments',
+        subBuilder: TranslationSegment.create)
+    ..aOS(2, _omitFieldNames ? '' : 'sourceLang')
+    ..aOS(3, _omitFieldNames ? '' : 'targetLang')
+    ..aOS(4, _omitFieldNames ? '' : 'domain')
+    ..aOS(5, _omitFieldNames ? '' : 'style')
+    ..aOS(6, _omitFieldNames ? '' : 'glossaryId')
+    ..aOS(7, _omitFieldNames ? '' : 'segmenterVersion')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationInput clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationInput copyWith(void Function(TranslationInput) updates) =>
+      super.copyWith((message) => updates(message as TranslationInput))
+          as TranslationInput;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TranslationInput create() => TranslationInput._();
+  @$core.override
+  TranslationInput createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TranslationInput getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TranslationInput>(create);
+  static TranslationInput? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<TranslationSegment> get segments => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.String get sourceLang => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set sourceLang($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSourceLang() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSourceLang() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get targetLang => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set targetLang($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTargetLang() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTargetLang() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get domain => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set domain($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDomain() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDomain() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get style => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set style($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStyle() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStyle() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get glossaryId => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set glossaryId($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasGlossaryId() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearGlossaryId() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get segmenterVersion => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set segmenterVersion($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasSegmenterVersion() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearSegmenterVersion() => $_clearField(7);
+}
+
+class AlignmentSpan extends $pb.GeneratedMessage {
+  factory AlignmentSpan({
+    $core.int? sourceStart,
+    $core.int? sourceEnd,
+    $core.int? targetStart,
+    $core.int? targetEnd,
+    $core.String? type,
+  }) {
+    final result = create();
+    if (sourceStart != null) result.sourceStart = sourceStart;
+    if (sourceEnd != null) result.sourceEnd = sourceEnd;
+    if (targetStart != null) result.targetStart = targetStart;
+    if (targetEnd != null) result.targetEnd = targetEnd;
+    if (type != null) result.type = type;
+    return result;
+  }
+
+  AlignmentSpan._();
+
+  factory AlignmentSpan.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory AlignmentSpan.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AlignmentSpan',
+      package: const $pb.PackageName(
+          _omitMessageNames ? '' : 'sparkle.inference.v1'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'sourceStart')
+    ..aI(2, _omitFieldNames ? '' : 'sourceEnd')
+    ..aI(3, _omitFieldNames ? '' : 'targetStart')
+    ..aI(4, _omitFieldNames ? '' : 'targetEnd')
+    ..aOS(5, _omitFieldNames ? '' : 'type')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AlignmentSpan clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AlignmentSpan copyWith(void Function(AlignmentSpan) updates) =>
+      super.copyWith((message) => updates(message as AlignmentSpan))
+          as AlignmentSpan;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static AlignmentSpan create() => AlignmentSpan._();
+  @$core.override
+  AlignmentSpan createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static AlignmentSpan getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AlignmentSpan>(create);
+  static AlignmentSpan? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get sourceStart => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set sourceStart($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSourceStart() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSourceStart() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get sourceEnd => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set sourceEnd($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSourceEnd() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSourceEnd() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get targetStart => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set targetStart($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTargetStart() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTargetStart() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get targetEnd => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set targetEnd($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTargetEnd() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTargetEnd() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get type => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set type($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasType() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearType() => $_clearField(5);
+}
+
+class TranslatedSegment extends $pb.GeneratedMessage {
+  factory TranslatedSegment({
+    $core.String? id,
+    $core.String? translation,
+    $core.Iterable<$core.String>? notes,
+    $core.Iterable<AlignmentSpan>? spans,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (translation != null) result.translation = translation;
+    if (notes != null) result.notes.addAll(notes);
+    if (spans != null) result.spans.addAll(spans);
+    return result;
+  }
+
+  TranslatedSegment._();
+
+  factory TranslatedSegment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TranslatedSegment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranslatedSegment',
+      package: const $pb.PackageName(
+          _omitMessageNames ? '' : 'sparkle.inference.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'translation')
+    ..pPS(3, _omitFieldNames ? '' : 'notes')
+    ..pPM<AlignmentSpan>(4, _omitFieldNames ? '' : 'spans',
+        subBuilder: AlignmentSpan.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslatedSegment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslatedSegment copyWith(void Function(TranslatedSegment) updates) =>
+      super.copyWith((message) => updates(message as TranslatedSegment))
+          as TranslatedSegment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TranslatedSegment create() => TranslatedSegment._();
+  @$core.override
+  TranslatedSegment createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TranslatedSegment getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TranslatedSegment>(create);
+  static TranslatedSegment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get translation => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set translation($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTranslation() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTranslation() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get notes => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<AlignmentSpan> get spans => $_getList(3);
+}
+
+class TranslationOutput extends $pb.GeneratedMessage {
+  factory TranslationOutput({
+    $core.Iterable<TranslatedSegment>? segments,
+    $core.String? provider,
+    $core.String? modelId,
+    $core.bool? cacheHit,
+    $core.int? latencyMs,
+  }) {
+    final result = create();
+    if (segments != null) result.segments.addAll(segments);
+    if (provider != null) result.provider = provider;
+    if (modelId != null) result.modelId = modelId;
+    if (cacheHit != null) result.cacheHit = cacheHit;
+    if (latencyMs != null) result.latencyMs = latencyMs;
+    return result;
+  }
+
+  TranslationOutput._();
+
+  factory TranslationOutput.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TranslationOutput.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranslationOutput',
+      package: const $pb.PackageName(
+          _omitMessageNames ? '' : 'sparkle.inference.v1'),
+      createEmptyInstance: create)
+    ..pPM<TranslatedSegment>(1, _omitFieldNames ? '' : 'segments',
+        subBuilder: TranslatedSegment.create)
+    ..aOS(2, _omitFieldNames ? '' : 'provider')
+    ..aOS(3, _omitFieldNames ? '' : 'modelId')
+    ..aOB(4, _omitFieldNames ? '' : 'cacheHit')
+    ..aI(5, _omitFieldNames ? '' : 'latencyMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationOutput clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranslationOutput copyWith(void Function(TranslationOutput) updates) =>
+      super.copyWith((message) => updates(message as TranslationOutput))
+          as TranslationOutput;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TranslationOutput create() => TranslationOutput._();
+  @$core.override
+  TranslationOutput createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TranslationOutput getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TranslationOutput>(create);
+  static TranslationOutput? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<TranslatedSegment> get segments => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.String get provider => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set provider($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasProvider() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearProvider() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get modelId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set modelId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasModelId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearModelId() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get cacheHit => $_getBF(3);
+  @$pb.TagNumber(4)
+  set cacheHit($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCacheHit() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCacheHit() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get latencyMs => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set latencyMs($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLatencyMs() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLatencyMs() => $_clearField(5);
 }
 
 const $core.bool _omitFieldNames =

@@ -1,24 +1,23 @@
 import 'package:flutter/foundation.dart';
-import 'package:opentelemetry/api.dart' show Span;
 
 import 'package:sparkle/core/tracing/tracing_service_impl_io.dart'
     if (dart.library.html) 'tracing_service_impl_web.dart';
+
+/// Simplified Span class for tracing (replaces OpenTelemetry Span)
+class Span {
+  Span(this.name);
+  final String name;
+  void end() {}
+  void recordException(Object error, {StackTrace? stackTrace}) {}
+  void setStatus(Object status, String description) {}
+  void setAttribute(String key, Object value) {}
+}
 
 abstract class TracingServiceBase {
   Future<void> initialize({Uri? collectorUri});
   Span startSpan(String name);
   String createTraceId({String spanName = 'trace.generate'});
   void recordException(Span span, Object error, StackTrace stackTrace);
-}
-
-// 简化的Span类替代
-class MockSpan {
-  MockSpan(this.name);
-  final String name;
-  void end() {} // 空实现
-  void recordException(Object error, {StackTrace? stackTrace}) {} // 空实现
-  void setStatus(Object status, String description) {} // 空实现
-  void setAttribute(String key, Object value) {} // 空实现
 }
 
 class TracingService {

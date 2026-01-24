@@ -59,7 +59,7 @@ class LocalTranslationRepository {
     int rating = 3,
     bool isFavorited = false,
   }) async {
-    final record = TranslationRecord.create(
+    final record = TranslationRecordExtension.create(
       originalText: originalText,
       translatedText: translatedText,
       sourceLanguage: sourceLanguage,
@@ -78,39 +78,37 @@ class LocalTranslationRepository {
     int limit = 100,
     int offset = 0,
   }) async {
-    final query = _buildFilterQuery(filter);
-
     List<TranslationRecord> records;
 
     switch (sortOrder) {
       case TranslationSortOrder.newestFirst:
-        records = await query
+        records = await _buildFilterQuery(filter)
             .sortByCreatedAtDesc()
             .offset(offset)
             .limit(limit)
             .findAll();
-        case TranslationSortOrder.oldestFirst:
-        records = await query
+      case TranslationSortOrder.oldestFirst:
+        records = await _buildFilterQuery(filter)
             .sortByCreatedAt()
             .offset(offset)
             .limit(limit)
             .findAll();
       case TranslationSortOrder.highestRating:
-        records = await query
+        records = await _buildFilterQuery(filter)
             .sortByRatingDesc()
             .thenByCreatedAtDesc()
             .offset(offset)
             .limit(limit)
             .findAll();
       case TranslationSortOrder.lowestRating:
-        records = await query
+        records = await _buildFilterQuery(filter)
             .sortByRating()
             .thenByCreatedAtDesc()
             .offset(offset)
             .limit(limit)
             .findAll();
       case TranslationSortOrder.mostViewed:
-        records = await query
+        records = await _buildFilterQuery(filter)
             .sortByViewCountDesc()
             .thenByCreatedAtDesc()
             .offset(offset)
@@ -121,8 +119,8 @@ class LocalTranslationRepository {
     return records.map(_toHistoryItem).toList();
   }
 
-  /// Build query based on filter
-  Query<TranslationRecord> _buildFilterQuery(TranslationFilter filter) {
+  /// Build query based on filter - returns the collection filter builder
+  _buildFilterQuery(TranslationFilter filter) {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
 
@@ -134,7 +132,7 @@ class LocalTranslationRepository {
       case TranslationFilter.highRating:
         return _collection
             .filter()
-            .ratingGreaterThanEqual(4);
+            .ratingGreaterThan(4);
       case TranslationFilter.recent:
         return _collection
             .filter()
@@ -209,11 +207,11 @@ class LocalTranslationRepository {
   Future<Map<String, int>> getStatistics() async {
     final total = await _collection.count();
     final favorites = await _collection.filter().isFavoritedEqualTo(true).count();
-    final highRated = await _collection.filter().ratingGreaterThanOrEqualTo(4).count();
+    final highRated = await _collection.filter().ratingGreaterThan(3).count();
 
     // Get total views
-    final records = await _collection.findAll();
-    final totalViews = records.fold(0, (sum, r) => sum + r.viewCount);
+    final records = await _collection.where().findAll();
+    final totalViews = records.fold<int>(0, (sum, r) => sum + r.viewCount);
 
     return {
       'total': total,
