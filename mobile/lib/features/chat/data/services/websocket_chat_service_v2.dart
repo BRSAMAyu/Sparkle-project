@@ -12,6 +12,19 @@ import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+bool _isTrue(dynamic value) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is String) {
+    return value.toLowerCase() == 'true';
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  return false;
+}
+
 /// Parse JSON event in isolate to avoid blocking main thread
 ChatStreamEvent _parseChatEvent(String jsonString) {
   try {
@@ -37,7 +50,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         final metadata = data['metadata'] as Map<String, dynamic>?;
 
         // Check if this delta contains plan review data
-        if (metadata != null && metadata['requires_review'] == true) {
+        if (metadata != null && _isTrue(metadata['requires_review'])) {
           final reviewData = metadata['review_data'] as Map<String, dynamic>?;
           return PlanReviewWidgetEvent(
             reviewData: reviewData ?? metadata,

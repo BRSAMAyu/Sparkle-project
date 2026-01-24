@@ -401,7 +401,10 @@ async def complete_task(
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
             "unlocked_achievements": unlocked_achievements,
         },
-        "next_actions": [action.model_dump() for action in next_actions],
+        "next_actions": [
+            action.model_dump() if hasattr(action, "model_dump") else action
+            for action in next_actions
+        ],
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
         "retry_token": x_idempotency_key or "generated-token"
     }
@@ -520,4 +523,3 @@ async def get_user_feedback_stats(
             ],
         }
     }
-
