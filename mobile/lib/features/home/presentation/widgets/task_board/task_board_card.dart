@@ -140,7 +140,7 @@ class TaskBoardCard extends ConsumerWidget {
               icon: Icons.warning_rounded,
               title: '逾期任务',
               description: '红色高亮显示已逾期的任务',
-              color: DS.error,
+              color: DS.semanticError,
             ),
           ],
         ),

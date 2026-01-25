@@ -75,6 +75,9 @@ Map<String, dynamic> _$PlanCreateToJson(PlanCreate instance) =>
 PlanUpdate _$PlanUpdateFromJson(Map<String, dynamic> json) => PlanUpdate(
       name: json['name'] as String?,
       description: json['description'] as String?,
+      targetDate: json['target_date'] == null
+          ? null
+          : DateTime.parse(json['target_date'] as String),
       dailyAvailableMinutes: (json['daily_available_minutes'] as num?)?.toInt(),
       isActive: json['is_active'] as bool?,
     );
@@ -83,6 +86,7 @@ Map<String, dynamic> _$PlanUpdateToJson(PlanUpdate instance) =>
     <String, dynamic>{
       'name': instance.name,
       'description': instance.description,
+      'target_date': instance.targetDate?.toIso8601String(),
       'daily_available_minutes': instance.dailyAvailableMinutes,
       'is_active': instance.isActive,
     };

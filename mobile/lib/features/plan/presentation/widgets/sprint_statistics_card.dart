@@ -291,7 +291,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                         final date = recentProgress[index].date;
                         return Text(
                           '${date.month}/${date.day}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 8,
                             color: DS.textSecondary,
                           ),
@@ -331,13 +331,13 @@ class SprintStatisticsCard extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),
           Text(
             value,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: color,
               fontWeight: FontWeight.w500,
             ),

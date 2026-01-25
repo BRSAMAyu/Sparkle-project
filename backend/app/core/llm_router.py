@@ -125,26 +125,38 @@ class LLMRouter:
             ),
 
             # ===== Zhipu GLM (标准 + 推理) =====
-            # GLM-4.7 默认开启思考模式，clear_thinking=False 开启保留式思考
+            # GLM-4.7 非思考模式 - 用于 STANDARD 任务（快速响应）
             "zhipu_chat": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=False,  # 开启保留式思考，保持推理连续性
+                clear_thinking=True,  # 关闭思考模式，用于标准任务的快速响应
                 tier=ModelTier.STANDARD,
                 cost_per_1k_tokens=0.001,
-                avg_latency_ms=600,
+                avg_latency_ms=400,
             ),
-            # GLM-4.7-FlashX 快速响应模型
+            # GLM-4.7 思考模式 - 用于 REASONING 任务（深度推理）
+            "zhipu_reason": ModelConfig(
+                provider=ModelProvider.ZHIPU,
+                model_name=settings.ZHIPU_CHAT_MODEL,
+                base_url=settings.ZHIPU_BASE_URL,
+                api_key=settings.ZHIPU_API_KEY,
+                temperature=settings.ZHIPU_TEMPERATURE,
+                clear_thinking=False,  # 开启保留式思考，保持推理连续性
+                tier=ModelTier.REASONING,
+                cost_per_1k_tokens=0.002,
+                avg_latency_ms=1500,
+            ),
+            # GLM-4.7-FlashX 快速响应模型（非思考模式）
             "zhipu_flash": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_FLASH_MODEL,
                 base_url=settings.ZHIPU_BASE_URL,
                 api_key=settings.ZHIPU_API_KEY,
                 temperature=settings.ZHIPU_TEMPERATURE,
-                clear_thinking=False,
+                clear_thinking=True,  # 关闭思考模式，极速响应
                 tier=ModelTier.FAST,
                 cost_per_1k_tokens=0.0001,
                 avg_latency_ms=150,
@@ -186,12 +198,13 @@ class LLMRouter:
         self._available_models = configs
 
         # 按tier分组（优先级从高到低）
-        # GLM-4.7 支持默认思考模式和交错式思考，适合作为 Standard 和 Reasoning 首选
-        # GLM-4.7-FlashX 作为快速响应备用选项
+        # - STANDARD: 使用非思考模式 GLM-4.7，快速响应
+        # - REASONING: 使用思考模式 GLM-4.7，深度推理
+        # - FAST: 使用非思考模式 GLM-4.7-FlashX，极速响应
         self._tier_mapping = {
             ModelTier.FAST: ["xiaomi_chat", "zhipu_flash"],
             ModelTier.STANDARD: ["zhipu_chat", "deepseek_chat", "dashscope_chat"],
-            ModelTier.REASONING: ["zhipu_chat", "deepseek_reason", "dashscope_reason"],
+            ModelTier.REASONING: ["zhipu_reason", "deepseek_reason", "dashscope_reason"],
         }
 
         # 注册到agent_profile_registry

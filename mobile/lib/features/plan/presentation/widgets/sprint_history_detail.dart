@@ -18,7 +18,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: DS.surfacePrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(DS.spacing20),
@@ -335,13 +335,13 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),
           Text(
             value,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textPrimary,
             ),
           ),
