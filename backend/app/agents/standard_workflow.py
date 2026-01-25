@@ -23,6 +23,16 @@ from app.agents.enhanced_agents import EnhancedAgentContext
 from app.core.pending_actions import pending_actions_store
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 
+# Phase 1: Review System
+from app.agents.graph.nodes.review_nodes import (
+    generation_review_node,
+    execution_review_node,
+    reflection_node,
+    route_after_generation_review,
+    route_after_reflection,
+    route_after_execution_review,
+)
+
 # ==========================================
 # Nodes
 # ==========================================
@@ -787,6 +797,9 @@ async def tool_planning_node(state: WorkflowState) -> WorkflowState:
 def create_standard_chat_graph() -> StateGraph:
     graph = StateGraph("StandardChat")
 
+    # ==========================
+    # 添加所有节点
+    # ==========================
     graph.add_node("context_builder", context_builder_node)
     graph.add_node("retrieval", retrieval_node)
     graph.add_node("router", router_node)
@@ -794,10 +807,20 @@ def create_standard_chat_graph() -> StateGraph:
     graph.add_node("collaboration_post_process", collaboration_post_process_node)
     graph.add_node("tool_planning", tool_planning_node)
     graph.add_node("generation", generation_node)
+
+    # ==========================
+    # Phase 1: 审查节点
+    # ==========================
+    graph.add_node("generation_review", generation_review_node)
+    graph.add_node("reflection", reflection_node)
     graph.add_node("tool_execution", tool_execution_node)
+    graph.add_node("execution_review", execution_review_node)
 
     graph.set_entry_point("context_builder")
 
+    # ==========================
+    # 基础流程边
+    # ==========================
     graph.add_edge("context_builder", "retrieval")
     graph.add_edge("retrieval", "router")
 
@@ -835,14 +858,76 @@ def create_standard_chat_graph() -> StateGraph:
     # Tool planning analyzes intent and sequences tools
     graph.add_edge("tool_planning", "generation")
 
-    # Generation node decides if tools or end
+    # ==========================
+    # Phase 1: 审查流程集成
+    # ==========================
+
+    # Generation → generation_review (所有生成内容都经过审查)
     def generation_router(state: WorkflowState) -> str:
-        return state.next_step or "__end__"
+        # 生成后默认进入审查
+        state.next_step = "generation_review"
+        return "generation_review"
 
     graph.add_conditional_edge("generation", generation_router)
 
-    # Tool execution loops back to generation (to interpret results)
-    graph.add_edge("tool_execution", "generation")
+    # generation_review的条件路由
+    # - passed + has_tools → tool_execution
+    # - passed + no_tools → __end__
+    # - failed + requires_reflection → reflection
+    # - failed → __end__ (或user_approval)
+    def generation_review_condition(state: WorkflowState) -> str:
+        next_step = state.next_step or "__end__"
+
+        # 如果有工具调用需要执行
+        if state.context_data.get("tool_calls") and next_step != "reflection":
+            return "tool_execution"
+
+        if next_step == "reflection":
+            return "reflection"
+
+        return "__end__"
+
+    graph.add_conditional_edge("generation_review", generation_review_condition)
+
+    # reflection的条件路由
+    # - passed + has_tools → tool_execution
+    # - passed + no_tools → __end__
+    # - continue_reflection → reflection (递归)
+    # - failed → __end__
+    def reflection_condition(state: WorkflowState) -> str:
+        next_step = state.next_step or "__end__"
+        reflection_round = state.context_data.get("review_context", {}).get("reflection_round", 0)
+        MAX_ROUNDS = 3
+
+        # 检查是否超过最大轮次
+        if reflection_round >= MAX_ROUNDS:
+            if state.context_data.get("tool_calls"):
+                return "tool_execution"
+            return "__end__"
+
+        if next_step == "reflection":
+            return "reflection"
+
+        if state.context_data.get("tool_calls") and state.context_data.get("reflection_completed"):
+            return "tool_execution"
+
+        return "__end__"
+
+    graph.add_conditional_edge("reflection", reflection_condition)
+
+    # Tool execution → execution_review
+    graph.add_edge("tool_execution", "execution_review")
+
+    # execution_review的条件路由
+    # - 需要解释结果 → generation
+    # - 否则 → __end__
+    def execution_review_condition(state: WorkflowState) -> str:
+        next_step = state.next_step or "__end__"
+        if next_step == "generation":
+            return "generation"
+        return "__end__"
+
+    graph.add_conditional_edge("execution_review", execution_review_condition)
 
     return graph
 

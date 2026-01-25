@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -24,6 +25,39 @@ class TaskBoardState {
   final String? selectedPlanId;
   final SprintTaskFilter sprintFilter;
 
+  /// Serialize state to JSON for persistence
+  Map<String, dynamic> toJson() {
+    return {
+      'currentView': currentView.name,
+      'expandedTaskIds': expandedTaskIds.toList(),
+      'selectedPlanId': selectedPlanId,
+      'sprintFilter': sprintFilter.name,
+    };
+  }
+
+  /// Create state from JSON (for persistence)
+  static TaskBoardState? fromJson(Map<String, dynamic> json) {
+    try {
+      return TaskBoardState(
+        currentView: TaskViewMode.values.firstWhere(
+          (e) => e.name == json['currentView'],
+          orElse: () => TaskViewMode.schedule,
+        ),
+        expandedTaskIds: (json['expandedTaskIds'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toSet() ??
+            const {},
+        selectedPlanId: json['selectedPlanId'] as String?,
+        sprintFilter: SprintTaskFilter.values.firstWhere(
+          (e) => e.name == json['sprintFilter'],
+          orElse: () => SprintTaskFilter.all,
+        ),
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   TaskBoardState copyWith({
     TaskViewMode? currentView,
     Set<String>? expandedTaskIds,
@@ -38,9 +72,17 @@ class TaskBoardState {
       );
 }
 
-/// Task board notifier
-class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
-  TaskBoardNotifier(this._ref) : super(TaskBoardState()) {
+/// Task board notifier with persistence
+class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
+  TaskBoardNotifier(this._ref)
+      : super(
+          _ref,
+          namespace: 'task_board',
+          key: 'state',
+          defaultValue: TaskBoardState(),
+          toJson: (s) => s.toJson(),
+          fromJson: (j) => TaskBoardState.fromJson(j),
+        ) {
     // Initialize default view based on sprint status
     _initializeDefaultView();
   }
@@ -49,11 +91,14 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
 
   void _initializeDefaultView() {
     final dashboardState = _ref.read(dashboardProvider);
-    // If sprint is active, default to sprint view
+    // If sprint is active, default to sprint view (only if currently on schedule)
     final defaultView = dashboardState.sprint != null
         ? TaskViewMode.sprint
         : TaskViewMode.schedule;
-    state = TaskBoardState(currentView: defaultView);
+    // Only update if state is still default (schedule view)
+    if (state.currentView == TaskViewMode.schedule && defaultView == TaskViewMode.sprint) {
+      state = state.copyWith(currentView: defaultView);
+    }
   }
 
   void switchView(TaskViewMode view) {
@@ -91,7 +136,7 @@ class TaskBoardNotifier extends StateNotifier<TaskBoardState> {
   }
 
   void clearPlanSelection() {
-    state = state.copyWith();
+    state = state.copyWith(selectedPlanId: null);
   }
 
   void collapseAll() {
