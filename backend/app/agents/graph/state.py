@@ -34,6 +34,28 @@ class ReviewFeedbackSource(str, Enum):
     REVIEWER_AGENT = "reviewer_agent"
 
 
+# ============================================
+# Review System Enums (Phase 1: 全流程审查系统)
+# ============================================
+
+class ReviewStatus(str, Enum):
+    """审查状态 (Review Status)"""
+    PENDING = "pending"           # 等待审查
+    IN_PROGRESS = "in_progress"   # 审查中
+    PASSED = "passed"             # 通过审查
+    FAILED = "failed"             # 未通过审查
+    REFLECTING = "reflecting"     # 自我反思修正中
+    SKIPPED = "skipped"           # 跳过审查（轻量级模式）
+
+
+class ReviewTargetType(str, Enum):
+    """审查目标类型"""
+    LLM_RESPONSE = "llm_response"  # LLM生成的响应
+    PLAN = "plan"                  # 执行计划
+    TOOL_RESULT = "tool_result"    # 工具执行结果
+    COLLABORATION = "collaboration"  # 协作结果
+
+
 class PlanContext(TypedDict, total=False):
     """计划上下文 (用于多计划并行)"""
     plan_id: str
@@ -47,6 +69,30 @@ class ReviewFeedback(TypedDict, total=False):
     decision: ReviewDecisionType  # Now typed with Enum
     comments: str
     modified_plan: Optional[Dict[str, Any]]
+
+
+class ReviewContext(TypedDict, total=False):
+    """审查上下文 (Review Context) - Phase 1 全流程审查系统"""
+    review_id: str                          # 审查ID
+    status: ReviewStatus                    # 审查状态
+    target_type: ReviewTargetType           # 目标类型
+    result: Optional[Dict[str, Any]]        # 审查结果 (ReviewResult.to_dict())
+    reflection_round: int                   # 反思修正轮次
+    reviewer_model: str                     # 审查使用的模型
+    original_content: Optional[str]         # 原始内容（用于反思修正）
+    reviewed_content: Optional[str]         # 审查后的内容
+
+
+class ReviewHistoryEntry(TypedDict, total=False):
+    """审查历史条目 - 用于学习和优化"""
+    review_id: str                          # 审查ID
+    timestamp: str                          # 审查时间
+    target_type: ReviewTargetType           # 目标类型
+    decision: str                           # 审查决策
+    overall_score: float                    # 总体评分
+    issues_count: int                       # 问题数量
+    user_satisfied: Optional[bool]          # 用户是否满意（用于学习）
+
 
 class SparkleState(TypedDict):
     """
@@ -111,3 +157,18 @@ class SparkleState(TypedDict):
     # 6. 错误处理 (Error Handling)
     # ==========================
     error: Optional[str]
+
+    # ==========================
+    # 7. 审查系统 (Review System) - Phase 1 全流程审查
+    # ==========================
+    # 当前审查上下文
+    review_context: Optional[ReviewContext]
+
+    # 审查历史（用于学习和优化）
+    review_history: Annotated[List[ReviewHistoryEntry], operator.add]
+
+    # 是否启用深度审查（可由用户或系统动态控制）
+    enable_deep_review: bool
+
+    # 审查配置
+    review_config: Optional[Dict[str, Any]]  # 如：thresholds, skip_patterns等

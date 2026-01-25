@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -185,6 +186,67 @@ final taskCalendarProvider =
   final taskRepository = ref.watch(taskRepositoryProvider);
   return TaskCalendarNotifier(taskRepository);
 });
+
+/// Selected calendar date provider with persistence
+///
+/// Persists the user's selected date in the calendar view.
+final selectedCalendarDateProvider =
+    StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>((ref) {
+  return SelectedCalendarDateNotifier();
+});
+
+/// Notifier for the selected calendar date
+class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {
+  SelectedCalendarDateNotifier()
+      : super(
+          namespace: 'calendar',
+          key: 'selected_date',
+          defaultValue: DateTime.now(),
+          serializer: (date) => date.toIso8601String(),
+          deserializer: (isoString) {
+            if (isoString == null || isoString.isEmpty) {
+              return DateTime.now();
+            }
+            try {
+              return DateTime.parse(isoString);
+            } catch (e) {
+              return DateTime.now();
+            }
+          },
+        );
+
+  /// Select a specific date (normalized to midnight)
+  void selectDate(DateTime date) {
+    // Normalize to midnight for consistent comparisons
+    final normalized = DateTime(date.year, date.month, date.day);
+    state = normalized;
+  }
+
+  /// Go to today
+  void goToToday() {
+    state = DateTime.now();
+  }
+
+  /// Navigate by days
+  void addDays(int days) {
+    final newDate = DateTime(
+      state.year,
+      state.month,
+      state.day + days,
+    );
+    state = newDate;
+  }
+
+  /// Navigate by months
+  void addMonths(int months) {
+    final newDate = DateTime(
+      state.year,
+      state.month + months,
+      state.day,
+    );
+    state = newDate;
+  }
+}
 
 /// Provider for tasks on a specific day
 /// Returns tasks for the given date, sorted by priority (highest first)

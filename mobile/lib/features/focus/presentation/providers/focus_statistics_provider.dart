@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
+import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/features/focus/data/models/focus_session_model.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_statistics_repository.dart';
@@ -164,14 +165,27 @@ class FocusStatistics extends _$FocusStatistics {
     _localRepo = FocusStatisticsRepository(db.isar);
     _apiRepo = ref.read(focusRepositoryProvider);
 
-    // Load initial data
-    loadTodayStats();
+    // Get the persisted period
+    final persistedPeriod = ref.watch(statsViewPeriodProvider);
 
-    return const FocusStatisticsState();
+    // Load initial data based on persisted period
+    switch (persistedPeriod) {
+      case StatsViewPeriod.today:
+        loadTodayStats();
+      case StatsViewPeriod.week:
+        loadWeeklyStats();
+      case StatsViewPeriod.month:
+        loadMonthlyStats();
+    }
+
+    return FocusStatisticsState(period: persistedPeriod);
   }
 
   /// Set the view period
   void setPeriod(StatsViewPeriod newPeriod) {
+    // Update the persisted period
+    ref.read(statsViewPeriodProvider.notifier).setValue(newPeriod);
+
     state = state.copyWith(period: newPeriod);
 
     switch (newPeriod) {
@@ -472,4 +486,23 @@ class FocusStatistics extends _$FocusStatistics {
 FocusStatisticsRepository localStatisticsRepo(Ref ref) {
   final db = ref.watch(localDatabaseProvider);
   return FocusStatisticsRepository(db.isar);
+}
+
+/// Stats view period provider with persistence
+///
+/// Persists the user's selected statistics view period (today/week/month).
+final statsViewPeriodProvider =
+    StateNotifierProvider<StatsViewPeriodNotifier, StatsViewPeriod>((ref) {
+  return StatsViewPeriodNotifier();
+});
+
+/// Notifier for the stats view period
+class StatsViewPeriodNotifier extends EnumPersistentNotifier<StatsViewPeriod> {
+  StatsViewPeriodNotifier()
+      : super(
+          namespace: 'focus_statistics',
+          key: 'view_period',
+          defaultValue: StatsViewPeriod.today,
+          values: StatsViewPeriod.values,
+        );
 }

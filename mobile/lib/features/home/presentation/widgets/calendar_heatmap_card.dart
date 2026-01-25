@@ -130,7 +130,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: _getColorForLevel(context, level),
+          color: _HeatmapColor.forLevel(context, level),
           borderRadius: BorderRadius.circular(2),
         ),
       );
@@ -235,16 +235,6 @@ class CalendarHeatmapCard extends ConsumerWidget {
   void _handleDateTap(WidgetRef ref, DateTime date) {
     ref.read(calendarPreviewProvider.notifier).selectDate(date);
   }
-
-  Color _getColorForLevel(BuildContext context, int level) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? DS.brandPrimary : DS.brandPrimary;
-    final alphaValues = isDark
-        ? [0.15, 0.35, 0.55, 0.75, 1.0]
-        : [0.2, 0.4, 0.6, 0.8, 1.0];
-    final safeIndex = level.clamp(0, alphaValues.length - 1);
-    return baseColor.withValues(alpha: alphaValues[safeIndex]);
-  }
 }
 
 /// Individual day cell in the calendar grid
@@ -273,9 +263,9 @@ class _DayCell extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: _getColorForLevel(context, intensity),
+          color: _HeatmapColor.forLevel(context, intensity),
           borderRadius: BorderRadius.circular(4),
-          border: _buildBorder(context),
+          border: _buildBorder(),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -301,7 +291,7 @@ class _DayCell extends StatelessWidget {
     );
   }
 
-  Border? _buildBorder(BuildContext context) {
+  Border? _buildBorder() {
     if (isSelected) {
       return Border.all(
         color: DS.brandPrimary.withValues(alpha: 0.9),
@@ -315,15 +305,5 @@ class _DayCell extends StatelessWidget {
       );
     }
     return null;
-  }
-
-  Color _getColorForLevel(BuildContext context, int level) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? DS.brandPrimary : DS.brandPrimary;
-    final alphaValues = isDark
-        ? [0.15, 0.35, 0.55, 0.75, 1.0]
-        : [0.2, 0.4, 0.6, 0.8, 1.0];
-    final safeIndex = level.clamp(0, alphaValues.length - 1);
-    return baseColor.withValues(alpha: alphaValues[safeIndex]);
   }
 }
