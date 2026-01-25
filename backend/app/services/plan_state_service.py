@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from loguru import logger
@@ -366,7 +366,7 @@ class PlanStateService:
         task_id: UUID,
         task_type: str,
         actual_minutes: Optional[int] = None,
-    ) -> Optional[PlanState]:
+    ) -> Tuple[Optional[PlanState], List[Dict[str, Any]]]:
         """
         Handle task completion event.
 
@@ -380,7 +380,7 @@ class PlanStateService:
             actual_minutes: Actual time spent
 
         Returns:
-            Updated PlanState
+            Tuple of (Updated PlanState, List of new milestones)
         """
         state = await self.get_or_create_plan_state(user_id, plan_id)
 
@@ -418,7 +418,7 @@ class PlanStateService:
         new_milestones = self._check_milestone_triggers(task_index, milestones)
 
         # Apply updates
-        return await self.upsert_plan_state(
+        updated_state = await self.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,
             patch={
@@ -428,6 +428,27 @@ class PlanStateService:
             },
             bump_version=True,
         )
+        return updated_state, new_milestones
+
+    async def on_milestone_triggered(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        milestone: Dict[str, Any],
+        pending_task_count: int,
+    ) -> None:
+        """
+        Handle milestone trigger event.
+        
+        Args:
+            user_id: User ID
+            plan_id: Plan ID
+            milestone: The milestone data
+            pending_task_count: Number of pending tasks
+        """
+        # This is a hook for future state updates related to milestones
+        # e.g. recording the event in a timeline or history
+        logger.info(f"Milestone triggered: {milestone.get('id')} for plan {plan_id}")
 
     async def on_task_created(
         self,

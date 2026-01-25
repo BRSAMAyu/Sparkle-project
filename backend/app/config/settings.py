@@ -322,6 +322,11 @@ class Settings(BaseSettings):
     RERANK_TIMEOUT_SECONDS: float = 2.5
     ENABLE_REDIS_HYBRID_FALLBACK: bool = False
 
+    # Plan Quota Settings (并行计划数限制)
+    PLAN_QUOTA_DEFAULT: int = 3           # 免费用户默认3个活跃计划
+    PLAN_QUOTA_PREMIUM: int = 10          # 付费用户10个活跃计划
+    PLAN_QUOTA_UNLIMITED: int = -1        # 无限制 (特殊用户)
+
     # Event Retention
     EVENT_RETENTION_DAYS: int = 30
     STATE_RETENTION_DAYS: int = 30

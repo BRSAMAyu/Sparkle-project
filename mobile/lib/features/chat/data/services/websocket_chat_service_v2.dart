@@ -371,6 +371,25 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           promptVersion: promptVersion,
         );
 
+      case 'milestone_proposal':
+        final proposalData = data['proposal'] as Map<String, dynamic>?;
+        if (proposalData != null) {
+          return MilestoneProposalEvent(
+            proposalData: proposalData,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
+        return UnknownEvent(
+          data: data,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+        );
+
       default:
         final finishReason = data['finish_reason'] as String?;
         if (finishReason != null && finishReason != 'NULL') {

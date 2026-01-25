@@ -16,7 +16,7 @@ from app.services.user_service import UserService
 from app.services.focus_service import focus_service
 from app.models.task import Task, TaskStatus as ModelTaskStatus
 from app.models.plan import Plan
-from sqlalchemy import select, and_, desc, asc
+from sqlalchemy import select, and_, desc, asc, func
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.state_manager import SessionStateManager, FSMState
@@ -229,7 +229,14 @@ class ChatOrchestrator:
         # Plan Review Service
         plan_review_service.set_redis(redis_client)
 
-        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview")
+        # Phase 3: Version Conflict Service (P1 enhancement)
+        from app.orchestration.version_conflict_service import VersionConflictService
+        self.version_conflict_service = VersionConflictService(
+            redis=redis_client,
+            planner=self.lang_graph_planner,
+        )
+
+        logger.info("ChatOrchestrator initialized with Phase 3 components: CircuitBreaker, Observability, ShadowMode, PlanReview, VersionConflict")
 
         # Ensure tools are registered
         self._ensure_tools_registered()
@@ -483,6 +490,46 @@ class ChatOrchestrator:
         logger.debug(f"Merged context keys: {list(merged.keys())}")
         return merged
 
+    async def _get_task_status_summary(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
+        """Get summary of all tasks for user across all plans."""
+        try:
+            # Pending count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.PENDING
+                )
+            )
+            pending = result.scalar() or 0
+            
+            # In progress count
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status == ModelTaskStatus.IN_PROGRESS
+                )
+            )
+            in_progress = result.scalar() or 0
+            
+            # Overdue count (pending/in_progress and due_date < now)
+            result = await db_session.execute(
+                select(func.count(Task.id)).where(
+                    Task.user_id == uuid.UUID(user_id),
+                    Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
+                    Task.due_date < datetime.utcnow()
+                )
+            )
+            overdue = result.scalar() or 0
+            
+            return {
+                "pending": pending,
+                "in_progress": in_progress,
+                "overdue": overdue
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get task status summary: {e}")
+            return {"pending": 0, "in_progress": 0, "overdue": 0}
+
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> Dict[str, Any]:
         """
         Build comprehensive user context from UserService
@@ -495,6 +542,9 @@ class ChatOrchestrator:
             user_service = UserService(db_session, self.redis)
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
+
+            # P1: Task Status Summary
+            task_status_summary = await self._get_task_status_summary(user_id, db_session)
 
             llm_profile_data = None
             preference_version = 0
@@ -570,6 +620,7 @@ class ChatOrchestrator:
                     "focus_stats": cognitive_context.focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                     
                     # New field for full context injection
                     "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'})
@@ -651,6 +702,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
             else:
                 # Fallback to basic context
@@ -664,6 +716,7 @@ class ChatOrchestrator:
                     "focus_stats": focus_stats,
                     "preference_version": preference_version,
                     "llm_profile": llm_profile_data,
+                    "task_status_summary": task_status_summary,
                 }
 
         except Exception as e:
@@ -879,6 +932,33 @@ class ChatOrchestrator:
                     except (ValueError, AttributeError):
                         pass
 
+                # P0: Auto-switch plan based on task context if no plan_id provided
+                plan_switched = False
+                if not plan_id and user_message and active_db:
+                    with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
+                        try:
+                            from app.services.plan_matching_service import PlanMatchingService
+                            plan_matching = PlanMatchingService(active_db)
+
+                            # Try to match the message to a plan
+                            matched_plan_id = await self.session_state.auto_switch_plan(
+                                session_id=session_id,
+                                user_id=uuid.UUID(user_id),
+                                task_context={
+                                    "content": user_message,
+                                    "type": grpc_context.get("task_type", "chat"),
+                                },
+                                db_session=active_db,
+                                plan_matching_service=plan_matching
+                            )
+
+                            if matched_plan_id:
+                                plan_id = matched_plan_id
+                                plan_switched = True
+                                logger.info(f"Auto-switched to plan {plan_id} based on message content")
+                        except Exception as e:
+                            logger.warning(f"Auto-switch plan failed: {e}")
+
                 overlay_versions = {}
                 if grpc_context:
                     versions = grpc_context.get("realtime_versions")
@@ -994,6 +1074,16 @@ class ChatOrchestrator:
                         state=agent_service_pb2.AgentStatus.THINKING
                     )
                 ))
+
+                # P0: Send plan switch notification if auto-switched
+                if plan_switched and plan_id:
+                    await stream_callback(agent_service_pb2.ChatResponse(
+                        metadata={
+                            "plan_switched": "true",
+                            "switched_to_plan_id": str(plan_id),
+                        }
+                    ))
+                    logger.info(f"Sent plan switch notification to client: plan_id={plan_id}")
 
                 # Inject Dependencies
                 if active_db:
@@ -1201,6 +1291,30 @@ class ChatOrchestrator:
                                 )
 
                                 if executable_plan.fallback_strategy.get("on_version_conflict") == "replan":
+                                    # P1: Check replan rate limit
+                                    plan_uuid = uuid.UUID(plan_id_str) if plan_id_str else None
+                                    user_uuid = uuid.UUID(user_id)
+
+                                    if plan_uuid:
+                                        can_replan, limit_reason, attempt_count = await self.version_conflict_service.can_replan(
+                                            user_uuid, plan_uuid
+                                        )
+
+                                        if not can_replan:
+                                            logger.warning(f"Replan rate limited: {limit_reason}")
+                                            await stream_callback(agent_service_pb2.ChatResponse(
+                                                delta=f"\n\n⚠️ {limit_reason}. 请稍后重试。",
+                                                metadata={
+                                                    "replan_blocked": "true",
+                                                    "reason": limit_reason,
+                                                    "attempt_count": str(attempt_count),
+                                                }
+                                            ))
+                                            return
+
+                                        # Record replan attempt
+                                        await self.version_conflict_service.record_replan_attempt(user_uuid, plan_uuid)
+
                                     logger.info("Version conflict -> attempting replan with latest snapshot")
                                     replan_attempted = True
                                     snapshot = await self.snapshot_manager.create_snapshot(
@@ -1663,15 +1777,24 @@ class ChatOrchestrator:
                         if not isinstance(llm_profile_meta, dict):
                             llm_profile_meta = {}
 
+                    # Build metadata with plan switch notification
+                    response_metadata = {
+                        "response_id": response_id,
+                        "trace_id": trace_id,
+                        "preference_version": (user_context_payload or {}).get("preference_version", 0),
+                        "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
+                    }
+
+                    # P0: Add plan switch notification to metadata
+                    if plan_switched and plan_id:
+                        response_metadata["plan_switched"] = True
+                        response_metadata["switched_to_plan_id"] = str(plan_id)
+                        logger.info(f"Plan switch notification added to response: plan_id={plan_id}")
+
                     final_response_data = {
                         "message": full_response,
                         "tool_results": [],
-                        "metadata": {
-                            "response_id": response_id,
-                            "trace_id": trace_id,
-                            "preference_version": (user_context_payload or {}).get("preference_version", 0),
-                            "verbosity_target": llm_profile_meta.get("verbosity_target", "balanced"),
-                        },
+                        "metadata": response_metadata,
                     }
                     try:
                         from app.services.decision_record_service import DecisionRecordService

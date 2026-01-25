@@ -19,11 +19,12 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task, TaskStatus
 from app.services.plan_state_service import PlanStateService
+from app.services.milestone_handler import MilestoneHandler
 
 
 class TaskStateSyncService:
@@ -44,6 +45,7 @@ class TaskStateSyncService:
         self.db = db
         self.redis = redis
         self._plan_state_service = PlanStateService(db, redis)
+        self._milestone_handler = MilestoneHandler(db)
 
     async def on_task_created(
         self,
@@ -94,7 +96,7 @@ class TaskStateSyncService:
             return
 
         try:
-            await self._plan_state_service.on_task_completed(
+            state, new_milestones = await self._plan_state_service.on_task_completed(
                 user_id=task.user_id,
                 plan_id=task.plan_id,
                 task_id=task.id,
@@ -103,11 +105,36 @@ class TaskStateSyncService:
             )
             # Also sync task summaries after completion
             await self.sync_task_summaries(task.user_id, task.plan_id)
+
+            # Handle milestones if any
+            if new_milestones and state:
+                pending_count = await self._count_pending_tasks(task.plan_id)
+                plan_context = state.to_dict()
+                
+                for milestone in new_milestones:
+                    await self._milestone_handler.on_milestone_achieved(
+                        user_id=task.user_id,
+                        plan_id=task.plan_id,
+                        milestone=milestone,
+                        pending_task_count=pending_count,
+                        current_plan_context=plan_context
+                    )
+
             logger.info(
                 f"Synced task completion: task_id={task.id}, plan_id={task.plan_id}"
             )
         except Exception as e:
             logger.warning(f"Failed to sync task completion: {e}")
+
+    async def _count_pending_tasks(self, plan_id: UUID) -> int:
+        """Count pending and in-progress tasks for a plan."""
+        result = await self.db.execute(
+            select(func.count()).select_from(Task).where(
+                Task.plan_id == plan_id,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+            )
+        )
+        return result.scalar() or 0
 
     async def on_task_updated(
         self,

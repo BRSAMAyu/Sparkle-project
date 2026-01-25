@@ -1,14 +1,21 @@
 """
 Session State Manager
 基于 Redis 的分布式状态管理，支持 FSM 持久化和会话恢复
+
+扩展功能:
+- 活跃计划管理（P0: 任务→计划自动切换）
+- 计划上下文跟踪
 """
 import json
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 from datetime import datetime, timedelta
 from loguru import logger
 from dataclasses import dataclass, asdict
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from app.services.plan_matching_service import PlanMatchingService
 
 # FSM States (与 orchestrator.py 保持一致)
 STATE_INIT = "INIT"
@@ -347,10 +354,10 @@ class SessionStateManager:
     async def get_session_stats(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
         获取会话统计信息
-        
+
         Args:
             session_id: 会话 ID
-            
+
         Returns:
             Optional[Dict]: 统计信息
         """
@@ -358,7 +365,7 @@ class SessionStateManager:
             state = await self.load_state(session_id)
             if not state:
                 return None
-            
+
             return {
                 "session_id": session_id,
                 "current_state": state.state,
@@ -372,3 +379,178 @@ class SessionStateManager:
         except Exception as e:
             logger.error(f"Failed to get stats for session {session_id}: {e}")
             return None
+
+    # ========== Active Plan Management (P0: 任务→计划自动切换) ==========
+
+    def _get_active_plan_key(self, session_id: str) -> str:
+        """生成活跃计划键"""
+        return f"session:{session_id}:active_plan"
+
+    async def set_active_plan(
+        self,
+        session_id: str,
+        plan_id: UUID,
+        reason: str = "manual"
+    ) -> bool:
+        """
+        设置会话的活跃计划
+
+        Args:
+            session_id: 会话 ID
+            plan_id: 计划 ID
+            reason: 切换原因 (manual, auto_match, task_context)
+
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            key = self._get_active_plan_key(session_id)
+            data = {
+                "plan_id": str(plan_id),
+                "reason": reason,
+                "switched_at": datetime.utcnow().isoformat()
+            }
+            await self.redis.setex(key, self.ttl, json.dumps(data))
+            logger.info(f"Active plan set to {plan_id} for session {session_id}, reason: {reason}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set active plan for session {session_id}: {e}")
+            return False
+
+    async def get_active_plan(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取会话的活跃计划
+
+        Args:
+            session_id: 会话 ID
+
+        Returns:
+            Dict with plan_id, reason, switched_at or None
+        """
+        try:
+            key = self._get_active_plan_key(session_id)
+            data = await self.redis.get(key)
+            if data:
+                return json.loads(data)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get active plan for session {session_id}: {e}")
+            return None
+
+    async def get_active_plan_id(self, session_id: str) -> Optional[UUID]:
+        """
+        获取会话的活跃计划 ID
+
+        Args:
+            session_id: 会话 ID
+
+        Returns:
+            计划 ID 或 None
+        """
+        data = await self.get_active_plan(session_id)
+        if data and data.get("plan_id"):
+            return UUID(data["plan_id"])
+        return None
+
+    async def auto_switch_plan(
+        self,
+        session_id: str,
+        user_id: UUID,
+        task_context: Dict[str, Any],
+        db_session=None,
+        plan_matching_service: Optional['PlanMatchingService'] = None
+    ) -> Optional[UUID]:
+        """
+        根据任务上下文自动切换计划
+
+        智能匹配逻辑:
+        1. 提取任务关键词/主题
+        2. 与用户活跃计划进行相似度匹配
+        3. 如果找到更匹配的计划，自动切换
+
+        Args:
+            session_id: 会话 ID
+            user_id: 用户 ID
+            task_context: 任务上下文 {"content": str, "type": str, ...}
+            db_session: 数据库会话（用于查询计划）
+            plan_matching_service: 计划匹配服务
+
+        Returns:
+            切换后的计划 ID，如果未切换则返回当前计划 ID
+        """
+        try:
+            current_plan_data = await self.get_active_plan(session_id)
+            current_plan_id = UUID(current_plan_data["plan_id"]) if current_plan_data else None
+
+            # 如果没有提供匹配服务，无法进行自动匹配
+            if not plan_matching_service:
+                logger.debug(f"No plan matching service provided, skipping auto-switch for session {session_id}")
+                return current_plan_id
+
+            # 使用匹配服务查找最佳计划
+            matched_plan = await plan_matching_service.match_task_to_plan(
+                user_id=user_id,
+                task_content=task_context.get("content", ""),
+                task_type=task_context.get("type", "chat"),
+                current_plan_id=current_plan_id
+            )
+
+            if matched_plan and (not current_plan_id or matched_plan.id != current_plan_id):
+                # 切换到新计划
+                await self.set_active_plan(
+                    session_id=session_id,
+                    plan_id=matched_plan.id,
+                    reason="auto_match"
+                )
+                logger.info(
+                    f"Auto-switched plan from {current_plan_id} to {matched_plan.id} "
+                    f"for session {session_id}"
+                )
+                return matched_plan.id
+
+            return current_plan_id
+
+        except Exception as e:
+            logger.error(f"Failed to auto-switch plan for session {session_id}: {e}")
+            return None
+
+    async def clear_active_plan(self, session_id: str) -> bool:
+        """
+        清除会话的活跃计划
+
+        Args:
+            session_id: 会话 ID
+
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            key = self._get_active_plan_key(session_id)
+            await self.redis.delete(key)
+            logger.debug(f"Active plan cleared for session {session_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear active plan for session {session_id}: {e}")
+            return False
+
+    async def get_plan_switch_history(
+        self,
+        session_id: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        获取计划切换历史
+
+        Args:
+            session_id: 会话 ID
+            limit: 返回数量限制
+
+        Returns:
+            切换历史列表
+        """
+        # 简化实现：当前只存储最新状态
+        # 完整实现需要使用 Redis List 或单独的历史表
+        current = await self.get_active_plan(session_id)
+        if current:
+            return [current]
+        return []
