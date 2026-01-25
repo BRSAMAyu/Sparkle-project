@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 
 /// Arbitration priority options
@@ -206,6 +207,17 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
   // gRPC service
   ReviewGrpcService? _reviewService;
 
+  /// Get current admin ID from auth state
+  String get _currentAdminId {
+    final authState = ref.read(authProvider);
+    final user = authState.user;
+    if (user?.id != null && user!.id.isNotEmpty) {
+      return user.id;
+    }
+    // Fallback to a default admin ID if user not authenticated
+    return 'admin_system';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -318,7 +330,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
 
       final result = await _reviewService!.assignArbitrationCase(
         caseId: caseId,
-        arbitratorId: 'current_admin', // TODO: Get actual admin ID from auth
+        arbitratorId: _currentAdminId,
         arbitratorRole: 'admin',
       );
 
@@ -369,7 +381,7 @@ class _AppealDashboardState extends ConsumerState<AppealDashboard> {
         caseId: caseId,
         decision: decision.value,
         explanation: explanation,
-        arbitratorId: 'current_admin', // TODO: Get actual admin ID from auth
+        arbitratorId: _currentAdminId,
         arbitratorRole: 'admin',
       );
 

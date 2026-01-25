@@ -891,12 +891,12 @@ class ChatOrchestrator:
 
                 # Step 3.5: Extract chat mode for multi-agent routing
                 chat_mode = CHAT_MODE_STANDARD
-                if request.HasField("chat_mode") and request.chat_mode:
+                if request.chat_mode:
                     chat_mode = request.chat_mode
                     logger.info(f"Chat mode requested: {chat_mode}")
 
                 user_message = ""
-                if request.HasField("message"):
+                if request.message:
                     user_message = request.message
                 elif request.HasField("tool_result"):
                     tool_result = request.tool_result
