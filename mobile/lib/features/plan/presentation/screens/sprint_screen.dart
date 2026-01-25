@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/shared/entities/achievement_model.dart';
 // import 'package:sparkle/features/task/presentation/widgets/task_card.dart'; // Assuming TaskCard is available
 
 class SprintScreen extends ConsumerWidget {
@@ -114,6 +116,8 @@ class _ActiveSprintView extends ConsumerWidget {
       data: (fullPlan) => CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _SprintHeader(plan: fullPlan)),
+          // Sprint Achievements Progress Section
+          SliverToBoxAdapter(child: _SprintAchievementsProgress()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(DS.lg),
@@ -196,5 +200,163 @@ class _SprintHeader extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Sprint Achievements Progress Widget
+/// Shows relevant sprint achievements and their progress
+class _SprintAchievementsProgress extends ConsumerWidget {
+  const _SprintAchievementsProgress();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final achievementState = ref.watch(achievementProvider);
+
+    // Filter sprint achievements
+    final sprintAchievements = achievementState.achievements
+        .where((a) => a.achievement.type == AchievementType.sprint)
+        .toList();
+
+    if (sprintAchievements.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Sort by progress (descending), then by rarity
+    sprintAchievements.sort((a, b) {
+      if (a.isUnlocked != b.isUnlocked) {
+        return a.isUnlocked ? -1 : 1;
+      }
+      return b.progressPercentage.compareTo(a.progressPercentage);
+    });
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+      child: Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(DS.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.military_tech,
+                        size: DS.iconSizeSm,
+                        color: DS.brandPrimary,
+                      ),
+                      const SizedBox(width: DS.sm),
+                      Text(
+                        'Sprint Achievements',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/achievements?type=sprint'),
+                    child: const Text('View All'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.sm),
+              ...sprintAchievements.take(3).map((achievement) =>
+                  _SprintAchievementTile(achievement: achievement)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SprintAchievementTile extends StatelessWidget {
+  const _SprintAchievementTile({required this.achievement});
+
+  final AchievementWithProgress achievement;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = achievement.progressPercentage / 100.0;
+    final rarity = achievement.achievement.rarity;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: DS.xs),
+      child: Row(
+        children: [
+          // Achievement icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _getRarityColor(rarity).withValues(alpha: 0.2),
+              border: Border.all(
+                color: _getRarityColor(rarity),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              achievement.isUnlocked ? Icons.check : Icons.flag_outlined,
+              size: DS.iconSizeSm,
+              color: _getRarityColor(rarity),
+            ),
+          ),
+          const SizedBox(width: DS.sm),
+          // Achievement info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  achievement.achievement.name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: DS.fontWeightMedium,
+                      ),
+                ),
+                Text(
+                  achievement.achievement.description ?? '',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: DS.xs),
+                // Progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(DS.borderRadiusSM),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: DS.neutral100,
+                    valueColor: AlwaysStoppedAnimation<Color>(_getRarityColor(rarity)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Progress percentage
+          Text(
+            achievement.isUnlocked ? '完成!' : '${achievement.progressPercentage}%',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: _getRarityColor(rarity),
+                  fontWeight: DS.fontWeightMedium,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getRarityColor(AchievementRarity rarity) {
+    switch (rarity) {
+      case AchievementRarity.common:
+        return DS.neutral400;
+      case AchievementRarity.rare:
+        return const Color(0xFFFFD700);
+      case AchievementRarity.epic:
+        return const Color(0xFF9B59B6);
+      case AchievementRarity.legendary:
+        return const Color(0xFFFF6B6B);
+    }
   }
 }

@@ -34,6 +34,13 @@ class AchievementEvent:
     CONTRACT_FAILED = "contract_failed"
     MUTUAL_STUDY = "mutual_study"  # 与搭子同时学习
     HIDDEN_TRIGGER = "hidden_trigger"  # 隐藏成就特殊触发
+    # Sprint events
+    SPRINT_STARTED = "sprint_started"
+    SPRINT_COMPLETED = "sprint_completed"
+    SPRINT_ABANDONED = "sprint_abandoned"
+    SPRINT_PERFECT = "sprint_perfect"  # 100%完成
+    SPRINT_STREAK = "sprint_streak"    # 连续冲刺
+    SPRINT_AHEAD = "sprint_ahead"      # 超前完成
 
 
 class AchievementEngine:
@@ -155,6 +162,19 @@ class AchievementEngine:
                         relevant.append(achievement)
                 case AchievementEvent.STUDY_MINUTES_ACCUMULATED:
                     if trigger_code in ["STUDY_MINUTES_TOTAL", "STUDY_MINUTES_SINGLE"]:
+                        relevant.append(achievement)
+                # Sprint event matching
+                case AchievementEvent.SPRINT_COMPLETED:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_PERFECT:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED", "SPRINT_PERFECT"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_STREAK:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_STREAK"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_AHEAD:
+                    if trigger_code in ["SPRINTS_TOTAL", "SPRINT_AHEAD"]:
                         relevant.append(achievement)
 
         return relevant
@@ -315,6 +335,95 @@ class AchievementEngine:
                     if status and status.mastery_score >= 100:
                         return (1.0, 100, 100)
                 return (0.0, 0, 100)
+
+            # ========== Sprint Achievement Triggers ==========
+            # 冲刺完成总数
+            case "SPRINTS_TOTAL":
+                from app.models.plan import Plan, PlanType
+                target = config.get("count", 1)
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False  # 已归档（完成/放弃）
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 完美冲刺（100%完成率）
+            case "SPRINT_PERFECT":
+                from app.models.plan import Plan, PlanType
+                target = config.get("count", 1)
+                # 查询完成率为100%的冲刺
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False,
+                        Plan.progress >= 1.0
+                    )
+                )
+                result = await self.db.execute(query)
+                current = result.scalar_one() or 0
+                return (min(current / target, 1.0), current, target)
+
+            # 连续冲刺（连续完成多个冲刺）
+            case "SPRINTS_STREAK":
+                from app.models.plan import Plan, PlanType
+                target = config.get("streak", 3)
+
+                # 获取最近归档的冲刺（按archived_at降序）
+                query = select(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False
+                    )
+                ).order_by(Plan.updated_at.desc())
+
+                result = await self.db.execute(query)
+                sprints = result.scalars().all()
+
+                # 计算连续完成的冲刺（progress >= 0.8视为完成）
+                streak = 0
+                for sprint in sprints:
+                    if sprint.progress >= 0.8:
+                        streak += 1
+                    else:
+                        break  # 断开连续
+
+                current = streak
+                return (min(current / target, 1.0), current, target)
+
+            # 超前完成（提前完成冲刺）
+            case "SPRINT_AHEAD":
+                # 这个在事件触发时检查，这里返回当前值
+                completion_rate = kwargs.get("completion_rate", 0.0)
+                days_ahead = kwargs.get("days_ahead", 0)
+
+                # 检查是否100%完成且提前至少1天
+                if completion_rate >= 1.0 and days_ahead > 0:
+                    return (1.0, days_ahead, 1)
+
+                # 统计历史超前完成次数
+                from app.models.plan import Plan, PlanType
+                query = select(func.count()).select_from(Plan).where(
+                    and_(
+                        Plan.user_id == user_id,
+                        Plan.type == PlanType.SPRINT,
+                        Plan.is_active == False,
+                        Plan.progress >= 1.0,
+                        Plan.target_date.isnot(None)
+                    )
+                )
+                result = await self.db.execute(query)
+                total = result.scalar_one() or 0
+
+                # 估算超前完成数（这里简化处理，实际应用中需要更精确的记录）
+                target = config.get("count", 1)
+                return (min(1.0, total / target) if total > 0 else (0.0, 0, target), total, target)
 
             case _:
                 logger.warning(f"Unknown trigger code: {trigger_code}")

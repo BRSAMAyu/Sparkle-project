@@ -93,6 +93,68 @@ class FeedbackEntry:
     was_reflected: bool = False
 
 
+class OverrideDecision(str, Enum):
+    """用户覆盖决策类型"""
+    ACCEPT_DESPITE_FAILURE = "accept_despite_failure"  # 接受尽管审查失败
+    REJECT_DESPITE_PASS = "reject_despite_pass"        # 拒绝尽管审查通过
+    MODIFY_DECISION = "modify_decision"                # 修改决策
+
+
+class AppealStatus(str, Enum):
+    """申诉状态"""
+    PENDING = "pending"                # 待处理
+    IN_REVIEW = "in_review"            # 二次审查中
+    RESOLVED = "resolved"              # 已解决
+    REJECTED = "rejected"              # 已拒绝
+    ESCALATED = "escalated"            # 已升级（人工处理）
+
+
+@dataclass
+class OverrideEntry:
+    """用户覆盖条目"""
+    override_id: str
+    review_id: str
+    user_id: str
+    timestamp: str
+
+    # 覆盖详情
+    original_decision: str             # 原审查决策
+    new_decision: str                  # 用户新决策
+    override_type: OverrideDecision    # 覆盖类型
+    reason: str                        # 用户理由
+
+    # 审计信息
+    was_correct: Optional[bool] = None # 后续验证：用户覆盖是否正确
+    admin_reviewed: bool = False       # 是否被管理员审查
+
+
+@dataclass
+class AppealEntry:
+    """审查申诉条目"""
+    appeal_id: str
+    review_id: str
+    user_id: str
+    timestamp: str
+
+    # 申诉内容
+    appeal_reason: str                 # 申诉理由
+    issues_with_review: List[str] = field(default_factory=list)  # 审查中的问题
+
+    # 状态追踪
+    status: AppealStatus = AppealStatus.PENDING
+    assigned_to: Optional[str] = None  # 分配给谁处理
+
+    # 二次审查结果
+    secondary_review_id: Optional[str] = None
+    secondary_decision: Optional[str] = None
+    secondary_score: Optional[float] = None
+
+    # 解决信息
+    resolution: Optional[str] = None   # 解决方案
+    resolved_by: Optional[str] = None  # 解决者
+    resolved_at: Optional[str] = None  # 解决时间
+
+
 @dataclass
 class ReviewAggregation:
     """审查聚合统计"""
@@ -148,6 +210,8 @@ class ReviewHistoryService:
         self._db = db_session
         self._memory_cache: Dict[str, ReviewHistoryEntry] = {}
         self._feedback_cache: List[FeedbackEntry] = []
+        self._override_cache: List[OverrideEntry] = []
+        self._appeal_cache: List[AppealEntry] = []
 
     # ============================================
     # 记录保存
@@ -608,6 +672,267 @@ class ReviewHistoryService:
 
         misclassified.sort(key=lambda x: x["timestamp"], reverse=True)
         return misclassified[:limit]
+
+    # ============================================
+    # Phase 2e: 用户覆盖与申诉
+    # ============================================
+
+    async def record_user_override(
+        self,
+        review_id: str,
+        user_id: str,
+        original_decision: str,
+        new_decision: str,
+        reason: str,
+    ) -> OverrideEntry:
+        """
+        记录用户覆盖审查决策
+
+        当用户不同意审查结果并选择覆盖时调用
+
+        Args:
+            review_id: 审查ID
+            user_id: 用户ID
+            original_decision: 原审查决策
+            new_decision: 用户新决策
+            reason: 用户覆盖理由
+
+        Returns:
+            OverrideEntry: 保存的覆盖条目
+        """
+        import uuid
+
+        # 确定覆盖类型
+        if original_decision == "failed" and new_decision == "passed":
+            override_type = OverrideDecision.ACCEPT_DESPITE_FAILURE
+        elif original_decision == "passed" and new_decision == "failed":
+            override_type = OverrideDecision.REJECT_DESPITE_PASS
+        else:
+            override_type = OverrideDecision.MODIFY_DECISION
+
+        override = OverrideEntry(
+            override_id=f"ovr_{uuid.uuid4().hex[:12]}",
+            review_id=review_id,
+            user_id=user_id,
+            timestamp=datetime.utcnow().isoformat(),
+            original_decision=original_decision,
+            new_decision=new_decision,
+            override_type=override_type,
+            reason=reason,
+        )
+
+        self._override_cache.append(override)
+
+        # 更新原审查记录
+        if review_id in self._memory_cache:
+            entry = self._memory_cache[review_id]
+            entry.user_feedback = f"override:{new_decision}"
+            entry.user_satisfied = (new_decision == "passed")
+            entry.feedback_timestamp = datetime.utcnow().isoformat()
+
+        logger.info(
+            f"[ReviewHistory] Recorded override {override.override_id}: "
+            f"{original_decision} -> {new_decision} for review {review_id}"
+        )
+
+        return override
+
+    async def record_review_appeal(
+        self,
+        review_id: str,
+        user_id: str,
+        appeal_reason: str,
+        issues_with_review: Optional[List[str]] = None,
+    ) -> AppealEntry:
+        """
+        记录审查申诉
+
+        当用户认为审查本身有问题时调用
+
+        Args:
+            review_id: 审查ID
+            user_id: 用户ID
+            appeal_reason: 申诉理由
+            issues_with_review: 审查中的问题列表
+
+        Returns:
+            AppealEntry: 保存的申诉条目
+        """
+        import uuid
+
+        appeal = AppealEntry(
+            appeal_id=f"apl_{uuid.uuid4().hex[:12]}",
+            review_id=review_id,
+            user_id=user_id,
+            timestamp=datetime.utcnow().isoformat(),
+            appeal_reason=appeal_reason,
+            issues_with_review=issues_with_review or [],
+            status=AppealStatus.PENDING,
+        )
+
+        self._appeal_cache.append(appeal)
+
+        logger.info(
+            f"[ReviewHistory] Recorded appeal {appeal.appeal_id}: "
+            f"for review {review_id}, reason: {appeal_reason[:50]}..."
+        )
+
+        return appeal
+
+    async def get_appeal_queue(
+        self,
+        status: Optional[AppealStatus] = None,
+        limit: int = 50,
+    ) -> List[AppealEntry]:
+        """
+        获取待处理申诉队列
+
+        Args:
+            status: 按状态筛选（None表示待处理）
+            limit: 返回数量限制
+
+        Returns:
+            申诉条目列表
+        """
+        if status is None:
+            # 默认返回待处理的申诉
+            results = [
+                a for a in self._appeal_cache
+                if a.status in [AppealStatus.PENDING, AppealStatus.IN_REVIEW]
+            ]
+        else:
+            results = [
+                a for a in self._appeal_cache
+                if a.status == status
+            ]
+
+        # 按时间排序（最早的在前，FIFO）
+        results.sort(key=lambda x: x.timestamp)
+        return results[:limit]
+
+    async def update_appeal_status(
+        self,
+        appeal_id: str,
+        status: AppealStatus,
+        resolution: Optional[str] = None,
+        resolved_by: Optional[str] = None,
+        secondary_review_id: Optional[str] = None,
+        secondary_decision: Optional[str] = None,
+        secondary_score: Optional[float] = None,
+    ) -> Optional[AppealEntry]:
+        """
+        更新申诉状态
+
+        Args:
+            appeal_id: 申诉ID
+            status: 新状态
+            resolution: 解决方案
+            resolved_by: 解决者
+            secondary_review_id: 二次审查ID
+            secondary_decision: 二次审查决策
+            secondary_score: 二次审查分数
+
+        Returns:
+            更新后的申诉条目
+        """
+        for appeal in self._appeal_cache:
+            if appeal.appeal_id == appeal_id:
+                appeal.status = status
+                if resolution:
+                    appeal.resolution = resolution
+                if resolved_by:
+                    appeal.resolved_by = resolved_by
+                    appeal.resolved_at = datetime.utcnow().isoformat()
+                if secondary_review_id:
+                    appeal.secondary_review_id = secondary_review_id
+                if secondary_decision:
+                    appeal.secondary_decision = secondary_decision
+                if secondary_score is not None:
+                    appeal.secondary_score = secondary_score
+
+                logger.info(
+                    f"[ReviewHistory] Updated appeal {appeal_id}: status={status.value}"
+                )
+                return appeal
+
+        return None
+
+    async def get_appeal_by_id(self, appeal_id: str) -> Optional[AppealEntry]:
+        """根据ID获取申诉"""
+        for appeal in self._appeal_cache:
+            if appeal.appeal_id == appeal_id:
+                return appeal
+        return None
+
+    async def get_override_history(
+        self,
+        user_id: Optional[str] = None,
+        review_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[OverrideEntry]:
+        """获取覆盖历史"""
+        results = self._override_cache
+
+        if user_id:
+            results = [o for o in results if o.user_id == user_id]
+        if review_id:
+            results = [o for o in results if o.review_id == review_id]
+
+        results = sorted(results, key=lambda x: x.timestamp, reverse=True)
+        return results[:limit]
+
+    async def get_override_patterns(
+        self,
+        user_id: Optional[str] = None,
+        days: int = 30,
+    ) -> Dict[str, Any]:
+        """
+        分析用户覆盖模式
+
+        用于检测可能的滥用行为
+
+        Args:
+            user_id: 用户ID
+            days: 分析天数
+
+        Returns:
+            覆盖模式分析
+        """
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff_str = cutoff.isoformat()
+
+        overrides = [
+            o for o in self._override_cache
+            if o.timestamp >= cutoff_str
+        ]
+
+        if user_id:
+            overrides = [o for o in overrides if o.user_id == user_id]
+
+        if not overrides:
+            return {
+                "total_overrides": 0,
+                "by_type": {},
+                "suspicious": False,
+            }
+
+        # 按类型统计
+        by_type = {}
+        for o in overrides:
+            t = o.override_type.value
+            by_type[t] = by_type.get(t, 0) + 1
+
+        # 检测可疑行为（例如：大量覆盖失败审查）
+        accept_despite_failure = by_type.get(OverrideDecision.ACCEPT_DESPITE_FAILURE.value, 0)
+        suspicious = accept_despite_failure > 10  # 阈值可配置
+
+        return {
+            "total_overrides": len(overrides),
+            "by_type": by_type,
+            "suspicious": suspicious,
+            "accept_despite_failure_count": accept_despite_failure,
+            "period_days": days,
+        }
 
 
 # ============================================

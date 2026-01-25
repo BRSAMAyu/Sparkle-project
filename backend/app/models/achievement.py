@@ -30,6 +30,7 @@ class AchievementType(str, enum.Enum):
     CONTRACT = "contract"           # 契约成就
     STUDY_TIME = "study_time"       # 学习时长
     NODE_EXPLORE = "node_explore"   # 知识点探索
+    SPRINT = "sprint"               # 冲刺专属成就
 
 
 class VisualEffectType(str, enum.Enum):

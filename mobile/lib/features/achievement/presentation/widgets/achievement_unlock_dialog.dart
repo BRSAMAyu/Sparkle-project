@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart' as chat;
 
 /// 成就解锁弹窗
 ///
@@ -16,9 +17,35 @@ class AchievementUnlockDialog extends StatefulWidget {
     this.onClose,
   });
 
+  /// 接受AchievementUnlockEvent (来自achievement_model.dart)
   final AchievementUnlockEvent event;
   final VoidCallback? onShare;
   final VoidCallback? onClose;
+
+  /// 从WebSocket事件创建弹窗
+  static Future<void> showFromWsEvent(
+    BuildContext context,
+    chat.AchievementUnlockEvent wsEvent, {
+    VoidCallback? onShare,
+    bool barrierDismissible = true,
+  }) {
+    final event = wsEvent.toUnlockModel();
+    return show(
+      context,
+      AchievementUnlockEvent(
+        achievementId: event.achievementId,
+        name: event.name,
+        rarity: event.rarity,
+        unlockedAt: event.unlockedAt,
+        isFirst: event.isFirst,
+        visualEffect: event.visualEffect,
+        visualEffectType: event.visualEffectType,
+        rewards: event.rewards,
+      ),
+      onShare: onShare,
+      barrierDismissible: barrierDismissible,
+    );
+  }
 
   @override
   State<AchievementUnlockDialog> createState() => _AchievementUnlockDialogState();

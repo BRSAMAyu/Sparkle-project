@@ -331,6 +331,53 @@ async def archive_plan_state(
         bump_version=False,
     )
 
+    # Trigger sprint achievement events if this is a sprint plan
+    if plan.type == PlanType.SPRINT:
+        from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+        engine = AchievementEngine(db)
+
+        # Calculate completion rate and check if ahead of schedule
+        completion_rate = plan.progress or 0.0
+        days_ahead = 0
+        if plan.target_date:
+            today = date.today()
+            days_ahead = (plan.target_date - today).days if completion_rate >= 1.0 else 0
+
+        # Check if sprint meets completion threshold (80%+)
+        if completion_rate >= 0.8:
+            # SPRINTS_TOTAL: Count all completed sprints (both 80%+ and 100%)
+            # This triggers achievements like sprint_first, sprint_5, sprint_10
+            await engine.process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_COMPLETED,
+                completion_rate=completion_rate
+            )
+
+            if completion_rate >= 1.0:
+                # 100% completion - trigger perfect completion event
+                await engine.process_event(
+                    str(current_user.id),
+                    AchievementEvent.SPRINT_PERFECT,
+                    completion_rate=completion_rate
+                )
+
+                if days_ahead > 0:
+                    # Completed ahead of schedule
+                    await engine.process_event(
+                        str(current_user.id),
+                        AchievementEvent.SPRINT_AHEAD,
+                        completion_rate=completion_rate,
+                        days_ahead=days_ahead
+                    )
+
+            # SPRINT_STREAK: Always check streak for any completion >=80%
+            await engine.process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_STREAK,
+                completion_rate=completion_rate
+            )
+
     # Get new primary plan info
     quota_service = PlanQuotaService(db, cache_service.redis)
     quota_status = await quota_service.get_quota_status(current_user.id)

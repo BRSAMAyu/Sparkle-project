@@ -220,6 +220,18 @@ class ContentReviewResult {
       issues.where((i) => i.severity == 'info').toList();
 }
 
+/// 用户覆盖回调参数
+typedef OnOverrideCallback = Future<bool> Function(
+  String newDecision,
+  String reason,
+);
+
+/// 申诉回调参数
+typedef OnAppealCallback = Future<bool> Function(
+  String reason,
+  List<String> issues,
+);
+
 /// Content Review Card Widget
 ///
 /// 显示AI生成内容的审查结果
@@ -230,6 +242,8 @@ class ContentReviewCard extends StatefulWidget {
     this.onAccept,
     this.onReject,
     this.onRequestReview,
+    this.onOverride,
+    this.onAppeal,
     this.collapsed = false,
   });
 
@@ -237,6 +251,8 @@ class ContentReviewCard extends StatefulWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onReject;
   final VoidCallback? onRequestReview;  // 请求人工审查
+  final OnOverrideCallback? onOverride; // Phase 2e: 用户覆盖审查决策
+  final OnAppealCallback? onAppeal;     // Phase 2e: 用户申诉审查结果
   final bool collapsed;  // 是否折叠显示
 
   @override
@@ -973,7 +989,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     Color color,
     LinearGradient gradient,
   ) {
-    // 已审查通过的场景不需要操作按钮
+    // 已审查通过的场景
     if (widget.review.decision == ContentReviewDecision.passed) {
       return Row(
         children: [
@@ -982,6 +998,11 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             onPressed: widget.onAccept,
             size: CustomButtonSize.small,
           ),
+          // Phase 2e: 即使通过，用户仍可以反对
+          if (widget.onOverride != null) ...[
+            const SizedBox(width: DS.spacing4),
+            _buildMoreActionsMenu(context, color),
+          ],
         ],
       );
     }
@@ -1004,6 +1025,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             onPressed: widget.onRequestReview,
             size: CustomButtonSize.small,
           ),
+        // Phase 2e: 更多操作菜单（覆盖/申诉）
+        if (widget.onOverride != null || widget.onAppeal != null)
+          _buildMoreActionsMenu(context, color),
         // 接受当前内容
         if (widget.onAccept != null)
           CustomButton.primary(
@@ -1016,18 +1040,304 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       ],
     );
   }
+
+  /// Phase 2e: 更多操作菜单
+  Widget _buildMoreActionsMenu(BuildContext context, Color color) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_horiz_rounded,
+        color: DS.neutral500,
+        size: 20,
+      ),
+      padding: EdgeInsets.zero,
+      onSelected: (value) => _handleMenuAction(context, value),
+      itemBuilder: (context) => [
+        if (widget.onOverride != null)
+          PopupMenuItem(
+            value: 'override',
+            child: Row(
+              children: [
+                Icon(
+                  widget.review.passed
+                      ? Icons.thumb_down_rounded
+                      : Icons.thumb_up_rounded,
+                  size: 16,
+                  color: DS.neutral700,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  widget.review.passed ? '不同意通过' : '我认为应该通过',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        if (widget.onAppeal != null)
+          PopupMenuItem(
+            value: 'appeal',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.report_problem_rounded,
+                  size: 16,
+                  color: DS.warning,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  '报告审查问题',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _handleMenuAction(BuildContext context, String action) {
+    if (action == 'override') {
+      _showOverrideDialog(context);
+    } else if (action == 'appeal') {
+      _showAppealDialog(context);
+    }
+  }
+
+  /// 显示覆盖决策对话框
+  void _showOverrideDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    final currentDecision = widget.review.decision == ContentReviewDecision.passed
+        ? 'passed'
+        : 'failed';
+    final newDecision = currentDecision == 'passed' ? 'failed' : 'passed';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              currentDecision == 'passed'
+                  ? '不同意审查通过'
+                  : '我认为内容应该通过审查',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '请说明您的理由：',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral600,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: '输入您的理由...',
+                filled: true,
+                fillColor: DS.neutral100,
+                border: OutlineInputBorder(
+                  borderRadius: DS.borderRadius8,
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                const SizedBox(width: DS.spacing8),
+                ElevatedButton(
+                  onPressed: () async {
+                    final reason = reasonController.text.trim();
+                    if (reason.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('请填写理由')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    await widget.onOverride?.call(newDecision, reason);
+                  },
+                  child: const Text('确认'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示申诉对话框
+  void _showAppealDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    final selectedIssues = <String>[];
+    const issueOptions = [
+      '审查标准不合理',
+      '评分计算有误',
+      '忽略了重要上下文',
+      '问题描述不准确',
+      '建议不可行',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Container(
+          margin: const EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: DS.borderRadius16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '报告审查问题',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text(
+                '选择问题类型：',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral600,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: issueOptions.map((issue) {
+                  final isSelected = selectedIssues.contains(issue);
+                  return GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        if (isSelected) {
+                          selectedIssues.remove(issue);
+                        } else {
+                          selectedIssues.add(issue);
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing10,
+                        vertical: DS.spacing6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? DS.warning.withValues(alpha: 0.15)
+                            : DS.neutral100,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(
+                          color: isSelected
+                              ? DS.warning.withValues(alpha: 0.5)
+                              : DS.neutral300,
+                        ),
+                      ),
+                      child: Text(
+                        issue,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: isSelected ? DS.warning : DS.neutral700,
+                            ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text(
+                '详细说明：',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral600,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: '请描述审查结果存在的问题...',
+                  filled: true,
+                  fillColor: DS.neutral100,
+                  border: OutlineInputBorder(
+                    borderRadius: DS.borderRadius8,
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final reason = reasonController.text.trim();
+                      if (reason.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('请填写详细说明')),
+                        );
+                        return;
+                      }
+                      if (selectedIssues.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('请至少选择一个问题类型')),
+                        );
+                        return;
+                      }
+                      Navigator.pop(context);
+                      await widget.onAppeal?.call(reason, selectedIssues);
+                    },
+                    child: const Text('提交申诉'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ReflectionStatusInfo {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool isInProgress;
-
   _ReflectionStatusInfo({
     required this.label,
     required this.icon,
     required this.color,
     required this.isInProgress,
   });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool isInProgress;
 }
