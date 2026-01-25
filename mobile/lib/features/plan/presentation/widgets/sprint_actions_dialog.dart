@@ -23,6 +23,41 @@ Future<SprintActionType?> showSprintActionsDialog(
   );
 }
 
+/// Shows confirm complete dialog - returns true if confirmed
+Future<bool> showConfirmCompleteDialog(
+  BuildContext context, {
+  required String planName,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => _ConfirmCompleteDialog(planName: planName),
+  );
+  return result == true;
+}
+
+/// Shows extend sprint dialog - returns selected days or null
+Future<int?> showExtendSprintDialog(
+  BuildContext context, {
+  required String planName,
+}) async {
+  return await showDialog<int>(
+    context: context,
+    builder: (context) => _ExtendSprintDialog(planName: planName),
+  );
+}
+
+/// Shows confirm abandon dialog - returns true if confirmed
+Future<bool> showConfirmAbandonDialog(
+  BuildContext context, {
+  required String planName,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => _ConfirmAbandonDialog(planName: planName),
+  );
+  return result == true;
+}
+
 /// Sprint actions bottom sheet
 class _SprintActionsSheet extends ConsumerStatefulWidget {
   const _SprintActionsSheet({
@@ -69,7 +104,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: DS.surfacePrimary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(DS.spacing20),
@@ -112,7 +147,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                         ),
                         Text(
                           widget.planName,
-                          style: context.sparkleTypography.bodySmall.copyWith(
+                          style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
                         ),
@@ -244,7 +279,7 @@ class _ActionTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: context.sparkleTypography.bodySmall.copyWith(
+        style: context.sparkleTypography.labelSmall.copyWith(
           color: DS.textSecondary,
         ),
       ),
@@ -280,7 +315,7 @@ class _ConfirmCompleteDialog extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             '完成后冲刺将被归档，无法再编辑。',
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),
@@ -329,7 +364,7 @@ class _ConfirmAbandonDialog extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             '放弃后冲刺将被归档，当前进度将被保留。',
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),

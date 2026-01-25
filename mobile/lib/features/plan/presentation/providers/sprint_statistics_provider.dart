@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/domain/entities/sprint_statistics.dart';
-import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
 /// Sprint statistics provider
 ///
@@ -67,7 +68,7 @@ final sprintStatisticsProvider = Provider<SprintStatistics>((ref) {
 });
 
 /// Calculate daily progress from tasks
-List<DailyProgress> _calculateDailyProgress(List tasks) {
+List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
   final Map<String, List<DateTime>> completedByDate = {};
 
   // Group completed tasks by completion date
@@ -91,10 +92,22 @@ List<DailyProgress> _calculateDailyProgress(List tasks) {
     );
     final completedTasks = completedByDate[dateKey]!;
 
+    // Calculate actual focus minutes from tasks
+    final actualFocusMinutes = tasks
+        .where((t) =>
+            t.status == TaskStatus.completed &&
+            t.completedAt != null &&
+            t.completedAt!.year == date.year &&
+            t.completedAt!.month == date.month &&
+            t.completedAt!.day == date.day)
+        .fold<int>(0, (sum, t) => sum + (t.actualMinutes ?? 0));
+
     progress.add(DailyProgress(
       date: date,
       tasksCompleted: completedTasks.length,
-      focusMinutes: completedTasks.length * 30, // Estimate 30 min per task
+      focusMinutes: actualFocusMinutes > 0
+          ? actualFocusMinutes
+          : completedTasks.length * 30, // Fallback to estimate
     ));
   }
 
@@ -102,7 +115,7 @@ List<DailyProgress> _calculateDailyProgress(List tasks) {
 }
 
 /// Calculate approximate start date from the oldest task
-DateTime? _calculateStartDate(List tasks) {
+DateTime? _calculateStartDate(List<TaskModel> tasks) {
   if (tasks.isEmpty) return null;
 
   // Find the oldest created date

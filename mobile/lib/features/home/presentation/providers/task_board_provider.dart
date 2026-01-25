@@ -255,10 +255,8 @@ final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
       break;
     case SprintTaskFilter.all:
     default:
-      // 默认只显示未完成和未放弃的任务
-      tasks = tasks
-          .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
-          .toList();
+      // 全部显示所有任务（包括已完成，排除已放弃）
+      tasks = tasks.where((t) => t.status != TaskStatus.abandoned).toList();
       break;
   }
 
@@ -273,7 +271,7 @@ final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
   final taskState = ref.watch(taskListProvider);
 
   if (dashboardState.sprint == null) {
-    return SprintTaskFilter.values.asMap().map((_, _) => 0);
+    return {for (final filter in SprintTaskFilter.values) filter: 0};
   }
 
   final sprintPlanId = dashboardState.sprint!.id;
@@ -283,7 +281,7 @@ final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
 
   return {
     SprintTaskFilter.all: sprintTasks
-        .where((t) => t.status != TaskStatus.completed && t.status != TaskStatus.abandoned)
+        .where((t) => t.status != TaskStatus.abandoned)
         .length,
     SprintTaskFilter.todo: sprintTasks
         .where((t) => t.status == TaskStatus.pending)

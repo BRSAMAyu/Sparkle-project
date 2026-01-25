@@ -6,6 +6,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
+import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_actions_dialog.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_statistics_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -193,9 +194,9 @@ class _SprintHeader extends ConsumerWidget {
               backgroundColor: DS.surfaceSecondary,
               foregroundColor: DS.brandPrimary,
             ),
-            onSelected: (value) => _handleMenuSelection(context, value, sprint.id, sprint.name),
+            onSelected: (value) => _handleMenuSelection(context, ref, value, sprint.id, sprint.name),
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'complete',
                 child: Row(
                   children: [
@@ -205,7 +206,7 @@ class _SprintHeader extends ConsumerWidget {
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'extend',
                 child: Row(
                   children: [
@@ -215,7 +216,7 @@ class _SprintHeader extends ConsumerWidget {
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'abandon',
                 child: Row(
                   children: [
@@ -259,31 +260,38 @@ class _SprintHeader extends ConsumerWidget {
 
   Future<void> _handleMenuSelection(
     BuildContext context,
+    WidgetRef ref,
     String value,
     String planId,
     String planName,
   ) async {
     switch (value) {
       case 'complete':
-        await showSprintActionsDialog(
+        final confirmed = await showConfirmCompleteDialog(
           context,
-          planId: planId,
           planName: planName,
         );
+        if (confirmed) {
+          await ref.read(sprintActionsProvider.notifier).completeSprint(planId);
+        }
         break;
       case 'extend':
-        await showSprintActionsDialog(
+        final days = await showExtendSprintDialog(
           context,
-          planId: planId,
           planName: planName,
         );
+        if (days != null && days > 0) {
+          await ref.read(sprintActionsProvider.notifier).extendSprint(planId, days);
+        }
         break;
       case 'abandon':
-        await showSprintActionsDialog(
+        final confirmed = await showConfirmAbandonDialog(
           context,
-          planId: planId,
           planName: planName,
         );
+        if (confirmed) {
+          await ref.read(sprintActionsProvider.notifier).abandonSprint(planId, '');
+        }
         break;
     }
   }
@@ -349,7 +357,7 @@ class _SprintFilterChips extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacing4,
-                      vertical: DS.spacing1,
+                      vertical: 1,
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
